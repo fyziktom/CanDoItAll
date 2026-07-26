@@ -301,7 +301,10 @@ internal static class ProcessSubprocessCompletionPolicy
             $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-missing-parent-outcome:{launch.DefinitionKey}:{childRunSummary}:{launch.Stage}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.Unknown,
-            ProcessDiagnosticIdempotencyClassification.Unknown);
+            ProcessDiagnosticIdempotencyClassification.Unknown)
+        {
+            RelatedChildRunId = launch.ChildRunId
+        };
     }
 
     internal static ProcessCompletionIssue CreateSubprocessLaunchDefinitionMissingIssue(
@@ -388,7 +391,10 @@ internal static class ProcessSubprocessCompletionPolicy
             $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-nogo:{childRunId}:{evidenceSummary}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
-            ProcessDiagnosticIdempotencyClassification.Idempotent);
+            ProcessDiagnosticIdempotencyClassification.Idempotent)
+        {
+            RelatedChildRunId = childRunId
+        };
     }
 
     internal static ProcessCompletionIssue CreateSubprocessChildAcceptedOutputMissingIssue(
@@ -410,7 +416,10 @@ internal static class ProcessSubprocessCompletionPolicy
             $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-accepted-output-missing:{childRunId}:{acceptedOutputs}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
-            ProcessDiagnosticIdempotencyClassification.Idempotent);
+            ProcessDiagnosticIdempotencyClassification.Idempotent)
+        {
+            RelatedChildRunId = childRunId
+        };
     }
 
     internal static ProcessCompletionIssue CreateSubprocessChildForwardedContextIssue(
@@ -426,7 +435,10 @@ internal static class ProcessSubprocessCompletionPolicy
             $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-forwarded-context:{childRunId}:{forwardedContextIssue.Evidence}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
-            ProcessDiagnosticIdempotencyClassification.Idempotent);
+            ProcessDiagnosticIdempotencyClassification.Idempotent)
+        {
+            RelatedChildRunId = childRunId
+        };
     }
 
     internal static ProcessCompletionIssue CreateSubprocessChildStoppedIssue(
@@ -445,8 +457,8 @@ internal static class ProcessSubprocessCompletionPolicy
             : $"child recovery decision {stoppedChild.RecoveryDecision.DecisionKind}/{stoppedChild.RecoveryDecision.RouteKind}; policy {stoppedChild.RecoveryDecision.Policy}; retry {stoppedChild.RecoveryDecision.AutomaticRetryAttempt}/{stoppedChild.RecoveryDecision.MaximumAutomaticRetryAttempts}; persistent diagnostic identity {stoppedChild.RecoveryDecision.SameDiagnosticFingerprintAttempt}/{stoppedChild.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts}; reason {stoppedChild.RecoveryDecision.SafeReason}";
         var childStepId = stoppedChild.ChildStepInstanceId?.Value.ToString("D") ?? "unknown";
         var code = failed
-            ? "process.adapter.subprocess_child_failed"
-            : "process.adapter.subprocess_child_blocked";
+            ? ProcessExecutionAdapterDiagnosticCodes.SubprocessChildFailed
+            : ProcessExecutionAdapterDiagnosticCodes.SubprocessChildBlocked;
         var statusLabel = failed ? "failed" : "blocked";
         var summary = $"Step '{assignment.StepKey}' has {statusLabel} child process run '{childRunId.Value:D}' at child step '{stoppedChild.ChildStepKey}' ({childStepId}); child runtime status {stoppedChild.ChildStatus}; child step status {stoppedChild.ChildStepStatus?.ToString() ?? "unknown"}. Child diagnostic(s): {diagnosticSummary}. {recoverySummary}.";
         var evidence = $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-child-{statusLabel}:{childRunId}:{stoppedChild.ChildStatus}:{stoppedChild.ChildStepKey}:{childStepId}:{string.Join("|", stoppedChild.Diagnostics.Select(diagnostic => $"{diagnostic.Code}:{diagnostic.EvidenceHash}"))}:{recoverySummary}";
@@ -456,7 +468,10 @@ internal static class ProcessSubprocessCompletionPolicy
             evidence,
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
-            ProcessDiagnosticIdempotencyClassification.Idempotent);
+            ProcessDiagnosticIdempotencyClassification.Idempotent)
+        {
+            RelatedChildRunId = childRunId
+        };
     }
 
     internal static bool HasToolReceipt(

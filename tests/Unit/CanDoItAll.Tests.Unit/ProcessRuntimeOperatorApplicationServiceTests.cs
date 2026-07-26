@@ -281,7 +281,7 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             blockedStepId,
             producerStepId,
             ProcessBlockedRunRecoveryActionKind.UpstreamStepRework,
-            ProcessBlockedRunRecoveryPolicy.SimpleAppMissingInputProducerRework,
+            ProcessBlockedRunRecoveryPolicy.MissingInputProducerRework,
             sourceResultKey,
             "sha256:missing-input-fingerprint",
             ProcessRecoveryRouteKind.UpstreamStepRework,
@@ -474,8 +474,16 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             blockedStepId,
             sourceResultKey);
         var assignmentStore = new RecordingAssignmentStore(
-            CreateAssignment(runId, planId, producerStepId, "produce-application-skeleton"),
-            CreateAssignment(runId, planId, blockedStepId, "consume-application-skeleton"));
+            CreateArtifactRecoveryAssignment(
+                runId,
+                planId,
+                producerStepId,
+                "produce-application-skeleton"),
+            CreateArtifactRecoveryAssignment(
+                runId,
+                planId,
+                blockedStepId,
+                "consume-application-skeleton"));
         var dispatchQueue = new RecordingDispatchQueue();
         var stateStore = new InMemoryRuntimeStateStore(initialState);
         var unitOfWork = new RecordingUnitOfWork(stateStore);
@@ -502,6 +510,7 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         var coordinator = new ProcessBlockedRunRecoveryCoordinator(
             stateStore,
             new StubPlanStore(CreateSimpleAppPlan(planId)),
+            assignmentStore,
             new ProcessBlockedRunRecoveryCommandExecutor(operatorService),
             new ProcessBlockedRunRecoveryPolicyCatalog());
 
@@ -630,7 +639,7 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
                 blockedStepId,
                 blockedStepId,
                 ProcessBlockedRunRecoveryActionKind.CurrentStepRework,
-                ProcessBlockedRunRecoveryPolicy.SimpleAppMissingOutputRework,
+                ProcessBlockedRunRecoveryPolicy.MissingOutputRework,
                 sourceResultKey,
                 "sha256:missing-output-fingerprint",
                 ProcessRecoveryRouteKind.ManagerAction,
@@ -1396,6 +1405,25 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             Now.AddMinutes(-10));
     }
 
+    private static ProcessRuntimeStepAssignment CreateArtifactRecoveryAssignment(
+        ProcessRunId runId,
+        ProcessInstancePlanId planId,
+        ProcessStepInstanceId stepId,
+        string stepKey)
+    {
+        return CreateAssignment(runId, planId, stepId, stepKey) with
+        {
+            AllowedOperations =
+            [
+                nameof(ProcessDefinitionStepOperationKind.ReadUpstreamArtifacts),
+                nameof(ProcessDefinitionStepOperationKind.WriteManagedProcessArtifacts),
+                nameof(ProcessDefinitionStepOperationKind.RecoverArtifactsOnly)
+            ],
+            OperationTargetScope =
+                nameof(ProcessDefinitionStepTargetScopeKind.ManagedProcessArtifactsOnly)
+        };
+    }
+
     private static IReadOnlyDictionary<string, string> CreateDotNetCreateProjectLaunchVariables(ProcessRunId runId)
     {
         return new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1587,6 +1615,11 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         {
             Requests.Add(request);
             return ValueTask.CompletedTask;
+        }
+
+        public void EnqueueOrDefer(ProcessRuntimeDispatchQueueRequest request)
+        {
+            Requests.Add(request);
         }
     }
 

@@ -65,7 +65,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         CancellationToken cancellationToken)
     {
         await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
             .ConfigureAwait(false);
         await AcquireRunMutationLockAsync(seed.Identity.RunId.Value, cancellationToken)
             .ConfigureAwait(false);

@@ -8,9 +8,8 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessRuntimeDispatchRecoveryRunQuery
 {
-    private const int MaxDispatchableRuns = 500;
-    private const int MaxDispatchableCandidateRows = MaxDispatchableRuns * 8;
-    private const int MaxExpiredClaimRuns = 250;
+    internal const int RecoverableRunPageSize = 250;
+    internal const int BlockedRunPageSize = 250;
 
     private static readonly string ParentRunKeySnippet = JsonSerializer.Serialize(ProcessRuntimeLaunchVariables.ParentProcessRunId);
     private static readonly string ParentStepKeySnippet = JsonSerializer.Serialize(ProcessRuntimeLaunchVariables.ParentProcessStepId);
@@ -33,159 +32,191 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
             readyUpdatedAfterUtc = cutoff.ToUniversalTime();
         }
 
-        var dispatchableCandidateRows = await dbContext.RuntimeStates
-            .AsNoTracking()
-            .Where(state => state.Status == ProcessRuntimeStatus.Active)
-            .Where(state => readyUpdatedAfterUtc == null || state.UpdatedAtUtc >= readyUpdatedAfterUtc)
-            .Join(
-                dbContext.RuntimeSteps.AsNoTracking(),
-                state => state.RunId,
-                step => step.RunId,
-                (state, step) => new { state.RunId, state.UpdatedAtUtc, Step = step })
-            .Where(item =>
-                item.Step.IsExecutable &&
-                item.Step.Status == ProcessRuntimeStepStatus.Ready &&
-                item.Step.ActiveClaimToken == null)
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenBy(item => item.Step.AttemptNumber)
-            .ThenBy(item => item.Step.StepInstanceId)
-            .Select(item => new DispatchableCandidate(
-                item.RunId,
-                item.Step.StepInstanceId,
-                item.UpdatedAtUtc))
-            .Take(MaxDispatchableCandidateRows)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var schedulablePendingCandidateRows = await LoadSchedulablePendingCandidateRowsAsync(
-            dbContext,
-            cancellationToken).ConfigureAwait(false);
-
         var activeChildParentSteps = await LoadActiveChildParentStepsAsync(dbContext, cancellationToken).ConfigureAwait(false);
-        var dispatchableRunIds = dispatchableCandidateRows
-            .Concat(schedulablePendingCandidateRows)
-            .GroupBy(candidate => candidate.RunId)
-            .OrderByDescending(group => group.Max(candidate => candidate.UpdatedAtUtc))
-            .Where(group => group.Any(candidate => !activeChildParentSteps.Contains((candidate.RunId, candidate.StepInstanceId))))
-            .Select(group => group.Key)
-            .Take(MaxDispatchableRuns)
-            .ToArray();
-
-        var expiredClaimRunIds = await dbContext.RuntimeStates
-            .AsNoTracking()
-            .Where(state => state.Status == ProcessRuntimeStatus.Active)
-            .Join(
-                dbContext.DispatchClaims.AsNoTracking(),
-                state => state.RunId,
-                claim => claim.RunId,
-                (state, claim) => new { state.RunId, state.UpdatedAtUtc, Claim = claim })
-            .Where(item =>
-                item.Claim.ExpiresAtUtc <= nowUtc &&
-                (item.Claim.Status == DispatchClaimStatus.Claimed ||
-                 item.Claim.Status == DispatchClaimStatus.LeaseRenewed ||
-                 item.Claim.Status == DispatchClaimStatus.Reclaimed))
-            .GroupBy(item => item.RunId)
-            .Select(group => new
+        var dispatchableRunIds = new List<Guid>();
+        var expiredClaimRunIds = new List<Guid>();
+        RecoverableRunCursor? cursor = null;
+        while (true)
+        {
+            var runtimeStates = await LoadRecoverableRuntimeStatePageAsync(
+                dbContext,
+                cursor,
+                cancellationToken).ConfigureAwait(false);
+            if (runtimeStates.Count == 0)
             {
-                RunId = group.Key,
-                UpdatedAtUtc = group.Max(item => item.UpdatedAtUtc)
-            })
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .Select(item => item.RunId)
-            .Take(MaxExpiredClaimRuns)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
+                break;
+            }
 
-        var runIds = new List<Guid>(dispatchableRunIds.Length + expiredClaimRunIds.Length);
+            var candidateRunIds = runtimeStates
+                .Select(state => state.RunId)
+                .ToArray();
+            var runtimeSteps = await dbContext.RuntimeSteps
+                .AsNoTracking()
+                .Where(step => candidateRunIds.Contains(step.RunId))
+                .Select(step => new RecoveryRuntimeStepCandidate(
+                    step.RunId,
+                    step.StepInstanceId,
+                    step.Status,
+                    step.IsExecutable,
+                    step.ActiveClaimToken,
+                    step.DependencyStepIds,
+                    step.RequiredArtifactSlotIds))
+                .ToArrayAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var availableSlots = await dbContext.AvailableArtifactSlots
+                .AsNoTracking()
+                .Where(slot => candidateRunIds.Contains(slot.RunId))
+                .Select(slot => new AvailableArtifactSlotRow(slot.RunId, slot.SlotId))
+                .ToArrayAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var expiredClaimRunIdSet = await dbContext.DispatchClaims
+                .AsNoTracking()
+                .Where(claim =>
+                    candidateRunIds.Contains(claim.RunId) &&
+                    claim.ExpiresAtUtc <= nowUtc &&
+                    (claim.Status == DispatchClaimStatus.Claimed ||
+                     claim.Status == DispatchClaimStatus.LeaseRenewed ||
+                     claim.Status == DispatchClaimStatus.Reclaimed))
+                .Select(claim => claim.RunId)
+                .Distinct()
+                .ToHashSetAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var stepsByRun = runtimeSteps
+                .GroupBy(step => step.RunId)
+                .ToDictionary(group => group.Key, group => group.ToArray());
+            var slotsByRun = availableSlots
+                .GroupBy(slot => slot.RunId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(slot => slot.SlotId).ToHashSet());
+            foreach (var runtimeState in runtimeStates)
+            {
+                if (stepsByRun.TryGetValue(runtimeState.RunId, out var runSteps))
+                {
+                    slotsByRun.TryGetValue(runtimeState.RunId, out var runAvailableSlots);
+                    if (HasDispatchableStep(
+                        runtimeState,
+                        runSteps,
+                        runAvailableSlots ?? [],
+                        activeChildParentSteps,
+                        readyUpdatedAfterUtc))
+                    {
+                        dispatchableRunIds.Add(runtimeState.RunId);
+                    }
+                }
+
+                if (runtimeState.Status == ProcessRuntimeStatus.Active &&
+                    expiredClaimRunIdSet.Contains(runtimeState.RunId))
+                {
+                    expiredClaimRunIds.Add(runtimeState.RunId);
+                }
+            }
+
+            if (runtimeStates.Count < RecoverableRunPageSize)
+            {
+                break;
+            }
+
+            cursor = runtimeStates[^1].Cursor;
+        }
+
+        var runIds = new List<Guid>(dispatchableRunIds.Count + expiredClaimRunIds.Count);
         var seen = new HashSet<Guid>();
         AddUnique(runIds, seen, dispatchableRunIds);
         AddUnique(runIds, seen, expiredClaimRunIds);
         return runIds;
     }
 
-    private static async Task<IReadOnlyList<DispatchableCandidate>> LoadSchedulablePendingCandidateRowsAsync(
+    public static async Task<IReadOnlyList<BlockedRunRecoveryCandidate>> LoadBlockedRunsPageAsync(
         ProcessPersistenceDbContext dbContext,
-        CancellationToken cancellationToken)
+        BlockedRunRecoveryCursor? cursor = null,
+        DateTimeOffset? updatedAtOrAfterUtc = null,
+        CancellationToken cancellationToken = default)
     {
-        var pendingCandidateRows = await dbContext.RuntimeStates
-            .AsNoTracking()
-            .Where(state => state.Status == ProcessRuntimeStatus.Active || state.Status == ProcessRuntimeStatus.Created)
-            .Join(
-                dbContext.RuntimeSteps.AsNoTracking(),
-                state => state.RunId,
-                step => step.RunId,
-                (state, step) => new { state.RunId, state.UpdatedAtUtc, Step = step })
-            .Where(item =>
-                item.Step.IsExecutable &&
-                item.Step.Status == ProcessRuntimeStepStatus.Pending &&
-                item.Step.ActiveClaimToken == null)
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenBy(item => item.Step.AttemptNumber)
-            .ThenBy(item => item.Step.StepInstanceId)
-            .Select(item => new PendingStepCandidate(
-                item.RunId,
-                item.Step.StepInstanceId,
-                item.UpdatedAtUtc,
-                item.Step.DependencyStepIds,
-                item.Step.RequiredArtifactSlotIds))
-            .Take(MaxDispatchableCandidateRows)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (pendingCandidateRows.Length == 0)
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        if (updatedAtOrAfterUtc is { } cutoff && cutoff.Offset != TimeSpan.Zero)
         {
-            return [];
+            updatedAtOrAfterUtc = cutoff.ToUniversalTime();
         }
 
-        var candidateRunIds = pendingCandidateRows
-            .Select(candidate => candidate.RunId)
-            .Distinct()
-            .ToArray();
-        var stepRows = await dbContext.RuntimeSteps
+        return await dbContext.RuntimeStates
             .AsNoTracking()
-            .Where(step => candidateRunIds.Contains(step.RunId))
-            .Select(step => new RuntimeStepStatusRow(
-                step.RunId,
-                step.StepInstanceId,
-                step.Status))
+            .Where(state => state.Status == ProcessRuntimeStatus.Blocked)
+            .Where(state => updatedAtOrAfterUtc == null || state.UpdatedAtUtc >= updatedAtOrAfterUtc)
+            .Where(state =>
+                cursor == null ||
+                state.UpdatedAtUtc < cursor.Value.UpdatedAtUtc ||
+                state.UpdatedAtUtc == cursor.Value.UpdatedAtUtc &&
+                state.RunId.CompareTo(cursor.Value.RunId) < 0)
+            .OrderByDescending(state => state.UpdatedAtUtc)
+            .ThenByDescending(state => state.RunId)
+            .Select(state => new BlockedRunRecoveryCandidate(
+                state.RunId,
+                state.UpdatedAtUtc))
+            .Take(BlockedRunPageSize)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        var availableSlots = await dbContext.AvailableArtifactSlots
-            .AsNoTracking()
-            .Where(slot => candidateRunIds.Contains(slot.RunId))
-            .Select(slot => new AvailableArtifactSlotRow(slot.RunId, slot.SlotId))
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
+    }
 
-        var stepsByRun = stepRows
-            .GroupBy(step => step.RunId)
-            .ToDictionary(
-                group => group.Key,
-                group => group.ToDictionary(step => step.StepInstanceId, step => step.Status));
-        var slotsByRun = availableSlots
-            .GroupBy(slot => slot.RunId)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(slot => slot.SlotId).ToHashSet());
-        var candidates = new List<DispatchableCandidate>();
-        foreach (var pendingCandidate in pendingCandidateRows)
+    private static async Task<IReadOnlyList<RecoveryRuntimeStateCandidate>> LoadRecoverableRuntimeStatePageAsync(
+        ProcessPersistenceDbContext dbContext,
+        RecoverableRunCursor? cursor,
+        CancellationToken cancellationToken)
+    {
+        return await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state => state.Status == ProcessRuntimeStatus.Active || state.Status == ProcessRuntimeStatus.Created)
+            .Where(state =>
+                cursor == null ||
+                state.UpdatedAtUtc < cursor.Value.UpdatedAtUtc ||
+                state.UpdatedAtUtc == cursor.Value.UpdatedAtUtc &&
+                state.RunId.CompareTo(cursor.Value.RunId) < 0)
+            .OrderByDescending(state => state.UpdatedAtUtc)
+            .ThenByDescending(state => state.RunId)
+            .Select(state => new RecoveryRuntimeStateCandidate(
+                state.RunId,
+                state.Status,
+                state.UpdatedAtUtc))
+            .Take(RecoverableRunPageSize)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static bool HasDispatchableStep(
+        RecoveryRuntimeStateCandidate runtimeState,
+        IReadOnlyList<RecoveryRuntimeStepCandidate> runtimeSteps,
+        IReadOnlySet<Guid> availableSlots,
+        IReadOnlySet<(Guid RunId, Guid StepInstanceId)> activeChildParentSteps,
+        DateTimeOffset? readyUpdatedAfterUtc)
+    {
+        var stepStatuses = runtimeSteps.ToDictionary(step => step.StepInstanceId, step => step.Status);
+        foreach (var runtimeStep in runtimeSteps)
         {
-            if (!stepsByRun.TryGetValue(pendingCandidate.RunId, out var stepStatuses))
+            if (!runtimeStep.IsExecutable ||
+                runtimeStep.ActiveClaimToken is not null ||
+                activeChildParentSteps.Contains((runtimeStep.RunId, runtimeStep.StepInstanceId)))
             {
                 continue;
             }
 
-            slotsByRun.TryGetValue(pendingCandidate.RunId, out var runAvailableSlots);
-            runAvailableSlots ??= [];
-            if (DependenciesSatisfied(pendingCandidate.DependencyStepIds, stepStatuses) &&
-                RequiredArtifactsAvailable(pendingCandidate.RequiredArtifactSlotIds, runAvailableSlots))
+            if (runtimeStep.Status == ProcessRuntimeStepStatus.Ready &&
+                runtimeState.Status == ProcessRuntimeStatus.Active &&
+                (readyUpdatedAfterUtc is null || runtimeState.UpdatedAtUtc >= readyUpdatedAfterUtc))
             {
-                candidates.Add(new DispatchableCandidate(
-                    pendingCandidate.RunId,
-                    pendingCandidate.StepInstanceId,
-                    pendingCandidate.UpdatedAtUtc));
+                return true;
+            }
+
+            if (runtimeStep.Status == ProcessRuntimeStepStatus.Pending &&
+                DependenciesSatisfied(runtimeStep.DependencyStepIds, stepStatuses) &&
+                RequiredArtifactsAvailable(runtimeStep.RequiredArtifactSlotIds, availableSlots))
+            {
+                return true;
             }
         }
 
-        return candidates;
+        return false;
     }
 
     private static async Task<HashSet<(Guid RunId, Guid StepInstanceId)>> LoadActiveChildParentStepsAsync(
@@ -308,26 +339,41 @@ internal static class ProcessRuntimeDispatchRecoveryRunQuery
         return true;
     }
 
-    private sealed record DispatchableCandidate(
+    private sealed record RecoveryRuntimeStateCandidate(
         Guid RunId,
-        Guid StepInstanceId,
-        DateTimeOffset UpdatedAtUtc);
+        ProcessRuntimeStatus Status,
+        DateTimeOffset UpdatedAtUtc)
+    {
+        public RecoverableRunCursor Cursor => new(UpdatedAtUtc, RunId);
+    }
 
-    private sealed record PendingStepCandidate(
+    private sealed record RecoveryRuntimeStepCandidate(
         Guid RunId,
         Guid StepInstanceId,
-        DateTimeOffset UpdatedAtUtc,
+        ProcessRuntimeStepStatus Status,
+        bool IsExecutable,
+        Guid? ActiveClaimToken,
         string DependencyStepIds,
         string RequiredArtifactSlotIds);
-
-    private sealed record RuntimeStepStatusRow(
-        Guid RunId,
-        Guid StepInstanceId,
-        ProcessRuntimeStepStatus Status);
 
     private sealed record AvailableArtifactSlotRow(
         Guid RunId,
         Guid SlotId);
+
+    private readonly record struct RecoverableRunCursor(
+        DateTimeOffset UpdatedAtUtc,
+        Guid RunId);
+
+    internal readonly record struct BlockedRunRecoveryCandidate(
+        Guid RunId,
+        DateTimeOffset UpdatedAtUtc)
+    {
+        public BlockedRunRecoveryCursor Cursor => new(UpdatedAtUtc, RunId);
+    }
+
+    internal readonly record struct BlockedRunRecoveryCursor(
+        DateTimeOffset UpdatedAtUtc,
+        Guid RunId);
 
     private static void AddUnique(
         List<Guid> target,

@@ -157,6 +157,11 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
     {
         var mutation = RequestStepRework(state, context, command);
 
-        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+        return CommitAsync(
+            state,
+            context.CommandId,
+            mutation,
+            cancellationToken,
+            command.BlockedRecoveryAuthorization);
     }
 }

@@ -21,6 +21,8 @@ public sealed class ProcessRuntimeEngineTests
     private static readonly StrategyId StrategyId = new("strategy.execute");
     private static readonly DriverId DriverId = new("driver.runtime");
     private static readonly DispatcherOwnerId OwnerId = new("dispatcher.local");
+    private static readonly ProcessExecutionExecutorId ExecutionExecutorId =
+        new(new Guid("6bdb6a23-a4c4-403c-a736-f533442299f8"));
     private static readonly ProcessStrategyBindingSnapshot Binding = new(
         DriverId,
         StrategyId,
@@ -583,7 +585,101 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
-    public async Task Safe_idempotent_completion_gate_result_routes_to_current_step_retry()
+    public async Task Opaque_primary_diagnostic_with_typed_child_run_routes_as_child_propagation()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var childRunId = ProcessRunId.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                NeedsManagerResultWithOpaqueChildDiagnostic(childRunId)));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal(childRunId, diagnostic.RelatedChildRunId);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.ChildRunBlocked, receipt.RecoveryDecision.FailureCategory);
+        Assert.Equal(ProcessRecoveryRouteKind.ChildRunPropagation, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal(childRunId, receipt.RecoveryDecision.RelatedChildRunId);
+    }
+
+    [Fact]
+    public async Task Attested_transient_before_side_effects_is_classified_for_bounded_adapter_rework()
+    {
+        var engine = new ProcessRuntimeEngine(new RecordingUnitOfWork());
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                AttestedTransientBeforeSideEffectsResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        var attestation = Assert.IsType<ProcessExecutionSafetyAttestation>(
+            diagnostic.ExecutionSafetyAttestation);
+        Assert.True(attestation.IsStructurallyValid());
+        Assert.Equal(RunId, attestation.ProcessRunId);
+        Assert.Equal(ActivityStepId, attestation.StepInstanceId);
+        Assert.Equal(ExecutionExecutorId, attestation.ExecutorId);
+        Assert.Equal(attestation.ExecutionRunId, receipt.ExecutionRunId);
+        var decision = Assert.IsType<ProcessRecoveryDecisionReceipt>(receipt.RecoveryDecision);
+        Assert.Equal(ProcessFailureCategory.AdapterRetryable, decision.FailureCategory);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, decision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, decision.RouteKind);
+        Assert.Equal(ActivityStepId, decision.ResponsibleStepInstanceId);
+        Assert.Equal("process.current-step-replay-scope-review-required", decision.Policy);
+    }
+
+    [Fact]
+    public async Task Safe_idempotent_completion_gate_result_waits_for_assignment_replay_scope_review()
     {
         var unitOfWork = new RecordingUnitOfWork();
         var engine = new ProcessRuntimeEngine(unitOfWork);
@@ -619,21 +715,21 @@ public sealed class ProcessRuntimeEngineTests
         var receipt = Assert.Single(result.State.AppliedResults);
         var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
         Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
         Assert.NotNull(receipt.RecoveryDecision);
         Assert.Equal(ProcessFailureCategory.ProductCompletionGate, receipt.RecoveryDecision.FailureCategory);
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", receipt.RecoveryDecision.Policy);
         Assert.Equal(1, receipt.RecoveryDecision.AutomaticRetryAttempt);
         Assert.Equal(1, receipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
-        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
-        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
     }
 
     [Fact]
-    public async Task Branch_defect_evidence_gap_routes_to_current_step_retry()
+    public async Task Branch_defect_evidence_gap_waits_for_assignment_replay_scope_review()
     {
         var unitOfWork = new RecordingUnitOfWork();
         var engine = new ProcessRuntimeEngine(unitOfWork);
@@ -669,19 +765,19 @@ public sealed class ProcessRuntimeEngineTests
         var receipt = Assert.Single(result.State.AppliedResults);
         var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
         Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
         Assert.NotNull(receipt.RecoveryDecision);
         Assert.Equal(ProcessFailureCategory.ProductCompletionGate, receipt.RecoveryDecision.FailureCategory);
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
-        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
-        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", receipt.RecoveryDecision.Policy);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
     }
 
     [Fact]
-    public async Task Runtime_lifecycle_correlation_gap_routes_to_current_step_retry()
+    public async Task Runtime_lifecycle_correlation_gap_waits_for_assignment_replay_scope_review()
     {
         var unitOfWork = new RecordingUnitOfWork();
         var engine = new ProcessRuntimeEngine(unitOfWork);
@@ -717,14 +813,14 @@ public sealed class ProcessRuntimeEngineTests
         var receipt = Assert.Single(result.State.AppliedResults);
         var step = result.State.Steps.Single(item => item.StepInstanceId == ActivityStepId);
         Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Ready, step.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Ready, receipt.AppliedStepStatus);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, step.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
         Assert.NotNull(receipt.RecoveryDecision);
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, receipt.RecoveryDecision.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, receipt.RecoveryDecision.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", receipt.RecoveryDecision.Policy);
-        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
-        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", receipt.RecoveryDecision.Policy);
+        Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
+        Assert.DoesNotContain(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
     }
 
 
@@ -811,7 +907,7 @@ public sealed class ProcessRuntimeEngineTests
         Assert.Equal("process.current-step-safe-retry-budget-exhausted", secondReceipt.RecoveryDecision.Policy);
         Assert.Equal(2, secondReceipt.RecoveryDecision.SameDiagnosticFingerprintAttempt);
         Assert.Equal(1, secondReceipt.RecoveryDecision.MaximumSameDiagnosticFingerprintAttempts);
-        Assert.Contains("exhausted automatic current-step retry budget", secondReceipt.RecoveryDecision.SafeReason, StringComparison.Ordinal);
+        Assert.Contains("exhausted the bounded replay-scope recovery budget", secondReceipt.RecoveryDecision.SafeReason, StringComparison.Ordinal);
         Assert.Contains(second.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked);
     }
 
@@ -1420,6 +1516,32 @@ public sealed class ProcessRuntimeEngineTests
         };
     }
 
+    private static StrategyResultEnvelope NeedsManagerResultWithOpaqueChildDiagnostic(ProcessRunId childRunId)
+    {
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode("external.system.condition"),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:opaque-child-diagnostic",
+                    "An external system condition stopped the child run.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+                {
+                    RelatedChildRunId = childRunId
+                }
+            ],
+            [],
+            "sha256:opaque-child-result");
+    }
+
     private static StrategyResultEnvelope SafeCompletionGateNeedsManagerResult()
     {
         return new StrategyResultEnvelope(
@@ -1441,6 +1563,43 @@ public sealed class ProcessRuntimeEngineTests
             ],
             [],
             "sha256:completion-gate-safe-retry");
+    }
+
+    private static StrategyResultEnvelope AttestedTransientBeforeSideEffectsResult()
+    {
+        var attestation = ProcessExecutionSafetyAttestation.FailedBeforeRecordedSideEffects(
+            new ProcessExecutionRunId(
+                new Guid("458e6dab-95d2-4ef8-9c05-e4da58594cf8")),
+            RunId,
+            ActivityStepId,
+            ExecutionExecutorId,
+            "sha256:" + new string('b', 64));
+        return new StrategyResultEnvelope(
+            StrategyId,
+            "1.0.0",
+            Guid.NewGuid(),
+            StrategyOutcome.NeedsManager,
+            [],
+            [],
+            [
+                new StrategyDiagnosticRef(
+                    new StrategyDiagnosticCode(
+                        ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects),
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:attested-zero-side-effects",
+                    "The provider failed before the execution recorded any side effect.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+                {
+                    ExecutionSafetyAttestation = attestation
+                }
+            ],
+            [],
+            "sha256:attested-transient-result")
+        {
+            ExecutionRunId = attestation.ExecutionRunId
+        };
     }
 
     private static StrategyResultEnvelope BranchDefectEvidenceGapNeedsManagerResult()

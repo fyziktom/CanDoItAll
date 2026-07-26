@@ -175,9 +175,8 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         }
 
         await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-        await dispatchQueue.EnqueueAsync(
-            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy),
-            cancellationToken).ConfigureAwait(false);
+        dispatchQueue.EnqueueOrDefer(
+            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy));
 
         var recoverySource = executionRunId == Guid.Empty
             ? "missing AgentFramework execution run"
@@ -314,9 +313,8 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             result,
             requestedBy,
             cancellationToken).ConfigureAwait(false);
-        await dispatchQueue.EnqueueAsync(
-            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy),
-            cancellationToken).ConfigureAwait(false);
+        dispatchQueue.EnqueueOrDefer(
+            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy));
 
         logger.LogInformation(
             "Recovered completed AgentFramework execution run {ExecutionRunId} into process run {RunId}, step {StepInstanceId}. Outcome={Outcome}",
@@ -370,12 +368,17 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                     diagnostic.SafeSummary,
                     diagnostic.RestrictedEvidenceReference,
                     diagnostic.RetrySafety,
-                    diagnostic.Idempotency))
+                    diagnostic.Idempotency)
+                {
+                    RelatedChildRunId = diagnostic.RelatedChildRunId,
+                    ExecutionSafetyAttestation = diagnostic.ExecutionSafetyAttestation
+                })
                 .ToArray(),
             adapterResult.ManagerSignals,
             adapterResult.ResultHash)
         {
-            UserSafeSummary = adapterResult.UserSafeSummary
+            UserSafeSummary = adapterResult.UserSafeSummary,
+            ExecutionRunId = adapterResult.ExecutionRunId
         };
     }
 

@@ -29,6 +29,8 @@ internal static class ProcessAgentVisibleLaunchVariablePolicy
         ProcessRuntimeLaunchVariables.CompletionIssueRoutesByStep,
         ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
         ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys,
+        ProcessRuntimeLaunchVariables.ProcessStepDeterministicToolPlanDescriptorJson,
+        ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson,
         ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey,
         ProcessRuntimeLaunchVariables.ProcessStepScopedLaunchVariablePrefixesByStep
     };

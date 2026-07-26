@@ -346,19 +346,28 @@
           {
             "ToolName": "workspace_dotnet_restore",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "product-repair-applied",
+              "proof-only-revalidation-prepared"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           },
           {
             "ToolName": "workspace_dotnet_build",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "product-repair-applied",
+              "proof-only-revalidation-prepared"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           },
           {
             "ToolName": "workspace_dotnet_test",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "product-repair-applied",
+              "proof-only-revalidation-prepared"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           }
         ],
@@ -906,19 +915,28 @@
           {
             "ToolName": "workspace_dotnet_restore",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "product-repair-applied",
+              "proof-only-revalidation-prepared"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           },
           {
             "ToolName": "workspace_dotnet_build",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "product-repair-applied",
+              "proof-only-revalidation-prepared"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           },
           {
             "ToolName": "workspace_dotnet_test",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "product-repair-applied",
+              "proof-only-revalidation-prepared"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           }
         ],

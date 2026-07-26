@@ -26,14 +26,17 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var recoveryEnabled = options.Value.EnableRecovery;
-        var recurringReadyRecoveryStartedAtUtc = DateTimeOffset.UtcNow;
+        var startupRecoveryScanCompleted = !recoveryEnabled;
+        DateTimeOffset? successfulRecoveryScanWatermarkUtc = null;
         var nextRecoveryAtUtc = DateTimeOffset.MinValue;
         var activeImmediateDispatches = new Dictionary<Task, ProcessRunId>();
         var activeRecoveryDispatches = new Dictionary<Task, ProcessRunId>();
-        if (recoveryEnabled)
-        {
-            await EnqueueRecoverableRunsAsync(readyUpdatedAfterUtc: null, stoppingToken).ConfigureAwait(false);
-        }
+        var activeRecoveryScanStartedAtUtc = recoveryEnabled
+            ? DateTimeOffset.UtcNow
+            : (DateTimeOffset?)null;
+        Task? recoveryEnqueueTask = activeRecoveryScanStartedAtUtc is not null
+            ? EnqueueRecoverableRunsAsync(updatedAtOrAfterUtc: null, stoppingToken)
+            : null;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -44,10 +47,31 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                 queue.FlushDeferredRequests();
 
                 var nowUtc = DateTimeOffset.UtcNow;
-                if (recoveryEnabled && nowUtc >= nextRecoveryAtUtc)
+                if (recoveryEnqueueTask is { IsCompleted: true } completedRecoveryEnqueueTask)
                 {
-                    await EnqueueRecoverableRunsAsync(recurringReadyRecoveryStartedAtUtc, stoppingToken).ConfigureAwait(false);
-                    nextRecoveryAtUtc = nowUtc.Add(RecoveryPollInterval);
+                    recoveryEnqueueTask = null;
+                    var scanSucceeded = await ObserveRecoveryEnqueueTaskAsync(completedRecoveryEnqueueTask)
+                        .ConfigureAwait(false);
+                    if (scanSucceeded)
+                    {
+                        startupRecoveryScanCompleted = true;
+                        successfulRecoveryScanWatermarkUtc = activeRecoveryScanStartedAtUtc;
+                    }
+
+                    activeRecoveryScanStartedAtUtc = null;
+                    nextRecoveryAtUtc = DateTimeOffset.UtcNow.Add(RecoveryPollInterval);
+                }
+
+                if (recoveryEnabled &&
+                    recoveryEnqueueTask is null &&
+                    nowUtc >= nextRecoveryAtUtc)
+                {
+                    activeRecoveryScanStartedAtUtc = DateTimeOffset.UtcNow;
+                    recoveryEnqueueTask = EnqueueRecoverableRunsAsync(
+                        startupRecoveryScanCompleted
+                            ? successfulRecoveryScanWatermarkUtc
+                            : null,
+                        stoppingToken);
                 }
 
                 while (activeImmediateDispatches.Count < MaxImmediateDispatches &&
@@ -94,6 +118,28 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
 
         await ObserveCompletedDispatchesAsync(activeImmediateDispatches).ConfigureAwait(false);
         await ObserveCompletedDispatchesAsync(activeRecoveryDispatches).ConfigureAwait(false);
+        if (recoveryEnqueueTask is not null)
+        {
+            _ = await ObserveRecoveryEnqueueTaskAsync(recoveryEnqueueTask).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<bool> ObserveRecoveryEnqueueTaskAsync(Task recoveryEnqueueTask)
+    {
+        try
+        {
+            await recoveryEnqueueTask.ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Process background recovery discovery failed.");
+            return false;
+        }
     }
 
     private void TryStartDispatch(
@@ -191,11 +237,10 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                     cancellationToken).ConfigureAwait(false);
                 foreach (var releasedParentRunId in releasedParentRunIds)
                 {
-                    await queue.EnqueueAsync(
+                    queue.EnqueueOrDefer(
                         new ProcessRuntimeDispatchQueueRequest(
                             new ProcessRunId(releasedParentRunId),
-                            NormalizeRequestedBy(request.RequestedBy)),
-                        cancellationToken).ConfigureAwait(false);
+                            NormalizeRequestedBy(request.RequestedBy)));
                 }
 
                 await ReworkActiveParentStepsForStoppedChildAsync(
@@ -211,11 +256,10 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                     .ConfigureAwait(false);
                 foreach (var parentRunId in parentRunIds)
                 {
-                    await queue.EnqueueAsync(
+                    queue.EnqueueOrDefer(
                         new ProcessRuntimeDispatchQueueRequest(
                             new ProcessRunId(parentRunId),
-                            NormalizeRequestedBy(request.RequestedBy)),
-                        cancellationToken).ConfigureAwait(false);
+                            NormalizeRequestedBy(request.RequestedBy)));
                 }
 
                 if (parentRunIds.Count > 0)
@@ -235,6 +279,8 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
                     result.Stage,
                     result.Status);
             }
+
+            queue.MarkDispatchSucceeded(request.RunId);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -242,9 +288,10 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         }
         catch (Exception exception)
         {
+            queue.DeferAfterFailure(request, DateTimeOffset.UtcNow);
             logger.LogError(
                 exception,
-                "Process background dispatch failed for run {RunId}.",
+                "Process background dispatch failed for run {RunId}. The deduplicated request was retained for a delayed retry.",
                 request.RunId.Value);
         }
     }
@@ -487,56 +534,87 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
     }
 
     private async Task EnqueueRecoverableRunsAsync(
-        DateTimeOffset? readyUpdatedAfterUtc,
+        DateTimeOffset? updatedAtOrAfterUtc,
         CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ProcessPersistenceDbContext>();
-        var terminalChildRunIds = await ProcessRuntimeChildRunParentQuery
-            .LoadTerminalChildRunIdsWithParentLinksAsync(dbContext, cancellationToken)
-            .ConfigureAwait(false);
-        foreach (var terminalChildRunId in terminalChildRunIds)
+        ProcessRuntimeDispatchRecoveryRunQuery.BlockedRunRecoveryCursor? blockedRunCursor = null;
+        while (true)
         {
-            var childStatus = await ProcessRuntimeChildRunParentQuery
-                .LoadStoppedChildStatusAsync(dbContext, terminalChildRunId, cancellationToken)
+            var blockedRuns = await ProcessRuntimeDispatchRecoveryRunQuery
+                .LoadBlockedRunsPageAsync(
+                    dbContext,
+                    blockedRunCursor,
+                    updatedAtOrAfterUtc,
+                    cancellationToken)
                 .ConfigureAwait(false);
-            if (childStatus is null)
-            {
-                continue;
-            }
-
-            var releasedParentRunIds = await ReleaseActiveParentClaimsForStoppedChildAsync(
-                scope.ServiceProvider,
-                terminalChildRunId,
-                RecoveryRequestedBy,
-                cancellationToken).ConfigureAwait(false);
-            foreach (var releasedParentRunId in releasedParentRunIds)
+            foreach (var blockedRun in blockedRuns)
             {
                 await queue.EnqueueAsync(
-                    new ProcessRuntimeDispatchQueueRequest(new ProcessRunId(releasedParentRunId), RecoveryRequestedBy, IsRecovery: true),
+                    new ProcessRuntimeDispatchQueueRequest(
+                        new ProcessRunId(blockedRun.RunId),
+                        RecoveryRequestedBy,
+                        IsRecovery: true),
                     cancellationToken).ConfigureAwait(false);
             }
 
-            var reworkedParentRunIds = await ReworkActiveParentStepsForStoppedChildAsync(
-                scope.ServiceProvider,
-                dbContext,
-                terminalChildRunId,
-                childStatus.Value,
-                RecoveryRequestedBy,
-                cancellationToken).ConfigureAwait(false);
-            foreach (var reworkedParentRunId in reworkedParentRunIds)
+            if (blockedRuns.Count < ProcessRuntimeDispatchRecoveryRunQuery.BlockedRunPageSize)
             {
-                await queue.EnqueueAsync(
-                    new ProcessRuntimeDispatchQueueRequest(new ProcessRunId(reworkedParentRunId), RecoveryRequestedBy, IsRecovery: true),
-                    cancellationToken).ConfigureAwait(false);
+                break;
             }
+
+            blockedRunCursor = blockedRuns[^1].Cursor;
+        }
+
+        var terminalChildReconciliationFailed = false;
+        ProcessRuntimeChildRunParentQuery.TerminalChildRunCursor? terminalChildCursor = null;
+        while (true)
+        {
+            var terminalChildRuns = await ProcessRuntimeChildRunParentQuery
+                .LoadTerminalChildRunsPageAsync(
+                    dbContext,
+                    terminalChildCursor,
+                    updatedAtOrAfterUtc,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var terminalChildRun in terminalChildRuns)
+            {
+                try
+                {
+                    await ReconcileTerminalChildAsync(
+                        scope.ServiceProvider,
+                        dbContext,
+                        terminalChildRun.RunId,
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    terminalChildReconciliationFailed = true;
+                    logger.LogError(
+                        exception,
+                        "Process background recovery could not reconcile terminal child run {RunId}; continuing with remaining candidates.",
+                        terminalChildRun.RunId);
+                }
+            }
+
+            if (terminalChildRuns.Count < ProcessRuntimeChildRunParentQuery.TerminalChildRunPageSize)
+            {
+                break;
+            }
+
+            terminalChildCursor = terminalChildRuns[^1].Cursor;
         }
 
         var activeRunIds = await ProcessRuntimeDispatchRecoveryRunQuery
             .LoadRecoverableRunIdsAsync(
                 dbContext,
                 DateTimeOffset.UtcNow,
-                readyUpdatedAfterUtc,
+                updatedAtOrAfterUtc,
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -544,6 +622,80 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         {
             await queue.EnqueueAsync(
                 new ProcessRuntimeDispatchQueueRequest(new ProcessRunId(runId), RecoveryRequestedBy, IsRecovery: true),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (terminalChildReconciliationFailed)
+        {
+            throw new InvalidOperationException(
+                "One or more terminal child runs could not be reconciled. The recovery watermark was not advanced.");
+        }
+    }
+
+    private async Task ReconcileTerminalChildAsync(
+        IServiceProvider serviceProvider,
+        ProcessPersistenceDbContext dbContext,
+        Guid terminalChildRunId,
+        CancellationToken cancellationToken)
+    {
+        var childStatus = await ProcessRuntimeChildRunParentQuery
+            .LoadStoppedChildStatusAsync(dbContext, terminalChildRunId, cancellationToken)
+            .ConfigureAwait(false);
+        if (childStatus is null)
+        {
+            return;
+        }
+
+        var releasedParentRunIds = await ReleaseActiveParentClaimsForStoppedChildAsync(
+            serviceProvider,
+            terminalChildRunId,
+            RecoveryRequestedBy,
+            cancellationToken).ConfigureAwait(false);
+        foreach (var releasedParentRunId in releasedParentRunIds)
+        {
+            await queue.EnqueueAsync(
+                new ProcessRuntimeDispatchQueueRequest(
+                    new ProcessRunId(releasedParentRunId),
+                    RecoveryRequestedBy,
+                    IsRecovery: true),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var reworkedParentRunIds = await ReworkActiveParentStepsForStoppedChildAsync(
+            serviceProvider,
+            dbContext,
+            terminalChildRunId,
+            childStatus.Value,
+            RecoveryRequestedBy,
+            cancellationToken).ConfigureAwait(false);
+        foreach (var reworkedParentRunId in reworkedParentRunIds)
+        {
+            await queue.EnqueueAsync(
+                new ProcessRuntimeDispatchQueueRequest(
+                    new ProcessRunId(reworkedParentRunId),
+                    RecoveryRequestedBy,
+                    IsRecovery: true),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (childStatus != ProcessRuntimeStatus.Completed)
+        {
+            return;
+        }
+
+        var blockedParentRunIds = await ProcessRuntimeChildRunParentQuery
+            .LoadBlockedParentRunIdsAsync(
+                dbContext,
+                terminalChildRunId,
+                cancellationToken)
+            .ConfigureAwait(false);
+        foreach (var blockedParentRunId in blockedParentRunIds)
+        {
+            await queue.EnqueueAsync(
+                new ProcessRuntimeDispatchQueueRequest(
+                    new ProcessRunId(blockedParentRunId),
+                    RecoveryRequestedBy,
+                    IsRecovery: true),
                 cancellationToken).ConfigureAwait(false);
         }
     }

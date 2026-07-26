@@ -123,7 +123,10 @@ public sealed class ProcessLaunchApplicationService(
                 initialState,
                 createMutation,
                 parentStepPrecondition,
-                plan),
+                plan)
+            {
+                InitialAssignments = assignments
+            },
             cancellationToken).ConfigureAwait(false);
         if (!createCommit.Succeeded)
         {
@@ -137,8 +140,8 @@ public sealed class ProcessLaunchApplicationService(
                 createCommit.Diagnostics.Select(diagnostic => diagnostic.Message).ToArray());
         }
 
-        await assignmentStore.SaveAsync(assignments, cancellationToken).ConfigureAwait(false);
         var artifactRoot = BuildManagedProcessArtifactRoot(initialState.RunId);
+        var engine = new ProcessRuntimeEngine(unitOfWork);
         try
         {
             await artifactInitializer.InitializeAsync(
@@ -153,6 +156,16 @@ public sealed class ProcessLaunchApplicationService(
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
+            var diagnostics = new List<string>
+            {
+                $"Failed to initialize managed process artifact root '{artifactRoot}': {exception.Message}"
+            };
+            diagnostics.AddRange(await TryCancelFailedLaunchAsync(
+                engine,
+                initialState.RunId,
+                request.RequestedBy,
+                cancellationToken).ConfigureAwait(false));
+            diagnostics.AddRange(await TryCatchUpFailedLaunchProjectionAsync(cancellationToken).ConfigureAwait(false));
             return new ProcessLaunchResult(
                 plan.Definition.DefinitionId,
                 plan.Header.PlanId,
@@ -160,10 +173,9 @@ public sealed class ProcessLaunchApplicationService(
                 ProcessLaunchStage.Failed,
                 BuildRunRoute(initialState.RunId, request.ProjectId),
                 launchPlan,
-                [$"Failed to initialize managed process artifact root '{artifactRoot}': {exception.Message}"]);
+                diagnostics);
         }
 
-        var engine = new ProcessRuntimeEngine(unitOfWork);
         var activeCommit = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
             initialState.RunId,
             reloadedState => engine.ActivateAsync(
@@ -171,23 +183,44 @@ public sealed class ProcessLaunchApplicationService(
                 CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
                 cancellationToken),
             cancellationToken).ConfigureAwait(false);
-        var activeState = activeCommit.State;
-        if (activeCommit.Succeeded)
+        if (!activeCommit.Succeeded)
         {
-            var scheduled = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
-                initialState.RunId,
-                reloadedState => engine.ScheduleReadyAsync(
-                    reloadedState,
-                    CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
-                    cancellationToken),
+            return await BuildFailedLifecycleLaunchResultAsync(
+                plan,
+                launchPlan,
+                request,
+                engine,
+                activeCommit,
+                "activation",
                 cancellationToken).ConfigureAwait(false);
-            activeState = scheduled.State;
+        }
+
+        var scheduled = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
+            initialState.RunId,
+            reloadedState => engine.ScheduleReadyAsync(
+                reloadedState,
+                CreateContext(request.RequestedBy, NormalizeUtc(clock.GetUtcNow())),
+                cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+        if (!scheduled.Succeeded)
+        {
+            return await BuildFailedLifecycleLaunchResultAsync(
+                plan,
+                launchPlan,
+                request,
+                engine,
+                scheduled,
+                "ready-step scheduling",
+                cancellationToken).ConfigureAwait(false);
         }
 
         await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
 
-        var stage = ProcessLaunchStage.Running;
-        if (request.Execute)
+        var activeState = scheduled.State;
+        var stage = MapLaunchStage(activeState.Status);
+        if (request.Execute &&
+            stage == ProcessLaunchStage.Running &&
+            activeState.Status == ProcessRuntimeStatus.Active)
         {
             await dispatchQueue.EnqueueAsync(
                 new ProcessRuntimeDispatchQueueRequest(activeState.RunId, request.RequestedBy),
@@ -1225,6 +1258,9 @@ public sealed class ProcessLaunchApplicationService(
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepKind);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepSubprocessContractJson);
+        RemoveCanonicalLaunchVariable(
+            enriched,
+            ProcessRuntimeLaunchVariables.ProcessStepDeterministicToolPlanDescriptorJson);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey);
         RemoveCanonicalLaunchVariable(enriched, ProcessRuntimeLaunchVariables.ProcessStepCompletionDispositionJson);
@@ -1269,21 +1305,37 @@ public sealed class ProcessLaunchApplicationService(
                 ProcessRuntimeLaunchVariables.SerializeProcessStepSubprocessContract(step.SubprocessContract));
         }
 
-        if (step.ExecutionContract?.DeterministicToolPlan is { } deterministicToolPlan &&
-            !string.IsNullOrWhiteSpace(deterministicToolPlan.ScriptLaunchVariable) &&
-            !string.IsNullOrWhiteSpace(deterministicToolPlan.ScriptRefLaunchVariable))
+        if (step.ExecutionContract?.DeterministicToolPlan is { } deterministicToolPlan)
         {
+            var operationPolicies = deterministicToolPlan.Operations
+                .Select(CreateOperationExecutionPolicy)
+                .ToArray();
             SetCanonicalLaunchVariable(
                 enriched,
-                ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson,
-                ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
-                    new ProcessRuntimeScriptHelperDescriptor(
-                        deterministicToolPlan.ScriptLaunchVariable.Trim(),
-                        deterministicToolPlan.ScriptRefLaunchVariable.Trim(),
-                        deterministicToolPlan.SideEffectManifestLaunchVariable.Trim(),
+                ProcessRuntimeLaunchVariables.ProcessStepDeterministicToolPlanDescriptorJson,
+                ProcessRuntimeLaunchVariables.SerializeProcessStepDeterministicToolPlanDescriptor(
+                    new ProcessRuntimeDeterministicToolPlanDescriptor(
                         deterministicToolPlan.PlanKey.Trim(),
                         deterministicToolPlan.PlanKind.Trim(),
-                        deterministicToolPlan.ExecutionPlanLaunchVariable.Trim())));
+                        deterministicToolPlan.ExecutionPlanLaunchVariable.Trim(),
+                        operationPolicies)));
+
+            if (!string.IsNullOrWhiteSpace(deterministicToolPlan.ScriptLaunchVariable) &&
+                !string.IsNullOrWhiteSpace(deterministicToolPlan.ScriptRefLaunchVariable))
+            {
+                SetCanonicalLaunchVariable(
+                    enriched,
+                    ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson,
+                    ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
+                        new ProcessRuntimeScriptHelperDescriptor(
+                            deterministicToolPlan.ScriptLaunchVariable.Trim(),
+                            deterministicToolPlan.ScriptRefLaunchVariable.Trim(),
+                            deterministicToolPlan.SideEffectManifestLaunchVariable.Trim(),
+                            deterministicToolPlan.PlanKey.Trim(),
+                            deterministicToolPlan.PlanKind.Trim(),
+                            deterministicToolPlan.ExecutionPlanLaunchVariable.Trim(),
+                            operationPolicies)));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(step.ExecutionContract?.RuntimeOwnedExecutorKey))
@@ -1363,6 +1415,32 @@ public sealed class ProcessLaunchApplicationService(
         }
 
         return enriched;
+    }
+
+    private static ProcessToolOperationExecutionPolicy CreateOperationExecutionPolicy(
+        ProcessTemplateToolPlanOperationDocument operation)
+    {
+        if (!ProcessToolOperationExecutionPolicyKeys.TryResolveIdempotency(
+                operation.IdempotencyPolicyKey,
+                out var idempotency))
+        {
+            throw new InvalidOperationException(
+                $"Deterministic operation '{operation.Key}' has an unresolved idempotency policy.");
+        }
+
+        if (!ProcessToolOperationExecutionPolicyKeys.TryResolveFailureReconciliation(
+                operation.FailureReconciliationPolicyKey,
+                out var failureReconciliation))
+        {
+            throw new InvalidOperationException(
+                $"Deterministic operation '{operation.Key}' has an unresolved failure reconciliation policy.");
+        }
+
+        return new ProcessToolOperationExecutionPolicy(
+            operation.Key.Trim(),
+            operation.ToolName.Trim(),
+            idempotency,
+            failureReconciliation);
     }
 
     private static void ApplyStepScopedLaunchVariablePrefixFilter(
@@ -1719,6 +1797,91 @@ public sealed class ProcessLaunchApplicationService(
     private static DateTimeOffset NormalizeUtc(DateTimeOffset value)
     {
         return value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
+    }
+
+    private async Task<ProcessLaunchResult> BuildFailedLifecycleLaunchResultAsync(
+        ProcessInstancePlan plan,
+        ProcessLaunchPlanView launchPlan,
+        ProcessLaunchRequest request,
+        ProcessRuntimeEngine engine,
+        ProcessRuntimeCommitResult rejectedCommit,
+        string lifecyclePhase,
+        CancellationToken cancellationToken)
+    {
+        var diagnostics = new List<string>
+        {
+            $"Process launch stopped because {lifecyclePhase} was rejected."
+        };
+        diagnostics.AddRange(rejectedCommit.Diagnostics.Select(diagnostic =>
+            $"{diagnostic.Code}: {diagnostic.Message}"));
+        diagnostics.AddRange(await TryCancelFailedLaunchAsync(
+            engine,
+            rejectedCommit.State.RunId,
+            request.RequestedBy,
+            cancellationToken).ConfigureAwait(false));
+        diagnostics.AddRange(await TryCatchUpFailedLaunchProjectionAsync(cancellationToken).ConfigureAwait(false));
+
+        return new ProcessLaunchResult(
+            plan.Definition.DefinitionId,
+            plan.Header.PlanId,
+            rejectedCommit.State.RunId,
+            ProcessLaunchStage.Failed,
+            BuildRunRoute(rejectedCommit.State.RunId, request.ProjectId),
+            launchPlan,
+            diagnostics);
+    }
+
+    private async Task<IReadOnlyList<string>> TryCancelFailedLaunchAsync(
+        ProcessRuntimeEngine engine,
+        ProcessRunId runId,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cancellation = await ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(
+                runId,
+                state => engine.RequestCancellationAsync(
+                    state,
+                    CreateContext(requestedBy, NormalizeUtc(clock.GetUtcNow())),
+                    cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+            if (cancellation.Succeeded ||
+                ProcessRuntimeTerminalStates.IsRunTerminal(cancellation.State.Status))
+            {
+                return [];
+            }
+
+            return cancellation.Diagnostics
+                .Select(diagnostic =>
+                    $"Failed-launch cleanup was rejected. {diagnostic.Code}: {diagnostic.Message}")
+                .DefaultIfEmpty("Failed-launch cleanup was rejected without a diagnostic.")
+                .ToArray();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return
+            [
+                $"Failed-launch cleanup could not terminate process run '{runId}': {exception.Message}"
+            ];
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> TryCatchUpFailedLaunchProjectionAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
+            return [];
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return
+            [
+                $"Failed-launch projection catch-up did not complete: {exception.Message}"
+            ];
+        }
     }
 
     private async Task<ProcessRuntimeCommitResult> ExecuteLaunchLifecycleTransitionWithConcurrencyRetryAsync(

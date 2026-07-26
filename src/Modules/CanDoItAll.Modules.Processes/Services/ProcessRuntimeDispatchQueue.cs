@@ -14,7 +14,11 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
     private readonly ConcurrentDictionary<ProcessRunId, byte> recoveryQueuedRunIds = new();
     private readonly object activeRunGate = new();
     private readonly HashSet<ProcessRunId> activeRunIds = [];
-    private readonly Dictionary<ProcessRunId, ProcessRuntimeDispatchQueueRequest> deferredRunRequests = [];
+    private readonly Dictionary<ProcessRunId, DeferredDispatchRequest> deferredRunRequests = [];
+    private readonly Dictionary<ProcessRunId, int> dispatchFailureCounts = [];
+    private static readonly TimeSpan InitialDispatchFailureRetryDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MaximumDispatchFailureRetryDelay = TimeSpan.FromSeconds(30);
+    private const int MaximumDispatchFailureBackoffLevel = 6;
 
     public ProcessRuntimeDispatchQueue()
         : this(new ProcessRuntimeDispatchQueueOptions())
@@ -60,6 +64,69 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
         {
             queuedRunIds.TryRemove(request.RunId, out _);
             throw;
+        }
+    }
+
+    public void EnqueueOrDefer(ProcessRuntimeDispatchQueueRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (TryEnqueue(request))
+        {
+            lock (activeRunGate)
+            {
+                deferredRunRequests.Remove(request.RunId);
+            }
+
+            return;
+        }
+
+        lock (activeRunGate)
+        {
+            deferredRunRequests[request.RunId] = deferredRunRequests.TryGetValue(
+                request.RunId,
+                out var existing)
+                ? SelectPreferredRequest(existing, new DeferredDispatchRequest(request, DateTimeOffset.MinValue))
+                : new DeferredDispatchRequest(request, DateTimeOffset.MinValue);
+        }
+    }
+
+    public void DeferAfterFailure(
+        ProcessRuntimeDispatchQueueRequest request,
+        DateTimeOffset failedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (failedAtUtc.Offset != TimeSpan.Zero)
+        {
+            failedAtUtc = failedAtUtc.ToUniversalTime();
+        }
+
+        lock (activeRunGate)
+        {
+            var failureCount = dispatchFailureCounts.TryGetValue(request.RunId, out var existingFailureCount)
+                ? Math.Min(existingFailureCount + 1, MaximumDispatchFailureBackoffLevel)
+                : 1;
+            dispatchFailureCounts[request.RunId] = failureCount;
+
+            if (immediateQueuedRunIds.ContainsKey(request.RunId) ||
+                recoveryQueuedRunIds.ContainsKey(request.RunId) ||
+                deferredRunRequests.ContainsKey(request.RunId))
+            {
+                return;
+            }
+
+            deferredRunRequests[request.RunId] = new DeferredDispatchRequest(
+                request,
+                failedAtUtc.Add(CalculateDispatchFailureRetryDelay(failureCount)));
+        }
+    }
+
+    public void MarkDispatchSucceeded(ProcessRunId runId)
+    {
+        lock (activeRunGate)
+        {
+            dispatchFailureCounts.Remove(runId);
         }
     }
 
@@ -109,8 +176,8 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
             deferredRunRequests[request.RunId] = deferredRunRequests.TryGetValue(
                 request.RunId,
                 out var existing)
-                ? SelectPreferredRequest(existing, request)
-                : request;
+                ? SelectPreferredRequest(existing, new DeferredDispatchRequest(request, DateTimeOffset.MinValue))
+                : new DeferredDispatchRequest(request, DateTimeOffset.MinValue);
             return false;
         }
     }
@@ -124,12 +191,22 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
     }
 
     public int FlushDeferredRequests()
+        => FlushDeferredRequests(DateTimeOffset.UtcNow);
+
+    internal int FlushDeferredRequests(DateTimeOffset nowUtc)
     {
-        KeyValuePair<ProcessRunId, ProcessRuntimeDispatchQueueRequest>[] readyRequests;
+        if (nowUtc.Offset != TimeSpan.Zero)
+        {
+            nowUtc = nowUtc.ToUniversalTime();
+        }
+
+        KeyValuePair<ProcessRunId, DeferredDispatchRequest>[] readyRequests;
         lock (activeRunGate)
         {
             readyRequests = deferredRunRequests
-                .Where(item => !activeRunIds.Contains(item.Key))
+                .Where(item =>
+                    !activeRunIds.Contains(item.Key) &&
+                    item.Value.NotBeforeUtc <= nowUtc)
                 .ToArray();
             foreach (var readyRequest in readyRequests)
             {
@@ -140,7 +217,7 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
         var flushedCount = 0;
         foreach (var readyRequest in readyRequests)
         {
-            if (TryEnqueue(readyRequest.Value))
+            if (TryEnqueue(readyRequest.Value.Request))
             {
                 flushedCount++;
                 continue;
@@ -190,6 +267,26 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
             : existing;
     }
 
+    private static DeferredDispatchRequest SelectPreferredRequest(
+        DeferredDispatchRequest existing,
+        DeferredDispatchRequest candidate)
+    {
+        return new DeferredDispatchRequest(
+            SelectPreferredRequest(existing.Request, candidate.Request),
+            existing.NotBeforeUtc <= candidate.NotBeforeUtc
+                ? existing.NotBeforeUtc
+                : candidate.NotBeforeUtc);
+    }
+
+    private static TimeSpan CalculateDispatchFailureRetryDelay(int failureCount)
+    {
+        var exponent = Math.Min(
+            Math.Max(failureCount - 1, 0),
+            MaximumDispatchFailureBackoffLevel - 1);
+        var delaySeconds = InitialDispatchFailureRetryDelay.TotalSeconds * Math.Pow(2, exponent);
+        return TimeSpan.FromSeconds(Math.Min(delaySeconds, MaximumDispatchFailureRetryDelay.TotalSeconds));
+    }
+
     private static Channel<ProcessRuntimeDispatchQueueRequest> CreateChannel(int capacity)
     {
         return Channel.CreateBounded<ProcessRuntimeDispatchQueueRequest>(new BoundedChannelOptions(capacity)
@@ -210,4 +307,8 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
 
         return capacity;
     }
+
+    private sealed record DeferredDispatchRequest(
+        ProcessRuntimeDispatchQueueRequest Request,
+        DateTimeOffset NotBeforeUtc);
 }

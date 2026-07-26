@@ -60,7 +60,8 @@ public sealed partial class ProcessRuntimeEngine
             UserSafeSummary = string.IsNullOrWhiteSpace(appliedResult.UserSafeSummary)
                 ? string.Empty
                 : appliedResult.UserSafeSummary.Trim(),
-            AppliedSequence = NextAppliedResultSequence(state.AppliedResults)
+            AppliedSequence = NextAppliedResultSequence(state.AppliedResults),
+            ExecutionRunId = ResolveExecutionRunId(appliedResult)
         };
         var nextClaims = ReplaceClaim(
             state,

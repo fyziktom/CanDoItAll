@@ -8,6 +8,7 @@ namespace CanDoItAll.Processes.Application;
 public sealed class ProcessBlockedRunRecoveryCoordinator(
     IProcessRuntimeStateStore stateStore,
     IProcessInstancePlanStore planStore,
+    IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessBlockedRunRecoveryCommandExecutor commandExecutor,
     IProcessBlockedRunRecoveryPolicyCatalog policyCatalog) : IProcessBlockedRunRecoveryCoordinator
 {
@@ -30,6 +31,9 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
         var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException(
                 $"Process run '{runId}' references missing plan '{state.PlanId}'.");
+        var assignments = await assignmentStore
+            .LoadByRunAsync(runId, cancellationToken)
+            .ConfigureAwait(false);
         var candidate = FindLatestRecoveryCandidate(state);
         if (candidate is null)
         {
@@ -42,12 +46,30 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
 
         var receipt = candidate.Value.Receipt;
         var decision = receipt.RecoveryDecision!;
-        if (!TryResolveCommand(
+        var childRecovery = await ResolveChildRecoveryEvidenceAsync(
                 state,
-                plan,
                 candidate.Value.Step,
                 receipt,
                 decision,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (!childRecovery.IsValid)
+        {
+            return Result(
+                runId,
+                ProcessBlockedRunRecoveryOutcome.RequiresAttention,
+                state.Status,
+                diagnostics: [childRecovery.Issue]);
+        }
+
+        if (!TryResolveCommand(
+                state,
+                plan,
+                assignments,
+                candidate.Value.Step,
+                receipt,
+                decision,
+                childRecovery.Evidence,
                 out var command,
                 out var issue))
         {
@@ -109,9 +131,11 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
     private bool TryResolveCommand(
         ProcessRuntimeStateSnapshot state,
         ProcessInstancePlan plan,
+        IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
         ProcessRuntimeStepState blockedStep,
         StrategyResultReceipt receipt,
         ProcessRecoveryDecisionReceipt decision,
+        RelatedChildRecoveryEvidence? childRecoveryEvidence,
         out ProcessBlockedRunRecoveryCommand command,
         out string issue)
     {
@@ -161,7 +185,22 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
             return false;
         }
 
-        var policy = policyCatalog.Resolve(state, plan, blockedStep, receipt, decision);
+        var targetAssignment = assignments.FirstOrDefault(assignment =>
+            assignment.StepInstanceId == targetStep.StepInstanceId);
+        if (targetAssignment is null)
+        {
+            issue =
+                $"Recovery target step '{targetStep.StepInstanceId}' has no durable runtime assignment.";
+            return false;
+        }
+
+        var policy = policyCatalog.Resolve(
+            state,
+            plan,
+            blockedStep,
+            targetAssignment,
+            receipt,
+            decision);
         if (policy == ProcessBlockedRunRecoveryPolicy.None)
         {
             issue = "The typed diagnostics do not satisfy an automatic blocked-run recovery policy.";
@@ -177,7 +216,12 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
             decision.DiagnosticFingerprint,
             decision.RouteKind,
             decision.ResponsibleStepInstanceId,
-            phase);
+            phase)
+        {
+            RelatedChildRunId = childRecoveryEvidence?.RunId,
+            ExpectedRelatedChildUpdatedAtUtc = childRecoveryEvidence?.UpdatedAtUtc,
+            ExpectedChildLineageEvidence = childRecoveryEvidence?.LineageEvidence
+        };
         var authorizationIssue = ProcessRuntimeBlockedRecoveryAuthorizationRules.FindIssue(
             state,
             targetStep.StepInstanceId,
@@ -199,7 +243,12 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
             decision.RouteKind,
             decision.ResponsibleStepInstanceId,
             phase,
-            state.UpdatedAtUtc);
+            state.UpdatedAtUtc)
+        {
+            RelatedChildRunId = childRecoveryEvidence?.RunId,
+            ExpectedRelatedChildUpdatedAtUtc = childRecoveryEvidence?.UpdatedAtUtc,
+            ExpectedChildLineageEvidence = childRecoveryEvidence?.LineageEvidence
+        };
         issue = string.Empty;
         return true;
     }
@@ -211,7 +260,9 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
     {
         if (decision.RouteKind != ProcessRecoveryRouteKind.UpstreamStepRework)
         {
-            return ProcessRuntimeBlockedRecoveryPhase.CurrentStep;
+            return decision.RouteKind == ProcessRecoveryRouteKind.ChildRunPropagation
+                ? ProcessRuntimeBlockedRecoveryPhase.CompletedChildConsumer
+                : ProcessRuntimeBlockedRecoveryPhase.CurrentStep;
         }
 
         return targetStep.StepInstanceId == blockedStep.StepInstanceId
@@ -239,6 +290,8 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
                     decision.ResponsibleStepInstanceId ?? blockedStep.StepInstanceId,
                 ProcessRecoveryRouteKind.UpstreamStepRework =>
                     decision.ResponsibleStepInstanceId,
+                ProcessRecoveryRouteKind.ChildRunPropagation =>
+                    decision.ResponsibleStepInstanceId ?? blockedStep.StepInstanceId,
                 _ => null
             };
         if (targetStepId is null)
@@ -285,6 +338,165 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
         return true;
     }
 
+    private async Task<ChildRecoveryEvidenceResolution> ResolveChildRecoveryEvidenceAsync(
+        ProcessRuntimeStateSnapshot parentState,
+        ProcessRuntimeStepState blockedStep,
+        StrategyResultReceipt receipt,
+        ProcessRecoveryDecisionReceipt decision,
+        CancellationToken cancellationToken)
+    {
+        if (decision.RouteKind != ProcessRecoveryRouteKind.ChildRunPropagation)
+        {
+            return ChildRecoveryEvidenceResolution.NotRequired;
+        }
+
+        if (decision.FailureCategory != ProcessFailureCategory.ChildRunBlocked ||
+            decision.ResponsibleStepInstanceId != blockedStep.StepInstanceId ||
+            decision.RelatedChildRunId is not { } childRunId)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                "Child-run recovery requires a typed child id and the blocked parent step as the responsible target.");
+        }
+
+        var matchingDiagnosticChildIds = receipt.Diagnostics
+            .Where(diagnostic =>
+                string.Equals(
+                    diagnostic.Code,
+                    decision.SourceDiagnosticCode,
+                    StringComparison.OrdinalIgnoreCase) &&
+                diagnostic.RelatedChildRunId is not null)
+            .Select(diagnostic => diagnostic.RelatedChildRunId!.Value)
+            .Distinct()
+            .ToArray();
+        if (matchingDiagnosticChildIds.Length != 1 ||
+            matchingDiagnosticChildIds[0] != childRunId)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                "The child-run recovery decision is not grounded in one exact typed child diagnostic.");
+        }
+
+        var childState = await stateStore
+            .LoadAsync(childRunId, cancellationToken)
+            .ConfigureAwait(false);
+        if (childState is null)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                $"Related child run '{childRunId}' was not found.");
+        }
+
+        if (childState.Status != ProcessRuntimeStatus.Completed)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                $"Related child run '{childRunId}' has status '{childState.Status}', not '{ProcessRuntimeStatus.Completed}'.");
+        }
+
+        if (childState.RootRunId != parentState.RootRunId)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                $"Related child run '{childRunId}' is outside parent run '{parentState.RunId}' process tree.");
+        }
+
+        var linkedAssignmentSearch = await assignmentStore
+            .FindByLaunchVariablesBoundedAsync(
+                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    parentState.RunId,
+                    blockedStep.StepInstanceId),
+                ProcessRuntimeChildLineageEvidenceRules.MaximumLinkedChildRunCount,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (linkedAssignmentSearch.LimitExceeded)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                "The parent step has too many linked child runs for bounded automatic recovery.");
+        }
+
+        var linkedAssignments = linkedAssignmentSearch.Assignments;
+        if (!linkedAssignments.Any(assignment => assignment.RunId == childRunId))
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                $"Related child run '{childRunId}' has no durable assignment link to parent step '{blockedStep.StepInstanceId}'.");
+        }
+
+        var linkedChildRuns = linkedAssignments
+            .GroupBy(assignment => assignment.RunId)
+            .Select(group => new
+            {
+                RunId = group.Key,
+                CreatedAtUtc = group.Max(assignment => assignment.CreatedAtUtc)
+            })
+            .OrderByDescending(child => child.CreatedAtUtc)
+            .ThenByDescending(child => child.RunId.Value)
+            .ToArray();
+        if (linkedChildRuns[0].RunId != childRunId)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                $"Related child run '{childRunId}' is not the newest durable child linked to parent step '{blockedStep.StepInstanceId}'.");
+        }
+
+        var siblingRunIds = linkedChildRuns
+            .Select(child => child.RunId)
+            .Where(runId => runId != childRunId)
+            .ToArray();
+        if (siblingRunIds.Length > IProcessRuntimeStateStore.MaximumBatchRunCount)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                "The parent step has too many linked child runs for bounded automatic recovery.");
+        }
+
+        var siblingStates = await stateStore
+            .LoadManyAsync(siblingRunIds, cancellationToken)
+            .ConfigureAwait(false);
+        var loadedSiblingRunIds = siblingStates
+            .Select(sibling => sibling.RunId)
+            .ToHashSet();
+        if (siblingStates.Count != siblingRunIds.Length ||
+            !loadedSiblingRunIds.SetEquals(siblingRunIds))
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                "The parent step has linked child runs without exact durable runtime state evidence.");
+        }
+
+        if (siblingStates.Any(sibling =>
+                !ProcessRuntimeTerminalStates.IsChildRunStopped(sibling.Status)))
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(
+                "The parent step still has a linked child run that is not stopped.");
+        }
+
+        var linkedChildStates = siblingStates.ToDictionary(sibling => sibling.RunId);
+        linkedChildStates.Add(childState.RunId, childState);
+        var lineageEvidence = ProcessRuntimeChildLineageEvidence.Create(
+            parentState.RunId,
+            blockedStep.StepInstanceId,
+            linkedChildRuns.Select(link =>
+            {
+                var linkedState = linkedChildStates[link.RunId];
+                return new ProcessRuntimeLinkedChildEvidence(
+                    linkedState.RunId,
+                    linkedState.RootRunId,
+                    linkedState.Status,
+                    linkedState.UpdatedAtUtc,
+                    link.CreatedAtUtc);
+            }));
+        var lineageIssue = ProcessRuntimeChildLineageEvidenceRules.FindIssue(
+            lineageEvidence,
+            parentState.RunId,
+            blockedStep.StepInstanceId,
+            parentState.RootRunId,
+            childRunId,
+            childState.UpdatedAtUtc);
+        if (lineageIssue is not null)
+        {
+            return ChildRecoveryEvidenceResolution.Invalid(lineageIssue);
+        }
+
+        return ChildRecoveryEvidenceResolution.Valid(
+            new RelatedChildRecoveryEvidence(
+                childRunId,
+                childState.UpdatedAtUtc,
+                lineageEvidence));
+    }
+
     private static bool IsPolicyOrCapabilityBoundary(
         ProcessRecoveryDecisionReceipt decision)
     {
@@ -329,4 +541,24 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
     private readonly record struct RecoveryCandidate(
         ProcessRuntimeStepState Step,
         StrategyResultReceipt Receipt);
+
+    private sealed record RelatedChildRecoveryEvidence(
+        ProcessRunId RunId,
+        DateTimeOffset UpdatedAtUtc,
+        ProcessRuntimeChildLineageEvidence LineageEvidence);
+
+    private readonly record struct ChildRecoveryEvidenceResolution(
+        RelatedChildRecoveryEvidence? Evidence,
+        string Issue)
+    {
+        public bool IsValid => string.IsNullOrWhiteSpace(Issue);
+
+        public static ChildRecoveryEvidenceResolution NotRequired { get; } = new(null, string.Empty);
+
+        public static ChildRecoveryEvidenceResolution Valid(RelatedChildRecoveryEvidence evidence)
+            => new(evidence, string.Empty);
+
+        public static ChildRecoveryEvidenceResolution Invalid(string issue)
+            => new(null, issue);
+    }
 }

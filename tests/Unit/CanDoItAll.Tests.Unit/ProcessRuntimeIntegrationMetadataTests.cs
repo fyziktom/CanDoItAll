@@ -536,8 +536,13 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Contains("capability scope metadata is malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public void Runtime_usage_mapper_warns_when_context_manifest_exceeds_budget()
+    [Theory]
+    [InlineData(128_000, 64, 32_000)]
+    [InlineData(55_000, 42, 12_000)]
+    public void Runtime_usage_mapper_warns_when_context_manifest_exceeds_budget(
+        int estimatedInputTokens,
+        int toolCount,
+        int toolSchemaEstimatedTokens)
     {
         var run = CreateTrustedProcessRun("{}");
         var usageObservation = new ProviderUsageObservation(
@@ -556,14 +561,14 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             TotalTokens: 12,
             ToolCallCount: 0)
         {
-            DiagnosticsJson = """
+            DiagnosticsJson = $$"""
                 {
                   "contextAssemblyManifest": {
                     "totals": {
-                      "estimatedInputTokens": 128000,
+                      "estimatedInputTokens": {{estimatedInputTokens}},
                       "inputMessageCount": 3,
-                      "toolCount": 64,
-                      "toolSchemaEstimatedTokens": 32000
+                      "toolCount": {{toolCount}},
+                      "toolSchemaEstimatedTokens": {{toolSchemaEstimatedTokens}}
                     },
                     "sources": [
                       { "category": "workspace-tools" },
@@ -584,14 +589,14 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             null,
             [usageObservation, run, ProcessRunId.New(), Array.Empty<ProviderProfile>()]));
 
-        Assert.Equal(128000, observation.ContextEstimatedInputTokens);
-        Assert.Equal(64, observation.ContextToolCount);
-        Assert.Equal(32000, observation.ContextToolSchemaEstimatedTokens);
+        Assert.Equal(estimatedInputTokens, observation.ContextEstimatedInputTokens);
+        Assert.Equal(toolCount, observation.ContextToolCount);
+        Assert.Equal(toolSchemaEstimatedTokens, observation.ContextToolSchemaEstimatedTokens);
         Assert.Equal(2, observation.ContextSourceCount);
         Assert.True(observation.ContextBudgetExceeded);
-        Assert.Contains("EstimatedInputTokens=128000", observation.ContextBudgetWarning, StringComparison.Ordinal);
-        Assert.Contains("ToolCount=64", observation.ContextBudgetWarning, StringComparison.Ordinal);
-        Assert.Contains("ToolSchemaEstimatedTokens=32000", observation.ContextBudgetWarning, StringComparison.Ordinal);
+        Assert.Contains($"EstimatedInputTokens={estimatedInputTokens}", observation.ContextBudgetWarning, StringComparison.Ordinal);
+        Assert.Contains($"ToolCount={toolCount}", observation.ContextBudgetWarning, StringComparison.Ordinal);
+        Assert.Contains($"ToolSchemaEstimatedTokens={toolSchemaEstimatedTokens}", observation.ContextBudgetWarning, StringComparison.Ordinal);
     }
 
     [Fact]

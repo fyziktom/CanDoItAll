@@ -79,7 +79,7 @@ internal static class ProcessPersistenceMappers
                 ResultHash = receipt.ResultHash,
                 UserSafeSummary = NormalizeNullableText(receipt.UserSafeSummary),
                 AppliedSequence = appliedResultSequences[index],
-                DiagnosticsJson = SerializeDiagnostics(receipt.Diagnostics),
+                DiagnosticsJson = SerializeDiagnostics(receipt.Diagnostics, receipt.ExecutionRunId),
                 ProducedArtifactsJson = SerializeProducedArtifacts(receipt.ProducedArtifacts),
                 RecoveryDecisionJson = SerializeRecoveryDecision(receipt.RecoveryDecision)
             });
@@ -155,6 +155,7 @@ internal static class ProcessPersistenceMappers
         foreach (var receipt in entity.ResultReceipts
                      .OrderBy(item => item.AppliedSequence))
         {
+            var diagnosticSet = DeserializeDiagnostics(receipt.DiagnosticsJson);
             receipts.Add(new StrategyResultReceipt(
                 new ProcessStepInstanceId(receipt.StepInstanceId),
                 new StrategyId(receipt.StrategyId),
@@ -162,12 +163,13 @@ internal static class ProcessPersistenceMappers
                 Enum.Parse<StrategyOutcome>(receipt.Outcome),
                 receipt.AppliedStepStatus,
                 receipt.ResultHash,
-                DeserializeDiagnostics(receipt.DiagnosticsJson),
+                diagnosticSet.Diagnostics,
                 DeserializeProducedArtifacts(receipt.ProducedArtifactsJson),
                 DeserializeRecoveryDecision(receipt.RecoveryDecisionJson))
             {
                 UserSafeSummary = NormalizeOptionalText(receipt.UserSafeSummary),
-                AppliedSequence = receipt.AppliedSequence
+                AppliedSequence = receipt.AppliedSequence,
+                ExecutionRunId = diagnosticSet.ExecutionRunId
             });
         }
 
@@ -411,7 +413,9 @@ internal static class ProcessPersistenceMappers
             .ToArray() ?? [];
     }
 
-    private static string SerializeDiagnostics(IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
+    private static string SerializeDiagnostics(
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics,
+        ProcessExecutionRunId? executionRunId)
         => JsonSerializer.Serialize(
             diagnostics.Select(diagnostic => new PersistedStrategyResultDiagnostic(
                 diagnostic.Code,
@@ -420,18 +424,22 @@ internal static class ProcessPersistenceMappers
                 diagnostic.SafeSummary,
                 diagnostic.RestrictedEvidenceReference,
                 diagnostic.RetrySafety,
-                diagnostic.Idempotency)).ToArray(),
+                diagnostic.Idempotency,
+                diagnostic.RelatedChildRunId?.Value,
+                SerializeExecutionSafetyAttestation(diagnostic.ExecutionSafetyAttestation),
+                executionRunId?.Value)).ToArray(),
             ReceiptJsonOptions);
 
-    private static IReadOnlyList<StrategyResultDiagnosticReceipt> DeserializeDiagnostics(string? value)
+    private static DeserializedStrategyResultDiagnostics DeserializeDiagnostics(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return [];
+            return new DeserializedStrategyResultDiagnostics([], null);
         }
 
-        var diagnostics = JsonSerializer.Deserialize<PersistedStrategyResultDiagnostic[]>(value, ReceiptJsonOptions) ?? [];
-        return diagnostics
+        var persistedDiagnostics =
+            JsonSerializer.Deserialize<PersistedStrategyResultDiagnostic[]>(value, ReceiptJsonOptions) ?? [];
+        var diagnostics = persistedDiagnostics
             .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Code))
             .Select(diagnostic => new StrategyResultDiagnosticReceipt(
                 diagnostic.Code.Trim(),
@@ -442,8 +450,104 @@ internal static class ProcessPersistenceMappers
                     ? null
                     : diagnostic.RestrictedEvidenceReference.Trim(),
                 diagnostic.RetrySafety,
-                diagnostic.Idempotency))
+                diagnostic.Idempotency)
+            {
+                RelatedChildRunId = diagnostic.RelatedChildRunId is null
+                    ? null
+                    : new ProcessRunId(diagnostic.RelatedChildRunId.Value),
+                ExecutionSafetyAttestation =
+                    DeserializeExecutionSafetyAttestation(diagnostic.ExecutionSafetyAttestation)
+            })
             .ToArray();
+        return new DeserializedStrategyResultDiagnostics(
+            diagnostics,
+            ResolvePersistedExecutionRunId(persistedDiagnostics, diagnostics));
+    }
+
+    private static ProcessExecutionRunId? ResolvePersistedExecutionRunId(
+        IReadOnlyList<PersistedStrategyResultDiagnostic> persistedDiagnostics,
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
+    {
+        if (persistedDiagnostics.Count == 0)
+        {
+            return null;
+        }
+
+        var persistedExecutionRunIds = persistedDiagnostics
+            .Select(diagnostic => diagnostic.ResultExecutionRunId)
+            .Distinct()
+            .ToArray();
+        if (persistedExecutionRunIds is not [{ } executionRunId] ||
+            executionRunId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var typedExecutionRunId = new ProcessExecutionRunId(executionRunId);
+        return diagnostics.All(diagnostic =>
+                   diagnostic.ExecutionSafetyAttestation is not { } attestation ||
+                   attestation.ExecutionRunId == typedExecutionRunId)
+            ? typedExecutionRunId
+            : null;
+    }
+
+    private static PersistedProcessExecutionSafetyAttestation? SerializeExecutionSafetyAttestation(
+        ProcessExecutionSafetyAttestation? attestation)
+    {
+        return attestation is null
+            ? null
+            : new PersistedProcessExecutionSafetyAttestation(
+                attestation.Kind.ToString(),
+                attestation.Attestor.ToString(),
+                attestation.SchemaVersion,
+                attestation.ExecutionRunId.Value,
+                attestation.ProcessRunId.Value,
+                attestation.StepInstanceId.Value,
+                attestation.ExecutorId.Value,
+                attestation.DurableEvidenceDigest,
+                attestation.EvidenceHash);
+    }
+
+    private static ProcessExecutionSafetyAttestation? DeserializeExecutionSafetyAttestation(
+        PersistedProcessExecutionSafetyAttestation? persisted)
+    {
+        if (persisted is null ||
+            !TryParseExactEnum(persisted.Kind, out ProcessExecutionSafetyAttestationKind kind) ||
+            !TryParseExactEnum(persisted.Attestor, out ProcessExecutionSafetyAttestor attestor) ||
+            persisted.SchemaVersion is null ||
+            persisted.ExecutionRunId is null ||
+            persisted.ExecutionRunId.Value == Guid.Empty ||
+            persisted.ProcessRunId is null ||
+            persisted.ProcessRunId.Value == Guid.Empty ||
+            persisted.StepInstanceId is null ||
+            persisted.StepInstanceId.Value == Guid.Empty ||
+            persisted.ExecutorId is null ||
+            persisted.ExecutorId.Value == Guid.Empty)
+        {
+            return null;
+        }
+
+        var attestation = new ProcessExecutionSafetyAttestation(
+            kind,
+            attestor,
+            persisted.SchemaVersion.Value,
+            new ProcessExecutionRunId(persisted.ExecutionRunId.Value),
+            new ProcessRunId(persisted.ProcessRunId.Value),
+            new ProcessStepInstanceId(persisted.StepInstanceId.Value),
+            new ProcessExecutionExecutorId(persisted.ExecutorId.Value),
+            persisted.DurableEvidenceDigest ?? string.Empty,
+            persisted.EvidenceHash ?? string.Empty);
+        return attestation.IsStructurallyValid() ? attestation : null;
+    }
+
+    private static bool TryParseExactEnum<TEnum>(
+        string? value,
+        out TEnum result)
+        where TEnum : struct, Enum
+    {
+        return Enum.TryParse(value, ignoreCase: false, out result) &&
+               Enum.IsDefined(result) &&
+               string.Equals(value, result.ToString(), StringComparison.Ordinal);
     }
 
     private static string NormalizeOptionalText(string? value)
@@ -588,22 +692,29 @@ internal static class ProcessPersistenceMappers
                     decision.AutomaticRetryAttempt,
                     decision.MaximumAutomaticRetryAttempts,
                     decision.SameDiagnosticFingerprintAttempt,
-                    decision.MaximumSameDiagnosticFingerprintAttempts),
+                    decision.MaximumSameDiagnosticFingerprintAttempts,
+                    decision.RelatedChildRunId?.Value),
                 ReceiptJsonOptions);
     }
 
     private static string SerializeBlockedRecoveryActions(
         IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> actions)
     {
-        return JsonSerializer.Serialize(
-            actions.Select(action => new PersistedBlockedRecoveryAction(
+        var persistedActions = actions
+            .Select(action => new PersistedBlockedRecoveryAction(
                 action.SourceResultIdempotencyKey.Value,
                 action.SourceBlockedStepInstanceId.Value,
                 action.TargetStepInstanceId.Value,
                 action.DiagnosticFingerprint,
                 action.RecoveryRouteKind,
                 action.Phase,
-                action.AppliedAtUtc)),
+                action.AppliedAtUtc,
+                action.RelatedChildRunId?.Value,
+                action.RelatedChildUpdatedAtUtc))
+            .ToArray();
+        ValidateBlockedRecoveryActions(persistedActions);
+        return JsonSerializer.Serialize(
+            persistedActions,
             ReceiptJsonOptions);
     }
 
@@ -663,13 +774,46 @@ internal static class ProcessPersistenceMappers
         var actions = JsonSerializer.Deserialize<PersistedBlockedRecoveryAction[]>(
             value,
             ReceiptJsonOptions) ?? [];
+        ValidateBlockedRecoveryActions(actions);
+
+        return actions
+            .Select(action => new ProcessRuntimeBlockedRecoveryActionReceipt(
+                new StrategyResultIdempotencyKey(action.SourceResultIdempotencyKey),
+                new ProcessStepInstanceId(action.SourceBlockedStepInstanceId),
+                new ProcessStepInstanceId(action.TargetStepInstanceId),
+                action.DiagnosticFingerprint.Trim(),
+                action.RecoveryRouteKind,
+                action.Phase,
+                action.AppliedAtUtc)
+            {
+                RelatedChildRunId = action.RelatedChildRunId is null
+                    ? null
+                    : new ProcessRunId(action.RelatedChildRunId.Value),
+                RelatedChildUpdatedAtUtc = action.RelatedChildUpdatedAtUtc
+            })
+            .ToArray();
+    }
+
+    private static void ValidateBlockedRecoveryActions(
+        IReadOnlyList<PersistedBlockedRecoveryAction> actions)
+    {
         if (actions.Any(action =>
                 action.SourceResultIdempotencyKey == Guid.Empty ||
                 action.SourceBlockedStepInstanceId == Guid.Empty ||
                 action.TargetStepInstanceId == Guid.Empty ||
                 string.IsNullOrWhiteSpace(action.DiagnosticFingerprint) ||
                 action.RecoveryRouteKind == ProcessRecoveryRouteKind.None ||
-                action.AppliedAtUtc.Offset != TimeSpan.Zero))
+                action.AppliedAtUtc.Offset != TimeSpan.Zero ||
+                action.Phase == ProcessRuntimeBlockedRecoveryPhase.CompletedChildConsumer &&
+                (action.RecoveryRouteKind != ProcessRecoveryRouteKind.ChildRunPropagation ||
+                 action.TargetStepInstanceId != action.SourceBlockedStepInstanceId ||
+                 action.RelatedChildRunId is null ||
+                 action.RelatedChildRunId == Guid.Empty ||
+                 action.RelatedChildUpdatedAtUtc is null ||
+                 action.RelatedChildUpdatedAtUtc.Value.Offset != TimeSpan.Zero) ||
+                action.Phase != ProcessRuntimeBlockedRecoveryPhase.CompletedChildConsumer &&
+                (action.RelatedChildRunId is not null ||
+                 action.RelatedChildUpdatedAtUtc is not null)))
         {
             throw new InvalidOperationException(
                 "Persisted blocked-recovery action ledger contains an invalid entry.");
@@ -687,17 +831,6 @@ internal static class ProcessPersistenceMappers
             throw new InvalidOperationException(
                 "Persisted blocked-recovery action ledger contains a duplicate phase identity.");
         }
-
-        return actions
-            .Select(action => new ProcessRuntimeBlockedRecoveryActionReceipt(
-                new StrategyResultIdempotencyKey(action.SourceResultIdempotencyKey),
-                new ProcessStepInstanceId(action.SourceBlockedStepInstanceId),
-                new ProcessStepInstanceId(action.TargetStepInstanceId),
-                action.DiagnosticFingerprint.Trim(),
-                action.RecoveryRouteKind,
-                action.Phase,
-                action.AppliedAtUtc))
-            .ToArray();
     }
 
     private static ProcessRecoveryDecisionReceipt? DeserializeRecoveryDecision(string? value)
@@ -727,7 +860,10 @@ internal static class ProcessPersistenceMappers
                 AutomaticRetryAttempt = decision.AutomaticRetryAttempt,
                 MaximumAutomaticRetryAttempts = decision.MaximumAutomaticRetryAttempts,
                 SameDiagnosticFingerprintAttempt = decision.SameDiagnosticFingerprintAttempt,
-                MaximumSameDiagnosticFingerprintAttempts = decision.MaximumSameDiagnosticFingerprintAttempts
+                MaximumSameDiagnosticFingerprintAttempts = decision.MaximumSameDiagnosticFingerprintAttempts,
+                RelatedChildRunId = decision.RelatedChildRunId is null
+                    ? null
+                    : new ProcessRunId(decision.RelatedChildRunId.Value)
             };
     }
 
@@ -749,7 +885,25 @@ internal static class ProcessPersistenceMappers
         string SafeSummary,
         string? RestrictedEvidenceReference,
         ProcessDiagnosticRetrySafety RetrySafety,
-        ProcessDiagnosticIdempotencyClassification Idempotency);
+        ProcessDiagnosticIdempotencyClassification Idempotency,
+        Guid? RelatedChildRunId = null,
+        PersistedProcessExecutionSafetyAttestation? ExecutionSafetyAttestation = null,
+        Guid? ResultExecutionRunId = null);
+
+    private sealed record DeserializedStrategyResultDiagnostics(
+        IReadOnlyList<StrategyResultDiagnosticReceipt> Diagnostics,
+        ProcessExecutionRunId? ExecutionRunId);
+
+    private sealed record PersistedProcessExecutionSafetyAttestation(
+        string? Kind = null,
+        string? Attestor = null,
+        int? SchemaVersion = null,
+        Guid? ExecutionRunId = null,
+        Guid? ProcessRunId = null,
+        Guid? StepInstanceId = null,
+        Guid? ExecutorId = null,
+        string? DurableEvidenceDigest = null,
+        string? EvidenceHash = null);
 
     private sealed record PersistedStrategyResultArtifact(
         Guid SlotId,
@@ -792,7 +946,8 @@ internal static class ProcessPersistenceMappers
         int AutomaticRetryAttempt = 0,
         int MaximumAutomaticRetryAttempts = 0,
         int SameDiagnosticFingerprintAttempt = 0,
-        int MaximumSameDiagnosticFingerprintAttempts = 0);
+        int MaximumSameDiagnosticFingerprintAttempts = 0,
+        Guid? RelatedChildRunId = null);
 
     private sealed record PersistedBlockedRecoveryAction(
         Guid SourceResultIdempotencyKey,
@@ -801,5 +956,7 @@ internal static class ProcessPersistenceMappers
         string DiagnosticFingerprint,
         ProcessRecoveryRouteKind RecoveryRouteKind,
         ProcessRuntimeBlockedRecoveryPhase Phase,
-        DateTimeOffset AppliedAtUtc);
+        DateTimeOffset AppliedAtUtc,
+        Guid? RelatedChildRunId = null,
+        DateTimeOffset? RelatedChildUpdatedAtUtc = null);
 }

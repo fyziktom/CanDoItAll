@@ -203,12 +203,26 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         }
 
         var normalized = value.Trim();
-        var maxCharacters = string.Equals(key, ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract, StringComparison.OrdinalIgnoreCase)
-            ? MaxAcceptanceCriteriaContractCharacters
-            : MaxLaunchVariableValueCharacters;
+        var maxCharacters =
+            string.Equals(
+                key,
+                ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract,
+                StringComparison.OrdinalIgnoreCase)
+                ? MaxAcceptanceCriteriaContractCharacters
+                : ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(key)
+                    ? ProcessLaunchVariablePromptValuePolicy.MaximumInlineContractCharacters
+                    : MaxLaunchVariableValueCharacters;
         if (normalized.Length <= maxCharacters)
         {
             return normalized;
+        }
+
+        if (ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(key))
+        {
+            return ProcessLaunchVariablePromptValuePolicy.CreateAtomicOmission(
+                key,
+                normalized.Length,
+                maxCharacters);
         }
 
         var omittedCharacters = normalized.Length - LaunchVariableHeadCharacters - LaunchVariableTailCharacters;

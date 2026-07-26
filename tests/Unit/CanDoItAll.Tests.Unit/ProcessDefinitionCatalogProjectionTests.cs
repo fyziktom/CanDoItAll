@@ -3,8 +3,11 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Tests.Unit;
@@ -518,6 +521,11 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         var repositoryRoot = FindRepositoryRoot();
         var loader = new ProcessTemplatePackLoader(Path.Combine(repositoryRoot, "Templates", "Processes"));
         var definition = loader.LoadDefinition("dotnet-solution-setup");
+        var launchDriver = Assert.Single(definition.LaunchDriverActivations);
+        using var legacyReceiptMap = JsonDocument.Parse(
+            launchDriver.Settings["ProductCompletionRequiredToolReceiptsByStep"]);
+        Assert.False(legacyReceiptMap.RootElement.TryGetProperty("validate-first-build", out _));
+        Assert.False(legacyReceiptMap.RootElement.TryGetProperty("validate-first-build-after-repair", out _));
         var setupStepsRoot = Path.Combine(
             repositoryRoot,
             "Templates",
@@ -540,12 +548,19 @@ public sealed class ProcessDefinitionCatalogProjectionTests
 
         Assert.Contains(validate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
         Assert.Contains(validate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-repair-required", StringComparison.Ordinal));
-        Assert.True(
-            validate.CompletionPolicy is null ||
-            validate.CompletionPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys.Count == 0);
+        var validateCompletionPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(validate.CompletionPolicy);
+        AssertBranchReceiptPolicy(
+            validateCompletionPolicy,
+            "setup-validated",
+            allowFailedExecutionReceipt: false);
+        AssertBranchReceiptPolicy(
+            validateCompletionPolicy,
+            "setup-repair-required",
+            allowFailedExecutionReceipt: true);
+        Assert.Empty(validateCompletionPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys);
         Assert.Contains("Select setup-repair-required", validate.ExceptionPolicySummary, StringComparison.Ordinal);
-        Assert.Contains("ProductCompletionRequiredToolReceipts", validate.Notes, StringComparison.Ordinal);
-        Assert.Contains("successful current-run receipts for restore, build, and test", validate.Notes, StringComparison.Ordinal);
+        Assert.Contains("branch-scoped ProductCompletionRequiredToolReceipts", validate.Notes, StringComparison.Ordinal);
+        Assert.Contains("explicitly accepts failed execution receipts as defect evidence", validate.Notes, StringComparison.Ordinal);
         Assert.Contains(
             "Generated starter/demo UI or content and a passing placeholder template test are expected",
             validate.Notes,
@@ -579,6 +594,25 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Equal("dotnet.create-project", create.ExecutionContract?.DeterministicToolPlan?.PlanKey);
         Assert.Equal("DotNetCreateProjectExecutionPlan", create.ExecutionContract?.DeterministicToolPlan?.ExecutionPlanLaunchVariable);
         Assert.True(create.ExecutionContract?.DeterministicToolPlan?.RequiresReadbackChecks);
+        foreach (var step in new[] { create, addTest, repair })
+        {
+            var plan = Assert.IsType<ProcessTemplateDeterministicToolPlanDocument>(
+                step.ExecutionContract?.DeterministicToolPlan);
+            Assert.All(
+                plan.Operations,
+                operation => Assert.Equal(
+                    "current-run-repeatable",
+                    operation.IdempotencyPolicyKey));
+            var helperOperation = Assert.Single(
+                plan.Operations,
+                operation => string.Equals(
+                    operation.Key,
+                    "run-helper-script",
+                    StringComparison.Ordinal));
+            Assert.Equal(
+                "authoritative-readback-convergence",
+                helperOperation.FailureReconciliationPolicyKey);
+        }
 
         Assert.Contains("ProductCompletionRequiredToolReceipts", addTest.Notes, StringComparison.Ordinal);
         Assert.Contains("workspace_pwsh_run_script", addTest.Notes, StringComparison.Ordinal);
@@ -619,13 +653,20 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Equal("repair-solution-setup", revalidate.DependsOnStepKey);
         Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-validated", StringComparison.Ordinal));
         Assert.Contains(revalidate.BranchOutcomes, outcome => string.Equals(outcome.Key, "setup-repair-escalation", StringComparison.Ordinal));
-        Assert.True(
-            revalidate.CompletionPolicy is null ||
-            revalidate.CompletionPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys.Count == 0);
+        var revalidateCompletionPolicy = Assert.IsType<ProcessTemplateStepCompletionPolicyDocument>(revalidate.CompletionPolicy);
+        AssertBranchReceiptPolicy(
+            revalidateCompletionPolicy,
+            "setup-validated",
+            allowFailedExecutionReceipt: false);
+        AssertBranchReceiptPolicy(
+            revalidateCompletionPolicy,
+            "setup-repair-escalation",
+            allowFailedExecutionReceipt: true);
+        Assert.Empty(revalidateCompletionPolicy.AcceptanceCriteriaRequiredBranchOutcomeKeys);
         Assert.Contains(ProcessOperationContractNames.RunValidation, revalidate.AllowedOperations);
         Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, revalidate.AllowedOperations);
-        Assert.Contains("ProductCompletionRequiredToolReceipts", revalidate.Notes, StringComparison.Ordinal);
-        Assert.Contains("successful current-run receipts for restore, build, and test", revalidate.Notes, StringComparison.Ordinal);
+        Assert.Contains("branch-scoped ProductCompletionRequiredToolReceipts", revalidate.Notes, StringComparison.Ordinal);
+        Assert.Contains("explicitly accepts failed execution receipts as unresolved-defect evidence", revalidate.Notes, StringComparison.Ordinal);
         Assert.Contains(
             "must not select setup-repair-escalation",
             revalidate.Notes,
@@ -657,6 +698,40 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 string.Join(Environment.NewLine, step.ArtifactExpectations.Select(expectation => expectation.ValidationRequirementSummary)))));
         Assert.DoesNotContain("tetris", setupContract, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tetromino", setupContract, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AssertBranchReceiptPolicy(
+        ProcessTemplateStepCompletionPolicyDocument policy,
+        string branchOutcomeKey,
+        bool allowFailedExecutionReceipt)
+    {
+        var expectedToolNames = new[]
+        {
+            "workspace_dotnet_restore",
+            "workspace_dotnet_build",
+            "workspace_dotnet_test",
+            "workspace_read_file"
+        };
+        var branchRules = policy.RequiredProductToolReceipts
+            .Where(rule => rule.EnforceBranchOutcomeKeys.Contains(
+                branchOutcomeKey,
+                StringComparer.OrdinalIgnoreCase))
+            .ToArray();
+
+        Assert.Equal(
+            expectedToolNames.OrderBy(toolName => toolName, StringComparer.Ordinal),
+            branchRules
+                .Select(rule => rule.ToolName)
+                .OrderBy(toolName => toolName, StringComparer.Ordinal));
+        Assert.All(branchRules, rule =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(rule.Key));
+            Assert.Equal(allowFailedExecutionReceipt, rule.AllowFailedExecutionReceipt);
+            Assert.Equal([branchOutcomeKey], rule.EnforceBranchOutcomeKeys);
+        });
+        Assert.Equal(
+            branchRules.Length,
+            branchRules.Select(rule => rule.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]
@@ -961,6 +1036,39 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 .SelectMany(group => group.EnumerateArray())
                 .Select(value => value.GetString())
                 .Contains("<TargetFramework>${DotNetTargetFramework}</TargetFramework>", StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Dotnet_solution_setup_uses_candidate_aware_solution_readback_without_a_singular_required_path()
+    {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-solution-setup");
+        var activation = Assert.Single(definition.LaunchDriverActivations);
+
+        using var requiredPaths = JsonDocument.Parse(
+            activation.Settings["ProductCompletionRequiredPathsByStep"]);
+        using var readbackChecks = JsonDocument.Parse(
+            activation.Settings["ProductCompletionRequiredFileContentChecksByStep"]);
+
+        foreach (var stepKey in new[] { "create-dotnet-project", "add-test-project", "repair-solution-setup" })
+        {
+            var paths = requiredPaths.RootElement
+                .GetProperty(stepKey)
+                .EnumerateArray()
+                .Select(path => path.GetString())
+                .ToArray();
+            Assert.DoesNotContain("${DotNetSolutionFileForwardSlash}", paths, StringComparer.Ordinal);
+
+            var checks = readbackChecks.RootElement
+                .GetProperty(stepKey)
+                .EnumerateArray()
+                .ToArray();
+            Assert.Contains(checks, check =>
+                check.GetProperty("pathCandidates")
+                    .EnumerateArray()
+                    .Select(candidate => candidate.GetString())
+                    .Contains("${DotNetSolutionFileCandidates}", StringComparer.Ordinal));
+        }
     }
 
     [Fact]
@@ -1358,6 +1466,66 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.Contains("workspace_dotnet_run requires a declared runnable project file", step.Notes, StringComparison.Ordinal);
         Assert.Contains("current-run browser navigation, snapshot, screenshot, console, and cleanup receipts", step.Notes, StringComparison.Ordinal);
         Assert.Contains("browser_take_screenshot", step.EvidenceContractSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Launch_materializes_generic_deterministic_plan_descriptor_without_script_helper_metadata()
+    {
+        var loader = new ProcessTemplatePackLoader(
+            Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("dotnet-ui-screenshot-writeback");
+        var step = Assert.Single(
+            definition.Steps,
+            candidate => string.Equals(
+                candidate.Key,
+                "capture-ui-screenshots",
+                StringComparison.Ordinal));
+        var plan = Assert.IsType<ProcessTemplateDeterministicToolPlanDocument>(
+            step.ExecutionContract?.DeterministicToolPlan);
+        Assert.True(string.IsNullOrWhiteSpace(plan.ScriptLaunchVariable));
+        Assert.True(string.IsNullOrWhiteSpace(plan.ScriptRefLaunchVariable));
+
+        var briefBuilder = new CapturingStepBriefBuilder();
+        var service = new ProcessLaunchApplicationService(
+            loader,
+            new FixedProcessProjectionClock(Now),
+            new PreviewDriverCatalogProvider(),
+            new PreviewExecutorResolver(),
+            planStore: null!,
+            unitOfWork: null!,
+            stateStore: null!,
+            assignmentStore: null!,
+            artifactInitializer: null!,
+            briefBuilder,
+            dispatchQueue: null!,
+            projectionCatchupService: null!,
+            new LaunchVariableTemplateResolver());
+
+        await service.PreviewAsync(new ProcessLaunchRequest(
+            DefinitionKey: definition.Key,
+            ProcessDefinitionId: null,
+            LiveRunProfileKey: null,
+            ProjectId: null,
+            ProjectNodeId: null,
+            RequestedBy: "unit-test",
+            Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+            RunReadiness: false,
+            Execute: false));
+
+        var launchVariables = Assert.Single(
+            briefBuilder.Requests,
+            request => string.Equals(
+                request.Step.Key,
+                step.Key,
+                StringComparison.Ordinal)).LaunchVariables;
+        Assert.False(launchVariables.ContainsKey(
+            ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson));
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepDeterministicToolPlanDescriptor(
+            launchVariables,
+            out var descriptor));
+        Assert.Equal(plan.PlanKey, descriptor.PlanKey);
+        Assert.Equal(plan.PlanKind, descriptor.PlanKind);
+        Assert.Equal(plan.Operations.Count, descriptor.OperationPolicies.Count);
     }
 
     [Fact]
@@ -3169,6 +3337,80 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     private sealed class FixedProcessProjectionClock(DateTimeOffset utcNow) : IProcessProjectionClock
     {
         public DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    private sealed class CapturingStepBriefBuilder : IProcessStepBriefBuilder
+    {
+        public List<ProcessStepBriefBuildRequest> Requests { get; } = [];
+
+        public string Build(ProcessStepBriefBuildRequest request)
+        {
+            Requests.Add(request);
+            return "Captured for launch-variable verification.";
+        }
+    }
+
+    private sealed class PreviewDriverCatalogProvider : IProcessLaunchDriverCatalogProvider
+    {
+        private static readonly StrategyId ExecutionStrategyId =
+            new("strategy.process-definition-preview.execute");
+        private static readonly IReadOnlySet<CapabilityTag> Capabilities =
+            new HashSet<CapabilityTag>
+            {
+                new("capability.process-definition-preview.execution")
+            };
+
+        public ValueTask<ProcessLaunchDriverCatalog> LoadAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var descriptor = new ProcessDriverDescriptor(
+                new DriverId("driver.process-definition-preview"),
+                "Process definition preview test driver",
+                "1.0.0",
+                "runtime/1.0",
+                "runtime/1.0",
+                ProcessDriverLayer.Platform,
+                Capabilities,
+                [],
+                [],
+                [],
+                [
+                    new ProcessStrategyDescriptor(
+                        ExecutionStrategyId,
+                        "1.0.0",
+                        ProcessStrategyKind.StepExecution,
+                        Capabilities)
+                ]);
+            var catalog = new ProcessDriverCatalog(
+                [new ProcessDriverPackage(descriptor, [], [], [], [], [], [])]);
+            return ValueTask.FromResult(new ProcessLaunchDriverCatalog(
+                catalog,
+                ExecutionStrategyId,
+                Capabilities));
+        }
+    }
+
+    private sealed class PreviewExecutorResolver : IProcessLaunchExecutorResolver
+    {
+        public ValueTask<ProcessLaunchExecutorResolution> ResolveAsync(
+            ProcessLaunchExecutorResolutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var bindings = request.Plan.Steps
+                .Where(step => step.IsExecutable)
+                .Select(step => new ProcessLaunchExecutorBinding(
+                    step.StepKey,
+                    "unit-test-role",
+                    ProcessLaunchExecutorKinds.Agent,
+                    "unit-test-executor",
+                    "Unit test executor",
+                    "sha256:unit-test-readiness",
+                    "Resolved by the focused launch preview test."))
+                .ToArray();
+            return ValueTask.FromResult(new ProcessLaunchExecutorResolution(bindings, []));
+        }
     }
 
     private sealed class TemporaryProcessTemplatePack : IDisposable

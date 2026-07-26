@@ -119,6 +119,7 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.Arguments);
         var effectiveWorkingDirectoryPath = pathAliasSession?.RewritePath(plan.WorkingDirectoryPath) ?? plan.WorkingDirectoryPath;
         var effectiveArguments = pathAliasSession?.RewriteArguments(plan.Arguments) ?? plan.Arguments;
+        var environmentVariables = environmentPolicy.MergeEnvironmentVariables(plan.EnvironmentVariables);
         var processResult = await processHost.ExecuteAsync(
             new WorkspaceProcessExecutionRequest(
                 ToolName: plan.Decision.ToolName,
@@ -126,7 +127,7 @@ internal sealed class WorkspaceCommandProcessRunner
                 ExecutablePath: executablePath,
                 Arguments: effectiveArguments,
                 WorkingDirectory: effectiveWorkingDirectoryPath,
-                EnvironmentVariables: environmentPolicy.MergeEnvironmentVariables(plan.EnvironmentVariables),
+                EnvironmentVariables: environmentVariables,
                 TimeoutSeconds: plan.TimeoutSeconds,
                 StdoutLimitCharacters: plan.StdoutLimitCharacters,
                 StderrLimitCharacters: plan.StderrLimitCharacters),
@@ -159,7 +160,10 @@ internal sealed class WorkspaceCommandProcessRunner
             plan.MutatesWorkspace,
             message,
             effectiveProcessResult,
-            plan.DeclaredSideEffectMode);
+            plan.DeclaredSideEffectMode,
+            environmentVariables.Keys
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
         var resultMessage = AppendFailureDiagnosticHint(message, receipt, effectiveProcessResult, succeeded);
 
         return new WorkspaceCommandExecutionResult(

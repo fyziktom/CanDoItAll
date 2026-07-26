@@ -57,7 +57,11 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
                 diagnostic.SafeSummary,
                 diagnostic.RestrictedEvidenceReference,
                 diagnostic.RetrySafety,
-                diagnostic.Idempotency));
+                diagnostic.Idempotency)
+            {
+                RelatedChildRunId = diagnostic.RelatedChildRunId,
+                ExecutionSafetyAttestation = diagnostic.ExecutionSafetyAttestation
+            });
         }
 
         return new StrategyResultEnvelope(
@@ -71,7 +75,8 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
             result.ManagerSignals,
             result.ResultHash)
         {
-            UserSafeSummary = result.UserSafeSummary
+            UserSafeSummary = result.UserSafeSummary,
+            ExecutionRunId = result.ExecutionRunId
         };
     }
 

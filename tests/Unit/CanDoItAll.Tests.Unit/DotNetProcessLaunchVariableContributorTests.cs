@@ -141,6 +141,64 @@ public sealed class DotNetProcessLaunchVariableContributorTests
     }
 
     [Fact]
+    public void Template_owned_setup_policy_preserves_solution_file_candidates_for_readback()
+    {
+        var activation = CreateCandidateAwarePolicyActivation();
+        Assert.True(
+            DotNetSolutionSetupTemplatePolicyBindings.TryParse(
+                activation,
+                out var bindings,
+                out var issue),
+            issue);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [DotNetSolutionSetupTemplatePolicyBindings.SolutionFileCandidatesVariableKey] =
+                @"C:\output\AnyProduct\AnyProduct.sln; C:\output\AnyProduct\AnyProduct.slnx",
+            ["DotNetAppProjectFileForwardSlash"] = "C:/output/AnyProduct/src/AnyProduct/AnyProduct.csproj"
+        };
+
+        bindings.ApplyTo(variables);
+
+        using var document = JsonDocument.Parse(
+            variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep]);
+        var candidates = document.RootElement
+            .GetProperty("setup")[0]
+            .GetProperty("pathCandidates")
+            .EnumerateArray()
+            .Select(value => value.GetString()!)
+            .ToArray();
+        Assert.Equal(
+            [
+                @"C:\output\AnyProduct\AnyProduct.sln",
+                @"C:\output\AnyProduct\AnyProduct.slnx"
+            ],
+            candidates);
+    }
+
+    [Fact]
+    public void Template_owned_setup_policy_rejects_missing_solution_file_candidates()
+    {
+        var activation = CreateCandidateAwarePolicyActivation();
+        Assert.True(
+            DotNetSolutionSetupTemplatePolicyBindings.TryParse(
+                activation,
+                out var bindings,
+                out var issue),
+            issue);
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetAppProjectFileForwardSlash"] = "C:/output/AnyProduct/src/AnyProduct/AnyProduct.csproj"
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() => bindings.ApplyTo(variables));
+
+        Assert.Contains(
+            DotNetSolutionSetupTemplatePolicyBindings.SolutionFileCandidatesVariableKey,
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Template_owned_setup_policy_resolves_windows_paths_before_serializing_json()
     {
         var activation = new ProcessLaunchDriverActivation(
@@ -187,6 +245,23 @@ public sealed class DotNetProcessLaunchVariableContributorTests
                 @"..\..\app\TetrisGame\TetrisGame.csproj"
             ],
             referenceGroup);
+    }
+
+    private static ProcessLaunchDriverActivation CreateCandidateAwarePolicyActivation()
+    {
+        return new ProcessLaunchDriverActivation(
+            "dotnet.launch-contract",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredPathsSettingKey] =
+                    """{"setup":["${DotNetAppProjectFileForwardSlash}"]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredToolReceiptsSettingKey] =
+                    """{"setup":["workspace_pwsh_run_script"]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.RequiredFileContentChecksSettingKey] =
+                    """{"setup":[{"pathCandidates":["${DotNetSolutionFileCandidates}"],"requiredTextAnyGroups":[["src/AnyProduct/AnyProduct.csproj"]]}]}""",
+                [DotNetSolutionSetupTemplatePolicyBindings.ScopedLaunchVariablePrefixesSettingKey] =
+                    """{"setup":["DotNetSetup"]}"""
+            });
     }
 
     [Fact]

@@ -12,6 +12,9 @@ public interface IProcessRecoveryClassifier
 
 public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? options = null) : IProcessRecoveryClassifier
 {
+    private const string ReplayScopeReviewPolicy =
+        "process.current-step-replay-scope-review-required";
+
     public static ProcessRecoveryClassifier Default { get; } = new();
 
     private readonly ProcessRecoveryClassifierOptions options = options ?? ProcessRecoveryClassifierOptions.Default;
@@ -23,40 +26,42 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
         var diagnostics = input.Diagnostics
             .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Code))
             .ToArray();
-        var safeRetryAttempt = CountAutomaticSafeRetryReceipts(input) + 1;
+        var recoveryCandidateAttempt = CountReplayScopeReviewReceipts(input) + 1;
         var diagnosticIdentity = SelectMostPersistentDiagnosticIdentity(input, diagnostics);
         var fingerprint = diagnosticIdentity.Fingerprint;
         var sameFingerprintAttempt = diagnosticIdentity.PriorRetryOccurrences + 1;
-        if (CanUseCurrentStepSafeRetry(input, diagnostics) &&
-            safeRetryAttempt <= options.MaxAutomaticSafeReworksPerStep &&
+        var relatedChildRunId = ResolveRelatedChildRunId(input.SourceDiagnosticCode, diagnostics);
+        if (CanRequestReplayScopeReview(input, diagnostics) &&
+            recoveryCandidateAttempt <= options.MaxAutomaticSafeReworksPerStep &&
             sameFingerprintAttempt <= options.MaxSameDiagnosticFingerprintAutomaticReworks)
         {
             return new ProcessRecoveryDecisionReceipt(
                 input.FailureCategory,
-                ProcessRecoveryDecisionKind.SafeRetry,
+                ProcessRecoveryDecisionKind.ManagerRequired,
                 input.SourceDiagnosticCode,
-                "process.current-step-safe-retry",
-                $"Safe/idempotent completion-gate diagnostics qualify for bounded current-step retry. Persistent diagnostic identity '{fingerprint}', automatic retry {safeRetryAttempt}/{options.MaxAutomaticSafeReworksPerStep}, identity occurrence {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}.")
+                ReplayScopeReviewPolicy,
+                $"Safe/idempotent completion-gate diagnostics are eligible for bounded recovery only after the application recovery policy verifies the whole assignment is replay-safe. Persistent diagnostic identity '{fingerprint}', recovery candidate {recoveryCandidateAttempt}/{options.MaxAutomaticSafeReworksPerStep}, identity occurrence {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}.")
             {
-                RouteKind = ProcessRecoveryRouteKind.CurrentStepRetry,
-                ResponsibleStepInstanceId = input.StepInstanceId,
+                RouteKind = input.DefaultRouteKind,
+                ResponsibleStepInstanceId = input.DefaultResponsibleStepInstanceId,
                 DiagnosticFingerprint = fingerprint,
-                AutomaticRetryAttempt = safeRetryAttempt,
+                AutomaticRetryAttempt = recoveryCandidateAttempt,
                 MaximumAutomaticRetryAttempts = options.MaxAutomaticSafeReworksPerStep,
                 SameDiagnosticFingerprintAttempt = sameFingerprintAttempt,
-                MaximumSameDiagnosticFingerprintAttempts = options.MaxSameDiagnosticFingerprintAutomaticReworks
+                MaximumSameDiagnosticFingerprintAttempts = options.MaxSameDiagnosticFingerprintAutomaticReworks,
+                RelatedChildRunId = relatedChildRunId
             };
         }
 
-        var budgetExhausted = IsCompletionGateFailure(input, diagnostics) &&
-                              AreAllDiagnosticsSafeAndIdempotent(diagnostics) &&
-                              (safeRetryAttempt > options.MaxAutomaticSafeReworksPerStep ||
+        var budgetExhausted = IsReplayScopeRecoveryCandidate(input, diagnostics) &&
+                               AreAllDiagnosticsSafeAndIdempotent(diagnostics) &&
+                              (recoveryCandidateAttempt > options.MaxAutomaticSafeReworksPerStep ||
                                sameFingerprintAttempt > options.MaxSameDiagnosticFingerprintAutomaticReworks);
         var policy = budgetExhausted
             ? "process.current-step-safe-retry-budget-exhausted"
             : ResolveRecoveryPolicy(input.DefaultRouteKind);
         var reason = budgetExhausted
-            ? $"Safe/idempotent completion-gate diagnostics exhausted automatic current-step retry budget. Persistent diagnostic identity '{fingerprint}', automatic retry {safeRetryAttempt}/{options.MaxAutomaticSafeReworksPerStep}, identity occurrence {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}. Manager review is required before another rework."
+            ? $"Safe/idempotent completion-gate diagnostics exhausted the bounded replay-scope recovery budget. Persistent diagnostic identity '{fingerprint}', recovery candidate {recoveryCandidateAttempt}/{options.MaxAutomaticSafeReworksPerStep}, identity occurrence {sameFingerprintAttempt}/{options.MaxSameDiagnosticFingerprintAutomaticReworks}. Manager review is required before another rework."
             : ResolveRecoveryReason(input.DefaultRouteKind);
 
         return new ProcessRecoveryDecisionReceipt(
@@ -69,21 +74,60 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
             RouteKind = input.DefaultRouteKind,
             ResponsibleStepInstanceId = input.DefaultResponsibleStepInstanceId,
             DiagnosticFingerprint = fingerprint,
-            AutomaticRetryAttempt = safeRetryAttempt,
+            AutomaticRetryAttempt = recoveryCandidateAttempt,
             MaximumAutomaticRetryAttempts = options.MaxAutomaticSafeReworksPerStep,
             SameDiagnosticFingerprintAttempt = sameFingerprintAttempt,
-            MaximumSameDiagnosticFingerprintAttempts = options.MaxSameDiagnosticFingerprintAutomaticReworks
+            MaximumSameDiagnosticFingerprintAttempts = options.MaxSameDiagnosticFingerprintAutomaticReworks,
+            RelatedChildRunId = relatedChildRunId
         };
     }
 
-    private bool CanUseCurrentStepSafeRetry(
+    private static ProcessRunId? ResolveRelatedChildRunId(
+        string sourceDiagnosticCode,
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
+    {
+        var relatedChildRunIds = diagnostics
+            .Where(diagnostic =>
+                string.Equals(
+                    diagnostic.Code,
+                    sourceDiagnosticCode,
+                    StringComparison.OrdinalIgnoreCase) &&
+                diagnostic.RelatedChildRunId is not null)
+            .Select(diagnostic => diagnostic.RelatedChildRunId!.Value)
+            .Distinct()
+            .ToArray();
+        return relatedChildRunIds.Length == 1
+            ? relatedChildRunIds[0]
+            : null;
+    }
+
+    private static bool CanRequestReplayScopeReview(
         ProcessRecoveryClassificationInput input,
         IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
     {
         return input.DefaultRouteKind == ProcessRecoveryRouteKind.ManagerAction &&
-               IsCompletionGateFailure(input, diagnostics) &&
+               IsReplayScopeRecoveryCandidate(input, diagnostics) &&
                AreAllDiagnosticsSafeAndIdempotent(diagnostics) &&
                !diagnostics.Any(IsPolicyOrCapabilityDenial);
+    }
+
+    private static bool IsReplayScopeRecoveryCandidate(
+        ProcessRecoveryClassificationInput input,
+        IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
+    {
+        return IsCompletionGateFailure(input, diagnostics) ||
+               input.FailureCategory == ProcessFailureCategory.AdapterRetryable &&
+               string.Equals(
+                   input.SourceDiagnosticCode,
+                   ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                   StringComparison.Ordinal) &&
+               diagnostics.Count > 0 &&
+               diagnostics.All(diagnostic =>
+                   string.Equals(
+                       diagnostic.Code,
+                       ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                       StringComparison.Ordinal) &&
+                   diagnostic.RelatedChildRunId is null);
     }
 
     private static bool IsCompletionGateFailure(
@@ -113,12 +157,11 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
                code.Contains("agent_rights", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static int CountAutomaticSafeRetryReceipts(ProcessRecoveryClassificationInput input)
+    private static int CountReplayScopeReviewReceipts(ProcessRecoveryClassificationInput input)
     {
         return input.PriorStepReceipts.Count(receipt =>
             receipt.StepInstanceId == input.StepInstanceId &&
-            receipt.RecoveryDecision?.DecisionKind == ProcessRecoveryDecisionKind.SafeRetry &&
-            receipt.RecoveryDecision.RouteKind == ProcessRecoveryRouteKind.CurrentStepRetry);
+            IsReplayScopeReviewReceipt(receipt));
     }
 
     private static DiagnosticIdentityRecurrence SelectMostPersistentDiagnosticIdentity(
@@ -134,9 +177,8 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
 
         var retryReceipts = input.PriorStepReceipts
             .Where(receipt =>
-            receipt.StepInstanceId == input.StepInstanceId &&
-            receipt.RecoveryDecision?.DecisionKind == ProcessRecoveryDecisionKind.SafeRetry &&
-            receipt.RecoveryDecision.RouteKind == ProcessRecoveryRouteKind.CurrentStepRetry)
+                receipt.StepInstanceId == input.StepInstanceId &&
+                IsReplayScopeReviewReceipt(receipt))
             .ToArray();
 
         return diagnostics
@@ -148,6 +190,23 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
             .OrderByDescending(recurrence => recurrence.PriorRetryOccurrences)
             .ThenBy(recurrence => recurrence.Fingerprint, StringComparer.Ordinal)
             .First();
+    }
+
+    private static bool IsReplayScopeReviewReceipt(StrategyResultReceipt receipt)
+    {
+        return receipt.RecoveryDecision is
+        {
+            DecisionKind: ProcessRecoveryDecisionKind.SafeRetry,
+            RouteKind: ProcessRecoveryRouteKind.CurrentStepRetry
+        } ||
+        receipt.RecoveryDecision is
+        {
+            DecisionKind: ProcessRecoveryDecisionKind.ManagerRequired
+        } decision &&
+        string.Equals(
+            decision.Policy,
+            ReplayScopeReviewPolicy,
+            StringComparison.Ordinal);
     }
 
     private static bool ReceiptContainsDiagnosticIdentity(
@@ -171,6 +230,10 @@ public sealed class ProcessRecoveryClassifier(ProcessRecoveryClassifierOptions? 
     private static bool UsesCodeOnlyDiagnosticIdentity(string code)
     {
         return string.Equals(
+                   code,
+                   ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                   StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(
                    code,
                    "process.adapter.completed_outcome_declares_unresolved_blocker",
                    StringComparison.OrdinalIgnoreCase) ||

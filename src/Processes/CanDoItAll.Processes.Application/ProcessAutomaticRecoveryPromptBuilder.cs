@@ -13,7 +13,7 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
     private const int MaxFallbackPromptCharacters = 6000;
     private const int MaxSectionCharacters = 3000;
     private const int MaxLaunchVariableCharacters = 500;
-    private const int MaxLaunchVariableBlockCharacters = 6000;
+    private const int MaxLaunchVariableBlockCharacters = 10000;
     private const int MaxReferenceCount = 48;
     private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
 
@@ -274,12 +274,28 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         var omittedCount = 0;
         foreach (var pair in visibleLaunchVariables
                      .OrderByDescending(pair => HasGroundedReference(pair.Value))
-                     .ThenBy(pair => pair.Value.Length > MaxLaunchVariableCharacters)
+                     .ThenByDescending(pair =>
+                         ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(pair.Key))
+                     .ThenBy(pair =>
+                         pair.Value.Length >
+                         ResolveMaximumLaunchVariableCharacters(pair.Key))
                      .ThenBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            var value = CollapseWhitespace(pair.Value);
-            var clippedValue = Clip(value, MaxLaunchVariableCharacters);
-            var line = $"- {pair.Key}: {clippedValue}";
+            var isAtomicContract =
+                ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(pair.Key);
+            var value = isAtomicContract
+                ? pair.Value.Trim()
+                : CollapseWhitespace(pair.Value);
+            var maximumCharacters = ResolveMaximumLaunchVariableCharacters(pair.Key);
+            var formattedValue = value.Length <= maximumCharacters
+                ? value
+                : isAtomicContract
+                    ? ProcessLaunchVariablePromptValuePolicy.CreateAtomicOmission(
+                        pair.Key,
+                        value.Length,
+                        maximumCharacters)
+                    : Clip(value, maximumCharacters);
+            var line = $"- {pair.Key}: {formattedValue}";
             if (builder.Length + line.Length + Environment.NewLine.Length > MaxLaunchVariableBlockCharacters)
             {
                 omittedCount++;
@@ -296,6 +312,11 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
 
         return builder.ToString().TrimEnd();
     }
+
+    private static int ResolveMaximumLaunchVariableCharacters(string key)
+        => ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(key)
+            ? ProcessLaunchVariablePromptValuePolicy.MaximumInlineContractCharacters
+            : MaxLaunchVariableCharacters;
 
     private static bool HasGroundedReference(string value)
         => value.Contains("artifacts/", StringComparison.OrdinalIgnoreCase) ||

@@ -70,6 +70,32 @@ public readonly record struct ProcessRunId
     public override string ToString() => Value.ToString("D");
 }
 
+public readonly record struct ProcessExecutionRunId
+{
+    public ProcessExecutionRunId(Guid value)
+    {
+        Value = ProcessIdentifierValidation.RequireGuid(value, nameof(value));
+    }
+
+    public Guid Value { get; }
+
+    public static ProcessExecutionRunId New() => new(Guid.NewGuid());
+
+    public override string ToString() => Value.ToString("D");
+}
+
+public readonly record struct ProcessExecutionExecutorId
+{
+    public ProcessExecutionExecutorId(Guid value)
+    {
+        Value = ProcessIdentifierValidation.RequireGuid(value, nameof(value));
+    }
+
+    public Guid Value { get; }
+
+    public override string ToString() => Value.ToString("D");
+}
+
 public readonly record struct ProcessStepId
 {
     public ProcessStepId(Guid value)

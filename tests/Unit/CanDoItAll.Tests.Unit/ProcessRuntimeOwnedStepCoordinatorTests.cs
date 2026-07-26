@@ -90,8 +90,11 @@ public sealed class ProcessRuntimeOwnedStepCoordinatorTests
         Assert.Equal(StrategyOutcome.NeedsManager, result!.Outcome);
         Assert.Equal(1, selected.CallCount);
         Assert.Equal(0, unselected.CallCount);
-        Assert.Contains(result.Diagnostics, diagnostic =>
-            diagnostic.Code.Value == "process.adapter.runtime_owned_step_failed");
+        var diagnostic = Assert.Single(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code.Value == "process.adapter.runtime_owned_step_failed");
+        Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Unknown, diagnostic.Idempotency);
     }
 
     private static ProcessRuntimeOwnedStepCoordinator CreateCoordinator(

@@ -182,10 +182,11 @@ public sealed class ProcessRuntimeProjectionQueryService(
         }
 
         var selectedRunRecord = !loadOptions.IncludeRunRecord ||
-            !selectedRunNeedsRecordLookup
+            !selectedRunNeedsRecordLookup ||
+            selectedRunId is not { } selectedRunRecordId
             ? null
             : await runRecordStore!
-                .GetAsync(selectedRunId.Value, includeSuperseded: false, cancellationToken)
+                .GetAsync(selectedRunRecordId, includeSuperseded: false, cancellationToken)
                 .ConfigureAwait(false);
         var hasTerminalRecord = selectedRunRecord is not null;
         ProcessRunDetailProjection? selectedRun = null;

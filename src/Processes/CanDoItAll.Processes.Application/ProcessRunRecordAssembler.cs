@@ -643,7 +643,8 @@ public sealed class ProcessRunRecordAssembler(
                     continue;
                 }
 
-                if (runtimeEvent.GlobalSequence > summary.SourceGlobalSequence)
+                if (runtimeEvent.GlobalSequence > summary.SourceGlobalSequence &&
+                    !IsExpectedDescendantCancellationClosure(runtimeEvent, summary))
                 {
                     throw new InvalidOperationException(
                         $"Process run '{summary.Identity.RunId}' has newer subtree runtime events than its claimed record seed.");
@@ -999,6 +1000,15 @@ public sealed class ProcessRunRecordAssembler(
             ProcessRuntimeStatus.Failed or
             ProcessRuntimeStatus.Cancelled or
             ProcessRuntimeStatus.Escalated;
+
+    private static bool IsExpectedDescendantCancellationClosure(
+        ProcessStoredRuntimeEvent runtimeEvent,
+        ProcessRunRecordSummary summary)
+    {
+        return summary.Disposition == ProcessRunDisposition.Cancelled &&
+               runtimeEvent.Envelope.RunId != summary.Identity.RunId &&
+               runtimeEvent.Envelope.EventType == ProcessRuntimeEventTypes.ProcessRunCancelled;
+    }
 
     private static void AddWarning(
         List<ProcessRunRecordWarningCode> warnings,

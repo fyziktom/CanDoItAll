@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
@@ -86,6 +87,89 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
         finally
         {
             DeleteDirectory(productRoot);
+        }
+    }
+
+    [Fact]
+    public void Validate_RequiredContentCheckAcceptsLaterCandidateWhenPreferredFileIsStale()
+    {
+        var productRoot = CreateTemporaryProductRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(productRoot, "preferred.sln"), "stale membership");
+            File.WriteAllText(
+                Path.Combine(productRoot, "alternative.slnx"),
+                "src/Calculator/Calculator.csproj");
+            var context = CreateContext(
+                productRoot,
+                mutatesProduct: false,
+                extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                        JsonSerializer.Serialize(new object[]
+                        {
+                            new Dictionary<string, object>(StringComparer.Ordinal)
+                            {
+                                ["pathCandidates"] = new[] { "preferred.sln", "alternative.slnx" },
+                                ["requiredTextAnyGroups"] =
+                                    new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                            }
+                        })
+                });
+
+            var issue = Gate.Validate(context);
+
+            Assert.Null(issue);
+        }
+        finally
+        {
+            DeleteDirectory(productRoot);
+        }
+    }
+
+    [Fact]
+    public void Validate_RequiredContentCheckRejectsInvalidCandidateEvenWhenAlternativeIsValid()
+    {
+        var productRoot = CreateTemporaryProductRoot();
+        var outsideRoot = CreateTemporaryProductRoot();
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(productRoot, "alternative.slnx"),
+                "src/Calculator/Calculator.csproj");
+            var context = CreateContext(
+                productRoot,
+                mutatesProduct: false,
+                extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                        JsonSerializer.Serialize(new object[]
+                        {
+                            new Dictionary<string, object>(StringComparer.Ordinal)
+                            {
+                                ["pathCandidates"] = new[]
+                                {
+                                    Path.Combine(outsideRoot, "escaped.sln"),
+                                    "alternative.slnx"
+                                },
+                                ["requiredTextAnyGroups"] =
+                                    new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                            }
+                        })
+                });
+
+            var issue = Gate.Validate(context);
+
+            Assert.NotNull(issue);
+            Assert.Equal(
+                "process.adapter.product_required_file_content_check_unavailable",
+                issue.Code);
+            Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, issue.RetrySafety);
+        }
+        finally
+        {
+            DeleteDirectory(productRoot);
+            DeleteDirectory(outsideRoot);
         }
     }
 

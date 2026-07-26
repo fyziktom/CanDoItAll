@@ -47,7 +47,11 @@ internal static class ProcessRuntimeOwnedToolReceiptFactory
         string path,
         bool succeeded,
         string message)
-        => new(
+    {
+        var outcome = string.IsNullOrWhiteSpace(receipt.Outcome)
+            ? succeeded ? "Succeeded" : "Failed"
+            : receipt.Outcome.Trim();
+        return new ToolExecutionReceiptRecord(
             Guid.NewGuid(),
             executionRunId,
             "workspace-file",
@@ -57,7 +61,8 @@ internal static class ProcessRuntimeOwnedToolReceiptFactory
             receipt.Boundary,
             path,
             ".",
-            succeeded ? $"Succeeded: {message}" : $"Failed: {message}",
+            $"{outcome}: {message}",
             receipt.StartedAtUtc,
             receipt.CompletedAtUtc);
+    }
 }

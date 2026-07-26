@@ -10,12 +10,19 @@ internal static class ProcessRuntimeChildRunParentQuery
 {
     private static readonly string ParentRunKeySnippet = JsonSerializer.Serialize(ProcessRuntimeLaunchVariables.ParentProcessRunId);
 
+    public const int TerminalChildRunPageSize = 250;
+
     public sealed record ParentStep(Guid RunId, Guid StepInstanceId);
     public sealed record ParentClaim(Guid RunId, Guid StepInstanceId, Guid ClaimToken, string OwnerId);
+    public readonly record struct TerminalChildRunCursor(Guid RunId, DateTimeOffset UpdatedAtUtc);
+    public sealed record TerminalChildRunCandidate(Guid RunId, DateTimeOffset UpdatedAtUtc)
+    {
+        public TerminalChildRunCursor Cursor => new(RunId, UpdatedAtUtc);
+    }
 
     public static bool IsStoppedChildStatus(ProcessRuntimeStatus status)
     {
-        return ProcessRuntimeTerminalStates.IsRunTerminal(status) || status == ProcessRuntimeStatus.Blocked;
+        return ProcessRuntimeTerminalStates.IsChildRunStopped(status);
     }
 
     public static async Task<ProcessRuntimeStatus?> LoadStoppedChildStatusAsync(
@@ -144,6 +151,53 @@ internal static class ProcessRuntimeChildRunParentQuery
             .ToArray();
     }
 
+    public static async Task<IReadOnlyList<Guid>> LoadBlockedParentRunIdsAsync(
+        ProcessPersistenceDbContext dbContext,
+        Guid childRunId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var requestedParentSteps = await LoadRequestedParentStepsAsync(
+            dbContext,
+            childRunId,
+            cancellationToken).ConfigureAwait(false);
+        if (requestedParentSteps.Count == 0)
+        {
+            return [];
+        }
+
+        var parentRunIds = requestedParentSteps
+            .Select(parentStep => parentStep.RunId)
+            .Distinct()
+            .ToArray();
+        var parentStepIds = requestedParentSteps
+            .Select(parentStep => parentStep.StepInstanceId)
+            .Distinct()
+            .ToArray();
+        var candidates = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                parentRunIds.Contains(state.RunId) &&
+                state.Status == ProcessRuntimeStatus.Blocked)
+            .Join(
+                dbContext.RuntimeSteps.AsNoTracking(),
+                state => state.RunId,
+                step => step.RunId,
+                (state, step) => new { state.RunId, Step = step })
+            .Where(item => parentStepIds.Contains(item.Step.StepInstanceId))
+            .Select(item => new ParentStep(item.RunId, item.Step.StepInstanceId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var requested = requestedParentSteps.ToHashSet();
+        return candidates
+            .Where(requested.Contains)
+            .Select(parentStep => parentStep.RunId)
+            .Distinct()
+            .OrderBy(runId => runId)
+            .ToArray();
+    }
+
     public static async Task<IReadOnlyList<ParentClaim>> LoadActiveParentClaimsAsync(
         ProcessPersistenceDbContext dbContext,
         Guid childRunId,
@@ -227,29 +281,45 @@ internal static class ProcessRuntimeChildRunParentQuery
             .ToArray();
     }
 
-    public static async Task<IReadOnlyList<Guid>> LoadTerminalChildRunIdsWithParentLinksAsync(
+    public static async Task<IReadOnlyList<TerminalChildRunCandidate>> LoadTerminalChildRunsPageAsync(
         ProcessPersistenceDbContext dbContext,
+        TerminalChildRunCursor? cursor = null,
+        DateTimeOffset? updatedAtOrAfterUtc = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
 
-        return await dbContext.RuntimeStates
+        if (updatedAtOrAfterUtc is { } cutoff && cutoff.Offset != TimeSpan.Zero)
+        {
+            updatedAtOrAfterUtc = cutoff.ToUniversalTime();
+        }
+
+        var query = dbContext.RuntimeStates
             .AsNoTracking()
             .Where(state =>
                 state.Status == ProcessRuntimeStatus.Completed ||
                 state.Status == ProcessRuntimeStatus.Failed ||
                 state.Status == ProcessRuntimeStatus.Cancelled ||
                 state.Status == ProcessRuntimeStatus.Blocked)
-            .Join(
-                dbContext.RuntimeStepAssignments.AsNoTracking(),
-                state => state.RunId,
-                assignment => assignment.RunId,
-                (state, assignment) => new { state.RunId, assignment.LaunchVariablesJson })
-            .Where(item => item.LaunchVariablesJson.Contains(ParentRunKeySnippet))
-            .Select(item => item.RunId)
-            .Distinct()
-            .OrderBy(runId => runId)
-            .Take(250)
+            .Where(state => updatedAtOrAfterUtc == null || state.UpdatedAtUtc >= updatedAtOrAfterUtc)
+            .Where(state => dbContext.RuntimeStepAssignments
+                .AsNoTracking()
+                .Any(assignment =>
+                    assignment.RunId == state.RunId &&
+                    assignment.LaunchVariablesJson.Contains(ParentRunKeySnippet)));
+        if (cursor is not null)
+        {
+            query = query.Where(state =>
+                state.UpdatedAtUtc < cursor.Value.UpdatedAtUtc ||
+                state.UpdatedAtUtc == cursor.Value.UpdatedAtUtc &&
+                state.RunId.CompareTo(cursor.Value.RunId) < 0);
+        }
+
+        return await query
+            .OrderByDescending(state => state.UpdatedAtUtc)
+            .ThenByDescending(state => state.RunId)
+            .Select(state => new TerminalChildRunCandidate(state.RunId, state.UpdatedAtUtc))
+            .Take(TerminalChildRunPageSize)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
     }

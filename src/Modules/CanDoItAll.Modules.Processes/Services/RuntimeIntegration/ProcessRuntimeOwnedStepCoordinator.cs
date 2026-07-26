@@ -115,16 +115,17 @@ internal sealed class ProcessRuntimeOwnedStepCoordinator(
     {
         if (!runtimeResult.Succeeded || runtimeResult.Output is null)
         {
+            var failure = runtimeResult.Failure ?? ProcessRuntimeOwnedStepFailures.Unclassified;
             return NeedsManagerForCompletionIssue(
                 assignment,
                 ComputeHash(runtimeResult.Evidence),
                 new ProcessCompletionIssue(
-                    "process.adapter.runtime_owned_step_failed",
-                    runtimeResult.Summary,
+                    failure.Code.Value,
+                    BuildFailureSummary(runtimeResult),
                     runtimeResult.Evidence,
                     assignment.ProducedArtifactSlotIds,
-                    ProcessDiagnosticRetrySafety.SafeToRetry,
-                    ProcessDiagnosticIdempotencyClassification.Idempotent));
+                    failure.RetrySafety,
+                    failure.Idempotency));
         }
 
         var rawOutputHash = ComputeHash(runtimeResult.Evidence);
@@ -145,5 +146,52 @@ internal sealed class ProcessRuntimeOwnedStepCoordinator(
             runtimeResult.ExecutionRunId,
             materialization.ToolReceipts,
             stepContract: stepContract);
+    }
+
+    private static string BuildFailureSummary(ProcessRuntimeOwnedStepExecutionResult result)
+    {
+        const int maximumSummaryLength = 2000;
+        const int maximumReceiptCount = 12;
+
+        var receiptOutcomes = result.ToolReceipts
+            .Take(maximumReceiptCount)
+            .Select(receipt => $"{receipt.ToolName}={ClassifyReceiptOutcome(receipt.ExitSummary)}")
+            .ToArray();
+        var receiptSummary = receiptOutcomes.Length == 0
+            ? "no tool receipts"
+            : string.Join(", ", receiptOutcomes);
+        if (result.ToolReceipts.Count > maximumReceiptCount)
+        {
+            receiptSummary += $", and {result.ToolReceipts.Count - maximumReceiptCount} more";
+        }
+
+        var executionContext =
+            $"Runtime execution correlation: {result.ExecutionRunId:D}. Receipt outcomes: {receiptSummary}.";
+        var summaryPrefix = $"{executionContext} Driver summary: ";
+        if (summaryPrefix.Length >= maximumSummaryLength)
+        {
+            return summaryPrefix[..maximumSummaryLength];
+        }
+
+        var maximumDriverSummaryLength = maximumSummaryLength - summaryPrefix.Length;
+        var driverSummary = result.Summary.Length <= maximumDriverSummaryLength
+            ? result.Summary
+            : result.Summary[..maximumDriverSummaryLength];
+        return summaryPrefix + driverSummary;
+    }
+
+    private static string ClassifyReceiptOutcome(string exitSummary)
+    {
+        if (exitSummary.StartsWith("Succeeded", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Succeeded";
+        }
+
+        if (exitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Failed";
+        }
+
+        return "Observed";
     }
 }

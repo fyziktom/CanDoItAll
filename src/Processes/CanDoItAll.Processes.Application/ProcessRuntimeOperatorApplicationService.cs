@@ -419,9 +419,10 @@ public sealed class ProcessRuntimeOperatorApplicationService(
         {
             await ApplyReworkInstructionAsync(command, reason, stateBeforeRework, cancellationToken).ConfigureAwait(false);
             await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-            await dispatchQueue.EnqueueAsync(
-                new ProcessRuntimeDispatchQueueRequest(command.RunId, NormalizeRequestedBy(command.RequestedBy)),
-                cancellationToken).ConfigureAwait(false);
+            dispatchQueue.EnqueueOrDefer(
+                new ProcessRuntimeDispatchQueueRequest(
+                    command.RunId,
+                    NormalizeRequestedBy(command.RequestedBy)));
         }
 
         return new ProcessRuntimeOperatorActionResult(

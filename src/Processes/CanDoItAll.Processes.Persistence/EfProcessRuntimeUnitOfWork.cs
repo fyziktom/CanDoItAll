@@ -1,3 +1,6 @@
+using System.Buffers.Binary;
+using System.Data;
+using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
@@ -5,13 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Processes.Persistence;
 
-public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbContext) :
+public sealed class EfProcessRuntimeUnitOfWork(
+    ProcessPersistenceDbContext dbContext,
+    TimeProvider? timeProvider = null) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
     IProcessRuntimeActivityStore,
     IProcessRuntimeRunHierarchyStore,
     IProcessIdempotencyStore
 {
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+
     public async Task<ProcessRuntimeStateSnapshot?> LoadAsync(
         ProcessRunId runId,
         CancellationToken cancellationToken = default)
@@ -150,12 +157,51 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
         }
 
+        ValidateCommitIdentity(request);
         ValidateInitialPlanMatchesState(request);
+        ValidateAtomicMutation(request);
 
         using var rootSequenceLock = await ProcessRuntimeRootSequenceLocks
-            .AcquireAsync([request.Mutation.State.RootRunId.Value], cancellationToken)
+            .AcquireAsync([request.OriginalState.RootRunId.Value], cancellationToken)
             .ConfigureAwait(false);
 
+        if (!dbContext.Database.IsRelational())
+        {
+            try
+            {
+                return await CommitCoreAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                dbContext.ChangeTracker.Clear();
+                throw;
+            }
+        }
+
+        await using var transaction = await dbContext.Database
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            .ConfigureAwait(false);
+        try
+        {
+            await AcquireRootMutationLockAsync(
+                    request.OriginalState.RootRunId.Value,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            var result = await CommitCoreAsync(request, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return result;
+        }
+        catch
+        {
+            dbContext.ChangeTracker.Clear();
+            throw;
+        }
+    }
+
+    private async Task<ProcessRuntimeCommitResult> CommitCoreAsync(
+        ProcessRuntimeCommitRequest request,
+        CancellationToken cancellationToken)
+    {
         var duplicate = await FindCompletedCommandAsync(
             request.OriginalState.RunId,
             request.CommandId,
@@ -165,8 +211,6 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             return duplicate;
         }
 
-        ValidateAtomicMutation(request.Mutation);
-
         dbContext.ChangeTracker.Clear();
         var existing = await LoadStateEntityAsync(
             request.Mutation.State.RunId.Value,
@@ -175,6 +219,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         if (await ValidateParentStepPreconditionAsync(
                 request,
                 isNewState: existing is null,
+                commitTimeUtc: clock.GetUtcNow(),
                 cancellationToken).ConfigureAwait(false) is { } rejection)
         {
             dbContext.ChangeTracker.Clear();
@@ -185,6 +230,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             request,
             isNewState: existing is null,
             cancellationToken).ConfigureAwait(false);
+        StageInitialAssignments(request, isNewState: existing is null);
 
         if (existing is null)
         {
@@ -193,6 +239,14 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         else
         {
             EnsureCurrentStateMatchesOriginal(existing, request.OriginalState);
+            if (await ValidateBlockedRecoveryChildLineageAsync(
+                    request,
+                    cancellationToken).ConfigureAwait(false) is { } childLineageRejection)
+            {
+                dbContext.ChangeTracker.Clear();
+                return childLineageRejection;
+            }
+
             ReplaceState(existing, request.Mutation.State);
         }
 
@@ -211,6 +265,126 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         dbContext.ChangeTracker.Clear();
         return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
+    }
+
+    private void StageInitialAssignments(
+        ProcessRuntimeCommitRequest request,
+        bool isNewState)
+    {
+        if (request.InitialAssignments is not { } assignments)
+        {
+            if (isNewState &&
+                (request.ParentStepPrecondition is not null ||
+                 request.InitialPlan is not null))
+            {
+                throw new InvalidOperationException(
+                    "A new executable process run must commit its initial assignments atomically with its runtime state and immutable plan.");
+            }
+
+            return;
+        }
+
+        if (!isNewState || request.InitialPlan is null)
+        {
+            throw new InvalidOperationException(
+                "Initial process assignments can only be committed atomically with a new runtime state and its immutable plan.");
+        }
+
+        var planStepsById = request.InitialPlan.Steps
+            .Where(step => step.IsExecutable)
+            .ToDictionary(step => step.StepInstanceId);
+        var stateStepsById = request.Mutation.State.Steps
+            .Where(step => step.IsExecutable)
+            .ToDictionary(step => step.StepInstanceId);
+        var duplicateStepIds = assignments
+            .GroupBy(assignment => assignment.StepInstanceId)
+            .FirstOrDefault(group => group.Count() > 1);
+        var duplicateStepKeys = assignments
+            .GroupBy(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateStepIds is not null ||
+            duplicateStepKeys is not null ||
+            assignments.Count != planStepsById.Count ||
+            assignments.Count != stateStepsById.Count ||
+            assignments.Any(assignment =>
+                assignment.RunId != request.Mutation.State.RunId ||
+                 assignment.PlanId != request.Mutation.State.PlanId ||
+                 !planStepsById.TryGetValue(assignment.StepInstanceId, out var planStep) ||
+                 !stateStepsById.TryGetValue(assignment.StepInstanceId, out var stateStep) ||
+                 stateStep.StepDefinitionId != planStep.StepDefinitionId ||
+                 !string.Equals(
+                     assignment.StepKey,
+                     planStep.StepKey,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                "Initial process assignments must map exactly once to every executable step in the new runtime state and immutable plan.");
+        }
+
+        ValidateAssignmentParentLineage(request, assignments);
+
+        dbContext.RuntimeStepAssignments.AddRange(
+            assignments.Select(EfProcessRuntimeStepAssignmentStore.ToEntity));
+    }
+
+    private static void ValidateAssignmentParentLineage(
+        ProcessRuntimeCommitRequest request,
+        IReadOnlyList<ProcessRuntimeStepAssignment> assignments)
+    {
+        if (request.ParentStepPrecondition is not { } expectedParent)
+        {
+            if (assignments.Any(HasParentLineageKey))
+            {
+                throw new InvalidOperationException(
+                    "A root process assignment cannot carry parent-run lineage.");
+            }
+
+            return;
+        }
+
+        if (assignments.Count == 0 ||
+            assignments.Any(assignment =>
+                !ProcessRuntimeLaunchVariables.TryReadParentStep(
+                    assignment.LaunchVariables,
+                    out var actualParent) ||
+                actualParent != expectedParent))
+        {
+            throw new InvalidOperationException(
+                "Every child process assignment must carry the exact typed parent-step lineage used to authorize launch.");
+        }
+    }
+
+    private static bool HasParentLineageKey(ProcessRuntimeStepAssignment assignment)
+    {
+        return assignment.LaunchVariables.ContainsKey(
+                   ProcessRuntimeLaunchVariables.ParentProcessRunId) ||
+               assignment.LaunchVariables.ContainsKey(
+                   ProcessRuntimeLaunchVariables.ParentProcessStepId);
+    }
+
+    private async Task AcquireRootMutationLockAsync(
+        Guid rootRunId,
+        CancellationToken cancellationToken)
+    {
+        if (!dbContext.Database.IsNpgsql())
+        {
+            return;
+        }
+
+        var lockKey = CreateAdvisoryLockKey(rootRunId);
+        await dbContext.Database
+            .ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({lockKey})",
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static long CreateAdvisoryLockKey(Guid rootRunId)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        rootRunId.TryWriteBytes(bytes);
+        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^
+               BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
     }
 
     private async Task StageInitialPlanAsync(
@@ -270,6 +444,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
     private async Task<ProcessRuntimeCommitResult?> ValidateParentStepPreconditionAsync(
         ProcessRuntimeCommitRequest request,
         bool isNewState,
+        DateTimeOffset commitTimeUtc,
         CancellationToken cancellationToken)
     {
         if (request.ParentStepPrecondition is not { } parentStepPrecondition)
@@ -342,7 +517,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
                 (claim.Status is DispatchClaimStatus.Claimed or
                     DispatchClaimStatus.LeaseRenewed or
                     DispatchClaimStatus.Reclaimed) &&
-                claim.ExpiresAtUtc > request.Mutation.State.UpdatedAtUtc))
+                claim.ExpiresAtUtc > commitTimeUtc))
         {
             return RejectParentStepPrecondition(
                 request,
@@ -351,6 +526,164 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         }
 
         return null;
+    }
+
+    private async Task<ProcessRuntimeCommitResult?> ValidateBlockedRecoveryChildLineageAsync(
+        ProcessRuntimeCommitRequest request,
+        CancellationToken cancellationToken)
+    {
+        var authorization = request.BlockedRecoveryAuthorization;
+        if (authorization?.RecoveryRouteKind != ProcessRecoveryRouteKind.ChildRunPropagation)
+        {
+            return null;
+        }
+
+        if (authorization.RelatedChildRunId is not { } relatedChildRunId ||
+            authorization.ExpectedRelatedChildUpdatedAtUtc is not { } relatedChildUpdatedAtUtc ||
+            authorization.ExpectedChildLineageEvidence is not { } expectedEvidence)
+        {
+            return RejectBlockedRecoveryChildLineage(
+                request,
+                "The child-run recovery commit has incomplete typed lineage evidence.");
+        }
+
+        var expectedIssue = ProcessRuntimeChildLineageEvidenceRules.FindIssue(
+            expectedEvidence,
+            request.OriginalState.RunId,
+            authorization.SourceBlockedStepInstanceId,
+            request.OriginalState.RootRunId,
+            relatedChildRunId,
+            relatedChildUpdatedAtUtc);
+        if (expectedIssue is not null)
+        {
+            return RejectBlockedRecoveryChildLineage(request, expectedIssue);
+        }
+
+        var parentRunSnippet = BuildLaunchVariableJsonSnippet(
+            ProcessRuntimeLaunchVariables.ParentProcessRunId,
+            expectedEvidence.ParentRunId.ToString());
+        var parentStepSnippet = BuildLaunchVariableJsonSnippet(
+            ProcessRuntimeLaunchVariables.ParentProcessStepId,
+            expectedEvidence.ParentStepInstanceId.ToString());
+        var matchingAssignments = dbContext.RuntimeStepAssignments
+            .AsNoTracking()
+            .Where(assignment =>
+                assignment.LaunchVariablesJson.Contains(parentRunSnippet) &&
+                assignment.LaunchVariablesJson.Contains(parentStepSnippet));
+        var linkedAssignmentRows = await matchingAssignments
+            .Select(assignment => assignment.RunId)
+            .Distinct()
+            .Select(runId => new LinkedChildAssignmentRow(
+                runId,
+                matchingAssignments
+                    .Where(assignment => assignment.RunId == runId)
+                    .Select(assignment => assignment.LaunchVariablesJson)
+                    .First(),
+                matchingAssignments
+                    .Where(assignment => assignment.RunId == runId)
+                    .Max(assignment => assignment.CreatedAtUtc)))
+            .OrderByDescending(child => child.CreatedAtUtc)
+            .ThenByDescending(child => child.RunId)
+            .Take(ProcessRuntimeChildLineageEvidenceRules.MaximumLinkedChildRunCount + 1)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (linkedAssignmentRows.Length >
+            ProcessRuntimeChildLineageEvidenceRules.MaximumLinkedChildRunCount)
+        {
+            return RejectBlockedRecoveryChildLineage(
+                request,
+                "The current linked-child set exceeds the bounded automatic recovery limit.");
+        }
+
+        var linkedChildren = linkedAssignmentRows
+            .Where(row =>
+                ProcessRuntimeLaunchVariables.TryReadParentStep(
+                    row.LaunchVariablesJson,
+                    out var parentStep) &&
+                parentStep.RunId == expectedEvidence.ParentRunId &&
+                parentStep.StepInstanceId == expectedEvidence.ParentStepInstanceId)
+            .GroupBy(row => row.RunId)
+            .Select(group => new LinkedChildRun(
+                new ProcessRunId(group.Key),
+                group.Max(row => row.CreatedAtUtc)))
+            .OrderByDescending(child => child.LinkCreatedAtUtc)
+            .ThenByDescending(child => child.RunId.Value)
+            .ToArray();
+        if (linkedChildren.Length is < 1 or
+            > ProcessRuntimeChildLineageEvidenceRules.MaximumLinkedChildRunCount)
+        {
+            return RejectBlockedRecoveryChildLineage(
+                request,
+                "The current linked-child set has an invalid bounded child count.");
+        }
+
+        var linkedRunIds = linkedChildren
+            .Select(child => child.RunId.Value)
+            .ToArray();
+        var childStateRows = await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state => linkedRunIds.Contains(state.RunId))
+            .Select(state => new LinkedChildStateRow(
+                state.RunId,
+                state.RootRunId,
+                state.Status,
+                state.UpdatedAtUtc))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (childStateRows.Length != linkedChildren.Length)
+        {
+            return RejectBlockedRecoveryChildLineage(
+                request,
+                "A currently linked child run has no durable runtime state.");
+        }
+
+        var childStatesByRunId = childStateRows.ToDictionary(state => state.RunId);
+        var currentEvidence = ProcessRuntimeChildLineageEvidence.Create(
+            expectedEvidence.ParentRunId,
+            expectedEvidence.ParentStepInstanceId,
+            linkedChildren.Select(child =>
+            {
+                var state = childStatesByRunId[child.RunId.Value];
+                return new ProcessRuntimeLinkedChildEvidence(
+                    child.RunId,
+                    new ProcessRunId(state.RootRunId),
+                    state.Status,
+                    state.UpdatedAtUtc,
+                    child.LinkCreatedAtUtc);
+            }));
+        var currentIssue = ProcessRuntimeChildLineageEvidenceRules.FindIssue(
+            currentEvidence,
+            request.OriginalState.RunId,
+            authorization.SourceBlockedStepInstanceId,
+            request.OriginalState.RootRunId,
+            relatedChildRunId,
+            relatedChildUpdatedAtUtc);
+        if (currentIssue is not null)
+        {
+            return RejectBlockedRecoveryChildLineage(request, currentIssue);
+        }
+
+        return expectedEvidence.Matches(currentEvidence)
+            ? null
+            : RejectBlockedRecoveryChildLineage(
+                request,
+                "The linked-child membership, order, status, or version changed before commit.");
+    }
+
+    private static string BuildLaunchVariableJsonSnippet(string key, string value)
+    {
+        return $"{JsonSerializer.Serialize(key)}:{JsonSerializer.Serialize(value)}";
+    }
+
+    private static ProcessRuntimeCommitResult RejectBlockedRecoveryChildLineage(
+        ProcessRuntimeCommitRequest request,
+        string issue)
+    {
+        return ProcessRuntimeCommitResult.FromMutation(
+            ProcessRuntimeMutation.Rejected(
+                request.OriginalState,
+                "Runtime.BlockedRecoveryChildLineageChanged",
+                issue));
     }
 
     private static ProcessRuntimeCommitResult RejectParentStepPrecondition(
@@ -538,11 +871,34 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         }
     }
 
-    private static void ValidateAtomicMutation(ProcessRuntimeMutation mutation)
+    private static void ValidateCommitIdentity(ProcessRuntimeCommitRequest request)
     {
+        if (request.OriginalState.RunId != request.Mutation.State.RunId ||
+            request.OriginalState.RootRunId != request.Mutation.State.RootRunId ||
+            request.OriginalState.PlanId != request.Mutation.State.PlanId ||
+            !string.Equals(
+                request.OriginalState.PlanHash,
+                request.Mutation.State.PlanHash,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "A runtime mutation cannot change its run, root-run, plan, or plan-hash identity.");
+        }
+    }
+
+    private static void ValidateAtomicMutation(ProcessRuntimeCommitRequest request)
+    {
+        var mutation = request.Mutation;
         var eventIds = new HashSet<RuntimeEventId>();
         foreach (var runtimeEvent in mutation.Events)
         {
+            if (runtimeEvent.RunId != mutation.State.RunId ||
+                runtimeEvent.RootRunId != mutation.State.RootRunId)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime event '{runtimeEvent.EventId}' must belong to mutation run '{mutation.State.RunId}' and root '{mutation.State.RootRunId}'.");
+            }
+
             if (!eventIds.Add(runtimeEvent.EventId))
             {
                 throw new InvalidOperationException($"Runtime event '{runtimeEvent.EventId}' appears more than once in the same mutation.");
@@ -565,4 +921,19 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             }
         }
     }
+
+    private readonly record struct LinkedChildAssignmentRow(
+        Guid RunId,
+        string LaunchVariablesJson,
+        DateTimeOffset CreatedAtUtc);
+
+    private readonly record struct LinkedChildRun(
+        ProcessRunId RunId,
+        DateTimeOffset LinkCreatedAtUtc);
+
+    private readonly record struct LinkedChildStateRow(
+        Guid RunId,
+        Guid RootRunId,
+        ProcessRuntimeStatus Status,
+        DateTimeOffset UpdatedAtUtc);
 }

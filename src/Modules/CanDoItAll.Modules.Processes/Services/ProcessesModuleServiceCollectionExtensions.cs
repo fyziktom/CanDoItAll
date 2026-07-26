@@ -76,6 +76,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, WorkspaceProductTargetAliasLaunchVariableContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, WorkspaceProductTargetFilesystemStateLaunchVariableContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, ProcessAcceptanceCriteriaLaunchVariableContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, DotNetProductBaselineLaunchVariableContributor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, DotNetProcessLaunchVariableContributor>());
         services.TryAddScoped<ProcessLaunchVariablePreparationService>();
         services.TryAddScoped<DotNetExistingSolutionVerifier>();

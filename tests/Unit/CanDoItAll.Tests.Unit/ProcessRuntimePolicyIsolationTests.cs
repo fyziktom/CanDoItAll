@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.Extensions.Configuration;
@@ -227,6 +228,19 @@ public sealed class ProcessRuntimePolicyIsolationTests
         var launchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = "dotnet.solution-setup",
+            [ProcessRuntimeLaunchVariables.ProcessStepDeterministicToolPlanDescriptorJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepDeterministicToolPlanDescriptor(
+                    new ProcessRuntimeDeterministicToolPlanDescriptor(
+                        "dotnet.create-project",
+                        "DotNetSolutionCreate",
+                        "SetupExecutionPlan",
+                        [
+                            new ProcessToolOperationExecutionPolicy(
+                                "run-helper-script",
+                                "workspace_pwsh_run_script",
+                                ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable,
+                                ProcessToolOperationFailureReconciliationPolicy.AuthoritativeReadbackConvergence)
+                        ])),
             [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
                 ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
                     new ProcessRuntimeScriptHelperDescriptor(
@@ -235,19 +249,53 @@ public sealed class ProcessRuntimePolicyIsolationTests
                         "SetupManifest",
                         "dotnet.create-project",
                         "DotNetSolutionCreate",
-                        "SetupExecutionPlan"))
+                        "SetupExecutionPlan",
+                        [
+                            new ProcessToolOperationExecutionPolicy(
+                                "run-helper-script",
+                                "workspace_pwsh_run_script",
+                                ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable,
+                                ProcessToolOperationFailureReconciliationPolicy.AuthoritativeReadbackConvergence)
+                        ]))
         };
 
         Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepRuntimeOwnedExecutorKey(
             launchVariables,
             out var executorKey));
         Assert.Equal("dotnet.solution-setup", executorKey);
+        Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepDeterministicToolPlanDescriptor(
+            launchVariables,
+            out var deterministicDescriptor));
+        Assert.Equal("dotnet.create-project", deterministicDescriptor.PlanKey);
+        Assert.Equal("SetupExecutionPlan", deterministicDescriptor.ExecutionPlanVariableName);
+        Assert.Single(deterministicDescriptor.OperationPolicies);
         Assert.True(ProcessRuntimeLaunchVariables.TryReadProcessStepScriptHelperDescriptor(
             launchVariables,
             out var descriptor));
         Assert.Equal("dotnet.create-project", descriptor.PlanKey);
         Assert.Equal("DotNetSolutionCreate", descriptor.PlanKind);
         Assert.Equal("SetupExecutionPlan", descriptor.ExecutionPlanVariableName);
+        var operation = Assert.Single(descriptor.OperationPolicies!);
+        Assert.Equal("run-helper-script", operation.OperationKey);
+        Assert.Equal(
+            ProcessToolOperationFailureReconciliationPolicy.AuthoritativeReadbackConvergence,
+            operation.FailureReconciliation);
+    }
+
+    [Theory]
+    [InlineData("Denied", "process.adapter.runtime_owned_execution_denied")]
+    [InlineData("TimedOut", "process.adapter.runtime_owned_execution_timed_out")]
+    public void Runtime_owned_boundary_failures_remain_unsafe_despite_repeatability(
+        string outcome,
+        string expectedCode)
+    {
+        var failure = ProcessRuntimeOwnedStepFailures.ResolveExecutionFailure(
+            outcome,
+            ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable);
+
+        Assert.Equal(expectedCode, failure.Code.Value);
+        Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, failure.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Unknown, failure.Idempotency);
     }
 
     private static ProcessToolReceiptPolicyCatalog CreateToolReceiptPolicyCatalog()
