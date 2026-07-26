@@ -127,6 +127,14 @@ public sealed record AgentImportResult(
     public IReadOnlyList<ExecutionArtifactRecord> Artifacts { get; init; } = [];
     public IReadOnlyList<ExecutionWorkflowCheckpointRecord> Checkpoints { get; init; } = [];
     public IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts { get; init; } = [];
+    public string PackageSha256 { get; init; } = string.Empty;
+    public string PackageSchemaVersion { get; init; } = string.Empty;
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+}
+
+public sealed class AgentPackageValidationException(string code, string message) : Exception(message)
+{
+    public string Code { get; } = code;
 }
 
 public interface IAgentPackageService
@@ -137,6 +145,33 @@ public interface IAgentPackageService
         CancellationToken cancellationToken = default);
 
     Task<AgentImportResult> ImportAsync(string packagePath, CancellationToken cancellationToken = default);
+
+    async Task<AgentImportResult> ImportAsync(
+        Stream package,
+        AgentPackageReadOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var temporaryPath = Path.Combine(Path.GetTempPath(), $"agent-package-import-{Guid.NewGuid():N}.zip");
+        try
+        {
+            await using (var target = File.Create(temporaryPath))
+            {
+                await package.CopyToAsync(target, cancellationToken);
+            }
+
+            return await ImportAsync(temporaryPath, cancellationToken);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
 }
 
 public sealed record AgentRuntimeResponse(
@@ -378,6 +413,25 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default);
     Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default);
+
+    Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
+        Stream package,
+        AgentPackageImportCommand command,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Remote agent package import is not supported by this workspace service.");
+    Task<AgentExternalProvisioningResource> GetAgentByExternalKeyAsync(
+        string externalNamespace,
+        string key,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("External-key agent lookup is not supported by this workspace service.");
+    Task<AgentExternalProvisioningReceipt> ProvisionAgentByExternalKeyAsync(
+        AgentExternalProvisioningCommand command,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("External-key agent provisioning is not supported by this workspace service.");
+    Task<AgentExternalProvisioningReceipt> ArchiveAgentByExternalKeyAsync(
+        AgentExternalArchiveCommand command,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("External-key agent archive is not supported by this workspace service.");
     Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default);
     Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default);
@@ -396,6 +450,14 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default);
     Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default);
+    Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException(
+            "This workspace does not support atomic same-source execution reservation.");
+    }
     Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default);
     Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,

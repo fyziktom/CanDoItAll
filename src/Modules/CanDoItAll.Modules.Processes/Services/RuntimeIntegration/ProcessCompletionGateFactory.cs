@@ -52,7 +52,11 @@ internal sealed class ProcessCompletionGateFactory(
             .ToArray();
         var gates = new List<Func<ProcessCompletionGateContext, ProcessCompletionIssue?>>
         {
-            context => ValidateGroundedOutcomeReferences(context.Assignment, context.Output, context.ToolReceipts),
+            context => ValidateGroundedOutcomeReferences(
+                context.Assignment,
+                context.Output,
+                context.ToolReceipts,
+                context.VerifiedSubprocessOutcome),
             context => ValidateRequiredBranchOutcomeSelection(context.Assignment, context.Output),
             context => ValidateRuntimeRoutedBranchWasNotSelectedDirectly(context.Assignment, context.Output),
             context => ProcessProductMutationEvidenceGate.Validate(context.Assignment, context.Output),

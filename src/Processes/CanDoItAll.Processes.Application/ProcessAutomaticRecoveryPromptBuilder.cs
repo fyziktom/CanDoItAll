@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
@@ -12,8 +13,9 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
     private const int MaxFallbackPromptCharacters = 6000;
     private const int MaxSectionCharacters = 3000;
     private const int MaxLaunchVariableCharacters = 500;
-    private const int MaxLaunchVariableBlockCharacters = 6000;
+    private const int MaxLaunchVariableBlockCharacters = 10000;
     private const int MaxReferenceCount = 48;
+    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
 
     private static readonly string[] ContractSectionHeadings =
     [
@@ -23,7 +25,8 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         "Evidence contract:",
         "Required upstream artifact slots:",
         "Produced artifact slots:",
-        "Available branch outcomes:"
+        "Available branch outcomes:",
+        "Subprocess mapping:"
     ];
 
     private static readonly Regex GroundedReferenceRegex = new(
@@ -41,22 +44,29 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         ArgumentNullException.ThrowIfNull(assignment);
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRecoveryInstruction);
 
+        var isRuntimeOwnedSubprocess = IsRuntimeOwnedSubprocess(assignment.LaunchVariables);
+        var effectiveRecoveryInstruction = FormatRecoveryInstruction(
+            runtimeRecoveryInstruction,
+            isRuntimeOwnedSubprocess);
         var requiredSlots = FormatSlotIds(assignment.RequiredArtifactSlotIds);
         var producedSlots = FormatSlotIds(assignment.ProducedArtifactSlotIds);
         var branchGate = assignment.BranchGate is null
             ? "none"
             : $"{assignment.BranchGate.SourceStepKey} -> {assignment.BranchGate.RequiredOutcomeKey}";
-        var groundedRefs = FormatGroundedReferences(assignment.Prompt, runtimeRecoveryInstruction);
+        var groundedRefs = FormatGroundedReferences(assignment.Prompt, effectiveRecoveryInstruction);
         var launchVariables = FormatLaunchVariables(assignment.LaunchVariables);
-        var contractExcerpts = FormatContractExcerpts(assignment.Prompt);
-        var recoveryChecklist = FormatRecoveryChecklist(runtimeRecoveryInstruction);
+        var contractExcerpts = FormatContractExcerpts(assignment.Prompt, isRuntimeOwnedSubprocess);
+        var recoveryChecklist = FormatRecoveryChecklist(effectiveRecoveryInstruction, isRuntimeOwnedSubprocess);
+        var launchOwnershipSection = FormatLaunchOwnershipSection(isRuntimeOwnedSubprocess);
 
         return $"""
-        {runtimeRecoveryInstruction.Trim()}
+        {effectiveRecoveryInstruction}
 
         {ExecutionFocusHeading}
         This is a focused recovery attempt for the same process step, not a restart of its complete discovery and planning work. Resolve the rejected completion gate first. Reuse the existing product state and the exact grounded refs below. Read only the minimum files needed for the repair, perform the required action, verify its current-execution receipt, and only then rewrite the managed artifact and finalize.
         Do not claim an action, correction, rerun, mutation, validation, or artifact write unless this exact execution attempt has the corresponding successful tool receipt.
+
+        {launchOwnershipSection}
 
         {CompletionChecklistHeading}
         {recoveryChecklist}
@@ -85,13 +95,18 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         """;
     }
 
-    private static string FormatRecoveryChecklist(string runtimeRecoveryInstruction)
+    private static string FormatRecoveryChecklist(
+        string runtimeRecoveryInstruction,
+        bool isRuntimeOwnedSubprocess)
     {
         var items = MissingReceiptListRegex.Matches(runtimeRecoveryInstruction)
             .SelectMany(match => match.Groups["receipts"].Value.Split(
                 [';', ','],
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Where(LooksLikeToolName)
+            .Where(toolName =>
+                !isRuntimeOwnedSubprocess ||
+                !string.Equals(toolName, SubprocessLaunchToolName, StringComparison.OrdinalIgnoreCase))
             .Select(toolName => $"Invoke `{toolName}` successfully in this exact execution attempt.")
             .ToList();
 
@@ -139,6 +154,86 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
             RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     }
 
+    private static bool IsRuntimeOwnedSubprocess(IReadOnlyDictionary<string, string> launchVariables)
+        => ProcessRuntimeLaunchVariables.TryReadProcessStepSubprocessContract(
+               launchVariables,
+               out var contract) &&
+           contract.LaunchMode == ProcessSubprocessLaunchMode.RuntimeOwned;
+
+    private static string FormatLaunchOwnershipSection(bool isRuntimeOwnedSubprocess)
+        => isRuntimeOwnedSubprocess
+            ? $"Subprocess launch ownership:\n- process runtime owned\n- The process runtime launches, defers, and completes the parent step from typed child evidence. Do not call {SubprocessLaunchToolName}."
+            : string.Empty;
+
+    private static string FormatRecoveryInstruction(
+        string runtimeRecoveryInstruction,
+        bool isRuntimeOwnedSubprocess)
+    {
+        if (!isRuntimeOwnedSubprocess)
+        {
+            return runtimeRecoveryInstruction.Trim();
+        }
+
+        var retainedLines = new List<string>();
+        foreach (var line in runtimeRecoveryInstruction.Split(["\r\n", "\n"], StringSplitOptions.None))
+        {
+            if (!line.Contains(SubprocessLaunchToolName, StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("do not call", StringComparison.OrdinalIgnoreCase))
+            {
+                retainedLines.Add(line);
+                continue;
+            }
+
+            if (TryRemoveRuntimeOwnedLaunchReceipt(line, out var sanitizedLine))
+            {
+                retainedLines.Add(sanitizedLine);
+            }
+        }
+
+        var retainedInstruction = string.Join(Environment.NewLine, retainedLines).Trim();
+        if (string.IsNullOrWhiteSpace(retainedInstruction) ||
+            string.Equals(
+                retainedInstruction,
+                "Runtime diagnostic rework instruction:",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            retainedInstruction = "Runtime diagnostic rework instruction:\nApply the typed runtime-owned subprocess contract.";
+        }
+
+        return retainedInstruction;
+    }
+
+    private static bool TryRemoveRuntimeOwnedLaunchReceipt(
+        string line,
+        out string sanitizedLine)
+    {
+        sanitizedLine = string.Empty;
+        var match = MissingReceiptListRegex.Match(line);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        var receiptGroup = match.Groups["receipts"];
+        var retainedReceipts = receiptGroup.Value
+            .Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(receipt => !string.Equals(
+                receipt.Trim('`'),
+                SubprocessLaunchToolName,
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (retainedReceipts.Length == 0)
+        {
+            return false;
+        }
+
+        sanitizedLine = string.Concat(
+            line.AsSpan(0, receiptGroup.Index),
+            string.Join("; ", retainedReceipts),
+            line.AsSpan(receiptGroup.Index + receiptGroup.Length));
+        return true;
+    }
+
     private static string FormatSlotIds<T>(IReadOnlyList<T> slotIds)
         => slotIds.Count == 0
             ? "none"
@@ -179,12 +274,28 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         var omittedCount = 0;
         foreach (var pair in visibleLaunchVariables
                      .OrderByDescending(pair => HasGroundedReference(pair.Value))
-                     .ThenBy(pair => pair.Value.Length > MaxLaunchVariableCharacters)
+                     .ThenByDescending(pair =>
+                         ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(pair.Key))
+                     .ThenBy(pair =>
+                         pair.Value.Length >
+                         ResolveMaximumLaunchVariableCharacters(pair.Key))
                      .ThenBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            var value = CollapseWhitespace(pair.Value);
-            var clippedValue = Clip(value, MaxLaunchVariableCharacters);
-            var line = $"- {pair.Key}: {clippedValue}";
+            var isAtomicContract =
+                ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(pair.Key);
+            var value = isAtomicContract
+                ? pair.Value.Trim()
+                : CollapseWhitespace(pair.Value);
+            var maximumCharacters = ResolveMaximumLaunchVariableCharacters(pair.Key);
+            var formattedValue = value.Length <= maximumCharacters
+                ? value
+                : isAtomicContract
+                    ? ProcessLaunchVariablePromptValuePolicy.CreateAtomicOmission(
+                        pair.Key,
+                        value.Length,
+                        maximumCharacters)
+                    : Clip(value, maximumCharacters);
+            var line = $"- {pair.Key}: {formattedValue}";
             if (builder.Length + line.Length + Environment.NewLine.Length > MaxLaunchVariableBlockCharacters)
             {
                 omittedCount++;
@@ -202,14 +313,25 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
         return builder.ToString().TrimEnd();
     }
 
+    private static int ResolveMaximumLaunchVariableCharacters(string key)
+        => ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(key)
+            ? ProcessLaunchVariablePromptValuePolicy.MaximumInlineContractCharacters
+            : MaxLaunchVariableCharacters;
+
     private static bool HasGroundedReference(string value)
         => value.Contains("artifacts/", StringComparison.OrdinalIgnoreCase) ||
            value.Contains("external-target/", StringComparison.OrdinalIgnoreCase);
 
-    private static string FormatContractExcerpts(string prompt)
+    private static string FormatContractExcerpts(
+        string prompt,
+        bool isRuntimeOwnedSubprocess)
     {
         var excerpts = ContractSectionHeadings
             .Select(heading => ExtractSection(prompt, heading))
+            .Where(excerpt => !string.IsNullOrWhiteSpace(excerpt))
+            .Select(excerpt => isRuntimeOwnedSubprocess
+                ? RemoveAgentOwnedLaunchInstructions(excerpt)
+                : excerpt)
             .Where(excerpt => !string.IsNullOrWhiteSpace(excerpt))
             .ToArray();
         if (excerpts.Length > 0)
@@ -217,7 +339,23 @@ internal static class ProcessAutomaticRecoveryPromptBuilder
             return string.Join(Environment.NewLine + Environment.NewLine, excerpts);
         }
 
-        return Clip(prompt.Trim(), MaxFallbackPromptCharacters);
+        var fallback = Clip(prompt.Trim(), MaxFallbackPromptCharacters);
+        return isRuntimeOwnedSubprocess
+            ? RemoveAgentOwnedLaunchInstructions(fallback)
+            : fallback;
+    }
+
+    private static string RemoveAgentOwnedLaunchInstructions(string value)
+    {
+        return string.Join(
+                Environment.NewLine,
+                value
+                    .Split(["\r\n", "\n"], StringSplitOptions.None)
+                    .Where(line =>
+                        !line.Contains(SubprocessLaunchToolName, StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("do not call", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("process runtime owned", StringComparison.OrdinalIgnoreCase)))
+            .Trim();
     }
 
     private static string ExtractSection(string prompt, string heading)

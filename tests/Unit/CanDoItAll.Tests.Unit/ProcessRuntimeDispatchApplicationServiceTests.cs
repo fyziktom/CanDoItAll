@@ -70,6 +70,149 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
+    public async Task ExecuteReady_does_not_dispatch_cancel_requested_run()
+    {
+        var stepId = ProcessStepInstanceId.New();
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.CancelRequested,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Cancelled)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RecordingStrategyFactoryResolver("implementation");
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "implementation")),
+            new InMemoryAssignmentStore([]),
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessLaunchStage.Running, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.CancelRequested, result.Status);
+        Assert.Empty(unitOfWork.Requests);
+        Assert.Empty(strategyResolver.ExecutionContexts);
+    }
+
+    [Fact]
+    public async Task ExecuteReady_routes_blocked_result_through_shared_recovery_boundary()
+    {
+        var stepId = ProcessStepInstanceId.New();
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Blocked,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Blocked)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var recoveryCoordinator = new RecordingBlockedRunRecoveryCoordinator(
+            new ProcessBlockedRunRecoveryResult(
+                RunId,
+                ProcessBlockedRunRecoveryOutcome.Recovered,
+                ProcessBlockedRunRecoveryActionKind.CurrentStepRework,
+                stepId,
+                ProcessBlockedRunRecoveryPolicy.SafeIdempotentRework,
+                ProcessRuntimeStatus.Active,
+                []));
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            new RecordingRuntimeUnitOfWork(stateStore),
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "implementation")),
+            new InMemoryAssignmentStore([]),
+            new RecordingStrategyFactoryResolver("implementation"),
+            NewNoOpCatchupService(),
+            blockedRunRecoveryCoordinator: recoveryCoordinator);
+
+        var result = await service.ExecuteReadyAsync(RunId, "direct-api-test");
+
+        Assert.Equal(ProcessLaunchStage.Running, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Equal((RunId, "direct-api-test"), Assert.Single(recoveryCoordinator.Requests));
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains(
+                nameof(ProcessBlockedRunRecoveryPolicy.SafeIdempotentRework),
+            StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteReady_queues_blocked_parent_recovery_when_child_completes_through_direct_dispatch()
+    {
+        var parentRunId = ProcessRunId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var childStepId = ProcessStepInstanceId.New();
+        var childState = new ProcessRuntimeStateSnapshot(
+            parentRunId,
+            RunId,
+            PlanId,
+            "sha256:child-plan",
+            ProcessRuntimeStatus.Completed,
+            [NewStep(childStepId, ProcessRuntimeStepStatus.Completed)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var parentState = new ProcessRuntimeStateSnapshot(
+            parentRunId,
+            parentRunId,
+            PlanId,
+            "sha256:parent-plan",
+            ProcessRuntimeStatus.Blocked,
+            [NewStep(parentStepId, ProcessRuntimeStepStatus.Blocked)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-1));
+        var stateStore = new InMemoryRuntimeStateStore(childState, [parentState]);
+        var assignmentStore = new InMemoryAssignmentStore(
+        [
+            NewAssignment(
+                childStepId,
+                "child-work",
+                launchVariables: ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    parentRunId,
+                    parentStepId)) with
+            {
+                RunId = RunId
+            }
+        ]);
+        var dispatchQueue = new RecordingDispatchQueue();
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            new RecordingRuntimeUnitOfWork(stateStore),
+            new InMemoryPlanStore(NewSingleStepPlan(childStepId, "child-work")),
+            assignmentStore,
+            new ThrowingStrategyFactoryResolver(),
+            NewNoOpCatchupService(),
+            dispatchQueue: dispatchQueue);
+
+        var result = await service.ExecuteReadyAsync(RunId, "direct-api-test");
+
+        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
+        var request = Assert.Single(dispatchQueue.Requests);
+        Assert.Equal(parentRunId, request.RunId);
+        Assert.Equal("direct-api-test", request.RequestedBy);
+        Assert.True(request.IsRecovery);
+    }
+
+    [Fact]
     public async Task ExecuteReady_skips_branch_descendants_when_branch_source_was_skipped_and_closes_run()
     {
         var initialState = new ProcessRuntimeStateSnapshot(
@@ -772,7 +915,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_auto_reworks_safe_adapter_contract_violation_before_manager_review()
+    public async Task ExecuteReady_blocks_adapter_contract_violation_until_replay_scope_is_verified()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -790,7 +933,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             observedAtUtc);
         var stateStore = new InMemoryRuntimeStateStore(initialState);
         var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
-        var assignmentStore = new InMemoryAssignmentStore([NewAssignment(stepId, "review-architecture-design")]);
+        var assignmentStore = new InMemoryAssignmentStore(
+            [NewManagedArtifactAssignment(stepId, "review-architecture-design")]);
         var strategyResolver = new RetryableAdapterViolationThenSuccessStrategyFactoryResolver();
         var service = new ProcessRuntimeDispatchApplicationService(
             new TestProcessProjectionClock(observedAtUtc),
@@ -803,31 +947,28 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
-        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
-        Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
-        Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(2, strategyResolver.ExecutionCount);
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
+        Assert.Equal(1, strategyResolver.ExecutionCount);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
-                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Ready &&
+                       receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Blocked &&
                        receipt.RecoveryDecision is
                        {
-                           DecisionKind: ProcessRecoveryDecisionKind.SafeRetry,
-                           RouteKind: ProcessRecoveryRouteKind.CurrentStepRetry
+                           DecisionKind: ProcessRecoveryDecisionKind.ManagerRequired,
+                           RouteKind: ProcessRecoveryRouteKind.ManagerAction,
+                           Policy: "process.current-step-replay-scope-review-required"
                        });
-        Assert.DoesNotContain(
+        Assert.Contains(
             "Runtime manager recovery instruction",
             assignmentStore.Assignments.Single().Prompt,
             StringComparison.Ordinal);
-        Assert.Contains(stateStore.State.AppliedResults, receipt => receipt.Outcome == StrategyOutcome.Succeeded);
-        Assert.Contains(
-            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
-            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
     }
 
     [Fact]
-    public async Task ExecuteReady_auto_rework_appends_diagnostic_specific_packet()
+    public async Task ExecuteReady_does_not_auto_rework_product_mutation_for_missing_tool_receipt()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -868,17 +1009,17 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
-        Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
-        Assert.Equal(2, strategyResolver.ExecutionCount);
-        var prompt = assignmentStore.Assignments.Single().Prompt;
-        Assert.StartsWith("Runtime diagnostic rework instruction:", prompt, StringComparison.Ordinal);
-        Assert.Contains("Runtime diagnostic rework instruction:", prompt, StringComparison.Ordinal);
-        Assert.Contains(ProcessAutomaticRecoveryPromptBuilder.ExecutionFocusHeading, prompt, StringComparison.Ordinal);
-        Assert.Contains("workspace_pwsh_run_script", prompt, StringComparison.Ordinal);
-        Assert.Contains("Generic receipt recovery", prompt, StringComparison.Ordinal);
-        Assert.Contains("missing current-run receipt contract", prompt, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Runtime manager recovery instruction:", prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("{CurrentProcessRunId}", prompt, StringComparison.Ordinal);
+        Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Equal(1, strategyResolver.ExecutionCount);
+        Assert.Contains(
+            "Runtime manager recovery instruction",
+            assignmentStore.Assignments.Single().Prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Runtime diagnostic rework instruction",
+            assignmentStore.Assignments.Single().Prompt,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1019,7 +1160,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_auto_reworks_adapter_manager_result_through_same_fingerprint_budget_before_block()
+    public async Task ExecuteReady_blocks_adapter_manager_result_after_existing_replay_scope_budget()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1033,7 +1174,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ProcessRuntimeStatus.Active,
             [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 4)],
             [],
-            NewSubmittedResults(stepId, 3, StrategyOutcome.NeedsManager, ProcessRuntimeStepStatus.Ready, retryHash),
+            NewSafeRetryReceipts(stepId, 4, retryHash),
             new HashSet<ArtifactSlotId>(),
             observedAtUtc);
         var stateStore = new InMemoryRuntimeStateStore(initialState);
@@ -1044,7 +1185,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stateStore,
             unitOfWork,
             new InMemoryPlanStore(plan),
-            new InMemoryAssignmentStore([NewAssignment(stepId, "targeted-validation")]),
+            new InMemoryAssignmentStore(
+                [NewManagedArtifactAssignment(stepId, "targeted-validation")]),
             strategyResolver,
             NewNoOpCatchupService());
 
@@ -1053,9 +1195,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(
-            ProcessRecoveryClassifierOptions.Default.MaxSameDiagnosticFingerprintAutomaticReworks + 1,
-            strategyResolver.ExecutionContexts.Count);
+        Assert.Single(strategyResolver.ExecutionContexts);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
@@ -1085,7 +1225,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_auto_reworks_adapter_manager_result_with_new_hash_before_same_fingerprint_block()
+    public async Task ExecuteReady_blocks_new_result_hash_after_existing_replay_scope_budget()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1099,12 +1239,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ProcessRuntimeStatus.Active,
             [NewStep(stepId, ProcessRuntimeStepStatus.Ready, attemptNumber: 4)],
             [],
-            NewSubmittedResults(
-                stepId,
-                3,
-                StrategyOutcome.NeedsManager,
-                ProcessRuntimeStepStatus.Ready,
-                resultHash: null),
+            NewSafeRetryReceipts(stepId, 4, resultHash: null),
             new HashSet<ArtifactSlotId>(),
             observedAtUtc);
         var stateStore = new InMemoryRuntimeStateStore(initialState);
@@ -1115,7 +1250,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stateStore,
             unitOfWork,
             new InMemoryPlanStore(plan),
-            new InMemoryAssignmentStore([NewAssignment(stepId, "targeted-validation")]),
+            new InMemoryAssignmentStore(
+                [NewManagedArtifactAssignment(stepId, "targeted-validation")]),
             strategyResolver,
             NewNoOpCatchupService());
 
@@ -1124,9 +1260,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Blocked, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, stepId).Status);
-        Assert.Equal(
-            ProcessRecoveryClassifierOptions.Default.MaxSameDiagnosticFingerprintAutomaticReworks + 1,
-            strategyResolver.ExecutionContexts.Count);
+        Assert.Single(strategyResolver.ExecutionContexts);
         Assert.Contains(
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.NeedsManager &&
@@ -1417,6 +1551,32 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         return receipts;
     }
 
+    private static IReadOnlyList<StrategyResultReceipt> NewSafeRetryReceipts(
+        ProcessStepInstanceId stepId,
+        int count,
+        string? resultHash)
+    {
+        return Enumerable.Range(0, count)
+            .Select(index => new StrategyResultReceipt(
+                stepId,
+                Binding.StrategyId,
+                StrategyResultIdempotencyKey.New(),
+                StrategyOutcome.NeedsManager,
+                ProcessRuntimeStepStatus.Ready,
+                resultHash ?? $"sha256:previous-{index}",
+                recoveryDecision: new ProcessRecoveryDecisionReceipt(
+                    ProcessFailureCategory.ProductCompletionGate,
+                    ProcessRecoveryDecisionKind.SafeRetry,
+                    AdapterContractRetryDiagnosticCode,
+                    "process.current-step-replay-scope-verified",
+                    "Test fixture for a previously verified replay-safe assignment.")
+                {
+                    RouteKind = ProcessRecoveryRouteKind.CurrentStepRetry,
+                    ResponsibleStepInstanceId = stepId
+                }))
+            .ToArray();
+    }
+
     private static ProcessRuntimeStepState FindStep(
         ProcessRuntimeStateSnapshot state,
         ProcessStepInstanceId stepId)
@@ -1520,6 +1680,24 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             Now);
     }
 
+    private static ProcessRuntimeStepAssignment NewManagedArtifactAssignment(
+        ProcessStepInstanceId stepId,
+        string stepKey)
+    {
+        return NewAssignment(stepId, stepKey) with
+        {
+            AllowedOperations =
+            [
+                nameof(ProcessDefinitionStepOperationKind.ReadProcessContext),
+                nameof(ProcessDefinitionStepOperationKind.ReadUpstreamArtifacts),
+                nameof(ProcessDefinitionStepOperationKind.WriteManagedProcessArtifacts),
+                nameof(ProcessDefinitionStepOperationKind.RecoverArtifactsOnly)
+            ],
+            OperationTargetScope =
+                nameof(ProcessDefinitionStepTargetScopeKind.ManagedProcessArtifactsOnly)
+        };
+    }
+
     private static IReadOnlyDictionary<string, string> CreateDotNetCreateProjectLaunchVariables()
     {
         return new Dictionary<string, string>(StringComparer.Ordinal)
@@ -1549,14 +1727,34 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         public DateTimeOffset GetUtcNow() => now;
     }
 
-    private sealed class InMemoryRuntimeStateStore(ProcessRuntimeStateSnapshot initialState) : IProcessRuntimeStateStore
+    private sealed class InMemoryRuntimeStateStore : IProcessRuntimeStateStore
     {
-        public ProcessRuntimeStateSnapshot State { get; set; } = initialState;
+        private readonly ProcessRunId primaryRunId;
+        private readonly Dictionary<ProcessRunId, ProcessRuntimeStateSnapshot> states;
+
+        public InMemoryRuntimeStateStore(
+            ProcessRuntimeStateSnapshot initialState,
+            IReadOnlyList<ProcessRuntimeStateSnapshot>? additionalStates = null)
+        {
+            primaryRunId = initialState.RunId;
+            states = (additionalStates ?? [])
+                .Append(initialState)
+                .ToDictionary(state => state.RunId);
+        }
+
+        public ProcessRuntimeStateSnapshot State
+        {
+            get => states[primaryRunId];
+            set => states[value.RunId] = value;
+        }
 
         public Task<ProcessRuntimeStateSnapshot?> LoadAsync(
             ProcessRunId runId,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<ProcessRuntimeStateSnapshot?>(State.RunId == runId ? State : null);
+            => Task.FromResult(
+                states.TryGetValue(runId, out var state)
+                    ? state
+                    : null);
     }
 
     private sealed class RecordingRuntimeUnitOfWork(InMemoryRuntimeStateStore stateStore) : IProcessRuntimeUnitOfWork
@@ -1799,6 +1997,11 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         {
             Requests.Add(request);
             return ValueTask.CompletedTask;
+        }
+
+        public void EnqueueOrDefer(ProcessRuntimeDispatchQueueRequest request)
+        {
+            Requests.Add(request);
         }
     }
 
@@ -2083,6 +2286,21 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
+    private sealed class RecordingBlockedRunRecoveryCoordinator(
+        ProcessBlockedRunRecoveryResult result) : IProcessBlockedRunRecoveryCoordinator
+    {
+        public List<(ProcessRunId RunId, string RequestedBy)> Requests { get; } = [];
+
+        public Task<ProcessBlockedRunRecoveryResult> TryRecoverAsync(
+            ProcessRunId runId,
+            string requestedBy,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add((runId, requestedBy));
+            return Task.FromResult(result);
+        }
+    }
+
     private sealed class EmptyRuntimeEventReplayStore : IProcessRuntimeEventReplayStore
     {
         public Task<IReadOnlyList<ProcessStoredRuntimeEvent>> ReadAfterGlobalSequenceAsync(
@@ -2111,6 +2329,12 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ProcessProjectionKey projectionKey,
             CancellationToken cancellationToken = default)
             => Task.FromResult<ProcessProjectionSnapshot?>(null);
+
+        public Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+            ProcessProjectorName projectorName,
+            IReadOnlyList<ProcessProjectionKey> projectionKeys,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>([]);
 
         public Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
             ProcessProjectorName projectorName,

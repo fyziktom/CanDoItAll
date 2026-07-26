@@ -162,6 +162,26 @@
       "Title": "Write Run command project nodes",
       "Subtitle": "Process-run runtime receipts",
       "Notes": "Create or reuse an organizational runtime command group under the current process run node, then create or update child nodes Run app and Run tests as runtime-capable project-structure nodes. Prefer ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId from launch variables as the parent node id; do not fall back to ProjectNodeId or project root when one of those process-run nodes is present in project structure. If a grouping node is needed, use a non-runnable operations organizer such as ProjectBlock + operations; do not create a ProjectBlock + delivery node named like a runnable command. Run app must be an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the target is runnable, with metadata.environment.projectPath populated as an absolute project file/folder path or paired with metadata.environment.workingDirectory when projectPath is relative. Include launch profile, protocol, and localhost URL when known. Run tests, build, and utility commands must be Script nodes with subtype console or powershell, with script metadata for command, arguments, and working directory. Put runtime metadata in the metadataJson string passed to project_structure_node_create, not only in node notes: Run app uses {\"environment\":{\"projectPath\":\"<project-or-folder-path>\",\"workingDirectory\":\"<working-directory>\",\"arguments\":\"<optional-dotnet-arguments>\",\"launchProfile\":\"<optional-profile>\",\"protocol\":\"<optional-http-or-https>\",\"applicationUrl\":\"<optional-localhost-url>\"}}; Run tests uses {\"script\":{\"command\":\"dotnet\",\"arguments\":\"test <solution-or-project>\",\"workingDirectory\":\"<working-directory>\"}}. Do not create runnable command nodes as ProjectBlock + delivery or any other delivery block. You must call project_structure_node_create for the durable runtime command writeback and then project_structure_read to read back the created or reused Run app and Run tests nodes before completing this step; do not return Completed with only intended node payloads, created node ids, placeholder node ids, verified-with-project_structure_read text, or pending writeback receipt text. Each child node must include command, working directory, app type, source evidence, and any required environment or cleanup notes. After writing each runnable node, read back the node metadata with project_structure_read and record a launcher-compatibility receipt: object type, subtype, project path or command, arguments, working directory, and whether ProjectStructureRuntimeLauncher.Resolve can create a launch plan. Write the required receipt artifact for this step at artifacts/process-runs/<current-process-run-id>/steps/run-command-node-receipts.md; do not use runtime-command-handoff.md for this step because the handoff belongs to the downstream runtime-command-handoff step. If a runnable Run app or Run tests node cannot be made launcher-compatible, return Blocked with the missing field and why instead of returning Completed with a non-working node. Use project-structure write tools only through this externally controlled step; do not mutate product files.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "runtime-command-node-create",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_node_create",
+            "Activation": "Always",
+            "Purpose": "AcceptanceProof",
+            "Reason": "Runtime command writeback must create or update launcher-compatible command nodes."
+          },
+          {
+            "Key": "runtime-command-node-readback",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_read",
+            "Activation": "Always",
+            "Purpose": "AcceptanceProof",
+            "Reason": "Runtime command writeback must read back launcher metadata before completion."
+          }
+        ]
+      },
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,

@@ -248,106 +248,117 @@ internal static class ProcessProductCompletionPathGate
         var inspectionFailures = new List<string>();
         foreach (var check in checks.Where(shouldEvaluate))
         {
-            if (!TryResolveRequiredProductFileContentCheckPath(productRoot, check, out var resolvedPath, out var pathFailure, out var skippedMissingOptionalPath))
+            var invalidPaths = new List<string>();
+            var missingPaths = new List<string>();
+            var existingPaths = new List<string>();
+            foreach (var pathCandidate in check.PathCandidates)
             {
-                if (!skippedMissingOptionalPath)
+                if (!TryResolveRequiredProductPath(
+                        productRoot,
+                        pathCandidate,
+                        out var candidatePath,
+                        out var invalidReason))
                 {
-                    defectFailures.Add(pathFailure);
+                    invalidPaths.Add($"{pathCandidate} ({invalidReason})");
+                    continue;
+                }
+
+                if (!File.Exists(candidatePath))
+                {
+                    missingPaths.Add(candidatePath);
+                    continue;
+                }
+
+                existingPaths.Add(candidatePath);
+            }
+
+            if (invalidPaths.Count > 0)
+            {
+                inspectionFailures.Add(
+                    $"required content-check path candidate contract is invalid: {string.Join("; ", invalidPaths)}");
+                continue;
+            }
+
+            if (existingPaths.Count == 0)
+            {
+                if (check.MustExist)
+                {
+                    defectFailures.Add(
+                        $"none of the required content-check path candidates existed: {string.Join("; ", missingPaths)}");
                 }
 
                 continue;
             }
 
-            string content;
-            try
+            var candidateDefects = new List<string>();
+            var candidateInspectionFailures = new List<string>();
+            var satisfied = false;
+            foreach (var resolvedPath in existingPaths)
             {
-                content = File.ReadAllText(resolvedPath);
+                string content;
+                try
+                {
+                    content = File.ReadAllText(resolvedPath);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DirectoryNotFoundException or ArgumentException or NotSupportedException)
+                {
+                    candidateInspectionFailures.Add($"{resolvedPath} could not be read: {exception.Message}");
+                    continue;
+                }
+
+                var resolvedPathDefects = new List<string>();
+                foreach (var requiredTextGroup in check.RequiredTextAnyGroups)
+                {
+                    if (requiredTextGroup.Count == 0)
+                    {
+                        resolvedPathDefects.Add($"{resolvedPath} has an empty required text group.");
+                        continue;
+                    }
+
+                    if (!requiredTextGroup.Any(requiredText => content.Contains(requiredText, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        resolvedPathDefects.Add(
+                            $"{resolvedPath} does not contain any expected text from [{string.Join(" | ", requiredTextGroup)}]");
+                    }
+                }
+
+                foreach (var forbiddenTextGroup in check.ForbiddenTextAnyGroups)
+                {
+                    if (forbiddenTextGroup.Count == 0)
+                    {
+                        resolvedPathDefects.Add($"{resolvedPath} has an empty forbidden text group.");
+                        continue;
+                    }
+
+                    var foundForbiddenText = forbiddenTextGroup
+                        .Where(forbiddenText => content.Contains(forbiddenText, StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                    if (foundForbiddenText.Length > 0)
+                    {
+                        resolvedPathDefects.Add(
+                            $"{resolvedPath} contains forbidden text [{string.Join(" | ", foundForbiddenText)}]");
+                    }
+                }
+
+                if (resolvedPathDefects.Count == 0)
+                {
+                    satisfied = true;
+                    break;
+                }
+
+                candidateDefects.AddRange(resolvedPathDefects);
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DirectoryNotFoundException or ArgumentException or NotSupportedException)
+
+            if (satisfied)
             {
-                inspectionFailures.Add($"{resolvedPath} could not be read: {exception.Message}");
                 continue;
             }
 
-            foreach (var requiredTextGroup in check.RequiredTextAnyGroups)
-            {
-                if (requiredTextGroup.Count == 0)
-                {
-                    defectFailures.Add($"{resolvedPath} has an empty required text group.");
-                    continue;
-                }
-
-                if (!requiredTextGroup.Any(requiredText => content.Contains(requiredText, StringComparison.OrdinalIgnoreCase)))
-                {
-                    defectFailures.Add($"{resolvedPath} does not contain any expected text from [{string.Join(" | ", requiredTextGroup)}]");
-                }
-            }
-
-            foreach (var forbiddenTextGroup in check.ForbiddenTextAnyGroups)
-            {
-                if (forbiddenTextGroup.Count == 0)
-                {
-                    defectFailures.Add($"{resolvedPath} has an empty forbidden text group.");
-                    continue;
-                }
-
-                var foundForbiddenText = forbiddenTextGroup
-                    .Where(forbiddenText => content.Contains(forbiddenText, StringComparison.OrdinalIgnoreCase))
-                    .ToArray();
-                if (foundForbiddenText.Length > 0)
-                {
-                    defectFailures.Add($"{resolvedPath} contains forbidden text [{string.Join(" | ", foundForbiddenText)}]");
-                }
-            }
+            defectFailures.AddRange(candidateDefects);
+            inspectionFailures.AddRange(candidateInspectionFailures);
         }
 
         return new ProductFileContentCheckEvaluation(defectFailures, inspectionFailures);
-    }
-
-    internal static bool TryResolveRequiredProductFileContentCheckPath(
-        string productRoot,
-        ProductCompletionRequiredFileContentCheck check,
-        out string resolvedPath,
-        out string failure,
-        out bool skippedMissingOptionalPath)
-    {
-        resolvedPath = string.Empty;
-        failure = string.Empty;
-        skippedMissingOptionalPath = false;
-        var invalidPaths = new List<string>();
-        var missingPaths = new List<string>();
-        foreach (var pathCandidate in check.PathCandidates)
-        {
-            if (!TryResolveRequiredProductPath(productRoot, pathCandidate, out var candidatePath, out var invalidReason))
-            {
-                invalidPaths.Add($"{pathCandidate} ({invalidReason})");
-                continue;
-            }
-
-            if (!File.Exists(candidatePath))
-            {
-                missingPaths.Add(candidatePath);
-                continue;
-            }
-
-            resolvedPath = candidatePath;
-            return true;
-        }
-
-        if (invalidPaths.Count == check.PathCandidates.Count)
-        {
-            failure = $"all required content-check path candidates were invalid: {string.Join("; ", invalidPaths)}";
-            return false;
-        }
-
-        if (!check.MustExist)
-        {
-            skippedMissingOptionalPath = true;
-            return false;
-        }
-
-        failure = $"none of the required content-check path candidates existed: {string.Join("; ", missingPaths)}";
-        return false;
     }
 
 }

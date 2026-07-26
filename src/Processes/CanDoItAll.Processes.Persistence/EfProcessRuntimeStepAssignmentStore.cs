@@ -17,21 +17,49 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
     {
         ArgumentNullException.ThrowIfNull(assignments);
 
-        foreach (var assignment in assignments)
+        var keys = new HashSet<(Guid RunId, Guid StepInstanceId)>();
+        var validated = new List<(
+            ProcessRuntimeStepAssignmentEntity Existing,
+            ProcessRuntimeStepAssignment Assignment)>(assignments.Count);
+        try
         {
-            var existing = await dbContext.RuntimeStepAssignments
-                .FindAsync(new object[] { assignment.RunId.Value, assignment.StepInstanceId.Value }, cancellationToken)
-                .ConfigureAwait(false);
-            if (existing is null)
+            foreach (var assignment in assignments)
             {
-                dbContext.RuntimeStepAssignments.Add(ToEntity(assignment));
-                continue;
+                var key = (assignment.RunId.Value, assignment.StepInstanceId.Value);
+                if (!keys.Add(key))
+                {
+                    throw new InvalidOperationException(
+                        $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' appears more than once in the same update batch.");
+                }
+
+                var existing = await dbContext.RuntimeStepAssignments
+                    .FindAsync(
+                        new object[] { assignment.RunId.Value, assignment.StepInstanceId.Value },
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (existing is null)
+                {
+                    throw new InvalidOperationException(
+                        $"New process assignment '{assignment.RunId}/{assignment.StepInstanceId}' must be committed atomically with its initial runtime state.");
+                }
+
+                EnsureImmutableLineage(existing, assignment);
+                EnsureOnlyRepairFieldsChanged(existing, assignment);
+                validated.Add((existing, assignment));
             }
 
-            Update(existing, assignment);
-        }
+            foreach (var (existing, assignment) in validated)
+            {
+                Update(existing, assignment);
+            }
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            dbContext.ChangeTracker.Clear();
+            throw;
+        }
     }
 
     public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunAsync(
@@ -48,6 +76,41 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         return rows.Select(ToAssignment).ToArray();
     }
 
+    public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunsAsync(
+        IReadOnlyList<ProcessRunId> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+        if (runIds.Count > IProcessRuntimeStepAssignmentStore.MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(runIds),
+                runIds.Count,
+                $"Step-assignment batch cannot exceed {IProcessRuntimeStepAssignmentStore.MaximumBatchRunCount} runs.");
+        }
+
+        var values = runIds
+            .Select(runId => runId.Value)
+            .Distinct()
+            .ToArray();
+        if (values.Length == 0)
+        {
+            return [];
+        }
+
+        var rows = await dbContext.RuntimeStepAssignments
+            .AsNoTracking()
+            .Where(assignment => values.Contains(assignment.RunId))
+            .OrderBy(assignment => assignment.RunId)
+            .ThenBy(assignment => assignment.StepKey)
+            .ThenBy(assignment => assignment.StepInstanceId)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return rows
+            .Select(ToAssignment)
+            .ToArray();
+    }
+
     public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
         IReadOnlyDictionary<string, string> requiredVariables,
         CancellationToken cancellationToken = default)
@@ -60,11 +123,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             return [];
         }
 
-        var query = dbContext.RuntimeStepAssignments.AsNoTracking();
-        foreach (var snippet in normalized.Select(item => BuildLaunchVariableJsonSnippet(item.Key, item.Value)))
-        {
-            query = query.Where(assignment => assignment.LaunchVariablesJson.Contains(snippet));
-        }
+        var query = CreateLaunchVariableQuery(normalized);
 
         var rows = await query
             .OrderBy(assignment => assignment.CreatedAtUtc)
@@ -77,6 +136,55 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             .Select(ToAssignment)
             .Where(assignment => MatchesRequiredVariables(assignment.LaunchVariables, normalized))
             .ToArray();
+    }
+
+    public async ValueTask<ProcessRuntimeStepAssignmentBoundedSearchResult>
+        FindByLaunchVariablesBoundedAsync(
+            IReadOnlyDictionary<string, string> requiredVariables,
+            int maximumDistinctRunCount,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requiredVariables);
+        if (maximumDistinctRunCount is < 1 or
+            > IProcessRuntimeStepAssignmentStore.MaximumBoundedSearchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumDistinctRunCount),
+                maximumDistinctRunCount,
+                $"Bounded assignment search must allow between 1 and {IProcessRuntimeStepAssignmentStore.MaximumBoundedSearchRunCount} distinct runs.");
+        }
+
+        var normalized = NormalizeRequiredVariables(requiredVariables);
+        if (normalized.Count == 0)
+        {
+            return new ProcessRuntimeStepAssignmentBoundedSearchResult([], false);
+        }
+
+        var query = CreateLaunchVariableQuery(normalized);
+        var runIds = await query
+            .Select(assignment => assignment.RunId)
+            .Distinct()
+            .OrderBy(runId => runId)
+            .Take(maximumDistinctRunCount + 1)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (runIds.Length > maximumDistinctRunCount)
+        {
+            return new ProcessRuntimeStepAssignmentBoundedSearchResult([], true);
+        }
+
+        var rows = await query
+            .Where(assignment => runIds.Contains(assignment.RunId))
+            .OrderBy(assignment => assignment.CreatedAtUtc)
+            .ThenBy(assignment => assignment.RunId)
+            .ThenBy(assignment => assignment.StepKey)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var assignments = rows
+            .Select(ToAssignment)
+            .Where(assignment => MatchesRequiredVariables(assignment.LaunchVariables, normalized))
+            .ToArray();
+        return new ProcessRuntimeStepAssignmentBoundedSearchResult(assignments, false);
     }
 
     public async ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
@@ -94,7 +202,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         return row is null ? null : ToAssignment(row);
     }
 
-    private static ProcessRuntimeStepAssignmentEntity ToEntity(ProcessRuntimeStepAssignment assignment)
+    internal static ProcessRuntimeStepAssignmentEntity ToEntity(ProcessRuntimeStepAssignment assignment)
     {
         return new ProcessRuntimeStepAssignmentEntity
         {
@@ -132,31 +240,103 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
         ProcessRuntimeStepAssignmentEntity entity,
         ProcessRuntimeStepAssignment assignment)
     {
-        entity.PlanId = assignment.PlanId.Value;
-        entity.StepKey = assignment.StepKey;
-        entity.RoleKey = assignment.RoleKey;
-        entity.RoleResourceKey = assignment.RoleResourceKey;
-        entity.RoleDisplayName = assignment.RoleDisplayName;
+        entity.Prompt = assignment.Prompt;
         entity.ExecutorKind = assignment.ExecutorKind;
         entity.ExecutorId = assignment.ExecutorId;
         entity.ExecutorDisplayName = assignment.ExecutorDisplayName;
-        entity.WorkflowId = assignment.WorkflowBinding?.WorkflowId.Value;
-        entity.WorkflowVersionId = assignment.WorkflowBinding?.WorkflowVersionId?.Value;
-        entity.WorkflowOutputMapping = assignment.WorkflowBinding is { } workflowBinding
-            ? (int)workflowBinding.OutputMapping
-            : null;
-        entity.Prompt = assignment.Prompt;
         entity.ReadinessHash = assignment.ReadinessHash;
         entity.AssignmentReason = assignment.AssignmentReason;
-        entity.ProducedArtifactSlotIds = JoinGuids(assignment.ProducedArtifactSlotIds);
-        entity.RequiredArtifactSlotIds = JoinGuids(assignment.RequiredArtifactSlotIds);
-        entity.AllowedOperations = JoinStrings(assignment.AllowedOperations);
-        entity.OperationTargetScope = assignment.OperationTargetScope;
-        entity.LaunchVariablesJson = SerializeLaunchVariables(assignment.LaunchVariables);
-        entity.CapabilityScopeJson = SerializeCapabilityScope(assignment.CapabilityScope);
-        entity.BranchGateSourceStepKey = assignment.BranchGate?.SourceStepKey;
-        entity.BranchGateRequiredOutcomeKey = assignment.BranchGate?.RequiredOutcomeKey;
-        entity.CreatedAtUtc = assignment.CreatedAtUtc;
+    }
+
+    private static void EnsureImmutableLineage(
+        ProcessRuntimeStepAssignmentEntity existing,
+        ProcessRuntimeStepAssignment assignment)
+    {
+        if (existing.PlanId != assignment.PlanId.Value)
+        {
+            throw new InvalidOperationException(
+                $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' cannot change immutable '{nameof(assignment.PlanId)}'.");
+        }
+
+        if (!string.Equals(existing.StepKey, assignment.StepKey, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' cannot change immutable '{nameof(assignment.StepKey)}'.");
+        }
+
+        if (existing.CreatedAtUtc != assignment.CreatedAtUtc)
+        {
+            throw new InvalidOperationException(
+                $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' cannot change immutable '{nameof(assignment.CreatedAtUtc)}'.");
+        }
+
+        var existingLaunchVariables = DeserializeLaunchVariables(existing.LaunchVariablesJson);
+        var nextLaunchVariables = NormalizeLaunchVariables(assignment.LaunchVariables);
+        EnsureImmutableLineageKey(
+            assignment,
+            existingLaunchVariables,
+            nextLaunchVariables,
+            ProcessRuntimeLaunchVariables.ParentProcessRunId);
+        EnsureImmutableLineageKey(
+            assignment,
+            existingLaunchVariables,
+            nextLaunchVariables,
+            ProcessRuntimeLaunchVariables.ParentProcessStepId);
+    }
+
+    private static void EnsureOnlyRepairFieldsChanged(
+        ProcessRuntimeStepAssignmentEntity existing,
+        ProcessRuntimeStepAssignment assignment)
+    {
+        var proposed = ToEntity(assignment);
+        var normalizedExistingLaunchVariables =
+            SerializeLaunchVariables(DeserializeLaunchVariables(existing.LaunchVariablesJson));
+        var normalizedExistingCapabilityScope =
+            SerializeCapabilityScope(DeserializeCapabilityScope(existing.CapabilityScopeJson));
+        if (existing.RunId == proposed.RunId &&
+            existing.StepInstanceId == proposed.StepInstanceId &&
+            existing.PlanId == proposed.PlanId &&
+            string.Equals(existing.StepKey, proposed.StepKey, StringComparison.Ordinal) &&
+            string.Equals(existing.RoleKey, proposed.RoleKey, StringComparison.Ordinal) &&
+            string.Equals(existing.RoleResourceKey, proposed.RoleResourceKey, StringComparison.Ordinal) &&
+            string.Equals(existing.RoleDisplayName, proposed.RoleDisplayName, StringComparison.Ordinal) &&
+            existing.WorkflowId == proposed.WorkflowId &&
+            existing.WorkflowVersionId == proposed.WorkflowVersionId &&
+            existing.WorkflowOutputMapping == proposed.WorkflowOutputMapping &&
+            string.Equals(existing.ProducedArtifactSlotIds, proposed.ProducedArtifactSlotIds, StringComparison.Ordinal) &&
+            string.Equals(existing.RequiredArtifactSlotIds, proposed.RequiredArtifactSlotIds, StringComparison.Ordinal) &&
+            string.Equals(existing.AllowedOperations, proposed.AllowedOperations, StringComparison.Ordinal) &&
+            string.Equals(existing.OperationTargetScope, proposed.OperationTargetScope, StringComparison.Ordinal) &&
+            string.Equals(normalizedExistingLaunchVariables, proposed.LaunchVariablesJson, StringComparison.Ordinal) &&
+            string.Equals(normalizedExistingCapabilityScope, proposed.CapabilityScopeJson, StringComparison.Ordinal) &&
+            string.Equals(existing.BranchGateSourceStepKey, proposed.BranchGateSourceStepKey, StringComparison.Ordinal) &&
+            string.Equals(existing.BranchGateRequiredOutcomeKey, proposed.BranchGateRequiredOutcomeKey, StringComparison.Ordinal) &&
+            existing.CreatedAtUtc == proposed.CreatedAtUtc)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' can only change its recovery prompt or executor-readiness repair fields after initial launch.");
+    }
+
+    private static void EnsureImmutableLineageKey(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyDictionary<string, string> existingLaunchVariables,
+        IReadOnlyDictionary<string, string> nextLaunchVariables,
+        string key)
+    {
+        var hadExistingValue = existingLaunchVariables.TryGetValue(key, out var existingValue);
+        var hasNextValue = nextLaunchVariables.TryGetValue(key, out var nextValue);
+        if (hadExistingValue == hasNextValue &&
+            (!hadExistingValue ||
+             string.Equals(existingValue, nextValue, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Process assignment '{assignment.RunId}/{assignment.StepInstanceId}' cannot add, remove, or change immutable parent-lineage key '{key}'.");
     }
 
     private static ProcessRuntimeStepAssignment ToAssignment(ProcessRuntimeStepAssignmentEntity entity)
@@ -337,6 +517,20 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
     private static string BuildLaunchVariableJsonSnippet(string key, string value)
     {
         return $"{JsonSerializer.Serialize(key)}:{JsonSerializer.Serialize(value)}";
+    }
+
+    private IQueryable<ProcessRuntimeStepAssignmentEntity> CreateLaunchVariableQuery(
+        IReadOnlyDictionary<string, string> normalizedRequiredVariables)
+    {
+        var query = dbContext.RuntimeStepAssignments.AsNoTracking();
+        foreach (var snippet in normalizedRequiredVariables.Select(item =>
+                     BuildLaunchVariableJsonSnippet(item.Key, item.Value)))
+        {
+            query = query.Where(assignment =>
+                assignment.LaunchVariablesJson.Contains(snippet));
+        }
+
+        return query;
     }
 
     private static bool MatchesRequiredVariables(

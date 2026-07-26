@@ -129,7 +129,8 @@ internal sealed class ParentSubprocessArtifactBridge(
 
         foreach (var childGroup in childAssignments
             .GroupBy(childAssignment => childAssignment.RunId)
-            .OrderByDescending(group => group.Max(childAssignment => childAssignment.CreatedAtUtc)))
+            .OrderByDescending(group => group.Max(childAssignment => childAssignment.CreatedAtUtc))
+            .ThenByDescending(group => group.Key.Value))
         {
             var childRunId = childGroup.Key;
             var childState = await stateStore.LoadAsync(childRunId, cancellationToken).ConfigureAwait(false);

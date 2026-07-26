@@ -217,7 +217,8 @@
                     Click="ExecuteProcessLink" />
         </Actions>
         <Body>
-            <Stack GapScale="LayoutGap.Medium">
+            <Stack GapScale="LayoutGap.Medium"
+                   AlignItems="AlignItems.Stretch">
                 <PanelCard>
                     <Stack GapScale="LayoutGap.Small">
                         <TextBlock TextStyle="TextStyle.Footer" Value="Process" Class="cw-panel-copy" />
@@ -226,6 +227,7 @@
                                             SelectionChanged="ProcessLinkSelectionChanged"
                                             SearchPlaceholder="Search process definitions"
                                             EmptyTitle="No processes match the current search"
+                                            UseBoundedResultsViewport="false"
                                             DataTestId="project-structure-process-link-select" />
                     </Stack>
                 </PanelCard>

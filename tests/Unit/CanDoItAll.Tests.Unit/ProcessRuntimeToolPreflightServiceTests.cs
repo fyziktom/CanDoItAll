@@ -627,6 +627,8 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         {
             ["ProductRoot"] = productRoot,
             ["DotNetAppTemplate"] = "blazorwasm",
+            ["DotNetSolutionFile"] = solutionFile,
+            ["DotNetSolutionFileCandidates"] = solutionFile,
             ["DotNetCreateProjectScriptRef"] = scriptRef,
             ["DotNetCreateProjectScript"] = "dotnet sln $SolutionFile add $AppProjectFile; dotnet sln $SolutionFile list",
             ["DotNetCreateProjectSideEffectManifest"] = sideEffectManifest,

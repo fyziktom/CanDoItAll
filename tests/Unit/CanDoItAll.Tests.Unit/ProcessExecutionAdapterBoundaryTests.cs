@@ -9,6 +9,61 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessExecutionAdapterBoundaryTests
 {
     [Fact]
+    public async Task Adapter_strategy_preserves_typed_execution_safety_attestation()
+    {
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var attestation = ProcessExecutionSafetyAttestation.FailedBeforeRecordedSideEffects(
+            ProcessExecutionRunId.New(),
+            runId,
+            stepId,
+            new ProcessExecutionExecutorId(Guid.NewGuid()),
+            "sha256:" + new string('a', 64));
+        var driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
+            StandardProcessAdapterDescriptors.WorkflowAdapter,
+            new ProcessExecutionAdapterResult(
+                StrategyOutcome.NeedsManager,
+                [],
+                [],
+                [
+                    new ProcessExecutionAdapterDiagnostic(
+                        new StrategyDiagnosticCode(
+                            ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects),
+                        StrategyDiagnosticSensitivity.Normal,
+                        "sha256:stable-diagnostic",
+                        "The execution failed before recorded side effects.",
+                        RestrictedEvidenceReference: null,
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    {
+                        ExecutionSafetyAttestation = attestation
+                    }
+                ],
+                [],
+                "The execution requires bounded rework.",
+                "sha256:result")
+            {
+                ExecutionRunId = attestation.ExecutionRunId
+            });
+        var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(
+            driver,
+            ProcessDriverLayer.Platform);
+        var factory = Assert.Single(package.StrategyFactories);
+        var binding = NewBinding(package.Descriptor.DriverId, factory.Descriptor);
+        var strategy = await factory.CreateAsync(binding);
+
+        var result = await strategy.ExecuteAsync(new ProcessStrategyExecutionContext(
+            runId,
+            stepId,
+            binding,
+            binding.Inputs));
+
+        Assert.Equal(attestation, Assert.Single(result.Diagnostics).ExecutionSafetyAttestation);
+        Assert.Equal(attestation.ExecutionRunId, result.ExecutionRunId);
+    }
+
+    [Fact]
     public async Task Adapter_strategy_normalizes_restricted_diagnostics_into_result_envelope()
     {
         var driver = new RecordingStepExecutionDriver(
@@ -71,6 +126,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         Assert.Equal("restricted://workflow/run-1", diagnostic.RestrictedEvidenceReference);
         Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
         Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Equal("Workflow adapter completed with a restricted diagnostic.", result.UserSafeSummary);
         Assert.Equal("sha256:result", result.ResultHash);
     }
 

@@ -434,13 +434,18 @@ public readonly record struct WorkflowLaunchOriginScopeKey
 
 public readonly record struct WorkflowLaunchRequestFingerprint
 {
-    public WorkflowLaunchRequestFingerprint(string value)
+    public WorkflowLaunchRequestFingerprint(
+        string value,
+        string canonicalInputHash = "")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         Value = value.Trim();
+        CanonicalInputHash = canonicalInputHash.Trim();
     }
 
     public string Value { get; }
+
+    public string CanonicalInputHash { get; }
 
     public override string ToString() => Value;
 }
@@ -489,6 +494,42 @@ public sealed record WorkflowLaunchIdempotencyClaimResult(
     WorkflowLaunchIdempotencyClaimOutcome Outcome,
     WorkflowRunId? ReservedRunId = null,
     WorkflowLaunchIdempotencyCompletion? Completion = null);
+
+public enum WorkflowLaunchIdempotencyRecordState
+{
+    Pending,
+    Completed
+}
+
+public sealed record WorkflowLaunchIdempotencyRecord(
+    WorkflowLaunchIdempotencyScope Scope,
+    WorkflowLaunchRequestFingerprint Fingerprint,
+    WorkflowRunId OriginalRunId,
+    WorkflowLaunchIdempotencyRecordState State,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    int ReplayCount,
+    DateTimeOffset? LastReplayedAtUtc,
+    WorkflowLaunchIdempotencyCompletion? Completion);
+
+public sealed record WorkflowLaunchIdempotencyEvidence(
+    string IdempotencyKeyHash,
+    string RequestFingerprint,
+    string CanonicalInputHash,
+    WorkflowId WorkflowId,
+    WorkflowDefinitionSelectionKind SelectionKind,
+    WorkflowVersionId? RequestedVersionId,
+    WorkflowVersionId? ResolvedVersionId,
+    WorkflowRuntimeBackendKind? ResolvedBackend,
+    WorkflowRunId OriginalRunId,
+    WorkflowLaunchIdempotencyRecordState ClaimState,
+    WorkflowRunState? RunState,
+    bool IsTerminal,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    bool WasReplayed,
+    int ReplayCount,
+    DateTimeOffset? LastReplayedAtUtc);
 
 public enum WorkflowLaunchIdempotencyKind
 {

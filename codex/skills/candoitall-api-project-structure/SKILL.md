@@ -19,15 +19,16 @@ Use this skill when a task needs project, hierarchy, project-structure, dependen
 - Project records: `GET /api/projects`, `POST /api/projects`, `GET /api/projects/access-list`, `GET /api/projects/hierarchy-links`, `GET /api/projects/{projectId}`, `DELETE /api/projects/{projectId}`, `GET /api/projects/{projectId}/hierarchy`, `POST /api/projects/{parentProjectId}/subprojects/{childProjectId}`, `DELETE /api/projects/{parentProjectId}/subprojects/{childProjectId}`, and `POST /api/projects/{childProjectId}/reconnect-subproject`.
 - Project hierarchy: `/api/projects/{projectId}/hierarchy`.
 - Project structure read and focused mutations: `/api/project-structure/projects/{projectId}/structure/read`, `/nodes`, `/nodes/{nodeId}`, `/nodes/{nodeId}/type`, `/nodes/{nodeId}/metadata`, `/nodes/statuses`, `/nodes/{nodeId}/status`, `/nodes/progress`, `/nodes/{nodeId}/progress`, `/nodes/markers`, `/nodes/{nodeId}/markers`, `/nodes/priorities`, `/nodes/{nodeId}/priority`, `/nodes/move`, `/nodes/recompose`, `/nodes/{nodeId}/reparent`, `/nodes/reparent`, `/nodes/move-to-new-subproject`, `/nodes/{nodeId}/move-descendants-to-project`, `/nodes/{nodeId}/command`, `/nodes/{nodeId}/delete`, and `/nodes/delete`.
+- Project plan and canonical tasks: `/api/project-structure/projects/{projectId}/plan/summary`, `/tasks`, `/tasks/{taskId}`, and `/tasks/{taskId}/resource`.
 - Dependency and link control: `/links`, `/links/unlink`, `/dependencies/link`, `/dependencies/unlink`, `/dependencies/query`.
 - Assets: `/assets`, `/assets/{nodeId}`, `/assets/{nodeId}/content`, `/assets/{nodeId}/revisions`.
-- Process nodes: `/nodes/{nodeId}/process-definition` and `/nodes/{nodeId}/process/start`.
+- Process nodes: `/nodes/{nodeId}/process-definition` and `/nodes/{nodeId}/process/start`. The process-definition route creates a generic `Uses` link for non-canonical nodes and rejects canonical `WorkItem`/`task` nodes.
 - Workflow nodes: `/nodes/{nodeId}/workflow-add-options`, `/nodes/{nodeId}/workflow-definition`, `/nodes/{nodeId}/workflow/start`, `/nodes/{nodeId}/workflow/status`.
 - Coordination and review: `/approvals/request`, `/checklists/query`, `/leases/acquire`, `/leases/renew`, `/leases/current`, `/leases/release`, `/knowledge/query`, `/analytics/query`.
 
 ## Direct Tool Boundary
 
-The internal project-structure runtime tool surface currently exposes 53 direct functions through `ProjectStructureAgentRuntimeToolProvider`. It broadly mirrors the 52-route `/api/project-structure` HTTP surface and adds the repo-branch lease helper `project_structure_repo_branch_lease_acquire`, which is a runtime tool and not an HTTP route. Direct runtime tools include node create (`project_structure_node_create`), single and batch node delete (`project_structure_node_delete`, `project_structure_nodes_delete`), focused node updates, generic links, asset create/content (`project_structure_asset_create`, `project_structure_asset_content_get`), lease renew, process/workflow node operations, and read/write/import/lease tools. These tools are classified by `AgentToolInvocationPolicy`; destructive and mutating tools still require project-structure write access and the normal approval path.
+The internal project-structure runtime tool surface currently exposes 58 direct functions through `ProjectStructureAgentRuntimeToolProvider`. It broadly mirrors the 56-route `/api/project-structure` HTTP surface and adds two runtime-only helpers: the repo-branch lease tool `project_structure_repo_branch_lease_acquire` and governed child-process launcher `project_structure_process_subprocess_launch`. Direct runtime tools include node create (`project_structure_node_create`), single and batch node delete (`project_structure_node_delete`, `project_structure_nodes_delete`), focused node updates, generic links, asset create/content (`project_structure_asset_create`, `project_structure_asset_content_get`), lease renew, process/workflow node operations, typed plan/task tools, and read/write/import/lease tools. These tools are classified by `AgentToolInvocationPolicy`; destructive and mutating tools still require project-structure write access and the normal approval path.
 
 When a process or agent asks for a direct project-structure tool and that tool is unavailable in the running host, use the HTTP API skill for the equivalent governed action and record the missing tool name as an environment/runtime issue. Do not reinstall or infer a removed ProjectStructure MCP server.
 
@@ -35,6 +36,9 @@ When a process or agent asks for a direct project-structure tool and that tool i
 
 - Prefer focused endpoints over fetching or sending entire graphs.
 - Acquire a project lease before mutating shared project structure. Use repo-branch leases for branch-wide coordination.
+- Treat canonical `WorkItem`/`task` nodes as typed task records. Attach a workflow or process with `POST /api/project-structure/projects/{projectId}/tasks/{taskId}/resource` or `project_task_resource_attach`; both attach the resource and commit authoritative expected pricing as one compensated operation.
+- Before a typed task-resource attachment, read the task with `/structure/read` or `project_structure_read` using the exact task id in `nodeIds` and `includeMetadata: true`. Parse the returned task's `metadataJson`, then set `currentExecution.state`, `currentExecution.actualStartedAtUtc`, and `currentExecution.actualEndedAtUtc` to its exact `workItem.executionState`, `workItem.actualStartedAtUtc`, and `workItem.actualEndedAtUtc` values. Do not infer defaults or reuse a stale snapshot.
+- Use `/nodes/{nodeId}/process-definition` and `project_structure_node_process_definition_link` only for non-canonical nodes. They create a generic `Uses` link and reject canonical `WorkItem`/`task` nodes. Do not use `/links`, `project_structure_link_create`, generic metadata updates, or workflow-node tools to attach a task resource.
 - Preserve current-run lineage in nodes and assets that mirror process evidence: process run id, step run id, execution run id, workflow run id, source artifact path, source content hash, route/viewport for screenshots, and storage receipt ids when present.
 - For typed project blocks, keep `objectType` as `ProjectBlock` and use lowercase `objectSubtype` values such as `feature`, `architecture`, `implementation`, `testing`, `delivery`, `research`, `risk`, `deployment`, `operations`, `repos`, or `dockers`.
 - Mermaid diagrams are `File` asset nodes with `objectSubtype` `mermaid`; put Mermaid source in notes or asset content.
@@ -110,6 +114,10 @@ Project Structure API route appendix. Generated from Minimal API registrations; 
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/recompose` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/reparent` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/nodes/statuses` |
+| `POST` | `/api/project-structure/projects/{projectId:guid}/plan/summary` |
 | `POST` | `/api/project-structure/projects/{projectId:guid}/structure/read` |
+| `POST` | `/api/project-structure/projects/{projectId:guid}/tasks` |
+| `PUT` | `/api/project-structure/projects/{projectId:guid}/tasks/{taskId}` |
+| `POST` | `/api/project-structure/projects/{projectId:guid}/tasks/{taskId}/resource` |
 
 <!-- api-docs-skills-parity:routes:end -->

@@ -129,6 +129,26 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
         return CommitAsync(state, context.CommandId, mutation, cancellationToken);
     }
 
+    public Task<ProcessRuntimeCommitResult> BeginRootCancellationAsync(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var mutation = BeginRootCancellation(state, context);
+
+        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+    }
+
+    public Task<ProcessRuntimeCommitResult> FinalizeRootCancellationAsync(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var mutation = FinalizeRootCancellation(state, context);
+
+        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+    }
+
     public Task<ProcessRuntimeCommitResult> RequestStepReworkAsync(
         ProcessRuntimeStateSnapshot state,
         RuntimeCommandContext context,
@@ -137,6 +157,11 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
     {
         var mutation = RequestStepRework(state, context, command);
 
-        return CommitAsync(state, context.CommandId, mutation, cancellationToken);
+        return CommitAsync(
+            state,
+            context.CommandId,
+            mutation,
+            cancellationToken,
+            command.BlockedRecoveryAuthorization);
     }
 }

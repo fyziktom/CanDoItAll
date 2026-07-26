@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
 
@@ -14,6 +15,11 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     internal const string DriverKey = "dotnet.solution-setup";
     private const string WorkspaceDotnetNew = "workspace_dotnet_new";
     private const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
+    private const string RunHelperScriptOperationKey = "run-helper-script";
+    private const string CreateSolutionOperationKey = "create-solution";
+    private const string CreateAppProjectOperationKey = "create-app-project";
+    private const string IdempotentSkipRiskClass = "RuntimeOwned:IdempotentSkip";
+    private const string PostconditionVerifiedRiskClass = "RuntimeOwned:PostconditionVerified";
     private readonly DotNetExistingSolutionVerifier existingSolutionVerifier = existingSolutionVerifier ?? new DotNetExistingSolutionVerifier();
 
     public string ExecutorKey => DriverKey;
@@ -40,10 +46,11 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         {
             var modeExecutionRunId = Guid.NewGuid();
             return RuntimeOwnedStepExecutionResultFailure(
-                modeExecutionRunId,
-                [],
-                provisioningIssue,
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:provisioning-mode:{provisioningIssue}");
+                 modeExecutionRunId,
+                 [],
+                 provisioningIssue,
+                 $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:provisioning-mode:{provisioningIssue}",
+                 ProcessRuntimeOwnedStepFailures.ContractInvalid);
         }
 
         var guard = DotNetSolutionSetupToolPlanGuard.Evaluate(assignment);
@@ -60,17 +67,20 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 executionRunId,
                 [],
                 $"Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: {string.Join("; ", guard.Issues.Select(issue => issue.Code))}.",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:{string.Join("|", guard.Issues.Select(issue => issue.Evidence))}");
+                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:{string.Join("|", guard.Issues.Select(issue => issue.Evidence))}",
+                ProcessRuntimeOwnedStepFailures.ContractInvalid);
         }
 
         var receipts = new List<ToolExecutionReceiptRecord>();
+        var planExecutionPolicy = ResolveExecutionPolicy(plan);
         if (!TryResolveExecutionInputs(assignment, plan, out var inputs, out var inputIssue))
         {
             return RuntimeOwnedStepExecutionResultFailure(
                 executionRunId,
                 receipts,
                 inputIssue,
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:inputs:{inputIssue}");
+                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:inputs:{inputIssue}",
+                ProcessRuntimeOwnedStepFailures.ContractInvalid);
         }
 
         if (plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject)
@@ -85,7 +95,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     executionRunId,
                     receipts,
                     $"Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: {templateIssue}",
-                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:{templateIssue}");
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:{templateIssue}",
+                    ProcessRuntimeOwnedStepFailures.ContractInvalid);
             }
 
             var targetFramework = ResolveLaunchVariable(assignment.LaunchVariables, "DotNetTargetFramework");
@@ -95,7 +106,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     executionRunId,
                     receipts,
                     "Runtime-owned .NET setup cannot execute because the deterministic tool plan is invalid: dotnet.setup.plan.target_framework_missing",
-                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:dotnet.setup.plan.target_framework_missing");
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:guard:dotnet.setup.plan.target_framework_missing",
+                    ProcessRuntimeOwnedStepFailures.ContractInvalid);
             }
 
             var solutionScaffold = await EnsureDotNetNewTargetAsync(
@@ -105,6 +117,10 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     Path.GetFileNameWithoutExtension(inputs.SolutionFile),
                     ResolveDotNetNewParentDirectory(inputs.SolutionFile, inputs.ProductRoot),
                     null,
+                    ResolveOperationIdempotency(
+                        plan,
+                        CreateSolutionOperationKey,
+                        WorkspaceDotnetNew),
                     receipts,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -114,7 +130,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     executionRunId,
                     receipts,
                     solutionScaffold.Summary,
-                    solutionScaffold.Evidence);
+                    solutionScaffold.Evidence,
+                    solutionScaffold.Failure);
             }
 
             var appProject = inputs.AppProjectFile;
@@ -124,7 +141,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     executionRunId,
                     receipts,
                     "Runtime-owned .NET setup cannot create the app project because DotNetAppProjectFile was not resolved.",
-                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:app-project-missing");
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:app-project-missing",
+                    ProcessRuntimeOwnedStepFailures.ContractInvalid);
             }
 
             var appScaffold = await EnsureDotNetNewTargetAsync(
@@ -134,6 +152,10 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     Path.GetFileNameWithoutExtension(appProject),
                     ResolveDotNetProjectCreationParentDirectory(appProject, inputs.ProductRoot),
                     targetFramework,
+                    ResolveOperationIdempotency(
+                        plan,
+                        CreateAppProjectOperationKey,
+                        WorkspaceDotnetNew),
                     receipts,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -143,7 +165,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     executionRunId,
                     receipts,
                     appScaffold.Summary,
-                    appScaffold.Evidence);
+                    appScaffold.Evidence,
+                    appScaffold.Failure);
             }
         }
 
@@ -153,7 +176,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 executionRunId,
                 receipts,
                 readbackIssue,
-                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:readback:{readbackIssue}");
+                $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:readback:{readbackIssue}",
+                ProcessRuntimeOwnedStepFailures.ContractInvalid);
         }
 
         var managedScriptResult = await managedScriptPlanExecutor.ExecuteAsync(
@@ -166,7 +190,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     BuildRuntimeOwnedOutputPath(assignment, plan),
                     inputs.ProductRoot,
                     readbackChecks,
-                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup"),
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup",
+                    planExecutionPolicy),
                 cancellationToken)
             .ConfigureAwait(false);
         receipts.AddRange(managedScriptResult.ToolReceipts);
@@ -176,7 +201,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 executionRunId,
                 receipts,
                 managedScriptResult.Summary,
-                managedScriptResult.Evidence);
+                managedScriptResult.Evidence,
+                managedScriptResult.Failure);
         }
 
         var evidenceRefs = receipts
@@ -203,6 +229,57 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-setup:succeeded:{string.Join("|", receipts.Select(receipt => $"{receipt.ToolName}:{receipt.ExitSummary}"))}");
     }
 
+    private static WorkspaceManagedScriptPlanExecutionPolicy ResolveExecutionPolicy(
+        DotNetSolutionSetupToolPlan plan)
+    {
+        var isCurrentRunRepeatable =
+            plan.OperationPolicies.Count > 0 &&
+            plan.OperationPolicies.All(policy =>
+                policy.Idempotency == ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable);
+        var helperPolicies = plan.OperationPolicies
+            .Where(policy =>
+                string.Equals(
+                    policy.OperationKey,
+                    RunHelperScriptOperationKey,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    policy.ToolName,
+                    WorkspacePowerShellRunScript,
+                    StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        return new WorkspaceManagedScriptPlanExecutionPolicy(
+            isCurrentRunRepeatable
+                ? ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable
+                : ProcessToolOperationIdempotencyPolicy.Unspecified,
+            helperPolicies.Length == 1
+                ? helperPolicies[0].FailureReconciliation
+                : ProcessToolOperationFailureReconciliationPolicy.None);
+    }
+
+    private static ProcessRuntimeOwnedStepFailure ApplyExecutionPolicy(
+        ProcessRuntimeOwnedStepFailure failure,
+        ProcessToolOperationIdempotencyPolicy idempotency)
+        => ProcessRuntimeOwnedStepFailures.ApplyDeclaredIdempotency(
+            failure,
+            idempotency);
+
+    private static ProcessToolOperationIdempotencyPolicy ResolveOperationIdempotency(
+        DotNetSolutionSetupToolPlan plan,
+        string operationKey,
+        string toolName)
+        => plan.OperationPolicies
+            .SingleOrDefault(policy =>
+                string.Equals(
+                    policy.OperationKey,
+                    operationKey,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    policy.ToolName,
+                    toolName,
+                    StringComparison.OrdinalIgnoreCase))
+            ?.Idempotency ??
+           ProcessToolOperationIdempotencyPolicy.Unspecified;
+
     private async Task<DotNetSolutionSetupOperationResult> EnsureDotNetNewTargetAsync(
         Guid executionRunId,
         IReadOnlyList<string> targetPaths,
@@ -210,12 +287,13 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         string name,
         string parentDirectory,
         string? targetFramework,
+        ProcessToolOperationIdempotencyPolicy idempotency,
         List<ToolExecutionReceiptRecord> receipts,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingTarget = targetPaths.FirstOrDefault(targetPath => File.Exists(targetPath) || Directory.Exists(targetPath));
+        var existingTarget = FindExistingTarget(targetPaths);
         if (existingTarget is not null)
         {
             receipts.Add(CreateIdempotentSkipReceipt(
@@ -239,10 +317,29 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         receipts.Add(From(executionRunId, dotnetNew));
         if (!dotnetNew.Succeeded)
         {
+            var reconciledTarget = FindExistingTarget(targetPaths);
+            if (reconciledTarget is not null &&
+                string.Equals(
+                    dotnetNew.Receipt.Outcome,
+                    "Failed",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                receipts.Add(CreatePostconditionVerifiedReceipt(
+                    executionRunId,
+                    WorkspaceDotnetNew,
+                    $"new {template} postcondition-reconciled existing target",
+                    ToExternalTargetAliasOrNative(parentDirectory),
+                    $"Succeeded: Contracted .NET target '{Path.GetFileName(reconciledTarget)}' exists after the command result; destructive regeneration was skipped and downstream readback remains required."));
+                return DotNetSolutionSetupOperationResult.Ok;
+            }
+
             return new DotNetSolutionSetupOperationResult(
                 false,
                 $"Runtime-owned .NET setup failed to scaffold '{name}' with template '{template}': {dotnetNew.Message}",
-                $"dotnet-new:{template}:{name}:{dotnetNew.ExitCode}:{dotnetNew.Message}:{dotnetNew.StderrPreview}");
+                $"dotnet-new:{template}:{name}:{dotnetNew.ExitCode}:{dotnetNew.Message}:{dotnetNew.StderrPreview}",
+                ProcessRuntimeOwnedStepFailures.ResolveExecutionFailure(
+                    dotnetNew.Receipt.Outcome,
+                    idempotency));
         }
 
         var createdTarget = targetPaths.FirstOrDefault(File.Exists);
@@ -251,7 +348,10 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return new DotNetSolutionSetupOperationResult(
                 false,
                 $"Runtime-owned .NET setup completed dotnet new for '{name}', but none of the contracted target candidates were created: {string.Join(", ", targetPaths.Select(Path.GetFileName))}.",
-                $"dotnet-new-target-missing:{template}:{name}:{string.Join("|", targetPaths)}");
+                $"dotnet-new-target-missing:{template}:{name}:{string.Join("|", targetPaths)}",
+                ApplyExecutionPolicy(
+                    ProcessRuntimeOwnedStepFailures.ExecutionFailed,
+                    idempotency));
         }
 
         return DotNetSolutionSetupOperationResult.Ok;
@@ -261,14 +361,16 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> receipts,
         string summary,
-        string evidence)
+        string evidence,
+        ProcessRuntimeOwnedStepFailure? failure = null)
         => new(
             false,
             null,
             receipts,
             executionRunId,
             summary,
-            evidence);
+            evidence,
+            failure ?? ProcessRuntimeOwnedStepFailures.ExecutionFailed);
 
     private static bool TryBuildTemplateSpecification(
         string template,
@@ -411,15 +513,10 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         out string issue)
     {
         var configuredCandidates = ResolveLaunchVariable(launchVariables, "DotNetSolutionFileCandidates");
-        if (string.IsNullOrWhiteSpace(configuredCandidates))
-        {
-            candidateFiles = [solutionFile];
-            issue = string.Empty;
-            return true;
-        }
-
         var normalizedCandidates = new List<string> { solutionFile };
-        foreach (var configuredCandidate in configuredCandidates.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        foreach (var configuredCandidate in (configuredCandidates ?? string.Empty).Split(
+                     ';',
+                     StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             if (!TryNormalizeContractedProductFile(
                     configuredCandidate,
@@ -438,10 +535,14 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             }
         }
 
-        candidateFiles = normalizedCandidates;
+        candidateFiles = DotNetSolutionContextPathResolver
+            .IncludeSupportedSolutionFormatAlternatives(normalizedCandidates);
         issue = string.Empty;
         return true;
     }
+
+    private static string? FindExistingTarget(IReadOnlyList<string> targetPaths)
+        => targetPaths.FirstOrDefault(File.Exists);
 
     private static bool TryNormalizeContractedProductFile(
         string configuredPath,
@@ -552,9 +653,29 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             executionRunId,
             "process-runtime",
             toolName,
-            "RuntimeOwned:IdempotentSkip",
+            IdempotentSkipRiskClass,
             "NotRequired",
             "Runtime-owned deterministic .NET setup verified existing product state.",
+            requestSummary,
+            workingDirectory,
+            exitSummary,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+    private static ToolExecutionReceiptRecord CreatePostconditionVerifiedReceipt(
+        Guid executionRunId,
+        string toolName,
+        string requestSummary,
+        string workingDirectory,
+        string exitSummary)
+        => new(
+            Guid.NewGuid(),
+            executionRunId,
+            "process-runtime",
+            toolName,
+            PostconditionVerifiedRiskClass,
+            "NotRequired",
+            "Runtime-owned deterministic .NET setup independently verified the contracted postcondition after a failed command result.",
             requestSummary,
             workingDirectory,
             exitSummary,
@@ -604,8 +725,13 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     private sealed record DotNetSolutionSetupOperationResult(
         bool Succeeded,
         string Summary,
-        string Evidence)
+        string Evidence,
+        ProcessRuntimeOwnedStepFailure? Failure)
     {
-        public static DotNetSolutionSetupOperationResult Ok { get; } = new(true, string.Empty, string.Empty);
+        public static DotNetSolutionSetupOperationResult Ok { get; } = new(
+            true,
+            string.Empty,
+            string.Empty,
+            null);
     }
 }

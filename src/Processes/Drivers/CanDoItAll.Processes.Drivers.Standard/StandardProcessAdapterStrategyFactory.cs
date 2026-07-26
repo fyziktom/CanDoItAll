@@ -57,7 +57,11 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
                 diagnostic.SafeSummary,
                 diagnostic.RestrictedEvidenceReference,
                 diagnostic.RetrySafety,
-                diagnostic.Idempotency));
+                diagnostic.Idempotency)
+            {
+                RelatedChildRunId = diagnostic.RelatedChildRunId,
+                ExecutionSafetyAttestation = diagnostic.ExecutionSafetyAttestation
+            });
         }
 
         return new StrategyResultEnvelope(
@@ -69,7 +73,11 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
             result.RequestedArtifacts,
             diagnostics,
             result.ManagerSignals,
-            result.ResultHash);
+            result.ResultHash)
+        {
+            UserSafeSummary = result.UserSafeSummary,
+            ExecutionRunId = result.ExecutionRunId
+        };
     }
 
     private static IReadOnlyList<ProcessExecutionContextFacet> CreateContextFacets(

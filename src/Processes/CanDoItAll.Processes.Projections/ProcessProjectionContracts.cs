@@ -3,6 +3,11 @@ using CanDoItAll.Processes.Core;
 
 namespace CanDoItAll.Processes.Projections;
 
+public static class ProcessProjectionBatchLimits
+{
+    public const int MaximumSnapshotKeyCount = 500;
+}
+
 public sealed record ProcessDefinitionListProjection(
     ProcessDefinitionId Id,
     string Name,
@@ -137,6 +142,11 @@ public interface IProcessProjectionStore
     Task<ProcessProjectionSnapshot?> LoadSnapshotAsync(
         ProcessProjectorName projectorName,
         ProcessProjectionKey projectionKey,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+        ProcessProjectorName projectorName,
+        IReadOnlyList<ProcessProjectionKey> projectionKeys,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(

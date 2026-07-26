@@ -448,7 +448,14 @@ public sealed record ExecutionRunRecord(
     string StructuredOutputTypeName = "",
     string StructuredOutputSchemaName = "",
     string StructuredOutputSchemaDescription = "",
-    Guid? ProviderProfileId = null);
+    Guid? ProviderProfileId = null,
+    string StructuredOutputJsonSchema = "",
+    string StructuredOutputSchemaHash = "",
+    string StructuredOutputSchemaVersion = "",
+    bool StructuredOutputSchemaStrict = false,
+    string StructuredOutputRawOutput = "",
+    string StructuredOutputValidationStatus = "",
+    string StructuredOutputValidationErrorsJson = "[]");
 
 public sealed record ExecutionApprovalRecord(
     string ApprovalId,
@@ -484,7 +491,8 @@ public sealed record ExecutionRunRequest(
     ExecutionInvocationContext? Context = null,
     bool AutoApprovePendingToolCalls = false,
     AgentStructuredOutputContract? StructuredOutput = null,
-    IReadOnlyList<string>? InputAttachmentPaths = null)
+    IReadOnlyList<string>? InputAttachmentPaths = null,
+    AgentJsonSchemaOutputContract? JsonSchemaOutput = null)
 {
     [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
@@ -507,7 +515,12 @@ public sealed record ExecutionRunQuery(
     DateTimeOffset? CreatedFromUtc = null,
     DateTimeOffset? CreatedToUtc = null,
     DateTimeOffset? UpdatedFromUtc = null,
-    DateTimeOffset? UpdatedToUtc = null);
+    DateTimeOffset? UpdatedToUtc = null)
+{
+    public IReadOnlyList<string> ProcessRunIds { get; init; } = [];
+
+    public IReadOnlyList<string> ProcessStepIds { get; init; } = [];
+}
 
 public sealed record ExecutionRunDetail(
     ExecutionRunRecord Run,
@@ -530,6 +543,8 @@ public sealed record ExecutionRunResult(
     AgentRunMetric Metric)
 {
     public ExecutionState State { get; init; }
+
+    public AgentJsonSchemaOutputResult? StructuredOutput { get; init; }
 
     [JsonIgnore]
     public AgentChatExecutionCompleted? ContextCompletionNotification { get; init; }

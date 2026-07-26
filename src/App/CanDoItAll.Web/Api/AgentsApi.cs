@@ -17,7 +17,11 @@ internal static class AgentsApi
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken)))
-            .WithName("ListAgents");
+            .WithName("ListAgents")
+            .Produces<AgentDefinition[]>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         agents.MapGet("/bootstrap", async (
                 bool includeTemplates,
@@ -37,8 +41,14 @@ internal static class AgentsApi
                 AgentEditorModel request,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.SaveAgentAsync(request, cancellationToken)))
-            .WithName("SaveAgent");
+            await SaveAgentResultAsync(request, workspaceService, cancellationToken))
+            .WithName("SaveAgent")
+            .Accepts<AgentEditorModel>("application/json")
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status400BadRequest,
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         agents.MapDelete("/{agentId:guid}", async (
                 Guid agentId,
@@ -80,6 +90,8 @@ internal static class AgentsApi
             Results.Ok(await workspaceService.ImportAgentAsync(request.PackagePath, cancellationToken)))
             .WithName("ImportAgent");
 
+        agents.MapAgentPackageImportApi();
+        agents.MapAgentExternalProvisioningApi();
         MapTeamEndpoints(agents);
         MapProviderEndpoints(agents);
         MapCapabilityEndpoints(agents);
@@ -190,7 +202,11 @@ internal static class AgentsApi
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             Results.Ok(await workspaceService.ListProvidersAsync(cancellationToken)))
-            .WithName("ListAgentProviders");
+            .WithName("ListAgentProviders")
+            .Produces<ProviderProfile[]>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         agents.MapGet("/providers/{providerId:guid}/editor", async (
                 Guid providerId,
@@ -395,28 +411,51 @@ internal static class AgentsApi
     private static void MapExecutionEndpoints(RouteGroupBuilder agents)
     {
         agents.MapPost("/execution-runs", async (
-                ExecutionRunRequest request,
+                AgentExecutionRunApiRequest request,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ExecuteRunAsync(request, cancellationToken)))
-            .WithName("StartAgentExecutionRun");
+            await StartExecutionRunAsync(
+                new ExecutionRunRequest(
+                    AgentId: request.AgentId,
+                    Prompt: request.Prompt,
+                    ChatSessionId: request.ChatSessionId,
+                    Context: request.Context,
+                    AutoApprovePendingToolCalls: request.AutoApprovePendingToolCalls,
+                    InputAttachmentPaths: request.InputAttachmentPaths,
+                    JsonSchemaOutput: request.StructuredOutput),
+                workspaceService,
+                cancellationToken))
+            .WithName("StartAgentExecutionRun")
+            .Accepts<AgentExecutionRunApiRequest>("application/json")
+            .Produces<ExecutionRunResult>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status400BadRequest,
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         agents.MapPost("/{agentId:guid}/execution-runs", async (
                 Guid agentId,
                 AgentExecutionRunStartApiRequest request,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ExecuteRunAsync(
+            await StartExecutionRunAsync(
                 new ExecutionRunRequest(
-                    agentId,
-                    request.Prompt,
-                    request.ChatSessionId,
-                    request.Context,
-                    request.AutoApprovePendingToolCalls,
-                    request.StructuredOutput,
-                    request.InputAttachmentPaths),
-                cancellationToken)))
-            .WithName("StartAgentScopedExecutionRun");
+                    AgentId: agentId,
+                    Prompt: request.Prompt,
+                    ChatSessionId: request.ChatSessionId,
+                    Context: request.Context,
+                    AutoApprovePendingToolCalls: request.AutoApprovePendingToolCalls,
+                    InputAttachmentPaths: request.InputAttachmentPaths,
+                    JsonSchemaOutput: request.StructuredOutput),
+                workspaceService,
+                cancellationToken))
+            .WithName("StartAgentScopedExecutionRun")
+            .Accepts<AgentExecutionRunStartApiRequest>("application/json")
+            .Produces<ExecutionRunResult>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status400BadRequest,
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         agents.MapGet("/execution-runs", async (
                 [AsParameters] AgentExecutionRunApiQuery query,
@@ -451,7 +490,12 @@ internal static class AgentsApi
                 workspaceService,
                 detail => detail,
                 cancellationToken))
-            .WithName("GetAgentScopedExecutionRunDetail");
+            .WithName("GetAgentScopedExecutionRunDetail")
+            .Produces<ExecutionRunDetail>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden,
+                StatusCodes.Status404NotFound);
 
         agents.MapGet("/execution-runs/{executionRunId:guid}/artifacts", async (
                 Guid executionRunId,
@@ -576,6 +620,40 @@ internal static class AgentsApi
             .WithName("ListAgentMetrics");
     }
 
+    private static async Task<IResult> StartExecutionRunAsync(
+        ExecutionRunRequest request,
+        IAgentFrameworkWorkspaceService workspaceService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(await workspaceService.ExecuteRunAsync(request, cancellationToken));
+        }
+        catch (AgentJsonSchemaOutputContractException exception)
+        {
+            return ApiEndpointResults.BadRequest(exception.Message, exception.Code);
+        }
+    }
+
+    private static async Task<IResult> SaveAgentResultAsync(
+        AgentEditorModel request,
+        IAgentFrameworkWorkspaceService workspaceService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(await workspaceService.SaveAgentAsync(request, cancellationToken));
+        }
+        catch (ArgumentException exception)
+        {
+            return ApiEndpointResults.BadRequest(exception.Message, "agents.request-invalid");
+        }
+        catch (InvalidOperationException exception)
+        {
+            return ApiEndpointResults.BadRequest(exception.Message, "agents.request-invalid");
+        }
+    }
+
     private static async Task<IResult> GetAgentExecutionRunPartAsync<T>(
         Guid agentId,
         Guid executionRunId,
@@ -583,10 +661,21 @@ internal static class AgentsApi
         Func<ExecutionRunDetail, T> select,
         CancellationToken cancellationToken)
     {
-        var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
-        return detail.Run.AgentId == agentId
-            ? Results.Ok(select(detail))
-            : ApiEndpointResults.NotFound("Agent execution run was not found.", "agents.execution-run-not-found");
+        try
+        {
+            var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+            return detail.Run.AgentId == agentId
+                ? Results.Ok(select(detail))
+                : ApiEndpointResults.NotFound(
+                    "Agent execution run was not found.",
+                    "agents.execution-run-not-found");
+        }
+        catch (InvalidOperationException)
+        {
+            return ApiEndpointResults.NotFound(
+                "Agent execution run was not found.",
+                "agents.execution-run-not-found");
+        }
     }
 }
 
@@ -607,12 +696,21 @@ internal sealed record AgentChatApiRequest(
 
 internal sealed record PendingApprovalApiRequest(bool Approved, bool AutoApprovePendingToolCalls);
 
+internal sealed record AgentExecutionRunApiRequest(
+    Guid AgentId,
+    string Prompt,
+    Guid? ChatSessionId = null,
+    ExecutionInvocationContext? Context = null,
+    bool AutoApprovePendingToolCalls = false,
+    AgentJsonSchemaOutputContract? StructuredOutput = null,
+    IReadOnlyList<string>? InputAttachmentPaths = null);
+
 internal sealed record AgentExecutionRunStartApiRequest(
     string Prompt,
     Guid? ChatSessionId = null,
     ExecutionInvocationContext? Context = null,
     bool AutoApprovePendingToolCalls = false,
-    AgentStructuredOutputContract? StructuredOutput = null,
+    AgentJsonSchemaOutputContract? StructuredOutput = null,
     IReadOnlyList<string>? InputAttachmentPaths = null);
 
 internal sealed class AgentExecutionRunApiQuery

@@ -242,7 +242,10 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     TakeRuns: Math.Clamp(runtimeQuery.TakeRuns, 1, 100),
                     ResolveRunId(runtimeQuery.SelectedRunId ?? request.Selection.RunId),
                     runtimeQuery.AutoSelectRun,
-                    runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full),
+                    runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full)
+                {
+                    PreviouslyLoadedRuns = runtimeQuery.PreviouslyLoadedRuns
+                },
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -263,7 +266,10 @@ public sealed class ProcessWorkspaceShellProjectionService(
         CancellationToken cancellationToken)
     {
         var loadOptions = runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
-        if (!loadOptions.IncludeUsageTelemetry || runtimeUsageTelemetryReader is null || result.Runs.Count == 0)
+        if (!loadOptions.IncludeUsageTelemetry ||
+            runtimeUsageTelemetryReader is null ||
+            result.Runs.Count == 0 ||
+            CanUseTerminalRecord(result))
         {
             return [];
         }
@@ -374,7 +380,12 @@ public sealed class ProcessWorkspaceShellProjectionService(
             .OrderByDescending(incident => incident.RaisedAtUtc)
             .ToArray();
         var managerMessages = BuildManagerMessages(metricEvents);
-        var stats = BuildRuntimeStats(result.Runs, metricEvents, usageObservations);
+        var selectedRunRecord = result.SelectedRunRecord;
+        var hasTerminalRecord = CanUseTerminalRecord(result);
+        var hasDurableFacts = CanUseDurableFacts(result);
+        var stats = hasTerminalRecord
+            ? BuildRuntimeStats(result.Runs, selectedRunRecord!)
+            : BuildRuntimeStats(result.Runs, metricEvents, usageObservations);
 
         return new ProcessRuntimeWorkspaceProjection(
             query.HistoryWindow,
@@ -389,11 +400,46 @@ public sealed class ProcessWorkspaceShellProjectionService(
             managerMessages,
             result.ActiveAgents,
             stats,
-            BuildMetricPoints(metricEvents, usageObservations),
-            BuildToolUsage(metricEvents),
+            hasDurableFacts
+                ? BuildMetricPoints(selectedRunRecord!)
+                : hasTerminalRecord
+                    ? []
+                    : BuildMetricPoints(metricEvents, usageObservations),
+            hasTerminalRecord
+                ? BuildToolUsage(selectedRunRecord!)
+                : BuildToolUsage(metricEvents),
             result.Freshness,
-            BuildRuntimeSummary(result.Runs, metricEvents),
-            BuildAttentionSummary(result.Runs, incidents, metricEvents, result.SelectedRun, result.ActiveAgents));
+            hasTerminalRecord
+                ? BuildRuntimeSummary(selectedRunRecord!)
+                : BuildRuntimeSummary(result.Runs, metricEvents),
+            hasTerminalRecord
+                ? BuildAttentionSummary(selectedRunRecord!)
+                : BuildAttentionSummary(result.Runs, incidents, metricEvents, result.SelectedRun, result.ActiveAgents))
+        {
+            SelectedRunRecord = selectedRunRecord,
+            ReusableRuns = result.ReusableRuns
+        };
+    }
+
+    private static bool CanUseDurableFacts(ProcessRuntimeWorkspaceResult result)
+    {
+        return CanUseTerminalRecord(result) &&
+            result.SelectedRunRecord is
+            {
+                Summary.FactsStatus: ProcessRunFactsStatus.Completed,
+                Facts: not null
+            };
+    }
+
+    private static bool CanUseTerminalRecord(ProcessRuntimeWorkspaceResult result)
+    {
+        if (result.SelectedRunRecord is not { } selectedRunRecord)
+        {
+            return false;
+        }
+
+        var selectedRunId = result.SelectedRun?.RunId ?? selectedRunRecord.Summary.Identity.RunId;
+        return result.Runs.FirstOrDefault(run => run.RunId == selectedRunId)?.IsActive != true;
     }
 
     private static ProcessLiveRunSummaryProjection CreateLiveRunSummary(ProcessRuntimeWorkspaceProjection runtime)
@@ -451,6 +497,30 @@ public sealed class ProcessWorkspaceShellProjectionService(
             ActualCost: decimal.Round(usageObservations.Sum(observation => observation.ActualCostUsd), 6, MidpointRounding.AwayFromZero));
     }
 
+    private static ProcessRuntimeStatsProjection BuildRuntimeStats(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs,
+        ProcessRunRecord record)
+    {
+        var metrics = record.Summary.Metrics;
+        var totalEventCount = record.Facts?.TotalRuntimeEventCount ?? 0;
+        var managerEventCount = record.Facts?.ManagerRuntimeEventCount ?? 0;
+        return new ProcessRuntimeStatsProjection(
+            runs.Count,
+            runs.Count(run => run.IsActive),
+            runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention),
+            runs.Count(run => run.Status == ProcessProjectedRunStatus.Failed),
+            totalEventCount,
+            managerEventCount,
+            metrics.ToolCallCount,
+            Math.Max(0, metrics.DurationMilliseconds ?? 0),
+            SaturateToInt(metrics.InputTokenCount),
+            SaturateToInt(metrics.CachedInputTokenCount),
+            SaturateToInt(metrics.OutputTokenCount),
+            SaturateToInt(metrics.TotalTokenCount),
+            decimal.Round(metrics.EstimatedCost, 6, MidpointRounding.AwayFromZero),
+            decimal.Round(metrics.ActualCost, 6, MidpointRounding.AwayFromZero));
+    }
+
     private static IReadOnlyList<ProcessRuntimeMetricPointProjection> BuildMetricPoints(
         IReadOnlyList<ProcessTimelineEventProjection> events,
         IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
@@ -495,6 +565,43 @@ public sealed class ProcessWorkspaceShellProjectionService(
         return points;
     }
 
+    private static IReadOnlyList<ProcessRuntimeMetricPointProjection> BuildMetricPoints(
+        ProcessRunRecord record)
+    {
+        var facts = record.Facts
+            ?? throw new InvalidOperationException(
+                $"Process run '{record.Summary.Identity.RunId}' does not have hard facts for metric projection.");
+        var buckets =
+            new Dictionary<DateTimeOffset, DurableRuntimeMetricAccumulator>();
+        foreach (var runtimeEventBucket in facts.RuntimeEventMinuteBuckets)
+        {
+            var accumulator = new DurableRuntimeMetricAccumulator(
+                runtimeEventBucket.MinuteUtc);
+            accumulator.Add(runtimeEventBucket);
+            buckets.Add(runtimeEventBucket.MinuteUtc, accumulator);
+        }
+
+        foreach (var step in facts.Steps)
+        {
+            var minuteUtc = TruncateToMinute(
+                step.EndedAtUtc ??
+                step.StartedAtUtc ??
+                record.Summary.Metrics.EndedAtUtc);
+            if (!buckets.TryGetValue(minuteUtc, out var accumulator))
+            {
+                accumulator = new DurableRuntimeMetricAccumulator(minuteUtc);
+                buckets.Add(minuteUtc, accumulator);
+            }
+
+            accumulator.Add(step);
+        }
+
+        return buckets.Values
+            .OrderBy(accumulator => accumulator.TimestampUtc)
+            .Select(accumulator => accumulator.ToProjection())
+            .ToArray();
+    }
+
     private static IReadOnlyList<ProcessRuntimeToolUsageProjection> BuildToolUsage(
         IReadOnlyList<ProcessTimelineEventProjection> events)
     {
@@ -537,6 +644,47 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
         return usage;
     }
+
+    private static IReadOnlyList<ProcessRuntimeToolUsageProjection> BuildToolUsage(
+        ProcessRunRecord record)
+    {
+        var usage = (record.Facts?.RuntimeEventCategories ?? [])
+            .OrderBy(category => category.Category)
+            .Select(category => new ProcessRuntimeToolUsageProjection(
+                GetRuntimeEventCategoryDisplayName(category.Category),
+                category.EventCount,
+                category.LastOccurredAtUtc,
+                $"{category.EventCount.ToString(CultureInfo.InvariantCulture)} persisted " +
+                $"{GetRuntimeEventCategoryDisplayName(category.Category).ToLowerInvariant()}, " +
+                $"latest {category.LastOccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}."))
+            .ToList();
+        var toolCallCount = record.Summary.Metrics.ToolCallCount;
+        if (toolCallCount > 0)
+        {
+            usage.Add(new ProcessRuntimeToolUsageProjection(
+                "Recorded tool calls",
+                toolCallCount,
+                record.Summary.Metrics.EndedAtUtc,
+                $"{toolCallCount.ToString(CultureInfo.InvariantCulture)} persisted tool call(s) across the completed process run."));
+        }
+
+        return usage;
+    }
+
+    private static string GetRuntimeEventCategoryDisplayName(
+        ProcessRunRuntimeEventCategory category)
+        => category switch
+        {
+            ProcessRunRuntimeEventCategory.RunLifecycle => "Run lifecycle events",
+            ProcessRunRuntimeEventCategory.Step => "Step events",
+            ProcessRunRuntimeEventCategory.Dispatch => "Dispatch events",
+            ProcessRunRuntimeEventCategory.Manager => "Manager events",
+            ProcessRunRuntimeEventCategory.Other => "Other runtime events",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(category),
+                category,
+                "Unsupported process runtime event category.")
+        };
 
     private sealed class RuntimeMetricAccumulator(DateTimeOffset timestampUtc)
     {
@@ -618,6 +766,59 @@ public sealed class ProcessWorkspaceShellProjectionService(
         }
     }
 
+    private sealed class DurableRuntimeMetricAccumulator(DateTimeOffset timestampUtc)
+    {
+        private long toolCallCount;
+        private long inputTokens;
+        private long cachedInputTokens;
+        private long outputTokens;
+        private long totalTokens;
+        private decimal estimatedCost;
+        private decimal actualCost;
+
+        public DateTimeOffset TimestampUtc { get; } = timestampUtc;
+
+        public int EventCount { get; private set; }
+
+        public int ManagerEventCount { get; private set; }
+
+        public long DurationMilliseconds { get; private set; }
+
+        public void Add(ProcessRunRuntimeEventMinuteBucket bucket)
+        {
+            EventCount = bucket.EventCount;
+            ManagerEventCount = bucket.ManagerEventCount;
+            DurationMilliseconds = bucket.DurationMilliseconds;
+        }
+
+        public void Add(ProcessRunStepFact step)
+        {
+            toolCallCount += Math.Max(0, step.ToolCallCount);
+            inputTokens += Math.Max(0, step.InputTokenCount);
+            cachedInputTokens += Math.Max(0, step.CachedInputTokenCount);
+            outputTokens += Math.Max(0, step.OutputTokenCount);
+            totalTokens += Math.Max(0, step.TotalTokenCount);
+            estimatedCost += Math.Max(0, step.EstimatedCost);
+            actualCost += Math.Max(0, step.ActualCost);
+        }
+
+        public ProcessRuntimeMetricPointProjection ToProjection()
+        {
+            return new ProcessRuntimeMetricPointProjection(
+                TimestampUtc,
+                EventCount,
+                ManagerEventCount,
+                SaturateToInt(toolCallCount),
+                DurationMilliseconds,
+                SaturateToInt(inputTokens),
+                SaturateToInt(cachedInputTokens),
+                SaturateToInt(outputTokens),
+                SaturateToInt(totalTokens),
+                decimal.Round(estimatedCost, 6, MidpointRounding.AwayFromZero),
+                decimal.Round(actualCost, 6, MidpointRounding.AwayFromZero));
+        }
+    }
+
     private static int ResolveTotalTokens(ProcessRuntimeUsageObservation usageObservation)
     {
         return usageObservation.TotalTokens > 0
@@ -681,6 +882,22 @@ public sealed class ProcessWorkspaceShellProjectionService(
         var attention = runs.Count(run => run.Status == ProcessProjectedRunStatus.NeedsAttention);
         var latest = runs.Max(run => run.LastEventAtUtc).LocalDateTime.ToString("g", CultureInfo.CurrentCulture);
         return $"{runs.Count.ToString(CultureInfo.InvariantCulture)} run(s), {active.ToString(CultureInfo.InvariantCulture)} active, {attention.ToString(CultureInfo.InvariantCulture)} needing attention, {events.Count.ToString(CultureInfo.InvariantCulture)} event(s) on this page. Latest event {latest}.";
+    }
+
+    private static string BuildRuntimeSummary(ProcessRunRecord record)
+    {
+        if (record.Summary.FactsStatus != ProcessRunFactsStatus.Completed)
+        {
+            return FormattableString.Invariant(
+                $"{record.Summary.Disposition} run ended at {record.Summary.Metrics.EndedAtUtc:O}. {BuildFactsStageStatus(record.Summary)} Detailed historical metrics were not loaded.");
+        }
+
+        var metrics = record.Summary.Metrics;
+        var hardFacts = FormattableString.Invariant(
+            $"{record.Summary.Disposition} run with {metrics.CompletedStepCount}/{metrics.TotalStepCount} completed steps, {metrics.ExecutionCount} executions, {metrics.TotalTokenCount:N0} tokens, and {metrics.ActualCost:0.####} actual cost.");
+        return record.Summary.Narrative is { } narrative
+            ? $"{EnsureSentence(narrative.Overview)} {hardFacts}"
+            : $"{hardFacts} Manager summary status: {record.Summary.NarrativeStatus}.";
     }
 
     private static string BuildAttentionSummary(
@@ -805,6 +1022,49 @@ public sealed class ProcessWorkspaceShellProjectionService(
         return "No blocked or manager-escalated process runs are present in the selected history window.";
     }
 
+    private static string BuildAttentionSummary(ProcessRunRecord record)
+    {
+        if (record.Summary.FactsStatus != ProcessRunFactsStatus.Completed || record.Facts is null)
+        {
+            return BuildFactsStageStatus(record.Summary);
+        }
+
+        if (record.Summary.Narrative is { } narrative)
+        {
+            var problem = narrative.Problems.FirstOrDefault();
+            var followUp = narrative.FollowUps.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(problem))
+            {
+                return string.IsNullOrWhiteSpace(followUp)
+                    ? $"Recorded problem: {EnsureSentence(problem)}"
+                    : $"Recorded problem: {EnsureSentence(problem)} Follow-up: {EnsureSentence(followUp)}";
+            }
+
+            return $"Recorded outcome: {EnsureSentence(narrative.Outcome)}";
+        }
+
+        if (record.Summary.CompletenessWarnings.FirstOrDefault() is { } warning)
+        {
+            return $"Durable record is {record.Summary.Completeness.ToString().ToLowerInvariant()}: {EnsureSentence(warning.ToString())}";
+        }
+
+        return $"Durable record facts are {record.Summary.FactsStatus.ToString().ToLowerInvariant()}; manager summary is {record.Summary.NarrativeStatus.ToString().ToLowerInvariant()}.";
+    }
+
+    private static string BuildFactsStageStatus(ProcessRunRecordSummary summary)
+    {
+        var retry = summary.FactsNextAttemptAtUtc is { } nextAttemptAtUtc
+            ? $" Next retry: {nextAttemptAtUtc:O}."
+            : summary.FactsStatus == ProcessRunFactsStatus.Failed
+                ? " No automatic retry remains."
+                : string.Empty;
+        var failure = string.IsNullOrWhiteSpace(summary.FactsLastErrorClass)
+            ? string.Empty
+            : $" Last error: {summary.FactsLastErrorClass}; diagnostic reference: {summary.FactsLastErrorDiagnosticReference ?? "unavailable"}.";
+        return FormattableString.Invariant(
+            $"Durable facts are {summary.FactsStatus.ToString().ToLowerInvariant()} after {summary.FactsAttemptCount} attempt(s).{retry}{failure}");
+    }
+
     private static string BuildManagerMessageSummary(ProcessTimelineEventProjection runtimeEvent)
         => runtimeEvent.Sensitivity == ProcessProjectedSensitivity.Restricted
             ? $"Restricted manager event {runtimeEvent.EventType}."
@@ -826,6 +1086,14 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
     private static bool IsManagerEvent(ProcessTimelineEventProjection runtimeEvent)
         => runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal);
+
+    private static int SaturateToInt(long value)
+        => value switch
+        {
+            > int.MaxValue => int.MaxValue,
+            < int.MinValue => int.MinValue,
+            _ => (int)value
+        };
 
     private static bool IsToolUsageEvent(ProcessTimelineEventProjection runtimeEvent)
         => runtimeEvent.EventType.StartsWith("Dispatch", StringComparison.Ordinal) ||

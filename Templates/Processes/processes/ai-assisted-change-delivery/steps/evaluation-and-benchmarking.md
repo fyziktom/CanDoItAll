@@ -11,6 +11,8 @@ A polished answer is not enough
 ## Notes
 Run deterministic checks, benchmark tasks, and human review prompts to determine whether the agent output actually satisfies the bounded acceptance criteria.
 
+When `ProductAcceptanceCriteriaContract` is present, preserve every criterion id in the evaluation artifact, but require Pass/Fail product proof only for criteria with `kind=ProductAcceptance` and `required=true`. Record `kind=DeliveryPlanning` items separately as nonblocking planning context; they cannot require rework, block acceptance, or trigger human confirmation or escalation unless a separate typed decision gate explicitly requests that decision.
+
 Use the project-structure mindmap to decide the validation shape. When the mindmap explicitly says a deliverable is plain static JavaScript, no npm, no package install, and no build step, evaluate the actual product files directly with file inspection plus static browser or local HTTP smoke proof. Do not block only because there is no generated harness, package.json, benchmark dataset, or npm script unless the acceptance criteria asked for one.
 
 Before declaring implementation evidence missing, inspect the upstream delegated change set and execution trace from the agent-execution step. If those artifacts name grounded product files, read or stat those product files directly and evaluate the latest mutation; do not ask the implementer to create files that already exist in the current-run grounded product root.

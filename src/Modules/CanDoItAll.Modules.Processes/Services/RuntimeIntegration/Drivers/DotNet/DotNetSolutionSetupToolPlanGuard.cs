@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
@@ -26,6 +27,7 @@ internal sealed record DotNetSolutionSetupToolPlan(
     string ExecutionPlanVariableName,
     IReadOnlyList<string> RequiredReceipts,
     IReadOnlyList<string> RequiredPaths,
+    IReadOnlyList<ProcessToolOperationExecutionPolicy> OperationPolicies,
     string ScriptRef,
     string Script,
     string SideEffectManifest,
@@ -48,6 +50,15 @@ internal sealed record DotNetSolutionSetupToolPlanGuardResult(
 internal static class DotNetSolutionSetupToolPlanGuard
 {
     private const string WorkspacePwshRunScript = "workspace_pwsh_run_script";
+    private const string WorkspaceDotnetNew = "workspace_dotnet_new";
+    private const string WorkspaceWriteFile = "workspace_write_file";
+    private const string WorkspaceReadFile = "workspace_read_file";
+    private const string RunHelperScriptOperationKey = "run-helper-script";
+    private const string CreateSolutionOperationKey = "create-solution";
+    private const string CreateAppProjectOperationKey = "create-app-project";
+    private const string WriteHelperScriptOperationKey = "write-helper-script";
+    private const string SolutionMembershipReadbackOperationKey = "solution-membership-readback";
+    private const string ProjectReferenceReadbackOperationKey = "project-reference-readback";
     private const string ProductMutationMode = "ProductMutation";
     private const string CreateProjectPlanKey = "dotnet.create-project";
     private const string AddTestProjectPlanKey = "dotnet.add-test-project";
@@ -117,6 +128,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
         }
 
         var issues = new List<ProcessRuntimeToolPlanGuardIssue>();
+        ValidateOperationPolicies(assignment, plan, issues);
         ValidateRequiredReceipts(assignment, plan, issues);
         ValidateScriptRef(assignment, plan, issues);
         ValidateScript(assignment, plan, issues);
@@ -128,6 +140,135 @@ internal static class DotNetSolutionSetupToolPlanGuard
         return issues.Count == 0
             ? new DotNetSolutionSetupToolPlanGuardResult(plan, [])
             : new DotNetSolutionSetupToolPlanGuardResult(plan, issues);
+    }
+
+    private static void ValidateOperationPolicies(
+        ProcessRuntimeStepAssignment assignment,
+        DotNetSolutionSetupToolPlan plan,
+        List<ProcessRuntimeToolPlanGuardIssue> issues)
+    {
+        if (plan.OperationPolicies.Count == 0)
+        {
+            return;
+        }
+
+        var duplicateKey = plan.OperationPolicies
+            .Where(policy => !string.IsNullOrWhiteSpace(policy.OperationKey))
+            .GroupBy(policy => policy.OperationKey, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateKey is not null)
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.operation_policy_duplicate",
+                $"Step '{assignment.StepKey}' declares deterministic operation policy '{duplicateKey.Key}' more than once.",
+                assignment,
+                duplicateKey.Key);
+            return;
+        }
+
+        if (plan.OperationPolicies.Any(policy =>
+                string.IsNullOrWhiteSpace(policy.OperationKey) ||
+                string.IsNullOrWhiteSpace(policy.ToolName)))
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.operation_policy_invalid",
+                $"Step '{assignment.StepKey}' declares an incomplete deterministic operation policy.",
+                assignment,
+                plan.PlanKey);
+            return;
+        }
+
+        (string Key, string Tool)[] expectedOperations = plan.Kind switch
+        {
+            DotNetSolutionSetupToolPlanKind.CreateProject =>
+            [
+                (CreateSolutionOperationKey, WorkspaceDotnetNew),
+                (CreateAppProjectOperationKey, WorkspaceDotnetNew),
+                (WriteHelperScriptOperationKey, WorkspaceWriteFile),
+                (RunHelperScriptOperationKey, WorkspacePwshRunScript),
+                (SolutionMembershipReadbackOperationKey, WorkspaceReadFile)
+            ],
+            DotNetSolutionSetupToolPlanKind.AddTestProject or
+                DotNetSolutionSetupToolPlanKind.RepairSolutionSetup =>
+            [
+                (WriteHelperScriptOperationKey, WorkspaceWriteFile),
+                (RunHelperScriptOperationKey, WorkspacePwshRunScript),
+                (SolutionMembershipReadbackOperationKey, WorkspaceReadFile),
+                (ProjectReferenceReadbackOperationKey, WorkspaceReadFile)
+            ],
+            _ => []
+        };
+        if (plan.OperationPolicies.Count != expectedOperations.Length ||
+            expectedOperations.Any(expected =>
+                !plan.OperationPolicies.Any(policy =>
+                    string.Equals(
+                        policy.OperationKey,
+                        expected.Key,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(
+                        policy.ToolName,
+                        expected.Tool,
+                        StringComparison.OrdinalIgnoreCase))))
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.operation_policy_coverage_invalid",
+                $"Step '{assignment.StepKey}' operation policies must exactly cover the deterministic '{plan.Kind}' plan.",
+                assignment,
+                $"{plan.PlanKey}:{string.Join(",", plan.OperationPolicies.Select(policy => $"{policy.OperationKey}={policy.ToolName}").Order(StringComparer.OrdinalIgnoreCase))}");
+            return;
+        }
+
+        var helperPolicies = plan.OperationPolicies
+            .Where(policy => string.Equals(
+                policy.OperationKey,
+                RunHelperScriptOperationKey,
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (helperPolicies.Length != 1 ||
+            !string.Equals(
+                helperPolicies[0].ToolName,
+                WorkspacePwshRunScript,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.helper_operation_policy_invalid",
+                $"Step '{assignment.StepKey}' must bind exactly one '{RunHelperScriptOperationKey}' policy to '{WorkspacePwshRunScript}'.",
+                assignment,
+                plan.PlanKey);
+            return;
+        }
+
+        if (plan.OperationPolicies.Any(policy =>
+                !string.Equals(
+                    policy.OperationKey,
+                    RunHelperScriptOperationKey,
+                    StringComparison.OrdinalIgnoreCase) &&
+                policy.FailureReconciliation !=
+                    ProcessToolOperationFailureReconciliationPolicy.None))
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.operation_reconciliation_scope_invalid",
+                $"Step '{assignment.StepKey}' may declare failed-command reconciliation only for '{RunHelperScriptOperationKey}'.",
+                assignment,
+                plan.PlanKey);
+            return;
+        }
+
+        if (plan.OperationPolicies.Any(policy =>
+                policy.Idempotency != ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable))
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.operation_not_repeatable",
+                $"Step '{assignment.StepKey}' deterministic .NET setup plan must explicitly declare every operation current-run repeatable.",
+                assignment,
+                plan.PlanKey);
+        }
     }
 
     private static bool TryResolvePlan(
@@ -159,10 +300,41 @@ internal static class DotNetSolutionSetupToolPlanGuard
             ReadStringList(
                 assignment.LaunchVariables,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths),
+            descriptor.OperationPolicies ?? [],
             ReadLaunchVariable(assignment.LaunchVariables, scriptRefVariableName),
             ReadLaunchVariable(assignment.LaunchVariables, scriptVariableName),
             ReadLaunchVariable(assignment.LaunchVariables, manifestVariableName),
             ReadLaunchVariable(assignment.LaunchVariables, executionPlanVariableName));
+        if (!assignment.LaunchVariables.ContainsKey(
+                ProcessRuntimeLaunchVariables.ProcessStepDeterministicToolPlanDescriptorJson))
+        {
+            return true;
+        }
+
+        if (!ProcessRuntimeLaunchVariables.TryReadProcessStepDeterministicToolPlanDescriptor(
+                assignment.LaunchVariables,
+                out var deterministicDescriptor) ||
+            !string.Equals(
+                deterministicDescriptor.PlanKey,
+                planKey,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                deterministicDescriptor.PlanKind,
+                descriptor.PlanKind,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                deterministicDescriptor.ExecutionPlanVariableName,
+                executionPlanVariableName,
+                StringComparison.Ordinal))
+        {
+            plan = null!;
+            return false;
+        }
+
+        plan = plan with
+        {
+            OperationPolicies = deterministicDescriptor.OperationPolicies
+        };
         return true;
     }
 
@@ -535,24 +707,13 @@ internal static class DotNetSolutionSetupToolPlanGuard
         DotNetSolutionSetupToolPlan plan,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
-        var minimumPathCount = plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject ? 2 : 3;
+        var minimumPathCount = plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject ? 1 : 2;
         if (plan.RequiredPaths.Count < minimumPathCount)
         {
             AddIssue(
                 issues,
                 "dotnet.setup.plan.required_paths_missing",
-                $"Step '{assignment.StepKey}' must declare solution/project required paths for product completion.",
-                assignment,
-                ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
-        }
-
-        if (!plan.RequiredPaths.Any(path => path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
-                                            path.EndsWith(".sln", StringComparison.OrdinalIgnoreCase)))
-        {
-            AddIssue(
-                issues,
-                "dotnet.setup.plan.solution_path_missing",
-                $"Step '{assignment.StepKey}' required paths do not include a solution file.",
+                $"Step '{assignment.StepKey}' must declare every required project path for product completion.",
                 assignment,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths);
         }
@@ -577,15 +738,25 @@ internal static class DotNetSolutionSetupToolPlanGuard
         ProcessRuntimeStepAssignment assignment,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
+        var authoritativeSolutionCandidates = new[]
+            {
+                ReadLaunchVariable(assignment.LaunchVariables, "DotNetSolutionFile")
+            }
+            .Concat(ReadStringList(
+                assignment.LaunchVariables,
+                DotNetSolutionSetupTemplatePolicyBindings.SolutionFileCandidatesVariableKey))
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var checks = ReadCanonicalArrayElement(
             assignment.LaunchVariables,
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
-        if (checks is null)
+        if (checks is null || authoritativeSolutionCandidates.Length == 0)
         {
             AddIssue(
                 issues,
                 "dotnet.setup.plan.readback_checks_missing",
-                $"Step '{assignment.StepKey}' must declare solution membership readback file-content checks.",
+                $"Step '{assignment.StepKey}' must declare authoritative solution candidates and solution membership readback file-content checks.",
                 assignment,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
             return;
@@ -594,6 +765,10 @@ internal static class DotNetSolutionSetupToolPlanGuard
         var checkElements = checks.Value.ValueKind == JsonValueKind.Array
             ? checks.Value.EnumerateArray().ToArray()
             : [checks.Value];
+        var normalizedAuthoritativeCandidates = authoritativeSolutionCandidates
+            .Select(NormalizeNativePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var hasCompleteSolutionCandidateCheck = false;
         foreach (var check in checkElements)
         {
             if (check.ValueKind != JsonValueKind.Object ||
@@ -616,6 +791,25 @@ internal static class DotNetSolutionSetupToolPlanGuard
                     ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks);
                 return;
             }
+
+            var normalizedCheckCandidates = pathCandidates
+                .EnumerateArray()
+                .Select(candidate => candidate.GetString() ?? string.Empty)
+                .SelectMany(SplitStringList)
+                .Select(NormalizeNativePath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            hasCompleteSolutionCandidateCheck |=
+                normalizedAuthoritativeCandidates.All(normalizedCheckCandidates.Contains);
+        }
+
+        if (!hasCompleteSolutionCandidateCheck)
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.solution_readback_candidates_missing",
+                $"Step '{assignment.StepKey}' must declare one solution membership readback check containing every authoritative solution candidate.",
+                assignment,
+                DotNetSolutionSetupTemplatePolicyBindings.SolutionFileCandidatesVariableKey);
         }
     }
 

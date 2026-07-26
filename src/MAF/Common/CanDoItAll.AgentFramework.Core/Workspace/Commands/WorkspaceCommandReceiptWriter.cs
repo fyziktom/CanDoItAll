@@ -34,10 +34,16 @@ internal sealed class WorkspaceCommandReceiptWriter
         bool mutatesWorkspace,
         string message,
         WorkspaceProcessExecutionResult processResult,
-        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified,
+        IReadOnlyList<string>? environmentVariableNames = null)
     {
         var artifactDirectory = ResolveArtifactDirectory(recipeId, processResult.StartedAtUtc);
         Directory.CreateDirectory(artifactDirectory.FullPath);
+        var orderedEnvironmentVariableNames = environmentVariableNames?
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
 
         var stdoutRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(artifactDirectory.RelativePath, "stdout.txt"));
         var stderrRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(artifactDirectory.RelativePath, "stderr.txt"));
@@ -56,7 +62,8 @@ internal sealed class WorkspaceCommandReceiptWriter
                     decision,
                     workingDirectory,
                     arguments,
-                    targetPaths
+                    targetPaths,
+                    environmentVariableNames = orderedEnvironmentVariableNames
                 },
                 SerializerOptions));
 
@@ -89,6 +96,7 @@ internal sealed class WorkspaceCommandReceiptWriter
             boundary = processResult.Boundary,
             workingDirectory,
             argumentsSummary = BuildArgumentsSummary(arguments),
+            environmentVariableNames = orderedEnvironmentVariableNames,
             processResult.ExitCode,
             processResult.TimedOut,
             processResult.StdoutTruncated,

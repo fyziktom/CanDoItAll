@@ -62,12 +62,14 @@ internal sealed class ProcessStepCompletionCoordinator(
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> completionToolReceipts,
         bool appendRuntimeGateFindings = false,
-        ProcessStepExecutionContract? stepContract = null)
+        ProcessStepExecutionContract? stepContract = null,
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome = null)
     {
         if (groundingValidator.ValidateManagedArtifactBodyReferences(
                 assignment,
                 materialization.Output,
-                completionToolReceipts) is { } ungroundedArtifactReferenceIssue)
+                completionToolReceipts,
+                verifiedSubprocessOutcome) is { } ungroundedArtifactReferenceIssue)
         {
             return NeedsManagerForCompletionIssue(
                 assignment,
@@ -81,7 +83,8 @@ internal sealed class ProcessStepCompletionCoordinator(
             completionToolReceipts,
             executionRunId)
         {
-            StepContract = stepContract ?? ProcessStepExecutionContract.Empty
+            StepContract = stepContract ?? ProcessStepExecutionContract.Empty,
+            VerifiedSubprocessOutcome = verifiedSubprocessOutcome
         });
         if (!completionGateEvaluation.IsSatisfied)
         {
@@ -150,6 +153,7 @@ internal sealed class ProcessStepCompletionCoordinator(
             acceptedCompletionToolReceipts,
             executionRunId,
             producedArtifactContentHashes,
-            stepContract);
+            stepContract,
+            verifiedSubprocessOutcome);
     }
 }

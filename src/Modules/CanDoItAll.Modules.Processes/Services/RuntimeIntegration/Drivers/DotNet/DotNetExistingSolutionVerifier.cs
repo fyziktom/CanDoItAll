@@ -20,7 +20,12 @@ internal sealed class DotNetExistingSolutionVerifier
         var executionRunId = Guid.NewGuid();
         if (!TryResolveInputs(assignment.LaunchVariables, out var inputs, out var issue))
         {
-            return ValueTask.FromResult(Failed(assignment, executionRunId, [], issue));
+            return ValueTask.FromResult(Failed(
+                assignment,
+                executionRunId,
+                [],
+                issue,
+                ProcessRuntimeOwnedStepFailures.ContractInvalid));
         }
 
         var files = new WorkspaceFileService(inputs.ProductRoot);
@@ -40,29 +45,72 @@ internal sealed class DotNetExistingSolutionVerifier
             }
         }
 
-        var solutionRead = files.ReadTextFile(Path.GetRelativePath(inputs.ProductRoot, inputs.SolutionFile), maxCharacters: 200000);
-        receipts.Add(From(executionRunId, solutionRead));
-        if (!solutionRead.Succeeded)
+        string? solutionFile = null;
+        var foundExistingSolutionCandidate = false;
+        var candidateIssues = new List<string>();
+        foreach (var candidate in inputs.SolutionCandidateFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            var relativeCandidate = Path.GetRelativePath(inputs.ProductRoot, candidate);
+            var stat = files.StatPath(relativeCandidate);
+            receipts.Add(From(executionRunId, stat));
+            if (!stat.Succeeded)
+            {
+                candidateIssues.Add(
+                    $"'{Path.GetFileName(candidate)}' could not be inspected: {stat.Message}");
+                continue;
+            }
+
+            if (!stat.Exists)
+            {
+                continue;
+            }
+
+            foundExistingSolutionCandidate = true;
+            if (!string.Equals(stat.PathKind, "file", StringComparison.OrdinalIgnoreCase))
+            {
+                candidateIssues.Add($"'{Path.GetFileName(candidate)}' is not a file");
+                continue;
+            }
+
+            var solutionRead = files.ReadTextFile(relativeCandidate, maxCharacters: 200000);
+            receipts.Add(From(executionRunId, solutionRead));
+            if (!solutionRead.Succeeded || solutionRead.IsTruncated)
+            {
+                candidateIssues.Add(
+                    $"'{Path.GetFileName(candidate)}' could not be read completely: {solutionRead.Message}");
+                continue;
+            }
+
+            var normalizedSolution = NormalizePathText(solutionRead.Content);
+            var missingProjects = inputs.RequiredFiles
+                .Where(projectFile =>
+                    !normalizedSolution.Contains(
+                        NormalizePathText(Path.GetRelativePath(inputs.ProductRoot, projectFile)),
+                        StringComparison.OrdinalIgnoreCase))
+                .Select(Path.GetFileName)
+                .ToArray();
+            if (missingProjects.Length > 0)
+            {
+                candidateIssues.Add(
+                    $"'{Path.GetFileName(candidate)}' does not include required project(s): {string.Join(", ", missingProjects)}");
+                continue;
+            }
+
+            solutionFile = candidate;
+            break;
+        }
+
+        if (solutionFile is null)
+        {
+            var summary = !foundExistingSolutionCandidate && candidateIssues.Count == 0
+                ? $"The declared existing .NET solution context is missing every solution candidate: {string.Join(", ", inputs.SolutionCandidateFiles.Select(Path.GetFileName))}."
+                : $"No declared existing .NET solution candidate satisfied the verification contract: {string.Join("; ", candidateIssues)}.";
             return ValueTask.FromResult(Failed(
                 assignment,
                 executionRunId,
                 receipts,
-                "The declared existing .NET solution file could not be read."));
-        }
-
-        var normalizedSolution = NormalizePathText(solutionRead.Content);
-        foreach (var projectFile in inputs.ImplementationProjectFiles)
-        {
-            var relativeProjectFile = NormalizePathText(Path.GetRelativePath(inputs.ProductRoot, projectFile));
-            if (!normalizedSolution.Contains(relativeProjectFile, StringComparison.OrdinalIgnoreCase))
-            {
-                return ValueTask.FromResult(Failed(
-                    assignment,
-                    executionRunId,
-                    receipts,
-                    $"The declared existing .NET solution does not include required implementation project '{Path.GetFileName(projectFile)}'."));
-            }
+                summary));
         }
 
         var output = new ProcessStepOutcomeResult
@@ -86,7 +134,8 @@ internal sealed class DotNetExistingSolutionVerifier
         ProcessRuntimeStepAssignment assignment,
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> receipts,
-        string summary)
+        string summary,
+        ProcessRuntimeOwnedStepFailure? failure = null)
         => new(
             false,
             new ProcessStepOutcomeResult
@@ -100,7 +149,8 @@ internal sealed class DotNetExistingSolutionVerifier
             receipts,
             executionRunId,
             summary,
-            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-existing-solution:failed:{summary}");
+            $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-dotnet-existing-solution:failed:{summary}",
+            failure ?? ProcessRuntimeOwnedStepFailures.VerificationFailed);
 
     internal static bool TryResolveInputs(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -134,7 +184,7 @@ internal sealed class DotNetExistingSolutionVerifier
             return false;
         }
 
-        if (!TryResolveProductPath(launchVariables, "DotNetSolutionFile", productRoot, out var solutionFile, out issue) ||
+        if (!TryResolveSolutionCandidatePaths(launchVariables, productRoot, out var solutionCandidateFiles, out issue) ||
             !TryReadProductPathList(launchVariables, "DotNetRequiredProjectFiles", productRoot, requireAtLeastOne: true, out var implementationProjectFiles, out issue) ||
             !TryReadProductPathList(launchVariables, "DotNetTestProjectFiles", productRoot, requireAtLeastOne: false, out var testProjectFiles, out issue))
         {
@@ -143,10 +193,60 @@ internal sealed class DotNetExistingSolutionVerifier
 
         inputs = new DotNetExistingSolutionVerificationInputs(
             productRoot,
-            solutionFile,
+            solutionCandidateFiles,
             implementationProjectFiles,
             testProjectFiles,
-            [solutionFile, .. implementationProjectFiles, .. testProjectFiles]);
+            [.. implementationProjectFiles, .. testProjectFiles]);
+        issue = string.Empty;
+        return true;
+    }
+
+    private static bool TryResolveSolutionCandidatePaths(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string productRoot,
+        out IReadOnlyList<string> paths,
+        out string issue)
+    {
+        paths = [];
+        var configured = ResolveVariable(launchVariables, "DotNetSolutionFileCandidates");
+        var preferred = ResolveVariable(launchVariables, "DotNetSolutionFile");
+        var candidates = configured.Split(
+                ';',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+        if (!string.IsNullOrWhiteSpace(preferred) &&
+            !candidates.Contains(preferred, StringComparer.OrdinalIgnoreCase))
+        {
+            candidates.Insert(0, preferred);
+        }
+
+        if (candidates.Count == 0)
+        {
+            issue = "Read-only .NET solution verification requires 'DotNetSolutionFile' or 'DotNetSolutionFileCandidates'.";
+            return false;
+        }
+
+        var resolved = new List<string>();
+        foreach (var candidate in candidates)
+        {
+            if (!TryResolveProductPath(
+                    candidate,
+                    "DotNetSolutionFileCandidates",
+                    productRoot,
+                    out var path,
+                    out issue))
+            {
+                return false;
+            }
+
+            if (!resolved.Contains(path, StringComparer.OrdinalIgnoreCase))
+            {
+                resolved.Add(path);
+            }
+        }
+
+        paths = DotNetSolutionContextPathResolver
+            .IncludeSupportedSolutionFormatAlternatives(resolved);
         issue = string.Empty;
         return true;
     }
@@ -262,7 +362,7 @@ internal sealed class DotNetExistingSolutionVerifier
 
     internal sealed record DotNetExistingSolutionVerificationInputs(
         string ProductRoot,
-        string SolutionFile,
+        IReadOnlyList<string> SolutionCandidateFiles,
         IReadOnlyList<string> ImplementationProjectFiles,
         IReadOnlyList<string> TestProjectFiles,
         IReadOnlyList<string> RequiredFiles);

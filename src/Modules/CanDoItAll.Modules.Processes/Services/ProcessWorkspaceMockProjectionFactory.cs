@@ -110,7 +110,10 @@ public sealed class ProcessWorkspaceMockProjectionFactory(IProcessProjectionCloc
             toolUsage,
             freshness,
             $"{runs.Count:N0} run(s), {stats.ActiveRunCount:N0} active, {stats.AttentionRunCount:N0} needing attention, {stats.EventCount:N0} event(s) in this mock window.",
-            "Mock scenario: multi-team delivery is active, one run is blocked on operator rework, one run is waiting on a subprocess, and one failed run needs inspection.");
+            "Mock scenario: multi-team delivery is active, one run is blocked on operator rework, one run is waiting on a subprocess, and one failed run needs inspection.")
+        {
+            ReusableRuns = runs
+        };
 
         return baseline with
         {

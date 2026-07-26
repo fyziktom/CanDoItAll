@@ -675,8 +675,9 @@
             var runtimeQueryHistoryWindow = ResolveRuntimeHistoryWindow(detailTabKey);
             var shouldAutoSelectRuntimeRun = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat ||
                 (selectedRuntimeRunId ?? RunIdQuery).HasValue;
+            var scope = ResolveScope();
             var request = new ProcessWorkspaceShellRequest(
-                ResolveScope(),
+                scope,
                 new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
                 new ProcessDefinitionCatalogQueryProjection(
                     searchText,
@@ -699,7 +700,13 @@
                     selectedRuntimeRunId ?? RunIdQuery,
                     AutoSelectRun: shouldAutoSelectRuntimeRun,
                     TakeRuns: 50,
-                    runtimeLoadOptions),
+                    runtimeLoadOptions)
+                {
+                    PreviouslyLoadedRuns = ResolvePreviouslyLoadedRuns(
+                        forceRefresh,
+                        scope,
+                        runtimeQueryHistoryWindow)
+                },
                 definitionLoadOptions);
 
             var loadedShell = await ProjectionClient.GetShellAsync(request);
@@ -761,6 +768,17 @@
             ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
             : ProcessWorkspaceShellScope.Global;
 
+    private IReadOnlyList<ProcessLiveProcessSnapshot>? ResolvePreviouslyLoadedRuns(
+        bool forceRefresh,
+        ProcessWorkspaceShellScope scope,
+        ProcessRuntimeHistoryWindow historyWindow)
+        => !forceRefresh &&
+           shell is { } loadedShell &&
+           loadedShell.Scope == scope &&
+           loadedShell.Runtime.HistoryWindow == historyWindow
+            ? loadedShell.Runtime.ReusableRuns
+            : null;
+
     private ProcessWorkspaceDetailTabKey ResolvePreferredDetailTab()
         => LiveRoute || RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue
             ? ProcessWorkspaceDetailTabKey.Runs
@@ -794,6 +812,8 @@
         {
             ProcessWorkspaceDetailTabKey.Runs => new ProcessRuntimeWorkspaceLoadOptions
             {
+                IncludeSelectedRun = !SelectedRunViewNeedsMetrics,
+                IncludeHistory = !SelectedRunViewNeedsMetrics,
                 IncludeMetricHistory = SelectedRunViewNeedsMetrics,
                 IncludeUsageTelemetry = SelectedRunViewNeedsMetrics,
                 IncludeActiveAgents = SelectedRunViewNeedsActiveAgents
@@ -801,6 +821,8 @@
             ProcessWorkspaceDetailTabKey.Graphs when !processGraphsHistoryLoaded => ProcessRuntimeWorkspaceLoadOptions.ListOnly,
             ProcessWorkspaceDetailTabKey.Graphs or ProcessWorkspaceDetailTabKey.Analytics => new ProcessRuntimeWorkspaceLoadOptions
             {
+                IncludeSelectedRun = false,
+                IncludeHistory = false,
                 IncludeActiveAgents = false
             },
             ProcessWorkspaceDetailTabKey.ManagerChat => new ProcessRuntimeWorkspaceLoadOptions
@@ -847,6 +869,11 @@
     private async Task HandleDetailTabChangedAsync(int index)
     {
         activeDetailTabIndex = index;
+        if (ShouldDeferProcessGraphsHistoryLoad)
+        {
+            return;
+        }
+
         await LoadAsync(forceRefresh: false);
     }
 

@@ -77,16 +77,6 @@ public partial class AgentsHomePage
     private bool isOpeningHrAgent;
     private bool hasOverviewLoadError;
     private string? overviewLoadError;
-    private SandboxDashboardSnapshot dashboard = new(
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        ExecutionBoundaryDescriptor.Unknown);
     private AgentOverviewSnapshot overview = AgentOverviewSnapshot.Empty;
 
     private AgentChatContextSurface AgentChatSurface
@@ -331,13 +321,11 @@ public partial class AgentsHomePage
 
     private async Task LoadDashboardAsync()
     {
-        var dashboardTask = WorkspaceService.GetDashboardAsync();
         var overviewTask = WorkspaceService.GetAgentOverviewAsync();
         var hrAgentTask = TryResolveHrAgentAsync();
         var boundResourceCountTask = LoadBoundResourceCountAsync();
-        await Task.WhenAll(dashboardTask, overviewTask, hrAgentTask, boundResourceCountTask);
+        await Task.WhenAll(overviewTask, hrAgentTask, boundResourceCountTask);
 
-        dashboard = await dashboardTask;
         overview = await overviewTask;
         var hrAgentResolution = await hrAgentTask;
         hrAgent = hrAgentResolution.Agent;

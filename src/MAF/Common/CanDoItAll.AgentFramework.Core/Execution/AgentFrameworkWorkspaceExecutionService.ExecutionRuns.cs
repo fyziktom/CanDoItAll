@@ -12,6 +12,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.StructuredOutput is not null && request.JsonSchemaOutput is not null)
+        {
+            throw new AgentJsonSchemaOutputContractException(
+                "agents.structured-output-ambiguous",
+                "Choose either a trusted in-process structured output contract or a portable JSON Schema contract, not both.");
+        }
+
+        _ = AgentJsonSchemaOutputContractProcessor.Prepare(request.JsonSchemaOutput);
         if (string.IsNullOrWhiteSpace(request.Prompt))
         {
             throw new InvalidOperationException("Prompt is required.");
@@ -64,6 +72,97 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         return await ExecuteRunWithWorkspaceDocumentAsync(request, cancellationToken);
+    }
+
+    public async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+        {
+            throw new InvalidOperationException("Prompt is required.");
+        }
+
+        if (request.ChatSessionId.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Atomic same-source execution is supported only for non-chat execution runs.");
+        }
+
+        if (store is not ISandboxWorkspaceExecutionRunReservationStore reservationStore)
+        {
+            throw new NotSupportedException(
+                "The workspace store does not support atomic same-source execution reservation.");
+        }
+
+        var context = PrepareInvocationContext(request) with
+        {
+            SourceKind = source.SourceKind,
+            SourceId = source.SourceId
+        };
+        request = request with { Context = context };
+
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        var agent = EnsureAgentExists(catalog, request.AgentId);
+        var provider = await ResolveProviderForExecutionRequestAsync(
+            agent,
+            catalog,
+            request,
+            await ResolveProviderForAgentAsync(agent, catalog, cancellationToken).ConfigureAwait(false),
+            cancellationToken).ConfigureAwait(false);
+        var prompt = request.Prompt.Trim();
+        var run = CreatePreparingRun(
+            agent,
+            provider,
+            chatSessionId: null,
+            CreateSessionTitle(prompt),
+            context,
+            prompt,
+            DateTimeOffset.UtcNow,
+            request.AutoApprovePendingToolCalls,
+            request.StructuredOutput);
+        var reservation = await reservationStore
+            .ReserveExecutionRunAsync(
+                source,
+                CreateExecutionRunDetail(
+                    run,
+                    session: null,
+                    executionLog: [],
+                    metrics: [],
+                    usageObservations: [],
+                    approvals: [],
+                    artifacts: [],
+                    checkpoints: [],
+                    toolReceipts: []),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (reservation.Disposition != ExecutionRunSourceDisposition.Created)
+        {
+            return new ExecutionRunSourceExecutionResult(
+                reservation.Disposition,
+                reservation.Run,
+                CreatedExecutionResult: null);
+        }
+
+        var result = await CompletePreparedExecutionRunAsync(
+                agent,
+                provider,
+                catalog,
+                session: null,
+                request,
+                reservation.Run,
+                userMessage: null,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return new ExecutionRunSourceExecutionResult(
+            ExecutionRunSourceDisposition.Created,
+            reservation.Run,
+            result);
     }
 
     private async Task<ExecutionRunResult> ExecuteRunWithWorkspaceDocumentAsync(
@@ -210,7 +309,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
+                    executionOptions: CreateRuntimeExecutionOptionsCore(
+                        run,
+                        structuredOutput,
+                        handoffOptions,
+                        inputAttachments: null,
+                        jsonSchemaOutput: null));
                 lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -249,6 +353,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse,
                     runtimeCancellationToken);
                 lastRuntimeResponse = runtimeResponse;
+                var portableStructuredOutput = await ValidatePortableJsonSchemaOutputBeforeCompletionAsync(
+                    run,
+                    runtimeResponse,
+                    runtimeCancellationToken);
+                var completionState = runtimeResponse.PendingApprovals.Count > 0
+                    ? ExecutionState.WaitingOnTool
+                    : portableStructuredOutput is null ||
+                      portableStructuredOutput.ValidationStatus == AgentJsonSchemaOutputValidationStatus.Valid
+                        ? ExecutionState.Completed
+                        : ExecutionState.Failed;
+                var completionOutcome = completionState switch
+                {
+                    ExecutionState.Completed => RunOutcome.Succeeded,
+                    ExecutionState.Failed => RunOutcome.Failed,
+                    _ => (RunOutcome?)null
+                };
 
                 var assistantMessage = session is null
                     ? null
@@ -265,7 +385,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         AgentId: agent.Id,
                         ChatSessionId: run.ChatSessionId,
                         CreatedAtUtc: DateTimeOffset.UtcNow,
-                        Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
+                        Outcome: runtimeResponse.PendingApprovals.Count > 0
+                            ? RunOutcome.Cancelled
+                            : completionOutcome ?? RunOutcome.Succeeded,
                         ProviderName: provider.Name,
                         Model: ResolveModel(runtimeAgent, provider),
                         DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
@@ -282,9 +404,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 var updatedRun = UpdateRunFromResponse(
                     run,
                     runtimeResponse,
-                    runtimeResponse.PendingApprovals.Count > 0 ? ExecutionState.WaitingOnTool : ExecutionState.Completed,
-                    runtimeResponse.PendingApprovals.Count > 0 ? null : RunOutcome.Succeeded,
+                    completionState,
+                    completionOutcome,
                     DateTimeOffset.UtcNow);
+                updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
                 var runtimeToolReceipts = CreateRuntimeProviderToolReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
@@ -332,8 +455,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     await executionGovernanceBridge.OnApprovalsRequestedAsync(updatedRun, approvalUpdate.Pending, cancellationToken);
                 }
 
-                var completionState = runtimeResponse.PendingApprovals.Count > 0 ? ExecutionState.WaitingOnTool : ExecutionState.Completed;
-                if (completionState == ExecutionState.Completed)
+                if (completionState is ExecutionState.Completed or ExecutionState.Failed)
                 {
                     AgentFrameworkTelemetry.RecordRunOutcome(updatedRun);
                     transientContextRegistry.Remove(run.Id);
@@ -344,15 +466,24 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     agent.Id,
                     run.ChatSessionId,
                     completionState,
-                    completionState == ExecutionState.Completed ? "Completed" : "Approval",
-                    completionState == ExecutionState.Completed
-                        ? "Execution run response persisted after the approval decision."
-                        : "The execution run still requires another approval decision before it can continue.",
+                    completionState switch
+                    {
+                        ExecutionState.Completed => "Completed",
+                        ExecutionState.Failed => "Output validation",
+                        _ => "Approval"
+                    },
+                    completionState switch
+                    {
+                        ExecutionState.Completed => "Execution run response persisted after the approval decision.",
+                        ExecutionState.Failed => "Execution run response and portable JSON Schema validation failure were persisted after the approval decision.",
+                        _ => "The execution run still requires another approval decision before it can continue."
+                    },
                     cancellationToken);
 
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
+                    StructuredOutput = portableStructuredOutput,
                     ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
                 };
             }
@@ -520,9 +651,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             runs = runs.Where(item => string.Equals(item.ProcessRunId, query.ProcessRunId, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (query.ProcessRunIds.Count > 0)
+        {
+            var processRunIds = query.ProcessRunIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            runs = runs.Where(item => processRunIds.Contains(item.ProcessRunId));
+        }
+
         if (!string.IsNullOrWhiteSpace(query.ProcessStepId))
         {
             runs = runs.Where(item => string.Equals(item.ProcessStepId, query.ProcessStepId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ProcessStepIds.Count > 0)
+        {
+            var processStepIds = query.ProcessStepIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            runs = runs.Where(item => processStepIds.Contains(item.ProcessStepId));
         }
 
         if (!string.IsNullOrWhiteSpace(query.SchedulerRunId))
@@ -617,6 +760,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         CancellationToken cancellationToken)
     {
         var prompt = request.Prompt.Trim();
+        var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Prepare(request.JsonSchemaOutput);
         var context = PrepareInvocationContext(request);
         request = request with { Context = context };
         ChatMessageRecord? userMessage = null;
@@ -632,6 +776,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 context,
                 request.AutoApprovePendingToolCalls,
                 request.StructuredOutput,
+                jsonSchemaOutput,
                 cancellationToken);
 
             catalog = prepared.Catalog;
@@ -658,7 +803,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 prompt,
                 now,
                 request.AutoApprovePendingToolCalls,
-                request.StructuredOutput);
+                request.StructuredOutput,
+                jsonSchemaOutput);
 
             if (session is not null)
             {
@@ -707,6 +853,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
         var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
         var inputAttachments = await ResolveRuntimeInputAttachmentsAsync(request.InputAttachmentPaths, cancellationToken);
+        var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Restore(run);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
 
         PrimeProviderCredentialEnvironment(provider);
@@ -749,7 +896,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions, inputAttachments));
+                    executionOptions: CreateRuntimeExecutionOptionsCore(
+                        run,
+                        request.StructuredOutput,
+                        handoffOptions,
+                        inputAttachments,
+                        jsonSchemaOutput));
                 lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -788,6 +940,22 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse,
                     runtimeCancellationToken);
                 lastRuntimeResponse = runtimeResponse;
+                var portableStructuredOutput = await ValidatePortableJsonSchemaOutputBeforeCompletionAsync(
+                    run,
+                    runtimeResponse,
+                    runtimeCancellationToken);
+                var completionState = runtimeResponse.PendingApprovals.Count > 0
+                    ? ExecutionState.WaitingOnTool
+                    : portableStructuredOutput is null ||
+                      portableStructuredOutput.ValidationStatus == AgentJsonSchemaOutputValidationStatus.Valid
+                        ? ExecutionState.Completed
+                        : ExecutionState.Failed;
+                var completionOutcome = completionState switch
+                {
+                    ExecutionState.Completed => RunOutcome.Succeeded,
+                    ExecutionState.Failed => RunOutcome.Failed,
+                    _ => (RunOutcome?)null
+                };
 
                 var assistantMessage = session is null
                     ? null
@@ -804,7 +972,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         AgentId: agent.Id,
                         ChatSessionId: run.ChatSessionId,
                         CreatedAtUtc: DateTimeOffset.UtcNow,
-                        Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
+                        Outcome: runtimeResponse.PendingApprovals.Count > 0
+                            ? RunOutcome.Cancelled
+                            : completionOutcome ?? RunOutcome.Succeeded,
                         ProviderName: provider.Name,
                         Model: ResolveModel(runtimeAgent, provider),
                         DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
@@ -821,9 +991,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 var updatedRun = UpdateRunFromResponse(
                     run,
                     runtimeResponse,
-                    runtimeResponse.PendingApprovals.Count > 0 ? ExecutionState.WaitingOnTool : ExecutionState.Completed,
-                    runtimeResponse.PendingApprovals.Count > 0 ? null : RunOutcome.Succeeded,
+                    completionState,
+                    completionOutcome,
                     DateTimeOffset.UtcNow);
+                updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
                 var runtimeToolReceipts = CreateRuntimeProviderToolReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
@@ -871,8 +1042,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     await executionGovernanceBridge.OnApprovalsRequestedAsync(updatedRun, approvalUpdate.Pending, cancellationToken);
                 }
 
-                var completionState = runtimeResponse.PendingApprovals.Count > 0 ? ExecutionState.WaitingOnTool : ExecutionState.Completed;
-                if (completionState == ExecutionState.Completed)
+                if (completionState is ExecutionState.Completed or ExecutionState.Failed)
                 {
                     AgentFrameworkTelemetry.RecordRunOutcome(updatedRun);
                     transientContextRegistry.Remove(run.Id);
@@ -883,15 +1053,24 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     agent.Id,
                     run.ChatSessionId,
                     completionState,
-                    completionState == ExecutionState.Completed ? "Completed" : "Approval",
-                    completionState == ExecutionState.Completed
-                        ? "Execution run response persisted."
-                        : "The execution run is waiting for an approval response before it can continue.",
+                    completionState switch
+                    {
+                        ExecutionState.Completed => "Completed",
+                        ExecutionState.Failed => "Output validation",
+                        _ => "Approval"
+                    },
+                    completionState switch
+                    {
+                        ExecutionState.Completed => "Execution run response persisted.",
+                        ExecutionState.Failed => "Execution run response and portable JSON Schema validation failure were persisted.",
+                        _ => "The execution run is waiting for an approval response before it can continue."
+                    },
                     cancellationToken);
 
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
+                    StructuredOutput = portableStructuredOutput,
                     ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
                 };
             }
@@ -1095,6 +1274,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         };
     }
 
+    private static ExecutionRunRecord ApplyPortableJsonSchemaOutputEvidence(
+        ExecutionRunRecord run,
+        AgentJsonSchemaOutputResult? result)
+    {
+        if (result is null)
+        {
+            return run;
+        }
+
+        return run with
+        {
+            StructuredOutputRawOutput = result.RawOutput,
+            StructuredOutputValidationStatus = result.ValidationStatus.ToString(),
+            StructuredOutputValidationErrorsJson = JsonSerializer.Serialize(
+                result.ValidationErrors,
+                AgentOutputJson.SerializerOptions)
+        };
+    }
+
     private AgentStructuredOutputContract? ResolveContinuationStructuredOutputContract(ExecutionRunRecord run)
     {
         if (AgentStructuredOutputContracts.TryResolve(run.StructuredOutputContractKey, out var storedContract))
@@ -1263,6 +1461,38 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return response;
     }
 
+    private async Task<AgentJsonSchemaOutputResult?> ValidatePortableJsonSchemaOutputBeforeCompletionAsync(
+        ExecutionRunRecord run,
+        AgentRuntimeResponse response,
+        CancellationToken cancellationToken)
+    {
+        var contract = AgentJsonSchemaOutputContractProcessor.Restore(run);
+        if (contract is null || response.PendingApprovals.Count > 0)
+        {
+            return null;
+        }
+
+        var result = AgentJsonSchemaOutputContractProcessor.ValidateOutput(contract, response.ResponseText);
+        Activity.Current?.SetTag("agentframework.structured_output_schema_hash", contract.SchemaHash);
+        Activity.Current?.SetTag(
+            "agentframework.structured_output_validation_status",
+            result.ValidationStatus.ToString());
+
+        var valid = result.ValidationStatus == AgentJsonSchemaOutputValidationStatus.Valid;
+        await AppendExecutionLogAsync(
+            run.Id,
+            run.AgentId,
+            run.ChatSessionId,
+            valid ? ExecutionState.Persisting : ExecutionState.Failed,
+            "Output validation",
+            valid
+                ? $"Validated portable JSON Schema output contract '{contract.Name}' with schema hash '{contract.SchemaHash}'."
+                : $"Portable JSON Schema output contract '{contract.Name}' produced status '{result.ValidationStatus}' with schema hash '{contract.SchemaHash}'. Errors: {string.Join(" ", result.ValidationErrors.Select(error => $"{error.Code} at {error.Path}: {error.Message}"))}",
+            cancellationToken);
+
+        return result;
+    }
+
     private async Task<AgentRuntimeHandoffExecutionOptions?> ResolveHandoffExecutionOptionsAsync(
         AgentDefinition agent,
         SandboxWorkspaceCatalog catalog,
@@ -1312,15 +1542,52 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             string.IsNullOrWhiteSpace(run.CorrelationId) ? run.Id.ToString("D") : run.CorrelationId);
     }
 
-    private AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
+    private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
         ExecutionRunRecord run,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeHandoffExecutionOptions? handoffOptions = null,
         IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments = null)
     {
+        var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Restore(run);
+        return BuildRuntimeExecutionOptions(
+            run,
+            structuredOutput,
+            handoffOptions,
+            inputAttachments,
+            jsonSchemaOutput,
+            transientContext: null);
+    }
+
+    private AgentRuntimeExecutionOptions CreateRuntimeExecutionOptionsCore(
+        ExecutionRunRecord run,
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeHandoffExecutionOptions? handoffOptions,
+        IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments,
+        PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput = null)
+    {
         ArgumentNullException.ThrowIfNull(run);
 
+        jsonSchemaOutput ??= AgentJsonSchemaOutputContractProcessor.Restore(run);
         var transientContext = transientContextRegistry.Resolve(run);
+        return BuildRuntimeExecutionOptions(
+            run,
+            structuredOutput,
+            handoffOptions,
+            inputAttachments,
+            jsonSchemaOutput,
+            transientContext);
+    }
+
+    private static AgentRuntimeExecutionOptions BuildRuntimeExecutionOptions(
+        ExecutionRunRecord run,
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeHandoffExecutionOptions? handoffOptions,
+        IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments,
+        PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput,
+        AgentRuntimeTransientContext? transientContext)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
         return new AgentRuntimeExecutionOptions(
             StructuredOutput: structuredOutput,
             FinalizerMode: AgentFinalizerPolicies.ResolveMode(run, structuredOutput),
@@ -1328,6 +1595,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
             Handoff: handoffOptions,
             ContextWorkspaceScope: transientContext?.WorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
+            RequireJsonResponseFormat: jsonSchemaOutput is not null,
+            ResponseFormatJsonSchema: jsonSchemaOutput?.SchemaJson ?? string.Empty,
+            ResponseFormatSchemaName: jsonSchemaOutput?.Name ?? string.Empty,
+            ResponseFormatSchemaDescription: jsonSchemaOutput is null
+                ? string.Empty
+                : $"Portable JSON Schema output contract {jsonSchemaOutput.Version}.",
             ContextIntent: CreateRuntimeContextIntent(run),
             InputAttachments: inputAttachments)
         {

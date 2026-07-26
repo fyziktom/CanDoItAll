@@ -235,14 +235,15 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             return chatIndex;
         }
 
-        return await BuildChatIndexAsync(cancellationToken);
+        var rebuilt = await BuildChatIndexAsync(cancellationToken);
+        await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionChatIndexPath, rebuilt, cancellationToken);
+        return rebuilt;
     }
 
     private async Task<ExecutionChatIndex> BuildChatIndexAsync(CancellationToken cancellationToken)
     {
         var sessions = await jsonStore.LoadRecordsFromDirectoryAsync<ChatSessionRecord>(layout.ExecutionSessionsRoot, cancellationToken);
         var runs = new List<ExecutionRunRecord>();
-        var executionLog = new List<ExecutionLogEntry>();
         if (Directory.Exists(layout.ExecutionRunsRoot))
         {
             foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
@@ -254,12 +255,11 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
                 }
 
                 runs.Add(run);
-                executionLog.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionLogEntry>(Path.Combine(runDirectory, "logs"), cancellationToken));
             }
         }
 
         var index = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(layout.ExecutionIndexPath, cancellationToken);
-        var projection = WorkspaceChatProjectionBuilder.Build(sessions, runs, executionLog);
+        var projection = WorkspaceChatProjectionBuilder.Build(sessions, runs, []);
         return new ExecutionChatIndex(
             Version: string.IsNullOrWhiteSpace(index?.Version) ? "1.0" : index.Version,
             Revision: index?.Revision ?? 1L,

@@ -12,6 +12,8 @@ internal sealed record ProcessCompletionGateContext(
     Guid? CurrentExecutionRunId)
 {
     public ProcessStepExecutionContract StepContract { get; init; } = ProcessStepExecutionContract.Empty;
+
+    public ParentSubprocessBridgedOutcome? VerifiedSubprocessOutcome { get; init; }
 }
 
 internal sealed record ProcessCompletionIssue(
@@ -20,7 +22,12 @@ internal sealed record ProcessCompletionIssue(
     string Evidence,
     IReadOnlyList<ArtifactSlotId> RequestedArtifactSlotIds,
     ProcessDiagnosticRetrySafety RetrySafety,
-    ProcessDiagnosticIdempotencyClassification Idempotency);
+    ProcessDiagnosticIdempotencyClassification Idempotency)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public ProcessExecutionSafetyAttestation? ExecutionSafetyAttestation { get; init; }
+}
 
 internal sealed record ProcessCompletionGateEvaluation(
     IReadOnlyList<ProcessCompletionIssue> Issues,

@@ -75,7 +75,7 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         If branch outcomes are listed, set BranchOutcomeKey to exactly one listed outcome key. Selecting a branch outcome means the step completed its decision work, even when the selected branch sends downstream repair, recheck, escalation, rejection, or no-go work. Use Status Completed with BranchOutcomeKey for those evidence-backed branch decisions; use Status Blocked only when no branch can be selected because a concrete tool, input, permission, policy, approval, or environment boundary prevents the decision.
 
         AgentFramework manager escalation rule:
-        If you are blocked by a missing or denied tool, permission, right, capability, workspace boundary, approval path, or policy contract, make the first nextActions entry a manager action request. Include the assigned agent name, step key, process run id, denied tool or right, allowed operations, operation target scope, and whether the manager should grant the right to this agent or reassign the step to an agent that already has it. Include the exact policy or tool denial text in Reason and in HumanReadableSummaryMarkdown; do not only say that you cannot proceed.
+        If a current failed receipt proves a missing tool, input, permission, capability, workspace boundary, approval, or policy blocker, cite that exact receipt and blocker in Reason and the first nextActions entry. Do not invent a recovery action or repeat run, step, executor, operation, and scope metadata already owned by the runtime; the runtime builds the typed manager packet from those records.
         Do not return Blocked only because the required work has not been attempted yet. When the step has the needed operations and tools are available, use the tools now and return Blocked only after a current denied-tool receipt, missing mandatory input, explicit approval wait, policy boundary, or unrecoverable environment failure proves the step cannot proceed.
         Tool precondition rule: follow each tool's declared creation, inspection, and invocation prerequisites. If a prerequisite can be satisfied within this step's allowed operations, satisfy it and retry the bounded action before returning Blocked.
 
@@ -173,6 +173,11 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         if (request.LaunchVariables.Keys.Any(IsTypedLaunchContractVariableName))
         {
             lines.Add("Launch variables whose names end with Contract are typed project-structure facts for this process; use them only for the decisions explicitly described by those variables.");
+        }
+
+        if (TryResolveLaunchVariable(request.LaunchVariables, "DotNetProductBaselineContract", out _))
+        {
+            lines.Add("DotNetProductBaselineContract is a runtime-owned bounded read-only observation for the current .NET launch. A discovered contract with discoveryComplete true proves an existing baseline. Copy its paths as the complete topology only when topologySampleComplete is true; otherwise use the counts and samples to drive bounded read-only topology discovery. Trust framework and test-project metadata only when metadataInspectionComplete is true. Not-found proves absence only when discoveryComplete is true. Partial, unavailable, duplicate-name, incomplete-sample, or incomplete-metadata findings never authorize destructive reinitialization.");
         }
 
         if (TryResolveLaunchVariable(request.LaunchVariables, "ProductRoot", out _) ||

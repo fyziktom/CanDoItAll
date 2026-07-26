@@ -133,7 +133,12 @@ public sealed record StrategyResultEnvelope(
     IReadOnlyList<RequestedArtifactRef> RequestedArtifacts,
     IReadOnlyList<StrategyDiagnosticRef> Diagnostics,
     IReadOnlyList<ManagerSignal> ManagerSignals,
-    string ResultHash);
+    string ResultHash)
+{
+    public string UserSafeSummary { get; init; } = string.Empty;
+
+    public ProcessExecutionRunId? ExecutionRunId { get; init; }
+}
 
 public sealed record ProducedArtifactRef(
     ArtifactInstanceId ArtifactId,
@@ -151,7 +156,12 @@ public sealed record StrategyDiagnosticRef(
     string SafeSummary,
     string? RestrictedEvidenceReference = null,
     ProcessDiagnosticRetrySafety RetrySafety = ProcessDiagnosticRetrySafety.Unknown,
-    ProcessDiagnosticIdempotencyClassification Idempotency = ProcessDiagnosticIdempotencyClassification.Unknown);
+    ProcessDiagnosticIdempotencyClassification Idempotency = ProcessDiagnosticIdempotencyClassification.Unknown)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public ProcessExecutionSafetyAttestation? ExecutionSafetyAttestation { get; init; }
+}
 
 public sealed record ManagerSignal(
     ManagerSignalCode Code,

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Core;
 
 namespace CanDoItAll.Processes.Templates;
 
@@ -181,6 +182,9 @@ public sealed class ProcessTemplatePackLoader
         foreach (var step in definition.Steps)
         {
             ValidateExecutorPreferredSpecializationTags(step, definitionPath, definition.Key);
+            ProcessTemplateStepCompletionPolicyValidator.Validate(
+                step,
+                $"{definitionPath}:{definition.Key}.{step.Key}");
             if (!string.Equals(step.StepKind, "Subprocess", StringComparison.OrdinalIgnoreCase) &&
                 string.IsNullOrWhiteSpace(step.SubprocessProcessKey))
             {
@@ -389,6 +393,74 @@ public sealed class ProcessTemplatePackLoader
         {
             throw new InvalidOperationException(
                 $"Process template step '{stepPath}' runtime-owned deterministic tool plan requires PlanKey, PlanKind, and ExecutionPlanLaunchVariable.");
+        }
+
+        if (step.ExecutionContract?.DeterministicToolPlan is { } deterministicToolPlan)
+        {
+            ValidateDeterministicToolPlan(deterministicToolPlan, stepPath);
+        }
+    }
+
+    private static void ValidateDeterministicToolPlan(
+        ProcessTemplateDeterministicToolPlanDocument plan,
+        string stepPath)
+    {
+        if (plan.Operations.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' deterministic tool plan must declare at least one operation.");
+        }
+
+        if (plan.RequiresReadbackChecks && plan.ReadbackChecks.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Process template step '{stepPath}' deterministic tool plan requires at least one readback check.");
+        }
+
+        var operationKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var operation in plan.Operations)
+        {
+            var operationKey = Require(
+                operation.Key,
+                "deterministic tool plan operation key",
+                stepPath);
+            Require(
+                operation.ToolName,
+                $"deterministic tool plan operation '{operationKey}' tool name",
+                stepPath);
+            Require(
+                operation.RequiredReceiptKey,
+                $"deterministic tool plan operation '{operationKey}' required receipt key",
+                stepPath);
+            if (!operationKeys.Add(operationKey))
+            {
+                throw new InvalidOperationException(
+                    $"Process template step '{stepPath}' deterministic tool plan declares operation '{operationKey}' more than once.");
+            }
+
+            if (!ProcessToolOperationExecutionPolicyKeys.TryResolveIdempotency(
+                    operation.IdempotencyPolicyKey,
+                    out _))
+            {
+                throw new InvalidOperationException(
+                    $"Process template step '{stepPath}' deterministic tool plan operation '{operationKey}' has unknown idempotency policy '{operation.IdempotencyPolicyKey}'.");
+            }
+
+            if (!ProcessToolOperationExecutionPolicyKeys.TryResolveFailureReconciliation(
+                    operation.FailureReconciliationPolicyKey,
+                    out var failureReconciliation))
+            {
+                throw new InvalidOperationException(
+                    $"Process template step '{stepPath}' deterministic tool plan operation '{operationKey}' has unknown failure reconciliation policy '{operation.FailureReconciliationPolicyKey}'.");
+            }
+
+            if (failureReconciliation ==
+                    ProcessToolOperationFailureReconciliationPolicy.AuthoritativeReadbackConvergence &&
+                (!plan.RequiresReadbackChecks || plan.ReadbackChecks.Count == 0))
+            {
+                throw new InvalidOperationException(
+                    $"Process template step '{stepPath}' deterministic tool plan operation '{operationKey}' requires authoritative readback checks for failure reconciliation.");
+            }
         }
     }
 

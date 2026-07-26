@@ -55,7 +55,14 @@ public sealed partial class ProcessRuntimeEngine
             appliedResult.ResultHash,
             diagnosticReceipts,
             BuildProducedArtifactReceipts(appliedResult),
-            recoveryDecision);
+            recoveryDecision)
+        {
+            UserSafeSummary = string.IsNullOrWhiteSpace(appliedResult.UserSafeSummary)
+                ? string.Empty
+                : appliedResult.UserSafeSummary.Trim(),
+            AppliedSequence = NextAppliedResultSequence(state.AppliedResults),
+            ExecutionRunId = ResolveExecutionRunId(appliedResult)
+        };
         var nextClaims = ReplaceClaim(
             state,
             claim with
@@ -95,6 +102,15 @@ public sealed partial class ProcessRuntimeEngine
             BuildArtifactLedgerEvents(resultEventId, appliedResult));
     }
 
+    private static long NextAppliedResultSequence(IReadOnlyList<StrategyResultReceipt> receipts)
+    {
+        return Math.Max(
+            receipts.Count + 1L,
+            receipts.Count == 0
+                ? 1L
+                : receipts.Max(receipt => receipt.AppliedSequence) + 1L);
+    }
+
     private static ProcessRuntimeMutation RequestCancellation(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context)
     {
         ValidateArguments(state, context);
@@ -104,6 +120,73 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
         }
 
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.Cancelled, context.OccurredAtUtc);
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeMutation BeginRootCancellation(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (state.RunId != state.RootRunId)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationRequiresRootRun",
+                "The root cancellation barrier can only be started on the root process run.");
+        }
+
+        if (state.Status == ProcessRuntimeStatus.CancelRequested)
+        {
+            return Duplicate(state);
+        }
+
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
+        }
+
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.CancelRequested, context.OccurredAtUtc);
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelRequested, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeMutation FinalizeRootCancellation(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (state.RunId != state.RootRunId)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationRequiresRootRun",
+                "The root cancellation barrier can only be finalized on the root process run.");
+        }
+
+        if (state.Status != ProcessRuntimeStatus.CancelRequested)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationBarrierMissing",
+                "Root cancellation can only be finalized after the cancellation barrier was committed.");
+        }
+
+        var next = state with
+        {
+            Status = ProcessRuntimeStatus.Cancelled,
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeStateSnapshot CancelOpenWork(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStatus status,
+        DateTimeOffset occurredAtUtc)
+    {
         var steps = new List<ProcessRuntimeStepState>(state.Steps.Count);
         foreach (var step in state.Steps)
         {
@@ -124,13 +207,12 @@ public sealed partial class ProcessRuntimeEngine
                 : claim);
         }
 
-        var next = state with
+        return state with
         {
-            Status = ProcessRuntimeStatus.Cancelled,
+            Status = status,
             Steps = steps,
             Claims = claims,
-            UpdatedAtUtc = context.OccurredAtUtc
+            UpdatedAtUtc = occurredAtUtc
         };
-        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
     }
 }

@@ -118,6 +118,30 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void Generic_step_brief_omits_oversized_typed_contract_atomically()
+    {
+        var contract = JsonSerializer.Serialize(new
+        {
+            schema = "example.large/v1",
+            payload = new string('x', 9000)
+        });
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            variables: new Dictionary<string, string>
+            {
+                ["ExampleContract"] = contract
+            });
+
+        Assert.Contains(
+            "typed launch contract 'ExampleContract' omitted atomically",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("\"schema\":\"example.large/v1\"", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("launch variable truncated", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Generic_step_brief_renders_resolved_template_execution_guidance()
     {
         var step = CreatePromptStep("Review the supplied evidence.");
@@ -176,9 +200,48 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("acceptanceCriteriaEvidence", prompt, StringComparison.Ordinal);
         Assert.Contains("Status: Passed", prompt, StringComparison.Ordinal);
         Assert.Contains("Status: Failed", prompt, StringComparison.Ordinal);
+        Assert.Contains(
+            "marked kind=ProductAcceptance and required=true",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Legacy criterion lines without kind/required markers default to required ProductAcceptance",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Preserve kind=DeliveryPlanning entries as nonblocking context",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "do not submit Passed or Failed acceptance evidence for them",
+            prompt,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("launch variable truncated", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("internal-matrix-payload", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("AcceptanceCriteriaAcceptedBranchOutcomeKeys", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Setup_step_with_acceptance_contract_is_not_presented_as_final_acceptance_owner()
+    {
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract] =
+                    "AC-001: Product behavior is implemented. [proof=browser-proof]"
+            });
+
+        Assert.Contains(
+            "This step contributes evidence to a later acceptance owner",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "do not claim end-to-end acceptance solely from this step",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("For these final-acceptance branches only", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -192,10 +255,20 @@ public sealed class ProcessLaunchPromptTests
             [
                 new ProcessTemplateProductToolReceiptRequirementDocument
                 {
+                    Key = "renamed-proof-success",
                     ToolName = "workspace_validate",
                     Purpose = "AcceptanceProof",
                     EnforceBranchOutcomeKeys = ["accepted"],
                     Reason = "Current-run validation proof is required.",
+                    AllowFailedExecutionReceipt = false
+                },
+                new ProcessTemplateProductToolReceiptRequirementDocument
+                {
+                    Key = "renamed-proof-attempt",
+                    ToolName = "workspace_validate",
+                    Purpose = "DefectEvidence",
+                    EnforceBranchOutcomeKeys = ["repair-required"],
+                    Reason = "Current-run failed validation is accepted as repair evidence.",
                     AllowFailedExecutionReceipt = true
                 }
             ],
@@ -224,6 +297,8 @@ public sealed class ProcessLaunchPromptTests
         ProcessTemplateStepCompletionPolicyMaterializer.Apply(variables, step);
 
         Assert.Contains("workspace_validate", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
+        Assert.Contains("renamed-proof-success", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
+        Assert.Contains("renamed-proof-attempt", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
         Assert.Contains("allowFailedExecutionReceipt\":true", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
         Assert.DoesNotContain("spoofed-receipt", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
         Assert.Contains("repair-required", variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutes], StringComparison.Ordinal);
@@ -236,6 +311,16 @@ public sealed class ProcessLaunchPromptTests
         Assert.Equal(
             "[\"accepted\"]",
             variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaAcceptedBranchOutcomeKeys]);
+        variables[ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract] =
+            "AC-001: Required behavior. [kind=ProductAcceptance; required=true; proof=planned-validation]";
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            variables: variables);
+        Assert.Contains(
+            "For these final-acceptance branches only: accepted",
+            prompt,
+            StringComparison.Ordinal);
         Assert.Equal(
             "[\"renamed-proof-step\"]",
             variables[ProcessRuntimeLaunchVariables.ProductSourceInspectionRequiredStepKeys]);
@@ -291,6 +376,14 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("AgentFramework execution contract:", prompt, StringComparison.Ordinal);
         Assert.Contains("This is a tool-backed process step, not a chat-only response", prompt, StringComparison.Ordinal);
         Assert.Contains("Only after the required evidence exists", prompt, StringComparison.Ordinal);
+        Assert.Contains(
+            "the runtime builds the typed manager packet from those records",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Include the assigned agent name, step key, process run id",
+            prompt,
+            StringComparison.Ordinal);
         Assert.Contains("Do not put native absolute filesystem paths", prompt, StringComparison.Ordinal);
         Assert.Contains("scoped storage paths under artifacts/scopes", prompt, StringComparison.Ordinal);
         Assert.Contains("ignore that scoped echo in artifact prose and evidenceRefs", prompt, StringComparison.Ordinal);
@@ -322,6 +415,36 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Create only the durable project-structure records required by the current template", prompt, StringComparison.Ordinal);
         Assert.Contains("Keep intermediate subprocess details, logs, and step evidence in managed artifacts", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("one run-app proof node", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentFramework_runtime_owned_subprocess_prompt_uses_single_runtime_launch_owner()
+    {
+        var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
+        var step = CreatePromptStep("Coordinate the typed child evidence for this delivery slice.");
+        step.StepKind = ProcessTemplateStepKinds.Subprocess;
+        step.SubprocessProcessKey = "dotnet-development-slice";
+        step.SubprocessContract = new ProcessSubprocessContract
+        {
+            DefinitionKey = "dotnet-development-slice",
+            LaunchMode = ProcessSubprocessLaunchMode.RuntimeOwned
+        };
+        step.AllowedOperations =
+        [
+            ProcessOperationContractNames.ReadProjectStructure,
+            ProcessOperationContractNames.ExecuteExternalAction
+        ];
+
+        var genericPrompt = BuildStepPrompt(new GenericProcessStepBriefBuilder(), runId, step);
+        var prompt = BuildStepPrompt(new AgentFrameworkProcessStepBriefBuilder(), runId, step);
+
+        Assert.Contains("Launch ownership: process runtime owned", genericPrompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call project_structure_process_subprocess_launch", genericPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Child-outcome rule: when the subprocess launch tool returns", genericPrompt, StringComparison.Ordinal);
+        Assert.Contains("Launch ownership: process runtime owned", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not call project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Governed launch tool: project_structure_process_subprocess_launch", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("your first non-read external action", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

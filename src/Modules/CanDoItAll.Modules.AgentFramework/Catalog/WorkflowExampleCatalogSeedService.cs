@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 using DocumentCellWrite = CanDoItAll.Tools.Documents.SpreadsheetCellWrite;
 using DocumentRangeWrite = CanDoItAll.Tools.Documents.SpreadsheetRangeWrite;
 using DocumentWriteRequest = CanDoItAll.Tools.Documents.SpreadsheetWriteRequest;
@@ -61,12 +62,35 @@ public sealed class WorkflowExampleCatalogSeedService(
             var inputParameters = templatePack.CreateInputParameters(template);
             var definitionName = $"{templatePack.Manifest.DefinitionNamePrefix}{template.Name}";
             var description = $"{template.Description} {templatePack.Manifest.SeedMarker}: {templatePack.Manifest.SeedVersion}.";
-            var existing = existingDefinitions.FirstOrDefault(item => string.Equals(item.Name, definitionName, StringComparison.OrdinalIgnoreCase));
+            var provenance = CreateTemplateProvenance(templatePack, template);
+            var stableMatches = existingDefinitions
+                .Where(item => string.Equals(
+                    item.TemplateKey,
+                    provenance.TemplateKey,
+                    StringComparison.Ordinal))
+                .ToArray();
+            if (stableMatches.Length > 1)
+            {
+                logger.LogWarning(
+                    "Skipping workflow example seed template '{TemplateKey}' because {MaterializationCount} catalog definitions claim the same stable key.",
+                    provenance.TemplateKey,
+                    stableMatches.Length);
+                continue;
+            }
+
+            var existing = stableMatches.SingleOrDefault() ??
+                           existingDefinitions.FirstOrDefault(item =>
+                               string.IsNullOrWhiteSpace(item.TemplateKey) &&
+                               string.Equals(
+                                   item.Name,
+                                   definitionName,
+                                   StringComparison.OrdinalIgnoreCase));
 
             if (existing is not null)
             {
                 var detail = await catalogService.GetDefinitionAsync(existing.Id, existing.VersionId, cancellationToken);
                 if (detail is not null &&
+                    HasExactTemplateProvenance(detail.Definition, provenance) &&
                     detail.Definition.Description.Contains(templatePack.Manifest.SeedMarker, StringComparison.OrdinalIgnoreCase) &&
                     detail.Definition.Description.Contains(templatePack.Manifest.SeedVersion, StringComparison.OrdinalIgnoreCase))
                 {
@@ -90,6 +114,7 @@ public sealed class WorkflowExampleCatalogSeedService(
                     graph,
                     inputParameters,
                     templatePack.RuntimePolicy,
+                    provenance,
                     cancellationToken))
                 {
                     continue;
@@ -105,6 +130,7 @@ public sealed class WorkflowExampleCatalogSeedService(
                     graph,
                     inputParameters,
                     templatePack.RuntimePolicy,
+                    provenance,
                     cancellationToken))
                 {
                     continue;
@@ -232,6 +258,7 @@ public sealed class WorkflowExampleCatalogSeedService(
         WorkflowGraph graph,
         IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters,
         WorkflowRuntimePolicy runtimePolicy,
+        WorkflowTemplateProvenance provenance,
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
@@ -274,11 +301,33 @@ public sealed class WorkflowExampleCatalogSeedService(
                 graph,
                 runtimePolicy)
             {
-                InputParameters = inputParameters
+                InputParameters = inputParameters,
+                TemplateProvenance = provenance
             },
             cancellationToken);
         return true;
     }
+
+    private static WorkflowTemplateProvenance CreateTemplateProvenance(
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template)
+    {
+        var sourceBytes = File.ReadAllBytes(template.SourcePath);
+        var sourceHash = Convert.ToHexString(SHA256.HashData(sourceBytes)).ToLowerInvariant();
+        return new WorkflowTemplateProvenance(
+            template.Key,
+            templatePack.Manifest.PackKey,
+            templatePack.Manifest.Version,
+            sourceHash);
+    }
+
+    private static bool HasExactTemplateProvenance(
+        WorkflowDefinition definition,
+        WorkflowTemplateProvenance provenance)
+        => string.Equals(definition.TemplateKey, provenance.TemplateKey, StringComparison.Ordinal) &&
+           string.Equals(definition.TemplatePackKey, provenance.TemplatePackKey, StringComparison.Ordinal) &&
+           string.Equals(definition.TemplatePackVersion, provenance.TemplatePackVersion, StringComparison.Ordinal) &&
+           string.Equals(definition.SourceHash, provenance.SourceHash, StringComparison.Ordinal);
 
     private static bool IsUnavailableTemplateDependencyValidation(WorkflowValidationResult validation)
     {

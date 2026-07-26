@@ -7,6 +7,9 @@ namespace CanDoItAll.Processes.Application;
 
 public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProcessLaunchVariableContributor
 {
+    private const string PlannedValidationProof = "planned-validation";
+    private const string SourceContextProof = "source-context";
+
     public void Enrich(
         ProcessLaunchPreparationContext context,
         IDictionary<string, string> variables)
@@ -14,19 +17,21 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(variables);
 
+        if (context.IsSubprocess &&
+            TryCanonicalizeInheritedContract(variables))
+        {
+            return;
+        }
+
         if (!TryBuildMatrix(context.Source, out var matrix, out var contract))
         {
             return;
         }
 
-        AddIfMissing(
-            variables,
-            ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
-            ProcessAcceptanceCriteriaMatrixJson.Serialize(matrix));
-        AddIfMissing(
-            variables,
-            ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract,
-            contract);
+        variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix] =
+            ProcessAcceptanceCriteriaMatrixJson.Serialize(matrix);
+        variables[ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract] =
+            contract;
     }
 
     private static bool TryBuildMatrix(
@@ -43,8 +48,15 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
                 Id = $"AC-{index + 1:000}",
                 SourceNodeId = candidate.SourceId,
                 Summary = candidate.Summary,
-                VerificationMethods = ["planned-validation"],
-                RequiredForAcceptance = true
+                VerificationMethods =
+                [
+                    candidate.Kind == ProcessAcceptanceCriterionKind.ProductAcceptance
+                        ? PlannedValidationProof
+                        : SourceContextProof
+                ],
+                RequiredForAcceptance =
+                    candidate.Kind == ProcessAcceptanceCriterionKind.ProductAcceptance,
+                Kind = candidate.Kind
             })
             .ToArray();
         if (criteria.Length == 0)
@@ -61,17 +73,29 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
         ProcessLaunchSourceSnapshot source)
     {
         var candidates = new List<AcceptanceCriteriaCandidate>();
-        foreach (var item in source.ContextItems)
-        {
-            AddCandidates(item, candidates);
-        }
-
-        if (candidates.Count == 0 && source.SelectedItem.IsIncludedInProcessContext)
+        if (source.SelectedItem.IsIncludedInProcessContext)
         {
             AddCandidates(source.SelectedItem, candidates);
         }
 
+        foreach (var item in source.ContextItems)
+        {
+            if (string.Equals(item.Id, source.SelectedItem.Id, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            AddCandidates(
+                item,
+                candidates,
+                explicitSectionOnly: item.Kind == ProcessLaunchSourceItemKind.WorkItem);
+        }
+
         return candidates
+            .OrderBy(candidate =>
+                candidate.Kind == ProcessAcceptanceCriterionKind.ProductAcceptance
+                    ? 0
+                    : 1)
             .DistinctBy(candidate => NormalizeSummary(candidate.Summary))
             .Take(20)
             .ToArray();
@@ -79,7 +103,8 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
 
     private static void AddCandidates(
         ProcessLaunchSourceItem item,
-        List<AcceptanceCriteriaCandidate> candidates)
+        List<AcceptanceCriteriaCandidate> candidates,
+        bool explicitSectionOnly = false)
     {
         var sourceText = string.Join(
             Environment.NewLine,
@@ -88,17 +113,107 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
             item.Notes);
         var explicitSectionLines = ExtractExplicitSection(sourceText);
         var hasExplicitSection = explicitSectionLines.Count > 0;
+        if (explicitSectionOnly && !hasExplicitSection)
+        {
+            return;
+        }
+
         var segments = hasExplicitSection
-            ? explicitSectionLines
-            : SplitCriteriaText(sourceText);
+            ? explicitSectionLines.Select(value => new AcceptanceCriteriaSegment(
+                value,
+                ProcessAcceptanceCriterionKind.ProductAcceptance))
+            : SplitCriteriaTextByKind(sourceText);
 
         foreach (var summary in segments
-                     .Select(CleanCriterion)
-                     .Where(value => IsSubstantive(value, hasExplicitSection))
+                     .Select(segment => new AcceptanceCriteriaSegment(
+                         CleanCriterion(segment.Summary),
+                         segment.Kind))
+                     .Where(segment => IsSubstantive(segment.Summary, hasExplicitSection))
                      .Take(12))
         {
-            candidates.Add(new AcceptanceCriteriaCandidate(item.Id, summary));
+            candidates.Add(new AcceptanceCriteriaCandidate(
+                item.Id,
+                summary.Summary,
+                summary.Kind));
         }
+    }
+
+    private static IReadOnlyList<AcceptanceCriteriaSegment> SplitCriteriaTextByKind(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var segments = new List<AcceptanceCriteriaSegment>();
+        var currentKind = ProcessAcceptanceCriterionKind.ProductAcceptance;
+        foreach (var line in text
+                     .Replace("\r\n", "\n", StringComparison.Ordinal)
+                     .Split('\n', StringSplitOptions.TrimEntries))
+        {
+            if (TryGetSectionKind(line, out var sectionKind))
+            {
+                currentKind = sectionKind;
+                continue;
+            }
+
+            segments.AddRange(SplitCriteriaText(line)
+                .Select(value => new AcceptanceCriteriaSegment(value, currentKind)));
+        }
+
+        return segments;
+    }
+
+    private static bool TryGetSectionKind(
+        string line,
+        out ProcessAcceptanceCriterionKind kind)
+    {
+        kind = ProcessAcceptanceCriterionKind.ProductAcceptance;
+        if (!TryGetSectionTitle(line, out var title))
+        {
+            return false;
+        }
+
+        kind = Regex.IsMatch(
+            title,
+            @"^(?:recommended\s+)?next\s+actions?$|^open\s+(?:gaps?|questions?)$|^pending\s+(?:decisions?|questions?)$|^assumptions?$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+            ? ProcessAcceptanceCriterionKind.DeliveryPlanning
+            : ProcessAcceptanceCriterionKind.ProductAcceptance;
+        return true;
+    }
+
+    private static bool TryGetSectionTitle(string line, out string title)
+    {
+        title = string.Empty;
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return false;
+        }
+
+        var trimmed = line.Trim();
+        if (Regex.IsMatch(
+                trimmed,
+                @"^#{1,6}\s+\S",
+                RegexOptions.CultureInvariant))
+        {
+            title = Regex.Replace(
+                    trimmed,
+                    @"^#{1,6}\s+",
+                    string.Empty,
+                    RegexOptions.CultureInvariant)
+                .Trim()
+                .TrimEnd(':');
+            return title.Length > 0;
+        }
+
+        if (!LooksLikeSectionHeader(trimmed))
+        {
+            return false;
+        }
+
+        title = trimmed.TrimEnd(':').Trim();
+        return title.Length > 0;
     }
 
     private static IReadOnlyList<string> ExtractExplicitSection(string text)
@@ -197,17 +312,42 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
 
     private static bool LooksLikeSectionHeader(string line)
         => !string.IsNullOrWhiteSpace(line) &&
-           line.Length <= 80 &&
-           line.EndsWith(':') &&
-           !line.Contains("must", StringComparison.OrdinalIgnoreCase);
+           ((Regex.IsMatch(
+                 line.Trim(),
+                 @"^#{1,6}\s+\S",
+                 RegexOptions.CultureInvariant)) ||
+            (line.Length <= 80 &&
+             line.EndsWith(':') &&
+             !line.Contains("must", StringComparison.OrdinalIgnoreCase)));
 
     private static string BuildContract(IReadOnlyList<ProcessAcceptanceCriterion> criteria)
     {
+        var requiredCriteria = criteria
+            .Where(criterion =>
+                criterion.RequiredForAcceptance &&
+                criterion.Kind == ProcessAcceptanceCriterionKind.ProductAcceptance)
+            .ToArray();
+        var planningCriteria = criteria
+            .Where(criterion =>
+                criterion.Kind == ProcessAcceptanceCriterionKind.DeliveryPlanning)
+            .ToArray();
         var builder = new StringBuilder();
-        builder.AppendLine("AcceptanceCriteriaContract: an accepted branch must cite every required criterion id with concrete evidence. The architecture and validation-plan steps choose the appropriate proof methods.");
-        foreach (var criterion in criteria)
+        builder.AppendLine("AcceptanceCriteriaContract: an accepted branch must cite every required product-acceptance criterion id with concrete evidence. Delivery-planning context is non-blocking and must not request fresh human confirmation during autonomous implementation unless a separate typed decision gate explicitly owns it. The architecture and validation-plan steps choose the appropriate proof methods.");
+        foreach (var criterion in requiredCriteria)
         {
-            builder.AppendLine($"{criterion.Id}: {criterion.Summary} [proof=planned-validation]");
+            builder.AppendLine(
+                $"{criterion.Id}: {criterion.Summary} [kind=ProductAcceptance; required=true; proof={PlannedValidationProof}]");
+        }
+
+        if (planningCriteria.Length > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("DeliveryPlanningContext: the following items remain visible for planning but do not block product acceptance and require no criterion-by-criterion implementation proof.");
+            foreach (var criterion in planningCriteria)
+            {
+                builder.AppendLine(
+                    $"{criterion.Id}: {criterion.Summary} [kind=DeliveryPlanning; required=false; proof={SourceContextProof}]");
+            }
         }
 
         return builder.ToString().Trim();
@@ -216,19 +356,35 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
     private static string NormalizeSummary(string value)
         => Regex.Replace(value.Trim().ToLowerInvariant(), @"\s+", " ", RegexOptions.CultureInvariant);
 
-    private static void AddIfMissing(
-        IDictionary<string, string> variables,
-        string key,
-        string value)
+    private static bool TryCanonicalizeInheritedContract(
+        IDictionary<string, string> variables)
     {
-        if (!string.IsNullOrWhiteSpace(value) &&
-            (!variables.TryGetValue(key, out var existing) || string.IsNullOrWhiteSpace(existing)))
+        if (!variables.TryGetValue(
+                ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix,
+                out var rawMatrix))
         {
-            variables[key] = value;
+            return false;
         }
+
+        if (ProcessAcceptanceCriteriaMatrixJson.TryDeserialize(
+                rawMatrix,
+                out var matrix))
+        {
+            variables[ProcessRuntimeLaunchVariables.AcceptanceCriteriaMatrix] =
+                ProcessAcceptanceCriteriaMatrixJson.Serialize(matrix);
+            variables[ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract] =
+                BuildContract(matrix.Criteria);
+        }
+
+        return true;
     }
 
     private sealed record AcceptanceCriteriaCandidate(
         string SourceId,
-        string Summary);
+        string Summary,
+        ProcessAcceptanceCriterionKind Kind);
+
+    private sealed record AcceptanceCriteriaSegment(
+        string Summary,
+        ProcessAcceptanceCriterionKind Kind);
 }

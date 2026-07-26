@@ -28,6 +28,7 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
         builder.Property(state => state.PlanHash).HasMaxLength(128).IsRequired();
         builder.Property(state => state.Status).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(state => state.ConcurrencyToken).IsConcurrencyToken();
+        builder.Property(state => state.BlockedRecoveryActionsJson).IsRequired();
         builder.HasIndex(state => state.RootRunId);
         builder.HasIndex(state => state.Status);
         builder.HasIndex(state => new { state.UpdatedAtUtc, state.RunId })
@@ -133,10 +134,13 @@ internal sealed class ProcessStrategyResultReceiptEntityConfiguration : IEntityT
         builder.Property(receipt => receipt.Outcome).HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.AppliedStepStatus).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.ResultHash).HasMaxLength(128).IsRequired();
+        builder.Property(receipt => receipt.UserSafeSummary);
+        builder.Property(receipt => receipt.AppliedSequence).IsRequired();
         builder.Property(receipt => receipt.DiagnosticsJson).IsRequired();
         builder.Property(receipt => receipt.ProducedArtifactsJson).IsRequired();
         builder.Property(receipt => receipt.RecoveryDecisionJson);
         builder.HasIndex(receipt => new { receipt.StepInstanceId, receipt.StrategyId, receipt.IdempotencyKey }).IsUnique();
+        builder.HasIndex(receipt => new { receipt.RunId, receipt.AppliedSequence }).IsUnique();
     }
 }
 

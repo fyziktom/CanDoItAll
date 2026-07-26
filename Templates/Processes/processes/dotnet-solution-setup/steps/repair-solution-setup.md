@@ -4,7 +4,8 @@ Repair only the setup findings recorded by `validate-first-build`.
 
 ## Scope
 
-- Fix scaffold, project file, package/reference, template-integrity, and test-discovery issues needed for first build proof.
+- Fix only structural scaffold, project file, package/reference, malformed generated template output that prevents the baseline from building, and test-runner discovery issues needed for first build proof.
+- Generated starter/demo UI or content and passing placeholder template tests are expected before downstream feature implementation. Never treat them, absent feature behavior, unmet product acceptance criteria, or missing substantive product tests as setup repair targets.
 - If validation reported an empty solution, missing solution membership, or a disconnected test project, mutate the product target to add the missing solution entries and project references. Existing project files alone are not a repair.
 - For solution membership and project-reference repair, use the supplied deterministic helper instead of inventing a new helper. Write `DotNetAddTestProjectScript` verbatim to `DotNetAddTestProjectScriptRef`, verify that `.ps1` ref, invoke it with `workspace_pwsh_run_script` and `DotNetAddTestProjectSideEffectManifest`, then read back the solution and test project files.
 - When validation reported missing solution membership or a missing project reference, write a reviewed PowerShell helper script under the current-run artifact root and run it with `workspace_pwsh_run_script` using a `sideEffectManifest` with `version` set to `1`, `mode` set to `ProductMutation`, native absolute solution/project paths in `declaredReadPaths` and `declaredWritePaths`, and `allowShellDelegation` set to `true` when the helper invokes `dotnet`.
@@ -13,7 +14,7 @@ Repair only the setup findings recorded by `validate-first-build`.
 - The helper must verify solution membership with product-root-relative project paths, not native absolute paths only. Compute relative paths with `[System.IO.Path]::GetRelativePath($ProductRoot, <project-file>)`, normalize both `\` and `/` separators in expected paths and readback text, and accept normalized relative-path matches from `dotnet sln list` or solution file readback. When verifying `ProjectReference`, compute the app path relative to the test project directory with `[System.IO.Path]::GetRelativePath((Split-Path -Parent $TestProjectFile), $AppProjectFile)`, normalize that computed value and the project file readback, and do not hardcode an escaped relative string such as `..\\..\\src\\...` into the check.
 - Completion without the successful `workspace_pwsh_run_script` receipt is invalid when the validation finding requires solution membership or project-reference mutation.
 - Keep changes minimal and tied to the validation failure packet.
-- Do not implement feature behavior, replace starter UI beyond template repair, launch runtime, or capture browser proof.
+- Do not implement feature behavior, replace generated starter UI/content, add substantive product tests, launch runtime, or capture browser proof.
 
 ## Output
 

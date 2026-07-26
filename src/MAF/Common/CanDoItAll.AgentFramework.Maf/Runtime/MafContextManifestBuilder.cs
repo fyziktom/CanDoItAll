@@ -89,7 +89,14 @@ internal static class MafContextManifestBuilder
     {
         var name = tool.Name ?? string.Empty;
         var description = ResolvePublicStringProperty(tool, "Description") ?? string.Empty;
-        return name.Length + description.Length + tool.GetType().Name.Length + 128;
+        var parameterSchema = tool is AIFunction function
+            ? function.JsonSchema.GetRawText()
+            : string.Empty;
+        return name.Length +
+               description.Length +
+               parameterSchema.Length +
+               tool.GetType().Name.Length +
+               128;
     }
 
     private static string? ResolvePublicStringProperty(object instance, string propertyName)

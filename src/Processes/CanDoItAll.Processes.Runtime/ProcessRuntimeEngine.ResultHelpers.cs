@@ -42,7 +42,7 @@ public sealed partial class ProcessRuntimeEngine
             var evidenceHash = ComputePayloadHash($"missing-input:{state.RunId}:{step.StepInstanceId}:{slotId}:{result.ResultHash}");
             AddRequestedArtifact(requestedArtifacts, slotId, evidenceHash);
             diagnostics.Add(new StrategyDiagnosticRef(
-                new StrategyDiagnosticCode("process.runtime.missing_required_input_artifact"),
+                new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
                 StrategyDiagnosticSensitivity.Normal,
                 evidenceHash,
                 $"Step '{step.StepInstanceId}' cannot complete because required input artifact slot '{slotId}' is not available as a connected input receipt.",
@@ -57,7 +57,7 @@ public sealed partial class ProcessRuntimeEngine
             var evidenceHash = ComputePayloadHash($"missing-output:{state.RunId}:{step.StepInstanceId}:{slotId}:{result.ResultHash}");
             AddRequestedArtifact(requestedArtifacts, slotId, evidenceHash);
             diagnostics.Add(new StrategyDiagnosticRef(
-                new StrategyDiagnosticCode("process.runtime.missing_expected_output_artifact"),
+                new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingExpectedOutputArtifact),
                 StrategyDiagnosticSensitivity.Normal,
                 evidenceHash,
                 $"Step '{step.StepInstanceId}' reported success without producing required artifact slot '{slotId}'.",
@@ -159,7 +159,11 @@ public sealed partial class ProcessRuntimeEngine
                         ? null
                         : diagnostic.RestrictedEvidenceReference.Trim(),
                     diagnostic.RetrySafety,
-                    diagnostic.Idempotency));
+                    diagnostic.Idempotency)
+                {
+                    RelatedChildRunId = diagnostic.RelatedChildRunId,
+                    ExecutionSafetyAttestation = diagnostic.ExecutionSafetyAttestation
+                });
             }
 
             return receipts;
@@ -178,6 +182,25 @@ public sealed partial class ProcessRuntimeEngine
                     ProcessDiagnosticIdempotencyClassification.Unknown)
             ]
             : [];
+    }
+
+    private static ProcessExecutionRunId? ResolveExecutionRunId(StrategyResultEnvelope result)
+    {
+        if (result.ExecutionRunId is not { } executionRunId)
+        {
+            return null;
+        }
+
+        var attestedExecutionRunIds = result.Diagnostics
+            .Where(diagnostic => diagnostic.ExecutionSafetyAttestation is not null)
+            .Select(diagnostic => diagnostic.ExecutionSafetyAttestation!.ExecutionRunId)
+            .Distinct()
+            .ToArray();
+        return attestedExecutionRunIds.Length == 0 ||
+               attestedExecutionRunIds is [var attestedExecutionRunId] &&
+               attestedExecutionRunId == executionRunId
+            ? executionRunId
+            : null;
     }
 
     private static IReadOnlyList<StrategyResultArtifactReceipt> BuildProducedArtifactReceipts(
@@ -207,14 +230,17 @@ public sealed partial class ProcessRuntimeEngine
         ProcessRuntimeStepState step,
         IReadOnlyList<StrategyResultDiagnosticReceipt> diagnostics)
     {
-        var primaryDiagnosticCode = diagnostics.FirstOrDefault()?.Code ?? string.Empty;
+        var primaryDiagnostic = diagnostics.FirstOrDefault();
+        var primaryDiagnosticCode = primaryDiagnostic?.Code ?? string.Empty;
 
         if (appliedStepStatus is ProcessRuntimeStepStatus.Blocked)
         {
             var sourceCode = string.IsNullOrWhiteSpace(primaryDiagnosticCode)
                 ? MissingBlockedDiagnosticCode
                 : primaryDiagnosticCode;
-            var failureCategory = ClassifyFailureCategory(sourceCode);
+            var failureCategory = primaryDiagnostic?.RelatedChildRunId is not null
+                ? ProcessFailureCategory.ChildRunBlocked
+                : ClassifyFailureCategory(sourceCode);
             var routeKind = ResolveRecoveryRouteKind(state, step, result, failureCategory, out var responsibleStepId);
             return ProcessRecoveryClassifier.Default.ClassifyBlocked(new ProcessRecoveryClassificationInput(
                 step.StepInstanceId,
@@ -330,6 +356,14 @@ public sealed partial class ProcessRuntimeEngine
             code.Contains("without_diagnostics", StringComparison.OrdinalIgnoreCase))
         {
             return ProcessFailureCategory.MissingDiagnostics;
+        }
+
+        if (string.Equals(
+                code,
+                ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                StringComparison.Ordinal))
+        {
+            return ProcessFailureCategory.AdapterRetryable;
         }
 
         if (code.StartsWith("process.adapter.", StringComparison.OrdinalIgnoreCase) &&

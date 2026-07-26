@@ -119,7 +119,8 @@ public sealed class ProcessDashboardActivityQueryTests
         var service = new ProcessDashboardActivityQueryService(
             runtimeStore,
             projectionStore,
-            ProcessProjectionJsonCodec.Default);
+            ProcessProjectionJsonCodec.Default,
+            new DashboardRunRecordStore());
 
         var result = await service.QueryAsync(new ProcessDashboardActivityQuery());
 
@@ -131,6 +132,7 @@ public sealed class ProcessDashboardActivityQueryTests
         Assert.Equal(ProcessProjectedRunStatus.Completed, item.Projection.Status);
         Assert.Equal(37, item.Projection.Freshness.Lag.BacklogEventCount);
         Assert.Equal([ProcessRuntimeProjectionKeys.Live(activeRun.RunId)], projectionStore.LoadedKeys);
+        Assert.Equal(1, projectionStore.LoadSnapshotsCallCount);
         Assert.Equal(0, projectionStore.ReadSnapshotsCallCount);
         Assert.Equal(ProcessDashboardActivityQuery.MaximumTake, Assert.Single(runtimeStore.Queries).Take);
     }
@@ -144,13 +146,93 @@ public sealed class ProcessDashboardActivityQueryTests
                 ProcessRuntimeActivitySelectionMode.Active,
                 [activeRun])),
             new RecordingProjectionStore(),
-            ProcessProjectionJsonCodec.Default);
+            ProcessProjectionJsonCodec.Default,
+            new DashboardRunRecordStore());
 
         var result = await service.QueryAsync(new ProcessDashboardActivityQuery());
 
         var item = Assert.Single(result.Items);
         Assert.Equal(ProcessRuntimeStatus.WaitingForUser, item.Status);
         Assert.Null(item.Projection);
+    }
+
+    [Fact]
+    public async Task Dashboard_query_loads_selected_projections_in_one_bounded_batch()
+    {
+        var runs = Enumerable.Range(1, 3)
+            .Select(sequence => CreateRuntimeActivityRow(
+                sequence,
+                ProcessRuntimeStatus.Active,
+                Now.AddMinutes(sequence)))
+            .ToArray();
+        var projectionStore = new RecordingProjectionStore();
+        foreach (var run in runs)
+        {
+            projectionStore.Add(CreateProjectionSnapshot(
+                run.RunId,
+                ProcessProjectedRunStatus.Active,
+                run.UpdatedAtUtc,
+                $"Process {RunSequence(run.RunId)}"));
+        }
+
+        var service = new ProcessDashboardActivityQueryService(
+            new StubRuntimeActivityStore(new ProcessRuntimeActivitySelection(
+                ProcessRuntimeActivitySelectionMode.Active,
+                runs)),
+            projectionStore,
+            ProcessProjectionJsonCodec.Default,
+            new DashboardRunRecordStore());
+
+        var result = await service.QueryAsync(new ProcessDashboardActivityQuery(3));
+
+        Assert.Equal(3, result.Items.Count);
+        Assert.All(result.Items, item => Assert.NotNull(item.Projection));
+        Assert.Equal(1, projectionStore.LoadSnapshotsCallCount);
+        Assert.Equal(
+            runs.Select(run => ProcessRuntimeProjectionKeys.Live(run.RunId)),
+            projectionStore.LoadedKeys);
+    }
+
+    [Fact]
+    public async Task Dashboard_recent_fallback_enriches_empty_projection_identity_from_compact_record()
+    {
+        var run = CreateRuntimeActivityRow(
+            4,
+            ProcessRuntimeStatus.Completed,
+            Now);
+        var projectId = Guid.NewGuid();
+        var definitionId = ProcessDefinitionId.New();
+        var projectionStore = new RecordingProjectionStore();
+        projectionStore.Add(CreateProjectionSnapshot(
+            run.RunId,
+            ProcessProjectedRunStatus.Completed,
+            run.UpdatedAtUtc,
+            processName: string.Empty,
+            projectName: string.Empty));
+        var recordStore = new DashboardRunRecordStore
+        {
+            Page = new ProcessRunRecordPage(
+                [CreateRecordSummary(run.RunId, projectId, definitionId)],
+                null)
+        };
+        var service = new ProcessDashboardActivityQueryService(
+            new StubRuntimeActivityStore(new ProcessRuntimeActivitySelection(
+                ProcessRuntimeActivitySelectionMode.RecentFallback,
+                [run])),
+            projectionStore,
+            ProcessProjectionJsonCodec.Default,
+            recordStore);
+
+        var result = await service.QueryAsync(new ProcessDashboardActivityQuery());
+
+        var projection = Assert.Single(result.Items).Projection;
+        Assert.NotNull(projection);
+        Assert.Equal(projectId, projection.ProjectId);
+        Assert.Equal($"Project {projectId:D}", projection.ProjectName);
+        Assert.Equal($"Process definition {definitionId}", projection.ProcessName);
+        var query = Assert.Single(recordStore.Queries);
+        Assert.Equal(ProcessRunRecordListPayload.Compact, query.Payload);
+        Assert.Equal([run.RunId], query.RunIds);
     }
 
     [Theory]
@@ -222,7 +304,8 @@ public sealed class ProcessDashboardActivityQueryTests
         ProcessProjectedRunStatus status,
         DateTimeOffset updatedAtUtc,
         string processName,
-        int backlogEventCount = 0)
+        int backlogEventCount = 0,
+        string projectName = "Project")
     {
         var freshness = new ProcessProjectionFreshness(
             updatedAtUtc,
@@ -243,7 +326,7 @@ public sealed class ProcessDashboardActivityQueryTests
             [])
         {
             ProcessName = processName,
-            ProjectName = "Project"
+            ProjectName = projectName
         };
         return ProcessProjectionJsonCodec.Default.CreateSnapshot(
             ProcessRuntimeProjectionProjector.ProjectorName,
@@ -257,6 +340,68 @@ public sealed class ProcessDashboardActivityQueryTests
 
     private static int RunSequence(ProcessRunId runId)
         => int.Parse(runId.Value.ToString("N")[^12..]);
+
+    private static ProcessRunRecordSummary CreateRecordSummary(
+        ProcessRunId runId,
+        Guid projectId,
+        ProcessDefinitionId definitionId)
+    {
+        return new ProcessRunRecordSummary(
+            new ProcessRunRecordIdentity(
+                runId,
+                runId,
+                null,
+                null,
+                definitionId,
+                null,
+                projectId),
+            ProcessRunDisposition.Succeeded,
+            ProcessRunRecordLifecycleState.Current,
+            ProcessRunRecordCompleteness.Complete,
+            ProcessRunEvidenceSource.All,
+            ProcessRunEvidenceSource.None,
+            [],
+            ProcessRunFactsStatus.Completed,
+            1,
+            null,
+            null,
+            null,
+            ProcessRunNarrativeStatus.Completed,
+            1,
+            null,
+            null,
+            null,
+            new ProcessRunRecordMetrics(
+                Now.AddMinutes(-1),
+                Now,
+                60_000,
+                1,
+                1,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0),
+            [],
+            null,
+            1,
+            1,
+            ProcessRunRecordSchema.CurrentVersion,
+            Now);
+    }
 
     private sealed class StubRuntimeActivityStore(
         ProcessRuntimeActivitySelection selection) : IProcessRuntimeActivityStore
@@ -272,11 +417,82 @@ public sealed class ProcessDashboardActivityQueryTests
         }
     }
 
+    private sealed class DashboardRunRecordStore : IProcessRunRecordStore
+    {
+        public ProcessRunRecordPage Page { get; init; } = new([], null);
+
+        public List<ProcessRunRecordListQuery> Queries { get; } = [];
+
+        public Task<ProcessRunRecordPage> ListAsync(
+            ProcessRunRecordListQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            Queries.Add(query);
+            return Task.FromResult(Page);
+        }
+
+        public Task<ProcessRunRecord?> GetAsync(
+            ProcessRunId runId,
+            bool includeSuperseded = false,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<ProcessRunRecordAnalytics> ReadAnalyticsAsync(
+            ProcessRunRecordAnalyticsQuery query,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<bool> UpsertSeedAsync(
+            ProcessRunRecordSeed seed,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<bool> SupersedeAsync(
+            ProcessRunRecordSupersession supersession,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<IReadOnlyList<ProcessRunFactsClaim>> ClaimFactsAsync(
+            ProcessRunRecordClaimRequest request,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<bool> CompleteFactsAsync(
+            ProcessRunFactsCompletion completion,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<bool> FailFactsAsync(
+            ProcessRunStageFailure failure,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<IReadOnlyList<ProcessRunNarrativeClaim>> ClaimNarrativesAsync(
+            ProcessRunRecordClaimRequest request,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<bool> CompleteNarrativeAsync(
+            ProcessRunNarrativeCompletion completion,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        public Task<bool> FailNarrativeAsync(
+            ProcessRunStageFailure failure,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
+        private static InvalidOperationException UnexpectedCall()
+            => new("Dashboard activity query must use only compact run-record list reads.");
+    }
+
     private sealed class RecordingProjectionStore : IProcessProjectionStore
     {
         private readonly Dictionary<ProcessProjectionKey, ProcessProjectionSnapshot> snapshots = [];
 
         public List<ProcessProjectionKey> LoadedKeys { get; } = [];
+
+        public int LoadSnapshotsCallCount { get; private set; }
 
         public int ReadSnapshotsCallCount { get; private set; }
 
@@ -293,6 +509,21 @@ public sealed class ProcessDashboardActivityQueryTests
             LoadedKeys.Add(projectionKey);
             snapshots.TryGetValue(projectionKey, out var snapshot);
             return Task.FromResult(snapshot);
+        }
+
+        public Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+            ProcessProjectorName projectorName,
+            IReadOnlyList<ProcessProjectionKey> projectionKeys,
+            CancellationToken cancellationToken = default)
+        {
+            LoadSnapshotsCallCount++;
+            LoadedKeys.AddRange(projectionKeys);
+            return Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>(
+                projectionKeys
+                    .Distinct()
+                    .Where(snapshots.ContainsKey)
+                    .Select(key => snapshots[key])
+                    .ToArray());
         }
 
         public Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(

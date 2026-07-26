@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public sealed record WorkflowCatalogItem(
@@ -7,7 +9,20 @@ public sealed record WorkflowCatalogItem(
     string Description,
     WorkflowLifecycleStatus Status,
     WorkflowRuntimeBackendKind PreferredBackend,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public string TemplateKey { get; init; } = string.Empty;
+
+    public string TemplatePackKey { get; init; } = string.Empty;
+
+    public string TemplatePackVersion { get; init; } = string.Empty;
+
+    public string SourceHash { get; init; } = string.Empty;
+
+    public string ExternalNamespace { get; init; } = string.Empty;
+
+    public string ExternalKey { get; init; } = string.Empty;
+}
 
 public sealed record WorkflowDefinitionSaveRequest(
     WorkflowId? Id,
@@ -19,7 +34,46 @@ public sealed record WorkflowDefinitionSaveRequest(
     WorkflowRuntimePolicy RuntimePolicy)
 {
     public IReadOnlyList<WorkflowInputParameterDescriptor> InputParameters { get; init; } = [];
+
+    public string ExternalNamespace { get; init; } = string.Empty;
+
+    public string ExternalKey { get; init; } = string.Empty;
+
+    [JsonIgnore]
+    public WorkflowTemplateProvenance? TemplateProvenance { get; init; }
 }
+
+public sealed record WorkflowTemplateProvenance(
+    string TemplateKey,
+    string TemplatePackKey,
+    string TemplatePackVersion,
+    string SourceHash);
+
+[JsonConverter(typeof(JsonStringEnumConverter<WorkflowStableIdentityKind>))]
+public enum WorkflowStableIdentityKind
+{
+    Template,
+    External
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<WorkflowStableIdentityResolutionStatus>))]
+public enum WorkflowStableIdentityResolutionStatus
+{
+    Resolved,
+    NotFound,
+    Ambiguous,
+    Stale
+}
+
+public sealed record WorkflowStableIdentityResolution(
+    WorkflowStableIdentityKind IdentityKind,
+    string Namespace,
+    string Key,
+    WorkflowStableIdentityResolutionStatus Status,
+    WorkflowId? WorkflowId,
+    WorkflowVersionId? RunnableVersionId,
+    IReadOnlyList<WorkflowCatalogItem> Materializations,
+    string Message);
 
 public static class WorkflowDefinitionExchangeFormats
 {

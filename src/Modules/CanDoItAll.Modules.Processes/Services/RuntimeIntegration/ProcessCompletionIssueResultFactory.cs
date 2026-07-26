@@ -91,7 +91,11 @@ internal sealed class ProcessCompletionIssueResultFactory
                     issue.Summary,
                     RestrictedEvidenceReference: null,
                     issue.RetrySafety,
-                    issue.Idempotency))
+                    issue.Idempotency)
+                {
+                    RelatedChildRunId = issue.RelatedChildRunId,
+                    ExecutionSafetyAttestation = issue.ExecutionSafetyAttestation
+                })
                 .ToArray(),
             issues
                 .Select(issue => new ManagerSignal(

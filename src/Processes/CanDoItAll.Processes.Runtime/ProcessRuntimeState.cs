@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
@@ -65,6 +66,8 @@ public sealed record ProcessRuntimeStateSnapshot(
     DateTimeOffset UpdatedAtUtc)
 {
     public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> BlockedRecoveryActions { get; init; } = [];
 }
 
 public sealed record ProcessRuntimeStepState(
@@ -143,11 +146,17 @@ public sealed record StrategyResultReceipt
 
     public string ResultHash { get; init; }
 
+    public string UserSafeSummary { get; init; } = string.Empty;
+
+    public long AppliedSequence { get; init; }
+
     public IReadOnlyList<StrategyResultDiagnosticReceipt> Diagnostics { get; init; }
 
     public IReadOnlyList<StrategyResultArtifactReceipt> ProducedArtifacts { get; init; }
 
     public ProcessRecoveryDecisionReceipt? RecoveryDecision { get; init; }
+
+    public ProcessExecutionRunId? ExecutionRunId { get; init; }
 }
 
 public sealed record StrategyResultDiagnosticReceipt(
@@ -157,7 +166,12 @@ public sealed record StrategyResultDiagnosticReceipt(
     string SafeSummary,
     string? RestrictedEvidenceReference,
     ProcessDiagnosticRetrySafety RetrySafety,
-    ProcessDiagnosticIdempotencyClassification Idempotency);
+    ProcessDiagnosticIdempotencyClassification Idempotency)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public ProcessExecutionSafetyAttestation? ExecutionSafetyAttestation { get; init; }
+}
 
 public sealed record StrategyResultArtifactReceipt(
     ArtifactSlotId SlotId,
@@ -184,6 +198,8 @@ public sealed record ProcessRecoveryDecisionReceipt(
     public int SameDiagnosticFingerprintAttempt { get; init; }
 
     public int MaximumSameDiagnosticFingerprintAttempts { get; init; }
+
+    public ProcessRunId? RelatedChildRunId { get; init; }
 }
 
 public enum ProcessFailureCategory
@@ -219,6 +235,28 @@ public enum ProcessRecoveryRouteKind
     TerminalBlock,
     ChildRunPropagation,
     TemplateRepair
+}
+
+public enum ProcessRuntimeBlockedRecoveryPhase
+{
+    CurrentStep,
+    UpstreamProducer,
+    RestoredConsumer,
+    CompletedChildConsumer
+}
+
+public sealed record ProcessRuntimeBlockedRecoveryActionReceipt(
+    StrategyResultIdempotencyKey SourceResultIdempotencyKey,
+    ProcessStepInstanceId SourceBlockedStepInstanceId,
+    ProcessStepInstanceId TargetStepInstanceId,
+    string DiagnosticFingerprint,
+    ProcessRecoveryRouteKind RecoveryRouteKind,
+    ProcessRuntimeBlockedRecoveryPhase Phase,
+    DateTimeOffset AppliedAtUtc)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public DateTimeOffset? RelatedChildUpdatedAtUtc { get; init; }
 }
 
 public sealed record DispatchWorkItem
@@ -280,7 +318,14 @@ public sealed record ProcessRuntimeMutation(
 public sealed record ProcessRuntimeCommitRequest(
     RuntimeCommandId CommandId,
     ProcessRuntimeStateSnapshot OriginalState,
-    ProcessRuntimeMutation Mutation);
+    ProcessRuntimeMutation Mutation,
+    ProcessRuntimeParentStepReference? ParentStepPrecondition = null,
+    ProcessInstancePlan? InitialPlan = null)
+{
+    public ProcessRuntimeBlockedRecoveryAuthorization? BlockedRecoveryAuthorization { get; init; }
+
+    public IReadOnlyList<ProcessRuntimeStepAssignment>? InitialAssignments { get; init; }
+}
 
 public sealed record ProcessRuntimeCommitResult(
     ProcessRuntimeTransitionOutcome Outcome,
@@ -330,5 +375,10 @@ public static class ProcessRuntimeTerminalStates
     public static bool IsStepTerminal(ProcessRuntimeStepStatus status)
     {
         return status is ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed or ProcessRuntimeStepStatus.Cancelled or ProcessRuntimeStepStatus.Skipped;
+    }
+
+    public static bool IsChildRunStopped(ProcessRuntimeStatus status)
+    {
+        return IsRunTerminal(status) || status == ProcessRuntimeStatus.Blocked;
     }
 }

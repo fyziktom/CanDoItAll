@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
@@ -38,11 +37,15 @@ internal sealed class ProcessOutcomeGroundingValidator(IWorkspaceFileService wor
     internal static ProcessCompletionIssue? ValidateGroundedOutcomeReferences(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome = null)
     {
+        var verifiedForwardedContextEnvelope = ResolveVerifiedForwardedContextEnvelope(
+            verifiedSubprocessOutcome,
+            toolReceipts);
         var ungroundedRefs = FindUngroundedPathReferences(
             assignment,
-            EnumerateOutcomePathReferences(output),
+            EnumerateOutcomePathReferences(output, verifiedForwardedContextEnvelope),
             toolReceipts);
         if (ungroundedRefs.Length == 0)
         {
@@ -62,7 +65,8 @@ internal sealed class ProcessOutcomeGroundingValidator(IWorkspaceFileService wor
     internal ProcessCompletionIssue? ValidateManagedArtifactBodyReferences(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome = null)
     {
         if (output.Status != ProcessStepOutcomeStatus.Completed ||
             assignment.ProducedArtifactSlotIds.Count == 0)
@@ -87,9 +91,9 @@ internal sealed class ProcessOutcomeGroundingValidator(IWorkspaceFileService wor
             }
         }
 
-        var contentForGrounding = HasRuntimeSubprocessBridgeReceipt(toolReceipts)
-            ? RemoveRuntimeForwardedChildContextSections(content)
-            : content;
+        var contentForGrounding = RemoveVerifiedForwardedContextEnvelope(
+            content,
+            ResolveVerifiedForwardedContextEnvelope(verifiedSubprocessOutcome, toolReceipts));
         var ungroundedRefs = FindUngroundedPathReferences(
             assignment,
             EnumerateTextPathReferences(contentForGrounding),
@@ -110,40 +114,47 @@ internal sealed class ProcessOutcomeGroundingValidator(IWorkspaceFileService wor
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    private static bool HasRuntimeSubprocessBridgeReceipt(IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    private static string? ResolveVerifiedForwardedContextEnvelope(
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
+    {
+        if (verifiedSubprocessOutcome is null ||
+            verifiedSubprocessOutcome.ForwardedContextArtifacts.Count == 0 ||
+            !HasRuntimeSubprocessBridgeReceipt(verifiedSubprocessOutcome, toolReceipts))
+        {
+            return null;
+        }
+
+        var envelope = ParentSubprocessForwardedContextEnvelope.Format(
+            verifiedSubprocessOutcome.ForwardedContextArtifacts);
+        return string.IsNullOrWhiteSpace(envelope)
+            ? null
+            : envelope;
+    }
+
+    private static bool HasRuntimeSubprocessBridgeReceipt(
+        ParentSubprocessBridgedOutcome verifiedSubprocessOutcome,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts)
         => toolReceipts?.Any(receipt =>
+            receipt.ExecutionRunId == verifiedSubprocessOutcome.SyntheticExecutionRunId &&
             string.Equals(receipt.ToolFamily, "process-runtime", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(receipt.ToolName, ProcessSubprocessState.SubprocessLaunchToolName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(receipt.RiskClass, "ProcessRuntime", StringComparison.OrdinalIgnoreCase)) == true;
+            string.Equals(receipt.RiskClass, "ProcessRuntime", StringComparison.OrdinalIgnoreCase) &&
+            IsGroundingToolReceipt(receipt) &&
+            receipt.ExitSummary.Contains(
+                verifiedSubprocessOutcome.ChildRunId.Value.ToString("D"),
+                StringComparison.OrdinalIgnoreCase)) == true;
 
-    private static string RemoveRuntimeForwardedChildContextSections(string content)
+    private static string RemoveVerifiedForwardedContextEnvelope(
+        string content,
+        string? verifiedForwardedContextEnvelope)
     {
-        var remaining = content;
-        var result = new StringBuilder(content.Length);
-        while (true)
+        if (string.IsNullOrWhiteSpace(verifiedForwardedContextEnvelope))
         {
-            var beginIndex = remaining.IndexOf(
-                ParentSubprocessForwardedContextEnvelope.BeginMarker,
-                StringComparison.Ordinal);
-            if (beginIndex < 0)
-            {
-                result.Append(remaining);
-                return result.ToString();
-            }
-
-            var endIndex = remaining.IndexOf(
-                ParentSubprocessForwardedContextEnvelope.EndMarker,
-                beginIndex + ParentSubprocessForwardedContextEnvelope.BeginMarker.Length,
-                StringComparison.Ordinal);
-            if (endIndex < 0)
-            {
-                result.Append(remaining);
-                return result.ToString();
-            }
-
-            result.Append(remaining.AsSpan(0, beginIndex));
-            remaining = remaining[(endIndex + ParentSubprocessForwardedContextEnvelope.EndMarker.Length)..];
+            return content;
         }
+
+        return content.Replace(verifiedForwardedContextEnvelope, string.Empty, StringComparison.Ordinal);
     }
 
     internal static string DescribeUngroundedReferenceSet(IReadOnlyList<string> ungroundedRefs)
@@ -295,11 +306,24 @@ internal sealed class ProcessOutcomeGroundingValidator(IWorkspaceFileService wor
     internal static bool IsGroundingToolReceipt(ToolExecutionReceiptRecord receipt)
         => receipt.ExitSummary.StartsWith("Succeeded", StringComparison.OrdinalIgnoreCase);
 
-    internal static IEnumerable<string> EnumerateOutcomePathReferences(ProcessStepOutcomeResult output)
+    internal static IEnumerable<string> EnumerateOutcomePathReferences(
+        ProcessStepOutcomeResult output,
+        string? verifiedForwardedContextEnvelope = null)
     {
         foreach (var text in EnumerateOutcomeNarrativeText(output))
         {
-            foreach (var candidate in EnumerateTextPathReferences(text))
+            var textForGrounding = RemoveVerifiedForwardedContextEnvelope(
+                text ?? string.Empty,
+                verifiedForwardedContextEnvelope);
+            foreach (var candidate in EnumerateTextPathReferences(textForGrounding))
+            {
+                yield return candidate;
+            }
+        }
+
+        foreach (var evidenceRef in output.EvidenceRefs)
+        {
+            foreach (var candidate in EnumerateTextPathReferences(evidenceRef))
             {
                 yield return candidate;
             }

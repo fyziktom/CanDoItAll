@@ -657,8 +657,9 @@
     private async Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId)
     {
         var runtimeLoadOptions = CreateRuntimeLoadOptions();
+        var scope = ResolveScope();
         var request = new ProcessWorkspaceShellRequest(
-            ResolveScope(),
+            scope,
             new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
             new ProcessDefinitionCatalogQueryProjection(
                 SearchText: null,
@@ -679,7 +680,13 @@
                 runId,
                 AutoSelectRun: runId.HasValue,
                 TakeRuns: 40,
-                runtimeLoadOptions),
+                runtimeLoadOptions)
+            {
+                PreviouslyLoadedRuns = ResolvePreviouslyLoadedRuns(
+                    forceRefresh,
+                    scope,
+                    runtimeHistoryWindow)
+            },
             ProcessDefinitionWorkspaceLoadOptions.CatalogOnly);
 
         var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
@@ -700,6 +707,17 @@
             ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
             : ProcessWorkspaceShellScope.Global;
 
+    private IReadOnlyList<ProcessLiveProcessSnapshot>? ResolvePreviouslyLoadedRuns(
+        bool forceRefresh,
+        ProcessWorkspaceShellScope scope,
+        ProcessRuntimeHistoryWindow historyWindow)
+        => !forceRefresh &&
+           shell is { } loadedShell &&
+           loadedShell.Scope == scope &&
+           loadedShell.Runtime.HistoryWindow == historyWindow
+            ? loadedShell.Runtime.ReusableRuns
+            : null;
+
     private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions()
         => selectedTabIndex switch
         {
@@ -714,7 +732,7 @@
             2 => new ProcessRuntimeWorkspaceLoadOptions
             {
                 IncludeSelectedRun = false,
-                IncludeHistory = true,
+                IncludeHistory = false,
                 IncludeMetricHistory = true,
                 IncludeActiveAgents = false,
                 IncludeUsageTelemetry = true

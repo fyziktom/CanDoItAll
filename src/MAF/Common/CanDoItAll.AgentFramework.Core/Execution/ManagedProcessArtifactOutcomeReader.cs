@@ -16,6 +16,8 @@ public sealed record ManagedProcessArtifactOutcomeReadResult(
 
 public static class ManagedProcessArtifactOutcomeReader
 {
+    private const int MaxCanonicalHeaderNonEmptyLines = 24;
+
     public static ManagedProcessArtifactOutcomeReadResult Read(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -24,6 +26,11 @@ public static class ManagedProcessArtifactOutcomeReader
         }
 
         var lines = content.Split(['\r', '\n']);
+        if (TryReadCanonicalHeader(lines, out var canonicalHeader))
+        {
+            return canonicalHeader;
+        }
+
         var statuses = new HashSet<ProcessStepOutcomeStatus>();
         var branchOutcomeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < lines.Length; index++)
@@ -101,6 +108,117 @@ public static class ManagedProcessArtifactOutcomeReader
             statuses.Count == 1 ? statuses.Single() : null,
             branchOutcomeKeys.SingleOrDefault() ?? string.Empty,
             null);
+    }
+
+    private static bool TryReadCanonicalHeader(
+        IReadOnlyList<string> lines,
+        out ManagedProcessArtifactOutcomeReadResult result)
+    {
+        var statuses = new HashSet<ProcessStepOutcomeStatus>();
+        var branchOutcomeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var nonEmptyLineCount = 0;
+        var hasInlineMetadata = false;
+        var hasInlineStatus = false;
+
+        for (var index = 0; index < lines.Count; index++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[index]))
+            {
+                continue;
+            }
+
+            nonEmptyLineCount++;
+            if (nonEmptyLineCount > MaxCanonicalHeaderNonEmptyLines)
+            {
+                break;
+            }
+
+            var rawLine = lines[index].TrimStart();
+            if (hasInlineMetadata &&
+                rawLine.StartsWith("##", StringComparison.Ordinal) &&
+                !IsBranchOutcomeMetadataHeading(NormalizeMetadataLine(rawLine)))
+            {
+                break;
+            }
+
+            var metadataLine = NormalizeMetadataLine(lines[index]);
+            if (TryReadField(metadataLine, out var fieldKey, out var fieldValue))
+            {
+                if (IsStatusKey(fieldKey))
+                {
+                    hasInlineMetadata = true;
+                    hasInlineStatus = true;
+                    if (!TryParseStatus(fieldValue, out var status))
+                    {
+                        result = Failure("The managed artifact contains an invalid Status field.");
+                        return true;
+                    }
+
+                    statuses.Add(status);
+                    continue;
+                }
+
+                if (IsBranchOutcomeKey(fieldKey))
+                {
+                    hasInlineMetadata = true;
+                    if (!TryAddBranchOutcomeKey(fieldValue, branchOutcomeKeys, out var failure))
+                    {
+                        result = Failure(failure);
+                        return true;
+                    }
+
+                    continue;
+                }
+            }
+
+            if (hasInlineMetadata &&
+                IsBranchOutcomeSection(metadataLine) &&
+                !TryReadBranchOutcomeSection(lines, index, branchOutcomeKeys, out var sectionFailure))
+            {
+                result = Failure(sectionFailure);
+                return true;
+            }
+
+            if (hasInlineMetadata &&
+                IsBranchOutcomeKey(metadataLine))
+            {
+                if (!TryReadFollowingValue(lines, index, out var value))
+                {
+                    result = Failure("The managed artifact contains an invalid Branch outcome key section.");
+                    return true;
+                }
+
+                if (!TryAddBranchOutcomeKey(value, branchOutcomeKeys, out var headingFailure))
+                {
+                    result = Failure(headingFailure);
+                    return true;
+                }
+            }
+        }
+
+        if (!hasInlineStatus)
+        {
+            result = default!;
+            return false;
+        }
+
+        if (statuses.Count > 1)
+        {
+            result = Failure("The managed artifact contains multiple different Status values in its canonical header.");
+            return true;
+        }
+
+        if (branchOutcomeKeys.Count > 1)
+        {
+            result = Failure("The managed artifact contains multiple different Branch outcome key values in its canonical header.");
+            return true;
+        }
+
+        result = new ManagedProcessArtifactOutcomeReadResult(
+            statuses.Count == 1 ? statuses.Single() : null,
+            branchOutcomeKeys.SingleOrDefault() ?? string.Empty,
+            null);
+        return true;
     }
 
     private static ManagedProcessArtifactOutcomeReadResult Failure(string message)
@@ -225,6 +343,9 @@ public static class ManagedProcessArtifactOutcomeReader
 
     private static bool IsBranchOutcomeSection(string value)
         => string.Equals(NormalizeKey(value), "branchoutcome", StringComparison.Ordinal);
+
+    private static bool IsBranchOutcomeMetadataHeading(string value)
+        => IsBranchOutcomeSection(value) || IsBranchOutcomeKey(value);
 
     private static bool IsBranchOutcomeSectionField(string value)
         => IsBranchOutcomeKey(value) ||

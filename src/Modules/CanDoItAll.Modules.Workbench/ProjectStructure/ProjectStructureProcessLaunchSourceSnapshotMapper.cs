@@ -45,9 +45,12 @@ internal static class ProjectStructureProcessLaunchSourceSnapshotMapper
             node.ObjectSubtype,
             node.ArtifactKind,
             node.Badges?.ToArray() ?? [],
-            node.ObjectType == ProjectObjectType.ImageAsset
-                ? ProcessLaunchSourceItemKind.ImageAsset
-                : ProcessLaunchSourceItemKind.Other,
+            node.ObjectType switch
+            {
+                ProjectObjectType.ImageAsset => ProcessLaunchSourceItemKind.ImageAsset,
+                ProjectObjectType.WorkItem => ProcessLaunchSourceItemKind.WorkItem,
+                _ => ProcessLaunchSourceItemKind.Other
+            },
             isIncludedInProcessContext);
     }
 }

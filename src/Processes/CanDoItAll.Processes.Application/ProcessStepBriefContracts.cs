@@ -1,5 +1,6 @@
 using System.Text;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
@@ -27,6 +28,7 @@ public sealed record ProcessStepBriefBuildRequest(
 
 public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
 {
+    private const string SubprocessLaunchToolName = "project_structure_process_subprocess_launch";
     private const int MaxLaunchVariableValueCharacters = 2400;
     private const int MaxAcceptanceCriteriaContractCharacters = 12000;
     private const int MaxExecutionGuidanceCharacters = 16000;
@@ -171,21 +173,16 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
             return "This step contributes evidence to a later acceptance owner. Preserve criterion-relevant proof in its managed artifact, but do not claim end-to-end acceptance solely from this step.";
         }
 
-        var acceptanceBranchKeys = SplitLaunchVariableList(rawAcceptanceBranchKeys);
+        var acceptanceBranchKeys = ProcessLaunchVariableStringList.TryParse(
+            rawAcceptanceBranchKeys,
+            out var parsedAcceptanceBranchKeys)
+            ? parsedAcceptanceBranchKeys
+            : [];
         const string failedCriterionGuidance = "For a non-acceptance branch that reports an observed product or deliverable defect, populate acceptanceCriteriaEvidence for every criterion you directly found to fail. Each failed entry must use the exact criterion id, Status: Failed, a concise observed-failure summary, and at least one grounded current-run proof ref. Do not mark a criterion Failed merely because a later parent-owned proof has not run.";
         return acceptanceBranchKeys.Count == 0
             ? $"This step contributes evidence to a later acceptance owner. Preserve criterion-relevant proof in its managed artifact, but do not claim end-to-end acceptance solely from this step. {failedCriterionGuidance}"
-            : $"For these final-acceptance branches only: {string.Join(", ", acceptanceBranchKeys)}. Populate acceptanceCriteriaEvidence in the final structured result for every criterion id in ProductAcceptanceCriteriaContract. Each entry must use the exact id, Status: Passed, a concise criterion-specific summary, and at least one current-run proof ref. Do not select one of those branches when any required criterion cannot be recorded this way; select the template's applicable non-acceptance branch instead. {failedCriterionGuidance}";
+            : $"For these final-acceptance branches only: {string.Join(", ", acceptanceBranchKeys)}. Populate acceptanceCriteriaEvidence in the final structured result for every criterion in ProductAcceptanceCriteriaContract marked kind=ProductAcceptance and required=true. Legacy criterion lines without kind/required markers default to required ProductAcceptance and need the same evidence. Each entry must use the exact id, Status: Passed, a concise criterion-specific summary, and at least one current-run proof ref. Preserve kind=DeliveryPlanning entries as nonblocking context; do not submit Passed or Failed acceptance evidence for them, and do not route no-go, escalation, or human reconfirmation solely because they lack product proof unless a separate typed decision gate explicitly requires it. Do not select one of those branches when any required ProductAcceptance criterion cannot be recorded this way; select the template's applicable non-acceptance branch instead. {failedCriterionGuidance}";
     }
-
-    private static IReadOnlyList<string> SplitLaunchVariableList(string value)
-        => string.IsNullOrWhiteSpace(value)
-            ? []
-            : value
-                .Split([';', ',', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
 
     private static string FormatLaunchVariables(IReadOnlyDictionary<string, string> variables)
     {
@@ -206,12 +203,26 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         }
 
         var normalized = value.Trim();
-        var maxCharacters = string.Equals(key, ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract, StringComparison.OrdinalIgnoreCase)
-            ? MaxAcceptanceCriteriaContractCharacters
-            : MaxLaunchVariableValueCharacters;
+        var maxCharacters =
+            string.Equals(
+                key,
+                ProcessRuntimeLaunchVariables.ProductAcceptanceCriteriaContract,
+                StringComparison.OrdinalIgnoreCase)
+                ? MaxAcceptanceCriteriaContractCharacters
+                : ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(key)
+                    ? ProcessLaunchVariablePromptValuePolicy.MaximumInlineContractCharacters
+                    : MaxLaunchVariableValueCharacters;
         if (normalized.Length <= maxCharacters)
         {
             return normalized;
+        }
+
+        if (ProcessLaunchVariablePromptValuePolicy.IsAtomicContractKey(key))
+        {
+            return ProcessLaunchVariablePromptValuePolicy.CreateAtomicOmission(
+                key,
+                normalized.Length,
+                maxCharacters);
         }
 
         var omittedCharacters = normalized.Length - LaunchVariableHeadCharacters - LaunchVariableTailCharacters;
@@ -396,6 +407,18 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         var snapshotName = string.IsNullOrWhiteSpace(step.SubprocessDefinitionSnapshotName)
             ? "not supplied"
             : step.SubprocessDefinitionSnapshotName.Trim();
+        if (IsRuntimeOwnedSubprocess(step))
+        {
+            return $"""
+            - Child process definition key: {subprocessKey}
+            - Child definition snapshot name: {snapshotName}
+            - Launch ownership: process runtime owned
+            - Completion rule: the process runtime launches, defers, and completes this parent step from typed child evidence. Do not call {SubprocessLaunchToolName} and do not hand-author a parent handoff from a generic child folder.
+            - Accepted evidence rule: the runtime accepts only the typed child output rows listed in the subprocess parent bridge contract.
+            - Parent artifact rule: the parent artifact is runtime-synthesized from accepted child evidence using the materialization mode in the typed contract.
+            """;
+        }
+
         var completionRule = string.IsNullOrWhiteSpace(step.SubprocessProcessKey)
             ? "This step is marked as a subprocess but has no child process definition key. Return a blocked result unless upstream evidence already supplies the missing child run."
             : "Complete only after the child process result and required child artifacts are available through the configured subprocess driver. A stopped child run is historical evidence, not an active wait; inspect it, then complete from valid evidence or propagate a concrete child blocker. Relaunch only when the stopped child has no blocker/escalation evidence and the missing evidence is recoverable by another child attempt.";
@@ -408,6 +431,9 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
         - Child-outcome rule: when the subprocess launch tool returns ParentDeferredOutcomeJson, submit that JSON exactly. Running children defer the parent; Completed children complete the parent from child evidence; stopped children propagate their concrete blocker. Do not relaunch a Blocked child or a child with escalation/no-go evidence.
         """;
     }
+
+    private static bool IsRuntimeOwnedSubprocess(ProcessTemplateDefinitionStepDocument step)
+        => step.SubprocessContract?.LaunchMode == ProcessSubprocessLaunchMode.RuntimeOwned;
 
     private static string BuildStepArtifactPath(string artifactRoot, string stepKey)
         => $"{artifactRoot}/steps/{SanitizePathSegment(stepKey)}.md";

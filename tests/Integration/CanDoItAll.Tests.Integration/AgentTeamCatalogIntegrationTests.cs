@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
-    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v63";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v66";
 
     private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -296,6 +296,36 @@ public sealed class AgentTeamCatalogIntegrationTests
                 .Select(agent => agent.TemplateKey)
                 .OrderBy(key => key, StringComparer.OrdinalIgnoreCase));
 
+        var deliveryManager = agentsByTemplateKey["delivery-manager"];
+        Assert.Equal(DeliveryManagerAgentIdentity.AgentId, deliveryManager.Id);
+        Assert.True(DeliveryManagerAgentIdentity.Matches(deliveryManager));
+        Assert.Equal(AgentLifecycleStatus.Active, deliveryManager.Status);
+        Assert.False(deliveryManager.IsTemplate);
+        Assert.NotNull(deliveryManager.ProviderProfileId);
+        Assert.True(deliveryManager.Permissions.CanObserveOtherAgents);
+        Assert.Contains("process-manager", deliveryManager.Tags, StringComparer.Ordinal);
+
+        Assert.Contains(
+            "Pre-implementation setup exception",
+            agentsByTemplateKey["delivery-qa-observer"].Instructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Generated starter/demo UI or content and a passing placeholder template test are expected",
+            agentsByTemplateKey["dotnet-qa-review-lead"].Instructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "only entries with `kind=ProductAcceptance` and `required=true` are mandatory acceptance criteria",
+            agentsByTemplateKey["delivery-qa-observer"].Instructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "never select no-go, block, escalation, or human reconfirmation solely because one lacks product proof",
+            agentsByTemplateKey["dotnet-qa-review-lead"].Instructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "does not reopen that fact or create a human-decision acceptance gate",
+            agentsByTemplateKey["business-strategist"].Instructions,
+            StringComparison.Ordinal);
+
         var deliveryTeam = Assert.Single(teams, item => string.Equals(item.Name, "Delivery Platform Team", StringComparison.Ordinal));
         Assert.Equal("rocket_launch", deliveryTeam.Icon);
         Assert.Contains(agentsByTemplateKey["portfolio-architect"].Id, deliveryTeam.AgentIds);
@@ -400,6 +430,7 @@ public sealed class AgentTeamCatalogIntegrationTests
 
         var deliveryManager = members["delivery-manager"];
         Assert.Contains("workspace-convert-document", deliveryManager.Skills.CapabilityKeys);
+        Assert.Contains("process-manager", deliveryManager.Settings.Tags, StringComparer.Ordinal);
 
     }
 
@@ -500,6 +531,42 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(refreshed.Tags, AgentSpecialTags.IsFavorite);
         Assert.DoesNotContain("user-only-tag", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("prompts", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Managed_delivery_manager_refresh_restores_process_run_narrator_eligibility()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var deliveryManager = seed.Agents.Single(item =>
+            string.Equals(item.TemplateKey, "delivery-manager", StringComparison.OrdinalIgnoreCase));
+        var currentManagedSeedVersion = ReadManagedSeedVersion(deliveryManager.ConfigurationJson);
+        var staleDeliveryManager = deliveryManager with
+        {
+            ProviderProfileId = null,
+            Permissions = deliveryManager.Permissions with { CanObserveOtherAgents = false },
+            ConfigurationJson = deliveryManager.ConfigurationJson.Replace(
+                currentManagedSeedVersion,
+                "2026-07-agent-template-teams-v63",
+                StringComparison.Ordinal),
+            Tags = deliveryManager.Tags
+                .Where(tag => !string.Equals(tag, "process-manager", StringComparison.Ordinal))
+                .ToList()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == deliveryManager.Id ? staleDeliveryManager : agent)
+                .ToList()
+        });
+        var refreshed = normalized.Agents.Single(item => item.Id == deliveryManager.Id);
+
+        Assert.Equal(AgentLifecycleStatus.Active, refreshed.Status);
+        Assert.False(refreshed.IsTemplate);
+        Assert.NotNull(refreshed.ProviderProfileId);
+        Assert.True(refreshed.Permissions.CanObserveOtherAgents);
+        Assert.Contains("process-manager", refreshed.Tags, StringComparer.Ordinal);
+        Assert.Equal(ExpectedAgentTemplateSeedVersion, ReadManagedSeedVersion(refreshed.ConfigurationJson));
     }
 
     private static string ReadManagedSeedVersion(string configurationJson)

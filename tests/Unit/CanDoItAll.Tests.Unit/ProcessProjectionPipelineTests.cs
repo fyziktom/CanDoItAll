@@ -26,7 +26,11 @@ public sealed class ProcessProjectionPipelineTests
             StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunActivated, Now.AddMinutes(-5)),
             StoredEvent(2, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-4)));
         var clock = new FixedProcessProjectionClock(Now);
-        var projector = new ProcessRuntimeProjectionProjector(store, ProcessProjectionJsonCodec.Default, clock);
+        var projector = new ProcessRuntimeProjectionProjector(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            clock,
+            new EfProcessRunRecordStore(dbContext));
         var worker = new ProcessProjectionReplayWorker(replay, store, projector, clock);
 
         var result = await worker.ReplayAsync(new ProcessProjectionReplayRequest(
@@ -54,6 +58,131 @@ public sealed class ProcessProjectionPipelineTests
         Assert.NotNull(detail);
         Assert.Equal(runId, detail.RunId);
         Assert.Equal(ProcessProjectedRunStatus.Active, detail.Status);
+    }
+
+    [Theory]
+    [InlineData(ProcessRunDisposition.Succeeded)]
+    [InlineData(ProcessRunDisposition.Failed)]
+    [InlineData(ProcessRunDisposition.Cancelled)]
+    [InlineData(ProcessRunDisposition.Blocked)]
+    public async Task Runtime_projector_reportable_run_event_seeds_current_run_record(
+        ProcessRunDisposition expectedDisposition)
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runRecordStore = new EfProcessRunRecordStore(dbContext);
+        var projector = new ProcessRuntimeProjectionProjector(
+            projectionStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            runRecordStore);
+        var runId = ProcessRunId.New();
+        var endedAtUtc = Now.AddMinutes(-1);
+        var eventType = expectedDisposition switch
+        {
+            ProcessRunDisposition.Succeeded => ProcessRuntimeEventTypes.ProcessRunCompleted,
+            ProcessRunDisposition.Failed => ProcessRuntimeEventTypes.ProcessRunFailed,
+            ProcessRunDisposition.Cancelled => ProcessRuntimeEventTypes.ProcessRunCancelled,
+            ProcessRunDisposition.Blocked => ProcessRuntimeEventTypes.ProcessRunBlocked,
+            _ => throw new ArgumentOutOfRangeException(nameof(expectedDisposition))
+        };
+
+        await projector.ProjectAsync(
+            StoredEvent(1, runId, eventType, endedAtUtc),
+            new ProcessProjectionExecutionContext(
+                new ProcessProjectionShardKey("root-alpha"),
+                Now,
+                LatestKnownGlobalSequence: 1));
+
+        var record = Assert.IsType<ProcessRunRecord>(await runRecordStore.GetAsync(runId));
+        Assert.Equal(runId, record.Summary.Identity.RunId);
+        Assert.Equal(runId, record.Summary.Identity.RootRunId);
+        Assert.Equal(expectedDisposition, record.Summary.Disposition);
+        Assert.Equal(ProcessRunRecordLifecycleState.Current, record.Summary.LifecycleState);
+        Assert.Equal(ProcessRunRecordCompleteness.SeedOnly, record.Summary.Completeness);
+        Assert.Equal(endedAtUtc, record.Summary.Metrics.EndedAtUtc);
+        Assert.Equal(1, record.Summary.SourceGlobalSequence);
+        Assert.Equal(1, record.Summary.SourceRootSequence);
+    }
+
+    [Fact]
+    public async Task Runtime_projector_manager_loop_budget_escalation_does_not_seed_terminal_record()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runRecordStore = new EfProcessRunRecordStore(dbContext);
+        var projector = new ProcessRuntimeProjectionProjector(
+            projectionStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            runRecordStore);
+        var runId = ProcessRunId.New();
+
+        await projector.ProjectAsync(
+            StoredEvent(
+                1,
+                runId,
+                ProcessRuntimeEventTypes.ManagerLoopBudgetEscalated,
+                Now.AddMinutes(-1)),
+            new ProcessProjectionExecutionContext(
+                new ProcessProjectionShardKey("root-alpha"),
+                Now,
+                LatestKnownGlobalSequence: 1));
+
+        Assert.Null(await runRecordStore.GetAsync(runId, includeSuperseded: true));
+    }
+
+    [Fact]
+    public async Task Runtime_projector_reactivation_supersedes_current_record_and_later_terminal_event_reopens_it()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runRecordStore = new EfProcessRunRecordStore(dbContext);
+        var projector = new ProcessRuntimeProjectionProjector(
+            projectionStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            runRecordStore);
+        var runId = ProcessRunId.New();
+        var blockedAtUtc = Now.AddMinutes(-3);
+        var reactivatedAtUtc = Now.AddMinutes(-2);
+        var completedAtUtc = Now.AddMinutes(-1);
+        var context = new ProcessProjectionExecutionContext(
+            new ProcessProjectionShardKey("root-alpha"),
+            Now,
+            LatestKnownGlobalSequence: 3);
+
+        await projector.ProjectAsync(
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunBlocked, blockedAtUtc),
+            context);
+
+        var blocked = Assert.IsType<ProcessRunRecord>(await runRecordStore.GetAsync(runId));
+        Assert.Equal(ProcessRunDisposition.Blocked, blocked.Summary.Disposition);
+        Assert.Equal(ProcessRunRecordLifecycleState.Current, blocked.Summary.LifecycleState);
+
+        await projector.ProjectAsync(
+            StoredEvent(2, runId, ProcessRuntimeEventTypes.ProcessRunReactivated, reactivatedAtUtc),
+            context);
+
+        Assert.Null(await runRecordStore.GetAsync(runId));
+        var superseded = Assert.IsType<ProcessRunRecord>(
+            await runRecordStore.GetAsync(runId, includeSuperseded: true));
+        Assert.Equal(ProcessRunDisposition.Blocked, superseded.Summary.Disposition);
+        Assert.Equal(ProcessRunRecordLifecycleState.Superseded, superseded.Summary.LifecycleState);
+        Assert.Equal(2, superseded.Summary.SourceGlobalSequence);
+        Assert.Equal(2, superseded.Summary.SourceRootSequence);
+
+        await projector.ProjectAsync(
+            StoredEvent(3, runId, ProcessRuntimeEventTypes.ProcessRunCompleted, completedAtUtc),
+            context);
+
+        var completed = Assert.IsType<ProcessRunRecord>(await runRecordStore.GetAsync(runId));
+        Assert.Equal(ProcessRunDisposition.Succeeded, completed.Summary.Disposition);
+        Assert.Equal(ProcessRunRecordLifecycleState.Current, completed.Summary.LifecycleState);
+        Assert.Equal(ProcessRunRecordCompleteness.SeedOnly, completed.Summary.Completeness);
+        Assert.Equal(completedAtUtc, completed.Summary.Metrics.EndedAtUtc);
+        Assert.Equal(3, completed.Summary.SourceGlobalSequence);
+        Assert.Equal(3, completed.Summary.SourceRootSequence);
     }
 
     [Fact]
@@ -302,7 +431,7 @@ public sealed class ProcessProjectionPipelineTests
             new ThrowingAssignmentStore(),
             new ThrowingObservationReader());
 
-        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+        var workspaceQuery = new ProcessRuntimeWorkspaceQuery(
             Now,
             TimeSpan.FromHours(1),
             EventPage: 0,
@@ -310,7 +439,8 @@ public sealed class ProcessProjectionPipelineTests
             TakeRuns: 10,
             runId,
             AutoSelectRun: true,
-            ProcessRuntimeWorkspaceLoadOptions.ListOnly));
+            ProcessRuntimeWorkspaceLoadOptions.ListOnly);
+        var workspace = await query.GetRuntimeWorkspaceAsync(workspaceQuery);
 
         var run = Assert.Single(workspace.Runs);
         Assert.Equal(runId, run.RunId);
@@ -319,8 +449,56 @@ public sealed class ProcessProjectionPipelineTests
         Assert.Empty(workspace.MetricEvents);
         Assert.Empty(workspace.ActiveAgents);
         Assert.Equal(1, countingStore.ReadSnapshotsCallCount);
+        Assert.Equal(20, countingStore.LastReadSnapshotsTake);
         Assert.Equal(0, countingStore.LoadSnapshotCallCount);
         Assert.Equal(0, countingStore.ReadHistoryCallCount);
+        Assert.NotNull(workspace.ReusableRuns);
+
+        var reusedWorkspace = await query.GetRuntimeWorkspaceAsync(workspaceQuery with
+        {
+            PreviouslyLoadedRuns = workspace.ReusableRuns
+        });
+
+        Assert.Single(reusedWorkspace.Runs);
+        Assert.Equal(1, countingStore.ReadSnapshotsCallCount);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_shares_metric_history_with_the_visible_event_page()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        await ProjectAsync(
+            projectionStore,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var countingStore = new CountingProjectionStore(projectionStore);
+        var query = new ProcessRuntimeProjectionQueryService(
+            countingStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            runId,
+            AutoSelectRun: true,
+            new ProcessRuntimeWorkspaceLoadOptions
+            {
+                LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
+                IncludeSelectedRun = false,
+                IncludeRunRecord = false,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = false
+            }));
+
+        Assert.Single(workspace.Events);
+        Assert.Single(workspace.MetricEvents);
+        Assert.Equal(1, countingStore.ReadHistoryCallCount);
     }
 
     [Fact]
@@ -1820,6 +1998,352 @@ public sealed class ProcessProjectionPipelineTests
     }
 
     [Fact]
+    public async Task Runtime_workspace_honors_explicit_historic_run_outside_live_window()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runRecordStore = new EfProcessRunRecordStore(dbContext);
+        var runId = ProcessRunId.New();
+        var endedAtUtc = Now.AddDays(-60);
+        await ProjectAsync(
+            projectionStore,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunFailed, endedAtUtc),
+            latestKnownGlobalSequence: 1);
+        await runRecordStore.UpsertSeedAsync(new ProcessRunRecordSeed(
+            new ProcessRunRecordIdentity(
+                runId,
+                runId,
+                ParentRunId: null,
+                PlanId: null,
+                DefinitionId: null,
+                DefinitionVersionId: null,
+                ProjectId: null),
+            ProcessRunDisposition.Failed,
+            endedAtUtc,
+            SourceGlobalSequence: 1,
+            SourceRootSequence: 1,
+            ObservedAtUtc: endedAtUtc));
+        var service = new ProcessRuntimeProjectionQueryService(
+            projectionStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now),
+            runRecordStore: runRecordStore);
+
+        var result = await service.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromDays(1),
+            EventPage: 0,
+            EventPageSize: 25,
+            TakeRuns: 10,
+            runId,
+            AutoSelectRun: true));
+
+        Assert.Empty(result.Runs);
+        Assert.Equal(runId, result.SelectedRun?.RunId);
+        Assert.Equal(runId, result.SelectedRunRecord?.Summary.Identity.RunId);
+    }
+
+    [Fact]
+    public async Task Shell_projection_does_not_rebuild_incomplete_terminal_record_from_deep_history()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runRecordStore = new EfProcessRunRecordStore(dbContext);
+        var runId = ProcessRunId.New();
+        var endedAtUtc = Now.AddMinutes(-5);
+        await ProjectAsync(
+            projectionStore,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunFailed, endedAtUtc),
+            latestKnownGlobalSequence: 1);
+        await runRecordStore.UpsertSeedAsync(new ProcessRunRecordSeed(
+            new ProcessRunRecordIdentity(
+                runId,
+                runId,
+                ParentRunId: null,
+                PlanId: null,
+                DefinitionId: null,
+                DefinitionVersionId: null,
+                ProjectId: null),
+            ProcessRunDisposition.Failed,
+            endedAtUtc,
+            SourceGlobalSequence: 1,
+            SourceRootSequence: 1,
+            ObservedAtUtc: endedAtUtc));
+        var countingStore = new CountingProjectionStore(projectionStore);
+        var usageReader = new InMemoryUsageTelemetryReader();
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(
+                countingStore,
+                ProcessProjectionJsonCodec.Default,
+                clock,
+                runRecordStore: runRecordStore),
+            runtimeUsageTelemetryReader: usageReader);
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(ProcessId: null, RunId: runId.Value, LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(SearchText: null, SelectedDefinitionKey: null, ProcessDefinitionCatalogScopeKind.All, Take: 50),
+            new ProcessTemplateCatalogQueryProjection(SearchText: null, ProcessTemplateCatalogCategoryKind.All, SelectedItemKey: null, ProcessTemplateCatalogPreviewTabKind.Overview, Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(
+                ProcessRuntimeHistoryWindow.OneDay,
+                EventPage: 0,
+                EventPageSize: 25,
+                runId.Value)));
+
+        Assert.Equal(1, countingStore.ReadHistoryCallCount);
+        Assert.Equal(0, usageReader.CallCount);
+        Assert.Empty(shell.Runtime.MetricPoints);
+        Assert.Contains("Durable facts are pending", shell.Runtime.Summary, StringComparison.Ordinal);
+        Assert.Contains("0 attempt(s)", shell.Runtime.AttentionSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Shell_projection_uses_exact_durable_event_aggregates_without_fabricating_manager_end_point()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runRecordStore = new EfProcessRunRecordStore(dbContext);
+        var runId = ProcessRunId.New();
+        var endedAtUtc = Now.AddMinutes(-5);
+        await ProjectAsync(
+            projectionStore,
+            StoredEvent(
+                1,
+                runId,
+                ProcessRuntimeEventTypes.ProcessRunCompleted,
+                endedAtUtc),
+            latestKnownGlobalSequence: 1);
+        var identity = new ProcessRunRecordIdentity(
+            runId,
+            runId,
+            ParentRunId: null,
+            PlanId: null,
+            DefinitionId: null,
+            DefinitionVersionId: null,
+            ProjectId: null);
+        await runRecordStore.UpsertSeedAsync(new ProcessRunRecordSeed(
+            identity,
+            ProcessRunDisposition.Succeeded,
+            endedAtUtc,
+            SourceGlobalSequence: 1,
+            SourceRootSequence: 1,
+            ObservedAtUtc: endedAtUtc));
+        var claim = Assert.Single(await runRecordStore.ClaimFactsAsync(
+            new ProcessRunRecordClaimRequest(
+                endedAtUtc.AddMinutes(1),
+                TimeSpan.FromMinutes(5),
+                Take: 1)));
+        var step = new ProcessRunStepFact(
+            runId,
+            ProcessStepInstanceId.New(),
+            ProcessStepDefinitionId.New(),
+            "completed-step",
+            ProcessRunStepOutcome.Completed,
+            AttemptCount: 1,
+            ParticipantId: null,
+            WorkflowId: null,
+            DependencyStepIds: [],
+            ExecutionRunIds: [],
+            StartedAtUtc: endedAtUtc.AddSeconds(-30),
+            EndedAtUtc: endedAtUtc,
+            DurationMilliseconds: 30_000,
+            InputTokenCount: 10,
+            CachedInputTokenCount: 2,
+            OutputTokenCount: 5,
+            ReasoningTokenCount: 1,
+            TotalTokenCount: 18,
+            EstimatedCost: 0.12m,
+            ActualCost: 0.11m,
+            ToolCallCount: 2,
+            ArtifactCount: 0);
+        var facts = new ProcessRunHardFacts(
+            Steps: [step],
+            ParticipantIds: [],
+            WorkflowIds: [],
+            SubprocessRunIds: [],
+            ExecutionRunIds: [],
+            ArtifactIds: [])
+        {
+            TotalRuntimeEventCount = 3,
+            ManagerRuntimeEventCount = 1,
+            RuntimeEventMinuteBuckets =
+            [
+                new ProcessRunRuntimeEventMinuteBucket(
+                    endedAtUtc.AddMinutes(-2),
+                    EventCount: 2,
+                    ManagerEventCount: 1,
+                    DurationMilliseconds: 30_000),
+                new ProcessRunRuntimeEventMinuteBucket(
+                    endedAtUtc.AddMinutes(-1),
+                    EventCount: 1,
+                    ManagerEventCount: 0,
+                    DurationMilliseconds: 0)
+            ],
+            RuntimeEventCategories =
+            [
+                new ProcessRunRuntimeEventCategoryAggregate(
+                    ProcessRunRuntimeEventCategory.Step,
+                    EventCount: 2,
+                    FirstOccurredAtUtc: endedAtUtc.AddMinutes(-2).AddSeconds(10),
+                    LastOccurredAtUtc: endedAtUtc.AddMinutes(-1).AddSeconds(20)),
+                new ProcessRunRuntimeEventCategoryAggregate(
+                    ProcessRunRuntimeEventCategory.Manager,
+                    EventCount: 1,
+                    FirstOccurredAtUtc: endedAtUtc.AddMinutes(-2).AddSeconds(40),
+                    LastOccurredAtUtc: endedAtUtc.AddMinutes(-2).AddSeconds(40))
+            ]
+        };
+        var metrics = new ProcessRunRecordMetrics(
+            StartedAtUtc: endedAtUtc.AddMinutes(-10),
+            endedAtUtc,
+            DurationMilliseconds: 600_000,
+            TotalStepCount: 1,
+            ExecutableStepCount: 1,
+            CompletedStepCount: 1,
+            FailedStepCount: 0,
+            CancelledStepCount: 0,
+            RepetitionCount: 0,
+            ExecutionCount: 1,
+            ReworkCount: 1,
+            IncidentCount: 1,
+            EscalationCount: 1,
+            InputTokenCount: 10,
+            CachedInputTokenCount: 2,
+            OutputTokenCount: 5,
+            ReasoningTokenCount: 1,
+            TotalTokenCount: 18,
+            EstimatedCost: 0.12m,
+            ActualCost: 0.11m,
+            ToolCallCount: 2,
+            ArtifactCount: 0,
+            SubprocessCount: 0);
+        Assert.True(await runRecordStore.CompleteFactsAsync(
+            new ProcessRunFactsCompletion(
+                identity,
+                claim.SourceGlobalSequence,
+                claim.ClaimToken,
+                ProcessRunRecordCompleteness.Complete,
+                ProcessRunEvidenceSource.All,
+                ProcessRunEvidenceSource.None,
+                CompletenessWarnings: [],
+                metrics,
+                facts,
+                CompletedAtUtc: endedAtUtc.AddMinutes(2))));
+
+        var clock = new FixedProcessProjectionClock(Now);
+        var templateLoader = new ProcessTemplatePackLoader(
+            Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var service = new ProcessWorkspaceShellProjectionService(
+            clock,
+            new ProcessDefinitionCatalogProjectionService(templateLoader, clock),
+            new ProcessDefinitionEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionRoleEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionCanvasEditorProjectionService(templateLoader, clock),
+            new ProcessDefinitionStepEditorProjectionService(templateLoader, clock),
+            new ProcessTemplateCatalogProjectionService(templateLoader, clock),
+            new ProcessRuntimeProjectionQueryService(
+                projectionStore,
+                ProcessProjectionJsonCodec.Default,
+                clock,
+                runRecordStore: runRecordStore));
+
+        var shell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(
+                ProcessId: null,
+                RunId: runId.Value,
+                LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                SelectedDefinitionKey: null,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 50),
+            new ProcessTemplateCatalogQueryProjection(
+                SearchText: null,
+                ProcessTemplateCatalogCategoryKind.All,
+                SelectedItemKey: null,
+                ProcessTemplateCatalogPreviewTabKind.Overview,
+                Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(
+                ProcessRuntimeHistoryWindow.OneDay,
+                EventPage: 0,
+                EventPageSize: 25,
+                runId.Value)));
+
+        Assert.Equal(3, shell.Runtime.Stats.EventCount);
+        Assert.Equal(1, shell.Runtime.Stats.ManagerEventCount);
+        Assert.Contains(shell.Runtime.MetricPoints, point =>
+            point.TimestampUtc == endedAtUtc.AddMinutes(-2) &&
+            point.EventCount == 2 &&
+            point.ManagerEventCount == 1 &&
+            point.DurationMs == 30_000);
+        var terminalMinute = Assert.Single(
+            shell.Runtime.MetricPoints,
+            point => point.TimestampUtc == endedAtUtc);
+        Assert.Equal(0, terminalMinute.EventCount);
+        Assert.Equal(0, terminalMinute.ManagerEventCount);
+        Assert.Equal(2, terminalMinute.ToolCallCount);
+        Assert.Contains(shell.Runtime.ToolUsage, activity =>
+            activity.ToolName == "Step events" &&
+            activity.CallCount == 2 &&
+            activity.LastUsedAtUtc == endedAtUtc.AddMinutes(-1).AddSeconds(20));
+        Assert.Contains(shell.Runtime.ToolUsage, activity =>
+            activity.ToolName == "Manager events" &&
+            activity.CallCount == 1 &&
+            activity.LastUsedAtUtc == endedAtUtc.AddMinutes(-2).AddSeconds(40));
+
+        var compactShell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(
+                ProcessId: null,
+                RunId: runId.Value,
+                LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                SelectedDefinitionKey: null,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 50),
+            new ProcessTemplateCatalogQueryProjection(
+                SearchText: null,
+                ProcessTemplateCatalogCategoryKind.All,
+                SelectedItemKey: null,
+                ProcessTemplateCatalogPreviewTabKind.Overview,
+                Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(
+                ProcessRuntimeHistoryWindow.OneDay,
+                EventPage: 0,
+                EventPageSize: 25,
+                runId.Value,
+                LoadOptions: new ProcessRuntimeWorkspaceLoadOptions
+                {
+                    IncludeMetricHistory = false,
+                    IncludeActiveAgents = false,
+                    IncludeUsageTelemetry = false
+                })));
+
+        Assert.NotNull(compactShell.Runtime.SelectedRunRecord);
+        Assert.Null(compactShell.Runtime.SelectedRunRecord.Facts);
+        Assert.Equal(18, compactShell.Runtime.Stats.TotalTokens);
+        Assert.Equal(0.12m, compactShell.Runtime.Stats.EstimatedCost);
+        Assert.Equal(0.11m, compactShell.Runtime.Stats.ActualCost);
+        Assert.Empty(compactShell.Runtime.MetricPoints);
+        Assert.Contains("18 tokens", compactShell.Runtime.Summary, StringComparison.Ordinal);
+        Assert.Contains("0.11 actual cost", compactShell.Runtime.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Shell_projection_scopes_usage_telemetry_to_selected_run()
     {
         await using var dbContext = CreateDbContext();
@@ -2036,7 +2560,12 @@ public sealed class ProcessProjectionPipelineTests
     {
         var replay = new RecordingRuntimeEventReplayStore(runtimeEvent);
         var clock = new FixedProcessProjectionClock(Now);
-        var projector = new ProcessRuntimeProjectionProjector(store, ProcessProjectionJsonCodec.Default, clock);
+        await using var runRecordDbContext = CreateDbContext();
+        var projector = new ProcessRuntimeProjectionProjector(
+            store,
+            ProcessProjectionJsonCodec.Default,
+            clock,
+            new EfProcessRunRecordStore(runRecordDbContext));
         var worker = new ProcessProjectionReplayWorker(replay, store, projector, clock);
         await worker.ReplayAsync(new ProcessProjectionReplayRequest(
             ProcessRuntimeProjectionProjector.ProjectorName,
@@ -2308,7 +2837,11 @@ public sealed class ProcessProjectionPipelineTests
 
         public int LoadSnapshotCallCount { get; private set; }
 
+        public int LoadSnapshotsCallCount { get; private set; }
+
         public int ReadHistoryCallCount { get; private set; }
+
+        public int? LastReadSnapshotsTake { get; private set; }
 
         public Task UpsertSnapshotAsync(
             ProcessProjectionSnapshot snapshot,
@@ -2324,6 +2857,15 @@ public sealed class ProcessProjectionPipelineTests
             return inner.LoadSnapshotAsync(projectorName, projectionKey, cancellationToken);
         }
 
+        public Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+            ProcessProjectorName projectorName,
+            IReadOnlyList<ProcessProjectionKey> projectionKeys,
+            CancellationToken cancellationToken = default)
+        {
+            LoadSnapshotsCallCount++;
+            return inner.LoadSnapshotsAsync(projectorName, projectionKeys, cancellationToken);
+        }
+
         public Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,
@@ -2331,6 +2873,7 @@ public sealed class ProcessProjectionPipelineTests
             CancellationToken cancellationToken = default)
         {
             ReadSnapshotsCallCount++;
+            LastReadSnapshotsTake = take;
             return inner.ReadSnapshotsAsync(projectorName, projectionKeyPrefix, take, cancellationToken);
         }
 

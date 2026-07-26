@@ -60,7 +60,8 @@ public interface IProcessDashboardActivityQueryService
 public sealed class ProcessDashboardActivityQueryService(
     IProcessRuntimeActivityStore runtimeActivityStore,
     IProcessProjectionStore projectionStore,
-    ProcessProjectionJsonCodec jsonCodec) : IProcessDashboardActivityQueryService
+    ProcessProjectionJsonCodec jsonCodec,
+    IProcessRunRecordStore runRecordStore) : IProcessDashboardActivityQueryService
 {
     public async Task<ProcessDashboardActivityResult> QueryAsync(
         ProcessDashboardActivityQuery query,
@@ -71,10 +72,29 @@ public sealed class ProcessDashboardActivityQueryService(
         var selection = await runtimeActivityStore
             .QueryActivityAsync(new ProcessRuntimeActivityQuery(query.Take), cancellationToken)
             .ConfigureAwait(false);
+        var projectionKeys = selection.Runs
+            .Select(run => ProcessRuntimeProjectionKeys.Live(run.RunId))
+            .ToArray();
+        var projectionsByKey = (await projectionStore
+                .LoadSnapshotsAsync(
+                    ProcessRuntimeProjectionProjector.ProjectorName,
+                    projectionKeys,
+                    cancellationToken)
+                .ConfigureAwait(false))
+            .ToDictionary(snapshot => snapshot.ProjectionKey);
+        var recordSummariesByRunId = await LoadRecordSummariesAsync(
+            selection,
+            cancellationToken).ConfigureAwait(false);
         var items = new List<ProcessDashboardActivityItem>(selection.Runs.Count);
         foreach (var run in selection.Runs)
         {
-            var projection = await LoadProjectionAsync(run, cancellationToken).ConfigureAwait(false);
+            var projectionKey = ProcessRuntimeProjectionKeys.Live(run.RunId);
+            var projection = projectionsByKey.TryGetValue(projectionKey, out var snapshot)
+                ? MapProjection(
+                    run,
+                    snapshot,
+                    recordSummariesByRunId.GetValueOrDefault(run.RunId))
+                : null;
             items.Add(new ProcessDashboardActivityItem(
                 run.RootRunId,
                 run.RunId,
@@ -86,21 +106,11 @@ public sealed class ProcessDashboardActivityQueryService(
         return new ProcessDashboardActivityResult(MapMode(selection.Mode), items);
     }
 
-    private async Task<ProcessDashboardProjectionDetails?> LoadProjectionAsync(
+    private ProcessDashboardProjectionDetails MapProjection(
         ProcessRuntimeActivityRow run,
-        CancellationToken cancellationToken)
+        ProcessProjectionSnapshot snapshot,
+        ProcessRunRecordSummary? recordSummary)
     {
-        var snapshot = await projectionStore
-            .LoadSnapshotAsync(
-                ProcessRuntimeProjectionProjector.ProjectorName,
-                ProcessRuntimeProjectionKeys.Live(run.RunId),
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (snapshot is null)
-        {
-            return null;
-        }
-
         var projection = jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot);
         if (projection.RunId != run.RunId || projection.RootRunId != run.RootRunId)
         {
@@ -108,13 +118,68 @@ public sealed class ProcessDashboardActivityQueryService(
                 $"Process live projection '{snapshot.ProjectionKey}' does not match canonical run '{run.RunId}'.");
         }
 
+        var projectId = projection.ProjectId ?? recordSummary?.Identity.ProjectId;
         return new ProcessDashboardProjectionDetails(
-            projection.ProjectId,
-            projection.ProjectName,
-            projection.ProcessName,
+            projectId,
+            ResolveProjectName(projection.ProjectName, projectId),
+            ResolveProcessName(
+                projection.ProcessName,
+                recordSummary?.Identity.DefinitionId,
+                run.RunId),
             projection.Status,
             projection.LastEventAtUtc,
             projection.Freshness);
+    }
+
+    private async Task<IReadOnlyDictionary<ProcessRunId, ProcessRunRecordSummary>> LoadRecordSummariesAsync(
+        ProcessRuntimeActivitySelection selection,
+        CancellationToken cancellationToken)
+    {
+        if (selection.Mode != ProcessRuntimeActivitySelectionMode.RecentFallback ||
+            selection.Runs.Count == 0)
+        {
+            return new Dictionary<ProcessRunId, ProcessRunRecordSummary>();
+        }
+
+        var page = await runRecordStore
+            .ListAsync(
+                new ProcessRunRecordListQuery(selection.Runs.Count)
+                {
+                    RunIds = selection.Runs
+                        .Select(run => run.RunId)
+                        .ToArray(),
+                    Payload = ProcessRunRecordListPayload.Compact
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+        return page.Records.ToDictionary(summary => summary.Identity.RunId);
+    }
+
+    private static string ResolveProjectName(string projectedName, Guid? projectId)
+    {
+        if (!string.IsNullOrWhiteSpace(projectedName))
+        {
+            return projectedName.Trim();
+        }
+
+        return projectId.HasValue
+            ? $"Project {projectId.Value:D}"
+            : "Unassigned project";
+    }
+
+    private static string ResolveProcessName(
+        string projectedName,
+        ProcessDefinitionId? definitionId,
+        ProcessRunId runId)
+    {
+        if (!string.IsNullOrWhiteSpace(projectedName))
+        {
+            return projectedName.Trim();
+        }
+
+        return definitionId.HasValue
+            ? $"Process definition {definitionId.Value}"
+            : $"Process run {runId}";
     }
 
     private static ProcessDashboardActivityMode MapMode(ProcessRuntimeActivitySelectionMode mode)

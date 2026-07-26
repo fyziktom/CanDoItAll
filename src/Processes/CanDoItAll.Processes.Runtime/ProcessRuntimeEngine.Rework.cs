@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
+using CanDoItAll.Processes.Drivers.Abstractions;
 
 namespace CanDoItAll.Processes.Runtime;
 
@@ -32,6 +33,20 @@ public sealed partial class ProcessRuntimeEngine
                 "Only executable process steps can be requested for rework.");
         }
 
+        var blockedRecoveryAuthorizationIssue = command.BlockedRecoveryAuthorization is null
+            ? null
+            : ProcessRuntimeBlockedRecoveryAuthorizationRules.FindIssue(
+                state,
+                step.StepInstanceId,
+                command.BlockedRecoveryAuthorization);
+        if (blockedRecoveryAuthorizationIssue is not null)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.BlockedRecoveryAuthorizationRejected",
+                blockedRecoveryAuthorizationIssue);
+        }
+
         if (state.Status is ProcessRuntimeStatus.Completed or ProcessRuntimeStatus.Cancelled)
         {
             return ProcessRuntimeMutation.Rejected(
@@ -56,7 +71,23 @@ public sealed partial class ProcessRuntimeEngine
                 "A claimed or running step cannot be reworked until its dispatch claim is released or expired.");
         }
 
-        if (step.Status is not (ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.Blocked or ProcessRuntimeStepStatus.Failed))
+        var completedUpstreamReworkAuthorized =
+            step.Status == ProcessRuntimeStepStatus.Completed &&
+            command.BlockedRecoveryAuthorization is
+            {
+                RecoveryRouteKind: ProcessRecoveryRouteKind.UpstreamStepRework,
+                Phase: ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer
+            };
+        if (step.Status == ProcessRuntimeStepStatus.Completed && !completedUpstreamReworkAuthorized)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.CompletedStepReworkUnauthorized",
+                "A completed step can be reworked only by an exact blocked-recovery authorization from the current upstream rework receipt.");
+        }
+
+        if (!completedUpstreamReworkAuthorized &&
+            step.Status is not (ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.Blocked or ProcessRuntimeStepStatus.Failed))
         {
             return ProcessRuntimeMutation.Rejected(
                 state,
@@ -92,7 +123,11 @@ public sealed partial class ProcessRuntimeEngine
         {
             Status = ProcessRuntimeStatus.Active,
             Steps = ReplaceStep(state, reworkedStep),
-            AppliedResults = RemoveStepReceipts(state.AppliedResults, step.StepInstanceId),
+            BlockedRecoveryActions = AppendBlockedRecoveryAction(
+                state.BlockedRecoveryActions,
+                step.StepInstanceId,
+                command.BlockedRecoveryAuthorization,
+                context.OccurredAtUtc),
             UpdatedAtUtc = context.OccurredAtUtc
         };
 
@@ -131,25 +166,33 @@ public sealed partial class ProcessRuntimeEngine
                ProcessRuntimeArtifactContracts.RequiredArtifactsAvailable(state, step);
     }
 
-    private static IReadOnlyList<StrategyResultReceipt> RemoveStepReceipts(
-        IReadOnlyList<StrategyResultReceipt> receipts,
-        ProcessStepInstanceId stepInstanceId)
+    private static IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> AppendBlockedRecoveryAction(
+        IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> actions,
+        ProcessStepInstanceId targetStepInstanceId,
+        ProcessRuntimeBlockedRecoveryAuthorization? authorization,
+        DateTimeOffset appliedAtUtc)
     {
-        if (receipts.Count == 0)
+        if (authorization is null)
         {
-            return receipts;
+            return actions;
         }
 
-        var retained = new List<StrategyResultReceipt>(receipts.Count);
-        foreach (var receipt in receipts)
-        {
-            if (receipt.StepInstanceId != stepInstanceId)
+        return
+        [
+            .. actions,
+            new ProcessRuntimeBlockedRecoveryActionReceipt(
+                authorization.SourceResultIdempotencyKey,
+                authorization.SourceBlockedStepInstanceId,
+                targetStepInstanceId,
+                authorization.DiagnosticFingerprint,
+                authorization.RecoveryRouteKind,
+                authorization.Phase,
+                appliedAtUtc)
             {
-                retained.Add(receipt);
+                RelatedChildRunId = authorization.RelatedChildRunId,
+                RelatedChildUpdatedAtUtc = authorization.ExpectedRelatedChildUpdatedAtUtc
             }
-        }
-
-        return retained;
+        ];
     }
 
     private static string ComputePayloadHash(string value)

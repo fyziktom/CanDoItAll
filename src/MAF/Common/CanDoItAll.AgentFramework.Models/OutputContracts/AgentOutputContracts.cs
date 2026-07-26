@@ -94,6 +94,41 @@ public enum ProcessStepOutcomeStatus
     Refused
 }
 
+public static class AgentJsonSchemaOutputContractVersions
+{
+    public const string Current = "1.0";
+    public const string Kind = "json-schema";
+}
+
+public sealed record AgentJsonSchemaOutputContract(
+    string Kind,
+    string Version,
+    string Name,
+    JsonElement Schema,
+    bool Strict = true);
+
+[JsonConverter(typeof(JsonStringEnumConverter<AgentJsonSchemaOutputValidationStatus>))]
+public enum AgentJsonSchemaOutputValidationStatus
+{
+    Valid,
+    ProviderRefusal,
+    MalformedJson,
+    SchemaValidationFailed
+}
+
+public sealed record AgentJsonSchemaOutputValidationError(
+    string Code,
+    string Message,
+    string Path = "$");
+
+public sealed record AgentJsonSchemaOutputResult(
+    JsonElement? Data,
+    string RawOutput,
+    string Schema,
+    string SchemaHash,
+    AgentJsonSchemaOutputValidationStatus ValidationStatus,
+    IReadOnlyList<AgentJsonSchemaOutputValidationError> ValidationErrors);
+
 public sealed record AgentStructuredOutputContract
 {
     public AgentStructuredOutputContract(

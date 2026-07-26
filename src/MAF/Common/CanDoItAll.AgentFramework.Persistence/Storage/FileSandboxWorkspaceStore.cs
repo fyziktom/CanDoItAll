@@ -4,7 +4,15 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandboxWorkspaceChatQueryStore, ISandboxWorkspaceChatProjectionQueryStore, ISandboxWorkspaceChatSessionStore, ISandboxWorkspaceExecutionRunStore, ISandboxWorkspaceExecutionRunMutationStore
+public sealed partial class FileSandboxWorkspaceStore :
+    ISandboxWorkspaceStore,
+    ISandboxWorkspaceChatQueryStore,
+    ISandboxWorkspaceChatProjectionQueryStore,
+    ISandboxWorkspaceChatSessionStore,
+    ISandboxWorkspaceExecutionRunStore,
+    ISandboxWorkspaceExecutionRunMutationStore,
+    ISandboxWorkspaceExecutionRunReservationStore,
+    IAgentRecruitingEvidenceStore
 {
     private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
 
@@ -190,7 +198,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionWithoutWorkspaceLock())
+        if (CanReadExecutionProjectionWithoutWorkspaceLock())
         {
             return await LoadExecutionSummaryCoreAsync(cancellationToken);
         }
@@ -210,7 +218,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     public async Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionWithoutWorkspaceLock())
+        if (CanReadExecutionProjectionWithoutWorkspaceLock())
         {
             return await LoadUsageProjectionCoreAsync(cancellationToken);
         }
@@ -358,6 +366,64 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         }
     }
 
+    public async Task<ExecutionRunSourceReservationResult> ReserveExecutionRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunDetail candidate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(candidate);
+        if (!source.Matches(candidate.Run))
+        {
+            throw new InvalidOperationException(
+                "The candidate execution run does not match the requested source key.");
+        }
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var sameSourceRuns = (await executionSliceStore.ListRunsAsync(cancellationToken))
+                .Where(source.Matches)
+                .OrderByDescending(run => run.UpdatedAtUtc)
+                .ToArray();
+            var completedRun = sameSourceRuns.FirstOrDefault(run =>
+                run.State == ExecutionState.Completed &&
+                run.Outcome == RunOutcome.Succeeded);
+            if (completedRun is not null)
+            {
+                return new ExecutionRunSourceReservationResult(
+                    ExecutionRunSourceDisposition.ReusedCompleted,
+                    completedRun);
+            }
+
+            var activeRun = sameSourceRuns.FirstOrDefault(run =>
+                run.State is not ExecutionState.Completed and not ExecutionState.Failed);
+            if (activeRun is not null)
+            {
+                return new ExecutionRunSourceReservationResult(
+                    ExecutionRunSourceDisposition.ExistingActive,
+                    activeRun);
+            }
+
+            var catalog = await LoadCatalogCoreAsync(cancellationToken);
+            ValidateExecutionRunDetail(catalog, candidate);
+            var persisted = await SaveExecutionRunDetailCoreAsync(
+                previousDetail: null,
+                candidate,
+                cancellationToken);
+            return new ExecutionRunSourceReservationResult(
+                ExecutionRunSourceDisposition.Created,
+                persisted.Run);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,
@@ -429,7 +495,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid? agentId = null,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.ListChatSessionSummariesAsync(agentId, cancellationToken);
         }
@@ -451,7 +517,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid agentId,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
         }
@@ -496,7 +562,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken);
         }
@@ -519,7 +585,7 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        if (CanReadChatProjectionWithoutWorkspaceLock())
         {
             return await chatProjectionStore.LoadChatRuntimeSnapshotAsync(agentId, chatSessionId, cancellationToken);
         }
@@ -835,16 +901,12 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
     private async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryCoreAsync(CancellationToken cancellationToken)
     {
-        var recentWindow = DateTimeOffset.UtcNow.AddHours(-1);
         var executionIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
-        var runSummaries = await chatProjectionStore.ListAllRunSummariesAsync(cancellationToken);
 
         return new SandboxWorkspaceExecutionSummary(
             SessionCount: executionIndex.SessionCount,
-            ActiveRuns: runSummaries.Count(item =>
-                item.UpdatedAtUtc >= recentWindow &&
-                item.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting),
-            FailedRuns: runSummaries.Count(item => item.Outcome == RunOutcome.Failed));
+            ActiveRuns: executionIndex.ActiveRunCount,
+            FailedRuns: executionIndex.FailedRunCount);
     }
 
     private Task<bool> SaveCatalogCoreAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken)
@@ -958,6 +1020,18 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
     {
         return CanReadCatalogWithoutWorkspaceLock() &&
                executionSliceStore.ExecutionStorageExists();
+    }
+
+    private bool CanReadExecutionProjectionWithoutWorkspaceLock()
+    {
+        return CanReadExecutionWithoutWorkspaceLock() &&
+               executionSliceStore.HasPersistedIndex();
+    }
+
+    private bool CanReadChatProjectionWithoutWorkspaceLock()
+    {
+        return executionSliceStore.ExecutionStorageExists() &&
+               chatProjectionStore.HasPersistedChatIndex();
     }
 
     private bool CanReadExecutionDetailsWithoutWorkspaceLock()

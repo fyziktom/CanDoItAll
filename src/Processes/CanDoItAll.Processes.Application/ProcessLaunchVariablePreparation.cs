@@ -123,5 +123,6 @@ public sealed record ProcessLaunchSourceItem(
 public enum ProcessLaunchSourceItemKind
 {
     Other,
-    ImageAsset
+    ImageAsset,
+    WorkItem
 }

@@ -29,12 +29,15 @@ public sealed class ProcessRuntimeProjectionCatchupService(
             var worker = new ProcessProjectionReplayWorker(eventReplayStore, projectionStore, projector, clock);
 
             return await worker
-                .ReplayAsync(
+                .ReplayBatchAsync(
                     new ProcessProjectionReplayRequest(
                         projector.ProjectorName,
                         DefaultShard,
                         ReplayBatchSize,
                         latestKnownGlobalSequence),
+                    new ProcessProjectionReplayBatch(
+                        offset?.GlobalSequence ?? 0,
+                        latestEvents),
                     cancellationToken)
                 .ConfigureAwait(false);
         }

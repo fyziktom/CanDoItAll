@@ -10,33 +10,153 @@ internal sealed record DotNetSolutionSetupTemplatePolicyBindings(
     IReadOnlyDictionary<string, IReadOnlyList<DotNetSolutionSetupTemplateReadbackCheck>> RequiredFileContentChecksByStep,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ScopedLaunchVariablePrefixesByStep)
 {
+    private const string TemplateValueResolutionKey = "DotNetSolutionSetupPolicyTemplateValue";
+    internal const string SolutionFileCandidatesVariableKey = "DotNetSolutionFileCandidates";
+    internal const string SolutionFileCandidatesTemplate = "${DotNetSolutionFileCandidates}";
     internal const string RequiredPathsSettingKey = "ProductCompletionRequiredPathsByStep";
     internal const string RequiredToolReceiptsSettingKey = "ProductCompletionRequiredToolReceiptsByStep";
     internal const string RequiredFileContentChecksSettingKey = "ProductCompletionRequiredFileContentChecksByStep";
     internal const string ScopedLaunchVariablePrefixesSettingKey = "ProcessStepScopedLaunchVariablePrefixesByStep";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly LaunchVariableTemplateResolver TemplateResolver = new();
 
     public void ApplyTo(IDictionary<string, string> variables)
     {
         ArgumentNullException.ThrowIfNull(variables);
 
+        var templateVariables = new Dictionary<string, string>(variables, StringComparer.Ordinal);
         DotNetProcessLaunchVariableWriter.SetIfNotEmpty(
             variables,
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredPathsByStep,
-            JsonSerializer.Serialize(RequiredPathsByStep, JsonOptions));
+            JsonSerializer.Serialize(
+                ResolveStringMap(RequiredPathsByStep, RequiredPathsSettingKey, templateVariables),
+                JsonOptions));
         DotNetProcessLaunchVariableWriter.SetIfNotEmpty(
             variables,
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-            JsonSerializer.Serialize(RequiredToolReceiptsByStep, JsonOptions));
+            JsonSerializer.Serialize(
+                ResolveStringMap(RequiredToolReceiptsByStep, RequiredToolReceiptsSettingKey, templateVariables),
+                JsonOptions));
         DotNetProcessLaunchVariableWriter.SetIfNotEmpty(
             variables,
             ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep,
-            JsonSerializer.Serialize(RequiredFileContentChecksByStep, JsonOptions));
+            JsonSerializer.Serialize(
+                ResolveReadbackChecks(RequiredFileContentChecksByStep, templateVariables),
+                JsonOptions));
         DotNetProcessLaunchVariableWriter.SetIfNotEmpty(
             variables,
             ProcessRuntimeLaunchVariables.ProcessStepScopedLaunchVariablePrefixesByStep,
-            JsonSerializer.Serialize(ScopedLaunchVariablePrefixesByStep, JsonOptions));
+            JsonSerializer.Serialize(
+                ResolveStringMap(
+                    ScopedLaunchVariablePrefixesByStep,
+                    ScopedLaunchVariablePrefixesSettingKey,
+                    templateVariables),
+                JsonOptions));
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveStringMap(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> source,
+        string settingKey,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        return source.ToDictionary(
+            item => item.Key,
+            item => (IReadOnlyList<string>)item.Value
+                .Select(value => ResolveTemplateValue(value, settingKey, item.Key, variables))
+                .ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<DotNetSolutionSetupTemplateReadbackCheck>> ResolveReadbackChecks(
+        IReadOnlyDictionary<string, IReadOnlyList<DotNetSolutionSetupTemplateReadbackCheck>> source,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        return source.ToDictionary(
+            item => item.Key,
+            item => (IReadOnlyList<DotNetSolutionSetupTemplateReadbackCheck>)item.Value
+                 .Select(check => new DotNetSolutionSetupTemplateReadbackCheck(
+                     ResolveReadbackPathCandidates(check.PathCandidates, item.Key, variables),
+                     check.RequiredTextAnyGroups
+                        .Select(group => (IReadOnlyList<string>)group
+                            .Select(value => ResolveTemplateValue(
+                                value,
+                                RequiredFileContentChecksSettingKey,
+                                item.Key,
+                                variables))
+                            .ToArray())
+                        .ToArray()))
+                .ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<string> ResolveReadbackPathCandidates(
+        IReadOnlyList<string> source,
+        string stepKey,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        var resolved = new List<string>();
+        foreach (var value in source)
+        {
+            if (string.Equals(value.Trim(), SolutionFileCandidatesTemplate, StringComparison.Ordinal))
+            {
+                if (!variables.TryGetValue(SolutionFileCandidatesVariableKey, out var candidates) ||
+                    string.IsNullOrWhiteSpace(candidates))
+                {
+                    throw new InvalidOperationException(
+                        $"The .NET launch driver setting '{RequiredFileContentChecksSettingKey}' for step '{stepKey}' requires non-empty launch variable '{SolutionFileCandidatesVariableKey}'.");
+                }
+
+                foreach (var candidate in candidates.Split(
+                             ';',
+                             StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!resolved.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+                    {
+                        resolved.Add(candidate);
+                    }
+                }
+
+                continue;
+            }
+
+            var resolvedValue = ResolveTemplateValue(
+                value,
+                RequiredFileContentChecksSettingKey,
+                stepKey,
+                variables);
+            if (!resolved.Contains(resolvedValue, StringComparer.OrdinalIgnoreCase))
+            {
+                resolved.Add(resolvedValue);
+            }
+        }
+
+        return resolved;
+    }
+
+    private static string ResolveTemplateValue(
+        string value,
+        string settingKey,
+        string stepKey,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        var resolutionVariables = new Dictionary<string, string>(variables, StringComparer.Ordinal)
+        {
+            [TemplateValueResolutionKey] = value
+        };
+        var resolution = TemplateResolver.Resolve(resolutionVariables);
+        var resolutionDiagnostic = resolution.Diagnostics.FirstOrDefault(diagnostic =>
+            string.Equals(
+                diagnostic.VariableKey,
+                TemplateValueResolutionKey,
+                StringComparison.Ordinal));
+        if (resolutionDiagnostic is not null)
+        {
+            throw new InvalidOperationException(
+                $"The .NET launch driver setting '{settingKey}' for step '{stepKey}' could not resolve a template value: {resolutionDiagnostic.Message}");
+        }
+
+        return resolution.Variables[TemplateValueResolutionKey];
     }
 
     public static bool TryParse(

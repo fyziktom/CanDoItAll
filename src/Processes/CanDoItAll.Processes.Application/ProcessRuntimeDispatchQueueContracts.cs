@@ -12,4 +12,6 @@ public interface IProcessRuntimeDispatchQueue
     ValueTask EnqueueAsync(
         ProcessRuntimeDispatchQueueRequest request,
         CancellationToken cancellationToken = default);
+
+    void EnqueueOrDefer(ProcessRuntimeDispatchQueueRequest request);
 }

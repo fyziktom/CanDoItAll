@@ -66,6 +66,28 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
         => catalogService.ImportAgentAsync(packagePath, cancellationToken);
 
+    public Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
+        Stream package,
+        AgentPackageImportCommand command,
+        CancellationToken cancellationToken = default)
+        => packageImportService.ImportAsync(package, command, cancellationToken);
+
+    public Task<AgentExternalProvisioningResource> GetAgentByExternalKeyAsync(
+        string externalNamespace,
+        string key,
+        CancellationToken cancellationToken = default)
+        => externalProvisioningService.GetAsync(externalNamespace, key, cancellationToken);
+
+    public Task<AgentExternalProvisioningReceipt> ProvisionAgentByExternalKeyAsync(
+        AgentExternalProvisioningCommand command,
+        CancellationToken cancellationToken = default)
+        => externalProvisioningService.UpsertAsync(command, cancellationToken);
+
+    public Task<AgentExternalProvisioningReceipt> ArchiveAgentByExternalKeyAsync(
+        AgentExternalArchiveCommand command,
+        CancellationToken cancellationToken = default)
+        => externalProvisioningService.ArchiveAsync(command, cancellationToken);
+
     public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
         => catalogService.ListProvidersAsync(cancellationToken);
 

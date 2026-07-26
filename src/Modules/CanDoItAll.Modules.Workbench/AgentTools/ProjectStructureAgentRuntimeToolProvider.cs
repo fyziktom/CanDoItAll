@@ -350,7 +350,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureProcessDefinitionLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProcessDefinitionLinkAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_process_definition_link",
-                    "Links a project-structure node to a process definition using a Uses link."),
+                    "Links a non-canonical project-structure node to a process definition using a generic Uses link. Canonical WorkItem/task nodes are rejected; use project_task_resource_attach with the task's exact current execution snapshot so the process attachment and authoritative expected pricing are committed together."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureProcessNodeStartInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeProcessStartAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_process_start",
@@ -406,7 +406,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureLinkCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_link_create",
-                    "Creates a generic project-structure link with the supplied link kind. Use dependency-specific tools for DependsOn links unless another link kind is explicitly needed."),
+                    "Creates a generic project-structure link with the supplied link kind. Use dependency-specific tools for DependsOn links unless another link kind is explicitly needed. Never use this tool to attach a workflow or process to a canonical WorkItem/task; use project_task_resource_attach."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureLinkUnlinkAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_link_unlink",
@@ -504,7 +504,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 tools.Add(AIFunctionFactory.Create(
                     (Guid projectId, string taskNodeId, ProjectStructureTaskResourceAttachRequest request, CancellationToken cancellationToken = default) => ProjectTaskResourceAttachAsync(agent, accessState, projectId, taskNodeId, request, cancellationToken),
                     AgentToolInvocationPolicyMetadata.ProjectTaskResourceAttach,
-                    "Attaches an exact workflow version or process to a canonical task and commits authoritative expected pricing as one compensated operation. Read the task first and provide its exact current execution snapshot. Do not use generic workflow, process-link, metadata, or Uses-link tools for canonical task resources."));
+                    "Attaches an exact workflow version or process to a canonical task and commits authoritative expected pricing as one compensated operation. First call project_structure_read with the exact task id in nodeIds and includeMetadata true. Parse the returned metadataJson and copy workItem.executionState, workItem.actualStartedAtUtc, and workItem.actualEndedAtUtc exactly into currentExecution.state, currentExecution.actualStartedAtUtc, and currentExecution.actualEndedAtUtc. Do not infer defaults, reuse a stale snapshot, or use generic workflow, process-link, metadata, or Uses-link tools for canonical task resources."));
             }
 
             return tools;

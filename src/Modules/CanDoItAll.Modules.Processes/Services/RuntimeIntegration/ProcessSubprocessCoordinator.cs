@@ -294,7 +294,8 @@ internal sealed class ProcessSubprocessCoordinator(
             completedChildOutcome.RawOutputHash,
             completedChildOutcome.SyntheticExecutionRunId,
             materialization.ToolReceipts,
-            stepContract: stepContract);
+            stepContract: stepContract,
+            verifiedSubprocessOutcome: completedChildOutcome);
     }
 
     internal async ValueTask<ProcessExecutionAdapterResult?> TryResolveDeferredOrCompletedSubprocessOutputAsync(
