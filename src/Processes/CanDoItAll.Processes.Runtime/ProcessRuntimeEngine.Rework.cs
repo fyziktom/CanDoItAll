@@ -188,6 +188,10 @@ public sealed partial class ProcessRuntimeEngine
                 authorization.RecoveryRouteKind,
                 authorization.Phase,
                 appliedAtUtc)
+            {
+                RelatedChildRunId = authorization.RelatedChildRunId,
+                RelatedChildUpdatedAtUtc = authorization.ExpectedRelatedChildUpdatedAtUtc
+            }
         ];
     }
 

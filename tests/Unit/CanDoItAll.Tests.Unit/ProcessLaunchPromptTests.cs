@@ -118,6 +118,30 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void Generic_step_brief_omits_oversized_typed_contract_atomically()
+    {
+        var contract = JsonSerializer.Serialize(new
+        {
+            schema = "example.large/v1",
+            payload = new string('x', 9000)
+        });
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            variables: new Dictionary<string, string>
+            {
+                ["ExampleContract"] = contract
+            });
+
+        Assert.Contains(
+            "typed launch contract 'ExampleContract' omitted atomically",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("\"schema\":\"example.large/v1\"", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("launch variable truncated", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Generic_step_brief_renders_resolved_template_execution_guidance()
     {
         var step = CreatePromptStep("Review the supplied evidence.");
@@ -231,10 +255,20 @@ public sealed class ProcessLaunchPromptTests
             [
                 new ProcessTemplateProductToolReceiptRequirementDocument
                 {
+                    Key = "renamed-proof-success",
                     ToolName = "workspace_validate",
                     Purpose = "AcceptanceProof",
                     EnforceBranchOutcomeKeys = ["accepted"],
                     Reason = "Current-run validation proof is required.",
+                    AllowFailedExecutionReceipt = false
+                },
+                new ProcessTemplateProductToolReceiptRequirementDocument
+                {
+                    Key = "renamed-proof-attempt",
+                    ToolName = "workspace_validate",
+                    Purpose = "DefectEvidence",
+                    EnforceBranchOutcomeKeys = ["repair-required"],
+                    Reason = "Current-run failed validation is accepted as repair evidence.",
                     AllowFailedExecutionReceipt = true
                 }
             ],
@@ -263,6 +297,8 @@ public sealed class ProcessLaunchPromptTests
         ProcessTemplateStepCompletionPolicyMaterializer.Apply(variables, step);
 
         Assert.Contains("workspace_validate", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
+        Assert.Contains("renamed-proof-success", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
+        Assert.Contains("renamed-proof-attempt", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
         Assert.Contains("allowFailedExecutionReceipt\":true", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
         Assert.DoesNotContain("spoofed-receipt", variables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts], StringComparison.Ordinal);
         Assert.Contains("repair-required", variables[ProcessRuntimeLaunchVariables.CompletionIssueRoutes], StringComparison.Ordinal);

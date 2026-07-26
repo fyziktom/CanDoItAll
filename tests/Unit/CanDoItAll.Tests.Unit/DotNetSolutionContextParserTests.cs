@@ -105,6 +105,36 @@ public sealed class DotNetSolutionContextParserTests
         Assert.DoesNotContain("tests", contract.TestProjectDirectory, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Initialization_contract_factory_derives_supported_solution_format_alternatives()
+    {
+        var parser = new DotNetSolutionContextParser();
+        var artifact = CreateInitializeArtifact().Replace(
+            """["TimeTracker.slnx", "TimeTracker.sln"]""",
+            """["TimeTracker.slnx"]""",
+            StringComparison.Ordinal);
+        Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
+        var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Decision.{Guid.NewGuid():N}");
+        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+
+        var created = factory.TryCreate(
+            context,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProductRoot"] = root
+            },
+            out var contract,
+            out var issue);
+
+        Assert.True(created, issue);
+        Assert.Equal(
+            [
+                Path.Combine(root, "TimeTracker.slnx"),
+                Path.Combine(root, "TimeTracker.sln")
+            ],
+            contract.SolutionCandidatePaths);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

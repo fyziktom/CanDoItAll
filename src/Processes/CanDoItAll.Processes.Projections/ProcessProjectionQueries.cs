@@ -34,7 +34,10 @@ public sealed record ProcessLiveProcessesLoadOptions
 
 public sealed record ProcessLiveProcessesResult(
     IReadOnlyList<ProcessLiveProcessSnapshot> Runs,
-    ProcessProjectionFreshness? Freshness);
+    ProcessProjectionFreshness? Freshness)
+{
+    public IReadOnlyList<ProcessLiveProcessSnapshot>? ReusableRuns { get; init; }
+}
 
 public sealed record ProcessRunHistoryQuery(
     ProcessRunId? RunId,
@@ -58,7 +61,10 @@ public sealed record ProcessRuntimeWorkspaceQuery(
     int TakeRuns,
     ProcessRunId? SelectedRunId,
     bool AutoSelectRun = true,
-    ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null);
+    ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null)
+{
+    public IReadOnlyList<ProcessLiveProcessSnapshot>? PreviouslyLoadedRuns { get; init; }
+}
 
 public sealed record ProcessRuntimeWorkspaceLoadOptions
 {
@@ -100,6 +106,8 @@ public sealed record ProcessRuntimeWorkspaceResult(
     ProcessProjectionFreshness? Freshness)
 {
     public ProcessRunRecord? SelectedRunRecord { get; init; }
+
+    public IReadOnlyList<ProcessLiveProcessSnapshot>? ReusableRuns { get; init; }
 }
 
 public sealed record ProcessProjectionHistoryQuery(

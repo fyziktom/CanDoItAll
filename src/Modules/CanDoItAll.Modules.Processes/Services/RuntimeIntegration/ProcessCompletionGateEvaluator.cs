@@ -22,7 +22,12 @@ internal sealed record ProcessCompletionIssue(
     string Evidence,
     IReadOnlyList<ArtifactSlotId> RequestedArtifactSlotIds,
     ProcessDiagnosticRetrySafety RetrySafety,
-    ProcessDiagnosticIdempotencyClassification Idempotency);
+    ProcessDiagnosticIdempotencyClassification Idempotency)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public ProcessExecutionSafetyAttestation? ExecutionSafetyAttestation { get; init; }
+}
 
 internal sealed record ProcessCompletionGateEvaluation(
     IReadOnlyList<ProcessCompletionIssue> Issues,

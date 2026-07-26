@@ -425,9 +425,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                         deferredRunId != runId &&
                         dispatchQueue is not null)
                     {
-                        await dispatchQueue.EnqueueAsync(
-                            new ProcessRuntimeDispatchQueueRequest(deferredRunId, requestedBy),
-                            CancellationToken.None).ConfigureAwait(false);
+                        dispatchQueue.EnqueueOrDefer(
+                            new ProcessRuntimeDispatchQueueRequest(deferredRunId, requestedBy));
                     }
 
                     var deferredState = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? state;
@@ -488,6 +487,14 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         string requestedBy,
         CancellationToken cancellationToken)
     {
+        if (result.Status == ProcessRuntimeStatus.Completed)
+        {
+            await EnqueueBlockedParentsForCompletedChildAsync(
+                result.RunId,
+                requestedBy,
+                cancellationToken).ConfigureAwait(false);
+        }
+
         if (result.Status != ProcessRuntimeStatus.Blocked ||
             blockedRunRecoveryCoordinator is null)
         {
@@ -514,6 +521,50 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             Status = recovery.Status,
             Diagnostics = diagnostics
         };
+    }
+
+    private async Task EnqueueBlockedParentsForCompletedChildAsync(
+        ProcessRunId childRunId,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        if (dispatchQueue is null)
+        {
+            return;
+        }
+
+        var childAssignments = await assignmentStore
+            .LoadByRunAsync(childRunId, cancellationToken)
+            .ConfigureAwait(false);
+        var parentRunIds = childAssignments
+            .Select(assignment =>
+                ProcessRuntimeLaunchVariables.TryReadParentStep(
+                    assignment.LaunchVariables,
+                    out var parentStep)
+                    ? parentStep.RunId
+                    : (ProcessRunId?)null)
+            .Where(parentRunId => parentRunId is not null)
+            .Select(parentRunId => parentRunId!.Value)
+            .Distinct()
+            .OrderBy(parentRunId => parentRunId.Value)
+            .ToArray();
+
+        foreach (var parentRunId in parentRunIds)
+        {
+            var parentState = await stateStore
+                .LoadAsync(parentRunId, cancellationToken)
+                .ConfigureAwait(false);
+            if (parentState?.Status != ProcessRuntimeStatus.Blocked)
+            {
+                continue;
+            }
+
+            dispatchQueue.EnqueueOrDefer(
+                new ProcessRuntimeDispatchQueueRequest(
+                    parentRunId,
+                    requestedBy,
+                    IsRecovery: true));
+        }
     }
 
     private async Task<ProcessRuntimeStateSnapshot?> BlockExhaustedRunWithConcurrencyRetryAsync(

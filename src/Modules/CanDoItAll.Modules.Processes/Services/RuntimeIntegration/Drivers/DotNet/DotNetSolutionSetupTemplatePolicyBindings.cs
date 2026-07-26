@@ -11,6 +11,8 @@ internal sealed record DotNetSolutionSetupTemplatePolicyBindings(
     IReadOnlyDictionary<string, IReadOnlyList<string>> ScopedLaunchVariablePrefixesByStep)
 {
     private const string TemplateValueResolutionKey = "DotNetSolutionSetupPolicyTemplateValue";
+    internal const string SolutionFileCandidatesVariableKey = "DotNetSolutionFileCandidates";
+    internal const string SolutionFileCandidatesTemplate = "${DotNetSolutionFileCandidates}";
     internal const string RequiredPathsSettingKey = "ProductCompletionRequiredPathsByStep";
     internal const string RequiredToolReceiptsSettingKey = "ProductCompletionRequiredToolReceiptsByStep";
     internal const string RequiredFileContentChecksSettingKey = "ProductCompletionRequiredFileContentChecksByStep";
@@ -73,15 +75,9 @@ internal sealed record DotNetSolutionSetupTemplatePolicyBindings(
         return source.ToDictionary(
             item => item.Key,
             item => (IReadOnlyList<DotNetSolutionSetupTemplateReadbackCheck>)item.Value
-                .Select(check => new DotNetSolutionSetupTemplateReadbackCheck(
-                    check.PathCandidates
-                        .Select(value => ResolveTemplateValue(
-                            value,
-                            RequiredFileContentChecksSettingKey,
-                            item.Key,
-                            variables))
-                        .ToArray(),
-                    check.RequiredTextAnyGroups
+                 .Select(check => new DotNetSolutionSetupTemplateReadbackCheck(
+                     ResolveReadbackPathCandidates(check.PathCandidates, item.Key, variables),
+                     check.RequiredTextAnyGroups
                         .Select(group => (IReadOnlyList<string>)group
                             .Select(value => ResolveTemplateValue(
                                 value,
@@ -92,6 +88,50 @@ internal sealed record DotNetSolutionSetupTemplatePolicyBindings(
                         .ToArray()))
                 .ToArray(),
             StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<string> ResolveReadbackPathCandidates(
+        IReadOnlyList<string> source,
+        string stepKey,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        var resolved = new List<string>();
+        foreach (var value in source)
+        {
+            if (string.Equals(value.Trim(), SolutionFileCandidatesTemplate, StringComparison.Ordinal))
+            {
+                if (!variables.TryGetValue(SolutionFileCandidatesVariableKey, out var candidates) ||
+                    string.IsNullOrWhiteSpace(candidates))
+                {
+                    throw new InvalidOperationException(
+                        $"The .NET launch driver setting '{RequiredFileContentChecksSettingKey}' for step '{stepKey}' requires non-empty launch variable '{SolutionFileCandidatesVariableKey}'.");
+                }
+
+                foreach (var candidate in candidates.Split(
+                             ';',
+                             StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!resolved.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+                    {
+                        resolved.Add(candidate);
+                    }
+                }
+
+                continue;
+            }
+
+            var resolvedValue = ResolveTemplateValue(
+                value,
+                RequiredFileContentChecksSettingKey,
+                stepKey,
+                variables);
+            if (!resolved.Contains(resolvedValue, StringComparer.OrdinalIgnoreCase))
+            {
+                resolved.Add(resolvedValue);
+            }
+        }
+
+        return resolved;
     }
 
     private static string ResolveTemplateValue(

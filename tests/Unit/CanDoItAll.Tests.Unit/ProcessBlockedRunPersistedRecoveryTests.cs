@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -14,6 +15,7 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessBlockedRunPersistedRecoveryTests
 {
+    private const string ChildBlockedDiagnosticCode = "process.adapter.subprocess_child_blocked";
     private static readonly DateTimeOffset Now = new(2026, 7, 25, 12, 0, 0, TimeSpan.Zero);
     private static readonly DispatcherOwnerId OwnerId = new("persisted-recovery-test");
     private static readonly ProcessStrategyBindingSnapshot Binding = new(
@@ -48,7 +50,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             consumerDefinitionId,
             artifactSlotId,
             sourceResultKey);
-        var plan = CreateSimpleAppPlan(planId);
+        var plan = CreateSimpleAppPlan(planId, initialState.Steps);
         var dispatchQueue = new RecordingDispatchQueue();
 
         await using (var seedContext = CreateDbContext(databaseName, databaseRoot))
@@ -58,7 +60,13 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                 RuntimeCommandId.New(),
                 initialState,
                 Applied(initialState),
-                InitialPlan: plan));
+                InitialPlan: plan)
+            {
+                InitialAssignments = initialState.Steps
+                    .Where(step => step.IsExecutable)
+                    .Select(step => CreateAssignment(initialState, step, Now))
+                    .ToArray()
+            });
 
             Assert.True(seedResult.Succeeded);
         }
@@ -236,6 +244,576 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         }
     }
 
+    [Fact]
+    public async Task Completed_child_recovery_action_survives_context_recreation_and_denies_replay()
+    {
+        var databaseName = $"process-completed-child-recovery-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var parentStepDefinitionId = ProcessStepDefinitionId.New();
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var childUpdatedAtUtc = Now.AddMinutes(1);
+        var blockedParentState = CreateCompletedChildBlockedState(
+            parentRunId,
+            planId,
+            parentStepId,
+            parentStepDefinitionId,
+            childRunId,
+            sourceResultKey,
+            Now.AddMinutes(2));
+        var plan = CreateSimpleAppPlan(planId, blockedParentState.Steps);
+        var claimToken = DispatchClaimToken.New();
+        var launchableParentState = blockedParentState with
+        {
+            Status = ProcessRuntimeStatus.Active,
+            Steps = blockedParentState.Steps
+                .Select(step => step with
+                {
+                    Status = ProcessRuntimeStepStatus.Running,
+                    ActiveClaimToken = claimToken
+                })
+                .ToArray(),
+            Claims =
+            [
+                new DispatchClaimState(
+                    claimToken,
+                    parentStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(10),
+                    null,
+                    null)
+            ],
+            AppliedResults = [],
+            UpdatedAtUtc = Now
+        };
+        var parentAssignment = CreateAssignment(
+            blockedParentState,
+            blockedParentState.Steps.Single(step => step.StepInstanceId == parentStepId),
+            Now);
+        var childStepId = ProcessStepInstanceId.New();
+        var childPlanStep = new ProcessRuntimeStepState(
+            childStepId,
+            ProcessStepDefinitionId.New(),
+            ProcessRuntimeStepStatus.Completed,
+            IsExecutable: true,
+            AttemptNumber: 1,
+            DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+            RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+            ActiveClaimToken: null,
+            CompletedResultKey: StrategyResultIdempotencyKey.New());
+        var childPlan = CreateSimpleAppPlan(
+            ProcessInstancePlanId.New(),
+            [childPlanStep]);
+        var completedChildState = CreateChildState(
+            parentRunId,
+            childRunId,
+            childPlan,
+            ProcessRuntimeStatus.Completed,
+            childUpdatedAtUtc);
+        var childAssignment = parentAssignment with
+        {
+            RunId = childRunId,
+            PlanId = childPlan.Header.PlanId,
+            StepInstanceId = childStepId,
+            StepKey = Assert.Single(childPlan.Steps).StepKey,
+            LaunchVariables = ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                parentRunId,
+                parentStepId),
+            CreatedAtUtc = childUpdatedAtUtc.AddMinutes(-1)
+        };
+        var dispatchQueue = new RecordingDispatchQueue();
+
+        await using (var seedContext = CreateDbContext(databaseName, databaseRoot))
+        {
+            var store = new EfProcessRuntimeUnitOfWork(
+                seedContext,
+                new FixedTimeProvider(Now));
+            var parentSeed = await store.CommitAsync(new ProcessRuntimeCommitRequest(
+                RuntimeCommandId.New(),
+                launchableParentState,
+                Applied(launchableParentState),
+                InitialPlan: plan)
+            {
+                InitialAssignments = [parentAssignment]
+            });
+            Assert.True(parentSeed.Succeeded);
+
+            var childSeed = await store.CommitAsync(new ProcessRuntimeCommitRequest(
+                RuntimeCommandId.New(),
+                completedChildState,
+                Applied(completedChildState),
+                ParentStepPrecondition: new ProcessRuntimeParentStepReference(
+                    parentRunId,
+                    parentStepId),
+                InitialPlan: childPlan)
+            {
+                InitialAssignments = [childAssignment]
+            });
+            Assert.True(childSeed.Succeeded);
+
+            var blockedSeed = await store.CommitAsync(new ProcessRuntimeCommitRequest(
+                RuntimeCommandId.New(),
+                launchableParentState,
+                Applied(blockedParentState)));
+            Assert.True(blockedSeed.Succeeded);
+        }
+
+        await using (var recoveryContext = CreateDbContext(databaseName, databaseRoot))
+        {
+            var store = new EfProcessRuntimeUnitOfWork(recoveryContext);
+            var assignmentStore = new EfProcessRuntimeStepAssignmentStore(recoveryContext);
+            var coordinator = CreateCoordinator(
+                recoveryContext,
+                store,
+                dispatchQueue,
+                Now.AddMinutes(3),
+                assignmentStore);
+
+            var recovery = await coordinator.TryRecoverAsync(
+                parentRunId,
+                "persisted-child-recovery-test");
+
+            Assert.Equal(ProcessBlockedRunRecoveryOutcome.Recovered, recovery.Outcome);
+            Assert.Equal(
+                ProcessBlockedRunRecoveryPolicy.CompletedChildConsumerRework,
+                recovery.Policy);
+            var persisted = await store.LoadAsync(parentRunId);
+            Assert.NotNull(persisted);
+            var action = Assert.Single(persisted.BlockedRecoveryActions);
+            Assert.Equal(ProcessRuntimeBlockedRecoveryPhase.CompletedChildConsumer, action.Phase);
+            Assert.Equal(childRunId, action.RelatedChildRunId);
+            Assert.Equal(childUpdatedAtUtc, action.RelatedChildUpdatedAtUtc);
+
+            var replayState = await PersistBlockedRunAsync(
+                store,
+                persisted,
+                Now.AddMinutes(4),
+                parentStepId);
+            Assert.Equal(ProcessRuntimeStatus.Blocked, replayState.Status);
+        }
+
+        await using (var replayContext = CreateDbContext(databaseName, databaseRoot))
+        {
+            var store = new EfProcessRuntimeUnitOfWork(replayContext);
+            var assignmentStore = new EfProcessRuntimeStepAssignmentStore(replayContext);
+            var persisted = await store.LoadAsync(parentRunId);
+            Assert.NotNull(persisted);
+            var action = Assert.Single(persisted.BlockedRecoveryActions);
+            Assert.Equal(childRunId, action.RelatedChildRunId);
+            Assert.Equal(childUpdatedAtUtc, action.RelatedChildUpdatedAtUtc);
+            var childEvidence = await store.LoadAsync(childRunId);
+            Assert.NotNull(childEvidence);
+            Assert.Equal(ProcessRuntimeStatus.Completed, childEvidence.Status);
+            Assert.Equal(childUpdatedAtUtc, childEvidence.UpdatedAtUtc);
+            var linkedAssignments = await assignmentStore.FindByLaunchVariablesAsync(
+                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    parentRunId,
+                    parentStepId));
+            Assert.Contains(
+                linkedAssignments,
+                assignment => assignment.RunId == childRunId);
+            var coordinator = CreateCoordinator(
+                replayContext,
+                store,
+                dispatchQueue,
+                Now.AddMinutes(5),
+                assignmentStore);
+
+            var replay = await coordinator.TryRecoverAsync(
+                parentRunId,
+                "persisted-child-recovery-test");
+
+            Assert.Equal(ProcessBlockedRunRecoveryOutcome.RequiresAttention, replay.Outcome);
+            Assert.Contains(
+                replay.Diagnostics,
+                diagnostic => diagnostic.Contains("already applied", StringComparison.OrdinalIgnoreCase));
+            Assert.Single(dispatchQueue.Requests);
+        }
+    }
+
+    [Theory]
+    [InlineData(ChildLineageRaceMutation.SiblingReactivated)]
+    [InlineData(ChildLineageRaceMutation.NewerChildLinked)]
+    [InlineData(ChildLineageRaceMutation.LinkedChildStateMissing)]
+    [InlineData(ChildLineageRaceMutation.SiblingLinkChanged)]
+    public async Task Completed_child_recovery_rejects_lineage_change_before_runtime_commit(
+        ChildLineageRaceMutation mutation)
+    {
+        var databaseName = $"process-child-lineage-race-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
+        var scenario = await SeedChildLineageScenarioAsync(databaseName, databaseRoot);
+        var dispatchQueue = new RecordingDispatchQueue();
+
+        await using var recoveryContext = CreateDbContext(databaseName, databaseRoot);
+        var store = new EfProcessRuntimeUnitOfWork(recoveryContext);
+        var assignmentStore = new EfProcessRuntimeStepAssignmentStore(recoveryContext);
+        var interceptingUnitOfWork = new InterceptingRuntimeUnitOfWork(
+            store,
+            async (request, cancellationToken) =>
+            {
+                Assert.NotNull(
+                    request.BlockedRecoveryAuthorization?.ExpectedChildLineageEvidence);
+                await ApplyChildLineageRaceMutationAsync(
+                    recoveryContext,
+                    assignmentStore,
+                    scenario,
+                    mutation,
+                    cancellationToken);
+            });
+        var coordinator = CreateCoordinator(
+            recoveryContext,
+            store,
+            dispatchQueue,
+            Now.AddMinutes(4),
+            assignmentStore,
+            interceptingUnitOfWork);
+
+        var recovery = await coordinator.TryRecoverAsync(
+            scenario.ParentRunId,
+            "persisted-child-lineage-race-test");
+
+        Assert.True(interceptingUnitOfWork.Intercepted);
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.RequiresAttention, recovery.Outcome);
+        Assert.NotEmpty(recovery.Diagnostics);
+        Assert.Empty(dispatchQueue.Requests);
+        var persistedParent = await store.LoadAsync(scenario.ParentRunId);
+        Assert.NotNull(persistedParent);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, persistedParent.Status);
+        Assert.Empty(persistedParent.BlockedRecoveryActions);
+    }
+
+    private static async Task<ChildLineageScenario> SeedChildLineageScenarioAsync(
+        string databaseName,
+        InMemoryDatabaseRoot databaseRoot)
+    {
+        var parentRunId = ProcessRunId.New();
+        var relatedChildRunId = ProcessRunId.New();
+        var siblingRunId = ProcessRunId.New();
+        var newerChildRunId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var parentStepDefinitionId = ProcessStepDefinitionId.New();
+        var initialBlockedParentState = CreateCompletedChildBlockedState(
+            parentRunId,
+            planId,
+            parentStepId,
+            parentStepDefinitionId,
+            relatedChildRunId,
+            StrategyResultIdempotencyKey.New(),
+            Now.AddMinutes(2));
+        var alternateParentStepId = ProcessStepInstanceId.New();
+        var alternateParentStep = new ProcessRuntimeStepState(
+            alternateParentStepId,
+            ProcessStepDefinitionId.New(),
+            ProcessRuntimeStepStatus.Completed,
+            IsExecutable: true,
+            AttemptNumber: 1,
+            DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+            RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+            ActiveClaimToken: null,
+            CompletedResultKey: null);
+        var blockedParentState = initialBlockedParentState with
+        {
+            Steps = initialBlockedParentState.Steps
+                .Append(alternateParentStep)
+                .ToArray()
+        };
+        var plan = CreateSimpleAppPlan(planId, blockedParentState.Steps);
+        var claimToken = DispatchClaimToken.New();
+        var alternateClaimToken = DispatchClaimToken.New();
+        var launchableParentState = blockedParentState with
+        {
+            Status = ProcessRuntimeStatus.Active,
+            Steps = blockedParentState.Steps
+                .Select(step => step with
+                {
+                    Status = ProcessRuntimeStepStatus.Running,
+                    ActiveClaimToken = step.StepInstanceId == parentStepId
+                        ? claimToken
+                        : alternateClaimToken
+                })
+                .ToArray(),
+            Claims =
+            [
+                new DispatchClaimState(
+                    claimToken,
+                    parentStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(10),
+                    null,
+                    null),
+                new DispatchClaimState(
+                    alternateClaimToken,
+                    alternateParentStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(10),
+                    null,
+                    null)
+            ],
+            AppliedResults = [],
+            UpdatedAtUtc = Now
+        };
+        var parentAssignment = CreateAssignment(
+            blockedParentState,
+            blockedParentState.Steps.Single(step => step.StepInstanceId == parentStepId),
+            Now);
+        var alternateParentAssignment = CreateAssignment(
+            blockedParentState,
+            alternateParentStep,
+            Now);
+        var relatedChild = CreateLinkedChildSeed(
+            parentAssignment,
+            parentRunId,
+            parentStepId,
+            relatedChildRunId,
+            ProcessRuntimeStatus.Completed,
+            Now.AddMinutes(1),
+            Now.AddMinutes(1));
+        var sibling = CreateLinkedChildSeed(
+            parentAssignment,
+            parentRunId,
+            parentStepId,
+            siblingRunId,
+            ProcessRuntimeStatus.Failed,
+            Now.AddSeconds(45),
+            Now.AddSeconds(30));
+        var newerChild = CreateLinkedChildSeed(
+            alternateParentAssignment,
+            parentRunId,
+            alternateParentStepId,
+            newerChildRunId,
+            ProcessRuntimeStatus.Completed,
+            Now.AddMinutes(1).AddSeconds(30),
+            Now.AddMinutes(2));
+
+        await using var seedContext = CreateDbContext(databaseName, databaseRoot);
+        var store = new EfProcessRuntimeUnitOfWork(
+            seedContext,
+            new FixedTimeProvider(Now));
+        var parentSeed = await store.CommitAsync(new ProcessRuntimeCommitRequest(
+            RuntimeCommandId.New(),
+            launchableParentState,
+            Applied(launchableParentState),
+            InitialPlan: plan)
+        {
+            InitialAssignments = [parentAssignment, alternateParentAssignment]
+        });
+        Assert.True(parentSeed.Succeeded);
+
+        foreach (var child in new[]
+                 {
+                     relatedChild,
+                     sibling,
+                     newerChild
+                 })
+        {
+            var childRequest = new ProcessRuntimeCommitRequest(
+                RuntimeCommandId.New(),
+                child.State,
+                Applied(child.State),
+                ParentStepPrecondition: child.ParentStepPrecondition,
+                InitialPlan: child.Plan)
+            {
+                InitialAssignments = [child.Assignment]
+            };
+            var childSeed = await store.CommitAsync(childRequest);
+            Assert.True(childSeed.Succeeded);
+        }
+
+        var blockedSeed = await store.CommitAsync(new ProcessRuntimeCommitRequest(
+            RuntimeCommandId.New(),
+            launchableParentState,
+            Applied(blockedParentState)));
+        Assert.True(blockedSeed.Succeeded);
+
+        return new ChildLineageScenario(
+            parentRunId,
+            parentStepId,
+            siblingRunId,
+            newerChild.Assignment);
+    }
+
+    private static ProcessRuntimeStateSnapshot CreateChildState(
+        ProcessRunId rootRunId,
+        ProcessRunId runId,
+        ProcessInstancePlan plan,
+        ProcessRuntimeStatus status,
+        DateTimeOffset updatedAtUtc)
+    {
+        var stepStatus = status switch
+        {
+            ProcessRuntimeStatus.Completed => ProcessRuntimeStepStatus.Completed,
+            ProcessRuntimeStatus.Failed => ProcessRuntimeStepStatus.Failed,
+            ProcessRuntimeStatus.Cancelled => ProcessRuntimeStepStatus.Cancelled,
+            ProcessRuntimeStatus.Blocked => ProcessRuntimeStepStatus.Blocked,
+            _ => ProcessRuntimeStepStatus.Ready
+        };
+        return new ProcessRuntimeStateSnapshot(
+            rootRunId,
+            runId,
+            plan.Header.PlanId,
+            plan.PlanHash,
+            status,
+            plan.Steps
+                .Select(step => new ProcessRuntimeStepState(
+                    step.StepInstanceId,
+                    step.StepDefinitionId,
+                    stepStatus,
+                    step.IsExecutable,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: stepStatus == ProcessRuntimeStepStatus.Completed
+                        ? StrategyResultIdempotencyKey.New()
+                        : null))
+                .ToArray(),
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            updatedAtUtc);
+    }
+
+    private static ProcessRuntimeStepAssignment CreateLinkedChildAssignment(
+        ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRunId parentRunId,
+        ProcessStepInstanceId parentStepId,
+        ProcessRunId childRunId,
+        DateTimeOffset createdAtUtc)
+    {
+        var childStepId = ProcessStepInstanceId.New();
+        return parentAssignment with
+        {
+            RunId = childRunId,
+            StepInstanceId = childStepId,
+            StepKey = $"child-{childStepId.Value:N}",
+            LaunchVariables = ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                parentRunId,
+                parentStepId),
+            CreatedAtUtc = createdAtUtc
+        };
+    }
+
+    private static LinkedChildSeed CreateLinkedChildSeed(
+        ProcessRuntimeStepAssignment parentAssignment,
+        ProcessRunId parentRunId,
+        ProcessStepInstanceId parentStepId,
+        ProcessRunId childRunId,
+        ProcessRuntimeStatus status,
+        DateTimeOffset updatedAtUtc,
+        DateTimeOffset linkedAtUtc)
+    {
+        var assignment = CreateLinkedChildAssignment(
+            parentAssignment,
+            parentRunId,
+            parentStepId,
+            childRunId,
+            linkedAtUtc);
+        var planStep = new ProcessRuntimeStepState(
+            assignment.StepInstanceId,
+            ProcessStepDefinitionId.New(),
+            ProcessRuntimeStepStatus.Planned,
+            IsExecutable: true,
+            AttemptNumber: 0,
+            DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+            RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+            ActiveClaimToken: null,
+            CompletedResultKey: null);
+        var plan = CreateSimpleAppPlan(
+            ProcessInstancePlanId.New(),
+            [planStep]);
+        assignment = assignment with
+        {
+            PlanId = plan.Header.PlanId,
+            StepKey = Assert.Single(plan.Steps).StepKey
+        };
+        return new LinkedChildSeed(
+            plan,
+            CreateChildState(
+                parentRunId,
+                childRunId,
+                plan,
+                status,
+                updatedAtUtc),
+            assignment,
+            new ProcessRuntimeParentStepReference(parentRunId, parentStepId));
+    }
+
+    private static async Task ApplyChildLineageRaceMutationAsync(
+        ProcessPersistenceDbContext dbContext,
+        EfProcessRuntimeStepAssignmentStore assignmentStore,
+        ChildLineageScenario scenario,
+        ChildLineageRaceMutation mutation,
+        CancellationToken cancellationToken)
+    {
+        switch (mutation)
+        {
+            case ChildLineageRaceMutation.SiblingReactivated:
+            {
+                var siblingState = await dbContext.RuntimeStates.SingleAsync(
+                    state => state.RunId == scenario.SiblingRunId.Value,
+                    cancellationToken);
+                siblingState.Status = ProcessRuntimeStatus.Active;
+                siblingState.UpdatedAtUtc = Now.AddMinutes(3);
+                siblingState.ConcurrencyToken = Guid.NewGuid();
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            case ChildLineageRaceMutation.NewerChildLinked:
+            {
+                var newerChildAssignment = await dbContext.RuntimeStepAssignments.SingleAsync(
+                    assignment => assignment.RunId == scenario.NewerChildAssignment.RunId.Value,
+                    cancellationToken);
+                newerChildAssignment.LaunchVariablesJson =
+                    EfProcessRuntimeStepAssignmentStore.ToEntity(
+                        scenario.NewerChildAssignment with
+                        {
+                            LaunchVariables = ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                                scenario.ParentRunId,
+                                scenario.ParentStepId)
+                        })
+                    .LaunchVariablesJson;
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            case ChildLineageRaceMutation.LinkedChildStateMissing:
+            {
+                var siblingState = await dbContext.RuntimeStates.SingleAsync(
+                    state => state.RunId == scenario.SiblingRunId.Value,
+                    cancellationToken);
+                dbContext.RuntimeStates.Remove(siblingState);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            case ChildLineageRaceMutation.SiblingLinkChanged:
+            {
+                var siblingAssignment = await dbContext.RuntimeStepAssignments.SingleAsync(
+                    assignment => assignment.RunId == scenario.SiblingRunId.Value,
+                    cancellationToken);
+                siblingAssignment.LaunchVariablesJson = "{}";
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(mutation),
+                    mutation,
+                    "Unsupported child-lineage race mutation.");
+        }
+    }
+
     private static async Task<ProcessRuntimeStateSnapshot> ExecuteStepAsync(
         EfProcessRuntimeUnitOfWork store,
         ProcessRuntimeStateSnapshot state,
@@ -283,11 +861,24 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
     private static async Task<ProcessRuntimeStateSnapshot> PersistBlockedRunAsync(
         EfProcessRuntimeUnitOfWork store,
         ProcessRuntimeStateSnapshot state,
-        DateTimeOffset occurredAtUtc)
+        DateTimeOffset occurredAtUtc,
+        ProcessStepInstanceId? blockedStepId = null)
     {
         var blockedState = state with
         {
             Status = ProcessRuntimeStatus.Blocked,
+            Steps = blockedStepId is null
+                ? state.Steps
+                : state.Steps
+                    .Select(step => step.StepInstanceId == blockedStepId
+                        ? step with
+                        {
+                            Status = ProcessRuntimeStepStatus.Blocked,
+                            ActiveClaimToken = null,
+                            CompletedResultKey = null
+                        }
+                        : step)
+                    .ToArray(),
             UpdatedAtUtc = occurredAtUtc
         };
         var runtimeEvent = new ProcessRuntimeEventEnvelope(
@@ -329,16 +920,19 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         ProcessPersistenceDbContext dbContext,
         EfProcessRuntimeUnitOfWork store,
         RecordingDispatchQueue dispatchQueue,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        IProcessRuntimeStepAssignmentStore? persistedAssignmentStore = null,
+        IProcessRuntimeUnitOfWork? runtimeUnitOfWork = null)
     {
         var projectionStore = new EfProcessProjectionStore(dbContext);
         var clock = new FixedProcessProjectionClock(now);
+        var assignmentStore = persistedAssignmentStore ?? new RecoveryAssignmentStore(store);
         var operatorService = new ProcessRuntimeOperatorApplicationService(
             clock,
             store,
             store,
-            EmptyAssignmentStore.Instance,
-            store,
+            assignmentStore,
+            runtimeUnitOfWork ?? store,
             dispatchQueue,
             new ProcessRuntimeProjectionCatchupService(
                 EmptyRuntimeEventReplayStore.Instance,
@@ -353,6 +947,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         return new ProcessBlockedRunRecoveryCoordinator(
             store,
             new EfProcessInstancePlanStore(dbContext),
+            assignmentStore,
             new ProcessBlockedRunRecoveryCommandExecutor(operatorService),
             new ProcessBlockedRunRecoveryPolicyCatalog());
     }
@@ -458,7 +1053,75 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         };
     }
 
-    private static ProcessInstancePlan CreateSimpleAppPlan(ProcessInstancePlanId planId)
+    private static ProcessRuntimeStateSnapshot CreateCompletedChildBlockedState(
+        ProcessRunId parentRunId,
+        ProcessInstancePlanId planId,
+        ProcessStepInstanceId parentStepId,
+        ProcessStepDefinitionId parentStepDefinitionId,
+        ProcessRunId childRunId,
+        StrategyResultIdempotencyKey sourceResultKey,
+        DateTimeOffset updatedAtUtc)
+    {
+        var diagnostic = new StrategyResultDiagnosticReceipt(
+            ChildBlockedDiagnosticCode,
+            StrategyDiagnosticSensitivity.Normal,
+            "sha256:completed-child-blocked-parent",
+            "The parent is waiting on a linked child run.",
+            RestrictedEvidenceReference: null,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent)
+        {
+            RelatedChildRunId = childRunId
+        };
+        var recoveryDecision = ProcessRecoveryClassifier.Default.ClassifyBlocked(
+            new ProcessRecoveryClassificationInput(
+                parentStepId,
+                ProcessFailureCategory.ChildRunBlocked,
+                diagnostic.Code,
+                ProcessRecoveryRouteKind.ChildRunPropagation,
+                parentStepId,
+                [diagnostic],
+                []));
+        return new ProcessRuntimeStateSnapshot(
+            parentRunId,
+            parentRunId,
+            planId,
+            "sha256:persisted-recovery-plan",
+            ProcessRuntimeStatus.Blocked,
+            [
+                new ProcessRuntimeStepState(
+                    parentStepId,
+                    parentStepDefinitionId,
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null)
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    parentStepId,
+                    Binding.StrategyId,
+                    sourceResultKey,
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:completed-child-blocked-result",
+                    [diagnostic],
+                    recoveryDecision: recoveryDecision)
+                {
+                    AppliedSequence = 1
+                }
+            ],
+            new HashSet<ArtifactSlotId>(),
+            updatedAtUtc);
+    }
+
+    private static ProcessInstancePlan CreateSimpleAppPlan(
+        ProcessInstancePlanId planId,
+        IReadOnlyList<ProcessRuntimeStepState> runtimeSteps)
     {
         return new ProcessInstancePlan(
             new ProcessInstancePlanHeader(
@@ -485,8 +1148,17 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                 ],
                 []),
             new DriverStackSnapshot([]),
-            new StrategyBindingSet([], [], [], []),
-            [],
+            new StrategyBindingSet([Binding], [], [], []),
+            runtimeSteps
+                .Select(step => new StepInstancePlan(
+                    step.StepInstanceId,
+                    step.StepDefinitionId,
+                    $"step-{step.StepInstanceId.Value:N}",
+                    ProcessStepKind.Activity,
+                    step.IsExecutable,
+                    StartsSubprocess: false,
+                    Binding))
+                .ToArray(),
             new ArtifactPlan([], []),
             new BranchRouteTable([]),
             [],
@@ -576,9 +1248,84 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         return new ProcessPersistenceDbContext(options);
     }
 
+    private static ProcessRuntimeStepAssignment CreateAssignment(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState step,
+        DateTimeOffset? createdAtUtc = null)
+    {
+        return new ProcessRuntimeStepAssignment(
+            state.RunId,
+            state.PlanId,
+            step.StepInstanceId,
+            $"step-{step.StepInstanceId.Value:N}",
+            "recovery-worker",
+            "recovery-worker",
+            "Recovery worker",
+            ProcessLaunchExecutorKinds.Agent,
+            Guid.NewGuid().ToString("D"),
+            "Recovery worker",
+            "Recover the missing managed process artifact.",
+            "sha256:readiness",
+            "Persisted recovery test assignment.",
+            step.ProducedArtifactSlots.ToArray(),
+            step.RequiredArtifactSlots.ToArray(),
+            [ProcessOperationContractNames.WriteManagedProcessArtifacts],
+            ProcessOperationContractNames.ManagedProcessArtifactsOnly,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            BranchGate: null,
+            createdAtUtc ?? Now);
+    }
+
+    public enum ChildLineageRaceMutation
+    {
+        SiblingReactivated,
+        NewerChildLinked,
+        LinkedChildStateMissing,
+        SiblingLinkChanged
+    }
+
+    private sealed record ChildLineageScenario(
+        ProcessRunId ParentRunId,
+        ProcessStepInstanceId ParentStepId,
+        ProcessRunId SiblingRunId,
+        ProcessRuntimeStepAssignment NewerChildAssignment);
+
+    private sealed record LinkedChildSeed(
+        ProcessInstancePlan Plan,
+        ProcessRuntimeStateSnapshot State,
+        ProcessRuntimeStepAssignment Assignment,
+        ProcessRuntimeParentStepReference ParentStepPrecondition);
+
+    private sealed class InterceptingRuntimeUnitOfWork(
+        IProcessRuntimeUnitOfWork inner,
+        Func<ProcessRuntimeCommitRequest, CancellationToken, Task> beforeCommit)
+        : IProcessRuntimeUnitOfWork
+    {
+        private int intercepted;
+
+        public bool Intercepted => intercepted != 0;
+
+        public async Task<ProcessRuntimeCommitResult> CommitAsync(
+            ProcessRuntimeCommitRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref intercepted, 1) == 0)
+            {
+                await beforeCommit(request, cancellationToken).ConfigureAwait(false);
+            }
+
+            return await inner.CommitAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     private sealed class FixedProcessProjectionClock(DateTimeOffset utcNow) : IProcessProjectionClock
     {
         public DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
     private sealed class RecordingDispatchQueue : IProcessRuntimeDispatchQueue
@@ -592,12 +1339,16 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             Requests.Add(request);
             return ValueTask.CompletedTask;
         }
+
+        public void EnqueueOrDefer(ProcessRuntimeDispatchQueueRequest request)
+        {
+            Requests.Add(request);
+        }
     }
 
-    private sealed class EmptyAssignmentStore : IProcessRuntimeStepAssignmentStore
+    private sealed class RecoveryAssignmentStore(
+        IProcessRuntimeStateStore stateStore) : IProcessRuntimeStepAssignmentStore
     {
-        public static EmptyAssignmentStore Instance { get; } = new();
-
         public ValueTask SaveAsync(
             IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
             CancellationToken cancellationToken = default)
@@ -605,11 +1356,14 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunAsync(
+        public async ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> LoadByRunAsync(
             ProcessRunId runId,
             CancellationToken cancellationToken = default)
         {
-            return ValueTask.FromResult<IReadOnlyList<ProcessRuntimeStepAssignment>>([]);
+            var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
+            return state is null
+                ? []
+                : state.Steps.Select(step => CreateAssignment(state, step)).ToArray();
         }
 
         public ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
@@ -619,12 +1373,14 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             return ValueTask.FromResult<IReadOnlyList<ProcessRuntimeStepAssignment>>([]);
         }
 
-        public ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
+        public async ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
             ProcessRunId runId,
             ProcessStepInstanceId stepInstanceId,
             CancellationToken cancellationToken = default)
         {
-            return ValueTask.FromResult<ProcessRuntimeStepAssignment?>(null);
+            var assignments = await LoadByRunAsync(runId, cancellationToken).ConfigureAwait(false);
+            return assignments.FirstOrDefault(assignment =>
+                assignment.StepInstanceId == stepInstanceId);
         }
     }
 

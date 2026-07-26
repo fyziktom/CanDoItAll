@@ -946,7 +946,9 @@ public sealed class ProjectStructureAgentIntegrationTests
         {
             LaunchVariables = parentLaunchVariables
         };
-        await assignmentStore.SaveAsync([parentAssignment]);
+        await ReplacePersistedAssignmentLaunchVariablesAsync(
+            scope.ServiceProvider,
+            parentAssignment);
 
         await EnsureParentStepRunningAsync(
             scope.ServiceProvider,
@@ -1738,7 +1740,9 @@ public sealed class ProjectStructureAgentIntegrationTests
         {
             LaunchVariables = genericParentLaunchVariables
         };
-        await assignmentStore.SaveAsync([parentAssignment]);
+        await ReplacePersistedAssignmentLaunchVariablesAsync(
+            scope.ServiceProvider,
+            parentAssignment);
         Assert.DoesNotContain("ProductRoot", parentAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("OutputRoot", parentAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
 
@@ -1850,7 +1854,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("dotnet.add-test-project", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet.create-project", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.False(scaffoldAssignment.LaunchVariables.ContainsKey("DotNetScaffoldContract"));
-        Assert.Contains(
+        Assert.DoesNotContain(
             "C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx",
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
@@ -1858,7 +1862,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             "C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj",
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
-        Assert.Contains(
+        Assert.DoesNotContain(
             "C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
@@ -1944,11 +1948,28 @@ public sealed class ProjectStructureAgentIntegrationTests
                     ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecksByStep],
                 jsonOptions));
         var scaffoldAddTestProjectChecks = Assert.Contains("add-test-project", scaffoldChecksByStep);
+        var directCreateProjectChecks = Assert.IsType<ProductCompletionRequiredFileContentCheckJson[]>(
+            JsonSerializer.Deserialize<ProductCompletionRequiredFileContentCheckJson[]>(
+                createProjectAssignment.LaunchVariables[
+                    ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
+                jsonOptions));
         var directAddTestProjectChecks = Assert.IsType<ProductCompletionRequiredFileContentCheckJson[]>(
             JsonSerializer.Deserialize<ProductCompletionRequiredFileContentCheckJson[]>(
                 addTestProjectAssignment.LaunchVariables[
                     ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
                 jsonOptions));
+        var solutionMembershipCheck = Assert.Single(
+            directCreateProjectChecks,
+            check =>
+                check.PathCandidates.Contains(
+                    @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.slnx",
+                    StringComparer.Ordinal) &&
+                check.PathCandidates.Contains(
+                    @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.sln",
+                    StringComparer.Ordinal));
+        Assert.Contains(
+            solutionMembershipCheck.RequiredTextAnyGroups,
+            group => group.Contains("src/TetrisGame/TetrisGame.csproj", StringComparer.Ordinal));
 
         foreach (var checks in new[] { scaffoldAddTestProjectChecks, directAddTestProjectChecks })
         {
@@ -3208,6 +3229,26 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task ReplacePersistedAssignmentLaunchVariablesAsync(
+        IServiceProvider serviceProvider,
+        ProcessRuntimeStepAssignment assignment)
+    {
+        var dbContext = serviceProvider.GetRequiredService<ProcessPersistenceDbContext>();
+        var entity = await dbContext.RuntimeStepAssignments.SingleAsync(candidate =>
+            candidate.RunId == assignment.RunId.Value &&
+            candidate.StepInstanceId == assignment.StepInstanceId.Value);
+        var normalized = assignment.LaunchVariables
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .OrderBy(item => item.Key, StringComparer.Ordinal)
+            .ToDictionary(
+                item => item.Key.Trim(),
+                item => item.Value?.Trim() ?? string.Empty,
+                StringComparer.Ordinal);
+        entity.LaunchVariablesJson = JsonSerializer.Serialize(normalized);
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
     }
 
     private static async Task EnsureParentStepRunningAsync(

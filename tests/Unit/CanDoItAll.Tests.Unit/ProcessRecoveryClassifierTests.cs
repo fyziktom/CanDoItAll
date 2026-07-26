@@ -11,16 +11,16 @@ public sealed class ProcessRecoveryClassifierTests
     private static readonly StrategyId StrategyId = new("strategy.execute");
 
     [Fact]
-    public void RecoveryClassifier_routes_safe_idempotent_completion_gate_to_current_step_retry()
+    public void RecoveryClassifier_requires_assignment_replay_scope_review_for_safe_idempotent_completion_gate()
     {
         var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
         var result = classifier.ClassifyBlocked(CreateInput(Diagnostic(
             "process.adapter.product_required_tool_receipt_missing",
             "sha256:missing-tool")));
 
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, result.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, result.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", result.Policy);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, result.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", result.Policy);
         Assert.Equal(StepId, result.ResponsibleStepInstanceId);
         Assert.Equal(1, result.AutomaticRetryAttempt);
         Assert.Equal(1, result.SameDiagnosticFingerprintAttempt);
@@ -28,7 +28,7 @@ public sealed class ProcessRecoveryClassifierTests
     }
 
     [Fact]
-    public void RecoveryClassifier_routes_branch_defect_evidence_gap_to_current_step_retry()
+    public void RecoveryClassifier_requires_assignment_replay_scope_review_for_branch_defect_evidence_gap()
     {
         var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
         var result = classifier.ClassifyBlocked(CreateInput(
@@ -38,13 +38,13 @@ public sealed class ProcessRecoveryClassifierTests
             failureCategory: ProcessFailureCategory.Unknown));
 
         Assert.Equal(ProcessFailureCategory.Unknown, result.FailureCategory);
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, result.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, result.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", result.Policy);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, result.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", result.Policy);
     }
 
     [Fact]
-    public void RecoveryClassifier_routes_runtime_lifecycle_gap_to_current_step_retry()
+    public void RecoveryClassifier_requires_assignment_replay_scope_review_for_runtime_lifecycle_gap()
     {
         var classifier = new ProcessRecoveryClassifier(new ProcessRecoveryClassifierOptions(3, 1));
         var result = classifier.ClassifyBlocked(CreateInput(
@@ -53,9 +53,9 @@ public sealed class ProcessRecoveryClassifierTests
                 "sha256:runtime-lifecycle"),
             failureCategory: ProcessFailureCategory.Unknown));
 
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, result.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, result.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", result.Policy);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, result.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", result.Policy);
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public sealed class ProcessRecoveryClassifierTests
             [priorReceipt],
             ProcessFailureCategory.Unknown));
 
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, first.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, first.RouteKind);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, first.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, first.RouteKind);
         Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, second.DecisionKind);
         Assert.Equal("process.current-step-safe-retry-budget-exhausted", second.Policy);
         Assert.Equal(2, second.SameDiagnosticFingerprintAttempt);
@@ -101,14 +101,15 @@ public sealed class ProcessRecoveryClassifierTests
 
         var second = classifier.ClassifyBlocked(CreateInput(secondDiagnostic, [priorReceipt]));
 
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, second.DecisionKind);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, second.DecisionKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", second.Policy);
         Assert.Equal(2, second.AutomaticRetryAttempt);
         Assert.Equal(1, second.SameDiagnosticFingerprintAttempt);
         Assert.NotEqual(first.DiagnosticFingerprint, second.DiagnosticFingerprint);
     }
 
     [Fact]
-    public void RecoveryClassifier_routes_direct_runtime_branch_selection_to_one_current_step_retry()
+    public void RecoveryClassifier_routes_direct_runtime_branch_selection_to_one_replay_scope_review()
     {
         var classifier = new ProcessRecoveryClassifier();
         var diagnostic = Diagnostic(
@@ -119,9 +120,9 @@ public sealed class ProcessRecoveryClassifierTests
             diagnostic,
             failureCategory: ProcessFailureCategory.Unknown));
 
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, first.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, first.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", first.Policy);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, first.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, first.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", first.Policy);
 
         var priorReceipt = CreateReceipt(diagnostic, first, "sha256:first-runtime-owned-branch-retry");
         var repeated = classifier.ClassifyBlocked(CreateInput(
@@ -134,7 +135,7 @@ public sealed class ProcessRecoveryClassifierTests
     }
 
     [Fact]
-    public void RecoveryClassifier_routes_managed_artifact_completion_retry_to_current_step_retry()
+    public void RecoveryClassifier_routes_managed_artifact_completion_retry_to_replay_scope_review()
     {
         var classifier = new ProcessRecoveryClassifier();
         var result = classifier.ClassifyBlocked(CreateInput(
@@ -143,9 +144,9 @@ public sealed class ProcessRecoveryClassifierTests
                 "sha256:managed-artifact-timeout-recovery"),
             failureCategory: ProcessFailureCategory.AdapterRetryable));
 
-        Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, result.DecisionKind);
-        Assert.Equal(ProcessRecoveryRouteKind.CurrentStepRetry, result.RouteKind);
-        Assert.Equal("process.current-step-safe-retry", result.Policy);
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, result.RouteKind);
+        Assert.Equal("process.current-step-replay-scope-review-required", result.Policy);
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public sealed class ProcessRecoveryClassifierTests
             StrategyId,
             StrategyResultIdempotencyKey.New(),
             StrategyOutcome.NeedsManager,
-            ProcessRuntimeStepStatus.Ready,
+            ProcessRuntimeStepStatus.Blocked,
             "sha256:first-retry",
             diagnostics: [diagnostic],
             recoveryDecision: first);
@@ -229,7 +230,8 @@ public sealed class ProcessRecoveryClassifierTests
                 "process.adapter.product_required_file_content_missing",
                 $"sha256:progress-state-{attempt}");
             var decision = classifier.ClassifyBlocked(CreateInput(diagnostic, priorReceipts));
-            Assert.Equal(ProcessRecoveryDecisionKind.SafeRetry, decision.DecisionKind);
+            Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, decision.DecisionKind);
+            Assert.Equal("process.current-step-replay-scope-review-required", decision.Policy);
             Assert.Equal(attempt, decision.AutomaticRetryAttempt);
             Assert.Equal(1, decision.SameDiagnosticFingerprintAttempt);
             priorReceipts.Add(CreateReceipt(diagnostic, decision, $"sha256:retry-{attempt}"));
@@ -258,7 +260,7 @@ public sealed class ProcessRecoveryClassifierTests
             StrategyId,
             StrategyResultIdempotencyKey.New(),
             StrategyOutcome.NeedsManager,
-            ProcessRuntimeStepStatus.Ready,
+            ProcessRuntimeStepStatus.Blocked,
             "sha256:first-retry",
             diagnostics: [diagnostic],
             recoveryDecision: first);
@@ -301,6 +303,63 @@ public sealed class ProcessRecoveryClassifierTests
         Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, result.DecisionKind);
         Assert.Equal(ProcessRecoveryRouteKind.ManagerAction, result.RouteKind);
         Assert.Equal("process.manager-review-required", result.Policy);
+    }
+
+    [Fact]
+    public void RecoveryClassifier_preserves_typed_child_identity_for_child_propagation()
+    {
+        var childRunId = ProcessRunId.New();
+        var diagnostic = new StrategyResultDiagnosticReceipt(
+            "process.adapter.subprocess_child_blocked",
+            StrategyDiagnosticSensitivity.Normal,
+            "sha256:blocked-child",
+            "The linked child run is blocked.",
+            RestrictedEvidenceReference: null,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent)
+        {
+            RelatedChildRunId = childRunId
+        };
+        var result = new ProcessRecoveryClassifier().ClassifyBlocked(
+            new ProcessRecoveryClassificationInput(
+                StepId,
+                ProcessFailureCategory.ChildRunBlocked,
+                diagnostic.Code,
+                ProcessRecoveryRouteKind.ChildRunPropagation,
+                StepId,
+                [diagnostic],
+                []));
+
+        Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, result.DecisionKind);
+        Assert.Equal(ProcessRecoveryRouteKind.ChildRunPropagation, result.RouteKind);
+        Assert.Equal(childRunId, result.RelatedChildRunId);
+    }
+
+    [Fact]
+    public void RecoveryClassifier_counts_attested_transient_retries_by_code_not_execution_detail()
+    {
+        var classifier = new ProcessRecoveryClassifier();
+        var firstDiagnostic = Diagnostic(
+            ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+            "sha256:first-execution-run");
+        var first = classifier.ClassifyBlocked(CreateInput(
+            firstDiagnostic,
+            failureCategory: ProcessFailureCategory.AdapterRetryable));
+        var priorReceipt = CreateReceipt(firstDiagnostic, first, "sha256:first-transient-result");
+        var repeatedDiagnostic = Diagnostic(
+            ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+            "sha256:second-execution-run");
+
+        var repeated = classifier.ClassifyBlocked(CreateInput(
+            repeatedDiagnostic,
+            [priorReceipt],
+            ProcessFailureCategory.AdapterRetryable));
+
+        Assert.Equal("process.current-step-replay-scope-review-required", first.Policy);
+        Assert.Equal(first.DiagnosticFingerprint, repeated.DiagnosticFingerprint);
+        Assert.Equal(2, repeated.SameDiagnosticFingerprintAttempt);
+        Assert.Equal(1, repeated.MaximumSameDiagnosticFingerprintAttempts);
+        Assert.Equal("process.current-step-safe-retry-budget-exhausted", repeated.Policy);
     }
 
     private static ProcessRecoveryClassificationInput CreateInput(
@@ -356,7 +415,7 @@ public sealed class ProcessRecoveryClassifierTests
             StrategyId,
             StrategyResultIdempotencyKey.New(),
             StrategyOutcome.NeedsManager,
-            ProcessRuntimeStepStatus.Ready,
+            ProcessRuntimeStepStatus.Blocked,
             resultHash,
             diagnostics: [diagnostic],
             recoveryDecision: decision);
@@ -372,7 +431,7 @@ public sealed class ProcessRecoveryClassifierTests
             StrategyId,
             StrategyResultIdempotencyKey.New(),
             StrategyOutcome.NeedsManager,
-            ProcessRuntimeStepStatus.Ready,
+            ProcessRuntimeStepStatus.Blocked,
             resultHash,
             diagnostics: diagnostics,
             recoveryDecision: decision);

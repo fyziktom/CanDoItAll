@@ -254,13 +254,17 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
                       "operations": [
                         {
                           "key": "run-helper",
-                          "toolName": "workspace_pwsh_run_script"
+                          "toolName": "workspace_pwsh_run_script",
+                          "requiredReceiptKey": "run-helper",
+                          "idempotencyPolicyKey": "current-run-repeatable"
                         }
                       ],
                       "requiredReceipts": [
                         {
                           "key": "run-helper",
-                          "toolName": "workspace_pwsh_run_script"
+                          "toolName": "workspace_pwsh_run_script",
+                          "requiredReceiptKey": "run-helper",
+                          "idempotencyPolicyKey": "current-run-repeatable"
                         }
                       ],
                       "readbackChecks": [
@@ -316,13 +320,17 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
                       "operations": [
                         {
                           "key": "run-helper",
-                          "toolName": "workspace_pwsh_run_script"
+                          "toolName": "workspace_pwsh_run_script",
+                          "requiredReceiptKey": "run-helper",
+                          "idempotencyPolicyKey": "current-run-repeatable"
                         }
                       ],
                       "requiredReceipts": [
                         {
                           "key": "run-helper",
-                          "toolName": "workspace_pwsh_run_script"
+                          "toolName": "workspace_pwsh_run_script",
+                          "requiredReceiptKey": "run-helper",
+                          "idempotencyPolicyKey": "current-run-repeatable"
                         }
                       ]
                     }
@@ -366,7 +374,9 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
                       "operations": [
                         {
                           "key": "run-helper",
-                          "toolName": "workspace_pwsh_run_script"
+                          "toolName": "workspace_pwsh_run_script",
+                          "requiredReceiptKey": "run-helper",
+                          "idempotencyPolicyKey": "current-run-repeatable"
                         }
                       ],
                       "requiredReceipts": [
@@ -612,7 +622,9 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
                       "operations": [
                         {
                           "key": "run-helper",
-                          "toolName": "workspace_pwsh_run_script"
+                          "toolName": "workspace_pwsh_run_script",
+                          "requiredReceiptKey": "run-helper",
+                          "idempotencyPolicyKey": "current-run-repeatable"
                         }
                       ],
                       "requiredReceipts": [

@@ -65,7 +65,14 @@ public sealed record ProcessRuntimeBlockedRecoveryAuthorization(
     string DiagnosticFingerprint,
     ProcessRecoveryRouteKind RecoveryRouteKind,
     ProcessStepInstanceId? ResponsibleTargetStepInstanceId,
-    ProcessRuntimeBlockedRecoveryPhase Phase);
+    ProcessRuntimeBlockedRecoveryPhase Phase)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public DateTimeOffset? ExpectedRelatedChildUpdatedAtUtc { get; init; }
+
+    public ProcessRuntimeChildLineageEvidence? ExpectedChildLineageEvidence { get; init; }
+}
 
 public sealed record RequestStepReworkCommand(
     ProcessStepInstanceId StepInstanceId,

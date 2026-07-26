@@ -182,9 +182,10 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 issue);
         }
 
+        IAgentFrameworkWorkspaceService? workspaceService = null;
         try
         {
-            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+            workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             var metadataJson = executionMetadataComposer.Compose(assignment);
             var parentArtifactContext = parentArtifactContextHydrator.Hydrate(assignment);
             if (parentArtifactContext.Issue is { } parentArtifactContextIssue)
@@ -240,10 +241,26 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
             if (TryBuildRetryableAgentTransientExecutionIssue(assignment, result, out var transientExecutionIssue))
             {
+                transientExecutionIssue = await AttestRetryableAgentTransientExecutionIssueAsync(
+                        assignment,
+                        workspaceService,
+                        result.ExecutionRunId,
+                        result.Metric,
+                        $"executionRunId={result.ExecutionRunId:D}; outcome={result.Metric.Outcome}; provider={result.Metric.ProviderName}; model={result.Metric.Model}; detail={result.ResponseText}",
+                        cancellationToken)
+                    .ConfigureAwait(false);
                 return NeedsManagerForCompletionIssue(
                     assignment,
-                    ComputeHash($"{result.ExecutionRunId:D}:{result.Metric.Outcome}:{result.ResponseText}"),
-                    transientExecutionIssue);
+                    string.Equals(
+                        transientExecutionIssue.Code,
+                        ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                        StringComparison.Ordinal)
+                        ? ComputeHash(transientExecutionIssue.Evidence)
+                        : ComputeHash($"{result.ExecutionRunId:D}:{result.Metric.Outcome}:{result.ResponseText}"),
+                    transientExecutionIssue) with
+                {
+                    ExecutionRunId = new ProcessExecutionRunId(result.ExecutionRunId)
+                };
             }
 
             var validation = AgentOutputJson.DeserializeAndValidate(
@@ -351,10 +368,34 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
 
             if (TryBuildRetryableAgentTransientExecutionIssue(assignment, exception, out var transientExecutionIssue))
             {
+                if (exception is AgentRunFailedException agentRunFailedException &&
+                    workspaceService is not null)
+                {
+                    transientExecutionIssue = await AttestRetryableAgentTransientExecutionIssueAsync(
+                            assignment,
+                            workspaceService,
+                            agentRunFailedException.ExecutionRunId,
+                            immediateMetric: null,
+                            $"{exception.GetType().Name}: {exception.Message}",
+                            CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+
                 return NeedsManagerForCompletionIssue(
                     assignment,
-                    ComputeHash(exception.GetType().FullName + ":" + exception.Message),
-                    transientExecutionIssue);
+                    string.Equals(
+                        transientExecutionIssue.Code,
+                        ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                        StringComparison.Ordinal)
+                        ? ComputeHash(transientExecutionIssue.Evidence)
+                        : ComputeHash(exception.GetType().FullName + ":" + exception.Message),
+                    transientExecutionIssue) with
+                {
+                    ExecutionRunId = exception is AgentRunFailedException failedException &&
+                                     failedException.ExecutionRunId != Guid.Empty
+                        ? new ProcessExecutionRunId(failedException.ExecutionRunId)
+                        : null
+                };
             }
 
             return Failed(

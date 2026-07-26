@@ -309,7 +309,8 @@ public sealed class ProjectStructureProcessNodeService(
             .ConfigureAwait(false);
 
         var warnings = launch.Warnings.ToList();
-        if (launch.RunId is { } runId)
+        if (launch.RunId is { } runId &&
+            SupportsGenericProcessRunLink(targetNode))
         {
             try
             {
@@ -320,7 +321,7 @@ public sealed class ProjectStructureProcessNodeService(
                     ProjectObjectLinkKind.Uses,
                     cancellationToken).ConfigureAwait(false);
             }
-            catch (InvalidOperationException exception)
+            catch (Exception exception) when (exception is ProjectStructureAgentException or InvalidOperationException)
             {
                 warnings.Add($"Process run '{runId.Value:D}' started but could not be linked back to project node '{targetNode.Id}': {exception.Message}");
             }
@@ -505,18 +506,21 @@ public sealed class ProjectStructureProcessNodeService(
         if (launch.RunId is { } runId)
         {
             var childRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId.Value);
-            try
+            if (SupportsGenericProcessRunLink(projectNode))
             {
-                await dependencies.ProjectWorkbenchService.LinkObjectsAsync(
-                    projectId,
-                    projectNode.Id,
-                    childRunNodeId,
-                    ProjectObjectLinkKind.Uses,
-                    cancellationToken).ConfigureAwait(false);
-            }
-            catch (InvalidOperationException exception)
-            {
-                warnings.Add($"Subprocess run '{runId.Value:D}' started but could not be linked back to project node '{projectNode.Id}': {exception.Message}");
+                try
+                {
+                    await dependencies.ProjectWorkbenchService.LinkObjectsAsync(
+                        projectId,
+                        projectNode.Id,
+                        childRunNodeId,
+                        ProjectObjectLinkKind.Uses,
+                        cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is ProjectStructureAgentException or InvalidOperationException)
+                {
+                    warnings.Add($"Subprocess run '{runId.Value:D}' started but could not be linked back to project node '{projectNode.Id}': {exception.Message}");
+                }
             }
 
             var parentRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parentRunId.Value);
@@ -1349,6 +1353,13 @@ public sealed class ProjectStructureProcessNodeService(
     {
         return node?.ObjectType == ProjectObjectType.ProcessDefinition ||
             ProjectStructureProcessNodeKeys.TryParseProcessDefinitionNodeKey(node?.Id ?? nodeId, out _);
+    }
+
+    private static bool SupportsGenericProcessRunLink(ProjectStructureNode node)
+    {
+        return !ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+            node.ObjectType,
+            node.ObjectSubtype);
     }
 
     private static ProcessRunId ParseProcessRunId(string value)

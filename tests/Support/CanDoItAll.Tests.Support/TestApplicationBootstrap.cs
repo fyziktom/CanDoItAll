@@ -1,4 +1,6 @@
 using System.Reflection;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Mermaid.Infrastructure;
 using CanDoItAll.Composition;
@@ -62,6 +64,7 @@ public static class TestApplicationBootstrap
 
         services.TryAddSingleton<IJSRuntime, UnsupportedJsRuntime>();
         services.TryAddScoped<NavigationManager, TestNavigationManager>();
+        services.TryAddScoped<IAgentRecruitingTargetResolver, UnavailableAgentRecruitingTargetResolver>();
         services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
@@ -113,6 +116,19 @@ public static class TestApplicationBootstrap
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+        }
+    }
+
+    private sealed class UnavailableAgentRecruitingTargetResolver : IAgentRecruitingTargetResolver
+    {
+        public Task<AgentRecruitingTargetResolution> ResolveAsync(
+            AgentRecruitingExecutionTarget target,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new AgentRecruitingTargetResolution(
+                Found: false,
+                State: "unavailable",
+                IsTerminal: false));
         }
     }
 

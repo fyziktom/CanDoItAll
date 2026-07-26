@@ -37,6 +37,8 @@ internal sealed class DotNetSolutionContextPathResolver
             solutionCandidates = [solutionFile, .. solutionCandidates];
         }
 
+        solutionCandidates = IncludeSupportedSolutionFormatAlternatives(solutionCandidates);
+
         resolved = new DotNetResolvedSolutionContext(
             productRoot,
             solutionFile,
@@ -47,6 +49,39 @@ internal sealed class DotNetSolutionContextPathResolver
             Alias(productRoot));
         issue = string.Empty;
         return true;
+    }
+
+    internal static IReadOnlyList<string> IncludeSupportedSolutionFormatAlternatives(
+        IEnumerable<string> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+
+        var resolved = new List<string>();
+        foreach (var candidate in candidates)
+        {
+            Add(candidate);
+
+            var alternativeExtension = Path.GetExtension(candidate).ToLowerInvariant() switch
+            {
+                ".sln" => ".slnx",
+                ".slnx" => ".sln",
+                _ => string.Empty
+            };
+            if (!string.IsNullOrEmpty(alternativeExtension))
+            {
+                Add(Path.ChangeExtension(candidate, alternativeExtension));
+            }
+        }
+
+        return resolved;
+
+        void Add(string candidate)
+        {
+            if (!resolved.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+            {
+                resolved.Add(candidate);
+            }
+        }
     }
 
     public static bool TryResolveRelativePath(

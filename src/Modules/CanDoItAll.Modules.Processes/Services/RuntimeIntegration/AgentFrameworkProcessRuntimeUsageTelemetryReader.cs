@@ -30,9 +30,9 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
     IAgentReferenceDataProvider agentReferenceDataProvider,
     IAgentFrameworkWorkspaceService workspaceService) : IProcessRuntimeUsageTelemetryReader
 {
-    private const int ContextEstimatedInputTokenWarningThreshold = 128_000;
-    private const int ContextToolSchemaTokenWarningThreshold = 32_000;
-    private const int ContextToolCountWarningThreshold = 64;
+    private const int ContextEstimatedInputTokenWarningThreshold = 48_000;
+    private const int ContextToolSchemaTokenWarningThreshold = 12_000;
+    private const int ContextToolCountWarningThreshold = 40;
     private const int UsageExecutionRunBatchTake = 5_000;
 
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(

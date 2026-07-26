@@ -6,6 +6,8 @@ Use the current project-structure mindmap and upstream slice scope packet as the
 
 This is not a build, startup, or browser validation step. Read the upstream `ProductTargetState` record before producing any topology or solution context. `greenfield` authorizes creation of the declared baseline and requires `provisioningMode: "initialize"`; `existing` authorizes preservation and modification of the authoritative baseline and requires `provisioningMode: "verify-existing"`. `ProductTargetFilesystemState` is a read-only physical observation, not provisioning intent: a missing, empty, or preliminary target must not override the upstream decision, and a populated directory does not prove that an authoritative baseline exists. For an `existing` state, use read-only current-run evidence to ground the exact solution and project topology before emitting `verify-existing`. If the target-state decision conflicts with project structure, current-run evidence, or a non-directory/unavailable target, record the concrete contradiction and return `Blocked`; do not guess, silently switch modes, or retry an unchanged classification.
 
+When launch variables contain `DotNetProductBaselineContract`, treat `status: "discovered"` with `discoveryComplete: true` as current-run proof that an existing .NET baseline must be preserved. When `topologySampleComplete: true`, preserve its relative solution and project paths exactly; do not replace them with the example layout below. When `topologySampleComplete: false`, the arrays are samples and the counts describe the bounded discovery, so complete the exact topology with bounded read-only workspace inspection before emitting `verify-existing`. Trust target-framework and test-project metadata only when `metadataInspectionComplete: true`; otherwise reread the affected project files. Treat `partial`, `unavailable`, duplicate-name, incomplete-sample, or incomplete-metadata findings as explicit evidence requiring bounded clarification, not as permission to initialize over existing files. Treat `not-found` as proof of absence only when `discoveryComplete: true`.
+
 ## Solution-context contract
 
 Alongside the architecture decision, produce the required `.NET solution context` artifact. Its body must contain exactly one fenced `json` block using this schema. Replace every placeholder with an explicit, source-grounded decision. Every solution, candidate, required-project, test-project, and initialization path must be a bare path relative to the grounded ProductRoot, resolved exactly once; never put a native absolute path, `external-target/...` alias, ProductRoot prefix, or managed-artifact path into this JSON. `verify-existing` records only topology that is proven present and must not carry templates or initialization details. `initialize` is required for an upstream `greenfield` target state and must carry a complete, explicit initialization plan. Make one bounded technical choice when the authoritative scope leaves a non-essential choice open; do not write a `preserve-existing` pseudo-plan or switch to verification merely because no baseline exists yet.
@@ -21,8 +23,7 @@ Alongside the architecture decision, produce the required `.NET solution context
   "schema": "dotnet.solution-context/v1",
   "provisioningMode": "initialize",
   "solution": {
-    "file": "ProductSolution.slnx",
-    "candidateFiles": ["ProductSolution.slnx", "ProductSolution.sln"]
+    "file": "ProductSolution.slnx"
   },
   "requiredProjectFiles": [
     "app/ProductApp/ProductApp.csproj",
@@ -58,6 +59,7 @@ Before the first write, construct the complete JSON object for the selected prov
 - Use exactly one fenced `json` block in the managed artifact.
 - Verify that the root and `solution` are objects; `initialization` is also an object when `provisioningMode` is `initialize`.
 - Verify that `requiredProjectFiles` is a non-empty array of strings, and that optional `testProjectFiles` and `solution.candidateFiles` are arrays of strings when present.
+- The runtime derives the same-name `.sln` and `.slnx` alternatives from `solution.file`. Omit `solution.candidateFiles` unless the accepted architecture genuinely declares additional non-equivalent solution candidates.
 - For `initialize`, verify that `initialization.solutionName`, `initialization.application`, `initialization.tests`, and `initialization.targetFramework` are present; `application.templateOptions` must be an array, even when it is empty. Every non-empty `templateOptions` item must be a single `--`-prefixed option flag, not a feature label or an argument value.
 - For `verify-existing`, verify that `initialization` is omitted and the declared topology is grounded by current read-only evidence.
 

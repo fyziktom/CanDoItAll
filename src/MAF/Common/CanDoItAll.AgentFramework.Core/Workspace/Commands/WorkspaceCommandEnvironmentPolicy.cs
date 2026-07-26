@@ -4,7 +4,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed class WorkspaceCommandEnvironmentPolicy
 {
-    private static readonly HashSet<string> DefaultEnvironmentNames = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> InheritedEnvironmentNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "APPDATA",
         "COMPUTERNAME",
@@ -30,29 +30,40 @@ internal sealed class WorkspaceCommandEnvironmentPolicy
         "SystemRoot",
         "TEMP",
         "TMP",
-        "OPENAI_API_KEY",
         "USERDOMAIN",
         "USERNAME",
         "USERPROFILE",
-        "WINDIR"
-    };
-
-    private static readonly string[] DefaultEnvironmentPrefixes =
-    [
-        "DOTNET_",
-        "MSBUILD",
-        "NUGET_",
-        "OPENAI_",
-        "PIP_",
-        "POWERSHELL_",
-        "PSMODULE",
-        "PYTHON",
+        "WINDIR",
+        "DOTNET_CLI_HOME",
+        "DOTNET_CLI_TELEMETRY_OPTOUT",
+        "DOTNET_CLI_UI_LANGUAGE",
+        "DOTNET_NOLOGO",
+        "DOTNET_ROOT",
+        "DOTNET_ROOT_ARM64",
+        "DOTNET_ROOT_X64",
+        "DOTNET_ROOT_X86",
+        "DOTNET_SKIP_FIRST_TIME_EXPERIENCE",
+        "DOTNET_USE_POLLING_FILE_WATCHER",
+        "NUGET_CERT_REVOCATION_MODE",
+        "NUGET_HTTP_CACHE_PATH",
+        "NUGET_PACKAGES",
+        "NUGET_PLUGINS_CACHE_PATH",
+        "NUGET_XMLDOC_MODE",
+        "PIP_CACHE_DIR",
+        "PIP_DISABLE_PIP_VERSION_CHECK",
+        "PIP_NO_INPUT",
+        "POWERSHELL_TELEMETRY_OPTOUT",
+        "POWERSHELL_UPDATECHECK",
+        "PYTHONDONTWRITEBYTECODE",
+        "PYTHONIOENCODING",
+        "PYTHONUNBUFFERED",
+        "PYTHONUTF8",
         "VIRTUAL_ENV"
-    ];
+    };
 
     public IReadOnlyDictionary<string, string?> BuildEnvironmentVariables()
     {
-        var environment = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var source = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
         {
             if (entry.Key is not string name)
@@ -60,13 +71,23 @@ internal sealed class WorkspaceCommandEnvironmentPolicy
                 continue;
             }
 
-            if (!DefaultEnvironmentNames.Contains(name)
-                && !DefaultEnvironmentPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
+            source[name] = entry.Value?.ToString();
+        }
 
-            environment[name] = entry.Value?.ToString();
+        return BuildEnvironmentVariables(source);
+    }
+
+    internal IReadOnlyDictionary<string, string?> BuildEnvironmentVariables(
+        IReadOnlyDictionary<string, string?> source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var environment = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in source)
+        {
+            if (InheritedEnvironmentNames.Contains(pair.Key))
+            {
+                environment[pair.Key] = pair.Value;
+            }
         }
 
         return environment;

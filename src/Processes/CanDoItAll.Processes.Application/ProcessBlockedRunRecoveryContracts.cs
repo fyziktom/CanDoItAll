@@ -16,9 +16,11 @@ public enum ProcessBlockedRunRecoveryPolicy
 {
     None,
     SafeIdempotentRework,
-    SimpleAppMissingOutputRework,
-    SimpleAppMissingInputProducerRework,
-    SimpleAppRestoredInputConsumerRework
+    MissingOutputRework,
+    MissingInputProducerRework,
+    RestoredInputConsumerRework,
+    CompletedChildConsumerRework,
+    AgentTransientNoSideEffectsRework
 }
 
 public enum ProcessBlockedRunRecoveryOutcome
@@ -39,7 +41,14 @@ public sealed record ProcessBlockedRunRecoveryCommand(
     ProcessRecoveryRouteKind RecoveryRouteKind,
     ProcessStepInstanceId? ResponsibleStepInstanceId,
     ProcessRuntimeBlockedRecoveryPhase Phase,
-    DateTimeOffset ExpectedStateUpdatedAtUtc);
+    DateTimeOffset ExpectedStateUpdatedAtUtc)
+{
+    public ProcessRunId? RelatedChildRunId { get; init; }
+
+    public DateTimeOffset? ExpectedRelatedChildUpdatedAtUtc { get; init; }
+
+    public ProcessRuntimeChildLineageEvidence? ExpectedChildLineageEvidence { get; init; }
+}
 
 public sealed record ProcessBlockedRunRecoveryCommandResult(
     bool Succeeded,
@@ -69,6 +78,7 @@ public interface IProcessBlockedRunRecoveryPolicyCatalog
         ProcessRuntimeStateSnapshot state,
         ProcessInstancePlan plan,
         ProcessRuntimeStepState blockedStep,
+        ProcessRuntimeStepAssignment targetAssignment,
         StrategyResultReceipt receipt,
         ProcessRecoveryDecisionReceipt decision);
 }

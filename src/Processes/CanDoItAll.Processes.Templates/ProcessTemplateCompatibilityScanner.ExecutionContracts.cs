@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.Processes.Core;
 
 namespace CanDoItAll.Processes.Templates;
 
@@ -209,17 +210,81 @@ public static partial class ProcessTemplateCompatibilityScanner
             return;
         }
 
+        var operationKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var operation in operations.EnumerateArray())
         {
             if (operation.ValueKind != JsonValueKind.Object ||
-                !TryGetString(operation, "toolName", out _))
+                !TryGetString(operation, "key", out var operationKey) ||
+                !TryGetString(operation, "toolName", out _) ||
+                !TryGetString(operation, "requiredReceiptKey", out _) ||
+                !TryGetString(operation, "idempotencyPolicyKey", out var idempotencyPolicyKey))
             {
                 AddDiagnostic(
                     diagnostics,
                     processKey,
                     stepKey,
                     ProcessTemplateContractDiagnosticKind.InvalidDeterministicToolPlan,
-                    "Each deterministicToolPlan operation must declare toolName.");
+                    "Each deterministicToolPlan operation must declare key, toolName, requiredReceiptKey, and idempotencyPolicyKey.");
+                return;
+            }
+
+            if (!operationKeys.Add(operationKey))
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    stepKey,
+                    ProcessTemplateContractDiagnosticKind.InvalidDeterministicToolPlan,
+                    $"deterministicToolPlan operation key '{operationKey}' is declared more than once.");
+                return;
+            }
+
+            if (!ProcessToolOperationExecutionPolicyKeys.TryResolveIdempotency(
+                    idempotencyPolicyKey,
+                    out _))
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    stepKey,
+                    ProcessTemplateContractDiagnosticKind.InvalidDeterministicToolPlan,
+                    $"deterministicToolPlan operation has unknown idempotency policy '{idempotencyPolicyKey}'.");
+                return;
+            }
+
+            var failureReconciliationPolicyKey =
+                TryGetString(
+                    operation,
+                    "failureReconciliationPolicyKey",
+                    out var configuredFailureReconciliationPolicyKey)
+                    ? configuredFailureReconciliationPolicyKey
+                    : string.Empty;
+            if (!ProcessToolOperationExecutionPolicyKeys.TryResolveFailureReconciliation(
+                    failureReconciliationPolicyKey,
+                    out var failureReconciliation))
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    stepKey,
+                    ProcessTemplateContractDiagnosticKind.InvalidDeterministicToolPlan,
+                    $"deterministicToolPlan operation has unknown failure reconciliation policy '{failureReconciliationPolicyKey}'.");
+                return;
+            }
+
+            if (failureReconciliation ==
+                    ProcessToolOperationFailureReconciliationPolicy.AuthoritativeReadbackConvergence &&
+                (!requiresReadbackChecks ||
+                 !TryGetProperty(plan, "readbackChecks", out var convergenceReadbackChecks) ||
+                 convergenceReadbackChecks.ValueKind != JsonValueKind.Array ||
+                 convergenceReadbackChecks.GetArrayLength() == 0))
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    stepKey,
+                    ProcessTemplateContractDiagnosticKind.InvalidDeterministicToolPlan,
+                    "deterministicToolPlan authoritative-readback convergence requires readback checks.");
                 return;
             }
         }

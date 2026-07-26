@@ -170,6 +170,17 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
         Assert.Equal(ProjectStructureTaskResourceKind.Process, attached.Resource.Kind);
         Assert.Equal(SoftwareDeliveryDefinitionId, attached.Resource.ResourceId);
 
+        var started = await PostAndReadAsync<ProjectStructureProcessNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes/{created.TaskNodeId}/process/start",
+            new ProjectStructureProcessNodeStartInput(
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "integration-test"));
+
+        Assert.NotNull(started.RunId);
+
         var structure = await PostAndReadAsync<ProjectStructureReadResponse>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/structure/read",
@@ -178,10 +189,24 @@ public sealed class ProjectStructureTaskHttpBoundaryTests
                 IncludeMetadata: true));
         var processLink = Assert.Single(structure.Links, link =>
             string.Equals(link.SourceId, created.TaskNodeId, StringComparison.Ordinal) &&
+            string.Equals(
+                link.TargetId,
+                ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(SoftwareDeliveryDefinitionId),
+                StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.Uses);
         Assert.Equal(
             ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(SoftwareDeliveryDefinitionId),
             processLink.TargetId);
+        var runNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(started.RunId!.Value);
+        var runNode = Assert.Single(
+            structure.Nodes,
+            node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
+        Assert.Equal(created.TaskNodeId, runNode.ParentId);
+        Assert.DoesNotContain(structure.Links, link =>
+            link.IsUserAuthored &&
+            string.Equals(link.SourceId, created.TaskNodeId, StringComparison.Ordinal) &&
+            string.Equals(link.TargetId, runNodeId, StringComparison.Ordinal) &&
+            link.Kind == ProjectObjectLinkKind.Uses);
     }
 
     private static async Task<T> PostAndReadAsync<T>(

@@ -834,26 +834,34 @@
           {
             "ToolName": "workspace_dotnet_restore",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           },
           {
             "ToolName": "workspace_dotnet_build",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           },
           {
             "ToolName": "workspace_dotnet_test",
             "Purpose": "FocusedValidation",
-            "EnforceBranchOutcomeKeys": [],
+            "EnforceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "Reason": "Current-run validation proof is required for the repair attempt."
           }
         ],
         "CompletionIssueRoutes": [
           {
             "IssueCode": "process.adapter.product_mutation_receipt_missing",
-            "SourceBranchOutcomeKeys": [],
+            "SourceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "TargetBranchOutcomeKey": "repair-attempt-incomplete",
             "TargetBranchOutcomeTitle": "Repair attempt incomplete",
             "RequiresDefectEvidence": false,
@@ -861,7 +869,9 @@
           },
           {
             "IssueCode": "process.adapter.managed_artifact_write_receipt_missing",
-            "SourceBranchOutcomeKeys": [],
+            "SourceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "TargetBranchOutcomeKey": "repair-attempt-incomplete",
             "TargetBranchOutcomeTitle": "Repair attempt incomplete",
             "RequiresDefectEvidence": false,
@@ -869,7 +879,9 @@
           },
           {
             "IssueCode": "process.adapter.product_required_tool_receipt_missing",
-            "SourceBranchOutcomeKeys": [],
+            "SourceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "TargetBranchOutcomeKey": "repair-attempt-incomplete",
             "TargetBranchOutcomeTitle": "Repair attempt incomplete",
             "RequiresDefectEvidence": false,
@@ -877,7 +889,9 @@
           },
           {
             "IssueCode": "process.adapter.product_source_inspection_evidence_missing",
-            "SourceBranchOutcomeKeys": [],
+            "SourceBranchOutcomeKeys": [
+              "feature-repair-applied"
+            ],
             "TargetBranchOutcomeKey": "repair-attempt-incomplete",
             "TargetBranchOutcomeTitle": "Repair attempt incomplete",
             "RequiresDefectEvidence": false,

@@ -91,6 +91,8 @@ public sealed class ProcessTemplateStepCompletionPolicyDocument
 
 public sealed class ProcessTemplateProductToolReceiptRequirementDocument
 {
+    public string Key { get; set; } = string.Empty;
+
     public string ToolName { get; set; } = string.Empty;
 
     public string Purpose { get; set; } = string.Empty;
@@ -153,6 +155,8 @@ public sealed class ProcessTemplateToolPlanOperationDocument
     public string ArgumentsSummary { get; set; } = string.Empty;
 
     public string IdempotencyPolicyKey { get; set; } = string.Empty;
+
+    public string FailureReconciliationPolicyKey { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateRequiredReceiptDocument

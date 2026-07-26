@@ -175,6 +175,11 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
             lines.Add("Launch variables whose names end with Contract are typed project-structure facts for this process; use them only for the decisions explicitly described by those variables.");
         }
 
+        if (TryResolveLaunchVariable(request.LaunchVariables, "DotNetProductBaselineContract", out _))
+        {
+            lines.Add("DotNetProductBaselineContract is a runtime-owned bounded read-only observation for the current .NET launch. A discovered contract with discoveryComplete true proves an existing baseline. Copy its paths as the complete topology only when topologySampleComplete is true; otherwise use the counts and samples to drive bounded read-only topology discovery. Trust framework and test-project metadata only when metadataInspectionComplete is true. Not-found proves absence only when discoveryComplete is true. Partial, unavailable, duplicate-name, incomplete-sample, or incomplete-metadata findings never authorize destructive reinitialization.");
+        }
+
         if (TryResolveLaunchVariable(request.LaunchVariables, "ProductRoot", out _) ||
             TryResolveLaunchVariable(request.LaunchVariables, "OutputRoot", out _) ||
             TryResolveLaunchVariable(request.LaunchVariables, "ExternalTargetRoot", out _))

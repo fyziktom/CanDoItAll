@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
@@ -52,13 +53,215 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.Contains("src/Calculator/Calculator.csproj", await File.ReadAllTextAsync(Path.Combine(productRoot, "Calculator.slnx")), StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public async Task TryExecuteAsync_accepts_a_solution_candidate_created_with_an_alternative_extension()
+    [Theory]
+    [InlineData(".slnx")]
+    [InlineData(".sln")]
+    public async Task TryExecuteAsync_accepts_a_solution_candidate_created_by_the_sdk(
+        string generatedSolutionExtension)
     {
         using var workspace = new RuntimeExecutorWorkspace();
         var productRoot = workspace.CreateProductRoot();
         var primarySolutionFile = Path.Combine(productRoot, "Calculator.sln");
-        var generatedSolutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var alternativeSolutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var generatedSolutionFile = Path.Combine(
+            productRoot,
+            $"Calculator{generatedSolutionExtension}");
+        var processHost = new FakeWorkspaceProcessHost(request =>
+        {
+            if (request.ToolName == "workspace_dotnet_new")
+            {
+                CreateDotNetNewOutput(request, generatedSolutionExtension);
+            }
+            else if (request.ToolName == "workspace_pwsh_run_script")
+            {
+                WriteSolutionMembership(productRoot, generatedSolutionExtension);
+            }
+        });
+        var executor = CreateExecutor(workspace, processHost);
+        var launchVariables = new Dictionary<string, string>(CreateLaunchVariables(productRoot), StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetSolutionFile"] = primarySolutionFile,
+            ["DotNetSolutionFileCandidates"] = $"{primarySolutionFile}; {alternativeSolutionFile}",
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] = JsonSerializer.Serialize(
+            new[]
+            {
+                Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj")
+            }),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] = JsonSerializer.Serialize(
+            new object[]
+            {
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["pathCandidates"] = new[] { primarySolutionFile, alternativeSolutionFile },
+                    ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                },
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["pathCandidates"] = new[] { Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj") },
+                    ["requiredTextAnyGroups"] = new[] { new[] { "<TargetFramework>net8.0</TargetFramework>" } }
+                }
+            })
+        };
+        var assignment = CreateAssignment(productRoot, launchVariables: launchVariables);
+
+        var result = await executor.TryExecuteAsync(assignment);
+
+        Assert.NotNull(result);
+        Assert.True(result!.Succeeded, result.Summary);
+        Assert.True(File.Exists(generatedSolutionFile));
+        Assert.Null(ProcessProductCompletionPathGate.ValidateRequiredProductFilesystemState(
+            assignment,
+            result.Output!));
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt => receipt.ToolName == "workspace_dotnet_new" &&
+                       receipt.RequestSummary.StartsWith("new sln ", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_skips_existing_derived_solution_format_alternative()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var preferredSolutionFile = Path.Combine(productRoot, "Calculator.sln");
+        var existingSolutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
+        WriteExistingAppProject(productRoot);
+        await File.WriteAllTextAsync(existingSolutionFile, string.Empty);
+        var processHost = new FakeWorkspaceProcessHost(request =>
+        {
+            if (request.ToolName == "workspace_pwsh_run_script")
+            {
+                WriteSolutionMembership(productRoot);
+            }
+        });
+        var executor = CreateExecutor(workspace, processHost);
+        var launchVariables = new Dictionary<string, string>(
+            CreateLaunchVariables(productRoot),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetSolutionFile"] = preferredSolutionFile,
+            ["DotNetSolutionFileCandidates"] = preferredSolutionFile,
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                JsonSerializer.Serialize(
+                    new object[]
+                    {
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["pathCandidates"] = new[] { preferredSolutionFile, existingSolutionFile },
+                            ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                        },
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["pathCandidates"] = new[] { appProjectFile },
+                            ["requiredTextAnyGroups"] = new[] { new[] { "<Project Sdk=" } }
+                        }
+                    })
+        };
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.True(result!.Succeeded, result.Summary);
+        Assert.Single(processHost.Requests);
+        Assert.Equal("workspace_pwsh_run_script", processHost.Requests[0].ToolName);
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt =>
+                receipt.ToolName == "workspace_dotnet_new" &&
+                receipt.RiskClass == "RuntimeOwned:IdempotentSkip" &&
+                receipt.ExitSummary.Contains("Calculator.slnx", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_derives_solution_format_alternative_when_candidate_variable_is_absent()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var preferredSolutionFile = Path.Combine(productRoot, "Calculator.sln");
+        var existingSolutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
+        WriteExistingAppProject(productRoot);
+        await File.WriteAllTextAsync(existingSolutionFile, string.Empty);
+        var processHost = new FakeWorkspaceProcessHost(request =>
+        {
+            if (request.ToolName == "workspace_pwsh_run_script")
+            {
+                WriteSolutionMembership(productRoot);
+            }
+        });
+        var executor = CreateExecutor(workspace, processHost);
+        var launchVariables = new Dictionary<string, string>(
+            CreateLaunchVariables(productRoot),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetSolutionFile"] = preferredSolutionFile,
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] =
+                JsonSerializer.Serialize(new[] { appProjectFile }),
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                JsonSerializer.Serialize(
+                    new object[]
+                    {
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["pathCandidates"] = new[] { preferredSolutionFile, existingSolutionFile },
+                            ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                        },
+                        new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["pathCandidates"] = new[] { appProjectFile },
+                            ["requiredTextAnyGroups"] = new[] { new[] { "<Project Sdk=" } }
+                        }
+                    })
+        };
+        launchVariables.Remove("DotNetSolutionFileCandidates");
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.True(result!.Succeeded, result.Summary);
+        Assert.Single(processHost.Requests);
+        Assert.Equal("workspace_pwsh_run_script", processHost.Requests[0].ToolName);
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt =>
+                receipt.ToolName == "workspace_dotnet_new" &&
+                receipt.RiskClass == "RuntimeOwned:IdempotentSkip" &&
+                receipt.ExitSummary.Contains("Calculator.slnx", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_does_not_treat_a_directory_as_an_existing_solution_file()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var solutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        Directory.CreateDirectory(solutionFile);
+        WriteExistingAppProject(productRoot);
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        var result = await executor.TryExecuteAsync(CreateAssignment(productRoot));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        var request = Assert.Single(processHost.Requests);
+        Assert.Equal("workspace_dotnet_new", request.ToolName);
+        Assert.Equal("sln", request.Arguments[1]);
+        Assert.DoesNotContain(
+            result.ToolReceipts,
+            receipt =>
+                receipt.ToolName == "workspace_dotnet_new" &&
+                receipt.RiskClass == "RuntimeOwned:IdempotentSkip");
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_reconciles_failed_create_when_contracted_postcondition_exists()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
         var processHost = new FakeWorkspaceProcessHost(request =>
         {
             if (request.ToolName == "workspace_dotnet_new")
@@ -69,23 +272,29 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             {
                 WriteSolutionMembership(productRoot);
             }
-        });
-        var executor = CreateExecutor(workspace, processHost);
-        var launchVariables = new Dictionary<string, string>(CreateLaunchVariables(productRoot), StringComparer.OrdinalIgnoreCase)
+        })
         {
-            ["DotNetSolutionFile"] = primarySolutionFile,
-            ["DotNetSolutionFileCandidates"] = $"{primarySolutionFile}; {generatedSolutionFile}"
+            ExitCodeResolver = request => request.ToolName == "workspace_dotnet_new" ? 73 : 0,
+            Stderr = "The target was created concurrently."
         };
+        var executor = CreateExecutor(workspace, processHost);
 
-        var result = await executor.TryExecuteAsync(CreateAssignment(productRoot, launchVariables: launchVariables));
+        var result = await executor.TryExecuteAsync(CreateAssignment(productRoot));
 
         Assert.NotNull(result);
         Assert.True(result!.Succeeded, result.Summary);
-        Assert.True(File.Exists(generatedSolutionFile));
-        Assert.Contains(
-            result.ToolReceipts,
-            receipt => receipt.ToolName == "workspace_dotnet_new" &&
-                       receipt.RequestSummary.StartsWith("new sln ", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(
+            2,
+            result.ToolReceipts.Count(
+                receipt =>
+                    receipt.ToolName == "workspace_dotnet_new" &&
+                    receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase)));
+        Assert.Equal(
+            2,
+            result.ToolReceipts.Count(
+                receipt =>
+                    receipt.ToolName == "workspace_dotnet_new" &&
+                    receipt.RequestSummary.Contains("postcondition-reconciled", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -260,7 +469,82 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.False(result!.Succeeded);
         Assert.Contains("readback", result.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            ProcessRuntimeOwnedStepFailures.ApplyDeclaredIdempotency(
+                ProcessRuntimeOwnedStepFailures.ReadbackContentMissing,
+                ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable),
+            result.Failure);
         Assert.Contains(result.ToolReceipts, receipt => receipt.ToolName == "workspace_pwsh_run_script" && receipt.ExitSummary.Contains("Succeeded", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_reports_existing_unreadable_readback_as_unavailable()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        WriteExistingAppProject(productRoot);
+        await File.WriteAllBytesAsync(
+            Path.Combine(productRoot, "Calculator.slnx"),
+            [0x00, 0x01, 0x02, 0x03]);
+        var executor = CreateExecutor(workspace, new FakeWorkspaceProcessHost());
+
+        var result = await executor.TryExecuteAsync(CreateAssignment(productRoot));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Equal(ProcessRuntimeOwnedStepFailures.ReadbackUnavailable, result.Failure);
+        Assert.Contains("could not be read", result.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt =>
+                receipt.ToolName == "workspace_read_file" &&
+                receipt.ExitSummary.Contains("Denied", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_reports_every_missing_readback_candidate()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        WriteExistingAppProject(productRoot);
+        WriteSolutionMembership(productRoot);
+        var missingSln = Path.Combine(productRoot, "MissingCalculator.sln");
+        var missingSlnx = Path.Combine(productRoot, "MissingCalculator.slnx");
+        var solutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var launchVariables = new Dictionary<string, string>(
+            CreateLaunchVariables(productRoot),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                JsonSerializer.Serialize(
+                new object[]
+                {
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { solutionFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                    },
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { missingSln, missingSlnx },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                    }
+                })
+        };
+        var executor = CreateExecutor(workspace, new FakeWorkspaceProcessHost());
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Equal(
+            ProcessRuntimeOwnedStepFailures.ApplyDeclaredIdempotency(
+                ProcessRuntimeOwnedStepFailures.ReadbackPathMissing,
+                ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable),
+            result.Failure);
+        Assert.Contains("MissingCalculator.sln", result.Summary, StringComparison.Ordinal);
+        Assert.Contains("MissingCalculator.slnx", result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -434,12 +718,139 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
     }
 
     [Fact]
+    public async Task TryExecuteAsync_rejects_readback_contract_without_solution_candidates_before_tool_invocation()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
+        var launchVariables = new Dictionary<string, string>(
+            CreateLaunchVariables(productRoot),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                JsonSerializer.Serialize(
+                new object[]
+                {
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { appProjectFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "<TargetFramework>net8.0</TargetFramework>" } }
+                    }
+                })
+        };
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Contains(
+            "dotnet.setup.plan.solution_readback_candidates_missing",
+            result.Summary,
+            StringComparison.Ordinal);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_rejects_readback_contract_that_omits_an_authoritative_solution_candidate()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var preferredSolutionFile = Path.Combine(productRoot, "Calculator.sln");
+        var generatedSolutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
+        var launchVariables = new Dictionary<string, string>(
+            CreateLaunchVariables(productRoot),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetSolutionFile"] = preferredSolutionFile,
+            ["DotNetSolutionFileCandidates"] = $"{preferredSolutionFile}; {generatedSolutionFile}",
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                JsonSerializer.Serialize(
+                new object[]
+                {
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { preferredSolutionFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                    },
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { appProjectFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "<TargetFramework>net8.0</TargetFramework>" } }
+                    }
+                })
+        };
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Contains(
+            "dotnet.setup.plan.solution_readback_candidates_missing",
+            result.Summary,
+            StringComparison.Ordinal);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_rejects_readback_contract_that_omits_the_singular_solution_candidate()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var singularSolutionFile = Path.Combine(productRoot, "Calculator.sln");
+        var generatedSolutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
+        var launchVariables = new Dictionary<string, string>(
+            CreateLaunchVariables(productRoot),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetSolutionFile"] = singularSolutionFile,
+            ["DotNetSolutionFileCandidates"] = generatedSolutionFile,
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] =
+                JsonSerializer.Serialize(
+                new object[]
+                {
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { generatedSolutionFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                    },
+                    new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["pathCandidates"] = new[] { appProjectFile },
+                        ["requiredTextAnyGroups"] = new[] { new[] { "<TargetFramework>net8.0</TargetFramework>" } }
+                    }
+                })
+        };
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Contains(
+            "dotnet.setup.plan.solution_readback_candidates_missing",
+            result.Summary,
+            StringComparison.Ordinal);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
     public async Task TryExecuteAsync_rejects_readback_candidate_outside_product_root()
     {
         using var workspace = new RuntimeExecutorWorkspace();
         var productRoot = workspace.CreateProductRoot();
         WriteExistingAppProject(productRoot);
-        await File.WriteAllTextAsync(Path.Combine(productRoot, "Calculator.slnx"), string.Empty);
+        WriteSolutionMembership(productRoot);
+        var solutionFile = Path.Combine(productRoot, "Calculator.slnx");
         var outsideReadbackFile = Path.Combine(workspace.WorkspaceRoot, "outside.slnx");
         await File.WriteAllTextAsync(outsideReadbackFile, "src/Calculator/Calculator.csproj");
         var launchVariables = new Dictionary<string, string>(CreateLaunchVariables(productRoot), StringComparer.OrdinalIgnoreCase)
@@ -447,6 +858,11 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] = JsonSerializer.Serialize(
             new object[]
             {
+                new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["pathCandidates"] = new[] { solutionFile },
+                    ["requiredTextAnyGroups"] = new[] { new[] { "src/Calculator/Calculator.csproj" } }
+                },
                 new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     ["pathCandidates"] = new[] { outsideReadbackFile },
@@ -468,6 +884,102 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.False(result!.Succeeded);
         Assert.Contains("escapes ProductRoot", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_verify_existing_uses_existing_alternative_solution_candidate()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var projectFile = Path.Combine(productRoot, "src", "EnterpriseSuite", "EnterpriseSuite.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+        await File.WriteAllTextAsync(projectFile, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var preferredSolution = Path.Combine(productRoot, "build", "EnterpriseSuite.sln");
+        var existingSolution = Path.Combine(productRoot, "build", "EnterpriseSuite.slnx");
+        Directory.CreateDirectory(Path.GetDirectoryName(existingSolution)!);
+        await File.WriteAllTextAsync(preferredSolution, "stale solution membership");
+        await File.WriteAllTextAsync(existingSolution, "src/EnterpriseSuite/EnterpriseSuite.csproj");
+        var launchVariables = new Dictionary<string, string>(
+            CreateVerifyExistingLaunchVariables(productRoot, [projectFile]),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetSolutionFile"] = preferredSolution,
+            ["DotNetSolutionFileCandidates"] = $"{preferredSolution}; {existingSolution}"
+        };
+        var executor = CreateExecutor(workspace, new FakeWorkspaceProcessHost());
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.True(result!.Succeeded, result.Summary);
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt =>
+                receipt.ToolName == "workspace_read_file" &&
+                receipt.RequestSummary.EndsWith("EnterpriseSuite.slnx", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(
+            2,
+            result.ToolReceipts.Count(receipt => receipt.ToolName == "workspace_read_file"));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_verify_existing_requires_declared_test_project_membership()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var implementationProject = Path.Combine(
+            productRoot,
+            "src",
+            "EnterpriseSuite",
+            "EnterpriseSuite.csproj");
+        var testProject = Path.Combine(
+            productRoot,
+            "tests",
+            "EnterpriseSuite.Tests",
+            "EnterpriseSuite.Tests.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(implementationProject)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(testProject)!);
+        await File.WriteAllTextAsync(implementationProject, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        await File.WriteAllTextAsync(testProject, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var solutionFile = Path.Combine(productRoot, "build", "EnterpriseSuite.sln");
+        Directory.CreateDirectory(Path.GetDirectoryName(solutionFile)!);
+        await File.WriteAllTextAsync(solutionFile, "src/EnterpriseSuite/EnterpriseSuite.csproj");
+        var launchVariables = new Dictionary<string, string>(
+            CreateVerifyExistingLaunchVariables(productRoot, [implementationProject]),
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["DotNetTestProjectFiles"] = JsonSerializer.Serialize(new[] { testProject })
+        };
+        var executor = CreateExecutor(workspace, new FakeWorkspaceProcessHost());
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Equal(ProcessRuntimeOwnedStepFailures.VerificationFailed, result.Failure);
+        Assert.Contains("EnterpriseSuite.Tests.csproj", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_verify_existing_types_invalid_candidate_contract_as_contract_failure()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var projectFile = Path.Combine(productRoot, "src", "EnterpriseSuite", "EnterpriseSuite.csproj");
+        var launchVariables = new Dictionary<string, string>(
+            CreateVerifyExistingLaunchVariables(productRoot, [projectFile]),
+            StringComparer.OrdinalIgnoreCase);
+        launchVariables.Remove("DotNetSolutionFile");
+        var executor = CreateExecutor(workspace, new FakeWorkspaceProcessHost());
+
+        var result = await executor.TryExecuteAsync(
+            CreateAssignment(productRoot, launchVariables: launchVariables));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Equal(ProcessRuntimeOwnedStepFailures.ContractInvalid, result.Failure);
     }
 
     [Fact]
@@ -571,6 +1083,13 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
                     RequiresScaffold = true
                 }),
             [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = "dotnet.solution-setup",
+            [ProcessRuntimeLaunchVariables.ProcessStepDeterministicToolPlanDescriptorJson] =
+                ProcessRuntimeLaunchVariables.SerializeProcessStepDeterministicToolPlanDescriptor(
+                    new ProcessRuntimeDeterministicToolPlanDescriptor(
+                        "dotnet.create-project",
+                        "DotNetSolutionCreate",
+                        "DotNetCreateProjectExecutionPlan",
+                        CreateCreateProjectOperationPolicies())),
             [ProcessRuntimeLaunchVariables.ProcessStepScriptHelperDescriptorJson] =
                 ProcessRuntimeLaunchVariables.SerializeProcessStepScriptHelperDescriptor(
                     new ProcessRuntimeScriptHelperDescriptor(
@@ -579,7 +1098,8 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
                         "DotNetCreateProjectSideEffectManifest",
                         "dotnet.create-project",
                         "DotNetSolutionCreate",
-                        "DotNetCreateProjectExecutionPlan")),
+                        "DotNetCreateProjectExecutionPlan",
+                        CreateCreateProjectOperationPolicies())),
             [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = JsonSerializer.Serialize(
             new[]
             {
@@ -622,6 +1142,7 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             ["ProductRoot"] = productRoot,
             ["ExternalTargetRoot"] = productRoot,
             ["DotNetSolutionFile"] = solutionFile,
+            ["DotNetSolutionFileCandidates"] = solutionFile,
             ["DotNetAppProjectFile"] = appProjectFile,
             ["DotNetTestProjectFile"] = testProjectFile,
             ["DotNetTestTemplate"] = "mstest",
@@ -688,6 +1209,30 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         };
     }
 
+    private static IReadOnlyList<ProcessToolOperationExecutionPolicy> CreateCreateProjectOperationPolicies()
+        =>
+        [
+            CreateOperationPolicy("create-solution", "workspace_dotnet_new"),
+            CreateOperationPolicy("create-app-project", "workspace_dotnet_new"),
+            CreateOperationPolicy("write-helper-script", "workspace_write_file"),
+            CreateOperationPolicy(
+                "run-helper-script",
+                "workspace_pwsh_run_script",
+                ProcessToolOperationFailureReconciliationPolicy.AuthoritativeReadbackConvergence),
+            CreateOperationPolicy("solution-membership-readback", "workspace_read_file")
+        ];
+
+    private static ProcessToolOperationExecutionPolicy CreateOperationPolicy(
+        string operationKey,
+        string toolName,
+        ProcessToolOperationFailureReconciliationPolicy failureReconciliation =
+            ProcessToolOperationFailureReconciliationPolicy.None)
+        => new(
+            operationKey,
+            toolName,
+            ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable,
+            failureReconciliation);
+
     private static IReadOnlyDictionary<string, string> CreateVerifyExistingLaunchVariables(
         string productRoot,
         IReadOnlyList<string> implementationProjectFiles)
@@ -704,14 +1249,18 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         };
     }
 
-    private static void CreateDotNetNewOutput(WorkspaceProcessExecutionRequest request)
+    private static void CreateDotNetNewOutput(
+        WorkspaceProcessExecutionRequest request,
+        string solutionExtension = ".slnx")
     {
         var template = request.Arguments[1];
         var nameIndex = request.Arguments.ToList().IndexOf("-n");
         var name = request.Arguments[nameIndex + 1];
         if (string.Equals(template, "sln", StringComparison.OrdinalIgnoreCase))
         {
-            File.WriteAllText(Path.Combine(request.WorkingDirectory, $"{name}.slnx"), string.Empty);
+            File.WriteAllText(
+                Path.Combine(request.WorkingDirectory, $"{name}{solutionExtension}"),
+                string.Empty);
             return;
         }
 
@@ -728,10 +1277,12 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
                 : $"<Project Sdk=\"Microsoft.NET.Sdk.BlazorWebAssembly\"><PropertyGroup><TargetFramework>{targetFramework}</TargetFramework></PropertyGroup></Project>");
     }
 
-    private static void WriteSolutionMembership(string productRoot)
+    private static void WriteSolutionMembership(
+        string productRoot,
+        string solutionExtension = ".slnx")
     {
         File.WriteAllText(
-            Path.Combine(productRoot, "Calculator.slnx"),
+            Path.Combine(productRoot, $"Calculator{solutionExtension}"),
             "src/Calculator/Calculator.csproj");
     }
 
@@ -832,6 +1383,8 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
 
         public int ExitCode { get; init; }
 
+        public Func<WorkspaceProcessExecutionRequest, int>? ExitCodeResolver { get; init; }
+
         public string Stdout { get; init; } = "ok";
 
         public string Stderr { get; init; } = string.Empty;
@@ -859,9 +1412,10 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             Requests.Add(request);
             onExecute?.Invoke(request);
             var now = DateTimeOffset.UtcNow;
+            var exitCode = ExitCodeResolver?.Invoke(request) ?? ExitCode;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,
-                ExitCode: ExitCode,
+                ExitCode: exitCode,
                 Stdout: Stdout,
                 Stderr: Stderr,
                 StdoutTruncated: false,

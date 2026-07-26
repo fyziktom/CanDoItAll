@@ -21,9 +21,9 @@
       "DriverKey": "dotnet.launch-contract",
       "Settings": {
         "Mode": "solution-setup",
-        "ProductCompletionRequiredPathsByStep": "{\"create-dotnet-project\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\"],\"add-test-project\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"],\"repair-solution-setup\":[\"${DotNetSolutionFileForwardSlash}\",\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"]}",
-        "ProductCompletionRequiredToolReceiptsByStep": "{\"create-dotnet-project\":[\"template=sln\",\"template=${DotNetAppTemplate}\",\"workspace_pwsh_run_script\"],\"add-test-project\":[\"workspace_pwsh_run_script\"],\"repair-solution-setup\":[\"workspace_pwsh_run_script\"],\"validate-first-build\":[\"workspace_dotnet_restore\",\"workspace_dotnet_build\",\"workspace_dotnet_test\"],\"validate-first-build-after-repair\":[\"workspace_dotnet_restore\",\"workspace_dotnet_build\",\"workspace_dotnet_test\"]}",
-        "ProductCompletionRequiredFileContentChecksByStep": "{\"create-dotnet-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetAppProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"<TargetFramework>${DotNetTargetFramework}</TargetFramework>\"]]}],\"add-test-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\",\"${DotNetAppProjectReferenceRelativePathWindows}\"]]}],\"repair-solution-setup\":[{\"pathCandidates\":[\"${DotNetSolutionFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\",\"${DotNetAppProjectReferenceRelativePathWindows}\"]]}]}",
+        "ProductCompletionRequiredPathsByStep": "{\"create-dotnet-project\":[\"${DotNetAppProjectFileForwardSlash}\"],\"add-test-project\":[\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"],\"repair-solution-setup\":[\"${DotNetAppProjectFileForwardSlash}\",\"${DotNetTestProjectFileForwardSlash}\"]}",
+        "ProductCompletionRequiredToolReceiptsByStep": "{\"create-dotnet-project\":[\"template=sln\",\"template=${DotNetAppTemplate}\",\"workspace_pwsh_run_script\"],\"add-test-project\":[\"workspace_pwsh_run_script\"],\"repair-solution-setup\":[\"workspace_pwsh_run_script\"]}",
+        "ProductCompletionRequiredFileContentChecksByStep": "{\"create-dotnet-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileCandidates}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetAppProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"<TargetFramework>${DotNetTargetFramework}</TargetFramework>\"]]}],\"add-test-project\":[{\"pathCandidates\":[\"${DotNetSolutionFileCandidates}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\",\"${DotNetAppProjectReferenceRelativePathWindows}\"]]}],\"repair-solution-setup\":[{\"pathCandidates\":[\"${DotNetSolutionFileCandidates}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectSolutionRelativePath}\"],[\"${DotNetTestProjectSolutionRelativePath}\"]]},{\"pathCandidates\":[\"${DotNetTestProjectFileForwardSlash}\"],\"requiredTextAnyGroups\":[[\"${DotNetAppProjectReferenceRelativePath}\",\"${DotNetAppProjectReferenceRelativePathWindows}\"]]}]}",
         "ProcessStepScopedLaunchVariablePrefixesByStep": "{\"scaffold-contract\":[\"DotNetCreateProject\",\"DotNetAddTestProject\"],\"create-dotnet-project\":[\"DotNetCreateProject\"],\"add-test-project\":[\"DotNetAddTestProject\"],\"repair-solution-setup\":[\"DotNetCreateProject\",\"DotNetAddTestProject\"]}"
       },
       "InputArtifactBindings": [
@@ -352,7 +352,8 @@
               "ToolName": "workspace_pwsh_run_script",
               "RequiredReceiptKey": "run-helper-script",
               "ArgumentsSummary": "Run the helper script with the product side-effect manifest.",
-              "IdempotencyPolicyKey": "current-run-repeatable"
+              "IdempotencyPolicyKey": "current-run-repeatable",
+              "FailureReconciliationPolicyKey": "authoritative-readback-convergence"
             },
             {
               "Key": "solution-membership-readback",
@@ -558,7 +559,8 @@
               "ToolName": "workspace_pwsh_run_script",
               "RequiredReceiptKey": "run-helper-script",
               "ArgumentsSummary": "Run the helper script with the product side-effect manifest.",
-              "IdempotencyPolicyKey": "current-run-repeatable"
+              "IdempotencyPolicyKey": "current-run-repeatable",
+              "FailureReconciliationPolicyKey": "authoritative-readback-convergence"
             },
             {
               "Key": "solution-membership-readback",
@@ -641,7 +643,7 @@
       "Key": "validate-first-build",
       "Title": "Validate first build and test discovery",
       "Subtitle": "Build proof",
-      "Notes": "Run restore/build and a targeted test discovery or initial test command so the pre-implementation scaffold is known good before handoff. Before command execution, inspect only the contracted solution and project files needed to verify topology; a solution with no app/test project entries is incomplete even when dotnet build exits successfully as a no-op. Use workspace_dotnet_restore and workspace_dotnet_build against the contracted solution or product root before finalizing. Use workspace_dotnet_test against DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; use the contracted solution or product root for tests only when no test project target exists. The ProductCompletionRequiredToolReceipts launch variable is a hard validation gate for this step; successful current-run receipts for restore, build, and test are required before Completed. Select setup-validated when proof is green and solution membership/project-reference readbacks are present. Generated starter/demo UI or content and a passing placeholder template test are expected before downstream feature implementation; they are not template-integrity or test-discovery failures and must not select setup-repair-required. Do not assess product acceptance criteria, feature completeness, substantive product-test coverage, or absence of product-specific source here. Select setup-repair-required only for repairable structural or execution defects such as an empty solution, disconnected project, failed restore/build/test command, broken package/reference wiring, malformed generated template output that prevents the baseline from building, or failed test-runner discovery, and include a concrete repair packet. Return Blocked for missing execution capability only after a current tool boundary or denied tool receipt proves the required validation tool is unavailable. In the managed artifact, include the exact selected branch key on its own line as Branch outcome key: setup-validated or Branch outcome key: setup-repair-required before finalizing. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
+      "Notes": "Run restore/build and a targeted test discovery or initial test command so the pre-implementation scaffold is known good before handoff. Before command execution, inspect only the contracted solution and project files needed to verify topology; a solution with no app/test project entries is incomplete even when dotnet build exits successfully as a no-op. Use workspace_dotnet_restore and workspace_dotnet_build against the contracted solution or product root before finalizing. Use workspace_dotnet_test against DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; use the contracted solution or product root for tests only when no test project target exists. The branch-scoped ProductCompletionRequiredToolReceipts policy is a hard validation gate for this step: setup-validated requires successful current-run restore, build, test, and solution-readback receipts, while setup-repair-required requires current-run attempts for the same tools and explicitly accepts failed execution receipts as defect evidence. Select setup-validated when proof is green and solution membership/project-reference readbacks are present. Generated starter/demo UI or content and a passing placeholder template test are expected before downstream feature implementation; they are not template-integrity or test-discovery failures and must not select setup-repair-required. Do not assess product acceptance criteria, feature completeness, substantive product-test coverage, or absence of product-specific source here. Select setup-repair-required only for repairable structural or execution defects such as an empty solution, disconnected project, failed restore/build/test command, broken package/reference wiring, malformed generated template output that prevents the baseline from building, or failed test-runner discovery, and include a concrete repair packet. Return Blocked for missing execution capability only after a current tool boundary or denied tool receipt proves the required validation tool is unavailable. In the managed artifact, include the exact selected branch key on its own line as Branch outcome key: setup-validated or Branch outcome key: setup-repair-required before finalizing. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -732,6 +734,90 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "Key": "initial-restore-success",
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A validated setup requires a successful current-run restore receipt.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "initial-restore-attempt",
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-required"
+            ],
+            "Reason": "A repair route requires a current-run restore attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          },
+          {
+            "Key": "initial-build-success",
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A validated setup requires a successful current-run build receipt.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "initial-build-attempt",
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-required"
+            ],
+            "Reason": "A repair route requires a current-run build attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          },
+          {
+            "Key": "initial-test-success",
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A validated setup requires a successful current-run test receipt.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "initial-test-attempt",
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-required"
+            ],
+            "Reason": "A repair route requires a current-run test attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          },
+          {
+            "Key": "initial-solution-readback-success",
+            "ToolName": "workspace_read_file",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A validated setup requires a successful current-run solution-membership readback.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "initial-solution-readback-attempt",
+            "ToolName": "workspace_read_file",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-required"
+            ],
+            "Reason": "A repair route requires a current-run solution readback attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          }
+        ]
+      },
       "ExecutionClass": "BranchDecision",
       "ExecutionContract": {
         "ExecutionClass": "BranchDecision",
@@ -920,7 +1006,8 @@
               "ToolName": "workspace_pwsh_run_script",
               "RequiredReceiptKey": "run-helper-script",
               "ArgumentsSummary": "Run the repair helper script with the product side-effect manifest.",
-              "IdempotencyPolicyKey": "current-run-repeatable"
+              "IdempotencyPolicyKey": "current-run-repeatable",
+              "FailureReconciliationPolicyKey": "authoritative-readback-convergence"
             },
             {
               "Key": "solution-membership-readback",
@@ -990,7 +1077,7 @@
       "Key": "validate-first-build-after-repair",
       "Title": "Revalidate first build after setup repair",
       "Subtitle": "Repaired build proof",
-      "Notes": "Rerun restore/build and the smallest targeted test discovery or initial test command after setup repair. Before command execution, inspect only the repaired solution and project files needed to verify the original setup defect and topology; a solution with no app/test project entries remains failed repair evidence even when dotnet build exits successfully as a no-op. Use workspace_dotnet_restore and workspace_dotnet_build against the contracted solution or product root before finalizing. Use workspace_dotnet_test against DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; use the contracted solution or product root for tests only when no test project target exists. The ProductCompletionRequiredToolReceipts launch variable is a hard validation gate for this step; successful current-run receipts for restore, build, and test are required before Completed. Select setup-validated when the original setup defect is repaired and solution membership/project-reference readbacks plus restore/build/test-runner discovery are green. Generated starter/demo UI or content and a passing placeholder template test are expected before downstream feature implementation; they are not unresolved setup defects and must not select setup-repair-escalation. Do not assess product acceptance criteria, feature completeness, substantive product-test coverage, or absence of product-specific source here. Select setup-repair-escalation only when the original structural or execution proof still fails, repair evidence is detached from that original failure, solution membership/project-reference readback is still missing, or another setup-only repair would exceed scope. Return Blocked for missing execution capability only after a current tool boundary or denied tool receipt proves the required validation tool is unavailable. In the managed artifact, include the exact selected branch key on its own line as Branch outcome key: setup-validated or Branch outcome key: setup-repair-escalation before finalizing.",
+      "Notes": "Rerun restore/build and the smallest targeted test discovery or initial test command after setup repair. Before command execution, inspect only the repaired solution and project files needed to verify the original setup defect and topology; a solution with no app/test project entries remains failed repair evidence even when dotnet build exits successfully as a no-op. Use workspace_dotnet_restore and workspace_dotnet_build against the contracted solution or product root before finalizing. Use workspace_dotnet_test against DotNetTestProjectFileAlias or DotNetTestProjectFile when present, preferably with noBuild=true after a successful solution build; use the contracted solution or product root for tests only when no test project target exists. The branch-scoped ProductCompletionRequiredToolReceipts policy is a hard validation gate for this step: setup-validated requires successful current-run restore, build, test, and solution-readback receipts, while setup-repair-escalation requires current-run attempts for the same tools and explicitly accepts failed execution receipts as unresolved-defect evidence. Select setup-validated when the original setup defect is repaired and solution membership/project-reference readbacks plus restore/build/test-runner discovery are green. Generated starter/demo UI or content and a passing placeholder template test are expected before downstream feature implementation; they are not unresolved setup defects and must not select setup-repair-escalation. Do not assess product acceptance criteria, feature completeness, substantive product-test coverage, or absence of product-specific source here. Select setup-repair-escalation only when the original structural or execution proof still fails, repair evidence is detached from that original failure, solution membership/project-reference readback is still missing, or another setup-only repair would exceed scope. Return Blocked for missing execution capability only after a current tool boundary or denied tool receipt proves the required validation tool is unavailable. In the managed artifact, include the exact selected branch key on its own line as Branch outcome key: setup-validated or Branch outcome key: setup-repair-escalation before finalizing.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -1077,6 +1164,90 @@
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "CompletionPolicy": {
+        "RequiredProductToolReceipts": [
+          {
+            "Key": "recheck-restore-success",
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A repaired setup requires a successful current-run restore receipt.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "recheck-restore-attempt",
+            "ToolName": "workspace_dotnet_restore",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-escalation"
+            ],
+            "Reason": "An unresolved repair route requires a current-run restore attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          },
+          {
+            "Key": "recheck-build-success",
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A repaired setup requires a successful current-run build receipt.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "recheck-build-attempt",
+            "ToolName": "workspace_dotnet_build",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-escalation"
+            ],
+            "Reason": "An unresolved repair route requires a current-run build attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          },
+          {
+            "Key": "recheck-test-success",
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A repaired setup requires a successful current-run test receipt.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "recheck-test-attempt",
+            "ToolName": "workspace_dotnet_test",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-escalation"
+            ],
+            "Reason": "An unresolved repair route requires a current-run test attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          },
+          {
+            "Key": "recheck-solution-readback-success",
+            "ToolName": "workspace_read_file",
+            "Purpose": "ValidationProof",
+            "EnforceBranchOutcomeKeys": [
+              "setup-validated"
+            ],
+            "Reason": "A repaired setup requires a successful current-run solution-membership readback.",
+            "AllowFailedExecutionReceipt": false
+          },
+          {
+            "Key": "recheck-solution-readback-attempt",
+            "ToolName": "workspace_read_file",
+            "Purpose": "DefectEvidence",
+            "EnforceBranchOutcomeKeys": [
+              "setup-repair-escalation"
+            ],
+            "Reason": "An unresolved repair route requires a current-run solution readback attempt; a failed execution receipt is valid defect evidence.",
+            "AllowFailedExecutionReceipt": true
+          }
+        ]
+      },
       "ExecutionClass": "BranchDecision",
       "ExecutionContract": {
         "ExecutionClass": "BranchDecision",

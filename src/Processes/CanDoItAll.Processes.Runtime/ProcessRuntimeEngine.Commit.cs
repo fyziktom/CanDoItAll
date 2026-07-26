@@ -10,7 +10,8 @@ public sealed partial class ProcessRuntimeEngine
         ProcessRuntimeStateSnapshot originalState,
         RuntimeCommandId commandId,
         ProcessRuntimeMutation mutation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProcessRuntimeBlockedRecoveryAuthorization? blockedRecoveryAuthorization = null)
     {
         if (mutation.Outcome == ProcessRuntimeTransitionOutcome.Rejected)
         {
@@ -22,7 +23,10 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeCommitResult.FromMutation(mutation);
         }
 
-        var request = new ProcessRuntimeCommitRequest(commandId, originalState, mutation);
+        var request = new ProcessRuntimeCommitRequest(commandId, originalState, mutation)
+        {
+            BlockedRecoveryAuthorization = blockedRecoveryAuthorization
+        };
 
         return await unitOfWork.CommitAsync(request, cancellationToken).ConfigureAwait(false);
     }

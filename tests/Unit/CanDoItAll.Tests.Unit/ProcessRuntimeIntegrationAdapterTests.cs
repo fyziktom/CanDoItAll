@@ -5,10 +5,12 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
@@ -29,6 +31,42 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         "runtime.1",
         "sha256:binding",
         []);
+
+    [Fact]
+    public void Child_specific_completion_issues_preserve_typed_child_run_identity()
+    {
+        var assignment = CreateSubprocessAssignment();
+        var childRunId = ProcessRunId.New();
+        var issues = new[]
+        {
+            ProcessSubprocessCompletionPolicy.CreateSubprocessLaunchCoordinatorMissingOutcomeIssue(
+                assignment,
+                new ProcessSubprocessLaunchCoordinatorResult(
+                    "child-process",
+                    childRunId,
+                    ProcessLaunchStage.Running.ToString(),
+                    string.Empty,
+                    [],
+                    [])),
+            ProcessSubprocessCompletionPolicy.CreateSubprocessChildNoGoIssue(
+                assignment,
+                childRunId,
+                ["artifacts/child-no-go.md"]),
+            ProcessSubprocessCompletionPolicy.CreateSubprocessChildAcceptedOutputMissingIssue(
+                assignment,
+                childRunId,
+                new ProcessSubprocessContract()),
+            ProcessSubprocessCompletionPolicy.CreateSubprocessChildForwardedContextIssue(
+                assignment,
+                childRunId,
+                new ParentSubprocessForwardedContextIssue(
+                    "process.adapter.forwarded_context_unavailable",
+                    "Forwarded child context is unavailable.",
+                    "sha256:forwarded-context-unavailable"))
+        };
+
+        Assert.All(issues, issue => Assert.Equal(childRunId, issue.RelatedChildRunId));
+    }
 
     [Fact]
     public void Product_mutation_completion_requires_evidence_refs()
@@ -1049,6 +1087,109 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Assert.Empty(result.Diagnostics);
         Assert.Contains(result.ProducedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
         Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == ProcessBranchSignalCodes.Outcome("feature-repair-required").Value);
+    }
+
+    [Theory]
+    [InlineData("setup-validated", false)]
+    [InlineData("setup-repair-required", true)]
+    [InlineData("setup-repair-escalation", true)]
+    public void Validation_completion_scopes_failed_receipt_evidence_to_the_selected_branch(
+        string branchOutcomeKey,
+        bool expectedSuccess)
+    {
+        var baseAssignment = CreateManagedArtifactAssignment(
+            "targeted-validation",
+            allowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]);
+        var assignment = baseAssignment with
+        {
+            Prompt = """
+            Branch outcomes:
+            - setup-validated: Setup validated - Validation passed.
+            - setup-repair-required: Repair required - Validation failed and a bounded repair is available.
+            - setup-repair-escalation: Repair escalation - Validation still fails after repair.
+            """,
+            LaunchVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] =
+                    JsonSerializer.Serialize(new[]
+                    {
+                        new
+                        {
+                            key = "build-success",
+                            toolName = "workspace_dotnet_build",
+                            applicableBranchOutcomeKeys = new[] { "setup-validated" },
+                            allowFailedExecutionReceipt = false
+                        },
+                        new
+                        {
+                            key = "build-attempt",
+                            toolName = "workspace_dotnet_build",
+                            applicableBranchOutcomeKeys = new[]
+                            {
+                                "setup-repair-required",
+                                "setup-repair-escalation"
+                            },
+                            allowFailedExecutionReceipt = true
+                        }
+                    })
+            },
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "build",
+                        Kind = ProcessRequiredToolReceiptKind.RuntimeToolName,
+                        ToolName = "workspace_dotnet_build",
+                        RequireSuccessfulExit = true,
+                        RequireCurrentRun = false
+                    }
+                ]
+            }
+        };
+        var primaryRef = BuildStepArtifactRef(assignment);
+
+        var result = ToAdapterResult(
+            assignment,
+            new ProcessStepOutcomeResult
+            {
+                Status = ProcessStepOutcomeStatus.Completed,
+                Reason = "The current build attempt failed.",
+                EvidenceRefs = [primaryRef],
+                NextActions = ["Route using the selected validation branch."],
+                HumanReadableSummaryMarkdown =
+                    $"Status: Completed\n\nBranch outcome key: {branchOutcomeKey}"
+            },
+            [
+                CreateToolReceipt(
+                    "workspace_dotnet_build",
+                    "build Calculator.slnx",
+                    "Failed (exit 1)"),
+                CreateToolReceipt(
+                    "workspace_write_file",
+                    primaryRef,
+                    "Succeeded: Created file.")
+            ]);
+
+        if (expectedSuccess)
+        {
+            Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);
+            Assert.Empty(result.Diagnostics);
+            Assert.Contains(result.ManagerSignals, signal =>
+                signal.Code.Value == ProcessBranchSignalCodes.Outcome(branchOutcomeKey).Value);
+            return;
+        }
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code.Value == "process.adapter.product_required_tool_receipt_missing");
     }
 
     [Fact]
@@ -6056,6 +6197,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains(childAssignment.StepKey, diagnostic.SafeSummary, StringComparison.Ordinal);
             Assert.Contains("process.adapter.product_required_file_content_missing", diagnostic.SafeSummary, StringComparison.Ordinal);
             Assert.Contains("workspace_pwsh_run_script", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(childRunId, diagnostic.RelatedChildRunId);
             Assert.Empty(result.ProducedArtifacts);
         }
         finally
@@ -6207,6 +6349,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.agent_transient_execution_retry");
             Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
             Assert.True(workspace.ExecuteRunCalled);
+            Assert.Equal([executionRunId], workspace.ExecutionDetailRequestIds);
         }
         finally
         {
@@ -6267,6 +6410,292 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Contains(result.ManagerSignals, signal => signal.Code.Value == "process.adapter.agent_transient_execution_retry");
             Assert.Contains(result.RequestedArtifacts, artifact => artifact.SlotId == assignment.ProducedArtifactSlotIds[0]);
             Assert.True(workspace.ExecuteRunCalled);
+            Assert.Equal([executionRunId], workspace.ExecutionDetailRequestIds);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_attests_transient_failure_results_before_side_effects_with_stable_evidence()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("architecture-handoff", agent.Id);
+        var responseText = "The agent run failed while using provider 'OpenAI default'. Provider detail: Service request failed. Status: 520 (<none>)";
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            async Task<(ProcessExecutionAdapterResult Result, ThrowingWorkspaceService Workspace)> ExecuteFailureAsync(
+                Guid executionRunId)
+            {
+                var workspace = new ThrowingWorkspaceService(
+                    agent,
+                    executeException: null,
+                    executeResult: CreateExecutionRunResult(
+                        agent.Id,
+                        executionRunId,
+                        responseText,
+                        RunOutcome.Failed),
+                    executionDetail: CreateFailedExecutionRunDetail(
+                        assignment,
+                        executionRunId,
+                        responseText));
+                var adapter = CreateAdapter(
+                    new FakeWorkspaceFactory(workspace),
+                    CreateReferenceDataProvider(workspace),
+                    new InMemoryAssignmentStore(assignment),
+                    new InMemoryRuntimeStateStore(NewRuntimeState(
+                        assignment.RunId,
+                        assignment.RunId,
+                        ProcessRuntimeStatus.Active)),
+                    workspaceFiles);
+                var result = await adapter.ExecuteAsync(
+                    new ProcessExecutionAdapterRequest(
+                        assignment.RunId,
+                        assignment.StepInstanceId,
+                        ProcessExecutionAdapterKind.Workflow,
+                        new ProcessExecutionAdapterOperationKey("execute"),
+                        Binding,
+                        [],
+                        []));
+                return (result, workspace);
+            }
+
+            var firstExecutionRunId = Guid.NewGuid();
+            var secondExecutionRunId = Guid.NewGuid();
+            var first = await ExecuteFailureAsync(firstExecutionRunId);
+            var second = await ExecuteFailureAsync(secondExecutionRunId);
+            var firstDiagnostic = Assert.Single(first.Result.Diagnostics);
+            var secondDiagnostic = Assert.Single(second.Result.Diagnostics);
+
+            Assert.Equal(StrategyOutcome.NeedsManager, first.Result.Outcome);
+            Assert.Equal(
+                ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                firstDiagnostic.Code.Value);
+            Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, firstDiagnostic.RetrySafety);
+            Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, firstDiagnostic.Idempotency);
+            Assert.NotEqual(firstDiagnostic.EvidenceHash, secondDiagnostic.EvidenceHash);
+            Assert.NotEqual(first.Result.ResultHash, second.Result.ResultHash);
+            var firstAttestation = Assert.IsType<ProcessExecutionSafetyAttestation>(
+                firstDiagnostic.ExecutionSafetyAttestation);
+            var secondAttestation = Assert.IsType<ProcessExecutionSafetyAttestation>(
+                secondDiagnostic.ExecutionSafetyAttestation);
+            Assert.True(firstAttestation.IsStructurallyValid());
+            Assert.True(secondAttestation.IsStructurallyValid());
+            Assert.Equal(
+                ProcessExecutionSafetyAttestationKind.FailedBeforeRecordedSideEffects,
+                firstAttestation.Kind);
+            Assert.Equal(
+                ProcessExecutionSafetyAttestor.AgentFrameworkExecutionLedger,
+                firstAttestation.Attestor);
+            Assert.Equal(
+                ProcessExecutionSafetyAttestation.CurrentSchemaVersion,
+                firstAttestation.SchemaVersion);
+            Assert.Equal(firstExecutionRunId, firstAttestation.ExecutionRunId.Value);
+            Assert.Equal(secondExecutionRunId, secondAttestation.ExecutionRunId.Value);
+            Assert.Equal(firstAttestation.ExecutionRunId, first.Result.ExecutionRunId);
+            Assert.Equal(secondAttestation.ExecutionRunId, second.Result.ExecutionRunId);
+            Assert.Equal(assignment.RunId, firstAttestation.ProcessRunId);
+            Assert.Equal(assignment.StepInstanceId, firstAttestation.StepInstanceId);
+            Assert.Equal(agent.Id, firstAttestation.ExecutorId.Value);
+            Assert.NotEqual(firstAttestation.DurableEvidenceDigest, secondAttestation.DurableEvidenceDigest);
+            Assert.NotEqual(firstAttestation.EvidenceHash, secondAttestation.EvidenceHash);
+            Assert.Contains(firstExecutionRunId.ToString("D"), first.Result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains(secondExecutionRunId.ToString("D"), second.Result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains("metricToolCalls=0", first.Result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains("toolReceipts=0", first.Result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Equal([firstExecutionRunId], first.Workspace.ExecutionDetailRequestIds);
+            Assert.Equal([secondExecutionRunId], second.Workspace.ExecutionDetailRequestIds);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_attests_transient_agent_run_exception_before_side_effects()
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("targeted-validation", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var exception = new AgentRunFailedException(
+            agent.Id,
+            executionRunId,
+            chatSessionId: null,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new TimeoutException("Initialization timed out while composing the provider capability set."),
+            "The agent run failed while using provider 'OpenAI default'. Provider detail: Initialization timed out while composing the provider capability set.");
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            exception,
+            executionDetail: CreateFailedExecutionRunDetail(
+                assignment,
+                executionRunId,
+                exception.Message));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(
+                    assignment.RunId,
+                    assignment.RunId,
+                    ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            var diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal(
+                ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
+                diagnostic.Code.Value);
+            Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+            Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+            var attestation = Assert.IsType<ProcessExecutionSafetyAttestation>(
+                diagnostic.ExecutionSafetyAttestation);
+            Assert.True(attestation.IsStructurallyValid());
+            Assert.Equal(executionRunId, attestation.ExecutionRunId.Value);
+            Assert.Equal(attestation.ExecutionRunId, result.ExecutionRunId);
+            Assert.Equal(assignment.RunId, attestation.ProcessRunId);
+            Assert.Equal(assignment.StepInstanceId, attestation.StepInstanceId);
+            Assert.Equal(agent.Id, attestation.ExecutorId.Value);
+            Assert.Contains(executionRunId.ToString("D"), result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Contains("Initialization timed out", result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Equal([executionRunId], workspace.ExecutionDetailRequestIds);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData(AgentTransientDurableSignal.RunNotFailed)]
+    [InlineData(AgentTransientDurableSignal.WrongProcessIdentity)]
+    [InlineData(AgentTransientDurableSignal.MissingTerminalMetric)]
+    [InlineData(AgentTransientDurableSignal.MissingTerminalLog)]
+    [InlineData(AgentTransientDurableSignal.ImmediateMetricToolCall)]
+    [InlineData(AgentTransientDurableSignal.MetricToolCall)]
+    [InlineData(AgentTransientDurableSignal.UsageToolCall)]
+    [InlineData(AgentTransientDurableSignal.ToolReceipt)]
+    [InlineData(AgentTransientDurableSignal.Artifact)]
+    [InlineData(AgentTransientDurableSignal.Checkpoint)]
+    [InlineData(AgentTransientDurableSignal.Approval)]
+    [InlineData(AgentTransientDurableSignal.RunPendingApproval)]
+    [InlineData(AgentTransientDurableSignal.StructuredOutput)]
+    [InlineData(AgentTransientDurableSignal.StructuredOutputValidation)]
+    [InlineData(AgentTransientDurableSignal.SerializedSessionState)]
+    [InlineData(AgentTransientDurableSignal.RuntimeSessionKey)]
+    [InlineData(AgentTransientDurableSignal.WaitingOnToolLog)]
+    [InlineData(AgentTransientDurableSignal.FailedThenRunningLog)]
+    [InlineData(AgentTransientDurableSignal.LogAfterRunCompletion)]
+    public async Task ExecuteAsync_keeps_legacy_transient_diagnostic_when_durable_attestation_is_not_exact(
+        AgentTransientDurableSignal signal)
+    {
+        var agent = NewAgent(
+            ".NET Solution Architect",
+            "Solution architect",
+            AgentWorkloadKind.Programming,
+            [
+                "solution-architect",
+                "dotnet",
+                "architecture"
+            ],
+            AgentWorkspaceToolProfileKind.ArchitectureReview);
+        var assignment = CreateManagedArtifactAssignment("architecture-handoff", agent.Id);
+        var executionRunId = Guid.NewGuid();
+        var responseText = "The agent run failed while using provider 'OpenAI default'. Provider detail: Service request failed. Status: 520 (<none>)";
+        var executeResult = CreateExecutionRunResult(
+            agent.Id,
+            executionRunId,
+            responseText,
+            RunOutcome.Failed);
+        if (signal == AgentTransientDurableSignal.ImmediateMetricToolCall)
+        {
+            executeResult = executeResult with
+            {
+                Metric = executeResult.Metric with
+                {
+                    ToolCalls = 1
+                }
+            };
+        }
+
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            executeException: null,
+            executeResult: executeResult,
+            executionDetail: CreateFailedExecutionRunDetail(
+                assignment,
+                executionRunId,
+                responseText,
+                signal));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(
+                    assignment.RunId,
+                    assignment.RunId,
+                    ProcessRuntimeStatus.Active)),
+                workspaceFiles);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            var diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal(ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionRetry, diagnostic.Code.Value);
+            Assert.Null(diagnostic.ExecutionSafetyAttestation);
+            Assert.DoesNotContain(
+                result.Diagnostics,
+                candidate => candidate.Code.Value ==
+                    ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects);
+            Assert.Contains("did not prove", result.UserSafeSummary, StringComparison.Ordinal);
+            Assert.Equal([executionRunId], workspace.ExecutionDetailRequestIds);
         }
         finally
         {
@@ -6561,6 +6990,100 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.False(workspace.ExecuteRunCalled);
             Assert.Equal(1, runtimeExecutor.CallCount);
             Assert.Contains("Runtime-owned .NET solution setup completed", result.UserSafeSummary, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(outputRoot);
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_preserves_typed_runtime_owned_failure_and_bounded_execution_evidence()
+    {
+        var agent = NewAgent(
+            ".NET Application Developer",
+            ".NET developer",
+            AgentWorkloadKind.Programming,
+            [
+                "dotnet",
+                "developer",
+                "implementation"
+            ],
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var outputRoot = CreateTempProductRoot();
+        var assignment = CreateProductMutationAssignment(outputRoot) with
+        {
+            StepKey = "create-dotnet-project",
+            RoleKey = "dotnet-developer",
+            RoleResourceKey = "dotnet-developer",
+            RoleDisplayName = ".NET developer",
+            ExecutorId = agent.Id.ToString("D"),
+            ExecutorDisplayName = agent.Name,
+            LaunchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = FakeRuntimeOwnedStepExecutor.RuntimeOwnedExecutorKey
+            }
+        };
+        var executionRunId = Guid.NewGuid();
+        var runtimeExecutor = new FakeRuntimeOwnedStepExecutor(new ProcessRuntimeOwnedStepExecutionResult(
+            false,
+            null,
+            [
+                CreateToolReceipt(
+                    "workspace_pwsh_run_script",
+                    $"runtime-owned setup for {outputRoot}",
+                    "Succeeded (exit 0)",
+                    workingDirectory: outputRoot,
+                    executionRunId: executionRunId),
+                CreateToolReceipt(
+                    "workspace_read_file",
+                    "external-target/product/Calculator.sln",
+                    "Failed: File was not found.",
+                    workingDirectory: outputRoot,
+                    executionRunId: executionRunId)
+            ],
+            executionRunId,
+            $"Required readback candidates 'Calculator.sln' and 'Calculator.slnx' were not found. {new string('x', 3000)}",
+            "runtime-owned-dotnet-setup:readback-path-missing",
+            ProcessRuntimeOwnedStepFailures.ApplyDeclaredIdempotency(
+                ProcessRuntimeOwnedStepFailures.ReadbackPathMissing,
+                ProcessToolOperationIdempotencyPolicy.CurrentRunRepeatable)));
+        var workspace = new ThrowingWorkspaceService(
+            agent,
+            new InvalidOperationException("The agent must not run when the runtime-owned executor handles the step."));
+        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        try
+        {
+            var adapter = CreateAdapter(
+                new FakeWorkspaceFactory(workspace),
+                CreateReferenceDataProvider(workspace),
+                new InMemoryAssignmentStore(assignment),
+                new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
+                workspaceFiles,
+                runtimeOwnedStepExecutors: [runtimeExecutor]);
+
+            var result = await adapter.ExecuteAsync(
+                new ProcessExecutionAdapterRequest(
+                    assignment.RunId,
+                    assignment.StepInstanceId,
+                    ProcessExecutionAdapterKind.Workflow,
+                    new ProcessExecutionAdapterOperationKey("execute"),
+                    Binding,
+                    [],
+                    []));
+
+            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.False(workspace.ExecuteRunCalled);
+            Assert.Equal(1, runtimeExecutor.CallCount);
+            var diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal("process.adapter.runtime_owned_readback_path_missing", diagnostic.Code.Value);
+            Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+            Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+            Assert.Contains(executionRunId.ToString("D"), diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains("workspace_pwsh_run_script=Succeeded", diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.Contains("workspace_read_file=Failed", diagnostic.SafeSummary, StringComparison.Ordinal);
+            Assert.True(diagnostic.SafeSummary.Length <= 2000);
         }
         finally
         {
@@ -8686,10 +9209,13 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 outcome,
                 "test-provider",
                 "test-model",
-                1,
-                10,
-                2,
-                0));
+                 1,
+                 10,
+                 2,
+                 0)
+             {
+                 ExecutionRunId = executionRunId
+             });
 
     private static ExecutionRunDetail CreateExecutionRunDetail(
         Guid agentId,
@@ -8729,6 +9255,306 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             ToolReceipts = toolReceipts
         };
+
+    private static ExecutionRunDetail CreateFailedExecutionRunDetail(
+        ProcessRuntimeStepAssignment assignment,
+        Guid executionRunId,
+        string responseText,
+        AgentTransientDurableSignal signal = AgentTransientDurableSignal.None)
+    {
+        var agentId = Guid.Parse(assignment.ExecutorId);
+        var now = DateTimeOffset.UtcNow;
+        var metric = CreateExecutionRunResult(
+            agentId,
+            executionRunId,
+            responseText,
+            RunOutcome.Failed).Metric;
+        var usageObservation = new ProviderUsageObservation(
+            Guid.NewGuid(),
+            now,
+            "test-provider",
+            ProviderKind.OpenAi,
+            "test-model",
+            ProviderTransportKind.Responses,
+            ProviderUsageSourcePhases.LegacyAgentRunMetric,
+            ProviderUsageObservationStatus.EstimatedFromMetric,
+            10,
+            0,
+            0,
+            0,
+            10,
+            0)
+        {
+            ExecutionRunId = executionRunId,
+            AgentId = agentId,
+            ProcessRunId = assignment.RunId.Value.ToString("D"),
+            ProcessStepId = assignment.StepInstanceId.Value.ToString("D"),
+            CorrelationId = assignment.RunId.Value.ToString("D")
+        };
+        var baseDetail = CreateExecutionRunDetail(agentId, executionRunId, responseText, []);
+        var detail = baseDetail with
+        {
+            Run = baseDetail.Run with
+            {
+                SourceKind = ProcessMockAgentCatalog.ProcessSourceKind,
+                SourceId = assignment.StepKey,
+                CorrelationId = assignment.RunId.Value.ToString("D"),
+                CausationId = assignment.StepInstanceId.Value.ToString("D"),
+                RequestedBy = "process-runtime",
+                RequestedByKind = "system",
+                State = ExecutionState.Failed,
+                Outcome = RunOutcome.Failed,
+                CompletedAtUtc = now,
+                ProcessRunId = assignment.RunId.Value.ToString("D"),
+                ProcessStepId = assignment.StepInstanceId.Value.ToString("D")
+            },
+            ExecutionLog =
+            [
+                new ExecutionLogEntry(
+                    Guid.NewGuid(),
+                    agentId,
+                    null,
+                    now,
+                    ExecutionState.Failed,
+                    "Failed",
+                    responseText)
+                {
+                    ExecutionRunId = executionRunId
+                }
+            ],
+            Metrics = [metric],
+            UsageObservations = [usageObservation]
+        };
+
+        return signal switch
+        {
+            AgentTransientDurableSignal.None => detail,
+            AgentTransientDurableSignal.ImmediateMetricToolCall => detail,
+            AgentTransientDurableSignal.RunNotFailed => detail with
+            {
+                Run = detail.Run with
+                {
+                    State = ExecutionState.Completed,
+                    Outcome = RunOutcome.Succeeded
+                }
+            },
+            AgentTransientDurableSignal.WrongProcessIdentity => detail with
+            {
+                Run = detail.Run with
+                {
+                    ProcessStepId = Guid.NewGuid().ToString("D")
+                }
+            },
+            AgentTransientDurableSignal.MissingTerminalMetric => detail with
+            {
+                Metrics = []
+            },
+            AgentTransientDurableSignal.MissingTerminalLog => detail with
+            {
+                ExecutionLog = []
+            },
+            AgentTransientDurableSignal.MetricToolCall => detail with
+            {
+                Metrics = [metric with { ToolCalls = 1 }]
+            },
+            AgentTransientDurableSignal.UsageToolCall => detail with
+            {
+                UsageObservations = [usageObservation with { ToolCallCount = 1 }]
+            },
+            AgentTransientDurableSignal.ToolReceipt => detail with
+            {
+                ToolReceipts =
+                [
+                    CreateToolReceipt(
+                        "workspace_pwsh_run_script",
+                        "mutate product",
+                        "Succeeded",
+                        executionRunId: executionRunId)
+                ]
+            },
+            AgentTransientDurableSignal.Artifact => detail with
+            {
+                Artifacts =
+                [
+                    new ExecutionArtifactRecord(
+                        Guid.NewGuid(),
+                        executionRunId,
+                        "test",
+                        "Test artifact",
+                        "artifacts/test.md",
+                        "text/markdown",
+                        "test",
+                        "Durable artifact",
+                        now)
+                ]
+            },
+            AgentTransientDurableSignal.Checkpoint => detail with
+            {
+                Checkpoints =
+                [
+                    new ExecutionWorkflowCheckpointRecord(
+                        Guid.NewGuid(),
+                        executionRunId,
+                        "workflow-session",
+                        "checkpoint",
+                        "test",
+                        ExecutionState.Failed,
+                        [],
+                        now,
+                        null,
+                        assignment.RunId.Value.ToString("D"),
+                        ProcessMockAgentCatalog.ProcessSourceKind,
+                        assignment.StepKey,
+                        assignment.RunId.Value.ToString("D"),
+                        assignment.StepInstanceId.Value.ToString("D"),
+                        string.Empty,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty)
+                ]
+            },
+            AgentTransientDurableSignal.Approval => detail with
+            {
+                Approvals =
+                [
+                    new ExecutionApprovalRecord(
+                        "approval",
+                        executionRunId,
+                        "call",
+                        "workspace_pwsh_run_script",
+                        "workspace",
+                        "Run a script",
+                        "{}",
+                        ExecutionApprovalStatus.Pending,
+                        now,
+                        null,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty)
+                ]
+            },
+            AgentTransientDurableSignal.RunPendingApproval => detail with
+            {
+                Run = detail.Run with
+                {
+                    PendingApprovals =
+                    [
+                        new PendingToolApprovalRecord(
+                            "approval",
+                            "call",
+                            "workspace_pwsh_run_script",
+                            "workspace",
+                            "Run a script",
+                            "{}")
+                    ]
+                }
+            },
+            AgentTransientDurableSignal.StructuredOutput => detail with
+            {
+                Run = detail.Run with
+                {
+                    StructuredOutputRawOutput = "{}"
+                }
+            },
+            AgentTransientDurableSignal.StructuredOutputValidation => detail with
+            {
+                Run = detail.Run with
+                {
+                    StructuredOutputValidationStatus = "Invalid",
+                    StructuredOutputValidationErrorsJson = """["invalid"]"""
+                }
+            },
+            AgentTransientDurableSignal.SerializedSessionState => detail with
+            {
+                Run = detail.Run with
+                {
+                    SerializedSessionStateJson = "{}"
+                }
+            },
+            AgentTransientDurableSignal.RuntimeSessionKey => detail with
+            {
+                Run = detail.Run with
+                {
+                    RuntimeSessionKey = "runtime-session"
+                }
+            },
+            AgentTransientDurableSignal.WaitingOnToolLog => detail with
+            {
+                ExecutionLog =
+                [
+                    .. detail.ExecutionLog,
+                    new ExecutionLogEntry(
+                        Guid.NewGuid(),
+                        agentId,
+                        null,
+                        now,
+                        ExecutionState.WaitingOnTool,
+                        "Tool",
+                        "Waiting on tool")
+                    {
+                        ExecutionRunId = executionRunId
+                    }
+                ]
+            },
+            AgentTransientDurableSignal.FailedThenRunningLog => detail with
+            {
+                Run = detail.Run with
+                {
+                    CompletedAtUtc = now.AddSeconds(2)
+                },
+                ExecutionLog =
+                [
+                    .. detail.ExecutionLog,
+                    new ExecutionLogEntry(
+                        Guid.NewGuid(),
+                        agentId,
+                        null,
+                        now.AddSeconds(1),
+                        ExecutionState.Running,
+                        "Running",
+                        "Execution resumed after a terminal failure.")
+                    {
+                        ExecutionRunId = executionRunId
+                    }
+                ]
+            },
+            AgentTransientDurableSignal.LogAfterRunCompletion => detail with
+            {
+                ExecutionLog =
+                [
+                    detail.ExecutionLog[0] with
+                    {
+                        CreatedAtUtc = now.AddSeconds(1)
+                    }
+                ]
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(signal), signal, null)
+        };
+    }
+
+    public enum AgentTransientDurableSignal
+    {
+        None,
+        RunNotFailed,
+        WrongProcessIdentity,
+        MissingTerminalMetric,
+        MissingTerminalLog,
+        ImmediateMetricToolCall,
+        MetricToolCall,
+        UsageToolCall,
+        ToolReceipt,
+        Artifact,
+        Checkpoint,
+        Approval,
+        RunPendingApproval,
+        StructuredOutput,
+        StructuredOutputValidation,
+        SerializedSessionState,
+        RuntimeSessionKey,
+        WaitingOnToolLog,
+        FailedThenRunningLog,
+        LogAfterRunCompletion
+    }
 
     private static ProcessRuntimeStepAssignment CreateControlledExternalActionAssignment(
         ProcessRunId runId,
@@ -9015,6 +9841,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         public ExecutionRunRequest? LastExecuteRunRequest { get; private set; }
 
+        public List<Guid> ExecutionDetailRequestIds { get; } = [];
+
         public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
             bool includeTemplates = true,
             CancellationToken cancellationToken = default)
@@ -9166,10 +9994,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     .Select(detail => detail.Run)
                     .ToArray());
 
-        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default)
-            => executionDetailById.TryGetValue(executionRunId, out var detail)
+        public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(
+            Guid executionRunId,
+            CancellationToken cancellationToken = default)
+        {
+            ExecutionDetailRequestIds.Add(executionRunId);
+            return executionDetailById.TryGetValue(executionRunId, out var detail)
                 ? Task.FromResult(detail)
                 : throw Unused();
+        }
 
         public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
 

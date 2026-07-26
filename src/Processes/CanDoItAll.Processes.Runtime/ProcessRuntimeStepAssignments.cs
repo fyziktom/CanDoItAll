@@ -34,9 +34,14 @@ public sealed record ProcessRuntimeBranchGate(
     string SourceStepKey,
     string RequiredOutcomeKey);
 
+public sealed record ProcessRuntimeStepAssignmentBoundedSearchResult(
+    IReadOnlyList<ProcessRuntimeStepAssignment> Assignments,
+    bool LimitExceeded);
+
 public interface IProcessRuntimeStepAssignmentStore
 {
     public const int MaximumBatchRunCount = 2_049;
+    public const int MaximumBoundedSearchRunCount = MaximumBatchRunCount + 1;
 
     ValueTask SaveAsync(
         IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
@@ -72,6 +77,34 @@ public interface IProcessRuntimeStepAssignmentStore
     ValueTask<IReadOnlyList<ProcessRuntimeStepAssignment>> FindByLaunchVariablesAsync(
         IReadOnlyDictionary<string, string> requiredVariables,
         CancellationToken cancellationToken = default);
+
+    async ValueTask<ProcessRuntimeStepAssignmentBoundedSearchResult>
+        FindByLaunchVariablesBoundedAsync(
+            IReadOnlyDictionary<string, string> requiredVariables,
+            int maximumDistinctRunCount,
+            CancellationToken cancellationToken = default)
+    {
+        if (maximumDistinctRunCount is < 1 or > MaximumBoundedSearchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumDistinctRunCount),
+                maximumDistinctRunCount,
+                $"Bounded assignment search must allow between 1 and {MaximumBoundedSearchRunCount} distinct runs.");
+        }
+
+        var assignments = await FindByLaunchVariablesAsync(
+                requiredVariables,
+                cancellationToken)
+            .ConfigureAwait(false);
+        var limitExceeded = assignments
+            .Select(assignment => assignment.RunId)
+            .Distinct()
+            .Take(maximumDistinctRunCount + 1)
+            .Count() > maximumDistinctRunCount;
+        return new ProcessRuntimeStepAssignmentBoundedSearchResult(
+            limitExceeded ? [] : assignments,
+            limitExceeded);
+    }
 
     ValueTask<ProcessRuntimeStepAssignment?> LoadAsync(
         ProcessRunId runId,

@@ -34,6 +34,11 @@ public sealed class ProcessBlockedRunRecoveryCommandExecutor(
                     command.RecoveryRouteKind,
                     command.ResponsibleStepInstanceId,
                     command.Phase)
+                {
+                    RelatedChildRunId = command.RelatedChildRunId,
+                    ExpectedRelatedChildUpdatedAtUtc = command.ExpectedRelatedChildUpdatedAtUtc,
+                    ExpectedChildLineageEvidence = command.ExpectedChildLineageEvidence
+                }
             },
             cancellationToken).ConfigureAwait(false);
         return new ProcessBlockedRunRecoveryCommandResult(

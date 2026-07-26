@@ -147,9 +147,38 @@ public static class ProcessRuntimeBlockedRecoveryAuthorizationRules
                 authorization.DiagnosticFingerprint,
                 StringComparison.Ordinal) ||
             decision.RouteKind != authorization.RecoveryRouteKind ||
-            decision.ResponsibleStepInstanceId != authorization.ResponsibleTargetStepInstanceId)
+            decision.ResponsibleStepInstanceId != authorization.ResponsibleTargetStepInstanceId ||
+            decision.RelatedChildRunId != authorization.RelatedChildRunId)
         {
             return "The blocked-recovery authorization no longer matches the latest durable recovery receipt.";
+        }
+
+        if (authorization.RecoveryRouteKind == ProcessRecoveryRouteKind.ChildRunPropagation)
+        {
+            if (authorization.RelatedChildRunId is not { } relatedChildRunId ||
+                authorization.ExpectedRelatedChildUpdatedAtUtc is not { } relatedChildUpdatedAtUtc ||
+                authorization.ExpectedChildLineageEvidence is not { } childLineageEvidence)
+            {
+                return "The child-run recovery authorization has incomplete typed lineage evidence.";
+            }
+
+            var childLineageIssue = ProcessRuntimeChildLineageEvidenceRules.FindIssue(
+                childLineageEvidence,
+                state.RunId,
+                authorization.SourceBlockedStepInstanceId,
+                state.RootRunId,
+                relatedChildRunId,
+                relatedChildUpdatedAtUtc);
+            if (childLineageIssue is not null)
+            {
+                return childLineageIssue;
+            }
+        }
+        else if (authorization.RelatedChildRunId is not null ||
+                 authorization.ExpectedRelatedChildUpdatedAtUtc is not null ||
+                 authorization.ExpectedChildLineageEvidence is not null)
+        {
+            return "Only child-run recovery may carry child-lineage evidence.";
         }
 
         if (!IsPhaseTargetAuthorized(state, sourceStep, targetStep, authorization))
@@ -217,6 +246,13 @@ public static class ProcessRuntimeBlockedRecoveryAuthorizationRules
             ProcessRuntimeBlockedRecoveryPhase.RestoredConsumer =>
                 inputsRestored &&
                 authorization.RecoveryRouteKind == ProcessRecoveryRouteKind.UpstreamStepRework &&
+                targetStep.StepInstanceId == sourceStep.StepInstanceId,
+            ProcessRuntimeBlockedRecoveryPhase.CompletedChildConsumer =>
+                authorization.RecoveryRouteKind == ProcessRecoveryRouteKind.ChildRunPropagation &&
+                authorization.ResponsibleTargetStepInstanceId == sourceStep.StepInstanceId &&
+                authorization.RelatedChildRunId is not null &&
+                authorization.ExpectedRelatedChildUpdatedAtUtc is not null &&
+                authorization.ExpectedChildLineageEvidence is not null &&
                 targetStep.StepInstanceId == sourceStep.StepInstanceId,
             _ => false
         };

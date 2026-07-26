@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Core;
 
 namespace CanDoItAll.Processes.Runtime;
 
@@ -36,6 +37,7 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProcessDefinitionName = "ProcessDefinitionName";
     public const string ProcessStepKind = "ProcessStepKind";
     public const string ProcessStepSubprocessContractJson = "ProcessStepSubprocessContractJson";
+    public const string ProcessStepDeterministicToolPlanDescriptorJson = "ProcessStepDeterministicToolPlanDescriptorJson";
     public const string ProcessStepScriptHelperDescriptorJson = "ProcessStepScriptHelperDescriptorJson";
     public const string ProcessStepRuntimeOwnedExecutorKey = "ProcessStepRuntimeOwnedExecutorKey";
     public const string ProcessStepCompletionDispositionJson = "ProcessStepCompletionDispositionJson";
@@ -335,6 +337,53 @@ public static class ProcessRuntimeLaunchVariables
         }
     }
 
+    public static string SerializeProcessStepDeterministicToolPlanDescriptor(
+        ProcessRuntimeDeterministicToolPlanDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        return JsonSerializer.Serialize(descriptor, ProcessRuntimeLaunchVariableJson.Options);
+    }
+
+    public static bool TryReadProcessStepDeterministicToolPlanDescriptor(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out ProcessRuntimeDeterministicToolPlanDescriptor descriptor)
+    {
+        descriptor = new ProcessRuntimeDeterministicToolPlanDescriptor(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            []);
+        if (!TryReadNonEmptyString(
+                launchVariables,
+                ProcessStepDeterministicToolPlanDescriptorJson,
+                out var value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var deserialized = JsonSerializer.Deserialize<ProcessRuntimeDeterministicToolPlanDescriptor>(
+                value,
+                ProcessRuntimeLaunchVariableJson.Options);
+            if (deserialized is null ||
+                string.IsNullOrWhiteSpace(deserialized.PlanKey) ||
+                string.IsNullOrWhiteSpace(deserialized.PlanKind) ||
+                deserialized.OperationPolicies is null ||
+                deserialized.OperationPolicies.Count == 0)
+            {
+                return false;
+            }
+
+            descriptor = deserialized;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     public static string SerializeProcessStepCompletionDisposition(
         ProcessRuntimeCompletionDisposition disposition)
     {
@@ -493,10 +542,17 @@ public sealed record ProcessParentArtifactBindingRef(
     string ArtifactExpectationKey,
     string ArtifactRef);
 
+public sealed record ProcessRuntimeDeterministicToolPlanDescriptor(
+    string PlanKey,
+    string PlanKind,
+    string ExecutionPlanVariableName,
+    IReadOnlyList<ProcessToolOperationExecutionPolicy> OperationPolicies);
+
 public sealed record ProcessRuntimeScriptHelperDescriptor(
     string ScriptVariableName,
     string ScriptRefVariableName,
     string ManifestVariableName,
     string PlanKey = "",
     string PlanKind = "",
-    string ExecutionPlanVariableName = "");
+    string ExecutionPlanVariableName = "",
+    IReadOnlyList<ProcessToolOperationExecutionPolicy>? OperationPolicies = null);

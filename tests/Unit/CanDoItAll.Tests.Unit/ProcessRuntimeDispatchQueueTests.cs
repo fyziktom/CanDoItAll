@@ -75,6 +75,113 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public async Task Queue_defers_nonblocking_follow_up_when_recovery_channel_is_full()
+    {
+        var queue = new ProcessRuntimeDispatchQueue(new ProcessRuntimeDispatchQueueOptions
+        {
+            ImmediateQueueCapacity = 1,
+            RecoveryQueueCapacity = 1
+        });
+        var queuedRunId = ProcessRunId.New();
+        var followUpRunId = ProcessRunId.New();
+
+        await queue.EnqueueAsync(
+            new ProcessRuntimeDispatchQueueRequest(
+                queuedRunId,
+                "recovery-scan",
+                IsRecovery: true));
+
+        queue.EnqueueOrDefer(
+            new ProcessRuntimeDispatchQueueRequest(
+                followUpRunId,
+                "completed-child",
+                IsRecovery: true));
+
+        Assert.True(queue.TryDequeueRecovery(out var queuedRequest));
+        Assert.Equal(queuedRunId, queuedRequest.RunId);
+        Assert.Equal(1, queue.FlushDeferredRequests());
+        Assert.True(queue.TryDequeueRecovery(out var followUpRequest));
+        Assert.Equal(followUpRunId, followUpRequest.RunId);
+        Assert.Equal("completed-child", followUpRequest.RequestedBy);
+    }
+
+    [Fact]
+    public async Task Queue_defers_nonblocking_follow_up_when_immediate_channel_is_full()
+    {
+        var queue = new ProcessRuntimeDispatchQueue(new ProcessRuntimeDispatchQueueOptions
+        {
+            ImmediateQueueCapacity = 1,
+            RecoveryQueueCapacity = 1
+        });
+        var queuedRunId = ProcessRunId.New();
+        var followUpRunId = ProcessRunId.New();
+
+        await queue.EnqueueAsync(
+            new ProcessRuntimeDispatchQueueRequest(queuedRunId, "active-child"));
+
+        queue.EnqueueOrDefer(
+            new ProcessRuntimeDispatchQueueRequest(followUpRunId, "released-parent"));
+
+        Assert.True(queue.TryDequeueImmediate(out var queuedRequest));
+        Assert.Equal(queuedRunId, queuedRequest.RunId);
+        Assert.Equal(1, queue.FlushDeferredRequests());
+        Assert.True(queue.TryDequeueImmediate(out var followUpRequest));
+        Assert.Equal(followUpRunId, followUpRequest.RunId);
+        Assert.Equal("released-parent", followUpRequest.RequestedBy);
+    }
+
+    [Fact]
+    public void Queue_retains_failed_dispatch_until_its_bounded_retry_delay_elapses()
+    {
+        var queue = new ProcessRuntimeDispatchQueue(new ProcessRuntimeDispatchQueueOptions
+        {
+            ImmediateQueueCapacity = 1,
+            RecoveryQueueCapacity = 1
+        });
+        var failedAtUtc = new DateTimeOffset(2026, 7, 26, 20, 0, 0, TimeSpan.Zero);
+        var request = new ProcessRuntimeDispatchQueueRequest(
+            ProcessRunId.New(),
+            "recovery-scan",
+            IsRecovery: true);
+
+        Assert.True(queue.TryMarkActive(request.RunId));
+
+        queue.DeferAfterFailure(request, failedAtUtc);
+        queue.MarkInactive(request.RunId);
+
+        Assert.Equal(0, queue.FlushDeferredRequests(failedAtUtc.AddMilliseconds(999)));
+        Assert.False(queue.TryDequeueRecovery(out _));
+        Assert.Equal(1, queue.FlushDeferredRequests(failedAtUtc.AddSeconds(1)));
+        Assert.True(queue.TryDequeueRecovery(out var retry));
+        Assert.Equal(request, retry);
+    }
+
+    [Fact]
+    public void Queue_successful_dispatch_resets_failure_backoff()
+    {
+        var queue = new ProcessRuntimeDispatchQueue(new ProcessRuntimeDispatchQueueOptions
+        {
+            ImmediateQueueCapacity = 1,
+            RecoveryQueueCapacity = 1
+        });
+        var firstFailureUtc = new DateTimeOffset(2026, 7, 26, 20, 0, 0, TimeSpan.Zero);
+        var secondFailureUtc = firstFailureUtc.AddMinutes(1);
+        var request = new ProcessRuntimeDispatchQueueRequest(ProcessRunId.New(), "dispatcher");
+
+        queue.DeferAfterFailure(request, firstFailureUtc);
+        Assert.Equal(1, queue.FlushDeferredRequests(firstFailureUtc.AddSeconds(1)));
+        Assert.True(queue.TryDequeueImmediate(out _));
+
+        queue.MarkDispatchSucceeded(request.RunId);
+        queue.DeferAfterFailure(request, secondFailureUtc);
+
+        Assert.Equal(0, queue.FlushDeferredRequests(secondFailureUtc.AddMilliseconds(999)));
+        Assert.Equal(1, queue.FlushDeferredRequests(secondFailureUtc.AddSeconds(1)));
+        Assert.True(queue.TryDequeueImmediate(out var retry));
+        Assert.Equal(request, retry);
+    }
+
+    [Fact]
     public async Task Queue_retains_redispatch_enqueued_while_same_run_is_active()
     {
         var queue = new ProcessRuntimeDispatchQueue();
@@ -229,6 +336,33 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public async Task Recovery_query_pages_all_ready_runs_instead_of_truncating_at_legacy_cap()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 7, 26, 20, 0, 0, TimeSpan.Zero);
+        var expectedRunIds = new HashSet<Guid>();
+        for (var index = 0; index < 520; index++)
+        {
+            var runId = Guid.NewGuid();
+            expectedRunIds.Add(runId);
+            AddRuntimeState(
+                dbContext,
+                runId,
+                ProcessRuntimeStatus.Active,
+                now.AddMilliseconds(-index),
+                ProcessRuntimeStepStatus.Ready,
+                activeClaimToken: null);
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var runIds = await ProcessRuntimeDispatchRecoveryRunQuery.LoadRecoverableRunIdsAsync(dbContext, now);
+
+        Assert.Equal(expectedRunIds.Count, runIds.Count);
+        Assert.True(expectedRunIds.SetEquals(runIds));
+    }
+
+    [Fact]
     public async Task Recovery_query_includes_runs_with_expired_active_claims()
     {
         await using var dbContext = CreateDbContext();
@@ -269,6 +403,190 @@ public sealed class ProcessRuntimeDispatchQueueTests
 
         Assert.Contains(expiredRunId, runIds);
         Assert.DoesNotContain(staleRunId, runIds);
+    }
+
+    [Fact]
+    public async Task Blocked_recovery_query_includes_only_blocked_runs()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var blockedRunId = Guid.NewGuid();
+        var failedRunId = Guid.NewGuid();
+
+        AddRuntimeState(
+            dbContext,
+            blockedRunId,
+            ProcessRuntimeStatus.Blocked,
+            now.AddMinutes(-10),
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            failedRunId,
+            ProcessRuntimeStatus.Failed,
+            now.AddMinutes(-5),
+            ProcessRuntimeStepStatus.Failed,
+            activeClaimToken: null);
+
+        await dbContext.SaveChangesAsync();
+
+        var blockedRuns = await ProcessRuntimeDispatchRecoveryRunQuery.LoadBlockedRunsPageAsync(dbContext);
+        var runIds = blockedRuns.Select(candidate => candidate.RunId).ToArray();
+
+        Assert.Contains(blockedRunId, runIds);
+        Assert.DoesNotContain(failedRunId, runIds);
+    }
+
+    [Fact]
+    public async Task Blocked_recovery_recurring_window_discovers_run_blocked_after_startup()
+    {
+        await using var dbContext = CreateDbContext();
+        var startupWatermarkUtc = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var historicalBlockedRunId = Guid.NewGuid();
+        var newlyBlockedRunId = Guid.NewGuid();
+
+        AddRuntimeState(
+            dbContext,
+            historicalBlockedRunId,
+            ProcessRuntimeStatus.Blocked,
+            startupWatermarkUtc.AddMinutes(-1),
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            newlyBlockedRunId,
+            ProcessRuntimeStatus.Blocked,
+            startupWatermarkUtc.AddSeconds(1),
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+
+        await dbContext.SaveChangesAsync();
+
+        var blockedRuns = await ProcessRuntimeDispatchRecoveryRunQuery.LoadBlockedRunsPageAsync(
+            dbContext,
+            updatedAtOrAfterUtc: startupWatermarkUtc);
+
+        var blockedRun = Assert.Single(blockedRuns);
+        Assert.Equal(newlyBlockedRunId, blockedRun.RunId);
+    }
+
+    [Fact]
+    public async Task Ready_recovery_query_excludes_blocked_runs_during_recurring_scan()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var blockedRunId = Guid.NewGuid();
+        var readyRunId = Guid.NewGuid();
+
+        AddRuntimeState(
+            dbContext,
+            blockedRunId,
+            ProcessRuntimeStatus.Blocked,
+            now,
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            readyRunId,
+            ProcessRuntimeStatus.Active,
+            now,
+            ProcessRuntimeStepStatus.Ready,
+            activeClaimToken: null);
+
+        await dbContext.SaveChangesAsync();
+
+        var runIds = await ProcessRuntimeDispatchRecoveryRunQuery.LoadRecoverableRunIdsAsync(
+            dbContext,
+            now,
+            readyUpdatedAfterUtc: now.AddMinutes(-5));
+
+        Assert.Contains(readyRunId, runIds);
+        Assert.DoesNotContain(blockedRunId, runIds);
+    }
+
+    [Fact]
+    public async Task Blocked_recovery_query_pages_every_run_in_deterministic_recency_order()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var expectedRunIds = new List<Guid>();
+
+        for (var index = 0; index < 260; index++)
+        {
+            var runId = Guid.NewGuid();
+            AddRuntimeState(
+                dbContext,
+                runId,
+                ProcessRuntimeStatus.Blocked,
+                now.AddSeconds(-index),
+                ProcessRuntimeStepStatus.Blocked,
+                activeClaimToken: null);
+
+            expectedRunIds.Add(runId);
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var firstPage = await ProcessRuntimeDispatchRecoveryRunQuery.LoadBlockedRunsPageAsync(dbContext);
+        var secondPage = await ProcessRuntimeDispatchRecoveryRunQuery.LoadBlockedRunsPageAsync(
+            dbContext,
+            firstPage[^1].Cursor);
+        var runIds = firstPage
+            .Concat(secondPage)
+            .Select(candidate => candidate.RunId)
+            .ToArray();
+
+        Assert.Equal(ProcessRuntimeDispatchRecoveryRunQuery.BlockedRunPageSize, firstPage.Count);
+        Assert.Equal(10, secondPage.Count);
+        Assert.Equal(expectedRunIds, runIds);
+    }
+
+    [Fact]
+    public async Task Blocked_recovery_keyset_cursor_does_not_skip_older_runs_when_newer_rows_change()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var originalRunIds = Enumerable
+            .Range(0, 260)
+            .Select(_ => Guid.NewGuid())
+            .OrderByDescending(runId => runId)
+            .ToArray();
+        foreach (var runId in originalRunIds)
+        {
+            AddRuntimeState(
+                dbContext,
+                runId,
+                ProcessRuntimeStatus.Blocked,
+                now,
+                ProcessRuntimeStepStatus.Blocked,
+                activeClaimToken: null);
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var firstPage = await ProcessRuntimeDispatchRecoveryRunQuery.LoadBlockedRunsPageAsync(dbContext);
+        foreach (var runId in firstPage.Take(20).Select(candidate => candidate.RunId))
+        {
+            dbContext.RuntimeStates.Single(state => state.RunId == runId).Status =
+                ProcessRuntimeStatus.Active;
+        }
+
+        var newlyBlockedRunId = Guid.NewGuid();
+        AddRuntimeState(
+            dbContext,
+            newlyBlockedRunId,
+            ProcessRuntimeStatus.Blocked,
+            now.AddMinutes(1),
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        await dbContext.SaveChangesAsync();
+
+        var secondPage = await ProcessRuntimeDispatchRecoveryRunQuery.LoadBlockedRunsPageAsync(
+            dbContext,
+            firstPage[^1].Cursor);
+
+        Assert.Equal(originalRunIds.Skip(250), secondPage.Select(candidate => candidate.RunId));
+        Assert.DoesNotContain(secondPage, candidate => candidate.RunId == newlyBlockedRunId);
     }
 
     [Fact]
@@ -1078,12 +1396,202 @@ public sealed class ProcessRuntimeDispatchQueueTests
 
         await dbContext.SaveChangesAsync();
 
-        var terminalChildRunIds = await ProcessRuntimeChildRunParentQuery.LoadTerminalChildRunIdsWithParentLinksAsync(dbContext);
+        var terminalChildRuns = await ProcessRuntimeChildRunParentQuery.LoadTerminalChildRunsPageAsync(dbContext);
 
         var expectedChildRunIds = new[] { blockedChildRunId, completedChildRunId }
-            .OrderBy(runId => runId)
+            .OrderByDescending(runId => runId)
             .ToArray();
-        Assert.Equal(expectedChildRunIds, terminalChildRunIds);
+        Assert.Equal(expectedChildRunIds, terminalChildRuns.Select(candidate => candidate.RunId));
+    }
+
+    [Fact]
+    public async Task Child_parent_query_returns_only_blocked_parents_with_the_exact_linked_step()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var childRunId = Guid.NewGuid();
+        var blockedParentRunId = Guid.NewGuid();
+        var activeParentRunId = Guid.NewGuid();
+        var completedParentRunId = Guid.NewGuid();
+        var wrongStepParentRunId = Guid.NewGuid();
+        var blockedParentStepId = AddRuntimeState(
+            dbContext,
+            blockedParentRunId,
+            ProcessRuntimeStatus.Blocked,
+            now,
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        var activeParentStepId = AddRuntimeState(
+            dbContext,
+            activeParentRunId,
+            ProcessRuntimeStatus.Active,
+            now,
+            ProcessRuntimeStepStatus.Waiting,
+            activeClaimToken: null);
+        var completedParentStepId = AddRuntimeState(
+            dbContext,
+            completedParentRunId,
+            ProcessRuntimeStatus.Completed,
+            now,
+            ProcessRuntimeStepStatus.Completed,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            wrongStepParentRunId,
+            ProcessRuntimeStatus.Blocked,
+            now,
+            ProcessRuntimeStepStatus.Blocked,
+            activeClaimToken: null);
+        AddRuntimeState(
+            dbContext,
+            childRunId,
+            ProcessRuntimeStatus.Completed,
+            now,
+            ProcessRuntimeStepStatus.Completed,
+            activeClaimToken: null);
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                new ProcessRunId(blockedParentRunId),
+                new ProcessStepInstanceId(blockedParentStepId)));
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                new ProcessRunId(activeParentRunId),
+                new ProcessStepInstanceId(activeParentStepId)));
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                new ProcessRunId(completedParentRunId),
+                new ProcessStepInstanceId(completedParentStepId)));
+        AddAssignment(
+            dbContext,
+            childRunId,
+            Guid.NewGuid(),
+            ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                new ProcessRunId(wrongStepParentRunId),
+                ProcessStepInstanceId.New()));
+
+        await dbContext.SaveChangesAsync();
+
+        var parentRunIds = await ProcessRuntimeChildRunParentQuery
+            .LoadBlockedParentRunIdsAsync(dbContext, childRunId);
+
+        Assert.Equal([blockedParentRunId], parentRunIds);
+    }
+
+    [Fact]
+    public async Task Child_parent_query_pages_every_terminal_child_run_with_parent_links()
+    {
+        await using var dbContext = CreateDbContext();
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var parentRunId = Guid.NewGuid();
+        var parentStepId = Guid.NewGuid();
+        var expected = new List<(Guid RunId, DateTimeOffset UpdatedAtUtc)>();
+        for (var index = 0; index < 260; index++)
+        {
+            var childRunId = Guid.NewGuid();
+            var updatedAtUtc = now;
+            expected.Add((childRunId, updatedAtUtc));
+            AddRuntimeState(
+                dbContext,
+                childRunId,
+                ProcessRuntimeStatus.Completed,
+                updatedAtUtc,
+                ProcessRuntimeStepStatus.Completed,
+                activeClaimToken: null);
+            AddAssignment(
+                dbContext,
+                childRunId,
+                Guid.NewGuid(),
+                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    new ProcessRunId(parentRunId),
+                    new ProcessStepInstanceId(parentStepId)));
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var firstPage = await ProcessRuntimeChildRunParentQuery.LoadTerminalChildRunsPageAsync(dbContext);
+        var secondPage = await ProcessRuntimeChildRunParentQuery.LoadTerminalChildRunsPageAsync(
+            dbContext,
+            firstPage[^1].Cursor);
+        var actual = firstPage
+            .Concat(secondPage)
+            .Select(candidate => candidate.RunId)
+            .ToArray();
+        var expectedRunIds = expected
+            .OrderByDescending(candidate => candidate.UpdatedAtUtc)
+            .ThenByDescending(candidate => candidate.RunId)
+            .Select(candidate => candidate.RunId)
+            .ToArray();
+
+        Assert.Equal(ProcessRuntimeChildRunParentQuery.TerminalChildRunPageSize, firstPage.Count);
+        Assert.Equal(10, secondPage.Count);
+        Assert.Equal(expectedRunIds, actual);
+    }
+
+    [Fact]
+    public async Task Child_parent_query_recurring_window_excludes_history_and_discovers_new_terminal_rows()
+    {
+        await using var dbContext = CreateDbContext();
+        var recurringWatermarkUtc = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var parentRunId = Guid.NewGuid();
+        var parentStepId = Guid.NewGuid();
+        var historicalChildRunId = Guid.NewGuid();
+        var newChildRunIds = new[]
+        {
+            Guid.NewGuid(),
+            Guid.NewGuid()
+        };
+
+        AddRuntimeState(
+            dbContext,
+            historicalChildRunId,
+            ProcessRuntimeStatus.Completed,
+            recurringWatermarkUtc.AddMinutes(-1),
+            ProcessRuntimeStepStatus.Completed,
+            activeClaimToken: null);
+        AddAssignment(
+            dbContext,
+            historicalChildRunId,
+            Guid.NewGuid(),
+            ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                new ProcessRunId(parentRunId),
+                new ProcessStepInstanceId(parentStepId)));
+        foreach (var newChildRunId in newChildRunIds)
+        {
+            AddRuntimeState(
+                dbContext,
+                newChildRunId,
+                ProcessRuntimeStatus.Completed,
+                recurringWatermarkUtc.AddSeconds(1),
+                ProcessRuntimeStepStatus.Completed,
+                activeClaimToken: null);
+            AddAssignment(
+                dbContext,
+                newChildRunId,
+                Guid.NewGuid(),
+                ProcessRuntimeLaunchVariables.CreateParentStepLookup(
+                    new ProcessRunId(parentRunId),
+                    new ProcessStepInstanceId(parentStepId)));
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var terminalChildRuns = await ProcessRuntimeChildRunParentQuery.LoadTerminalChildRunsPageAsync(
+            dbContext,
+            updatedAtOrAfterUtc: recurringWatermarkUtc);
+
+        Assert.Equal(
+            newChildRunIds.OrderByDescending(runId => runId),
+            terminalChildRuns.Select(candidate => candidate.RunId));
+        Assert.DoesNotContain(terminalChildRuns, candidate => candidate.RunId == historicalChildRunId);
     }
 
     [Fact]

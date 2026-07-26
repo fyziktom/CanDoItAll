@@ -464,6 +464,49 @@ public sealed class ProcessRunRecordAssemblerTests
     }
 
     [Fact]
+    public async Task AssembleAsync_cancelled_child_accepts_later_descendant_cancellation_closure()
+    {
+        var scenario = CompleteScenario.Create(
+            ProcessRuntimeStatus.Cancelled,
+            ProcessRunDisposition.Cancelled);
+        var childIndex = scenario.States.FindIndex(state => state.RunId == scenario.ChildRunId);
+        scenario.States[childIndex] = scenario.States[childIndex] with
+        {
+            Status = ProcessRuntimeStatus.Cancelled
+        };
+        var grandchildIndex = scenario.States.FindIndex(state => state.RunId == scenario.GrandchildRunId);
+        scenario.States[grandchildIndex] = scenario.States[grandchildIndex] with
+        {
+            Status = ProcessRuntimeStatus.Cancelled
+        };
+        scenario.RuntimeEvents[^1] = CreateStoredEvent(
+            scenario.SourceGlobalSequence,
+            scenario.SourceRootSequence,
+            scenario.RootRunId,
+            scenario.ChildRunId,
+            ProcessRuntimeEventTypes.ProcessRunCancelled,
+            scenario.EndedAtUtc);
+        scenario.RuntimeEvents.Add(CreateStoredEvent(
+            scenario.SourceGlobalSequence + 1,
+            scenario.SourceRootSequence + 1,
+            scenario.RootRunId,
+            scenario.GrandchildRunId,
+            ProcessRuntimeEventTypes.ProcessRunCancelled,
+            scenario.EndedAtUtc.AddMilliseconds(1)));
+        var harness = scenario.CreateHarness();
+
+        var result = await harness.Assembler.AssembleAsync(
+            scenario.CreateClaim(scenario.ChildRunId),
+            scenario.CreateRecord(
+                scenario.ChildRunId,
+                scenario.ChildPlanId,
+                scenario.RootRunId));
+
+        Assert.Equal(ProcessRunRecordCompleteness.Complete, result.Completeness);
+        Assert.Equal([scenario.GrandchildRunId], result.Facts.SubprocessRunIds);
+    }
+
+    [Fact]
     public async Task AssembleAsync_runtime_event_cap_marks_runtime_events_missing()
     {
         const long eventCap = 100_000;
