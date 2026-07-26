@@ -242,7 +242,10 @@ public sealed class ProcessWorkspaceShellProjectionService(
                     TakeRuns: Math.Clamp(runtimeQuery.TakeRuns, 1, 100),
                     ResolveRunId(runtimeQuery.SelectedRunId ?? request.Selection.RunId),
                     runtimeQuery.AutoSelectRun,
-                    runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full),
+                    runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full)
+                {
+                    PreviouslyLoadedRuns = runtimeQuery.PreviouslyLoadedRuns
+                },
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -413,7 +416,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 ? BuildAttentionSummary(selectedRunRecord!)
                 : BuildAttentionSummary(result.Runs, incidents, metricEvents, result.SelectedRun, result.ActiveAgents))
         {
-            SelectedRunRecord = selectedRunRecord
+            SelectedRunRecord = selectedRunRecord,
+            ReusableRuns = result.ReusableRuns
         };
     }
 
@@ -882,7 +886,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
 
     private static string BuildRuntimeSummary(ProcessRunRecord record)
     {
-        if (record.Summary.FactsStatus != ProcessRunFactsStatus.Completed || record.Facts is null)
+        if (record.Summary.FactsStatus != ProcessRunFactsStatus.Completed)
         {
             return FormattableString.Invariant(
                 $"{record.Summary.Disposition} run ended at {record.Summary.Metrics.EndedAtUtc:O}. {BuildFactsStageStatus(record.Summary)} Detailed historical metrics were not loaded.");

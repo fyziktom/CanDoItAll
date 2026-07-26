@@ -459,7 +459,10 @@ public sealed record ProcessRuntimeWorkspaceQueryProjection(
     Guid? SelectedRunId,
     bool AutoSelectRun = true,
     int TakeRuns = 100,
-    ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null);
+    ProcessRuntimeWorkspaceLoadOptions? LoadOptions = null)
+{
+    public IReadOnlyList<ProcessLiveProcessSnapshot>? PreviouslyLoadedRuns { get; init; }
+}
 
 public sealed record ProcessRuntimeStatsProjection(
     int ObservedRunCount,
@@ -604,6 +607,8 @@ public sealed record ProcessRuntimeWorkspaceProjection(
     string AttentionSummary)
 {
     public ProcessRunRecord? SelectedRunRecord { get; init; }
+
+    public IReadOnlyList<ProcessLiveProcessSnapshot>? ReusableRuns { get; init; }
 
     public static ProcessRuntimeWorkspaceProjection Empty { get; } = new(
         ProcessRuntimeHistoryWindow.OneDay,

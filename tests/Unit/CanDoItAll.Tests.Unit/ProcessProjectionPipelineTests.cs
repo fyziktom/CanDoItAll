@@ -431,7 +431,7 @@ public sealed class ProcessProjectionPipelineTests
             new ThrowingAssignmentStore(),
             new ThrowingObservationReader());
 
-        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+        var workspaceQuery = new ProcessRuntimeWorkspaceQuery(
             Now,
             TimeSpan.FromHours(1),
             EventPage: 0,
@@ -439,7 +439,8 @@ public sealed class ProcessProjectionPipelineTests
             TakeRuns: 10,
             runId,
             AutoSelectRun: true,
-            ProcessRuntimeWorkspaceLoadOptions.ListOnly));
+            ProcessRuntimeWorkspaceLoadOptions.ListOnly);
+        var workspace = await query.GetRuntimeWorkspaceAsync(workspaceQuery);
 
         var run = Assert.Single(workspace.Runs);
         Assert.Equal(runId, run.RunId);
@@ -448,8 +449,56 @@ public sealed class ProcessProjectionPipelineTests
         Assert.Empty(workspace.MetricEvents);
         Assert.Empty(workspace.ActiveAgents);
         Assert.Equal(1, countingStore.ReadSnapshotsCallCount);
+        Assert.Equal(20, countingStore.LastReadSnapshotsTake);
         Assert.Equal(0, countingStore.LoadSnapshotCallCount);
         Assert.Equal(0, countingStore.ReadHistoryCallCount);
+        Assert.NotNull(workspace.ReusableRuns);
+
+        var reusedWorkspace = await query.GetRuntimeWorkspaceAsync(workspaceQuery with
+        {
+            PreviouslyLoadedRuns = workspace.ReusableRuns
+        });
+
+        Assert.Single(reusedWorkspace.Runs);
+        Assert.Equal(1, countingStore.ReadSnapshotsCallCount);
+    }
+
+    [Fact]
+    public async Task Runtime_workspace_shares_metric_history_with_the_visible_event_page()
+    {
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var runId = ProcessRunId.New();
+        await ProjectAsync(
+            projectionStore,
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.StepRunning, Now.AddMinutes(-5)),
+            latestKnownGlobalSequence: 1);
+        var countingStore = new CountingProjectionStore(projectionStore);
+        var query = new ProcessRuntimeProjectionQueryService(
+            countingStore,
+            ProcessProjectionJsonCodec.Default,
+            new FixedProcessProjectionClock(Now));
+
+        var workspace = await query.GetRuntimeWorkspaceAsync(new ProcessRuntimeWorkspaceQuery(
+            Now,
+            TimeSpan.FromHours(1),
+            EventPage: 0,
+            EventPageSize: 10,
+            TakeRuns: 10,
+            runId,
+            AutoSelectRun: true,
+            new ProcessRuntimeWorkspaceLoadOptions
+            {
+                LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
+                IncludeSelectedRun = false,
+                IncludeRunRecord = false,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = false
+            }));
+
+        Assert.Single(workspace.Events);
+        Assert.Single(workspace.MetricEvents);
+        Assert.Equal(1, countingStore.ReadHistoryCallCount);
     }
 
     [Fact]
@@ -2253,6 +2302,45 @@ public sealed class ProcessProjectionPipelineTests
             activity.ToolName == "Manager events" &&
             activity.CallCount == 1 &&
             activity.LastUsedAtUtc == endedAtUtc.AddMinutes(-2).AddSeconds(40));
+
+        var compactShell = await service.GetShellAsync(new ProcessWorkspaceShellRequest(
+            ProcessWorkspaceShellScope.Global,
+            new ProcessWorkspaceSelectionProjection(
+                ProcessId: null,
+                RunId: runId.Value,
+                LaunchPlanId: null),
+            new ProcessDefinitionCatalogQueryProjection(
+                SearchText: null,
+                SelectedDefinitionKey: null,
+                ProcessDefinitionCatalogScopeKind.All,
+                Take: 50),
+            new ProcessTemplateCatalogQueryProjection(
+                SearchText: null,
+                ProcessTemplateCatalogCategoryKind.All,
+                SelectedItemKey: null,
+                ProcessTemplateCatalogPreviewTabKind.Overview,
+                Take: 50),
+            ForceRefresh: false,
+            new ProcessRuntimeWorkspaceQueryProjection(
+                ProcessRuntimeHistoryWindow.OneDay,
+                EventPage: 0,
+                EventPageSize: 25,
+                runId.Value,
+                LoadOptions: new ProcessRuntimeWorkspaceLoadOptions
+                {
+                    IncludeMetricHistory = false,
+                    IncludeActiveAgents = false,
+                    IncludeUsageTelemetry = false
+                })));
+
+        Assert.NotNull(compactShell.Runtime.SelectedRunRecord);
+        Assert.Null(compactShell.Runtime.SelectedRunRecord.Facts);
+        Assert.Equal(18, compactShell.Runtime.Stats.TotalTokens);
+        Assert.Equal(0.12m, compactShell.Runtime.Stats.EstimatedCost);
+        Assert.Equal(0.11m, compactShell.Runtime.Stats.ActualCost);
+        Assert.Empty(compactShell.Runtime.MetricPoints);
+        Assert.Contains("18 tokens", compactShell.Runtime.Summary, StringComparison.Ordinal);
+        Assert.Contains("0.11 actual cost", compactShell.Runtime.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2753,6 +2841,8 @@ public sealed class ProcessProjectionPipelineTests
 
         public int ReadHistoryCallCount { get; private set; }
 
+        public int? LastReadSnapshotsTake { get; private set; }
+
         public Task UpsertSnapshotAsync(
             ProcessProjectionSnapshot snapshot,
             CancellationToken cancellationToken = default)
@@ -2783,6 +2873,7 @@ public sealed class ProcessProjectionPipelineTests
             CancellationToken cancellationToken = default)
         {
             ReadSnapshotsCallCount++;
+            LastReadSnapshotsTake = take;
             return inner.ReadSnapshotsAsync(projectorName, projectionKeyPrefix, take, cancellationToken);
         }
 

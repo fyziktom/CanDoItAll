@@ -15,7 +15,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
     IProcessExecutionObservationReader? executionObservationReader = null,
     IProcessRunRecordStore? runRecordStore = null)
 {
-    private const int LiveSnapshotReadLimit = 500;
+    private const int LiveSnapshotMaximumReadLimit = 500;
+    private const int LiveSnapshotReadOverscanFactor = 2;
     private const int RuntimeMetricEventReadLimit = 10_000;
     private const int OperatorActionObservationTakePerRun = 100;
     private const string MissingBlockedDiagnosticCode = "process.runtime.blocked_without_diagnostics";
@@ -36,21 +37,33 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var nowUtc = query.NowUtc == default ? clock.GetUtcNow() : query.NowUtc;
         var windowStartUtc = nowUtc - query.Window;
         var snapshots = await projectionStore
-            .ReadSnapshotsAsync(ProcessRuntimeProjectionProjector.ProjectorName, ProcessRuntimeProjectionKeys.LivePrefix, LiveSnapshotReadLimit, cancellationToken)
+            .ReadSnapshotsAsync(
+                ProcessRuntimeProjectionProjector.ProjectorName,
+                ProcessRuntimeProjectionKeys.LivePrefix,
+                ResolveLiveSnapshotReadLimit(query.Take),
+                cancellationToken)
             .ConfigureAwait(false);
-        var runs = new List<ProcessLiveProcessSnapshot>();
+        var runs = new List<ProcessLiveProcessSnapshot>(snapshots.Count);
 
         foreach (var snapshot in snapshots)
         {
-            var run = jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot);
-            if (run.LastEventAtUtc < windowStartUtc)
-            {
-                continue;
-            }
-
-            runs.Add(run);
+            runs.Add(jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot));
         }
 
+        return await PrepareLiveProcessesAsync(query, runs, nowUtc, windowStartUtc, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<ProcessLiveProcessesResult> PrepareLiveProcessesAsync(
+        ProcessLiveProcessesQuery query,
+        IReadOnlyList<ProcessLiveProcessSnapshot> sourceRuns,
+        DateTimeOffset nowUtc,
+        DateTimeOffset windowStartUtc,
+        CancellationToken cancellationToken)
+    {
+        var runs = sourceRuns
+            .Where(run => run.LastEventAtUtc >= windowStartUtc)
+            .ToList();
         runs.Sort(static (left, right) =>
         {
             var lastEventComparison = right.LastEventAtUtc.CompareTo(left.LastEventAtUtc);
@@ -63,6 +76,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.RemoveRange(query.Take, runs.Count - query.Take);
         }
 
+        var reusableRuns = runs.ToArray();
         var loadOptions = query.LoadOptions ?? ProcessLiveProcessesLoadOptions.Full;
         var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
         if (loadOptions.IncludeAttentionReconciliation)
@@ -96,7 +110,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs = (await EnrichRunMetadataAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
         }
 
-        return new ProcessLiveProcessesResult(runs, CombineFreshness(runs));
+        return new ProcessLiveProcessesResult(runs, CombineFreshness(runs))
+        {
+            ReusableRuns = reusableRuns
+        };
     }
 
     public async Task<ProcessRunHistoryResult> GetRunHistoryAsync(
@@ -158,9 +175,20 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
         var nowUtc = query.NowUtc == default ? clock.GetUtcNow() : query.NowUtc;
         var loadOptions = query.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
-        var liveProcesses = await GetLiveProcessesAsync(
-            new ProcessLiveProcessesQuery(nowUtc, query.Window, query.TakeRuns, loadOptions.LiveProcesses),
-            cancellationToken).ConfigureAwait(false);
+        var liveQuery = new ProcessLiveProcessesQuery(
+            nowUtc,
+            query.Window,
+            query.TakeRuns,
+            loadOptions.LiveProcesses);
+        var liveProcesses = query.PreviouslyLoadedRuns is null
+            ? await GetLiveProcessesAsync(liveQuery, cancellationToken).ConfigureAwait(false)
+            : await PrepareLiveProcessesAsync(
+                    liveQuery,
+                    query.PreviouslyLoadedRuns,
+                    nowUtc,
+                    nowUtc - query.Window,
+                    cancellationToken)
+                .ConfigureAwait(false);
         var selectedRunId = RequiresSelectedRunId(loadOptions)
             ? ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId, query.AutoSelectRun)
             : query.SelectedRunId;
@@ -185,8 +213,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
             !selectedRunNeedsRecordLookup ||
             selectedRunId is not { } selectedRunRecordId
             ? null
-            : await runRecordStore!
-                .GetAsync(selectedRunRecordId, includeSuperseded: false, cancellationToken)
+            : await LoadSelectedRunRecordAsync(
+                    selectedRunRecordId,
+                    includeFacts: loadOptions.IncludeMetricHistory,
+                    cancellationToken)
                 .ConfigureAwait(false);
         var hasTerminalRecord = selectedRunRecord is not null;
         ProcessRunDetailProjection? selectedRun = null;
@@ -196,25 +226,48 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 .ConfigureAwait(false);
         }
 
-        var history = loadOptions.IncludeHistory
-            ? await GetRunHistoryAsync(
-                new ProcessRunHistoryQuery(
-                    selectedRunId,
-                    nowUtc - query.Window,
-                    nowUtc,
-                    Take: query.EventPageSize + 1,
-                    Skip: checked(query.EventPage * query.EventPageSize)),
-                cancellationToken).ConfigureAwait(false)
-            : new ProcessRunHistoryResult([], Freshness: null);
-        var metricHistory = loadOptions.IncludeMetricHistory && !hasTerminalRecord
-            ? await GetRunHistoryAsync(
-                new ProcessRunHistoryQuery(
-                    selectedRunId,
-                    nowUtc - query.Window,
-                    nowUtc,
-                    Take: RuntimeMetricEventReadLimit),
-                cancellationToken).ConfigureAwait(false)
-            : new ProcessRunHistoryResult([], Freshness: null);
+        var historySkip = checked(query.EventPage * query.EventPageSize);
+        var includeMetricHistory = loadOptions.IncludeMetricHistory && !hasTerminalRecord;
+        ProcessRunHistoryResult history;
+        ProcessRunHistoryResult metricHistory;
+        if (loadOptions.IncludeHistory &&
+            includeMetricHistory &&
+            CanShareMetricHistoryWithPage(historySkip, query.EventPageSize))
+        {
+            metricHistory = await GetRunHistoryAsync(
+                    new ProcessRunHistoryQuery(
+                        selectedRunId,
+                        nowUtc - query.Window,
+                        nowUtc,
+                        Take: RuntimeMetricEventReadLimit),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            history = SliceHistoryPage(metricHistory, historySkip, query.EventPageSize);
+        }
+        else
+        {
+            history = loadOptions.IncludeHistory
+                ? await GetRunHistoryAsync(
+                        new ProcessRunHistoryQuery(
+                            selectedRunId,
+                            nowUtc - query.Window,
+                            nowUtc,
+                            Take: query.EventPageSize + 1,
+                            Skip: historySkip),
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : new ProcessRunHistoryResult([], Freshness: null);
+            metricHistory = includeMetricHistory
+                ? await GetRunHistoryAsync(
+                        new ProcessRunHistoryQuery(
+                            selectedRunId,
+                            nowUtc - query.Window,
+                            nowUtc,
+                            Take: RuntimeMetricEventReadLimit),
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : new ProcessRunHistoryResult([], Freshness: null);
+        }
         var events = history.Events.Take(query.EventPageSize).ToArray();
         var activeAgents = loadOptions.IncludeActiveAgents
             ? await LoadActiveAgentsAsync(liveProcesses.Runs, nowUtc, cancellationToken).ConfigureAwait(false)
@@ -230,9 +283,56 @@ public sealed class ProcessRuntimeProjectionQueryService(
             activeAgents,
             freshness)
         {
-            SelectedRunRecord = selectedRunRecord
+            SelectedRunRecord = selectedRunRecord,
+            ReusableRuns = liveProcesses.ReusableRuns
         };
     }
+
+    private async Task<ProcessRunRecord?> LoadSelectedRunRecordAsync(
+        ProcessRunId runId,
+        bool includeFacts,
+        CancellationToken cancellationToken)
+    {
+        if (includeFacts)
+        {
+            return await runRecordStore!
+                .GetAsync(runId, includeSuperseded: false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var page = await runRecordStore!
+            .ListAsync(
+                new ProcessRunRecordListQuery(Take: 1)
+                {
+                    RunIds = [runId],
+                    Payload = ProcessRunRecordListPayload.Compact
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+        var summary = page.Records.SingleOrDefault();
+        return summary is null
+            ? null
+            : new ProcessRunRecord(summary, Facts: null);
+    }
+
+    private static bool CanShareMetricHistoryWithPage(int skip, int pageSize)
+        => (long)skip + pageSize + 1 <= RuntimeMetricEventReadLimit;
+
+    private static int ResolveLiveSnapshotReadLimit(int take)
+        => take >= LiveSnapshotMaximumReadLimit / LiveSnapshotReadOverscanFactor
+            ? LiveSnapshotMaximumReadLimit
+            : take * LiveSnapshotReadOverscanFactor;
+
+    private static ProcessRunHistoryResult SliceHistoryPage(
+        ProcessRunHistoryResult metricHistory,
+        int skip,
+        int pageSize)
+        => new(
+            metricHistory.Events
+                .Skip(skip)
+                .Take(pageSize + 1)
+                .ToArray(),
+            metricHistory.Freshness);
 
     private static bool RequiresSelectedRunId(ProcessRuntimeWorkspaceLoadOptions loadOptions)
         => loadOptions.IncludeSelectedRun ||

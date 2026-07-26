@@ -551,6 +551,7 @@ public sealed class ProcessWorkspaceShellTests
         Assert.False(runtimeOptions.LiveProcesses.IncludeOperatorActions);
         Assert.False(runtimeOptions.LiveProcesses.IncludeCurrentSteps);
         Assert.False(runtimeOptions.LiveProcesses.IncludeChildRunWaits);
+        Assert.Null(request.RuntimeQuery?.PreviouslyLoadedRuns);
     }
 
     [Fact]
@@ -592,27 +593,25 @@ public sealed class ProcessWorkspaceShellTests
         Assert.True(runsRuntimeOptions.IncludeActiveAgents);
         Assert.False(runsRuntimeOptions.IncludeUsageTelemetry);
         Assert.False(client.LastRequest?.DefinitionLoadOptions?.IncludeSelectedEditor);
+        Assert.NotNull(client.LastRequest?.RuntimeQuery?.PreviouslyLoadedRuns);
 
+        var requestCountBeforeGraphGate = client.Requests.Count;
         ActivateProcessDetailTab(cut, "processes-detail-tab-graphs", "processes-detail-panel-graphs");
-        var graphRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
-        Assert.NotNull(graphRuntimeOptions);
-        Assert.False(graphRuntimeOptions.IncludeSelectedRun);
-        Assert.False(graphRuntimeOptions.IncludeHistory);
-        Assert.False(graphRuntimeOptions.IncludeMetricHistory);
-        Assert.False(graphRuntimeOptions.IncludeActiveAgents);
-        Assert.False(graphRuntimeOptions.IncludeUsageTelemetry);
-        Assert.Equal(ProcessRuntimeHistoryWindow.LiveHour, client.LastRequest?.RuntimeQuery?.HistoryWindow);
+        Assert.Equal(requestCountBeforeGraphGate, client.Requests.Count);
 
         cut.Find("[data-testid='processes-process-graphs-load-button']").Click();
         cut.WaitForAssertion(() =>
         {
+            Assert.Equal(requestCountBeforeGraphGate + 1, client.Requests.Count);
             var loadedGraphRuntimeOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
             Assert.NotNull(loadedGraphRuntimeOptions);
-            Assert.True(loadedGraphRuntimeOptions.IncludeSelectedRun);
-            Assert.True(loadedGraphRuntimeOptions.IncludeHistory);
+            Assert.False(loadedGraphRuntimeOptions.IncludeSelectedRun);
+            Assert.False(loadedGraphRuntimeOptions.IncludeHistory);
             Assert.True(loadedGraphRuntimeOptions.IncludeMetricHistory);
             Assert.False(loadedGraphRuntimeOptions.IncludeActiveAgents);
             Assert.True(loadedGraphRuntimeOptions.IncludeUsageTelemetry);
+            Assert.Equal(ProcessRuntimeHistoryWindow.LiveHour, client.LastRequest?.RuntimeQuery?.HistoryWindow);
+            Assert.NotNull(client.LastRequest?.RuntimeQuery?.PreviouslyLoadedRuns);
         });
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
@@ -660,7 +659,11 @@ public sealed class ProcessWorkspaceShellTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-refresh']")));
         cut.Find("[data-testid='processes-refresh']").Click();
 
-        cut.WaitForAssertion(() => Assert.True(client.Requests.Last().ForceRefresh));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(client.Requests.Last().ForceRefresh);
+            Assert.Null(client.Requests.Last().RuntimeQuery?.PreviouslyLoadedRuns);
+        });
         Assert.Contains("Refresh requested", cut.Markup, StringComparison.Ordinal);
     }
 
@@ -1533,6 +1536,24 @@ public sealed class ProcessWorkspaceShellTests
         Assert.False(runtimeOptions.IncludeMetricHistory);
         Assert.True(runtimeOptions.IncludeActiveAgents);
         Assert.False(runtimeOptions.IncludeUsageTelemetry);
+
+        var requestCountBeforeGraphs = client.Requests.Count;
+        cut.FindAll("button[role='tab']")
+            .Single(tab => tab.TextContent.Contains("Graphs", StringComparison.Ordinal))
+            .Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(requestCountBeforeGraphs + 1, client.Requests.Count);
+            var graphOptions = client.LastRequest?.RuntimeQuery?.LoadOptions;
+            Assert.NotNull(graphOptions);
+            Assert.False(graphOptions.IncludeSelectedRun);
+            Assert.False(graphOptions.IncludeHistory);
+            Assert.True(graphOptions.IncludeMetricHistory);
+            Assert.False(graphOptions.IncludeActiveAgents);
+            Assert.True(graphOptions.IncludeUsageTelemetry);
+            Assert.NotNull(client.LastRequest?.RuntimeQuery?.PreviouslyLoadedRuns);
+        });
+
         Assert.NotNull(cut.Find("[data-testid='live-processes-page']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-command-strip']"));
         Assert.NotNull(cut.Find("[data-testid='live-processes-dashboard']"));
@@ -2572,7 +2593,10 @@ public sealed class ProcessWorkspaceShellTests
                     : [],
                 freshness,
                 $"2 run(s), 2 active, 1 needing attention, {events.Count.ToString(CultureInfo.InvariantCulture)} event(s) on this page.",
-                "Cause: Manager incident raised. Next action: open the selected run and review manager messages.");
+                "Cause: Manager incident raised. Next action: open the selected run and review manager messages.")
+            {
+                ReusableRuns = runs
+            };
         }
 
         private static ProcessLiveProcessSnapshot CreateLiveRun(
