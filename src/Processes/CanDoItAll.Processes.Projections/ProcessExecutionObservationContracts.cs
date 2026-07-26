@@ -7,6 +7,13 @@ public interface IProcessExecutionObservationReader
     ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
         ProcessExecutionObservationQuery query,
         CancellationToken cancellationToken = default);
+
+    async ValueTask<ProcessExecutionObservationReadResult> ReadAsync(
+        ProcessExecutionObservationQuery query,
+        CancellationToken cancellationToken = default)
+        => new(
+            await ListAsync(query, cancellationToken).ConfigureAwait(false),
+            IsComplete: false);
 }
 
 public interface IProcessRuntimeUsageTelemetryReader
@@ -14,7 +21,22 @@ public interface IProcessRuntimeUsageTelemetryReader
     ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
         ProcessRuntimeUsageTelemetryQuery query,
         CancellationToken cancellationToken = default);
+
+    async ValueTask<ProcessRuntimeUsageTelemetryReadResult> ReadAsync(
+        ProcessRuntimeUsageTelemetryQuery query,
+        CancellationToken cancellationToken = default)
+        => new(
+            await ListAsync(query, cancellationToken).ConfigureAwait(false),
+            IsComplete: false);
 }
+
+public sealed record ProcessExecutionObservationReadResult(
+    IReadOnlyList<ProcessExecutionObservation> Items,
+    bool IsComplete);
+
+public sealed record ProcessRuntimeUsageTelemetryReadResult(
+    IReadOnlyList<ProcessRuntimeUsageObservation> Items,
+    bool IsComplete);
 
 public sealed record ProcessExecutionObservationQuery(
     IReadOnlyList<ProcessRunId> RunIds,
@@ -23,6 +45,15 @@ public sealed record ProcessExecutionObservationQuery(
     int TakePerRun)
 {
     public IReadOnlyList<ProcessStepInstanceId> StepInstanceIds { get; init; } = [];
+
+    public ProcessExecutionObservationDetailLevel DetailLevel { get; init; } =
+        ProcessExecutionObservationDetailLevel.Full;
+}
+
+public enum ProcessExecutionObservationDetailLevel
+{
+    Summary,
+    Full
 }
 
 public sealed record ProcessRuntimeUsageTelemetryQuery(

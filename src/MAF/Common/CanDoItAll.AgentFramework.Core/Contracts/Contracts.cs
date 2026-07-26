@@ -450,6 +450,14 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
     Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default);
     Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default);
+    Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException(
+            "This workspace does not support atomic same-source execution reservation.");
+    }
     Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default);
     Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,

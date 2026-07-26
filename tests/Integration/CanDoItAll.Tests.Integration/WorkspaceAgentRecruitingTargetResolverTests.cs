@@ -330,6 +330,16 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
             => Task.FromResult(
                 snapshots.GetValueOrDefault((projectorName, projectionKey)));
 
+        public Task<IReadOnlyList<ProcessProjectionSnapshot>> LoadSnapshotsAsync(
+            ProcessProjectorName projectorName,
+            IReadOnlyList<ProcessProjectionKey> projectionKeys,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProcessProjectionSnapshot>>(
+                projectionKeys
+                    .Select(projectionKey => snapshots.GetValueOrDefault((projectorName, projectionKey)))
+                    .OfType<ProcessProjectionSnapshot>()
+                    .ToArray());
+
         public Task<IReadOnlyList<ProcessProjectionSnapshot>> ReadSnapshotsAsync(
             ProcessProjectorName projectorName,
             ProcessProjectionKeyPrefix projectionKeyPrefix,

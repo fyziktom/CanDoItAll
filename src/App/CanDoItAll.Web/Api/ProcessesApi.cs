@@ -12,6 +12,7 @@ internal static class ProcessesApi
         var processes = group.MapGroup("/processes")
             .WithTags("Processes")
             .DisableAntiforgery();
+        processes.MapProcessRunRecordsApi();
 
         processes.MapGet("/contract", () => Results.Ok(new ProcessApiContractResponse(
             [
@@ -22,7 +23,11 @@ internal static class ProcessesApi
                 "POST /api/processes/runs/{runId}/cancel",
                 "POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework",
                 "GET /api/processes/live",
+                "GET /api/processes/runs",
+                "GET /api/processes/runs/analytics",
                 "GET /api/processes/runs/{runId}",
+                "GET /api/processes/runs/{runId}/summary",
+                "GET /api/processes/runs/{runId}/graph",
                 "GET /api/processes/runs/{runId}/history"
             ],
             "Runtime/core/dispatch remain generic. Module adapters resolve CanDoItAll agent execution through process driver strategies.")))
@@ -161,11 +166,9 @@ internal static class ProcessesApi
         processes.MapGet("/live", async (
                 int? take,
                 int? windowMinutes,
-                ProcessRuntimeProjectionCatchupService projectionCatchupService,
                 ProcessRuntimeProjectionQueryService queryService,
                 CancellationToken cancellationToken) =>
         {
-            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
             var result = await queryService
                 .GetLiveProcessesAsync(
                     new ProcessLiveProcessesQuery(
@@ -183,11 +186,9 @@ internal static class ProcessesApi
 
         processes.MapGet("/runs/{runId:guid}", async (
                 Guid runId,
-                ProcessRuntimeProjectionCatchupService projectionCatchupService,
                 ProcessRuntimeProjectionQueryService queryService,
                 CancellationToken cancellationToken) =>
         {
-            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
             var detail = await queryService
                 .GetRunDetailAsync(new ProcessRunDetailQuery(new ProcessRunId(runId)), cancellationToken)
                 .ConfigureAwait(false);
@@ -203,11 +204,9 @@ internal static class ProcessesApi
                 DateTimeOffset? fromUtc,
                 DateTimeOffset? toUtc,
                 int? take,
-                ProcessRuntimeProjectionCatchupService projectionCatchupService,
                 ProcessRuntimeProjectionQueryService queryService,
                 CancellationToken cancellationToken) =>
         {
-            await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
             var effectiveTo = NormalizeUtc(toUtc ?? DateTimeOffset.UtcNow);
             var effectiveFrom = NormalizeUtc(fromUtc ?? effectiveTo.AddHours(-24));
             var result = await queryService

@@ -9,7 +9,14 @@ internal sealed class WorkflowAwareProcessRuntimeUsageTelemetryReader(
     AgentFrameworkProcessRuntimeUsageTelemetryReader agentTelemetryReader,
     IWorkflowUsageObservationStore workflowUsageStore) : IProcessRuntimeUsageTelemetryReader
 {
+    private const int UsageObservationBatchTake = 5_000;
+
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
+        ProcessRuntimeUsageTelemetryQuery query,
+        CancellationToken cancellationToken = default)
+        => (await ReadAsync(query, cancellationToken).ConfigureAwait(false)).Items;
+
+    public async ValueTask<ProcessRuntimeUsageTelemetryReadResult> ReadAsync(
         ProcessRuntimeUsageTelemetryQuery query,
         CancellationToken cancellationToken = default)
     {
@@ -31,27 +38,40 @@ internal sealed class WorkflowAwareProcessRuntimeUsageTelemetryReader(
 
         if (query.RunIds.Count == 0)
         {
-            return [];
+            return new ProcessRuntimeUsageTelemetryReadResult([], IsComplete: true);
         }
 
-        var agentObservations = await agentTelemetryReader
-            .ListAsync(query, cancellationToken)
+        var agentRead = await agentTelemetryReader
+            .ReadAsync(query, cancellationToken)
             .ConfigureAwait(false);
-        var workflowObservations = await workflowUsageStore
-            .ListAsync(new WorkflowUsageObservationQuery
-            {
-                OriginProcessRunIds = query.RunIds.Select(runId => new WorkflowProcessRunId(runId.Value)).ToArray(),
-                RecordedFromUtc = query.FromUtc,
-                RecordedToUtc = query.ToUtc
-            }, cancellationToken)
+        var effectiveTake = Math.Min(
+            query.TakePerRun,
+            UsageObservationBatchTake);
+        var distinctRunCount = query.RunIds.Distinct().Count();
+        var requestedTake = Math.Min(
+            (long)effectiveTake * distinctRunCount + 1,
+            UsageObservationBatchTake + 1L);
+        var workflowPage = await workflowUsageStore
+            .ListPageAsync(
+                new WorkflowUsageObservationPageRequest(
+                    new WorkflowUsageObservationQuery
+                    {
+                        OriginProcessRunIds = query.RunIds
+                            .Select(runId => new WorkflowProcessRunId(runId.Value))
+                            .ToArray(),
+                        RecordedFromUtc = query.FromUtc,
+                        RecordedToUtc = query.ToUtc
+                    },
+                    PageSize: (int)requestedTake),
+                cancellationToken)
             .ConfigureAwait(false);
         var merged = new Dictionary<Guid, ProcessRuntimeUsageObservation>();
-        foreach (var observation in agentObservations)
+        foreach (var observation in agentRead.Items)
         {
             AddOrValidate(merged, observation);
         }
 
-        foreach (var observation in workflowObservations)
+        foreach (var observation in workflowPage.Items)
         {
             if (observation.Origin is not WorkflowLaunchOrigin.ProcessAssignment processOrigin)
             {
@@ -62,14 +82,22 @@ internal sealed class WorkflowAwareProcessRuntimeUsageTelemetryReader(
             AddOrValidate(merged, Map(observation, processOrigin));
         }
 
-        return merged.Values
+        var observationsByRun = merged.Values
             .OrderBy(observation => observation.CreatedAtUtc)
             .ThenBy(observation => observation.UsageObservationId)
             .GroupBy(observation => observation.RunId)
-            .SelectMany(group => group.Take(query.TakePerRun))
-            .OrderBy(observation => observation.CreatedAtUtc)
-            .ThenBy(observation => observation.UsageObservationId)
+            .Select(group => group.Take(effectiveTake + 1).ToArray())
             .ToArray();
+        var isComplete = agentRead.IsComplete &&
+            workflowPage.TotalCount == workflowPage.Items.Count &&
+            observationsByRun.All(group => group.Length <= effectiveTake);
+        return new ProcessRuntimeUsageTelemetryReadResult(
+            observationsByRun
+                .SelectMany(group => group.Take(effectiveTake))
+                .OrderBy(observation => observation.CreatedAtUtc)
+                .ThenBy(observation => observation.UsageObservationId)
+                .ToArray(),
+            isComplete);
     }
 
     private static ProcessRuntimeUsageObservation Map(

@@ -111,7 +111,7 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_rejects_conflicting_branch_outcome_keys()
+    public void Process_step_artifact_recovery_uses_canonical_branch_key_over_nested_body_metadata()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
@@ -133,13 +133,13 @@ public sealed class AgentFinalizerPolicyTests
             out var outcome,
             out var recoveryFailure);
 
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("multiple different Branch outcome key values", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+        Assert.True(recovered, recoveryFailure);
+        Assert.NotNull(outcome);
+        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_rejects_conflicting_branch_outcome_key_sections()
+    public void Process_step_artifact_recovery_uses_canonical_branch_key_over_nested_body_section()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
@@ -162,9 +162,9 @@ public sealed class AgentFinalizerPolicyTests
             out var outcome,
             out var recoveryFailure);
 
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("multiple different Branch outcome key values", recoveryFailure, StringComparison.OrdinalIgnoreCase);
+        Assert.True(recovered, recoveryFailure);
+        Assert.NotNull(outcome);
+        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
     }
 
     [Fact]

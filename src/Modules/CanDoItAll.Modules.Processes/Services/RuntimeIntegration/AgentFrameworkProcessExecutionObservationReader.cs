@@ -30,15 +30,36 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
     IAgentReferenceDataProvider agentReferenceDataProvider,
     IAgentFrameworkWorkspaceService workspaceService) : IProcessExecutionObservationReader
 {
+    private const int ExecutionRunBatchTake = 5_000;
+
     public async ValueTask<IReadOnlyList<ProcessExecutionObservation>> ListAsync(
+        ProcessExecutionObservationQuery query,
+        CancellationToken cancellationToken = default)
+        => (await ReadAsync(query, cancellationToken).ConfigureAwait(false)).Items;
+
+    public async ValueTask<ProcessExecutionObservationReadResult> ReadAsync(
         ProcessExecutionObservationQuery query,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
+        if (query.TakePerRun <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.TakePerRun,
+                "Process execution observation take per run must be greater than zero.");
+        }
+
+        if (query.ToUtc < query.FromUtc)
+        {
+            throw new ArgumentException(
+                "Process execution observation time range must end at or after it starts.",
+                nameof(query));
+        }
 
         if (query.RunIds.Count == 0)
         {
-            return [];
+            return new ProcessExecutionObservationReadResult([], IsComplete: true);
         }
 
         var referenceData = await agentReferenceDataProvider
@@ -48,10 +69,22 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         var agentAvatarById = referenceData.Agents.ToDictionary(agent => agent.Id, agent => agent.AvatarImageUrl ?? string.Empty);
         var requestedRunIds = query.RunIds.ToHashSet();
         var requestedStepIds = query.StepInstanceIds.ToHashSet();
-        var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
+        var loadDetails = query.DetailLevel switch
+        {
+            ProcessExecutionObservationDetailLevel.Summary => false,
+            ProcessExecutionObservationDetailLevel.Full => true,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.DetailLevel,
+                "The execution observation detail level is not supported.")
+        };
+        var executionRunRead = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
+        var executionRunSlice = SliceExecutionRuns(executionRunRead.Items, query);
         var observations = new List<ProcessExecutionObservation>();
+        var isComplete = executionRunRead.IsComplete &&
+            executionRunSlice.IsComplete;
 
-        foreach (var executionRun in SliceExecutionRuns(executionRuns, query))
+        foreach (var executionRun in executionRunSlice.Items)
         {
             if (!TryParseProcessIdentity(executionRun, out var processRunId, out var stepInstanceId) ||
                 !requestedRunIds.Contains(processRunId) ||
@@ -61,12 +94,18 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
             }
 
             ExecutionRunDetail? detail = null;
-            try
+            if (loadDetails)
             {
-                detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken).ConfigureAwait(false);
-            }
-            catch (InvalidOperationException)
-            {
+                try
+                {
+                    detail = await workspaceService
+                        .GetExecutionRunDetailAsync(executionRun.Id, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (InvalidOperationException)
+                {
+                    isComplete = false;
+                }
             }
 
             var detailRun = detail?.Run ?? executionRun;
@@ -97,74 +136,92 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
             });
         }
 
-        return observations
-            .OrderByDescending(observation => observation.UpdatedAtUtc)
-            .ToArray();
+        return new ProcessExecutionObservationReadResult(
+            observations
+                .OrderByDescending(observation => observation.UpdatedAtUtc)
+                .ToArray(),
+            isComplete);
     }
 
-    private async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+    private async Task<ExecutionRunRead> ListExecutionRunsAsync(
         ProcessExecutionObservationQuery query,
         CancellationToken cancellationToken)
     {
-        var executionRuns = new List<ExecutionRunRecord>();
-        var stepIds = query.StepInstanceIds
+        var requestedRunCount = query.RunIds
             .Distinct()
-            .ToArray();
-        foreach (var runId in query.RunIds.Distinct())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+            .Count();
+        var requestedStepCount = Math.Max(
+            1,
+            query.StepInstanceIds
+                .Distinct()
+                .Count());
+        var requestedGroupCount = Math.Min(
+            (long)Math.Max(1, requestedRunCount) * requestedStepCount,
+            ExecutionRunBatchTake + 1L);
+        var perGroupReadTake = Math.Min(
+            (long)query.TakePerRun + 1,
+            ExecutionRunBatchTake + 1L);
+        var requestedTake = Math.Min(
+            perGroupReadTake * requestedGroupCount,
+            ExecutionRunBatchTake + 1L);
+        var take = (int)Math.Clamp(
+            requestedTake,
+            1,
+            ExecutionRunBatchTake + 1L);
 
-            if (stepIds.Length == 0)
+        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+            new ExecutionRunQuery(
+                Take: take,
+                UpdatedFromUtc: query.FromUtc,
+                UpdatedToUtc: query.ToUtc)
             {
-                var runRecords = await workspaceService.ListExecutionRunsAsync(
-                    new ExecutionRunQuery(
-                        Take: Math.Max(1, query.TakePerRun),
-                        ProcessRunId: runId.ToString(),
-                        UpdatedFromUtc: query.FromUtc,
-                        UpdatedToUtc: query.ToUtc),
-                    cancellationToken).ConfigureAwait(false);
-                executionRuns.AddRange(runRecords);
-                continue;
-            }
-
-            foreach (var stepId in stepIds)
-            {
-                var runRecords = await workspaceService.ListExecutionRunsAsync(
-                    new ExecutionRunQuery(
-                        Take: Math.Max(1, query.TakePerRun),
-                        ProcessRunId: runId.ToString(),
-                        ProcessStepId: stepId.ToString(),
-                        UpdatedFromUtc: query.FromUtc,
-                        UpdatedToUtc: query.ToUtc),
-                    cancellationToken).ConfigureAwait(false);
-                executionRuns.AddRange(runRecords);
-            }
-        }
-
-        return executionRuns;
+                ProcessRunIds = query.RunIds
+                    .Distinct()
+                    .Select(runId => runId.ToString())
+                    .ToArray(),
+                ProcessStepIds = query.StepInstanceIds
+                    .Distinct()
+                    .Select(stepId => stepId.ToString())
+                    .ToArray()
+            },
+            cancellationToken).ConfigureAwait(false);
+        var isComplete = executionRuns.Count < take;
+        return new ExecutionRunRead(
+            executionRuns
+                .Take(ExecutionRunBatchTake)
+                .ToArray(),
+            isComplete);
     }
 
-    private static IEnumerable<ExecutionRunRecord> SliceExecutionRuns(
+    private static ExecutionRunRead SliceExecutionRuns(
         IReadOnlyList<ExecutionRunRecord> executionRuns,
         ProcessExecutionObservationQuery query)
     {
-        var take = Math.Max(1, query.TakePerRun);
+        var take = query.TakePerRun;
         var orderedRuns = executionRuns.OrderByDescending(run => run.UpdatedAtUtc);
-        if (query.StepInstanceIds.Count == 0)
-        {
-            return orderedRuns
-                .GroupBy(
-                    run => run.ProcessRunId,
-                    StringComparer.OrdinalIgnoreCase)
-                .SelectMany(group => group.Take(take));
-        }
-
-        return orderedRuns
-            .GroupBy(
-                run => $"{run.ProcessRunId}\u001f{run.ProcessStepId}",
+        var groups = query.StepInstanceIds.Count == 0
+            ? orderedRuns.GroupBy(
+                run => run.ProcessRunId,
                 StringComparer.OrdinalIgnoreCase)
-            .SelectMany(group => group.Take(take));
+            : orderedRuns.GroupBy(
+                run => $"{run.ProcessRunId}\u001f{run.ProcessStepId}",
+                StringComparer.OrdinalIgnoreCase);
+        var detectionTake = (int)Math.Min(
+            (long)take + 1,
+            ExecutionRunBatchTake + 1L);
+        var materializedGroups = groups
+            .Select(group => group.Take(detectionTake).ToArray())
+            .ToArray();
+        return new ExecutionRunRead(
+            materializedGroups
+                .SelectMany(group => group.Take(take))
+                .ToArray(),
+            materializedGroups.All(group => group.Length <= take));
     }
+
+    private sealed record ExecutionRunRead(
+        IReadOnlyList<ExecutionRunRecord> Items,
+        bool IsComplete);
 
     private static IReadOnlyList<ProcessExecutionActivityObservation> MapActivities(ExecutionRunDetail? detail)
         => detail?.ExecutionLog
@@ -269,7 +326,19 @@ internal sealed class AgentFrameworkProcessExecutionObservationReader(
         }
     }
 
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+    private static string FirstNonEmpty(string? first, string? second, string? third)
+    {
+        if (!string.IsNullOrWhiteSpace(first))
+        {
+            return first.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(second))
+        {
+            return second.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(third) ? string.Empty : third.Trim();
+    }
 }
 

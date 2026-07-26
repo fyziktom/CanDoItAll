@@ -10,7 +10,9 @@ Before deciding the branch, call `workspace_read_file` in this recheck execution
 
 When selecting a recheck branch, put the exact selected key on one line near the top of the artifact as `Branch outcome key: feature-accepted` or `Branch outcome key: feature-repair-escalation`. Do not write only a heading such as `## Branch outcome key` with the key on the next line.
 
-When `ProductAcceptanceCriteriaContract` is present, add an `Acceptance-criteria coverage` table with every literal criterion id, proof owner, current-run proof ref when this recheck owns it, and one of `Focused pass`, `Parent runtime proof required`, or `Fail`. Parent-owned browser or visual proof is not a failed focused recheck criterion.
+When `ProductAcceptanceCriteriaContract` is present, add an `Acceptance-criteria coverage` table with every criterion id. For each criterion with `kind=ProductAcceptance` and `required=true`, include the proof owner, current-run proof ref when this recheck owns it, and one of `Focused pass`, `Parent runtime proof required`, or `Fail`. Preserve `kind=DeliveryPlanning` items in a separate nonblocking section; they cannot select `feature-repair-escalation`, block `feature-accepted`, or require human confirmation unless a separate typed decision gate explicitly requests that decision. Parent-owned browser or visual proof is not a failed focused recheck criterion.
+
+A passing deterministic test through the typed storage adapter or coordinator is sufficient focused proof of graceful unavailable behavior unless the required ProductAcceptance criterion explicitly requires a live storage outage. Do not escalate because a live browser outage was not synthesized. For parent-owned normal IndexedDB reload proof, carry the recipe to seed and inspect the declared database/object-store schema with `browser_evaluate`, reload, and verify restored UI state; do not require a user workflow to generate a nonzero value first.
 
 This step owns the repaired feature branch decision:
 

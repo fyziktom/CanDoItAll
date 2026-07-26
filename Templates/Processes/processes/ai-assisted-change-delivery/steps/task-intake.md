@@ -13,6 +13,8 @@ Normalize the requested change into a bounded problem statement, value target, e
 
 When the current project structure or mindmap already supplies a concrete deliverable, product root, feature boundary, exclusions, and acceptance criteria, treat those explicit facts as the current human acceptance boundary for this intake step. Mindmap facts may be carried by child node titles, labels, and hierarchy, not only by long notes fields; an empty note body does not make explicit child-node requirements missing. Do not require a separate approval artifact just to repeat the same facts; record missing or contradictory owner input only when the mindmap leaves a core deliverable, authority, cost/license constraint, or safe execution boundary unresolved.
 
+When `ProductAcceptanceCriteriaContract` is present, preserve every criterion id, `kind`, and `required` value. Only criteria with `kind=ProductAcceptance` and `required=true` define mandatory product acceptance. Record `kind=DeliveryPlanning` items separately as nonblocking planning context. A recommendation to confirm or reconfirm an authoritative source fact does not reopen that fact and cannot create a human-confirmation, approval, or escalation gate unless a separate typed decision gate explicitly requests that decision.
+
 ## Contracts
 - Input contract: Feature request, defect, or improvement demand with business context.
 - Output contract: Bounded change brief with explicit human acceptance boundary.
@@ -33,7 +35,7 @@ When the current project structure or mindmap already supplies a concrete delive
 
 ## Artifact expectations
 - `task-intake-intake-brief` -> `intake-brief` / Intake brief | kind= | trust= | sensitivity= | validation=Must identify request source, decision owner, scope boundary, and missing inputs explicitly.
-- `intake-acceptance-criteria-pack` -> `acceptance-criteria-pack` / Acceptance criteria pack | kind= | trust= | sensitivity= | validation=Must copy acceptance criteria from the current project structure or approval source; explicit project-structure criteria count as acknowledged for this intake step unless they are missing or contradictory.
+- `intake-acceptance-criteria-pack` -> `acceptance-criteria-pack` / Acceptance criteria pack | kind= | trust= | sensitivity= | validation=Must preserve every ProductAcceptanceCriteriaContract id, kind, and required flag from the current project structure or approval source. Only kind=ProductAcceptance and required=true defines mandatory product acceptance; kind=DeliveryPlanning remains separate nonblocking context. Explicit project-structure facts count as acknowledged unless they are missing or contradictory.
 
 ## Artifact inputs
 - No explicit artifact inputs.

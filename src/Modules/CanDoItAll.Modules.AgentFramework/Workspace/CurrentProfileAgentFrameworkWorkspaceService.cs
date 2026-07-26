@@ -307,6 +307,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return ResolveService().ExecuteRunAsync(request, cancellationToken);
     }
 
+    public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return ResolveService().ExecuteSameSourceRunAsync(source, request, cancellationToken);
+    }
+
     public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
     {
         return ResolveService().ContinueExecutionRunAsync(executionRunId, approved, autoApprovePendingToolCalls, cancellationToken);

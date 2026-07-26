@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -9,6 +10,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -43,6 +45,112 @@ public sealed class ProcessPersistenceStoreTests
         var loadedInputArtifact = Assert.Single(loaded.ConnectedInputArtifacts);
         Assert.Equal(ProcessArtifactInputAvailability.Available, loadedInputArtifact.Availability);
         Assert.Equal(RequiredArtifactSlotId, loadedInputArtifact.RequiredSlotId);
+    }
+
+    [Fact]
+    public async Task Initial_commit_writes_plan_and_runtime_mutation_together()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var plan = NewInitialPlan();
+        var request = NewCommitRequest(
+            includeArtifactLedger: true,
+            initialPlan: plan);
+
+        var result = await unitOfWork.CommitAsync(request);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, await dbContext.InstancePlans.CountAsync());
+        Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(1, await dbContext.RuntimeEvents.CountAsync());
+        Assert.Equal(1, await dbContext.OutboxMessages.CountAsync());
+        Assert.Equal(1, await dbContext.ArtifactLedgerEvents.CountAsync());
+        Assert.Equal(1, await dbContext.IdempotencyKeys.CountAsync());
+        var persistedPlan = await new EfProcessInstancePlanStore(dbContext).LoadAsync(plan.Header.PlanId);
+        Assert.NotNull(persistedPlan);
+        Assert.Equal(plan.PlanHash, persistedPlan.PlanHash);
+    }
+
+    [Fact]
+    public async Task Initial_commit_reuses_existing_plan_with_matching_identity_and_hash()
+    {
+        await using var dbContext = CreateDbContext();
+        var plan = NewInitialPlan();
+        await new EfProcessInstancePlanStore(dbContext).PersistAsync(plan);
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(
+            includeArtifactLedger: false,
+            initialPlan: plan);
+
+        var result = await unitOfWork.CommitAsync(request);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, await dbContext.InstancePlans.CountAsync());
+        Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Initial_commit_rejects_plan_identity_or_hash_mismatch_before_writes(
+        bool mismatchPlanId)
+    {
+        await using var dbContext = CreateDbContext();
+        var plan = NewInitialPlan();
+        var request = NewCommitRequest(
+            includeArtifactLedger: true,
+            initialPlan: plan);
+        var mismatchedState = request.Mutation.State with
+        {
+            PlanId = mismatchPlanId
+                ? ProcessInstancePlanId.New()
+                : request.Mutation.State.PlanId,
+            PlanHash = mismatchPlanId
+                ? request.Mutation.State.PlanHash
+                : "sha256:different-runtime-plan"
+        };
+        request = request with
+        {
+            Mutation = request.Mutation with
+            {
+                State = mismatchedState
+            }
+        };
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request));
+
+        Assert.Equal(0, await dbContext.InstancePlans.CountAsync());
+        Assert.Equal(0, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.RuntimeEvents.CountAsync());
+        Assert.Equal(0, await dbContext.OutboxMessages.CountAsync());
+        Assert.Equal(0, await dbContext.ArtifactLedgerEvents.CountAsync());
+        Assert.Equal(0, await dbContext.IdempotencyKeys.CountAsync());
+    }
+
+    [Fact]
+    public async Task Initial_commit_rejects_conflicting_existing_plan_without_runtime_writes()
+    {
+        await using var dbContext = CreateDbContext();
+        var persistedPlan = NewInitialPlan();
+        await new EfProcessInstancePlanStore(dbContext).PersistAsync(persistedPlan);
+        var conflictingPlan = persistedPlan with
+        {
+            PlanHash = "sha256:conflicting-plan"
+        };
+        var request = NewCommitRequest(
+            includeArtifactLedger: false,
+            initialPlan: conflictingPlan);
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request));
+
+        Assert.Equal(1, await dbContext.InstancePlans.CountAsync());
+        Assert.Equal(persistedPlan.PlanHash, (await dbContext.InstancePlans.SingleAsync()).PlanHash);
+        Assert.Equal(0, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.RuntimeEvents.CountAsync());
+        Assert.Equal(0, await dbContext.OutboxMessages.CountAsync());
+        Assert.Equal(0, await dbContext.IdempotencyKeys.CountAsync());
     }
 
     [Fact]
@@ -85,7 +193,10 @@ public sealed class ProcessPersistenceStoreTests
             {
                 RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
                 ResponsibleStepInstanceId = stepId
-            });
+            })
+        {
+            UserSafeSummary = "Persisted runtime recovery summary."
+        };
         var state = request.Mutation.State with
         {
             AppliedResults = [receipt]
@@ -97,15 +208,208 @@ public sealed class ProcessPersistenceStoreTests
 
         await unitOfWork.CommitAsync(request with { Mutation = mutation });
 
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        Assert.Equal("Persisted runtime recovery summary.", persistedReceipt.UserSafeSummary);
+        using var diagnosticsDocument = JsonDocument.Parse(persistedReceipt.DiagnosticsJson);
+        Assert.Equal(JsonValueKind.Array, diagnosticsDocument.RootElement.ValueKind);
+
         var loaded = await unitOfWork.LoadAsync(state.RunId);
         Assert.NotNull(loaded);
         var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.Equal("Persisted runtime recovery summary.", loadedReceipt.UserSafeSummary);
         Assert.Equal("process.runtime.test_blocked", Assert.Single(loadedReceipt.Diagnostics).Code);
         Assert.Equal(RequiredArtifactSlotId, Assert.Single(loadedReceipt.ProducedArtifacts).SlotId);
         Assert.NotNull(loadedReceipt.RecoveryDecision);
         Assert.Equal(ProcessFailureCategory.MissingArtifact, loadedReceipt.RecoveryDecision.FailureCategory);
         Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, loadedReceipt.RecoveryDecision.RouteKind);
         Assert.Equal(stepId, loadedReceipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
+    public async Task Commit_round_trips_applied_sequence_and_blocked_recovery_actions_exactly()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var sourceReceipt = Assert.Single(request.Mutation.State.AppliedResults) with
+        {
+            AppliedSequence = 7
+        };
+        var sourceStepId = sourceReceipt.StepInstanceId;
+        var targetStepId = ProcessStepInstanceId.New();
+        var recoveryAction = new ProcessRuntimeBlockedRecoveryActionReceipt(
+            sourceReceipt.IdempotencyKey,
+            sourceStepId,
+            targetStepId,
+            "sha256:missing-summary",
+            ProcessRecoveryRouteKind.UpstreamStepRework,
+            ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer,
+            Now);
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [sourceReceipt],
+            BlockedRecoveryActions = [recoveryAction]
+        };
+
+        await unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with
+            {
+                State = state
+            }
+        });
+        dbContext.ChangeTracker.Clear();
+
+        var loaded = await unitOfWork.LoadAsync(state.RunId);
+
+        Assert.NotNull(loaded);
+        Assert.Equal(7, Assert.Single(loaded.AppliedResults).AppliedSequence);
+        Assert.Equal(recoveryAction, Assert.Single(loaded.BlockedRecoveryActions));
+    }
+
+    [Fact]
+    public async Task Load_orders_receipts_by_applied_sequence_despite_reversed_persisted_order_and_nonchronological_keys()
+    {
+        var databaseName = $"process-persistence-restart-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var stepId = Assert.Single(request.Mutation.State.Steps).StepInstanceId;
+        var laterReceiptKey = new StrategyResultIdempotencyKey(
+            new Guid("00000000-0000-0000-0000-000000000002"));
+        var earlierReceiptKey = new StrategyResultIdempotencyKey(
+            new Guid("ffffffff-ffff-ffff-ffff-fffffffffff1"));
+        var laterReceipt = NewResultReceipt(stepId, laterReceiptKey, appliedSequence: 2);
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [laterReceipt]
+        };
+
+        await using (var writeContext = CreateDbContext(databaseName, databaseRoot))
+        {
+            var writeUnitOfWork = new EfProcessRuntimeUnitOfWork(writeContext);
+            await writeUnitOfWork.CommitAsync(request with
+            {
+                Mutation = request.Mutation with
+                {
+                    State = state
+                }
+            });
+
+            writeContext.StrategyResultReceipts.Add(new ProcessStrategyResultReceiptEntity
+            {
+                RunId = state.RunId.Value,
+                StepInstanceId = stepId.Value,
+                StrategyId = "strategy.test",
+                IdempotencyKey = earlierReceiptKey.Value,
+                Outcome = StrategyOutcome.Succeeded.ToString(),
+                AppliedStepStatus = ProcessRuntimeStepStatus.Completed,
+                ResultHash = "hash:result-1",
+                AppliedSequence = 1,
+                DiagnosticsJson = "[]",
+                ProducedArtifactsJson = "[]"
+            });
+            await writeContext.SaveChangesAsync();
+        }
+
+        await using var readContext = CreateDbContext(databaseName, databaseRoot);
+        var readUnitOfWork = new EfProcessRuntimeUnitOfWork(readContext);
+        var loaded = await readUnitOfWork.LoadAsync(state.RunId);
+
+        Assert.NotNull(loaded);
+        Assert.Equal(
+            [1L, 2L],
+            loaded.AppliedResults.Select(receipt => receipt.AppliedSequence));
+        Assert.Equal(
+            [earlierReceiptKey, laterReceiptKey],
+            loaded.AppliedResults.Select(receipt => receipt.IdempotencyKey));
+    }
+
+    [Fact]
+    public async Task Load_rejects_malformed_blocked_recovery_action_ledger()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedState = await dbContext.RuntimeStates.SingleAsync();
+        persistedState.BlockedRecoveryActionsJson =
+            $$"""
+            [
+              {
+                "sourceResultIdempotencyKey": "{{Guid.NewGuid():D}}",
+                "sourceBlockedStepInstanceId": "{{Guid.NewGuid():D}}",
+                "targetStepInstanceId": "{{Guid.NewGuid():D}}",
+                "diagnosticFingerprint": "sha256:invalid-route",
+                "recoveryRouteKind": "None",
+                "phase": "CurrentStep",
+                "appliedAtUtc": "{{Now:O}}"
+              }
+            ]
+            """;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.Contains("invalid entry", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Load_rejects_nonpositive_persisted_receipt_sequence()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        persistedReceipt.AppliedSequence = 0;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.Contains("positive and unique", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Load_accepts_legacy_diagnostics_array_without_user_safe_summary()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        Assert.Null(persistedReceipt.UserSafeSummary);
+        persistedReceipt.DiagnosticsJson =
+            """
+            [
+              {
+                "code": "process.runtime.legacy_diagnostic",
+                "sensitivity": "Normal",
+                "evidenceHash": "hash:legacy-diagnostic",
+                "safeSummary": "Legacy diagnostic summary.",
+                "retrySafety": "UnsafeToRetry",
+                "idempotency": "Idempotent"
+              }
+            ]
+            """;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var loaded = await unitOfWork.LoadAsync(request.Mutation.State.RunId);
+
+        Assert.NotNull(loaded);
+        var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.Equal(string.Empty, loadedReceipt.UserSafeSummary);
+        Assert.Equal("process.runtime.legacy_diagnostic", Assert.Single(loadedReceipt.Diagnostics).Code);
     }
 
     [Fact]
@@ -226,6 +530,251 @@ public sealed class ProcessPersistenceStoreTests
         var current = await unitOfWork.LoadAsync(initial.Mutation.State.RunId);
         Assert.NotNull(current);
         Assert.Equal(Now.AddMinutes(1), current.UpdatedAtUtc);
+    }
+
+    [Theory]
+    [InlineData(ProcessRuntimeStatus.CancelRequested)]
+    [InlineData(ProcessRuntimeStatus.Cancelled)]
+    public async Task Commit_rejects_child_creation_beneath_stopping_or_cancelled_root_without_writes(
+        ProcessRuntimeStatus rootStatus)
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var rootRunId = ProcessRunId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var rootState = NewParentState(
+            rootRunId,
+            parentStepId,
+            rootStatus,
+            ProcessRuntimeStepStatus.Cancelled,
+            hasActiveClaim: false);
+        var rootRequestTemplate = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: rootRunId,
+            rootRunId: rootRunId,
+            eventType: rootStatus == ProcessRuntimeStatus.CancelRequested
+                ? ProcessRuntimeEventTypes.ProcessRunCancelRequested
+                : ProcessRuntimeEventTypes.ProcessRunCancelled);
+        var rootRequest = rootRequestTemplate with
+        {
+            OriginalState = rootState,
+            Mutation = rootRequestTemplate.Mutation with
+            {
+                State = rootState
+            }
+        };
+        await unitOfWork.CommitAsync(rootRequest);
+
+        var childRunId = ProcessRunId.New();
+        var childPlan = NewInitialPlan();
+        var childRequest = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: childRunId,
+            rootRunId: rootRunId,
+            initialPlan: childPlan) with
+        {
+            ParentStepPrecondition = new ProcessRuntimeParentStepReference(rootRunId, parentStepId)
+        };
+
+        var result = await unitOfWork.CommitAsync(childRequest);
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "Runtime.ParentRootNotLaunchable");
+        Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(1, await dbContext.RuntimeEvents.CountAsync());
+        Assert.Equal(1, await dbContext.OutboxMessages.CountAsync());
+        Assert.Equal(1, await dbContext.IdempotencyKeys.CountAsync());
+        Assert.Equal(0, await dbContext.InstancePlans.CountAsync());
+        Assert.Null(await unitOfWork.LoadAsync(childRunId));
+    }
+
+    [Fact]
+    public async Task Commit_rejects_new_descendant_without_typed_parent_step_precondition_without_writes()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var rootRunId = ProcessRunId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var rootState = NewParentState(
+            rootRunId,
+            parentStepId,
+            ProcessRuntimeStatus.Active,
+            ProcessRuntimeStepStatus.Running,
+            hasActiveClaim: true);
+        var rootRequestTemplate = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: rootRunId,
+            rootRunId: rootRunId,
+            eventType: ProcessRuntimeEventTypes.ProcessRunActivated);
+        await unitOfWork.CommitAsync(rootRequestTemplate with
+        {
+            OriginalState = rootState,
+            Mutation = rootRequestTemplate.Mutation with
+            {
+                State = rootState
+            }
+        });
+
+        var childRunId = ProcessRunId.New();
+        var childPlan = NewInitialPlan();
+        var childRequest = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: childRunId,
+            rootRunId: rootRunId,
+            initialPlan: childPlan);
+
+        var result = await unitOfWork.CommitAsync(childRequest);
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "Runtime.ParentStepPreconditionRequired");
+        Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(1, await dbContext.RuntimeEvents.CountAsync());
+        Assert.Equal(1, await dbContext.OutboxMessages.CountAsync());
+        Assert.Equal(1, await dbContext.IdempotencyKeys.CountAsync());
+        Assert.Equal(0, await dbContext.InstancePlans.CountAsync());
+        Assert.Null(await unitOfWork.LoadAsync(childRunId));
+    }
+
+    [Fact]
+    public async Task Commit_rejects_child_creation_when_parent_step_has_no_active_running_claim()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var rootRunId = ProcessRunId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var rootState = NewParentState(
+            rootRunId,
+            parentStepId,
+            ProcessRuntimeStatus.Active,
+            ProcessRuntimeStepStatus.Ready,
+            hasActiveClaim: false);
+        var rootRequestTemplate = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: rootRunId,
+            rootRunId: rootRunId,
+            eventType: ProcessRuntimeEventTypes.ProcessRunActivated);
+        await unitOfWork.CommitAsync(rootRequestTemplate with
+        {
+            OriginalState = rootState,
+            Mutation = rootRequestTemplate.Mutation with
+            {
+                State = rootState
+            }
+        });
+
+        var childRunId = ProcessRunId.New();
+        var childPlan = NewInitialPlan();
+        var childRequest = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: childRunId,
+            rootRunId: rootRunId,
+            initialPlan: childPlan) with
+        {
+            ParentStepPrecondition = new ProcessRuntimeParentStepReference(rootRunId, parentStepId)
+        };
+
+        var result = await unitOfWork.CommitAsync(childRequest);
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "Runtime.ParentStepNotRunning");
+        Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.InstancePlans.CountAsync());
+        Assert.Null(await unitOfWork.LoadAsync(childRunId));
+    }
+
+    [Fact]
+    public async Task Commit_rejects_child_creation_when_parent_claim_lease_is_expired_without_writes()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var rootRunId = ProcessRunId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var rootState = NewParentState(
+            rootRunId,
+            parentStepId,
+            ProcessRuntimeStatus.Active,
+            ProcessRuntimeStepStatus.Running,
+            hasActiveClaim: true,
+            claimExpiresAtUtc: Now);
+        var rootRequestTemplate = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: rootRunId,
+            rootRunId: rootRunId,
+            eventType: ProcessRuntimeEventTypes.ProcessRunActivated);
+        await unitOfWork.CommitAsync(rootRequestTemplate with
+        {
+            OriginalState = rootState,
+            Mutation = rootRequestTemplate.Mutation with
+            {
+                State = rootState
+            }
+        });
+
+        var childRunId = ProcessRunId.New();
+        var childPlan = NewInitialPlan();
+        var childRequest = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: childRunId,
+            rootRunId: rootRunId,
+            initialPlan: childPlan) with
+        {
+            ParentStepPrecondition = new ProcessRuntimeParentStepReference(rootRunId, parentStepId)
+        };
+
+        var result = await unitOfWork.CommitAsync(childRequest);
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "Runtime.ParentStepNotRunning");
+        Assert.Equal(1, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.InstancePlans.CountAsync());
+        Assert.Null(await unitOfWork.LoadAsync(childRunId));
+    }
+
+    [Fact]
+    public async Task Commit_allows_child_creation_when_parent_step_is_running_with_active_claim()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var rootRunId = ProcessRunId.New();
+        var parentStepId = ProcessStepInstanceId.New();
+        var rootState = NewParentState(
+            rootRunId,
+            parentStepId,
+            ProcessRuntimeStatus.Active,
+            ProcessRuntimeStepStatus.Running,
+            hasActiveClaim: true);
+        var rootRequestTemplate = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: rootRunId,
+            rootRunId: rootRunId,
+            eventType: ProcessRuntimeEventTypes.ProcessRunActivated);
+        await unitOfWork.CommitAsync(rootRequestTemplate with
+        {
+            OriginalState = rootState,
+            Mutation = rootRequestTemplate.Mutation with
+            {
+                State = rootState
+            }
+        });
+
+        var childRunId = ProcessRunId.New();
+        var childPlan = NewInitialPlan();
+        var childRequest = NewCommitRequest(
+            includeArtifactLedger: false,
+            runId: childRunId,
+            rootRunId: rootRunId,
+            initialPlan: childPlan) with
+        {
+            ParentStepPrecondition = new ProcessRuntimeParentStepReference(rootRunId, parentStepId)
+        };
+
+        var result = await unitOfWork.CommitAsync(childRequest);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(1, await dbContext.InstancePlans.CountAsync());
+        Assert.NotNull(await new EfProcessInstancePlanStore(dbContext).LoadAsync(childPlan.Header.PlanId));
+        Assert.NotNull(await unitOfWork.LoadAsync(childRunId));
     }
 
     [Fact]
@@ -579,6 +1128,16 @@ public sealed class ProcessPersistenceStoreTests
         return new ProcessPersistenceDbContext(options);
     }
 
+    private static ProcessPersistenceDbContext CreateDbContext(
+        string databaseName,
+        InMemoryDatabaseRoot databaseRoot)
+    {
+        var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>()
+            .UseInMemoryDatabase(databaseName, databaseRoot)
+            .Options;
+        return new ProcessPersistenceDbContext(options);
+    }
+
     private static void AssertHasUniqueConstraint<TEntity>(
         ProcessPersistenceDbContext dbContext,
         params string[] propertyNames)
@@ -606,12 +1165,18 @@ public sealed class ProcessPersistenceStoreTests
         ProcessRunId? rootRunId = null,
         RuntimeCommandId? commandId = null,
         ProcessEventType? eventType = null,
-        DateTimeOffset? updatedAtUtc = null)
+        DateTimeOffset? updatedAtUtc = null,
+        ProcessInstancePlan? initialPlan = null)
     {
         var actualRunId = runId ?? ProcessRunId.New();
         var actualRootRunId = rootRunId ?? actualRunId;
         var actualUpdatedAtUtc = updatedAtUtc ?? Now;
-        var state = NewState(actualRunId, actualRootRunId, actualUpdatedAtUtc);
+        var state = NewState(
+            actualRunId,
+            actualRootRunId,
+            actualUpdatedAtUtc,
+            initialPlan?.Header.PlanId,
+            initialPlan?.PlanHash);
         var runtimeEvent = NewEvent(
             actualRunId,
             actualRootRunId,
@@ -643,20 +1208,23 @@ public sealed class ProcessPersistenceStoreTests
         return new ProcessRuntimeCommitRequest(
             commandId ?? RuntimeCommandId.New(),
             state,
-            mutation);
+            mutation,
+            InitialPlan: initialPlan);
     }
 
     private static ProcessRuntimeStateSnapshot NewState(
         ProcessRunId runId,
         ProcessRunId rootRunId,
-        DateTimeOffset updatedAtUtc)
+        DateTimeOffset updatedAtUtc,
+        ProcessInstancePlanId? planId = null,
+        string? planHash = null)
     {
         var stepId = ProcessStepInstanceId.New();
         return new ProcessRuntimeStateSnapshot(
             rootRunId,
             runId,
-            ProcessInstancePlanId.New(),
-            "hash:plan",
+            planId ?? ProcessInstancePlanId.New(),
+            planHash ?? "hash:plan",
             ProcessRuntimeStatus.Completed,
             [
                 new ProcessRuntimeStepState(
@@ -699,6 +1267,70 @@ public sealed class ProcessPersistenceStoreTests
                     ConnectionHash: "hash:connected-input")
             ]
         };
+    }
+
+    private static StrategyResultReceipt NewResultReceipt(
+        ProcessStepInstanceId stepId,
+        StrategyResultIdempotencyKey idempotencyKey,
+        long appliedSequence)
+    {
+        return new StrategyResultReceipt(
+            stepId,
+            new StrategyId("strategy.test"),
+            idempotencyKey,
+            StrategyOutcome.Succeeded,
+            ProcessRuntimeStepStatus.Completed,
+            $"hash:result-{appliedSequence}")
+        {
+            AppliedSequence = appliedSequence
+        };
+    }
+
+    private static ProcessRuntimeStateSnapshot NewParentState(
+        ProcessRunId runId,
+        ProcessStepInstanceId stepId,
+        ProcessRuntimeStatus status,
+        ProcessRuntimeStepStatus stepStatus,
+        bool hasActiveClaim,
+        DateTimeOffset? claimExpiresAtUtc = null)
+    {
+        var claimToken = hasActiveClaim ? DispatchClaimToken.New() : (DispatchClaimToken?)null;
+        IReadOnlyList<DispatchClaimState> claims = claimToken is { } activeClaimToken
+            ? [
+                new DispatchClaimState(
+                    activeClaimToken,
+                    stepId,
+                    new DispatcherOwnerId("unit-test"),
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    claimExpiresAtUtc ?? Now.AddMinutes(5),
+                    null,
+                    null)
+            ]
+            : [];
+        return new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            ProcessInstancePlanId.New(),
+            "hash:parent-plan",
+            status,
+            [
+                new ProcessRuntimeStepState(
+                    stepId,
+                    ProcessStepDefinitionId.New(),
+                    stepStatus,
+                    true,
+                    1,
+                    new HashSet<ProcessStepInstanceId>(),
+                    new HashSet<ArtifactSlotId>(),
+                    claimToken,
+                    null)
+            ],
+            claims,
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
     }
 
     private static ProcessRuntimeEventEnvelope NewEvent(
@@ -752,11 +1384,20 @@ public sealed class ProcessPersistenceStoreTests
     private static ProcessInstancePlan NewDispatchablePlan(
         ProcessStepInstanceId stepId,
         ProcessStepDefinitionId stepDefinitionId,
-        ProcessStrategyBindingSnapshot binding)
+        ProcessStrategyBindingSnapshot binding,
+        ProcessInstancePlanId? planId = null,
+        string planHash = "sha256:plan")
     {
-        var planId = ProcessInstancePlanId.New();
+        var actualPlanId = planId ?? ProcessInstancePlanId.New();
         return new ProcessInstancePlan(
-            new ProcessInstancePlanHeader(planId, planId, null, null, "processes.instance-plan.v1", Now, 0),
+            new ProcessInstancePlanHeader(
+                actualPlanId,
+                actualPlanId,
+                null,
+                null,
+                "processes.instance-plan.v1",
+                Now,
+                0),
             new ResolvedProcessDefinitionSnapshot(
                 ProcessDefinitionId.New(),
                 ProcessDefinitionVersionId.New(),
@@ -794,7 +1435,24 @@ public sealed class ProcessPersistenceStoreTests
             new BudgetPlan([]),
             new MonitoringPlan(false, "sha256:projection"),
             new SecurityPlan("sha256:governance", []),
-            "sha256:plan");
+            planHash);
+    }
+
+    private static ProcessInstancePlan NewInitialPlan()
+    {
+        var binding = new ProcessStrategyBindingSnapshot(
+            new DriverId("driver.persistence-test"),
+            new StrategyId("strategy.persistence-test.execute"),
+            "1.0.0",
+            "factory.1.0.0",
+            RuntimeSchemaVersion,
+            RuntimeSchemaVersion,
+            "sha256:binding",
+            []);
+        return NewDispatchablePlan(
+            ProcessStepInstanceId.New(),
+            ProcessStepDefinitionId.New(),
+            binding);
     }
 
     private const string RuntimeSchemaVersion = "runtime/1.0";

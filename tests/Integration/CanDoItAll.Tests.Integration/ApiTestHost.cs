@@ -44,10 +44,13 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     public static async Task<ApiTestHost> CreateAsync(
         bool jwtEnabled,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        bool useInMemoryDatabase = false)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
-        var activeProfile = testEnvironment.CreatePostgreSqlProfile("api-host");
+        var activeProfile = useInMemoryDatabase
+            ? testEnvironment.CreateInMemoryProfile("api-host")
+            : testEnvironment.CreatePostgreSqlProfile("api-host");
         var configurationOverrides = new Dictionary<string, string?>
         {
             ["DevelopmentManager:TuningModeEnabled"] = "false",

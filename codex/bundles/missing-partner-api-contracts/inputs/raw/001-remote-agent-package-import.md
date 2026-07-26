@@ -1,6 +1,6 @@
 # 001 — Remote agent package upload/import
 
-Status: **missing in the pinned contract**  
+Status: **missing in the pinned contract**
 Priority: **high**
 
 ## Observed contract

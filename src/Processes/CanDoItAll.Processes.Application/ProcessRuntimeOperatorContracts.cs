@@ -9,7 +9,10 @@ public sealed record ProcessRuntimeOperatorActionCommand(
     ProcessStepInstanceId StepInstanceId,
     ProcessRuntimeOperatorActionKind Kind,
     string RequestedBy,
-    string Reason);
+    string Reason)
+{
+    public ProcessRuntimeBlockedRecoveryAuthorization? BlockedRecoveryAuthorization { get; init; }
+}
 
 public sealed record ProcessRuntimeOperatorActionResult(
     ProcessRunId RunId,

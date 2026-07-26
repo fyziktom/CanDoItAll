@@ -90,7 +90,7 @@
       "Key": "task-intake",
       "Title": "Capture change demand and human acceptance boundary",
       "Subtitle": "AI work starts from a human-owned contract",
-      "Notes": "Normalize the requested change into a bounded problem statement, value target, exclusions, and human acceptance criteria before any agent is engaged. When the current project structure or mindmap already supplies a concrete deliverable, product root, feature boundary, exclusions, and acceptance criteria, treat those explicit facts as the current human acceptance boundary for this intake step. Do not require a separate approval artifact just to repeat the same facts; record missing or contradictory owner input only when the mindmap leaves a core deliverable, authority, cost/license constraint, or safe execution boundary unresolved.",
+      "Notes": "Normalize the requested change into a bounded problem statement, value target, exclusions, and human acceptance criteria before any agent is engaged. When the current project structure or mindmap already supplies a concrete deliverable, product root, feature boundary, exclusions, and acceptance criteria, treat those explicit facts as the current human acceptance boundary for this intake step. When ProductAcceptanceCriteriaContract is present, preserve every criterion id, kind, and required flag. Only criteria with kind=ProductAcceptance and required=true define mandatory product acceptance; record kind=DeliveryPlanning items separately as nonblocking planning context. A recommendation to confirm or reconfirm an authoritative source fact does not reopen that fact and cannot create a human-confirmation, approval, or escalation gate unless a separate typed decision gate explicitly requests that decision. Do not require a separate approval artifact just to repeat the same facts; record missing or contradictory owner input only when the mindmap leaves a core deliverable, authority, cost/license constraint, or safe execution boundary unresolved.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -153,7 +153,7 @@
           "SensitivityLevel": "",
           "RetentionDays": 0,
           "AllowedFutureUsageSummary": "",
-          "ValidationRequirementSummary": "Must copy acceptance criteria from the current project structure or approval source; explicit project-structure criteria count as acknowledged for this intake step unless they are missing or contradictory.",
+          "ValidationRequirementSummary": "Must preserve every ProductAcceptanceCriteriaContract id, kind, and required flag from the current project structure or approval source. Only kind=ProductAcceptance and required=true defines mandatory product acceptance; kind=DeliveryPlanning remains separate nonblocking context. Explicit project-structure facts count as acknowledged unless they are missing or contradictory.",
           "Key": "intake-acceptance-criteria-pack"
         }
       ],
@@ -424,7 +424,7 @@
       "Key": "evaluation-and-benchmarking",
       "Title": "Evaluate outputs against benchmark and acceptance evidence",
       "Subtitle": "A polished answer is not enough",
-      "Notes": "Run deterministic checks, benchmark tasks, and human review prompts to determine whether the agent output actually satisfies the bounded acceptance criteria. Use the project-structure mindmap to decide the validation shape. When the mindmap explicitly says a deliverable is plain static JavaScript, no npm, no package install, and no build step, evaluate the actual product files directly with file inspection plus static browser or local HTTP smoke proof. Do not block only because there is no generated harness, package.json, benchmark dataset, or npm script unless the acceptance criteria asked for one.",
+      "Notes": "Run deterministic checks, benchmark tasks, and human review prompts to determine whether the agent output actually satisfies the bounded acceptance criteria. When ProductAcceptanceCriteriaContract is present, preserve every criterion id in the evaluation artifact, but require Pass/Fail product proof only for criteria with kind=ProductAcceptance and required=true. Record kind=DeliveryPlanning items separately as nonblocking planning context; they cannot require rework, block acceptance, or trigger human confirmation or escalation unless a separate typed decision gate explicitly requests that decision. Use the project-structure mindmap to decide the validation shape. When the mindmap explicitly says a deliverable is plain static JavaScript, no npm, no package install, and no build step, evaluate the actual product files directly with file inspection plus static browser or local HTTP smoke proof. Do not block only because there is no generated harness, package.json, benchmark dataset, or npm script unless a required ProductAcceptance criterion asked for one.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,

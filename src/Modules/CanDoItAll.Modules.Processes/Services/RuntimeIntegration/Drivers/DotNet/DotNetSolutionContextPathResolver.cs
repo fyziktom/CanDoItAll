@@ -74,9 +74,11 @@ internal sealed class DotNetSolutionContextPathResolver
 
         try
         {
-            var root = EnsureTrailingSeparator(Path.GetFullPath(productRoot));
+            var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(productRoot));
+            var root = EnsureTrailingSeparator(normalizedRoot);
             var candidate = Path.GetFullPath(Path.Combine(productRoot, value.Trim()));
-            if (!candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(candidate, normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
+                !candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
             {
                 issue = $"The .NET solution context field '{fieldName}' escapes ProductRoot.";
                 return false;

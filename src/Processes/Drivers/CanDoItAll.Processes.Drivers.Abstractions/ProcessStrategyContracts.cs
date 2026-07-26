@@ -133,7 +133,10 @@ public sealed record StrategyResultEnvelope(
     IReadOnlyList<RequestedArtifactRef> RequestedArtifacts,
     IReadOnlyList<StrategyDiagnosticRef> Diagnostics,
     IReadOnlyList<ManagerSignal> ManagerSignals,
-    string ResultHash);
+    string ResultHash)
+{
+    public string UserSafeSummary { get; init; } = string.Empty;
+}
 
 public sealed record ProducedArtifactRef(
     ArtifactInstanceId ArtifactId,

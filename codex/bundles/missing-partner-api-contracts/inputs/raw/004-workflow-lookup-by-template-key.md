@@ -1,6 +1,6 @@
 # 004 — Workflow lookup by stable template/external key
 
-Status: **missing in the pinned catalog API**  
+Status: **missing in the pinned catalog API**
 Priority: **high**
 
 ## Observed contract

@@ -9,6 +9,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 {
     public bool ExecutionStorageExists() => layout.ExecutionStorageExists();
 
+    public bool HasPersistedIndex() => File.Exists(layout.ExecutionIndexPath);
+
     public async Task<SandboxWorkspaceExecutionState> LoadAsync(CancellationToken cancellationToken)
     {
         if (ExecutionStorageExists())
@@ -556,7 +558,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             return existing;
         }
 
-        return new ExecutionStorageIndex(
+        var rebuilt = new ExecutionStorageIndex(
             Version: "3.0",
             Revision: 1L,
             UpdatedAtUtc: DateTimeOffset.UtcNow,
@@ -571,6 +573,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ActiveRunCount: await CountRunFilesAsync(IsIndexedActiveRun, cancellationToken),
             FailedRunCount: await CountRunFilesAsync(IsIndexedFailedRun, cancellationToken),
             UsageObservationCount: CountRunScopedJsonFiles(runId => layout.RunUsageRoot(runId)) + CountJsonFiles(layout.OrphanUsageRoot));
+
+        await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, rebuilt, cancellationToken);
+        return rebuilt;
     }
 
     private int CountRunFiles()

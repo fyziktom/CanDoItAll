@@ -373,7 +373,10 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                     diagnostic.Idempotency))
                 .ToArray(),
             adapterResult.ManagerSignals,
-            adapterResult.ResultHash);
+            adapterResult.ResultHash)
+        {
+            UserSafeSummary = adapterResult.UserSafeSummary
+        };
     }
 
     private static DateTimeOffset NormalizeRecoveredResultTimestamp(

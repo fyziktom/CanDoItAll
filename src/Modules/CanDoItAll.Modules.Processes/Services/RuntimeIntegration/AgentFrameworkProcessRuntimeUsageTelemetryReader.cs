@@ -38,12 +38,31 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
     public async ValueTask<IReadOnlyList<ProcessRuntimeUsageObservation>> ListAsync(
         ProcessRuntimeUsageTelemetryQuery query,
         CancellationToken cancellationToken = default)
+        => (await ReadAsync(query, cancellationToken).ConfigureAwait(false)).Items;
+
+    public async ValueTask<ProcessRuntimeUsageTelemetryReadResult> ReadAsync(
+        ProcessRuntimeUsageTelemetryQuery query,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
+        if (query.TakePerRun <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.TakePerRun,
+                "Process runtime usage take per run must be greater than zero.");
+        }
+
+        if (query.ToUtc < query.FromUtc)
+        {
+            throw new ArgumentException(
+                "Process runtime usage time range must end at or after it starts.",
+                nameof(query));
+        }
 
         if (query.RunIds.Count == 0)
         {
-            return [];
+            return new ProcessRuntimeUsageTelemetryReadResult([], IsComplete: true);
         }
 
         var runIdSet = query.RunIds.ToHashSet();
@@ -51,10 +70,16 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             .GetAsync(new AgentReferenceDataRequest(AgentReferenceDataSections.Providers), cancellationToken)
             .ConfigureAwait(false);
         var providers = referenceData.Providers;
-        var executionRuns = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
-        var observations = new List<ProcessRuntimeUsageObservation>();
+        var executionRunRead = await ListExecutionRunsAsync(query, cancellationToken).ConfigureAwait(false);
+        var effectiveTake = Math.Min(
+            query.TakePerRun,
+            UsageExecutionRunBatchTake);
+        var observationsByRun =
+            new Dictionary<ProcessRunId, List<ProcessRuntimeUsageObservation>>();
+        var detectionTake = effectiveTake + 1;
+        var isComplete = executionRunRead.IsComplete;
 
-        foreach (var executionRun in executionRuns
+        foreach (var executionRun in executionRunRead.Items
                      .OrderByDescending(run => run.UpdatedAtUtc))
         {
             if (!TryCreateProcessRunId(executionRun.ProcessRunId, out var executionProcessRunId) ||
@@ -70,6 +95,7 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             }
             catch (InvalidOperationException)
             {
+                isComplete = false;
                 continue;
             }
 
@@ -83,17 +109,45 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
                     continue;
                 }
 
-                observations.Add(MapUsageObservation(usageObservation, detail.Run, processRunId, providers));
+                if (!observationsByRun.TryGetValue(processRunId, out var runObservations))
+                {
+                    runObservations = new List<ProcessRuntimeUsageObservation>(
+                        Math.Min(detectionTake, 32));
+                    observationsByRun.Add(processRunId, runObservations);
+                }
+
+                if (runObservations.Count >= detectionTake)
+                {
+                    isComplete = false;
+                    continue;
+                }
+
+                runObservations.Add(MapUsageObservation(
+                    usageObservation,
+                    detail.Run,
+                    processRunId,
+                    providers));
             }
         }
 
-        return observations
-            .OrderBy(observation => observation.CreatedAtUtc)
-            .ThenBy(observation => observation.UsageObservationId)
+        var boundedObservationsByRun = observationsByRun.Values
+            .Select(observations => observations
+                .OrderBy(observation => observation.CreatedAtUtc)
+                .ThenBy(observation => observation.UsageObservationId)
+                .ToArray())
             .ToArray();
+        isComplete &= boundedObservationsByRun.All(group =>
+            group.Length <= effectiveTake);
+        return new ProcessRuntimeUsageTelemetryReadResult(
+            boundedObservationsByRun
+                .SelectMany(group => group.Take(effectiveTake))
+                .OrderBy(observation => observation.CreatedAtUtc)
+                .ThenBy(observation => observation.UsageObservationId)
+                .ToArray(),
+            isComplete);
     }
 
-    private async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+    private async Task<ExecutionRunRead> ListExecutionRunsAsync(
         ProcessRuntimeUsageTelemetryQuery query,
         CancellationToken cancellationToken)
     {
@@ -102,23 +156,33 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (runIds.Count == 0)
         {
-            return [];
+            return new ExecutionRunRead([], IsComplete: true);
         }
 
-        var requestedTake = Math.Max(query.TakePerRun * runIds.Count, runIds.Count);
-        var take = Math.Clamp(
+        var requestedTake = Math.Max(
+            (long)query.TakePerRun * runIds.Count + 1,
+            runIds.Count);
+        var take = (int)Math.Clamp(
             requestedTake,
-            runIds.Count,
-            Math.Max(runIds.Count, UsageExecutionRunBatchTake));
+            1,
+            UsageExecutionRunBatchTake + 1L);
         var executionRuns = await workspaceService.ListExecutionRunsAsync(
             new ExecutionRunQuery(
                 Take: take,
                 UpdatedFromUtc: query.FromUtc,
-                UpdatedToUtc: query.ToUtc),
+                UpdatedToUtc: query.ToUtc)
+            {
+                ProcessRunIds = runIds
+                    .OrderBy(runId => runId, StringComparer.OrdinalIgnoreCase)
+                    .ToArray()
+            },
             cancellationToken).ConfigureAwait(false);
-        return executionRuns
-            .Where(run => runIds.Contains(run.ProcessRunId))
-            .ToArray();
+        return new ExecutionRunRead(
+            executionRuns
+                .Where(run => runIds.Contains(run.ProcessRunId))
+                .Take(UsageExecutionRunBatchTake)
+                .ToArray(),
+            executionRuns.Count < take);
     }
 
     private static ProcessRuntimeUsageObservation MapUsageObservation(
@@ -353,5 +417,9 @@ internal sealed class AgentFrameworkProcessRuntimeUsageTelemetryReader(
             SourceCount: 0,
             DiagnosticsJson: string.Empty);
     }
+
+    private sealed record ExecutionRunRead(
+        IReadOnlyList<ExecutionRunRecord> Items,
+        bool IsComplete);
 }
 

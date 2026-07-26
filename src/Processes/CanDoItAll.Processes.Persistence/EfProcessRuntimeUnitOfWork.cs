@@ -23,6 +23,38 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         return entity is null ? null : ProcessPersistenceMappers.ToSnapshot(entity);
     }
 
+    public async Task<IReadOnlyList<ProcessRuntimeStateSnapshot>> LoadManyAsync(
+        IReadOnlyList<ProcessRunId> runIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(runIds);
+        if (runIds.Count > IProcessRuntimeStateStore.MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(runIds),
+                runIds.Count,
+                $"Runtime state batch cannot exceed {IProcessRuntimeStateStore.MaximumBatchRunCount} runs.");
+        }
+
+        var values = runIds
+            .Select(runId => runId.Value)
+            .Distinct()
+            .ToArray();
+        if (values.Length == 0)
+        {
+            return [];
+        }
+
+        var entities = await BuildStateQuery(trackChanges: false)
+            .Where(state => values.Contains(state.RunId))
+            .OrderBy(state => state.RunId)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return entities
+            .Select(ProcessPersistenceMappers.ToSnapshot)
+            .ToArray();
+    }
+
     public async Task<ProcessRuntimeActivitySelection> QueryActivityAsync(
         ProcessRuntimeActivityQuery query,
         CancellationToken cancellationToken = default)
@@ -82,6 +114,31 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<ProcessRunId>> FindDescendantRunIdsAsync(
+        ProcessRunId rootRunId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        if (take is < 1 or > IProcessRuntimeRunHierarchyStore.MaximumBatchRunCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(take),
+                take,
+                $"Runtime hierarchy take must be between 1 and {IProcessRuntimeRunHierarchyStore.MaximumBatchRunCount}.");
+        }
+
+        return await dbContext.RuntimeStates
+            .AsNoTracking()
+            .Where(state =>
+                state.RootRunId == rootRunId.Value &&
+                state.RunId != rootRunId.Value)
+            .OrderBy(state => state.RunId)
+            .Take(take)
+            .Select(state => new ProcessRunId(state.RunId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<ProcessRuntimeCommitResult> CommitAsync(
         ProcessRuntimeCommitRequest request,
         CancellationToken cancellationToken = default)
@@ -92,6 +149,8 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         {
             return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
         }
+
+        ValidateInitialPlanMatchesState(request);
 
         using var rootSequenceLock = await ProcessRuntimeRootSequenceLocks
             .AcquireAsync([request.Mutation.State.RootRunId.Value], cancellationToken)
@@ -112,6 +171,19 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         var existing = await LoadStateEntityAsync(
             request.Mutation.State.RunId.Value,
             trackChanges: true,
+            cancellationToken).ConfigureAwait(false);
+        if (await ValidateParentStepPreconditionAsync(
+                request,
+                isNewState: existing is null,
+                cancellationToken).ConfigureAwait(false) is { } rejection)
+        {
+            dbContext.ChangeTracker.Clear();
+            return rejection;
+        }
+
+        await StageInitialPlanAsync(
+            request,
+            isNewState: existing is null,
             cancellationToken).ConfigureAwait(false);
 
         if (existing is null)
@@ -140,6 +212,153 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         dbContext.ChangeTracker.Clear();
         return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
     }
+
+    private async Task StageInitialPlanAsync(
+        ProcessRuntimeCommitRequest request,
+        bool isNewState,
+        CancellationToken cancellationToken)
+    {
+        if (request.InitialPlan is not { } plan)
+        {
+            return;
+        }
+
+        if (!isNewState)
+        {
+            throw new InvalidOperationException(
+                $"Initial process instance plan '{plan.Header.PlanId}' can only be committed while creating runtime state '{request.Mutation.State.RunId}'.");
+        }
+
+        var existingPlan = await dbContext.InstancePlans
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                candidate => candidate.PlanId == plan.Header.PlanId.Value,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (existingPlan is not null)
+        {
+            ProcessInstancePlanPersistenceMapper.EnsureSameIdentityAndHash(existingPlan, plan);
+            _ = ProcessInstancePlanPersistenceMapper.ToPlan(existingPlan);
+            return;
+        }
+
+        dbContext.InstancePlans.Add(ProcessInstancePlanPersistenceMapper.ToEntity(plan));
+    }
+
+    private static void ValidateInitialPlanMatchesState(ProcessRuntimeCommitRequest request)
+    {
+        if (request.InitialPlan is not { } plan)
+        {
+            return;
+        }
+
+        if (plan.Header.PlanId != request.OriginalState.PlanId ||
+            plan.Header.PlanId != request.Mutation.State.PlanId)
+        {
+            throw new InvalidOperationException(
+                $"Initial process instance plan '{plan.Header.PlanId}' does not match runtime state plan id '{request.Mutation.State.PlanId}'.");
+        }
+
+        if (!string.Equals(plan.PlanHash, request.OriginalState.PlanHash, StringComparison.Ordinal) ||
+            !string.Equals(plan.PlanHash, request.Mutation.State.PlanHash, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Initial process instance plan '{plan.Header.PlanId}' does not match runtime state plan hash '{request.Mutation.State.PlanHash}'.");
+        }
+    }
+
+    private async Task<ProcessRuntimeCommitResult?> ValidateParentStepPreconditionAsync(
+        ProcessRuntimeCommitRequest request,
+        bool isNewState,
+        CancellationToken cancellationToken)
+    {
+        if (request.ParentStepPrecondition is not { } parentStepPrecondition)
+        {
+            if (isNewState &&
+                request.Mutation.State.RunId != request.Mutation.State.RootRunId)
+            {
+                return RejectParentStepPrecondition(
+                    request,
+                    "Runtime.ParentStepPreconditionRequired",
+                    $"New descendant process run '{request.Mutation.State.RunId}' cannot start without a typed parent-step precondition.");
+            }
+
+            return null;
+        }
+
+        var rootState = await LoadStateEntityAsync(
+            request.Mutation.State.RootRunId.Value,
+            trackChanges: false,
+            cancellationToken).ConfigureAwait(false);
+        if (rootState is null ||
+            rootState.RootRunId != request.Mutation.State.RootRunId.Value)
+        {
+            return RejectParentStepPrecondition(
+                request,
+                "Runtime.ParentRootMissing",
+                $"Child process run '{request.Mutation.State.RunId}' cannot start because root run '{request.Mutation.State.RootRunId}' does not exist.");
+        }
+
+        if (rootState.Status == ProcessRuntimeStatus.CancelRequested ||
+            ProcessRuntimeTerminalStates.IsRunTerminal(rootState.Status))
+        {
+            return RejectParentStepPrecondition(
+                request,
+                "Runtime.ParentRootNotLaunchable",
+                $"Child process run '{request.Mutation.State.RunId}' cannot start because root run '{request.Mutation.State.RootRunId}' has status '{rootState.Status}'.");
+        }
+
+        var parentState = parentStepPrecondition.RunId == request.Mutation.State.RootRunId
+            ? rootState
+            : await LoadStateEntityAsync(
+                parentStepPrecondition.RunId.Value,
+                trackChanges: false,
+                cancellationToken).ConfigureAwait(false);
+        if (parentState is null ||
+            parentState.RootRunId != request.Mutation.State.RootRunId.Value)
+        {
+            return RejectParentStepPrecondition(
+                request,
+                "Runtime.ParentRunMissing",
+                $"Child process run '{request.Mutation.State.RunId}' cannot start because parent run '{parentStepPrecondition.RunId}' is missing from root '{request.Mutation.State.RootRunId}'.");
+        }
+
+        if (parentState.Status != ProcessRuntimeStatus.Active)
+        {
+            return RejectParentStepPrecondition(
+                request,
+                "Runtime.ParentRunNotLaunchable",
+                $"Child process run '{request.Mutation.State.RunId}' cannot start because parent run '{parentStepPrecondition.RunId}' has status '{parentState.Status}'.");
+        }
+
+        var parentStep = parentState.Steps.SingleOrDefault(step =>
+            step.StepInstanceId == parentStepPrecondition.StepInstanceId.Value);
+        if (parentStep is null ||
+            parentStep.Status != ProcessRuntimeStepStatus.Running ||
+            parentStep.ActiveClaimToken is not { } activeClaimToken ||
+            !parentState.Claims.Any(claim =>
+                claim.ClaimToken == activeClaimToken &&
+                claim.StepInstanceId == parentStep.StepInstanceId &&
+                (claim.Status is DispatchClaimStatus.Claimed or
+                    DispatchClaimStatus.LeaseRenewed or
+                    DispatchClaimStatus.Reclaimed) &&
+                claim.ExpiresAtUtc > request.Mutation.State.UpdatedAtUtc))
+        {
+            return RejectParentStepPrecondition(
+                request,
+                "Runtime.ParentStepNotRunning",
+                $"Child process run '{request.Mutation.State.RunId}' cannot start because parent step '{parentStepPrecondition.StepInstanceId}' is not running with an active dispatch claim.");
+        }
+
+        return null;
+    }
+
+    private static ProcessRuntimeCommitResult RejectParentStepPrecondition(
+        ProcessRuntimeCommitRequest request,
+        string code,
+        string message)
+        => ProcessRuntimeCommitResult.FromMutation(
+            ProcessRuntimeMutation.Rejected(request.Mutation.State, code, message));
 
     public async Task<ProcessRuntimeCommitResult?> FindCompletedCommandAsync(
         RuntimeCommandId commandId,
@@ -193,21 +412,26 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         bool trackChanges,
         CancellationToken cancellationToken)
     {
+        return await BuildStateQuery(trackChanges)
+            .SingleOrDefaultAsync(state => state.RunId == runId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private IQueryable<ProcessRuntimeStateEntity> BuildStateQuery(bool trackChanges)
+    {
         var query = dbContext.RuntimeStates.AsQueryable();
         if (!trackChanges)
         {
             query = query.AsNoTracking();
         }
 
-        return await query
+        return query
             .AsSplitQuery()
             .Include(state => state.Steps)
             .Include(state => state.Claims)
             .Include(state => state.ResultReceipts)
             .Include(state => state.AvailableArtifactSlots)
-            .Include(state => state.ConnectedInputArtifacts)
-            .SingleOrDefaultAsync(state => state.RunId == runId, cancellationToken)
-            .ConfigureAwait(false);
+            .Include(state => state.ConnectedInputArtifacts);
     }
 
     private async Task AppendEventsAsync(
@@ -268,6 +492,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         existing.ConnectedInputArtifacts.Clear();
 
         var replacement = ProcessPersistenceMappers.ToEntity(state);
+        existing.BlockedRecoveryActionsJson = replacement.BlockedRecoveryActionsJson;
         existing.Steps.AddRange(replacement.Steps);
         existing.Claims.AddRange(replacement.Claims);
         existing.ResultReceipts.AddRange(replacement.ResultReceipts);

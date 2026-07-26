@@ -106,6 +106,40 @@ public sealed class DotNetSolutionContextParserTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Initialization_contract_factory_accepts_application_at_product_root(
+        bool productRootHasTrailingSeparator)
+    {
+        var parser = new DotNetSolutionContextParser();
+        var artifact = CreateInitializeArtifact()
+            .Replace("client/TimeTracker/TimeTracker.csproj", "TimeTracker.csproj", StringComparison.Ordinal)
+            .Replace("\"directory\": \"client/TimeTracker\"", "\"directory\": \".\"", StringComparison.Ordinal);
+        Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
+        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var canonicalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.Decision.{Guid.NewGuid():N}",
+            "TimeTracker");
+        var root = productRootHasTrailingSeparator
+            ? canonicalRoot + Path.DirectorySeparatorChar
+            : canonicalRoot;
+
+        var created = factory.TryCreate(
+            context,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProductRoot"] = root
+            },
+            out var contract,
+            out var issue);
+
+        Assert.True(created, issue);
+        Assert.Equal(Path.GetFullPath(canonicalRoot), contract.AppProjectDirectory);
+        Assert.Equal(Path.Combine(canonicalRoot, "TimeTracker.csproj"), contract.AppProjectFile);
+    }
+
+    [Theory]
     [InlineData("Blazor WebAssembly App", "xunit", "initialization.application.template")]
     [InlineData("blazorwasm", "xUnit test project", "initialization.tests.template")]
     public void Initialization_contract_factory_rejects_template_display_labels_before_child_launch(

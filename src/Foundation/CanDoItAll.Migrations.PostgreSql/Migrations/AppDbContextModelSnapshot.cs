@@ -5359,6 +5359,256 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("process_projector_offsets", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRunRecordEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ActualCost")
+                        .HasPrecision(20, 6)
+                        .HasColumnType("numeric(20,6)");
+
+                    b.Property<int>("ArtifactCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AvailableEvidenceSources")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<long>("CachedInputTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CancelledStepCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CompletedStepCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Completeness")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CompletenessWarningsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("DefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DefinitionVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Disposition")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long?>("DurationMilliseconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("EndedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("EscalationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasPrecision(20, 6)
+                        .HasColumnType("numeric(20,6)");
+
+                    b.Property<int>("ExecutableStepCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ExecutionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FactsAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FactsJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("FactsLastErrorClass")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("FactsLastErrorDiagnosticReference")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset?>("FactsLeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FactsLeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("FactsNextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FactsStatus")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("FailedStepCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IncidentCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("InputTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LifecycleState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MissingEvidenceSources")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("NarrativeAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NarrativeJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("NarrativeLastErrorClass")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NarrativeLastErrorDiagnosticReference")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset?>("NarrativeLeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("NarrativeLeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("NarrativeNextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NarrativeStatus")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("OutputTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("ParentRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ParticipantIdsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ReasoningTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RepetitionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReworkCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("SourceGlobalSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SourceRootSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SubprocessCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ToolCallCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalStepCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("TotalTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RunId");
+
+                    b.HasIndex("DefinitionId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("EndedAtUtc", "RunId")
+                        .IsDescending();
+
+                    b.HasIndex("LifecycleState", "EndedAtUtc", "RunId")
+                        .IsDescending(false, true, true);
+
+                    b.HasIndex("LifecycleState", "DefinitionId", "EndedAtUtc", "RunId")
+                        .IsDescending(false, false, true, true);
+
+                    b.HasIndex("LifecycleState", "Disposition", "EndedAtUtc", "RunId")
+                        .IsDescending(false, false, true, true);
+
+                    b.HasIndex("LifecycleState", "FactsStatus", "FactsNextAttemptAtUtc", "FactsLeaseExpiresAtUtc");
+
+                    b.HasIndex("LifecycleState", "NarrativeStatus", "NarrativeNextAttemptAtUtc", "NarrativeLeaseExpiresAtUtc");
+
+                    b.HasIndex("LifecycleState", "ParentRunId", "EndedAtUtc", "RunId")
+                        .IsDescending(false, false, true, true);
+
+                    b.HasIndex("LifecycleState", "ProjectId", "EndedAtUtc", "RunId")
+                        .IsDescending(false, false, true, true);
+
+                    b.HasIndex("LifecycleState", "RootRunId", "EndedAtUtc", "RunId")
+                        .IsDescending(false, false, true, true);
+
+                    b.ToTable("process_run_records", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRunRecordParticipantEntity", b =>
+                {
+                    b.Property<string>("ParticipantId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ParticipantId", "RunId");
+
+                    b.HasIndex("RunId");
+
+                    b.ToTable("process_run_record_participants", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b =>
                 {
                     b.Property<Guid>("RunId")
@@ -5514,6 +5764,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("RunId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BlockedRecoveryActionsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
@@ -5745,6 +5999,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("IdempotencyKey")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("AppliedSequence")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("AppliedStepStatus")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -5771,7 +6028,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<string>("UserSafeSummary")
+                        .HasColumnType("text");
+
                     b.HasKey("RunId", "StepInstanceId", "StrategyId", "IdempotencyKey");
+
+                    b.HasIndex("RunId", "AppliedSequence")
+                        .IsUnique();
 
                     b.HasIndex("StepInstanceId", "StrategyId", "IdempotencyKey")
                         .IsUnique();

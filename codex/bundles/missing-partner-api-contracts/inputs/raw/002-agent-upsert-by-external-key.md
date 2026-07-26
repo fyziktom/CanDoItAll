@@ -1,6 +1,6 @@
 # 002 — Idempotent agent provisioning by external key
 
-Status: **missing in the pinned contract**  
+Status: **missing in the pinned contract**
 Priority: **high**
 
 ## Observed contract

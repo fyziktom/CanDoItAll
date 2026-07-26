@@ -57,6 +57,19 @@ public sealed record ReclaimDispatchClaimCommand(
     DispatchClaimToken NewClaimToken,
     DateTimeOffset LeaseExpiresAtUtc);
 
+public sealed record ProcessRuntimeBlockedRecoveryAuthorization(
+    DateTimeOffset ExpectedStateUpdatedAtUtc,
+    ProcessRuntimeStatus ExpectedStateStatus,
+    ProcessStepInstanceId SourceBlockedStepInstanceId,
+    StrategyResultIdempotencyKey SourceResultIdempotencyKey,
+    string DiagnosticFingerprint,
+    ProcessRecoveryRouteKind RecoveryRouteKind,
+    ProcessStepInstanceId? ResponsibleTargetStepInstanceId,
+    ProcessRuntimeBlockedRecoveryPhase Phase);
+
 public sealed record RequestStepReworkCommand(
     ProcessStepInstanceId StepInstanceId,
-    string Reason);
+    string Reason)
+{
+    public ProcessRuntimeBlockedRecoveryAuthorization? BlockedRecoveryAuthorization { get; init; }
+}

@@ -37,7 +37,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     ProcessRuntimeDispatchOptions? options = null,
     IProcessRuntimeDispatchQueue? dispatchQueue = null,
     IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null,
-    IProcessStepRecoveryInstructionBuilder? recoveryInstructionBuilder = null)
+    IProcessStepRecoveryInstructionBuilder? recoveryInstructionBuilder = null,
+    IProcessBlockedRunRecoveryCoordinator? blockedRunRecoveryCoordinator = null)
 {
     private const int MaximumDispatchIterations = 200;
     private const int MaximumStepDispatchAttempts = 20;
@@ -77,12 +78,26 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 ?? throw new InvalidOperationException($"Process run '{runId}' was not found.");
             if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
             {
-                return new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics);
+                return await CompleteDispatchAsync(
+                    new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics),
+                    requestedBy,
+                    cancellationToken).ConfigureAwait(false);
             }
 
             if (state.Status == ProcessRuntimeStatus.Blocked)
             {
-                return new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics);
+                return await CompleteDispatchAsync(
+                    new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics),
+                    requestedBy,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (state.Status == ProcessRuntimeStatus.CancelRequested)
+            {
+                return await CompleteDispatchAsync(
+                    new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics),
+                    requestedBy,
+                    cancellationToken).ConfigureAwait(false);
             }
 
             var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
@@ -148,7 +163,10 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     cancellationToken).ConfigureAwait(false);
                 if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
                 {
-                    return new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics);
+                    return await CompleteDispatchAsync(
+                        new ProcessRuntimeDispatchResult(runId, ToStage(state.Status), state.Status, diagnostics),
+                        requestedBy,
+                        cancellationToken).ConfigureAwait(false);
                 }
             }
 
@@ -162,10 +180,24 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     cancellationToken).ConfigureAwait(false);
                 if (blockedState is not null)
                 {
-                    return new ProcessRuntimeDispatchResult(runId, ToStage(blockedState.Status), blockedState.Status, diagnostics);
+                    return await CompleteDispatchAsync(
+                        new ProcessRuntimeDispatchResult(
+                            runId,
+                            ToStage(blockedState.Status),
+                            blockedState.Status,
+                            diagnostics),
+                        requestedBy,
+                        cancellationToken).ConfigureAwait(false);
                 }
 
-                return new ProcessRuntimeDispatchResult(runId, ProcessLaunchStage.Running, state.Status, diagnostics);
+                return await CompleteDispatchAsync(
+                    new ProcessRuntimeDispatchResult(
+                        runId,
+                        ProcessLaunchStage.Running,
+                        state.Status,
+                        diagnostics),
+                    requestedBy,
+                    cancellationToken).ConfigureAwait(false);
             }
 
             var reloadAfterConcurrentClaimChange = false;
@@ -399,7 +431,14 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     }
 
                     var deferredState = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false) ?? state;
-                    return new ProcessRuntimeDispatchResult(runId, ProcessLaunchStage.Running, deferredState.Status, diagnostics);
+                    return await CompleteDispatchAsync(
+                        new ProcessRuntimeDispatchResult(
+                            runId,
+                            ProcessLaunchStage.Running,
+                            deferredState.Status,
+                            diagnostics),
+                        requestedBy,
+                        cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception exception) when (claimCreated && !resultSubmitted)
                 {
@@ -434,7 +473,47 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         var finalState = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Process run '{runId}' was not found after dispatch.");
         diagnostics.Add($"Dispatch stopped after {MaximumDispatchIterations} iterations.");
-        return new ProcessRuntimeDispatchResult(runId, ToStage(finalState.Status), finalState.Status, diagnostics);
+        return await CompleteDispatchAsync(
+            new ProcessRuntimeDispatchResult(
+                runId,
+                ToStage(finalState.Status),
+                finalState.Status,
+                diagnostics),
+            requestedBy,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ProcessRuntimeDispatchResult> CompleteDispatchAsync(
+        ProcessRuntimeDispatchResult result,
+        string requestedBy,
+        CancellationToken cancellationToken)
+    {
+        if (result.Status != ProcessRuntimeStatus.Blocked ||
+            blockedRunRecoveryCoordinator is null)
+        {
+            return result;
+        }
+
+        var recovery = await blockedRunRecoveryCoordinator
+            .TryRecoverAsync(result.RunId, requestedBy, cancellationToken)
+            .ConfigureAwait(false);
+        var diagnostics = result.Diagnostics
+            .Concat(recovery.Diagnostics)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (recovery.Outcome == ProcessBlockedRunRecoveryOutcome.Recovered)
+        {
+            diagnostics.Add(
+                $"Automatic blocked-run recovery applied '{recovery.Policy}' to step " +
+                $"'{recovery.TargetStepInstanceId}'.");
+        }
+
+        return result with
+        {
+            Stage = ToStage(recovery.Status),
+            Status = recovery.Status,
+            Diagnostics = diagnostics
+        };
     }
 
     private async Task<ProcessRuntimeStateSnapshot?> BlockExhaustedRunWithConcurrencyRetryAsync(
@@ -1319,7 +1398,10 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     resultHash,
                     summary)
             ],
-            resultHash);
+            resultHash)
+        {
+            UserSafeSummary = summary
+        };
     }
 
     private static int CountSubmittedResults(
@@ -1515,7 +1597,10 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     resultHash,
                     summary)
             ],
-            resultHash);
+            resultHash)
+        {
+            UserSafeSummary = summary
+        };
     }
 
     private static void ObserveLateStrategyCompletion(

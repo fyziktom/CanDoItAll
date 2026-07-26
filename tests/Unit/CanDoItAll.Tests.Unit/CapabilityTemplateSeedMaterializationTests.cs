@@ -83,6 +83,18 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("aspnet-core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
         Assert.Contains("ASP.NET Core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(), StringComparison.Ordinal);
 
+        using var concreteDeliverySkillJson = JsonDocument.Parse(
+            capabilities["concrete-deliverable-delivery-inline-skill"].ConfigurationJson);
+        var concreteDeliveryInstructions = concreteDeliverySkillJson.RootElement
+            .GetProperty("inlineSkill")
+            .GetProperty("instructions")
+            .GetString();
+        Assert.Contains("explicitly pre-implementation setup", concreteDeliveryInstructions, StringComparison.Ordinal);
+        Assert.Contains(
+            "Generated starter/demo UI or content and a passing placeholder template test are expected",
+            concreteDeliveryInstructions,
+            StringComparison.Ordinal);
+
         var developmentImageSkill = capabilities["development-image-analysis-guidance-inline-skill"];
         Assert.Contains(developmentImageSkill.Tags, tag => string.Equals(tag, "development", StringComparison.Ordinal));
         Assert.Contains(developmentImageSkill.Tags, tag => string.Equals(tag, "image-analysis", StringComparison.Ordinal));

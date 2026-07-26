@@ -41,6 +41,7 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
             {
                 await ObserveCompletedDispatchesAsync(activeImmediateDispatches).ConfigureAwait(false);
                 await ObserveCompletedDispatchesAsync(activeRecoveryDispatches).ConfigureAwait(false);
+                queue.FlushDeferredRequests();
 
                 var nowUtc = DateTimeOffset.UtcNow;
                 if (recoveryEnabled && nowUtc >= nextRecoveryAtUtc)
@@ -100,10 +101,10 @@ internal sealed class ProcessRuntimeDispatchQueueWorker(
         ProcessRuntimeDispatchQueueRequest request,
         CancellationToken cancellationToken)
     {
-        if (!queue.TryMarkActive(request.RunId))
+        if (!queue.TryMarkActiveOrDefer(request))
         {
             logger.LogDebug(
-                "Skipping queued process dispatch for run {RunId} because another dispatch is already active.",
+                "Deferring queued process dispatch for run {RunId} until the active dispatch completes.",
                 request.RunId.Value);
             return;
         }

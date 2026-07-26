@@ -12,7 +12,8 @@ public sealed class ProcessRuntimeProjectionQueryService(
     IProcessProjectionClock clock,
     IProcessRuntimeStateStore? runtimeStateStore = null,
     IProcessRuntimeStepAssignmentStore? assignmentStore = null,
-    IProcessExecutionObservationReader? executionObservationReader = null)
+    IProcessExecutionObservationReader? executionObservationReader = null,
+    IProcessRunRecordStore? runRecordStore = null)
 {
     private const int LiveSnapshotReadLimit = 500;
     private const int RuntimeMetricEventReadLimit = 10_000;
@@ -50,6 +51,18 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.Add(run);
         }
 
+        runs.Sort(static (left, right) =>
+        {
+            var lastEventComparison = right.LastEventAtUtc.CompareTo(left.LastEventAtUtc);
+            return lastEventComparison != 0
+                ? lastEventComparison
+                : string.CompareOrdinal(left.RunId.ToString(), right.RunId.ToString());
+        });
+        if (runs.Count > query.Take)
+        {
+            runs.RemoveRange(query.Take, runs.Count - query.Take);
+        }
+
         var loadOptions = query.LoadOptions ?? ProcessLiveProcessesLoadOptions.Full;
         var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
         if (loadOptions.IncludeAttentionReconciliation)
@@ -81,19 +94,6 @@ public sealed class ProcessRuntimeProjectionQueryService(
             (loadOptions.IncludeCurrentSteps || loadOptions.IncludeOperatorActions || loadOptions.IncludeChildRunWaits))
         {
             runs = (await EnrichRunMetadataAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
-        }
-
-        runs.Sort(static (left, right) =>
-        {
-            var lastEventComparison = right.LastEventAtUtc.CompareTo(left.LastEventAtUtc);
-            return lastEventComparison != 0
-                ? lastEventComparison
-                : string.CompareOrdinal(left.RunId.ToString(), right.RunId.ToString());
-        });
-
-        if (runs.Count > query.Take)
-        {
-            runs.RemoveRange(query.Take, runs.Count - query.Take);
         }
 
         return new ProcessLiveProcessesResult(runs, CombineFreshness(runs));
@@ -164,6 +164,30 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var selectedRunId = RequiresSelectedRunId(loadOptions)
             ? ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId, query.AutoSelectRun)
             : query.SelectedRunId;
+        var selectedRunSnapshot = selectedRunId is { } resolvedSelectedRunId
+            ? liveProcesses.Runs.FirstOrDefault(run => run.RunId == resolvedSelectedRunId)
+            : null;
+        var selectedRunNeedsRecordLookup = selectedRunId is not null &&
+            (selectedRunSnapshot is null ||
+             selectedRunSnapshot.Status is
+            ProcessProjectedRunStatus.Completed or
+            ProcessProjectedRunStatus.Failed or
+            ProcessProjectedRunStatus.Cancelled);
+        if (loadOptions.IncludeRunRecord &&
+            selectedRunNeedsRecordLookup &&
+            runRecordStore is null)
+        {
+            throw new InvalidOperationException(
+                "Process run records are required by the runtime workspace query but no record store is registered.");
+        }
+
+        var selectedRunRecord = !loadOptions.IncludeRunRecord ||
+            !selectedRunNeedsRecordLookup
+            ? null
+            : await runRecordStore!
+                .GetAsync(selectedRunId.Value, includeSuperseded: false, cancellationToken)
+                .ConfigureAwait(false);
+        var hasTerminalRecord = selectedRunRecord is not null;
         ProcessRunDetailProjection? selectedRun = null;
         if (loadOptions.IncludeSelectedRun && selectedRunId is not null)
         {
@@ -181,7 +205,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
                     Skip: checked(query.EventPage * query.EventPageSize)),
                 cancellationToken).ConfigureAwait(false)
             : new ProcessRunHistoryResult([], Freshness: null);
-        var metricHistory = loadOptions.IncludeMetricHistory
+        var metricHistory = loadOptions.IncludeMetricHistory && !hasTerminalRecord
             ? await GetRunHistoryAsync(
                 new ProcessRunHistoryQuery(
                     selectedRunId,
@@ -203,11 +227,15 @@ public sealed class ProcessRuntimeProjectionQueryService(
             metricHistory.Events,
             history.Events.Count > query.EventPageSize,
             activeAgents,
-            freshness);
+            freshness)
+        {
+            SelectedRunRecord = selectedRunRecord
+        };
     }
 
     private static bool RequiresSelectedRunId(ProcessRuntimeWorkspaceLoadOptions loadOptions)
         => loadOptions.IncludeSelectedRun ||
+            loadOptions.IncludeRunRecord ||
             loadOptions.IncludeHistory ||
             loadOptions.IncludeMetricHistory ||
             loadOptions.IncludeActiveAgents;
@@ -294,7 +322,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         ProcessRunId? requestedRunId,
         bool autoSelectRun)
     {
-        if (requestedRunId is not null && runs.Any(run => run.RunId == requestedRunId))
+        if (requestedRunId is not null)
         {
             return requestedRunId;
         }

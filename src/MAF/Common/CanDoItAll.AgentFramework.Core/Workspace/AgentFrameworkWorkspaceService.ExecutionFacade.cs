@@ -41,6 +41,12 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => executionService.ExecuteRunAsync(request, cancellationToken);
 
+    public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+        => executionService.ExecuteSameSourceRunAsync(source, request, cancellationToken);
+
     public Task<ExecutionRunResult> ContinueExecutionRunAsync(
         Guid executionRunId,
         bool approved,

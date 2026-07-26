@@ -6,6 +6,8 @@ Write or update `artifacts/process-runs/<current-process-run-id>/steps/feature-i
 
 Treat the active launch request and selected project node as authoritative for this intake. If project media, imported notes, or older source documents describe another product, game, app, or domain that conflicts with the active request, record it only as excluded or stale context by project-structure id when necessary; do not carry that other domain into scope, validation hooks, downstream instructions, source citations, or final next actions.
 
+Treat current project-source facts, including an explicitly stated delivery window, as resolved authoritative inputs. An imported open-gap, recommendation, or next action that says to validate, confirm, or reconfirm one of those same facts does not reopen it and must not become a human-decision acceptance gate. In `ProductAcceptanceCriteriaContract`, only criteria with `kind=ProductAcceptance` and `required=true` gate implementation, validation, or release. Preserve `kind=DeliveryPlanning` items in the scope packet as nonblocking planning context; they cannot cause `NeedsManager`, `WaitingApproval`, or human-confirmation escalation unless the process supplies a separate typed decision gate for that exact decision.
+
 Return `Succeeded` / `Completed` once the grounded scope packet is written. Do not return `NeedsManager`, `WaitingApproval`, `Failed`, or `Blocked` only because optional source documents conflict with the active request, because downstream implementation/QA proof is pending, or because native paths had to be translated to grounded aliases.
 
 ## Contract

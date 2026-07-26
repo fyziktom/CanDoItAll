@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
@@ -65,6 +66,8 @@ public sealed record ProcessRuntimeStateSnapshot(
     DateTimeOffset UpdatedAtUtc)
 {
     public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> BlockedRecoveryActions { get; init; } = [];
 }
 
 public sealed record ProcessRuntimeStepState(
@@ -142,6 +145,10 @@ public sealed record StrategyResultReceipt
     public ProcessRuntimeStepStatus AppliedStepStatus { get; init; }
 
     public string ResultHash { get; init; }
+
+    public string UserSafeSummary { get; init; } = string.Empty;
+
+    public long AppliedSequence { get; init; }
 
     public IReadOnlyList<StrategyResultDiagnosticReceipt> Diagnostics { get; init; }
 
@@ -221,6 +228,22 @@ public enum ProcessRecoveryRouteKind
     TemplateRepair
 }
 
+public enum ProcessRuntimeBlockedRecoveryPhase
+{
+    CurrentStep,
+    UpstreamProducer,
+    RestoredConsumer
+}
+
+public sealed record ProcessRuntimeBlockedRecoveryActionReceipt(
+    StrategyResultIdempotencyKey SourceResultIdempotencyKey,
+    ProcessStepInstanceId SourceBlockedStepInstanceId,
+    ProcessStepInstanceId TargetStepInstanceId,
+    string DiagnosticFingerprint,
+    ProcessRecoveryRouteKind RecoveryRouteKind,
+    ProcessRuntimeBlockedRecoveryPhase Phase,
+    DateTimeOffset AppliedAtUtc);
+
 public sealed record DispatchWorkItem
 {
     public DispatchWorkItem(
@@ -280,7 +303,9 @@ public sealed record ProcessRuntimeMutation(
 public sealed record ProcessRuntimeCommitRequest(
     RuntimeCommandId CommandId,
     ProcessRuntimeStateSnapshot OriginalState,
-    ProcessRuntimeMutation Mutation);
+    ProcessRuntimeMutation Mutation,
+    ProcessRuntimeParentStepReference? ParentStepPrecondition = null,
+    ProcessInstancePlan? InitialPlan = null);
 
 public sealed record ProcessRuntimeCommitResult(
     ProcessRuntimeTransitionOutcome Outcome,

@@ -1,10 +1,36 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using CanDoItAll.Processes.Application;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessApiIntegrationTests
 {
+    [Fact]
+    public async Task Projection_reads_do_not_require_foreground_catchup_service()
+    {
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            services =>
+            {
+                services.RemoveAll<ProcessRuntimeProjectionCatchupService>();
+                services.AddScoped<ProcessRuntimeProjectionCatchupService>(_ =>
+                    throw new InvalidOperationException(
+                        "Projection reads must not resolve foreground catch-up."));
+            });
+        var missingRunId = Guid.NewGuid();
+
+        using var liveResponse = await host.Client.GetAsync("/api/processes/live");
+        using var detailResponse = await host.Client.GetAsync($"/api/processes/runs/{missingRunId:D}");
+        using var historyResponse = await host.Client.GetAsync($"/api/processes/runs/{missingRunId:D}/history");
+
+        Assert.True(liveResponse.IsSuccessStatusCode, await liveResponse.Content.ReadAsStringAsync());
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, detailResponse.StatusCode);
+        Assert.True(historyResponse.IsSuccessStatusCode, await historyResponse.Content.ReadAsStringAsync());
+    }
+
     [Fact]
     public async Task Contract_lists_launch_check_and_launch_check_does_not_create_run()
     {
@@ -20,6 +46,10 @@ public sealed class ProcessApiIntegrationTests
         Assert.Contains("GET /api/processes/contract", endpoints);
         Assert.Contains("POST /api/processes/launch/check", endpoints);
         Assert.Contains("POST /api/processes/launch", endpoints);
+        Assert.Contains("GET /api/processes/runs", endpoints);
+        Assert.Contains("GET /api/processes/runs/analytics", endpoints);
+        Assert.Contains("GET /api/processes/runs/{runId}/summary", endpoints);
+        Assert.Contains("GET /api/processes/runs/{runId}/graph", endpoints);
 
         var checkResponse = await host.Client.PostAsJsonAsync(
             "/api/processes/launch/check",

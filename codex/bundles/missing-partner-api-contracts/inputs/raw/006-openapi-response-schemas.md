@@ -1,6 +1,6 @@
 # 006 — Complete OpenAPI response schemas
 
-Status: **missing for key endpoints in the pinned snapshot**  
+Status: **missing for key endpoints in the pinned snapshot**
 Priority: **high**
 
 ## Observed contract

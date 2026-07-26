@@ -1,6 +1,6 @@
 # 003 — Portable JSON Schema output contract for agent runs
 
-Status: **missing in the pinned public DTO**  
+Status: **missing in the pinned public DTO**
 Priority: **high**
 
 ## Observed contract

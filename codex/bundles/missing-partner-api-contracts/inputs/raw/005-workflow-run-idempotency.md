@@ -1,6 +1,6 @@
 # 005 — Workflow start idempotency
 
-Status: **missing in the pinned public start request**  
+Status: **missing in the pinned public start request**
 Priority: **high**
 
 ## Observed contract

@@ -22,7 +22,8 @@ internal static class ProcessPersistenceMappers
             PlanHash = state.PlanHash,
             Status = state.Status,
             UpdatedAtUtc = state.UpdatedAtUtc,
-            ConcurrencyToken = Guid.NewGuid()
+            ConcurrencyToken = Guid.NewGuid(),
+            BlockedRecoveryActionsJson = SerializeBlockedRecoveryActions(state.BlockedRecoveryActions)
         };
 
         foreach (var step in state.Steps)
@@ -63,8 +64,10 @@ internal static class ProcessPersistenceMappers
             });
         }
 
-        foreach (var receipt in state.AppliedResults)
+        var appliedResultSequences = ResolveAppliedResultSequences(state.AppliedResults);
+        for (var index = 0; index < state.AppliedResults.Count; index++)
         {
+            var receipt = state.AppliedResults[index];
             entity.ResultReceipts.Add(new ProcessStrategyResultReceiptEntity
             {
                 RunId = state.RunId.Value,
@@ -74,6 +77,8 @@ internal static class ProcessPersistenceMappers
                 Outcome = receipt.Outcome.ToString(),
                 AppliedStepStatus = receipt.AppliedStepStatus,
                 ResultHash = receipt.ResultHash,
+                UserSafeSummary = NormalizeNullableText(receipt.UserSafeSummary),
+                AppliedSequence = appliedResultSequences[index],
                 DiagnosticsJson = SerializeDiagnostics(receipt.Diagnostics),
                 ProducedArtifactsJson = SerializeProducedArtifacts(receipt.ProducedArtifacts),
                 RecoveryDecisionJson = SerializeRecoveryDecision(receipt.RecoveryDecision)
@@ -146,7 +151,9 @@ internal static class ProcessPersistenceMappers
         }
 
         var receipts = new List<StrategyResultReceipt>(entity.ResultReceipts.Count);
-        foreach (var receipt in entity.ResultReceipts)
+        ValidatePersistedReceiptSequences(entity.ResultReceipts);
+        foreach (var receipt in entity.ResultReceipts
+                     .OrderBy(item => item.AppliedSequence))
         {
             receipts.Add(new StrategyResultReceipt(
                 new ProcessStepInstanceId(receipt.StepInstanceId),
@@ -157,7 +164,11 @@ internal static class ProcessPersistenceMappers
                 receipt.ResultHash,
                 DeserializeDiagnostics(receipt.DiagnosticsJson),
                 DeserializeProducedArtifacts(receipt.ProducedArtifactsJson),
-                DeserializeRecoveryDecision(receipt.RecoveryDecisionJson)));
+                DeserializeRecoveryDecision(receipt.RecoveryDecisionJson))
+            {
+                UserSafeSummary = NormalizeOptionalText(receipt.UserSafeSummary),
+                AppliedSequence = receipt.AppliedSequence
+            });
         }
 
         var availableSlots = new HashSet<ArtifactSlotId>();
@@ -191,7 +202,9 @@ internal static class ProcessPersistenceMappers
             availableSlots,
             entity.UpdatedAtUtc)
         {
-            ConnectedInputArtifacts = connectedInputArtifacts
+            ConnectedInputArtifacts = connectedInputArtifacts,
+            BlockedRecoveryActions = DeserializeBlockedRecoveryActions(
+                entity.BlockedRecoveryActionsJson)
         };
     }
 
@@ -433,6 +446,12 @@ internal static class ProcessPersistenceMappers
             .ToArray();
     }
 
+    private static string NormalizeOptionalText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private static string? NormalizeNullableText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     private static string SerializeProducedArtifacts(IReadOnlyList<StrategyResultArtifactReceipt> artifacts)
         => JsonSerializer.Serialize(
             artifacts.Select(artifact => new PersistedStrategyResultArtifact(
@@ -573,6 +592,114 @@ internal static class ProcessPersistenceMappers
                 ReceiptJsonOptions);
     }
 
+    private static string SerializeBlockedRecoveryActions(
+        IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> actions)
+    {
+        return JsonSerializer.Serialize(
+            actions.Select(action => new PersistedBlockedRecoveryAction(
+                action.SourceResultIdempotencyKey.Value,
+                action.SourceBlockedStepInstanceId.Value,
+                action.TargetStepInstanceId.Value,
+                action.DiagnosticFingerprint,
+                action.RecoveryRouteKind,
+                action.Phase,
+                action.AppliedAtUtc)),
+            ReceiptJsonOptions);
+    }
+
+    private static IReadOnlyList<long> ResolveAppliedResultSequences(
+        IReadOnlyList<StrategyResultReceipt> receipts)
+    {
+        if (receipts.Count == 0)
+        {
+            return [];
+        }
+
+        if (receipts.All(receipt => receipt.AppliedSequence == 0))
+        {
+            return Enumerable.Range(1, receipts.Count)
+                .Select(index => (long)index)
+                .ToArray();
+        }
+
+        if (receipts.Any(receipt => receipt.AppliedSequence <= 0))
+        {
+            throw new InvalidOperationException(
+                "Process result receipt sequences cannot mix canonical positive values with legacy zero values.");
+        }
+
+        var sequences = receipts
+            .Select(receipt => receipt.AppliedSequence)
+            .ToArray();
+        if (sequences.Distinct().Count() != sequences.Length ||
+            !sequences.SequenceEqual(sequences.OrderBy(sequence => sequence)))
+        {
+            throw new InvalidOperationException(
+                "Process result receipt sequences must be unique and ordered in the runtime state snapshot.");
+        }
+
+        return sequences;
+    }
+
+    private static void ValidatePersistedReceiptSequences(
+        IReadOnlyList<ProcessStrategyResultReceiptEntity> receipts)
+    {
+        if (receipts.Any(receipt => receipt.AppliedSequence <= 0) ||
+            receipts.Select(receipt => receipt.AppliedSequence).Distinct().Count() != receipts.Count)
+        {
+            throw new InvalidOperationException(
+                "Persisted process result receipt sequences must be positive and unique.");
+        }
+    }
+
+    private static IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> DeserializeBlockedRecoveryActions(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var actions = JsonSerializer.Deserialize<PersistedBlockedRecoveryAction[]>(
+            value,
+            ReceiptJsonOptions) ?? [];
+        if (actions.Any(action =>
+                action.SourceResultIdempotencyKey == Guid.Empty ||
+                action.SourceBlockedStepInstanceId == Guid.Empty ||
+                action.TargetStepInstanceId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(action.DiagnosticFingerprint) ||
+                action.RecoveryRouteKind == ProcessRecoveryRouteKind.None ||
+                action.AppliedAtUtc.Offset != TimeSpan.Zero))
+        {
+            throw new InvalidOperationException(
+                "Persisted blocked-recovery action ledger contains an invalid entry.");
+        }
+
+        var duplicateIdentity = actions
+            .GroupBy(action => (
+                action.SourceBlockedStepInstanceId,
+                action.SourceResultIdempotencyKey,
+                action.Phase,
+                action.TargetStepInstanceId))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateIdentity is not null)
+        {
+            throw new InvalidOperationException(
+                "Persisted blocked-recovery action ledger contains a duplicate phase identity.");
+        }
+
+        return actions
+            .Select(action => new ProcessRuntimeBlockedRecoveryActionReceipt(
+                new StrategyResultIdempotencyKey(action.SourceResultIdempotencyKey),
+                new ProcessStepInstanceId(action.SourceBlockedStepInstanceId),
+                new ProcessStepInstanceId(action.TargetStepInstanceId),
+                action.DiagnosticFingerprint.Trim(),
+                action.RecoveryRouteKind,
+                action.Phase,
+                action.AppliedAtUtc))
+            .ToArray();
+    }
+
     private static ProcessRecoveryDecisionReceipt? DeserializeRecoveryDecision(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -666,4 +793,13 @@ internal static class ProcessPersistenceMappers
         int MaximumAutomaticRetryAttempts = 0,
         int SameDiagnosticFingerprintAttempt = 0,
         int MaximumSameDiagnosticFingerprintAttempts = 0);
+
+    private sealed record PersistedBlockedRecoveryAction(
+        Guid SourceResultIdempotencyKey,
+        Guid SourceBlockedStepInstanceId,
+        Guid TargetStepInstanceId,
+        string DiagnosticFingerprint,
+        ProcessRecoveryRouteKind RecoveryRouteKind,
+        ProcessRuntimeBlockedRecoveryPhase Phase,
+        DateTimeOffset AppliedAtUtc);
 }

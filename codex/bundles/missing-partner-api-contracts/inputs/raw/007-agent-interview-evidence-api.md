@@ -1,6 +1,6 @@
 # 007 — Agent interview and evaluation evidence API
 
-Status: **missing as a canonical cross-module contract**  
+Status: **missing as a canonical cross-module contract**
 Priority: **high**
 
 ## Observed contract
