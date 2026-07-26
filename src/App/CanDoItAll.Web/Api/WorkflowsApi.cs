@@ -1,10 +1,11 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
-using Microsoft.AspNetCore.Mvc;
+using CanDoItAll.SharedKernel;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
 
@@ -17,6 +18,8 @@ internal static class WorkflowsApi
             .DisableAntiforgery();
 
         workflows.MapWorkflowRunControlApi();
+        workflows.MapWorkflowRunIdempotencyApi();
+        workflows.MapWorkflowStableIdentityApi();
 
         workflows.MapGet("/contract", () => Results.Ok(new WorkflowApiContractResponse(
             [
@@ -26,6 +29,9 @@ internal static class WorkflowsApi
                 "GET /api/workflows/runtime-backends",
                 "GET /api/workflows/executor-catalog",
                 "GET /api/workflows/definitions",
+                "GET /api/workflows/definitions?externalNamespace={namespace}&externalKey={key}",
+                "GET /api/workflows/definitions/by-template-key/{templateKey}",
+                "GET /api/workflows/definitions/by-external-key/{externalNamespace}/{externalKey}",
                 "POST /api/workflows/definitions",
                 "GET /api/workflows/definitions/{workflowId}",
                 "GET /api/workflows/definitions/{workflowId}/versions/{versionId}",
@@ -45,6 +51,7 @@ internal static class WorkflowsApi
                 "DELETE /api/workflows/components/{componentId}",
                 "POST /api/workflows/test-runs",
                 "POST /api/workflows/runs/start",
+                "GET /api/workflows/runs/by-idempotency-key/{key}",
                 "GET /api/workflows/runs",
                 "GET /api/workflows/runs/page",
                 "GET /api/workflows/runs/{runId}",
@@ -84,12 +91,6 @@ internal static class WorkflowsApi
                 IWorkflowExecutorCatalog executorCatalog) =>
             Results.Ok(executorCatalog.ListExecutors()))
             .WithName("ListWorkflowExecutorCatalog");
-
-        workflows.MapGet("/definitions", async (
-                IWorkflowCatalogService catalogService,
-                CancellationToken cancellationToken) =>
-            Results.Ok(await catalogService.ListDefinitionsAsync(cancellationToken)))
-            .WithName("ListWorkflowDefinitions");
 
         workflows.MapGet("/definitions/{workflowId:guid}", async (
                 Guid workflowId,
@@ -305,7 +306,12 @@ internal static class WorkflowsApi
                 runtimeManager,
                 runStore,
                 cancellationToken))
-            .WithName("GetWorkflowRunDetail");
+            .WithName("GetWorkflowRunDetail")
+            .Produces<WorkflowRunDetailApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden,
+                StatusCodes.Status404NotFound);
 
         workflows.MapGet("/runs/{runId:guid}/events", async (
                 Guid runId,
@@ -377,6 +383,7 @@ internal static class WorkflowsApi
         workflows.MapPost("/definitions/{workflowId:guid}/runs/start", async (
                 Guid workflowId,
                 WorkflowRunStartApiRequest request,
+                [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
                 HttpContext httpContext,
                 IWorkflowLaunchService launchService,
                 IWorkflowRuntimeManager runtimeManager,
@@ -385,15 +392,24 @@ internal static class WorkflowsApi
             await StartWorkflowRunAsync(
                 workflowId,
                 request,
+                idempotencyKey,
                 httpContext,
                 launchService,
                 runtimeManager,
                 runStore,
                 cancellationToken))
-            .WithName("StartWorkflowDefinitionRun");
+            .WithName("StartWorkflowDefinitionRun")
+            .Produces<WorkflowRunStartApiResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         workflows.MapPost("/runs/start", async (
                 WorkflowRunStartApiRequest request,
+                [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
                 HttpContext httpContext,
                 IWorkflowLaunchService launchService,
                 IWorkflowRuntimeManager runtimeManager,
@@ -402,12 +418,20 @@ internal static class WorkflowsApi
             await StartWorkflowRunAsync(
                 routeWorkflowId: null,
                 request,
+                idempotencyKey,
                 httpContext,
                 launchService,
                 runtimeManager,
                 runStore,
                 cancellationToken))
-            .WithName("StartWorkflowRun");
+            .WithName("StartWorkflowRun")
+            .Produces<WorkflowRunStartApiResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
 
         workflows.MapPost("/runs/{runId:guid}/cancel", async (
                 Guid runId,
@@ -450,6 +474,7 @@ internal static class WorkflowsApi
     private static async Task<IResult> StartWorkflowRunAsync(
         Guid? routeWorkflowId,
         WorkflowRunStartApiRequest request,
+        string? idempotencyKey,
         HttpContext httpContext,
         IWorkflowLaunchService launchService,
         IWorkflowRuntimeManager runtimeManager,
@@ -492,26 +517,52 @@ internal static class WorkflowsApi
                         new WorkflowLaunchCorrelationId(httpContext.TraceIdentifier)),
                     request.InputJson ?? "{}",
                     WorkflowLaunchCompletionPolicy.WaitForStopped,
-                    new WorkflowLaunchIdempotency.NotRequested())
+                    ResolveLaunchIdempotency(httpContext, idempotencyKey))
                 {
                     RequestedBackend = request.RequestedBackend
                 },
                 cancellationToken);
-            return Results.Ok(await BuildRunDetailAsync(
+            var detail = await BuildRunDetailAsync(
                 launchResult.Run,
                 runtimeManager,
                 runStore,
-                cancellationToken));
+                cancellationToken);
+            var keyHash = launchResult.ResolvedRequest.Idempotency is
+                WorkflowLaunchIdempotency.CallerSupplied keyed
+                    ? WorkflowLaunchIdempotencyRequestFactory.CreateKeyHash(keyed.Key)
+                    : null;
+            return Results.Ok(WorkflowRunStartApiResponse.From(
+                detail,
+                launchResult.IdempotencyDisposition,
+                keyHash));
         }
         catch (WorkflowLaunchValidationException exception)
         {
-            return Results.BadRequest(new WorkflowRunStartRejectedApiResponse(
-                exception.Validation,
-                exception.Message));
+            var errors = exception.Validation.Issues.Count == 0
+                ?
+                [
+                    new ApiErrorItem(
+                        "workflows.validation-failed",
+                        exception.Message,
+                        ErrorSeverity.Error)
+                ]
+                : exception.Validation.Issues
+                    .Select(issue => new ApiErrorItem(
+                        $"workflows.validation.{issue.Code}",
+                        issue.Message,
+                        ErrorSeverity.Error))
+                    .ToArray();
+            return Results.BadRequest(new ApiErrorResponse(errors));
         }
         catch (ArgumentException exception)
         {
             return ApiEndpointResults.BadRequest(exception.Message, "workflows.request-invalid");
+        }
+        catch (WorkflowLaunchIdempotencyConflictException)
+        {
+            return ApiEndpointResults.Conflict(
+                "The Idempotency-Key was already used for a different workflow launch request.",
+                "workflows.idempotency-key-conflict");
         }
         catch (InvalidOperationException exception)
         {
@@ -521,6 +572,29 @@ internal static class WorkflowsApi
         {
             return ApiEndpointResults.NotFound(exception.Message, "workflows.resource-not-found");
         }
+    }
+
+    private static WorkflowLaunchIdempotency ResolveLaunchIdempotency(
+        HttpContext httpContext,
+        string? idempotencyKey)
+    {
+        const string headerName = "Idempotency-Key";
+        if (!httpContext.Request.Headers.TryGetValue(headerName, out var values))
+        {
+            return new WorkflowLaunchIdempotency.NotRequested();
+        }
+
+        if (values.Count != 1 ||
+            string.IsNullOrWhiteSpace(idempotencyKey) ||
+            idempotencyKey.Contains(',', StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"{headerName} must contain exactly one non-empty value.",
+                headerName);
+        }
+
+        return new WorkflowLaunchIdempotency.CallerSupplied(
+            new WorkflowLaunchIdempotencyKey(idempotencyKey));
     }
 
     private static WorkflowLaunchActor ResolveApiActor(ClaimsPrincipal principal)
@@ -801,6 +875,28 @@ internal sealed record WorkflowRunDetailApiResponse(
     IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests,
     IReadOnlyList<WorkflowCheckpointRecord> Checkpoints);
 
-internal sealed record WorkflowRunStartRejectedApiResponse(
-    WorkflowValidationResult Validation,
-    string ErrorMessage);
+internal sealed record WorkflowRunStartApiResponse(
+    WorkflowRunSnapshot Run,
+    IReadOnlyList<WorkflowEventRecord> Events,
+    IReadOnlyList<WorkflowArtifactRecord> Artifacts,
+    IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests,
+    IReadOnlyList<WorkflowCheckpointRecord> Checkpoints,
+    WorkflowLaunchIdempotencyDisposition IdempotencyDisposition,
+    string? IdempotencyKeyHash,
+    bool Created,
+    bool Replayed)
+{
+    public static WorkflowRunStartApiResponse From(
+        WorkflowRunDetailApiResponse detail,
+        WorkflowLaunchIdempotencyDisposition disposition,
+        string? idempotencyKeyHash) => new(
+            detail.Run,
+            detail.Events,
+            detail.Artifacts,
+            detail.PendingExternalRequests,
+            detail.Checkpoints,
+            disposition,
+            idempotencyKeyHash,
+            Created: disposition is not WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun,
+            Replayed: disposition is WorkflowLaunchIdempotencyDisposition.ReplayedExistingRun);
+}

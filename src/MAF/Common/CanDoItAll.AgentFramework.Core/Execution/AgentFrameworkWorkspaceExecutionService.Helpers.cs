@@ -230,6 +230,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionInvocationContext context,
         bool autoApprovePendingToolCalls,
         AgentStructuredOutputContract? structuredOutput,
+        PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput,
         CancellationToken cancellationToken)
     {
         if (store is ISandboxWorkspaceExecutionRunStore executionRunStore &&
@@ -245,6 +246,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 context,
                 autoApprovePendingToolCalls,
                 structuredOutput,
+                jsonSchemaOutput,
                 cancellationToken);
         }
 
@@ -291,7 +293,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 SerializedSessionStateJson: null,
                 Messages: [],
                 PendingApprovals: []);
-            var run = CreatePreparingRun(agent, provider, session.Id, session.Title, context, prompt, now, autoApprovePendingToolCalls, structuredOutput);
+            var run = CreatePreparingRun(
+                agent,
+                provider,
+                session.Id,
+                session.Title,
+                context,
+                prompt,
+                now,
+                autoApprovePendingToolCalls,
+                structuredOutput,
+                jsonSchemaOutput);
             var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
                 session with
                 {
@@ -332,6 +344,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionInvocationContext context,
         bool autoApprovePendingToolCalls,
         AgentStructuredOutputContract? structuredOutput,
+        PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput,
         CancellationToken cancellationToken)
     {
         var catalog = await store.LoadCatalogAsync(cancellationToken);
@@ -381,7 +394,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             SerializedSessionStateJson: null,
             Messages: [],
             PendingApprovals: []);
-        var run = CreatePreparingRun(agent, provider, session.Id, session.Title, context, prompt, now, autoApprovePendingToolCalls, structuredOutput);
+        var run = CreatePreparingRun(
+            agent,
+            provider,
+            session.Id,
+            session.Title,
+            context,
+            prompt,
+            now,
+            autoApprovePendingToolCalls,
+            structuredOutput,
+            jsonSchemaOutput);
         var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
             session with
             {
@@ -447,7 +470,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         string prompt,
         DateTimeOffset now,
         bool autoApprovePendingToolCalls,
-        AgentStructuredOutputContract? structuredOutput = null)
+        AgentStructuredOutputContract? structuredOutput = null,
+        PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput = null)
     {
         var sourceKind = string.IsNullOrWhiteSpace(context.SourceKind)
             ? ExecutionInvocationContext.Empty.SourceKind
@@ -495,11 +519,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             SchedulerRunId: context.SchedulerRunId ?? string.Empty,
             MessageId: context.MessageId ?? string.Empty,
             Revision: 1L,
-            StructuredOutputContractKey: structuredOutput?.ContractKey ?? string.Empty,
+            StructuredOutputContractKey: structuredOutput?.ContractKey ??
+                                         (jsonSchemaOutput is null
+                                             ? string.Empty
+                                             : $"{jsonSchemaOutput.Kind}:{jsonSchemaOutput.Version}:{jsonSchemaOutput.Name}"),
             StructuredOutputTypeName: structuredOutput?.OutputType.AssemblyQualifiedName ?? string.Empty,
-            StructuredOutputSchemaName: structuredOutput?.SchemaName ?? string.Empty,
+            StructuredOutputSchemaName: structuredOutput?.SchemaName ?? jsonSchemaOutput?.Name ?? string.Empty,
             StructuredOutputSchemaDescription: structuredOutput?.SchemaDescription ?? string.Empty,
-            ProviderProfileId: provider.Id);
+            ProviderProfileId: provider.Id,
+            StructuredOutputJsonSchema: jsonSchemaOutput?.SchemaJson ?? string.Empty,
+            StructuredOutputSchemaHash: jsonSchemaOutput?.SchemaHash ?? string.Empty,
+            StructuredOutputSchemaVersion: jsonSchemaOutput?.Version ?? string.Empty,
+            StructuredOutputSchemaStrict: jsonSchemaOutput?.Strict ?? false);
     }
 
     private static bool ShouldGroundPromptExternalTargetAliases(

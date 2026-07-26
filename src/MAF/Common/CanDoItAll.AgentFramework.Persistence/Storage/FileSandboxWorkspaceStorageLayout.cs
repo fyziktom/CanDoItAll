@@ -32,6 +32,11 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
 
     public string ExecutionOrphansRoot => Path.Combine(ExecutionStorageRoot, "orphans");
 
+    public string RecruitingEvidenceRoot => Path.Combine(DataRoot, "agent-recruiting", "interviews");
+
+    public string RecruitingInterviewPath(Guid interviewId)
+        => Path.Combine(RecruitingEvidenceRoot, $"{interviewId:N}.json");
+
     public string SessionPath(Guid chatSessionId) => Path.Combine(ExecutionSessionsRoot, $"{chatSessionId:N}.json");
 
     public string RunRoot(Guid executionRunId) => Path.Combine(ExecutionRunsRoot, executionRunId.ToString("N"));

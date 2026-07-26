@@ -8,6 +8,24 @@ internal sealed record ApiErrorResponse(IReadOnlyList<ApiErrorItem> Errors);
 
 internal sealed record ApiErrorItem(string Code, string Message, ErrorSeverity Severity);
 
+internal static class ApiEndpointMetadata
+{
+    public static RouteHandlerBuilder ProducesApiErrors(
+        this RouteHandlerBuilder builder,
+        params int[] statusCodes)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(statusCodes);
+
+        foreach (var statusCode in statusCodes.Distinct())
+        {
+            builder.Produces<ApiErrorResponse>(statusCode);
+        }
+
+        return builder;
+    }
+}
+
 internal static class ApiEndpointResults
 {
     public static IResult FromResult(Result result)
@@ -56,6 +74,11 @@ internal static class ApiEndpointResults
     public static IResult BadRequest(string message, string code)
     {
         return Results.BadRequest(MapErrors([Error.Validation(message, code)]));
+    }
+
+    public static IResult Conflict(string message, string code)
+    {
+        return Results.Conflict(MapErrors([Error.Failure(message, code)]));
     }
 
     public static IResult FromException(Exception exception)

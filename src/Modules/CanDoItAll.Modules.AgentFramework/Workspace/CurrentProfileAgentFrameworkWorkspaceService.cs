@@ -155,6 +155,61 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService(
         return agentId;
     }
 
+    public async Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
+        Stream package,
+        AgentPackageImportCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var receipt = await ResolveService().ImportAgentPackageAsync(package, command, cancellationToken);
+        if (!receipt.Replayed)
+        {
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        }
+
+        return receipt;
+    }
+
+    public Task<AgentExternalProvisioningResource> GetAgentByExternalKeyAsync(
+        string externalNamespace,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        return ResolveService().GetAgentByExternalKeyAsync(
+            externalNamespace,
+            key,
+            cancellationToken);
+    }
+
+    public async Task<AgentExternalProvisioningReceipt> ProvisionAgentByExternalKeyAsync(
+        AgentExternalProvisioningCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var receipt = await ResolveService().ProvisionAgentByExternalKeyAsync(
+            command,
+            cancellationToken);
+        if (!receipt.Replayed)
+        {
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        }
+
+        return receipt;
+    }
+
+    public async Task<AgentExternalProvisioningReceipt> ArchiveAgentByExternalKeyAsync(
+        AgentExternalArchiveCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var receipt = await ResolveService().ArchiveAgentByExternalKeyAsync(
+            command,
+            cancellationToken);
+        if (!receipt.Replayed)
+        {
+            await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        }
+
+        return receipt;
+    }
+
     public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
     {
         return ResolveService().ListProvidersAsync(cancellationToken);
