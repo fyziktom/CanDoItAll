@@ -1,6 +1,8 @@
 # Codex Skills
 
-This repo ships a portable CanDoItAll Codex skill pack under `codex/skills`.
+The canonical portable CanDoItAll Codex skill pack lives in the sibling
+`CanDoItAll.SharedInfo` repository under `codex/skills`. This repository retains its
+historical mirror during the migration period, but its installers source SharedInfo.
 
 It includes these custom skills:
 
@@ -45,8 +47,8 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 
 That script:
 
-- copies the custom CanDoItAll skills from this repo into `$CODEX_HOME\skills`
-- copies repo-owned skill support folders such as `_csharp-architecture-shared` into `$CODEX_HOME\skills`
+- installs the canonical custom CanDoItAll skills from sibling `CanDoItAll.SharedInfo` into `$CODEX_HOME\skills`
+- installs SharedInfo-owned support folders such as `_csharp-architecture-shared` into `$CODEX_HOME\skills`
 - clones or updates the public `openai/skills` and `dotnet/skills` repos into temp caches
 - finds the required public sibling skills by name in the correct upstream repo
 - installs those sibling skills into the same Codex home
