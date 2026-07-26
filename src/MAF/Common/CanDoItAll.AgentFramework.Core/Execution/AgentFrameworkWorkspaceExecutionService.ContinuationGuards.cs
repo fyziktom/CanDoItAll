@@ -41,14 +41,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .FirstOrDefault()
             ?? throw new InvalidOperationException("This execution run does not have a persisted metric result yet.");
         var assistantMessage = detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant);
-        var responseText = assistantMessage?.Content ?? detail.Run.ResultSummary;
+        var responseText = !string.IsNullOrWhiteSpace(detail.Run.StructuredOutputRawOutput)
+            ? detail.Run.StructuredOutputRawOutput
+            : assistantMessage?.Content ?? detail.Run.ResultSummary;
+        var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Restore(detail.Run);
+        var structuredOutput = jsonSchemaOutput is null ||
+                               string.IsNullOrEmpty(detail.Run.StructuredOutputValidationStatus)
+            ? null
+            : AgentJsonSchemaOutputContractProcessor.ValidateOutput(jsonSchemaOutput, responseText);
 
         return new ExecutionRunResult(
             executionRunId,
             detail.Run.ChatSessionId,
             responseText,
             assistantMessage,
-            metric);
+            metric)
+        {
+            State = detail.Run.State,
+            StructuredOutput = structuredOutput
+        };
     }
 
     private async Task<ExecutionRunContinuationStart> BeginPendingApprovalContinuationAsync(

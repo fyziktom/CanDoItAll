@@ -45,6 +45,20 @@ public interface IWorkflowLaunchIdempotencyStore
         CancellationToken cancellationToken = default);
 }
 
+public interface IWorkflowLaunchIdempotencyQueryStore
+{
+    Task<WorkflowLaunchIdempotencyRecord?> FindApiKeyAsync(
+        WorkflowLaunchIdempotencyKey callerKey,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWorkflowLaunchIdempotencyQueryService
+{
+    Task<WorkflowLaunchIdempotencyEvidence?> FindApiKeyAsync(
+        WorkflowLaunchIdempotencyKey callerKey,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class WorkflowLaunchIdempotencyConflictException(
     WorkflowLaunchIdempotencyScope scope) : InvalidOperationException(
         $"Workflow launch idempotency key '{scope.CallerKey}' was reused for a different request in the same launch scope.")

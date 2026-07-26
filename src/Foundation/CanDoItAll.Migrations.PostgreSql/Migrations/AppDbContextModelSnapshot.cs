@@ -743,6 +743,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExternalKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ExternalNamespace")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid>("VersionId")
                         .IsConcurrencyToken()
                         .HasColumnType("uuid");
@@ -751,6 +761,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasName("PK_AgentFramework_WorkflowDefinitionHeads");
 
                     b.HasIndex("VersionId");
+
+                    b.HasIndex("ExternalNamespace", "ExternalKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkflowDefinitionHeads_ExternalIdentity")
+                        .HasFilter("\"ExternalNamespace\" <> ''");
 
                     b.ToTable("AgentFramework_WorkflowDefinitionHeads", (string)null);
                 });
@@ -900,6 +915,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("CanonicalInputHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<Guid>("ClaimToken")
                         .HasColumnType("uuid");
 
@@ -918,6 +938,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<DateTimeOffset?>("LastReplayedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("LeaseExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -931,6 +954,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ReplayCount")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("RequestedVersionId")
                         .HasColumnType("uuid");
@@ -948,6 +974,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CallerKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowLaunchIdempotency_ApiKey")
+                        .HasFilter("\"OriginKind\" = 0");
 
                     b.HasIndex("ReservedRunId")
                         .IsUnique()

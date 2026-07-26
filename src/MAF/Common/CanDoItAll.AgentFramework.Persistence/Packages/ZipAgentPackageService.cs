@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -11,6 +12,28 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
     private const string ManagerReviewInputExportSummary = "HR manager-review request redacted for export.";
     private const string ManagerReviewResultExportSummary = "HR manager-review response redacted for export.";
     private const string ManagerReviewLogExportMessage = "HR manager-review execution log redacted for export.";
+    private const string SupportedPackageSchemaVersion = "1.0";
+
+    private static readonly IReadOnlySet<string> AllowedArchiveEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "manifest.json",
+        "agent.md",
+        "instructions.txt",
+        "memory.json",
+        "sessions.json",
+        "metrics.json"
+    };
+
+    private static readonly IReadOnlySet<string> RawSecretPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "accessToken",
+        "apiKey",
+        "bearerToken",
+        "clientSecret",
+        "password",
+        "privateKey",
+        "refreshToken"
+    };
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -116,21 +139,51 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
             throw new FileNotFoundException("The selected package does not exist.", packagePath);
         }
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"agent-import-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
+        await using var package = File.OpenRead(packagePath);
+        return await ImportAsync(package, new AgentPackageReadOptions(), cancellationToken);
+    }
 
+    public async Task<AgentImportResult> ImportAsync(
+        Stream package,
+        AgentPackageReadOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        ArgumentNullException.ThrowIfNull(options);
+        ValidateReadOptions(options);
+
+        await using var packageBuffer = await ReadBoundedPackageAsync(package, options.MaximumPackageBytes, cancellationToken);
+        var packageSha256 = Convert.ToHexString(SHA256.HashData(packageBuffer.GetBuffer().AsSpan(0, checked((int)packageBuffer.Length))));
+        if (!string.IsNullOrWhiteSpace(options.ExpectedPackageSha256) &&
+            !string.Equals(packageSha256, NormalizeSha256(options.ExpectedPackageSha256), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.hash-mismatch",
+                "The uploaded package does not match the expected SHA-256 hash.");
+        }
+
+        packageBuffer.Position = 0;
         try
         {
-            ZipFile.ExtractToDirectory(packagePath, tempRoot);
-            var manifestPath = Path.Combine(tempRoot, "manifest.json");
-            if (!File.Exists(manifestPath))
+            using var archive = new ZipArchive(packageBuffer, ZipArchiveMode.Read, leaveOpen: true);
+            ValidateArchiveEntries(archive, options);
+            var manifestEntry = archive.GetEntry("manifest.json")
+                ?? throw new AgentPackageValidationException(
+                    "agent-package.manifest-missing",
+                    "The package is missing manifest.json.");
+            var json = await ReadManifestAsync(manifestEntry, options.MaximumManifestBytes, cancellationToken);
+            RejectRawSecretMaterial(json);
+            var manifest = JsonSerializer.Deserialize<AgentPackageManifest>(json, SerializerOptions)
+                ?? throw new AgentPackageValidationException(
+                    "agent-package.manifest-invalid",
+                    "The package manifest could not be read.");
+            if (!string.Equals(manifest.SchemaVersion, SupportedPackageSchemaVersion, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("The package is missing manifest.json.");
+                throw new AgentPackageValidationException(
+                    "agent-package.schema-version-unsupported",
+                    $"Package schema version '{manifest.SchemaVersion}' is not supported.");
             }
 
-            var json = await File.ReadAllTextAsync(manifestPath, cancellationToken);
-            var manifest = JsonSerializer.Deserialize<AgentPackageManifest>(json, SerializerOptions)
-                ?? throw new InvalidOperationException("The package manifest could not be read.");
             var importedRuns = NormalizeExecutionRuns(manifest.Runs);
             var latestRunBySessionId = BuildLatestRunBySessionId(importedRuns);
 
@@ -147,16 +200,245 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
                 Approvals = manifest.Approvals,
                 Artifacts = manifest.Artifacts,
                 Checkpoints = manifest.Checkpoints,
-                ToolReceipts = manifest.ToolReceipts
+                ToolReceipts = manifest.ToolReceipts,
+                PackageSha256 = packageSha256,
+                PackageSchemaVersion = manifest.SchemaVersion
             };
         }
-        finally
+        catch (AgentPackageValidationException)
         {
-            if (Directory.Exists(tempRoot))
+            throw;
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.invalid-archive",
+                $"The uploaded package is not a valid agent archive: {exception.Message}");
+        }
+        catch (JsonException exception)
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.manifest-invalid",
+                $"The package manifest is invalid JSON: {exception.Message}");
+        }
+    }
+
+    private static void ValidateReadOptions(AgentPackageReadOptions options)
+    {
+        if (options.MaximumPackageBytes <= 0 ||
+            options.MaximumExpandedBytes <= 0 ||
+            options.MaximumEntryCount <= 0 ||
+            options.MaximumManifestBytes <= 0 ||
+            options.MaximumManifestBytes > options.MaximumExpandedBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Package import limits must be positive and internally consistent.");
+        }
+    }
+
+    private static async Task<MemoryStream> ReadBoundedPackageAsync(
+        Stream package,
+        long maximumPackageBytes,
+        CancellationToken cancellationToken)
+    {
+        var capacity = checked((int)Math.Min(maximumPackageBytes, 1024 * 1024));
+        var buffer = new MemoryStream(capacity);
+        var chunk = new byte[64 * 1024];
+        long total = 0;
+
+        while (true)
+        {
+            var read = await package.ReadAsync(chunk, cancellationToken);
+            if (read == 0)
             {
-                Directory.Delete(tempRoot, recursive: true);
+                break;
+            }
+
+            total += read;
+            if (total > maximumPackageBytes)
+            {
+                await buffer.DisposeAsync();
+                throw new AgentPackageValidationException(
+                    "agent-package.too-large",
+                    $"The uploaded package exceeds the {maximumPackageBytes}-byte limit.");
+            }
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
+        }
+
+        buffer.Position = 0;
+        return buffer;
+    }
+
+    private static void ValidateArchiveEntries(ZipArchive archive, AgentPackageReadOptions options)
+    {
+        if (archive.Entries.Count == 0)
+        {
+            throw new AgentPackageValidationException("agent-package.empty", "The uploaded package is empty.");
+        }
+
+        if (archive.Entries.Count > options.MaximumEntryCount)
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.too-many-entries",
+                $"The uploaded package exceeds the {options.MaximumEntryCount}-entry limit.");
+        }
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        long expandedBytes = 0;
+        foreach (var entry in archive.Entries)
+        {
+            var name = entry.FullName;
+            if (string.IsNullOrWhiteSpace(name) ||
+                Path.IsPathRooted(name) ||
+                name.Contains('\\') ||
+                name.Contains('/') ||
+                name is "." or ".." ||
+                !AllowedArchiveEntries.Contains(name))
+            {
+                throw new AgentPackageValidationException(
+                    "agent-package.entry-not-allowed",
+                    $"Archive entry '{name}' is not allowed.");
+            }
+
+            if (!names.Add(name))
+            {
+                throw new AgentPackageValidationException(
+                    "agent-package.duplicate-entry",
+                    $"Archive entry '{name}' appears more than once.");
+            }
+
+            var unixMode = (entry.ExternalAttributes >> 16) & 0xFFFF;
+            if ((unixMode & 0xF000) == 0xA000)
+            {
+                throw new AgentPackageValidationException(
+                    "agent-package.symlink-not-allowed",
+                    $"Archive entry '{name}' is a symbolic link.");
+            }
+
+            if ((unixMode & 0x49) != 0)
+            {
+                throw new AgentPackageValidationException(
+                    "agent-package.executable-not-allowed",
+                    $"Archive entry '{name}' is executable.");
+            }
+
+            if (entry.Length < 0 || entry.Length > options.MaximumExpandedBytes - expandedBytes)
+            {
+                throw new AgentPackageValidationException(
+                    "agent-package.expanded-size-exceeded",
+                    $"The uploaded package exceeds the {options.MaximumExpandedBytes}-byte expanded-size limit.");
+            }
+
+            expandedBytes += entry.Length;
+        }
+
+        if (!names.Contains("manifest.json"))
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.manifest-missing",
+                "The package is missing manifest.json.");
+        }
+    }
+
+    private static async Task<string> ReadManifestAsync(
+        ZipArchiveEntry manifestEntry,
+        long maximumManifestBytes,
+        CancellationToken cancellationToken)
+    {
+        if (manifestEntry.Length > maximumManifestBytes)
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.manifest-too-large",
+                $"manifest.json exceeds the {maximumManifestBytes}-byte limit.");
+        }
+
+        await using var manifestStream = manifestEntry.Open();
+        using var reader = new StreamReader(
+            manifestStream,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 16 * 1024,
+            leaveOpen: false);
+        var json = await reader.ReadToEndAsync(cancellationToken);
+        if (Encoding.UTF8.GetByteCount(json) > maximumManifestBytes)
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.manifest-too-large",
+                $"manifest.json exceeds the {maximumManifestBytes}-byte limit.");
+        }
+
+        return json;
+    }
+
+    private static void RejectRawSecretMaterial(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        InspectElementForRawSecrets(document.RootElement, "$");
+    }
+
+    private static void InspectElementForRawSecrets(JsonElement element, string path)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                var propertyPath = $"{path}.{property.Name}";
+                if (RawSecretPropertyNames.Contains(property.Name) &&
+                    property.Value.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(property.Value.GetString()))
+                {
+                    throw new AgentPackageValidationException(
+                        "agent-package.raw-secret-material",
+                        $"Raw secret material is not allowed at '{propertyPath}'.");
+                }
+
+                InspectElementForRawSecrets(property.Value, propertyPath);
+                if (property.Name.EndsWith("Json", StringComparison.OrdinalIgnoreCase) &&
+                    property.Value.ValueKind == JsonValueKind.String)
+                {
+                    InspectEmbeddedJsonForRawSecrets(property.Value.GetString(), propertyPath);
+                }
             }
         }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            var index = 0;
+            foreach (var item in element.EnumerateArray())
+            {
+                InspectElementForRawSecrets(item, $"{path}[{index++}]");
+            }
+        }
+    }
+
+    private static void InspectEmbeddedJsonForRawSecrets(string? json, string path)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            InspectElementForRawSecrets(document.RootElement, path);
+        }
+        catch (JsonException)
+        {
+            // Other model validation owns malformed opaque configuration JSON.
+        }
+    }
+
+    private static string NormalizeSha256(string value)
+    {
+        var normalized = value.Trim();
+        if (normalized.Length != 64 || normalized.Any(character => !Uri.IsHexDigit(character)))
+        {
+            throw new AgentPackageValidationException(
+                "agent-package.expected-hash-invalid",
+                "Expected package SHA-256 must contain exactly 64 hexadecimal characters.");
+        }
+
+        return normalized;
     }
 
     private static string BuildMarkdownSummary(AgentDefinition agent, AgentPackageManifest manifest)
@@ -339,6 +621,7 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
         IReadOnlyList<ProviderProfile> Providers,
         IReadOnlyList<CapabilityCatalogItem> Capabilities)
     {
+        public string SchemaVersion { get; init; } = SupportedPackageSchemaVersion;
         public IReadOnlyList<ExecutionRunRecord> Runs { get; init; } = [];
         public IReadOnlyList<ExecutionApprovalRecord> Approvals { get; init; } = [];
         public IReadOnlyList<ExecutionArtifactRecord> Artifacts { get; init; } = [];

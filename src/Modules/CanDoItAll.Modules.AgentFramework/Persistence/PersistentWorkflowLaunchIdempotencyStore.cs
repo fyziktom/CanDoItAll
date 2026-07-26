@@ -9,7 +9,9 @@ using Npgsql;
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class PersistentWorkflowLaunchIdempotencyStore(
-    IDbContextFactory<AppDbContext> dbContextFactory) : IWorkflowLaunchIdempotencyStore
+    IDbContextFactory<AppDbContext> dbContextFactory) :
+    IWorkflowLaunchIdempotencyStore,
+    IWorkflowLaunchIdempotencyQueryStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -40,7 +42,7 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
             }
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var existing = await ScopeQuery(dbContext, scope)
+            var existing = await ClaimQuery(dbContext, scope)
                 .AsNoTracking()
                 .SingleOrDefaultAsync(cancellationToken);
             if (existing is null)
@@ -48,9 +50,11 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                 continue;
             }
 
+            ThrowIfPublicApiScopeConflicts(scope, existing);
             ThrowIfFingerprintConflicts(scope, fingerprint, existing.Fingerprint);
             if (existing.State == WorkflowLaunchIdempotencyClaimState.Completed)
             {
+                await RecordReplayAsync(existing.Id, claimedAtUtc, cancellationToken);
                 return Completed(existing);
             }
 
@@ -61,7 +65,7 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                     existing.ReservedRunIdAsValue());
             }
 
-            var affected = await ScopeQuery(dbContext, scope)
+            var affected = await ClaimQuery(dbContext, scope)
                 .Where(record =>
                     record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
                     record.Fingerprint == fingerprint.Value &&
@@ -78,7 +82,7 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                     existing.ReservedRunIdAsValue());
             }
 
-            var current = await ScopeQuery(dbContext, scope)
+            var current = await ClaimQuery(dbContext, scope)
                 .AsNoTracking()
                 .SingleOrDefaultAsync(cancellationToken);
             if (current is null)
@@ -86,10 +90,15 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                 continue;
             }
 
+            ThrowIfPublicApiScopeConflicts(scope, current);
             ThrowIfFingerprintConflicts(scope, fingerprint, current.Fingerprint);
-            return current.State == WorkflowLaunchIdempotencyClaimState.Completed
-                ? Completed(current)
-                : new WorkflowLaunchIdempotencyClaimResult(
+            if (current.State == WorkflowLaunchIdempotencyClaimState.Completed)
+            {
+                await RecordReplayAsync(current.Id, claimedAtUtc, cancellationToken);
+                return Completed(current);
+            }
+
+            return new WorkflowLaunchIdempotencyClaimResult(
                     WorkflowLaunchIdempotencyClaimOutcome.InProgress,
                     current.ReservedRunIdAsValue());
         }
@@ -102,7 +111,7 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var affected = await ScopeQuery(dbContext, scope)
+        var affected = await ClaimQuery(dbContext, scope)
             .Where(record =>
                 record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
                 record.ClaimToken == claimToken.Value)
@@ -121,7 +130,7 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         ArgumentNullException.ThrowIfNull(completion);
         var completionJson = JsonSerializer.Serialize(completion, JsonOptions);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var affected = await ScopeQuery(dbContext, scope)
+        var affected = await ClaimQuery(dbContext, scope)
             .Where(record =>
                 record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
                 record.ClaimToken == claimToken.Value)
@@ -139,12 +148,27 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var affected = await ScopeQuery(dbContext, scope)
+        var affected = await ClaimQuery(dbContext, scope)
             .Where(record =>
                 record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
                 record.ClaimToken == claimToken.Value)
             .ExecuteDeleteAsync(cancellationToken);
         return affected == 1;
+    }
+
+    public async Task<WorkflowLaunchIdempotencyRecord?> FindApiKeyAsync(
+        WorkflowLaunchIdempotencyKey callerKey,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item =>
+                    item.OriginKind == WorkflowLaunchOriginKind.Api &&
+                    item.CallerKey == callerKey.Value,
+                cancellationToken);
+        return record is null ? null : ToRecord(record);
     }
 
     private async Task<bool> TryInsertClaimAsync(
@@ -176,10 +200,18 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         }
     }
 
-    private static IQueryable<WorkflowLaunchIdempotencyRecordEntity> ScopeQuery(
+    private static IQueryable<WorkflowLaunchIdempotencyRecordEntity> ClaimQuery(
         AppDbContext dbContext,
         WorkflowLaunchIdempotencyScope scope)
     {
+        if (scope.OriginKind == WorkflowLaunchOriginKind.Api)
+        {
+            return dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>()
+                .Where(record =>
+                    record.OriginKind == WorkflowLaunchOriginKind.Api &&
+                    record.CallerKey == scope.CallerKey.Value);
+        }
+
         var requestedVersionId = scope.RequestedVersionId?.Value ?? Guid.Empty;
         return dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>()
             .Where(record =>
@@ -192,7 +224,63 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                 record.OriginScopeKey == scope.OriginScopeKey.Value);
     }
 
+    private async Task RecordReplayAsync(
+        Guid recordId,
+        DateTimeOffset replayedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>()
+            .Where(record => record.Id == recordId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(record => record.ReplayCount, record => record.ReplayCount + 1)
+                .SetProperty(record => record.LastReplayedAtUtc, replayedAtUtc),
+                cancellationToken);
+    }
+
     private static WorkflowLaunchIdempotencyClaimResult Completed(
+        WorkflowLaunchIdempotencyRecordEntity record)
+    {
+        var completion = DeserializeCompletion(record);
+        return new WorkflowLaunchIdempotencyClaimResult(
+            WorkflowLaunchIdempotencyClaimOutcome.Completed,
+            record.ReservedRunIdAsValue(),
+            completion);
+    }
+
+    private static WorkflowLaunchIdempotencyRecord ToRecord(
+        WorkflowLaunchIdempotencyRecordEntity record)
+    {
+        WorkflowVersionId? requestedVersionId = record.RequestedVersionId == Guid.Empty
+            ? null
+            : new WorkflowVersionId(record.RequestedVersionId);
+        var scope = new WorkflowLaunchIdempotencyScope(
+            new WorkflowLaunchIdempotencyKey(record.CallerKey),
+            new WorkflowId(record.WorkflowId),
+            record.SelectionKind,
+            requestedVersionId,
+            record.Mode,
+            record.OriginKind,
+            new WorkflowLaunchOriginScopeKey(record.OriginScopeKey));
+        return new WorkflowLaunchIdempotencyRecord(
+            scope,
+            new WorkflowLaunchRequestFingerprint(
+                record.Fingerprint,
+                record.CanonicalInputHash),
+            record.ReservedRunIdAsValue(),
+            record.State == WorkflowLaunchIdempotencyClaimState.Completed
+                ? WorkflowLaunchIdempotencyRecordState.Completed
+                : WorkflowLaunchIdempotencyRecordState.Pending,
+            record.ClaimedAtUtc,
+            record.CompletedAtUtc,
+            record.ReplayCount,
+            record.LastReplayedAtUtc,
+            record.State == WorkflowLaunchIdempotencyClaimState.Completed
+                ? DeserializeCompletion(record)
+                : null);
+    }
+
+    private static WorkflowLaunchIdempotencyCompletion DeserializeCompletion(
         WorkflowLaunchIdempotencyRecordEntity record)
     {
         if (string.IsNullOrWhiteSpace(record.CompletionJson))
@@ -201,15 +289,11 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                 $"Completed workflow launch idempotency record '{record.Id}' has no completion payload.");
         }
 
-        var completion = JsonSerializer.Deserialize<WorkflowLaunchIdempotencyCompletion>(
+        return JsonSerializer.Deserialize<WorkflowLaunchIdempotencyCompletion>(
                 record.CompletionJson,
                 JsonOptions)
             ?? throw new InvalidOperationException(
                 $"Completed workflow launch idempotency record '{record.Id}' could not be deserialized.");
-        return new WorkflowLaunchIdempotencyClaimResult(
-            WorkflowLaunchIdempotencyClaimOutcome.Completed,
-            record.ReservedRunIdAsValue(),
-            completion);
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception)
@@ -247,6 +331,24 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
             throw new WorkflowLaunchIdempotencyConflictException(scope);
         }
     }
+
+    private static void ThrowIfPublicApiScopeConflicts(
+        WorkflowLaunchIdempotencyScope requested,
+        WorkflowLaunchIdempotencyRecordEntity existing)
+    {
+        if (requested.OriginKind != WorkflowLaunchOriginKind.Api)
+        {
+            return;
+        }
+
+        if (requested.WorkflowId.Value != existing.WorkflowId ||
+            requested.SelectionKind != existing.SelectionKind ||
+            (requested.RequestedVersionId?.Value ?? Guid.Empty) != existing.RequestedVersionId ||
+            requested.Mode != existing.Mode)
+        {
+            throw new WorkflowLaunchIdempotencyConflictException(requested);
+        }
+    }
 }
 
 public sealed class WorkflowLaunchIdempotencyRecordEntity
@@ -269,6 +371,8 @@ public sealed class WorkflowLaunchIdempotencyRecordEntity
 
     public string Fingerprint { get; set; } = string.Empty;
 
+    public string CanonicalInputHash { get; set; } = string.Empty;
+
     public WorkflowLaunchIdempotencyClaimState State { get; set; }
 
     public Guid ClaimToken { get; set; }
@@ -282,6 +386,10 @@ public sealed class WorkflowLaunchIdempotencyRecordEntity
     public string CompletionJson { get; set; } = string.Empty;
 
     public DateTimeOffset? CompletedAtUtc { get; set; }
+
+    public int ReplayCount { get; set; }
+
+    public DateTimeOffset? LastReplayedAtUtc { get; set; }
 
     public static WorkflowLaunchIdempotencyRecordEntity CreatePending(
         WorkflowLaunchIdempotencyScope scope,
@@ -300,6 +408,7 @@ public sealed class WorkflowLaunchIdempotencyRecordEntity
             OriginKind = scope.OriginKind,
             OriginScopeKey = scope.OriginScopeKey.Value,
             Fingerprint = fingerprint.Value,
+            CanonicalInputHash = fingerprint.CanonicalInputHash,
             State = WorkflowLaunchIdempotencyClaimState.Pending,
             ClaimToken = claimToken.Value,
             ReservedRunId = proposedRunId.Value,
@@ -329,6 +438,7 @@ internal sealed class WorkflowLaunchIdempotencyRecordEntityConfiguration :
         builder.Property(record => record.OriginKind).HasConversion<int>();
         builder.Property(record => record.OriginScopeKey).HasMaxLength(64).IsRequired();
         builder.Property(record => record.Fingerprint).HasMaxLength(64).IsRequired();
+        builder.Property(record => record.CanonicalInputHash).HasMaxLength(64).IsRequired();
         builder.Property(record => record.State).HasConversion<int>();
         builder.Property(record => record.CompletionJson).HasColumnType("TEXT");
         builder.HasIndex(record => new
@@ -343,6 +453,10 @@ internal sealed class WorkflowLaunchIdempotencyRecordEntityConfiguration :
             })
             .IsUnique()
             .HasDatabaseName("UX_AF_WorkflowLaunchIdempotency_Scope");
+        builder.HasIndex(record => record.CallerKey)
+            .IsUnique()
+            .HasFilter("\"OriginKind\" = 0")
+            .HasDatabaseName("UX_AF_WorkflowLaunchIdempotency_ApiKey");
         builder.HasIndex(record => new { record.State, record.LeaseExpiresAtUtc })
             .HasDatabaseName("IX_AF_WorkflowLaunchIdempotency_Lease");
         builder.HasIndex(record => record.ReservedRunId)

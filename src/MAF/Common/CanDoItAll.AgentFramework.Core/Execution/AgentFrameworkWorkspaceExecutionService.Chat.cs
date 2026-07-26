@@ -389,7 +389,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 cancellationToken,
                 suppressApprovalRequirements: true,
                 structuredOutput: structuredOutput,
-                executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
+                executionOptions: CreateRuntimeExecutionOptionsCore(
+                    run,
+                    structuredOutput,
+                    handoffOptions,
+                    inputAttachments: null,
+                    jsonSchemaOutput: null));
 
             totalInputTokens += currentResponse.InputTokens;
             totalCachedInputTokens += currentResponse.CachedInputTokens;

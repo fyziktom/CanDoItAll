@@ -553,11 +553,7 @@ public sealed class WorkflowLaunchService(
         var normalized = string.IsNullOrWhiteSpace(inputJson) ? "{}" : inputJson.Trim();
         try
         {
-            using var document = JsonDocument.Parse(normalized);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                throw new ArgumentException("Workflow launch input must be a valid JSON object.", nameof(inputJson));
-            }
+            return WorkflowLaunchIdempotencyRequestFactory.CanonicalizeInputJson(normalized);
         }
         catch (JsonException exception)
         {
@@ -567,7 +563,6 @@ public sealed class WorkflowLaunchService(
                 exception);
         }
 
-        return normalized;
     }
 
     private static void ThrowIfDefinitionInvalid(WorkflowDefinitionDetail detail)

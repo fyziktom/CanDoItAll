@@ -3,7 +3,9 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdempotencyStore
+public sealed class InMemoryWorkflowLaunchIdempotencyStore :
+    IWorkflowLaunchIdempotencyStore,
+    IWorkflowLaunchIdempotencyQueryStore
 {
     private readonly object gate = new();
     private readonly Dictionary<WorkflowLaunchIdempotencyScope, ClaimEntry> claims = [];
@@ -22,21 +24,28 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdem
 
         lock (gate)
         {
-            if (!claims.TryGetValue(scope, out var existing))
+            if (!TryFindClaim(scope, out var storedScope, out var existing))
             {
                 claims.Add(scope, ClaimEntry.Pending(
                     fingerprint,
                     claimToken,
                     proposedRunId,
+                    claimedAtUtc,
                     leaseExpiresAtUtc));
                 return Task.FromResult(new WorkflowLaunchIdempotencyClaimResult(
                     WorkflowLaunchIdempotencyClaimOutcome.Acquired,
                     proposedRunId));
             }
 
+            ThrowIfPublicApiScopeConflicts(scope, storedScope);
             ThrowIfFingerprintConflicts(scope, fingerprint, existing.Fingerprint);
             if (existing.Completion is not null)
             {
+                claims[storedScope] = existing with
+                {
+                    ReplayCount = existing.ReplayCount + 1,
+                    LastReplayedAtUtc = claimedAtUtc
+                };
                 return Task.FromResult(new WorkflowLaunchIdempotencyClaimResult(
                     WorkflowLaunchIdempotencyClaimOutcome.Completed,
                     existing.ReservedRunId,
@@ -45,7 +54,7 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdem
 
             if (existing.LeaseExpiresAtUtc <= claimedAtUtc)
             {
-                claims[scope] = existing with
+                claims[storedScope] = existing with
                 {
                     ClaimToken = claimToken,
                     LeaseExpiresAtUtc = leaseExpiresAtUtc
@@ -70,14 +79,14 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdem
 
         lock (gate)
         {
-            if (!claims.TryGetValue(scope, out var existing) ||
+            if (!TryFindClaim(scope, out var storedScope, out var existing) ||
                 existing.Completion is not null ||
                 existing.ClaimToken != claimToken)
             {
                 return Task.FromResult(false);
             }
 
-            claims[scope] = existing with { LeaseExpiresAtUtc = leaseExpiresAtUtc };
+            claims[storedScope] = existing with { LeaseExpiresAtUtc = leaseExpiresAtUtc };
             return Task.FromResult(true);
         }
     }
@@ -93,14 +102,14 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdem
 
         lock (gate)
         {
-            if (!claims.TryGetValue(scope, out var existing) ||
+            if (!TryFindClaim(scope, out var storedScope, out var existing) ||
                 existing.Completion is not null ||
                 existing.ClaimToken != claimToken)
             {
                 return Task.FromResult(false);
             }
 
-            claims[scope] = existing with { Completion = completion };
+            claims[storedScope] = existing with { Completion = completion };
             return Task.FromResult(true);
         }
     }
@@ -114,15 +123,84 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdem
 
         lock (gate)
         {
-            if (!claims.TryGetValue(scope, out var existing) ||
+            if (!TryFindClaim(scope, out var storedScope, out var existing) ||
                 existing.Completion is not null ||
                 existing.ClaimToken != claimToken)
             {
                 return Task.FromResult(false);
             }
 
-            claims.Remove(scope);
+            claims.Remove(storedScope);
             return Task.FromResult(true);
+        }
+    }
+
+    public Task<WorkflowLaunchIdempotencyRecord?> FindApiKeyAsync(
+        WorkflowLaunchIdempotencyKey callerKey,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (gate)
+        {
+            var match = claims.FirstOrDefault(item =>
+                item.Key.OriginKind == WorkflowLaunchOriginKind.Api &&
+                item.Key.CallerKey == callerKey);
+            if (match.Value is null)
+            {
+                return Task.FromResult<WorkflowLaunchIdempotencyRecord?>(null);
+            }
+
+            var entry = match.Value;
+            return Task.FromResult<WorkflowLaunchIdempotencyRecord?>(new(
+                match.Key,
+                entry.Fingerprint,
+                entry.ReservedRunId,
+                entry.Completion is null
+                    ? WorkflowLaunchIdempotencyRecordState.Pending
+                    : WorkflowLaunchIdempotencyRecordState.Completed,
+                entry.CreatedAtUtc,
+                entry.Completion?.CompletedAtUtc,
+                entry.ReplayCount,
+                entry.LastReplayedAtUtc,
+                entry.Completion));
+        }
+    }
+
+    private bool TryFindClaim(
+        WorkflowLaunchIdempotencyScope requestedScope,
+        out WorkflowLaunchIdempotencyScope storedScope,
+        out ClaimEntry entry)
+    {
+        if (requestedScope.OriginKind != WorkflowLaunchOriginKind.Api)
+        {
+            storedScope = requestedScope;
+            return claims.TryGetValue(requestedScope, out entry!);
+        }
+
+        var match = claims.FirstOrDefault(item =>
+            item.Key.OriginKind == WorkflowLaunchOriginKind.Api &&
+            item.Key.CallerKey == requestedScope.CallerKey);
+        storedScope = match.Key;
+        entry = match.Value!;
+        return entry is not null;
+    }
+
+    private static void ThrowIfPublicApiScopeConflicts(
+        WorkflowLaunchIdempotencyScope requested,
+        WorkflowLaunchIdempotencyScope existing)
+    {
+        if (requested.OriginKind != WorkflowLaunchOriginKind.Api)
+        {
+            return;
+        }
+
+        if (requested.WorkflowId != existing.WorkflowId ||
+            requested.SelectionKind != existing.SelectionKind ||
+            requested.RequestedVersionId != existing.RequestedVersionId ||
+            requested.Mode != existing.Mode)
+        {
+            throw new WorkflowLaunchIdempotencyConflictException(requested);
         }
     }
 
@@ -153,18 +231,25 @@ public sealed class InMemoryWorkflowLaunchIdempotencyStore : IWorkflowLaunchIdem
         WorkflowLaunchRequestFingerprint Fingerprint,
         WorkflowLaunchIdempotencyClaimToken ClaimToken,
         WorkflowRunId ReservedRunId,
+        DateTimeOffset CreatedAtUtc,
         DateTimeOffset LeaseExpiresAtUtc,
-        WorkflowLaunchIdempotencyCompletion? Completion)
+        WorkflowLaunchIdempotencyCompletion? Completion,
+        int ReplayCount,
+        DateTimeOffset? LastReplayedAtUtc)
     {
         public static ClaimEntry Pending(
             WorkflowLaunchRequestFingerprint fingerprint,
             WorkflowLaunchIdempotencyClaimToken claimToken,
             WorkflowRunId reservedRunId,
+            DateTimeOffset createdAtUtc,
             DateTimeOffset leaseExpiresAtUtc) => new(
                 fingerprint,
                 claimToken,
                 reservedRunId,
+                createdAtUtc,
                 leaseExpiresAtUtc,
-                Completion: null);
+                Completion: null,
+                ReplayCount: 0,
+                LastReplayedAtUtc: null);
     }
 }
