@@ -576,6 +576,7 @@ public sealed class ProcessRuntimeEngineTests
         Assert.Equal("Unit test needs manager.", diagnostic.SafeSummary);
         Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
         Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Equal("Unit test requires manager recovery.", receipt.UserSafeSummary);
         Assert.NotNull(receipt.RecoveryDecision);
         Assert.Equal(ProcessRecoveryDecisionKind.ManagerRequired, receipt.RecoveryDecision.DecisionKind);
         Assert.Equal(ProcessFailureCategory.Unknown, receipt.RecoveryDecision.FailureCategory);
@@ -908,6 +909,69 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Successful_result_missing_required_input_emits_canonical_finalization_diagnostic()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(
+                ProcessRuntimeStepStatus.Running,
+                requiredArtifacts: new HashSet<ArtifactSlotId> { ArtifactSlotId },
+                activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]) with
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    ActivityStepId,
+                    ArtifactSlotId,
+                    ProcessArtifactInputAvailability.Expected,
+                    StartStepId,
+                    ArtifactId: null,
+                    ContentHash: string.Empty,
+                    ConnectionHash: "sha256:start-to-activity-expected")
+            ]
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                SucceededResult()));
+
+        var receipt = Assert.Single(result.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact, diagnostic.Code);
+        Assert.Equal(StrategyOutcome.NeedsManager, receipt.Outcome);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, receipt.AppliedStepStatus);
+        Assert.NotNull(receipt.RecoveryDecision);
+        Assert.Equal(
+            ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
+            receipt.RecoveryDecision.SourceDiagnosticCode);
+        Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, receipt.RecoveryDecision.RouteKind);
+        Assert.Equal(StartStepId, receipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
     public async Task Missing_required_input_routes_recovery_to_upstream_producer()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -1002,7 +1066,8 @@ public sealed class ProcessRuntimeEngineTests
         Assert.Equal(0, step.AttemptNumber);
         Assert.Null(step.ActiveClaimToken);
         Assert.Null(step.CompletedResultKey);
-        Assert.Empty(result.State.AppliedResults);
+        var retainedReceipt = Assert.Single(result.State.AppliedResults);
+        Assert.Equal(resultKey, retainedReceipt.IdempotencyKey);
         Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReworkRequested);
         Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunReactivated);
         Assert.Contains(result.Events, runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReady);
@@ -1058,6 +1123,135 @@ public sealed class ProcessRuntimeEngineTests
         Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "Runtime.BlockedStepNotActionable");
         Assert.Equal(ProcessRuntimeStepStatus.Blocked, result.State.Steps.Single(step => step.StepInstanceId == ActivityStepId).Status);
+    }
+
+    [Fact]
+    public async Task Authorized_upstream_rework_reactivates_completed_producer_and_retains_receipts()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var producerResultKey = StrategyResultIdempotencyKey.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Blocked,
+            NewStartStep(ProcessRuntimeStepStatus.Completed) with
+            {
+                IsExecutable = true,
+                AttemptNumber = 1,
+                CompletedResultKey = producerResultKey
+            },
+            NewActivityStep(ProcessRuntimeStepStatus.Blocked) with
+            {
+                DependencyStepIds = new HashSet<ProcessStepInstanceId> { StartStepId },
+                RequiredArtifactSlots = new HashSet<ArtifactSlotId> { ArtifactSlotId }
+            },
+            receipts: [CreateUpstreamRecoveryReceipt(sourceResultKey)]);
+        var authorization = new ProcessRuntimeBlockedRecoveryAuthorization(
+            state.UpdatedAtUtc,
+            ProcessRuntimeStatus.Blocked,
+            ActivityStepId,
+            sourceResultKey,
+            "sha256:missing-input-fingerprint",
+            ProcessRecoveryRouteKind.UpstreamStepRework,
+            StartStepId,
+            ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer);
+
+        var result = await engine.RequestStepReworkAsync(
+            state,
+            Context(Now.AddMinutes(2)),
+            new RequestStepReworkCommand(StartStepId, "Recreate the missing upstream artifact.")
+            {
+                BlockedRecoveryAuthorization = authorization
+            });
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.State.Status);
+        var producer = result.State.Steps.Single(step => step.StepInstanceId == StartStepId);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, producer.Status);
+        Assert.Equal(0, producer.AttemptNumber);
+        Assert.Null(producer.CompletedResultKey);
+        Assert.Equal(sourceResultKey, Assert.Single(result.State.AppliedResults).IdempotencyKey);
+        var recoveryAction = Assert.Single(result.State.BlockedRecoveryActions);
+        Assert.Equal(ActivityStepId, recoveryAction.SourceBlockedStepInstanceId);
+        Assert.Equal(sourceResultKey, recoveryAction.SourceResultIdempotencyKey);
+        Assert.Equal(StartStepId, recoveryAction.TargetStepInstanceId);
+        Assert.Equal(ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer, recoveryAction.Phase);
+        Assert.Contains(
+            result.Events,
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepReworkRequested);
+        Assert.Contains(
+            result.Events,
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunReactivated);
+        Assert.Single(unitOfWork.Requests);
+    }
+
+    [Fact]
+    public async Task Manual_rework_rejects_completed_producer_without_blocked_recovery_authorization()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var state = NewState(
+            ProcessRuntimeStatus.Blocked,
+            NewStartStep(ProcessRuntimeStepStatus.Completed) with
+            {
+                IsExecutable = true,
+                CompletedResultKey = StrategyResultIdempotencyKey.New()
+            },
+            NewActivityStep(ProcessRuntimeStepStatus.Blocked),
+            receipts: [CreateUpstreamRecoveryReceipt(StrategyResultIdempotencyKey.New())]);
+
+        var result = await engine.RequestStepReworkAsync(
+            state,
+            Context(Now.AddMinutes(2)),
+            new RequestStepReworkCommand(StartStepId, "Manual completed-step retry."));
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Runtime.CompletedStepReworkUnauthorized");
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Completed,
+            result.State.Steps.Single(step => step.StepInstanceId == StartStepId).Status);
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Fact]
+    public async Task Runtime_rejects_completed_upstream_rework_when_responsible_target_does_not_match_receipt()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Blocked,
+            NewStartStep(ProcessRuntimeStepStatus.Completed) with
+            {
+                IsExecutable = true,
+                CompletedResultKey = StrategyResultIdempotencyKey.New()
+            },
+            NewActivityStep(ProcessRuntimeStepStatus.Blocked),
+            receipts: [CreateUpstreamRecoveryReceipt(sourceResultKey)]);
+
+        var result = await engine.RequestStepReworkAsync(
+            state,
+            Context(Now.AddMinutes(2)),
+            new RequestStepReworkCommand(StartStepId, "Mismatched upstream retry.")
+            {
+                BlockedRecoveryAuthorization = new ProcessRuntimeBlockedRecoveryAuthorization(
+                    state.UpdatedAtUtc,
+                    ProcessRuntimeStatus.Blocked,
+                    ActivityStepId,
+                    sourceResultKey,
+                    "sha256:missing-input-fingerprint",
+                    ProcessRecoveryRouteKind.UpstreamStepRework,
+                    ProcessStepInstanceId.New(),
+                    ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer)
+            });
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Runtime.BlockedRecoveryAuthorizationRejected");
+        Assert.Empty(unitOfWork.Requests);
     }
 
     [Fact]
@@ -1220,7 +1414,10 @@ public sealed class ProcessRuntimeEngineTests
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
             ],
             [],
-            "sha256:needs-manager-result");
+            "sha256:needs-manager-result")
+        {
+            UserSafeSummary = "Unit test requires manager recovery."
+        };
     }
 
     private static StrategyResultEnvelope SafeCompletionGateNeedsManagerResult()
@@ -1317,7 +1514,7 @@ public sealed class ProcessRuntimeEngineTests
             [new RequestedArtifactRef(ArtifactSlotId, "sha256:requested-input")],
             [
                 new StrategyDiagnosticRef(
-                    new StrategyDiagnosticCode("process.runtime.required_artifact_missing"),
+                    new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
                     StrategyDiagnosticSensitivity.Normal,
                     "sha256:missing-input",
                     "Required input artifact is missing.",
@@ -1327,11 +1524,44 @@ public sealed class ProcessRuntimeEngineTests
             ],
             [
                 new ManagerSignal(
-                    new ManagerSignalCode("process.runtime.required_artifact_missing"),
+                    new ManagerSignalCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
                     "sha256:missing-input",
                     "Required input artifact is missing.")
             ],
             "sha256:missing-input-result");
+    }
+
+    private static StrategyResultReceipt CreateUpstreamRecoveryReceipt(
+        StrategyResultIdempotencyKey sourceResultKey)
+    {
+        return new StrategyResultReceipt(
+            ActivityStepId,
+            StrategyId,
+            sourceResultKey,
+            StrategyOutcome.NeedsManager,
+            ProcessRuntimeStepStatus.Blocked,
+            "sha256:missing-input-result",
+            [
+                new StrategyResultDiagnosticReceipt(
+                    ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
+                    StrategyDiagnosticSensitivity.Normal,
+                    "sha256:missing-input",
+                    "Required input artifact is missing.",
+                    RestrictedEvidenceReference: null,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+            ],
+            recoveryDecision: new ProcessRecoveryDecisionReceipt(
+                ProcessFailureCategory.MissingArtifact,
+                ProcessRecoveryDecisionKind.ManagerRequired,
+                ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
+                "process.upstream-artifact-rework-required",
+                "Rework the responsible upstream producer.")
+            {
+                RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
+                ResponsibleStepInstanceId = StartStepId,
+                DiagnosticFingerprint = "sha256:missing-input-fingerprint"
+            });
     }
 
     private sealed class RecordingUnitOfWork : IProcessRuntimeUnitOfWork

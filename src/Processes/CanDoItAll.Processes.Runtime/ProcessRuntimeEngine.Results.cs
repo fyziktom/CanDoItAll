@@ -55,7 +55,13 @@ public sealed partial class ProcessRuntimeEngine
             appliedResult.ResultHash,
             diagnosticReceipts,
             BuildProducedArtifactReceipts(appliedResult),
-            recoveryDecision);
+            recoveryDecision)
+        {
+            UserSafeSummary = string.IsNullOrWhiteSpace(appliedResult.UserSafeSummary)
+                ? string.Empty
+                : appliedResult.UserSafeSummary.Trim(),
+            AppliedSequence = NextAppliedResultSequence(state.AppliedResults)
+        };
         var nextClaims = ReplaceClaim(
             state,
             claim with
@@ -93,6 +99,15 @@ public sealed partial class ProcessRuntimeEngine
             next,
             events,
             BuildArtifactLedgerEvents(resultEventId, appliedResult));
+    }
+
+    private static long NextAppliedResultSequence(IReadOnlyList<StrategyResultReceipt> receipts)
+    {
+        return Math.Max(
+            receipts.Count + 1L,
+            receipts.Count == 0
+                ? 1L
+                : receipts.Max(receipt => receipt.AppliedSequence) + 1L);
     }
 
     private static ProcessRuntimeMutation RequestCancellation(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context)

@@ -65,6 +65,26 @@ public sealed class SimpleAppDeliveryTemplateTests
         Assert.DoesNotContain(
             ProcessOperationContractNames.MutateProductTarget,
             unsupported.AllowedOperations);
+
+        var liveProfile = Assert.Single(
+            loader.LoadLiveRunProfiles(),
+            profile => profile.Key == "generic-simple-local-app");
+        Assert.Equal(definition.Key, liveProfile.ProcessTemplateKey);
+        Assert.Equal("GovernedLive", liveProfile.OperatingMode);
+        Assert.Contains(
+            liveProfile.Assignments,
+            assignment =>
+                assignment.StepKey == "implement-application" &&
+                assignment.RoleKey == "simple-app-engineer");
+        Assert.Contains(
+            liveProfile.Assignments,
+            assignment =>
+                assignment.StepKey == "validate-application" &&
+                assignment.RoleKey == "simple-app-qa");
+        Assert.Contains(
+            "Do not infer browser, HTTP, deployment, or privileged-operation requirements from the topic.",
+            liveProfile.TriggerReasonTemplate,
+            StringComparison.Ordinal);
     }
 
     private static void AssertValidationStep(

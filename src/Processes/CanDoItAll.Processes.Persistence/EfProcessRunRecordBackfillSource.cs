@@ -10,7 +10,7 @@ public sealed class EfProcessRunRecordBackfillSource(
     TimeProvider timeProvider) :
     IProcessRunRecordBackfillSource
 {
-    public async Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingTerminalSeedsAsync(
+    public async Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingReportableSeedsAsync(
         int take,
         CancellationToken cancellationToken = default)
     {
@@ -25,12 +25,14 @@ public sealed class EfProcessRunRecordBackfillSource(
         var completedEventType = ProcessRuntimeEventTypes.ProcessRunCompleted.Value;
         var failedEventType = ProcessRuntimeEventTypes.ProcessRunFailed.Value;
         var cancelledEventType = ProcessRuntimeEventTypes.ProcessRunCancelled.Value;
+        var blockedEventType = ProcessRuntimeEventTypes.ProcessRunBlocked.Value;
         var candidates = await dbContext.RuntimeStates
             .AsNoTracking()
             .Where(state =>
                 state.Status == ProcessRuntimeStatus.Completed ||
                 state.Status == ProcessRuntimeStatus.Failed ||
-                state.Status == ProcessRuntimeStatus.Cancelled)
+                state.Status == ProcessRuntimeStatus.Cancelled ||
+                state.Status == ProcessRuntimeStatus.Blocked)
             .Where(state => !dbContext.RunRecords.Any(record =>
                 record.RunId == state.RunId &&
                 record.LifecycleState == ProcessRunRecordLifecycleState.Current))
@@ -41,7 +43,9 @@ public sealed class EfProcessRunRecordBackfillSource(
                  (state.Status == ProcessRuntimeStatus.Failed &&
                   runtimeEvent.EventType == failedEventType) ||
                  (state.Status == ProcessRuntimeStatus.Cancelled &&
-                  runtimeEvent.EventType == cancelledEventType))))
+                  runtimeEvent.EventType == cancelledEventType) ||
+                 (state.Status == ProcessRuntimeStatus.Blocked &&
+                  runtimeEvent.EventType == blockedEventType))))
             .OrderByDescending(state => state.UpdatedAtUtc)
             .ThenBy(state => state.RunId)
             .Take(take)
@@ -58,17 +62,18 @@ public sealed class EfProcessRunRecordBackfillSource(
         }
 
         var runIds = candidates.Select(candidate => candidate.RunId).ToArray();
-        var terminalEventTypes = new[]
+        var reportableEventTypes = new[]
         {
             completedEventType,
             failedEventType,
-            cancelledEventType
+            cancelledEventType,
+            blockedEventType
         };
-        var terminalEvents = await dbContext.RuntimeEvents
+        var reportableEvents = await dbContext.RuntimeEvents
             .AsNoTracking()
             .Where(runtimeEvent =>
                 runIds.Contains(runtimeEvent.RunId) &&
-                terminalEventTypes.Contains(runtimeEvent.EventType))
+                reportableEventTypes.Contains(runtimeEvent.EventType))
             .GroupBy(runtimeEvent => new
             {
                 runtimeEvent.RunId,
@@ -85,7 +90,7 @@ public sealed class EfProcessRunRecordBackfillSource(
                 .First())
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var eventsByRunId = terminalEvents
+        var eventsByRunId = reportableEvents
             .GroupBy(runtimeEvent => runtimeEvent.RunId)
             .ToDictionary(group => group.Key, group => group.ToArray());
         var seeds = new List<ProcessRunRecordSeed>(candidates.Count);
@@ -102,12 +107,13 @@ public sealed class EfProcessRunRecordBackfillSource(
                 ProcessRuntimeStatus.Completed => completedEventType,
                 ProcessRuntimeStatus.Failed => failedEventType,
                 ProcessRuntimeStatus.Cancelled => cancelledEventType,
+                ProcessRuntimeStatus.Blocked => blockedEventType,
                 _ => throw new InvalidOperationException(
                     $"Runtime status '{candidate.Status}' is not supported by process run record backfill.")
             };
-            var terminalEvent = candidateEvents.FirstOrDefault(runtimeEvent =>
+            var reportableEvent = candidateEvents.FirstOrDefault(runtimeEvent =>
                 string.Equals(runtimeEvent.EventType, requiredEventType, StringComparison.Ordinal));
-            if (terminalEvent is null)
+            if (reportableEvent is null)
             {
                 continue;
             }
@@ -122,12 +128,12 @@ public sealed class EfProcessRunRecordBackfillSource(
                     DefinitionVersionId: null,
                     ProjectId: null),
                 MapDisposition(candidate.Status),
-                terminalEvent.OccurredAtUtc,
-                terminalEvent.GlobalSequence,
-                terminalEvent.RootSequence,
+                reportableEvent.OccurredAtUtc,
+                reportableEvent.GlobalSequence,
+                reportableEvent.RootSequence,
                 observedAtUtc)
             {
-                Validation = ProcessRunRecordSeedValidation.CurrentTerminalSource
+                Validation = ProcessRunRecordSeedValidation.CurrentReportableSource
             });
         }
 
@@ -141,6 +147,7 @@ public sealed class EfProcessRunRecordBackfillSource(
             ProcessRuntimeStatus.Completed => ProcessRunDisposition.Succeeded,
             ProcessRuntimeStatus.Failed => ProcessRunDisposition.Failed,
             ProcessRuntimeStatus.Cancelled => ProcessRunDisposition.Cancelled,
+            ProcessRuntimeStatus.Blocked => ProcessRunDisposition.Blocked,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(status),
                 status,

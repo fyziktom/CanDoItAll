@@ -492,6 +492,7 @@ public sealed class EfProcessRuntimeUnitOfWork(ProcessPersistenceDbContext dbCon
         existing.ConnectedInputArtifacts.Clear();
 
         var replacement = ProcessPersistenceMappers.ToEntity(state);
+        existing.BlockedRecoveryActionsJson = replacement.BlockedRecoveryActionsJson;
         existing.Steps.AddRange(replacement.Steps);
         existing.Claims.AddRange(replacement.Claims);
         existing.ResultReceipts.AddRange(replacement.ResultReceipts);

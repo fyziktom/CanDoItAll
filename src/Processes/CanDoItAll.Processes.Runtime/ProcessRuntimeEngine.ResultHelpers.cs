@@ -42,7 +42,7 @@ public sealed partial class ProcessRuntimeEngine
             var evidenceHash = ComputePayloadHash($"missing-input:{state.RunId}:{step.StepInstanceId}:{slotId}:{result.ResultHash}");
             AddRequestedArtifact(requestedArtifacts, slotId, evidenceHash);
             diagnostics.Add(new StrategyDiagnosticRef(
-                new StrategyDiagnosticCode("process.runtime.missing_required_input_artifact"),
+                new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
                 StrategyDiagnosticSensitivity.Normal,
                 evidenceHash,
                 $"Step '{step.StepInstanceId}' cannot complete because required input artifact slot '{slotId}' is not available as a connected input receipt.",
@@ -57,7 +57,7 @@ public sealed partial class ProcessRuntimeEngine
             var evidenceHash = ComputePayloadHash($"missing-output:{state.RunId}:{step.StepInstanceId}:{slotId}:{result.ResultHash}");
             AddRequestedArtifact(requestedArtifacts, slotId, evidenceHash);
             diagnostics.Add(new StrategyDiagnosticRef(
-                new StrategyDiagnosticCode("process.runtime.missing_expected_output_artifact"),
+                new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingExpectedOutputArtifact),
                 StrategyDiagnosticSensitivity.Normal,
                 evidenceHash,
                 $"Step '{step.StepInstanceId}' reported success without producing required artifact slot '{slotId}'.",

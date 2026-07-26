@@ -219,27 +219,13 @@ public sealed class ProcessRunRecordAssembler(
                 $"Runtime plan '{state.PlanId}' does not match seeded plan '{seededPlanId}'.");
         }
 
-        if (summary.Disposition == ProcessRunDisposition.Escalated)
-        {
-            if (state.Status == ProcessRuntimeStatus.Escalated)
-            {
-                return true;
-            }
-
-            if (!IsTerminalStatus(state.Status))
-            {
-                return false;
-            }
-
-            throw new InvalidOperationException(
-                $"Terminal runtime status '{state.Status}' does not match seeded escalation for run '{state.RunId}'.");
-        }
-
         var currentDisposition = state.Status switch
         {
             ProcessRuntimeStatus.Completed => ProcessRunDisposition.Succeeded,
             ProcessRuntimeStatus.Failed => ProcessRunDisposition.Failed,
             ProcessRuntimeStatus.Cancelled => ProcessRunDisposition.Cancelled,
+            ProcessRuntimeStatus.Blocked => ProcessRunDisposition.Blocked,
+            ProcessRuntimeStatus.Escalated => ProcessRunDisposition.Escalated,
             _ => throw new InvalidOperationException(
                 $"Process run '{state.RunId}' was reactivated or is not terminal; current status is '{state.Status}'.")
         };
@@ -249,7 +235,7 @@ public sealed class ProcessRunRecordAssembler(
                 $"Runtime disposition '{currentDisposition}' does not match seeded disposition '{summary.Disposition}'.");
         }
 
-        return true;
+        return state.Status != ProcessRuntimeStatus.Blocked;
     }
 
     private async Task<ProcessRunSubtree> LoadSubtreeAsync(
@@ -285,7 +271,7 @@ public sealed class ProcessRunRecordAssembler(
             AddWarning(
                 warnings,
                 warningSet,
-                ProcessRunRecordWarningCode.PrimaryRunNonTerminalAtEscalation);
+                ProcessRunRecordWarningCode.PrimaryRunBlocked);
         }
 
         var subprocessEvidenceComplete = family.Complete;

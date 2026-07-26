@@ -44,6 +44,8 @@ public sealed class ProcessRuntimeStateEntity
 
     public Guid ConcurrencyToken { get; set; }
 
+    public string BlockedRecoveryActionsJson { get; set; } = "[]";
+
     public List<ProcessRuntimeStepEntity> Steps { get; } = [];
 
     public List<ProcessDispatchClaimEntity> Claims { get; } = [];
@@ -181,6 +183,10 @@ public sealed class ProcessStrategyResultReceiptEntity
     public ProcessRuntimeStepStatus AppliedStepStatus { get; set; }
 
     public string ResultHash { get; set; } = string.Empty;
+
+    public string? UserSafeSummary { get; set; }
+
+    public long AppliedSequence { get; set; }
 
     public string DiagnosticsJson { get; set; } = "[]";
 

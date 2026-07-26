@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
@@ -232,6 +233,416 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         Assert.Single(dispatchQueue.Requests);
         var saved = Assert.Single(assignmentStore.SavedAssignments);
         Assert.Contains("expired architecture step", saved.Prompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Authorized_upstream_rework_of_completed_producer_enqueues_dispatch()
+    {
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var producerStepId = ProcessStepInstanceId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var state = CreateBlockedUpstreamRecoveryState(
+            runId,
+            planId,
+            producerStepId,
+            blockedStepId,
+            sourceResultKey);
+        var assignmentStore = new RecordingAssignmentStore(
+            CreateAssignment(runId, planId, producerStepId, "produce-application-skeleton"));
+        var dispatchQueue = new RecordingDispatchQueue();
+        var stateStore = new InMemoryRuntimeStateStore(state);
+        var unitOfWork = new RecordingUnitOfWork(stateStore);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            unitOfWork,
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+
+        var executor = new ProcessBlockedRunRecoveryCommandExecutor(service);
+        var result = await executor.ExecuteAsync(new ProcessBlockedRunRecoveryCommand(
+            runId,
+            blockedStepId,
+            producerStepId,
+            ProcessBlockedRunRecoveryActionKind.UpstreamStepRework,
+            ProcessBlockedRunRecoveryPolicy.SimpleAppMissingInputProducerRework,
+            sourceResultKey,
+            "sha256:missing-input-fingerprint",
+            ProcessRecoveryRouteKind.UpstreamStepRework,
+            producerStepId,
+            ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer,
+            state.UpdatedAtUtc),
+            "blocked-run-recovery",
+            CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Ready,
+            stateStore.State.Steps.Single(step => step.StepInstanceId == producerStepId).Status);
+        Assert.Equal(2, stateStore.State.AppliedResults.Count);
+        Assert.Single(unitOfWork.Requests);
+        Assert.Single(assignmentStore.SavedAssignments);
+        Assert.Single(dispatchQueue.Requests);
+    }
+
+    [Theory]
+    [InlineData(BlockedRecoveryAuthorizationMismatch.StaleState)]
+    [InlineData(BlockedRecoveryAuthorizationMismatch.ResultKey)]
+    [InlineData(BlockedRecoveryAuthorizationMismatch.ResponsibleTarget)]
+    [InlineData(BlockedRecoveryAuthorizationMismatch.UnrelatedTarget)]
+    public async Task Blocked_recovery_precondition_mismatch_rejects_without_mutation_or_dispatch(
+        BlockedRecoveryAuthorizationMismatch mismatch)
+    {
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var producerStepId = ProcessStepInstanceId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var state = CreateBlockedUpstreamRecoveryState(
+            runId,
+            planId,
+            producerStepId,
+            blockedStepId,
+            sourceResultKey);
+        var authorization = CreateBlockedRecoveryAuthorization(
+            state,
+            blockedStepId,
+            sourceResultKey,
+            producerStepId);
+        authorization = mismatch switch
+        {
+            BlockedRecoveryAuthorizationMismatch.StaleState => authorization with
+            {
+                ExpectedStateUpdatedAtUtc = authorization.ExpectedStateUpdatedAtUtc.AddMilliseconds(-1)
+            },
+            BlockedRecoveryAuthorizationMismatch.ResultKey => authorization with
+            {
+                SourceResultIdempotencyKey = StrategyResultIdempotencyKey.New()
+            },
+            BlockedRecoveryAuthorizationMismatch.ResponsibleTarget => authorization with
+            {
+                ResponsibleTargetStepInstanceId = ProcessStepInstanceId.New()
+            },
+            BlockedRecoveryAuthorizationMismatch.UnrelatedTarget => authorization,
+            _ => throw new ArgumentOutOfRangeException(nameof(mismatch), mismatch, null)
+        };
+        var commandTargetStepId = mismatch == BlockedRecoveryAuthorizationMismatch.UnrelatedTarget
+            ? ProcessStepInstanceId.New()
+            : producerStepId;
+        var assignmentStore = new RecordingAssignmentStore(
+            CreateAssignment(runId, planId, producerStepId, "produce-application-skeleton"));
+        var dispatchQueue = new RecordingDispatchQueue();
+        var stateStore = new InMemoryRuntimeStateStore(state);
+        var unitOfWork = new RecordingUnitOfWork(stateStore);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            unitOfWork,
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+
+        var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
+            runId,
+            commandTargetStepId,
+            ProcessRuntimeOperatorActionKind.RequestRework,
+            "blocked-run-recovery",
+            "This command must not mutate stale blocked state.")
+        {
+            BlockedRecoveryAuthorization = authorization
+        });
+
+        Assert.Equal(ProcessRuntimeTransitionOutcome.Rejected, result.Outcome);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains("Runtime.BlockedRecoveryAuthorizationRejected", StringComparison.Ordinal));
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Completed,
+            stateStore.State.Steps.Single(step => step.StepInstanceId == producerStepId).Status);
+        Assert.Empty(unitOfWork.Requests);
+        Assert.Empty(assignmentStore.SavedAssignments);
+        Assert.Empty(dispatchQueue.Requests);
+    }
+
+    [Fact]
+    public async Task Authorized_restored_input_rework_targets_blocked_consumer_not_responsible_producer()
+    {
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var producerStepId = ProcessStepInstanceId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var state = CreateBlockedUpstreamRecoveryState(
+            runId,
+            planId,
+            producerStepId,
+            blockedStepId,
+            sourceResultKey,
+            inputRestored: true);
+        var assignmentStore = new RecordingAssignmentStore(
+            CreateAssignment(runId, planId, blockedStepId, "consume-application-skeleton"));
+        var dispatchQueue = new RecordingDispatchQueue();
+        var stateStore = new InMemoryRuntimeStateStore(state);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            new RecordingUnitOfWork(stateStore),
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+
+        var result = await service.ExecuteAsync(new ProcessRuntimeOperatorActionCommand(
+            runId,
+            blockedStepId,
+            ProcessRuntimeOperatorActionKind.RequestRework,
+            "blocked-run-recovery",
+            "The upstream input artifact is now restored.")
+        {
+            BlockedRecoveryAuthorization = CreateBlockedRecoveryAuthorization(
+                state,
+                blockedStepId,
+                sourceResultKey,
+                producerStepId,
+                ProcessRuntimeBlockedRecoveryPhase.RestoredConsumer)
+        });
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Ready,
+            stateStore.State.Steps.Single(step => step.StepInstanceId == blockedStepId).Status);
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Completed,
+            stateStore.State.Steps.Single(step => step.StepInstanceId == producerStepId).Status);
+        Assert.Single(dispatchQueue.Requests);
+    }
+
+    [Fact]
+    public async Task Coordinator_recovers_producer_then_restored_consumer_and_rejects_replay()
+    {
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var producerStepId = ProcessStepInstanceId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var initialState = CreateBlockedUpstreamRecoveryState(
+            runId,
+            planId,
+            producerStepId,
+            blockedStepId,
+            sourceResultKey);
+        var assignmentStore = new RecordingAssignmentStore(
+            CreateAssignment(runId, planId, producerStepId, "produce-application-skeleton"),
+            CreateAssignment(runId, planId, blockedStepId, "consume-application-skeleton"));
+        var dispatchQueue = new RecordingDispatchQueue();
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingUnitOfWork(stateStore);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var operatorService = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            unitOfWork,
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+        var coordinator = new ProcessBlockedRunRecoveryCoordinator(
+            stateStore,
+            new StubPlanStore(CreateSimpleAppPlan(planId)),
+            new ProcessBlockedRunRecoveryCommandExecutor(operatorService),
+            new ProcessBlockedRunRecoveryPolicyCatalog());
+
+        var producerRecovery = await coordinator.TryRecoverAsync(runId, "blocked-run-recovery");
+
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.Recovered, producerRecovery.Outcome);
+        Assert.Equal(
+            ProcessBlockedRunRecoveryActionKind.UpstreamStepRework,
+            producerRecovery.ActionKind);
+        var producerAction = Assert.Single(stateStore.State.BlockedRecoveryActions);
+        Assert.Equal(ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer, producerAction.Phase);
+        Assert.Equal(sourceResultKey, producerAction.SourceResultIdempotencyKey);
+        Assert.Equal(producerStepId, producerAction.TargetStepInstanceId);
+
+        var expectedInput = Assert.Single(stateStore.State.ConnectedInputArtifacts);
+        var producerResultKey = StrategyResultIdempotencyKey.New();
+        stateStore.State = stateStore.State with
+        {
+            Status = ProcessRuntimeStatus.Blocked,
+            Steps = stateStore.State.Steps
+                .Select(step => step.StepInstanceId == producerStepId
+                    ? step with
+                    {
+                        Status = ProcessRuntimeStepStatus.Completed,
+                        AttemptNumber = 1,
+                        CompletedResultKey = producerResultKey
+                    }
+                    : step with
+                    {
+                        Status = ProcessRuntimeStepStatus.Blocked,
+                        ActiveClaimToken = null,
+                        CompletedResultKey = null
+                    })
+                .ToArray(),
+            AvailableArtifactSlots = new HashSet<ArtifactSlotId> { expectedInput.RequiredSlotId },
+            ConnectedInputArtifacts =
+            [
+                expectedInput with
+                {
+                    Availability = ProcessArtifactInputAvailability.Available,
+                    ArtifactId = ArtifactInstanceId.New(),
+                    ContentHash = "sha256:restored-input"
+                }
+            ],
+            UpdatedAtUtc = Now
+        };
+
+        var consumerRecovery = await coordinator.TryRecoverAsync(runId, "blocked-run-recovery");
+
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.Recovered, consumerRecovery.Outcome);
+        Assert.Equal(
+            ProcessBlockedRunRecoveryActionKind.CurrentStepRework,
+            consumerRecovery.ActionKind);
+        Assert.Collection(
+            stateStore.State.BlockedRecoveryActions,
+            action => Assert.Equal(ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer, action.Phase),
+            action => Assert.Equal(ProcessRuntimeBlockedRecoveryPhase.RestoredConsumer, action.Phase));
+        Assert.All(
+            stateStore.State.BlockedRecoveryActions,
+            action => Assert.Equal(sourceResultKey, action.SourceResultIdempotencyKey));
+
+        stateStore.State = stateStore.State with
+        {
+            Status = ProcessRuntimeStatus.Blocked,
+            Steps = stateStore.State.Steps
+                .Select(step => step.StepInstanceId == blockedStepId
+                    ? step with
+                    {
+                        Status = ProcessRuntimeStepStatus.Blocked,
+                        ActiveClaimToken = null,
+                        CompletedResultKey = null
+                    }
+                    : step)
+                .ToArray(),
+            UpdatedAtUtc = Now
+        };
+
+        var replay = await coordinator.TryRecoverAsync(runId, "blocked-run-recovery");
+
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.RequiresAttention, replay.Outcome);
+        Assert.Contains(
+            replay.Diagnostics,
+            diagnostic => diagnostic.Contains("budget", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, stateStore.State.BlockedRecoveryActions.Count);
+        Assert.Equal(2, unitOfWork.Requests.Count);
+        Assert.Equal(2, dispatchQueue.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Authorized_manager_action_with_null_responsible_target_reworks_source_step()
+    {
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var blockedStepId = ProcessStepInstanceId.New();
+        var sourceResultKey = StrategyResultIdempotencyKey.New();
+        var state = CreateBlockedManagerActionState(runId, planId, blockedStepId, sourceResultKey);
+        var assignmentStore = new RecordingAssignmentStore(
+            CreateAssignment(runId, planId, blockedStepId, "produce-application-output"));
+        var dispatchQueue = new RecordingDispatchQueue();
+        var stateStore = new InMemoryRuntimeStateStore(state);
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            new RecordingUnitOfWork(stateStore),
+            dispatchQueue,
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            []);
+        var executor = new ProcessBlockedRunRecoveryCommandExecutor(service);
+
+        var result = await executor.ExecuteAsync(
+            new ProcessBlockedRunRecoveryCommand(
+                runId,
+                blockedStepId,
+                blockedStepId,
+                ProcessBlockedRunRecoveryActionKind.CurrentStepRework,
+                ProcessBlockedRunRecoveryPolicy.SimpleAppMissingOutputRework,
+                sourceResultKey,
+                "sha256:missing-output-fingerprint",
+                ProcessRecoveryRouteKind.ManagerAction,
+                ResponsibleStepInstanceId: null,
+                ProcessRuntimeBlockedRecoveryPhase.CurrentStep,
+                ExpectedStateUpdatedAtUtc: state.UpdatedAtUtc),
+            "blocked-run-recovery");
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Ready, stateStore.State.Steps.Single().Status);
+        Assert.Single(dispatchQueue.Requests);
     }
 
     [Fact]
@@ -669,6 +1080,221 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
             Now.AddMinutes(-5));
     }
 
+    private static ProcessRuntimeStateSnapshot CreateBlockedUpstreamRecoveryState(
+        ProcessRunId runId,
+        ProcessInstancePlanId planId,
+        ProcessStepInstanceId producerStepId,
+        ProcessStepInstanceId blockedStepId,
+        StrategyResultIdempotencyKey sourceResultKey,
+        bool inputRestored = false)
+    {
+        var artifactSlotId = ArtifactSlotId.New();
+        var producerResultKey = StrategyResultIdempotencyKey.New();
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Blocked,
+            [
+                new ProcessRuntimeStepState(
+                    producerStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Completed,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    producerResultKey),
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId> { producerStepId },
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId> { artifactSlotId },
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null)
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    producerStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    producerResultKey,
+                    StrategyOutcome.Succeeded,
+                    ProcessRuntimeStepStatus.Completed,
+                    "sha256:producer-result"),
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    sourceResultKey,
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:missing-input-result",
+                    [
+                        new StrategyResultDiagnosticReceipt(
+                            ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:missing-input",
+                            "Required input artifact is missing.",
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ],
+                    recoveryDecision: new ProcessRecoveryDecisionReceipt(
+                        ProcessFailureCategory.MissingArtifact,
+                        ProcessRecoveryDecisionKind.ManagerRequired,
+                        ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
+                        "process.upstream-artifact-rework-required",
+                        "Rework the responsible upstream producer.")
+                    {
+                        RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
+                        ResponsibleStepInstanceId = producerStepId,
+                        DiagnosticFingerprint = "sha256:missing-input-fingerprint"
+                    })
+            ],
+            inputRestored
+                ? new HashSet<ArtifactSlotId> { artifactSlotId }
+                : new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-5));
+        return state with
+        {
+            ConnectedInputArtifacts =
+            [
+                new ProcessRuntimeInputArtifactReceipt(
+                    blockedStepId,
+                    artifactSlotId,
+                    inputRestored
+                        ? ProcessArtifactInputAvailability.Available
+                        : ProcessArtifactInputAvailability.Expected,
+                    producerStepId,
+                    inputRestored ? ArtifactInstanceId.New() : null,
+                    inputRestored ? "sha256:restored-input" : string.Empty,
+                    "sha256:producer-to-consumer")
+            ]
+        };
+    }
+
+    private static ProcessRuntimeStateSnapshot CreateBlockedManagerActionState(
+        ProcessRunId runId,
+        ProcessInstancePlanId planId,
+        ProcessStepInstanceId blockedStepId,
+        StrategyResultIdempotencyKey sourceResultKey)
+    {
+        return new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Blocked,
+            [
+                new ProcessRuntimeStepState(
+                    blockedStepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Blocked,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: null,
+                    CompletedResultKey: null)
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    blockedStepId,
+                    new StrategyId("strategy.adapter.workflow.execute"),
+                    sourceResultKey,
+                    StrategyOutcome.NeedsManager,
+                    ProcessRuntimeStepStatus.Blocked,
+                    "sha256:missing-output-result",
+                    [
+                        new StrategyResultDiagnosticReceipt(
+                            "process.runtime.missing_expected_output_artifact",
+                            StrategyDiagnosticSensitivity.Normal,
+                            "sha256:missing-output",
+                            "Expected output artifact is missing.",
+                            RestrictedEvidenceReference: null,
+                            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ],
+                    recoveryDecision: new ProcessRecoveryDecisionReceipt(
+                        ProcessFailureCategory.MissingArtifact,
+                        ProcessRecoveryDecisionKind.ManagerRequired,
+                        "process.runtime.missing_expected_output_artifact",
+                        "process.manager-review-required",
+                        "Retry the source step.")
+                    {
+                        RouteKind = ProcessRecoveryRouteKind.ManagerAction,
+                        ResponsibleStepInstanceId = null,
+                        DiagnosticFingerprint = "sha256:missing-output-fingerprint"
+                    })
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now.AddMinutes(-5));
+    }
+
+    private static ProcessRuntimeBlockedRecoveryAuthorization CreateBlockedRecoveryAuthorization(
+        ProcessRuntimeStateSnapshot state,
+        ProcessStepInstanceId blockedStepId,
+        StrategyResultIdempotencyKey sourceResultKey,
+        ProcessStepInstanceId responsibleTargetStepId,
+        ProcessRuntimeBlockedRecoveryPhase phase =
+            ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer)
+    {
+        return new ProcessRuntimeBlockedRecoveryAuthorization(
+            state.UpdatedAtUtc,
+            ProcessRuntimeStatus.Blocked,
+            blockedStepId,
+            sourceResultKey,
+            "sha256:missing-input-fingerprint",
+            ProcessRecoveryRouteKind.UpstreamStepRework,
+            responsibleTargetStepId,
+            phase);
+    }
+
+    private static ProcessInstancePlan CreateSimpleAppPlan(ProcessInstancePlanId planId)
+    {
+        return new ProcessInstancePlan(
+            new ProcessInstancePlanHeader(
+                planId,
+                planId,
+                ParentPlanId: null,
+                ParentStepId: null,
+                "processes.instance-plan.v1",
+                Now,
+                HierarchyDepth: 0),
+            new ResolvedProcessDefinitionSnapshot(
+                ProcessDefinitionId.New(),
+                ProcessDefinitionVersionId.New(),
+                "sha256:definition",
+                "template/1",
+                "template/1",
+                [],
+                [
+                    new ResolvedTemplateComponentSnapshot(
+                        TemplateComponentId.New(),
+                        "simple-app-delivery",
+                        "1.0.0",
+                        "sha256:simple-app-template")
+                ],
+                []),
+            new DriverStackSnapshot([]),
+            new StrategyBindingSet([], [], [], []),
+            [],
+            new ArtifactPlan([], []),
+            new BranchRouteTable([]),
+            [],
+            new ManagerPlan("sha256:manager-policy", null, [], []),
+            new BudgetPlan([]),
+            new MonitoringPlan(true, "sha256:monitoring"),
+            new SecurityPlan("sha256:security", []),
+            "sha256:plan");
+    }
+
     private static ProcessRuntimeStateSnapshot CreateExpiredRunningState(
         ProcessRunId runId,
         ProcessInstancePlanId planId,
@@ -798,6 +1424,14 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
     private sealed class FixedProcessProjectionClock(DateTimeOffset utcNow) : IProcessProjectionClock
     {
         public DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    public enum BlockedRecoveryAuthorizationMismatch
+    {
+        StaleState,
+        ResultKey,
+        ResponsibleTarget,
+        UnrelatedTarget
     }
 
     private sealed class InMemoryRuntimeStateStore(params ProcessRuntimeStateSnapshot[] states) :
@@ -956,13 +1590,12 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         }
     }
 
-    private sealed class RecordingAssignmentStore(ProcessRuntimeStepAssignment assignment) : IProcessRuntimeStepAssignmentStore
+    private sealed class RecordingAssignmentStore(params ProcessRuntimeStepAssignment[] initialAssignments) :
+        IProcessRuntimeStepAssignmentStore
     {
         private readonly Dictionary<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId), ProcessRuntimeStepAssignment> assignments =
-            new()
-            {
-                [(assignment.RunId, assignment.StepInstanceId)] = assignment
-            };
+            initialAssignments.ToDictionary(
+                assignment => (assignment.RunId, assignment.StepInstanceId));
 
         public List<ProcessRuntimeStepAssignment> SavedAssignments { get; } = [];
 
@@ -996,6 +1629,25 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         {
             assignments.TryGetValue((runId, stepInstanceId), out var assignment);
             return ValueTask.FromResult(assignment);
+        }
+    }
+
+    private sealed class StubPlanStore(ProcessInstancePlan plan) : IProcessInstancePlanStore
+    {
+        public ValueTask<PersistedProcessInstancePlan> PersistAsync(
+            ProcessInstancePlan processPlan,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(
+                new PersistedProcessInstancePlan(processPlan.Header.PlanId, processPlan.PlanHash));
+        }
+
+        public ValueTask<ProcessInstancePlan?> LoadAsync(
+            ProcessInstancePlanId planId,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult<ProcessInstancePlan?>(
+                planId == plan.Header.PlanId ? plan : null);
         }
     }
 

@@ -340,6 +340,14 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("AgentFramework execution contract:", prompt, StringComparison.Ordinal);
         Assert.Contains("This is a tool-backed process step, not a chat-only response", prompt, StringComparison.Ordinal);
         Assert.Contains("Only after the required evidence exists", prompt, StringComparison.Ordinal);
+        Assert.Contains(
+            "the runtime builds the typed manager packet from those records",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Include the assigned agent name, step key, process run id",
+            prompt,
+            StringComparison.Ordinal);
         Assert.Contains("Do not put native absolute filesystem paths", prompt, StringComparison.Ordinal);
         Assert.Contains("scoped storage paths under artifacts/scopes", prompt, StringComparison.Ordinal);
         Assert.Contains("ignore that scoped echo in artifact prose and evidenceRefs", prompt, StringComparison.Ordinal);

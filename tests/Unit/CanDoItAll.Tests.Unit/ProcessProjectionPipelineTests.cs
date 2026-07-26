@@ -64,7 +64,8 @@ public sealed class ProcessProjectionPipelineTests
     [InlineData(ProcessRunDisposition.Succeeded)]
     [InlineData(ProcessRunDisposition.Failed)]
     [InlineData(ProcessRunDisposition.Cancelled)]
-    public async Task Runtime_projector_canonical_terminal_event_seeds_current_run_record(
+    [InlineData(ProcessRunDisposition.Blocked)]
+    public async Task Runtime_projector_reportable_run_event_seeds_current_run_record(
         ProcessRunDisposition expectedDisposition)
     {
         await using var dbContext = CreateDbContext();
@@ -82,6 +83,7 @@ public sealed class ProcessProjectionPipelineTests
             ProcessRunDisposition.Succeeded => ProcessRuntimeEventTypes.ProcessRunCompleted,
             ProcessRunDisposition.Failed => ProcessRuntimeEventTypes.ProcessRunFailed,
             ProcessRunDisposition.Cancelled => ProcessRuntimeEventTypes.ProcessRunCancelled,
+            ProcessRunDisposition.Blocked => ProcessRuntimeEventTypes.ProcessRunBlocked,
             _ => throw new ArgumentOutOfRangeException(nameof(expectedDisposition))
         };
 
@@ -142,7 +144,7 @@ public sealed class ProcessProjectionPipelineTests
             new FixedProcessProjectionClock(Now),
             runRecordStore);
         var runId = ProcessRunId.New();
-        var failedAtUtc = Now.AddMinutes(-3);
+        var blockedAtUtc = Now.AddMinutes(-3);
         var reactivatedAtUtc = Now.AddMinutes(-2);
         var completedAtUtc = Now.AddMinutes(-1);
         var context = new ProcessProjectionExecutionContext(
@@ -151,12 +153,12 @@ public sealed class ProcessProjectionPipelineTests
             LatestKnownGlobalSequence: 3);
 
         await projector.ProjectAsync(
-            StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunFailed, failedAtUtc),
+            StoredEvent(1, runId, ProcessRuntimeEventTypes.ProcessRunBlocked, blockedAtUtc),
             context);
 
-        var failed = Assert.IsType<ProcessRunRecord>(await runRecordStore.GetAsync(runId));
-        Assert.Equal(ProcessRunDisposition.Failed, failed.Summary.Disposition);
-        Assert.Equal(ProcessRunRecordLifecycleState.Current, failed.Summary.LifecycleState);
+        var blocked = Assert.IsType<ProcessRunRecord>(await runRecordStore.GetAsync(runId));
+        Assert.Equal(ProcessRunDisposition.Blocked, blocked.Summary.Disposition);
+        Assert.Equal(ProcessRunRecordLifecycleState.Current, blocked.Summary.LifecycleState);
 
         await projector.ProjectAsync(
             StoredEvent(2, runId, ProcessRuntimeEventTypes.ProcessRunReactivated, reactivatedAtUtc),
@@ -165,7 +167,7 @@ public sealed class ProcessProjectionPipelineTests
         Assert.Null(await runRecordStore.GetAsync(runId));
         var superseded = Assert.IsType<ProcessRunRecord>(
             await runRecordStore.GetAsync(runId, includeSuperseded: true));
-        Assert.Equal(ProcessRunDisposition.Failed, superseded.Summary.Disposition);
+        Assert.Equal(ProcessRunDisposition.Blocked, superseded.Summary.Disposition);
         Assert.Equal(ProcessRunRecordLifecycleState.Superseded, superseded.Summary.LifecycleState);
         Assert.Equal(2, superseded.Summary.SourceGlobalSequence);
         Assert.Equal(2, superseded.Summary.SourceRootSequence);

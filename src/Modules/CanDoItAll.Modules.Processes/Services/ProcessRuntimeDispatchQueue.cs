@@ -12,7 +12,9 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
     private readonly Channel<ProcessRuntimeDispatchQueueRequest> recoveryChannel;
     private readonly ConcurrentDictionary<ProcessRunId, byte> immediateQueuedRunIds = new();
     private readonly ConcurrentDictionary<ProcessRunId, byte> recoveryQueuedRunIds = new();
-    private readonly ConcurrentDictionary<ProcessRunId, byte> activeRunIds = new();
+    private readonly object activeRunGate = new();
+    private readonly HashSet<ProcessRunId> activeRunIds = [];
+    private readonly Dictionary<ProcessRunId, ProcessRuntimeDispatchQueueRequest> deferredRunRequests = [];
 
     public ProcessRuntimeDispatchQueue()
         : this(new ProcessRuntimeDispatchQueueOptions())
@@ -86,10 +88,107 @@ internal sealed class ProcessRuntimeDispatchQueue : IProcessRuntimeDispatchQueue
     }
 
     public bool TryMarkActive(ProcessRunId runId)
-        => activeRunIds.TryAdd(runId, 0);
+    {
+        lock (activeRunGate)
+        {
+            return activeRunIds.Add(runId);
+        }
+    }
+
+    public bool TryMarkActiveOrDefer(ProcessRuntimeDispatchQueueRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        lock (activeRunGate)
+        {
+            if (activeRunIds.Add(request.RunId))
+            {
+                return true;
+            }
+
+            deferredRunRequests[request.RunId] = deferredRunRequests.TryGetValue(
+                request.RunId,
+                out var existing)
+                ? SelectPreferredRequest(existing, request)
+                : request;
+            return false;
+        }
+    }
 
     public void MarkInactive(ProcessRunId runId)
-        => activeRunIds.TryRemove(runId, out _);
+    {
+        lock (activeRunGate)
+        {
+            activeRunIds.Remove(runId);
+        }
+    }
+
+    public int FlushDeferredRequests()
+    {
+        KeyValuePair<ProcessRunId, ProcessRuntimeDispatchQueueRequest>[] readyRequests;
+        lock (activeRunGate)
+        {
+            readyRequests = deferredRunRequests
+                .Where(item => !activeRunIds.Contains(item.Key))
+                .ToArray();
+            foreach (var readyRequest in readyRequests)
+            {
+                deferredRunRequests.Remove(readyRequest.Key);
+            }
+        }
+
+        var flushedCount = 0;
+        foreach (var readyRequest in readyRequests)
+        {
+            if (TryEnqueue(readyRequest.Value))
+            {
+                flushedCount++;
+                continue;
+            }
+
+            lock (activeRunGate)
+            {
+                deferredRunRequests[readyRequest.Key] = deferredRunRequests.TryGetValue(
+                    readyRequest.Key,
+                    out var existing)
+                    ? SelectPreferredRequest(existing, readyRequest.Value)
+                    : readyRequest.Value;
+            }
+        }
+
+        return flushedCount;
+    }
+
+    private bool TryEnqueue(ProcessRuntimeDispatchQueueRequest request)
+    {
+        var queuedRunIds = request.IsRecovery
+            ? recoveryQueuedRunIds
+            : immediateQueuedRunIds;
+        if (!queuedRunIds.TryAdd(request.RunId, 0))
+        {
+            return true;
+        }
+
+        var channel = request.IsRecovery
+            ? recoveryChannel
+            : immediateChannel;
+        if (channel.Writer.TryWrite(request))
+        {
+            return true;
+        }
+
+        queuedRunIds.TryRemove(request.RunId, out _);
+        return false;
+    }
+
+    private static ProcessRuntimeDispatchQueueRequest SelectPreferredRequest(
+        ProcessRuntimeDispatchQueueRequest existing,
+        ProcessRuntimeDispatchQueueRequest candidate)
+    {
+        return existing.IsRecovery && !candidate.IsRecovery
+            ? candidate
+            : existing;
+    }
 
     private static Channel<ProcessRuntimeDispatchQueueRequest> CreateChannel(int capacity)
     {

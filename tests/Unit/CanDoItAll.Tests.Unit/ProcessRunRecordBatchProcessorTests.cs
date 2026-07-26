@@ -221,7 +221,7 @@ public sealed class ProcessRunRecordBatchProcessorTests
         List<Invocation> invocations,
         IReadOnlyList<ProcessRunRecordSeed> seeds) : IProcessRunRecordBackfillSource
     {
-        public Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingTerminalSeedsAsync(
+        public Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingReportableSeedsAsync(
             int take,
             CancellationToken cancellationToken = default)
         {
@@ -232,7 +232,7 @@ public sealed class ProcessRunRecordBatchProcessorTests
 
     private sealed class EmptyBackfillSource : IProcessRunRecordBackfillSource
     {
-        public Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingTerminalSeedsAsync(
+        public Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingReportableSeedsAsync(
             int take,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ProcessRunRecordSeed>>([]);

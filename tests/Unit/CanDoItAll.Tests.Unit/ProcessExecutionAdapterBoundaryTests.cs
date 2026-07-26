@@ -71,6 +71,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         Assert.Equal("restricted://workflow/run-1", diagnostic.RestrictedEvidenceReference);
         Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
         Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Equal("Workflow adapter completed with a restricted diagnostic.", result.UserSafeSummary);
         Assert.Equal("sha256:result", result.ResultHash);
     }
 

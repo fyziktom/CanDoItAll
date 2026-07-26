@@ -23,7 +23,7 @@ public sealed class ProcessRunRecordBackfillProcessor(
         }
 
         var seeds = await source
-            .ListMissingTerminalSeedsAsync(take, cancellationToken)
+            .ListMissingReportableSeedsAsync(take, cancellationToken)
             .ConfigureAwait(false);
         var insertedOrRevisedCount = 0;
         foreach (var seed in seeds)

@@ -80,7 +80,7 @@ internal sealed class ProjectStructureProcessRunRecordProjector(
                 summary.Identity.RunId.Value,
                 metrics.TotalStepCount,
                 metrics.CompletedStepCount,
-                BlockedStepCount: 0,
+                BlockedStepCount: summary.Disposition == ProcessRunDisposition.Blocked ? 1 : 0,
                 WaitingApprovalStepCount: 0,
                 ActiveStepCount: 0),
             metrics.StartedAtUtc,
@@ -98,6 +98,7 @@ internal sealed class ProjectStructureProcessRunRecordProjector(
             ProcessRunDisposition.Succeeded => ProcessRuntimeStatus.Completed,
             ProcessRunDisposition.Failed => ProcessRuntimeStatus.Failed,
             ProcessRunDisposition.Cancelled => ProcessRuntimeStatus.Cancelled,
+            ProcessRunDisposition.Blocked => ProcessRuntimeStatus.Blocked,
             ProcessRunDisposition.Escalated => ProcessRuntimeStatus.Escalated,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(disposition),

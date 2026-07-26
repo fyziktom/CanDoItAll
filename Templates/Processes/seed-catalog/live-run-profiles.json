@@ -84,5 +84,87 @@
       "PWA manifest/service-worker readiness notes",
       "Project-structure writeback receipt"
     ]
+  },
+  {
+    "Key": "generic-simple-local-app",
+    "ProcessTemplateKey": "simple-app-delivery",
+    "RunNameTemplate": "Simple app delivery / {AppTopic}",
+    "Summary": "Framework-neutral live-run profile for a small local UI, API, console, or library application. The run request supplies the application kind, stack, product root, and acceptance criteria.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReasonTemplate": "Deliver the bounded local application requested for {AppTopic}. Resolve exactly one application kind, the approved product root, technology stack, entry point, acceptance criteria, and only the proof applicable to that kind. Do not infer browser, HTTP, deployment, or privileged-operation requirements from the topic. Route explicit production, privilege, regulated-data, payment, destructive-migration, or unresolved security risk to specialist review.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "simple-app-manager",
+        "DisplayNameTemplate": "{AppTopic} delivery manager",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns the bounded delivery contract, recovery decisions, evidence index, and terminal routing without performing implementation work."
+      },
+      {
+        "StepKey": "resolve-app-profile",
+        "RoleKey": "simple-app-architect",
+        "DisplayNameTemplate": "{AppTopic} contract reviewer",
+        "ExecutorKind": "agent",
+        "BindingReason": "Reviews application kind, product boundary, applicable proof, and unsupported-risk classification without mutating the product."
+      },
+      {
+        "StepKey": "implement-application",
+        "RoleKey": "simple-app-engineer",
+        "DisplayNameTemplate": "{AppTopic} implementation owner",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns scaffolding, implementation, and current-run build, test, or smoke proof inside the approved product root."
+      },
+      {
+        "StepKey": "validate-application",
+        "RoleKey": "simple-app-qa",
+        "DisplayNameTemplate": "{AppTopic} independent validator",
+        "ExecutorKind": "agent",
+        "BindingReason": "Validates the declared acceptance contract using only the runtime, HTTP, browser, console, or consumer proof applicable to the selected application kind."
+      },
+      {
+        "StepKey": "repair-findings",
+        "RoleKey": "simple-app-engineer",
+        "DisplayNameTemplate": "{AppTopic} repair owner",
+        "ExecutorKind": "agent",
+        "BindingReason": "Applies the single bounded repair from concrete validation findings."
+      },
+      {
+        "StepKey": "revalidate-repair",
+        "RoleKey": "simple-app-qa",
+        "DisplayNameTemplate": "{AppTopic} repair validator",
+        "ExecutorKind": "agent",
+        "BindingReason": "Revalidates only the repaired acceptance contract and produces fresh proof."
+      }
+    ],
+    "AcceptanceCriteria": [
+      {
+        "Key": "explicit-application-profile",
+        "Title": "Explicit application profile",
+        "Description": "The current run declares one supported application kind, stack, approved product root, entry point, and bounded acceptance contract."
+      },
+      {
+        "Key": "complete-bounded-delivery",
+        "Title": "Complete bounded delivery",
+        "Description": "The implementation satisfies every declared acceptance criterion and does not expand into deployment, privilege, regulated-data, payment, destructive-migration, or unresolved security work."
+      },
+      {
+        "Key": "kind-appropriate-proof",
+        "Title": "Application-kind appropriate proof",
+        "Description": "Build, tests, and only the runtime, HTTP, browser, console, or consumer evidence applicable to the declared application kind are captured from the current run."
+      },
+      {
+        "Key": "single-mutation-owner",
+        "Title": "Predictable team boundary",
+        "Description": "The implementation owner is the only normal product mutator; architecture and QA remain independent and read-only."
+      }
+    ],
+    "RequiredProofKinds": [
+      "Simple application delivery contract",
+      "Implementation change-set summary",
+      "Current-run build and test transcript",
+      "Application-kind appropriate smoke or consumer proof",
+      "Independent acceptance result",
+      "Managed handoff receipt"
+    ]
   }
 ]

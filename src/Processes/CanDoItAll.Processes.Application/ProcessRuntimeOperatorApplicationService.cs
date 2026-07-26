@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using System.Text.RegularExpressions;
@@ -24,6 +25,8 @@ public sealed class ProcessRuntimeOperatorApplicationService(
     private const string ReworkInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.OperatorRework;
     private const string ManagerRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.ManagerRecovery;
     private const string RuntimeDiagnosticRecoveryInstructionHeading = ProcessRuntimeRecoveryInstructionHeadings.RuntimeDiagnosticRecovery;
+    private const string BlockedRecoveryAuthorizationRejected = "Runtime.BlockedRecoveryAuthorizationRejected";
+    private const string BlockedRecoveryConcurrencyRejected = "Runtime.BlockedRecoveryConcurrencyRejected";
     private static readonly Regex PriorReworkInstructionBlockRegex = new(
         $@"(?ms)^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*.*?(?=^\s*(?:{Regex.Escape(ManagerRecoveryInstructionHeading)}|{Regex.Escape(ReworkInstructionHeading)}|{Regex.Escape(RuntimeDiagnosticRecoveryInstructionHeading)}):\s*|\z)",
         RegexOptions.CultureInvariant);
@@ -359,9 +362,16 @@ public sealed class ProcessRuntimeOperatorApplicationService(
     {
         var state = await stateStore.LoadAsync(command.RunId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Process run '{command.RunId}' was not found.");
+        var authorizationIssue = ValidateBlockedRecoveryAuthorization(command, state);
+        if (authorizationIssue is not null)
+        {
+            return RejectBlockedRecovery(command, state, BlockedRecoveryAuthorizationRejected, authorizationIssue);
+        }
+
         var reason = NormalizeReason(command.Reason);
         var engine = new ProcessRuntimeEngine(unitOfWork);
-        if (HasExpiredActiveClaim(state, command.StepInstanceId, NormalizeUtc(clock.GetUtcNow())))
+        if (command.BlockedRecoveryAuthorization is null &&
+            HasExpiredActiveClaim(state, command.StepInstanceId, NormalizeUtc(clock.GetUtcNow())))
         {
             var expireCommit = await engine.ExpireClaimsAsync(
                 state,
@@ -383,11 +393,27 @@ public sealed class ProcessRuntimeOperatorApplicationService(
         }
 
         var stateBeforeRework = state;
-        var commit = await engine.RequestStepReworkAsync(
-            state,
-            CreateContext(command.RequestedBy),
-            new RequestStepReworkCommand(command.StepInstanceId, reason),
-            cancellationToken).ConfigureAwait(false);
+        ProcessRuntimeCommitResult commit;
+        try
+        {
+            commit = await engine.RequestStepReworkAsync(
+                state,
+                CreateContext(command.RequestedBy),
+                new RequestStepReworkCommand(command.StepInstanceId, reason)
+                {
+                    BlockedRecoveryAuthorization = command.BlockedRecoveryAuthorization
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (ProcessRuntimeOptimisticConcurrencyException exception)
+            when (command.BlockedRecoveryAuthorization is not null)
+        {
+            return RejectBlockedRecovery(
+                command,
+                state,
+                BlockedRecoveryConcurrencyRejected,
+                $"The blocked run changed before the authorized rework could commit: {exception.Message}");
+        }
 
         if (commit.Succeeded)
         {
@@ -405,6 +431,34 @@ public sealed class ProcessRuntimeOperatorApplicationService(
             commit.Outcome,
             commit.State.Status,
             commit.Diagnostics.Select(diagnostic => diagnostic.Message).ToArray());
+    }
+
+    private static string? ValidateBlockedRecoveryAuthorization(
+        ProcessRuntimeOperatorActionCommand command,
+        ProcessRuntimeStateSnapshot state)
+    {
+        var authorization = command.BlockedRecoveryAuthorization;
+        return authorization is null
+            ? null
+            : ProcessRuntimeBlockedRecoveryAuthorizationRules.FindIssue(
+                state,
+                command.StepInstanceId,
+                authorization);
+    }
+
+    private static ProcessRuntimeOperatorActionResult RejectBlockedRecovery(
+        ProcessRuntimeOperatorActionCommand command,
+        ProcessRuntimeStateSnapshot state,
+        string code,
+        string issue)
+    {
+        return new ProcessRuntimeOperatorActionResult(
+            command.RunId,
+            command.StepInstanceId,
+            command.Kind,
+            ProcessRuntimeTransitionOutcome.Rejected,
+            state.Status,
+            [$"{code}: {issue}"]);
     }
 
     private async Task ApplyReworkInstructionAsync(
@@ -505,7 +559,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
     private static StrategyResultReceipt? FindLatestReceipt(
         ProcessRuntimeStateSnapshot state,
         ProcessStepInstanceId stepInstanceId)
-        => state.AppliedResults.LastOrDefault(receipt => receipt.StepInstanceId == stepInstanceId);
+        => ProcessRuntimeBlockedRecoveryAuthorizationRules.FindLatestReceipt(state, stepInstanceId);
 
     private RuntimeCommandContext CreateContext(string requestedBy)
     {

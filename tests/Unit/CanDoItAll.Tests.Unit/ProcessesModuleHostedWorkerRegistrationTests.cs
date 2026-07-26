@@ -1,10 +1,13 @@
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Unit;
@@ -31,6 +34,58 @@ public sealed class ProcessesModuleHostedWorkerRegistrationTests
                 descriptor.ServiceType == typeof(ProcessRunRecordBackfillProcessor) &&
                 descriptor.ImplementationType == typeof(ProcessRunRecordBackfillProcessor) &&
                 descriptor.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void Add_processes_module_registers_blocked_run_recovery_pipeline()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddProcessesModule(configuration);
+
+        Assert.Contains(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IProcessBlockedRunRecoveryCommandExecutor) &&
+                descriptor.ImplementationType == typeof(ProcessBlockedRunRecoveryCommandExecutor) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IProcessBlockedRunRecoveryPolicyCatalog) &&
+                descriptor.ImplementationType == typeof(ProcessBlockedRunRecoveryPolicyCatalog) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IProcessBlockedRunRecoveryCoordinator) &&
+                descriptor.ImplementationType == typeof(ProcessBlockedRunRecoveryCoordinator) &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void Add_processes_module_resolves_dispatch_and_blocked_recovery_pipeline()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddSingleton<ICanonicalRuntimeDatabase>(new TestCanonicalRuntimeDatabase());
+        services.AddScoped<IProcessRuntimeStrategyFactoryResolver, UnusableStrategyFactoryResolver>();
+        services.AddProcessesModule(configuration);
+        services.RemoveAll<IProcessRuntimeStepAssignmentRepairService>();
+        services.RemoveAll<IProcessRuntimeRunCancellationObserver>();
+
+        using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateScopes = true
+            });
+        using var scope = provider.CreateScope();
+
+        Assert.IsType<ProcessRuntimeDispatchApplicationService>(
+            scope.ServiceProvider.GetRequiredService<ProcessRuntimeDispatchApplicationService>());
+        Assert.IsType<ProcessBlockedRunRecoveryCoordinator>(
+            scope.ServiceProvider.GetRequiredService<IProcessBlockedRunRecoveryCoordinator>());
     }
 
     [Fact]
@@ -67,5 +122,31 @@ public sealed class ProcessesModuleHostedWorkerRegistrationTests
             descriptor =>
                 descriptor.ServiceType == typeof(IHostedService) &&
                 descriptor.ImplementationType == typeof(ProcessRuntimeProjectionReplayBackgroundWorker));
+    }
+
+    private sealed class TestCanonicalRuntimeDatabase : ICanonicalRuntimeDatabase
+    {
+        public ResolvedDatabaseProfile Profile { get; } = new(
+            new DatabaseProfileRecord
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = "Processes module DI test",
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory
+            },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            $"processes-module-di-{Guid.NewGuid():N}");
+
+        public long Generation => 0;
+    }
+
+    private sealed class UnusableStrategyFactoryResolver : IProcessRuntimeStrategyFactoryResolver
+    {
+        public ValueTask<IProcessStrategyFactory> ResolveAsync(
+            ProcessStrategyBindingSnapshot binding,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("The DI resolution test does not dispatch a strategy.");
+        }
     }
 }

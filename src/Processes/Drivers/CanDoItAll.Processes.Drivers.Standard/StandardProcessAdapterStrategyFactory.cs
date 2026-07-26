@@ -69,7 +69,10 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
             result.RequestedArtifacts,
             diagnostics,
             result.ManagerSignals,
-            result.ResultHash);
+            result.ResultHash)
+        {
+            UserSafeSummary = result.UserSafeSummary
+        };
     }
 
     private static IReadOnlyList<ProcessExecutionContextFacet> CreateContextFacets(

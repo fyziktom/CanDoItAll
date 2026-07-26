@@ -35,7 +35,8 @@ public enum ProcessRunDisposition
     Succeeded,
     Failed,
     Cancelled,
-    Escalated
+    Escalated,
+    Blocked
 }
 
 public enum ProcessRunRecordLifecycleState
@@ -60,7 +61,7 @@ public enum ProcessRunRecordListPayload
 public enum ProcessRunRecordSeedValidation
 {
     None,
-    CurrentTerminalSource
+    CurrentReportableSource
 }
 
 public enum ProcessRunFactsStatus
@@ -129,7 +130,8 @@ public enum ProcessRunRecordWarningCode
     InvalidRunTiming,
     UnallocatedUsage,
     MissingStepKey,
-    InvalidProjectId
+    InvalidProjectId,
+    PrimaryRunBlocked
 }
 
 [Flags]
@@ -527,7 +529,7 @@ public interface IProcessRunRecordStore
 
 public interface IProcessRunRecordBackfillSource
 {
-    Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingTerminalSeedsAsync(
+    Task<IReadOnlyList<ProcessRunRecordSeed>> ListMissingReportableSeedsAsync(
         int take,
         CancellationToken cancellationToken = default);
 }

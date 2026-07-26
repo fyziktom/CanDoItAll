@@ -105,6 +105,53 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
+    public async Task ExecuteReady_routes_blocked_result_through_shared_recovery_boundary()
+    {
+        var stepId = ProcessStepInstanceId.New();
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Blocked,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Blocked)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var recoveryCoordinator = new RecordingBlockedRunRecoveryCoordinator(
+            new ProcessBlockedRunRecoveryResult(
+                RunId,
+                ProcessBlockedRunRecoveryOutcome.Recovered,
+                ProcessBlockedRunRecoveryActionKind.CurrentStepRework,
+                stepId,
+                ProcessBlockedRunRecoveryPolicy.SafeIdempotentRework,
+                ProcessRuntimeStatus.Active,
+                []));
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            new RecordingRuntimeUnitOfWork(stateStore),
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "implementation")),
+            new InMemoryAssignmentStore([]),
+            new RecordingStrategyFactoryResolver("implementation"),
+            NewNoOpCatchupService(),
+            blockedRunRecoveryCoordinator: recoveryCoordinator);
+
+        var result = await service.ExecuteReadyAsync(RunId, "direct-api-test");
+
+        Assert.Equal(ProcessLaunchStage.Running, result.Stage);
+        Assert.Equal(ProcessRuntimeStatus.Active, result.Status);
+        Assert.Equal((RunId, "direct-api-test"), Assert.Single(recoveryCoordinator.Requests));
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains(
+                nameof(ProcessBlockedRunRecoveryPolicy.SafeIdempotentRework),
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExecuteReady_skips_branch_descendants_when_branch_source_was_skipped_and_closes_run()
     {
         var initialState = new ProcessRuntimeStateSnapshot(
@@ -2115,6 +2162,21 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                         diagnosticSummary)
                 ],
                 resultHash));
+        }
+    }
+
+    private sealed class RecordingBlockedRunRecoveryCoordinator(
+        ProcessBlockedRunRecoveryResult result) : IProcessBlockedRunRecoveryCoordinator
+    {
+        public List<(ProcessRunId RunId, string RequestedBy)> Requests { get; } = [];
+
+        public Task<ProcessBlockedRunRecoveryResult> TryRecoverAsync(
+            ProcessRunId runId,
+            string requestedBy,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add((runId, requestedBy));
+            return Task.FromResult(result);
         }
     }
 

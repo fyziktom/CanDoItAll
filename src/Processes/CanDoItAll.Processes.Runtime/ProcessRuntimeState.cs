@@ -66,6 +66,8 @@ public sealed record ProcessRuntimeStateSnapshot(
     DateTimeOffset UpdatedAtUtc)
 {
     public IReadOnlyList<ProcessRuntimeInputArtifactReceipt> ConnectedInputArtifacts { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeBlockedRecoveryActionReceipt> BlockedRecoveryActions { get; init; } = [];
 }
 
 public sealed record ProcessRuntimeStepState(
@@ -144,6 +146,10 @@ public sealed record StrategyResultReceipt
 
     public string ResultHash { get; init; }
 
+    public string UserSafeSummary { get; init; } = string.Empty;
+
+    public long AppliedSequence { get; init; }
+
     public IReadOnlyList<StrategyResultDiagnosticReceipt> Diagnostics { get; init; }
 
     public IReadOnlyList<StrategyResultArtifactReceipt> ProducedArtifacts { get; init; }
@@ -221,6 +227,22 @@ public enum ProcessRecoveryRouteKind
     ChildRunPropagation,
     TemplateRepair
 }
+
+public enum ProcessRuntimeBlockedRecoveryPhase
+{
+    CurrentStep,
+    UpstreamProducer,
+    RestoredConsumer
+}
+
+public sealed record ProcessRuntimeBlockedRecoveryActionReceipt(
+    StrategyResultIdempotencyKey SourceResultIdempotencyKey,
+    ProcessStepInstanceId SourceBlockedStepInstanceId,
+    ProcessStepInstanceId TargetStepInstanceId,
+    string DiagnosticFingerprint,
+    ProcessRecoveryRouteKind RecoveryRouteKind,
+    ProcessRuntimeBlockedRecoveryPhase Phase,
+    DateTimeOffset AppliedAtUtc);
 
 public sealed record DispatchWorkItem
 {

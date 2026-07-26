@@ -17,6 +17,7 @@ public sealed class EfProcessRunRecordStoreTests
     [InlineData(ProcessRunDisposition.Failed)]
     [InlineData(ProcessRunDisposition.Cancelled)]
     [InlineData(ProcessRunDisposition.Escalated)]
+    [InlineData(ProcessRunDisposition.Blocked)]
     public async Task Seed_round_trips_every_reportable_disposition(ProcessRunDisposition disposition)
     {
         await using var dbContext = CreateDbContext();
@@ -373,27 +374,80 @@ public sealed class EfProcessRunRecordStoreTests
         Assert.Equal(43, record.Summary.SourceGlobalSequence);
         Assert.Equal(Now.AddMinutes(-2), record.Summary.Metrics.EndedAtUtc);
         Assert.Equal(observedAtUtc, record.Summary.UpdatedAtUtc);
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => source.ListMissingTerminalSeedsAsync(101));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => source.ListMissingReportableSeedsAsync(101));
     }
 
     [Fact]
-    public async Task Stale_backfill_seed_is_rejected_after_run_reactivation()
+    public async Task Backfill_captures_blocked_run_as_blocked_record()
     {
         await using var dbContext = CreateDbContext();
         var runId = ProcessRunId.New();
-        AddRuntimeState(dbContext, runId, ProcessRuntimeStatus.Completed, Now);
+        var blockedAtUtc = Now.AddMinutes(-2);
+        AddRuntimeState(dbContext, runId, ProcessRuntimeStatus.Blocked, Now);
         AddRuntimeEvent(
             dbContext,
             runId,
-            ProcessRuntimeEventTypes.ProcessRunCompleted.Value,
+            ProcessRuntimeEventTypes.ProcessRunBlocked.Value,
+            globalSequence: 45,
+            blockedAtUtc);
+        await dbContext.SaveChangesAsync();
+        var store = new EfProcessRunRecordStore(dbContext);
+        var source = new EfProcessRunRecordBackfillSource(
+            dbContext,
+            new FixedTimeProvider(Now.AddMinutes(1)));
+        var processor = new ProcessRunRecordBackfillProcessor(source, store);
+
+        var result = await processor.RunBatchAsync(1);
+
+        Assert.Equal(1, result.CandidateCount);
+        Assert.Equal(1, result.InsertedOrRevisedCount);
+        var record = Assert.IsType<ProcessRunRecord>(await store.GetAsync(runId));
+        Assert.Equal(ProcessRunDisposition.Blocked, record.Summary.Disposition);
+        Assert.Equal(blockedAtUtc, record.Summary.Metrics.EndedAtUtc);
+        Assert.Equal(45, record.Summary.SourceGlobalSequence);
+    }
+
+    [Fact]
+    public async Task Validated_backfill_seed_rejects_explicit_escalated_disposition_without_run_event()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRunRecordStore(dbContext);
+        var seed = NewSeed(
+            ProcessRunId.New(),
+            ProcessRunDisposition.Escalated,
+            sourceSequence: 46) with
+        {
+            Validation = ProcessRunRecordSeedValidation.CurrentReportableSource
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.UpsertSeedAsync(seed));
+
+        Assert.Contains("explicit escalated disposition", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(ProcessRuntimeStatus.Completed, ProcessRuntimeProjectionEventTypeNames.ProcessRunCompleted)]
+    [InlineData(ProcessRuntimeStatus.Blocked, ProcessRuntimeProjectionEventTypeNames.ProcessRunBlocked)]
+    public async Task Stale_reportable_backfill_seed_is_rejected_after_run_reactivation(
+        ProcessRuntimeStatus sourceStatus,
+        string sourceEventType)
+    {
+        await using var dbContext = CreateDbContext();
+        var runId = ProcessRunId.New();
+        AddRuntimeState(dbContext, runId, sourceStatus, Now);
+        AddRuntimeEvent(
+            dbContext,
+            runId,
+            sourceEventType,
             globalSequence: 50,
             Now);
         await dbContext.SaveChangesAsync();
         var source = new EfProcessRunRecordBackfillSource(
             dbContext,
             new FixedTimeProvider(Now.AddMinutes(1)));
-        var staleSeed = Assert.Single(await source.ListMissingTerminalSeedsAsync(1));
-        Assert.Equal(ProcessRunRecordSeedValidation.CurrentTerminalSource, staleSeed.Validation);
+        var staleSeed = Assert.Single(await source.ListMissingReportableSeedsAsync(1));
+        Assert.Equal(ProcessRunRecordSeedValidation.CurrentReportableSource, staleSeed.Validation);
 
         var state = await dbContext.RuntimeStates.SingleAsync(item => item.RunId == runId.Value);
         state.Status = ProcessRuntimeStatus.Active;

@@ -174,6 +174,10 @@ public sealed class ProcessRuntimeProjectionProjector(
                 disposition = ProcessRunDisposition.Cancelled;
                 return true;
 
+            case ProcessRuntimeProjectionEventTypeNames.ProcessRunBlocked:
+                disposition = ProcessRunDisposition.Blocked;
+                return true;
+
             default:
                 disposition = default;
                 return false;

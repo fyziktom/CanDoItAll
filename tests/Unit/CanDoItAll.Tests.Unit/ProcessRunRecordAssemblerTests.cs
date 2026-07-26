@@ -410,17 +410,17 @@ public sealed class ProcessRunRecordAssemblerTests
     }
 
     [Fact]
-    public async Task AssembleAsync_nonterminal_escalation_seed_is_partial_but_assembled()
+    public async Task AssembleAsync_blocked_seed_is_partial_but_assembled()
     {
         var scenario = CompleteScenario.Create(
             ProcessRuntimeStatus.Blocked,
-            ProcessRunDisposition.Escalated);
+            ProcessRunDisposition.Blocked);
         scenario.RuntimeEvents[^1] = CreateStoredEvent(
             scenario.SourceGlobalSequence,
             scenario.SourceRootSequence,
             scenario.RootRunId,
             scenario.RootRunId,
-            ProcessRuntimeEventTypes.ManagerLoopBudgetEscalated,
+            ProcessRuntimeEventTypes.ProcessRunBlocked,
             scenario.EndedAtUtc);
         var harness = scenario.CreateHarness();
 
@@ -436,7 +436,7 @@ public sealed class ProcessRunRecordAssemblerTests
         Assert.False(result.MissingEvidenceSources.HasFlag(
             ProcessRunEvidenceSource.StepAssignments));
         Assert.Contains(
-            ProcessRunRecordWarningCode.PrimaryRunNonTerminalAtEscalation,
+            ProcessRunRecordWarningCode.PrimaryRunBlocked,
             result.CompletenessWarnings);
     }
 

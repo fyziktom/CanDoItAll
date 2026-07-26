@@ -75,6 +75,56 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
+    public async Task Queue_retains_redispatch_enqueued_while_same_run_is_active()
+    {
+        var queue = new ProcessRuntimeDispatchQueue();
+        var runId = ProcessRunId.New();
+        var initialRequest = new ProcessRuntimeDispatchQueueRequest(runId, "initial-dispatch");
+        var redispatchRequest = new ProcessRuntimeDispatchQueueRequest(runId, "automatic-recovery");
+
+        await queue.EnqueueAsync(initialRequest);
+        Assert.True(queue.TryDequeueImmediate(out var dequeuedInitialRequest));
+        Assert.True(queue.TryMarkActiveOrDefer(dequeuedInitialRequest));
+
+        await queue.EnqueueAsync(redispatchRequest);
+        Assert.True(queue.TryDequeueImmediate(out var dequeuedRedispatchRequest));
+        Assert.False(queue.TryMarkActiveOrDefer(dequeuedRedispatchRequest));
+        Assert.False(queue.TryDequeueImmediate(out _));
+
+        queue.MarkInactive(runId);
+
+        Assert.Equal(1, queue.FlushDeferredRequests());
+        Assert.True(queue.TryDequeueImmediate(out var retainedRedispatchRequest));
+        Assert.Equal(runId, retainedRedispatchRequest.RunId);
+        Assert.Equal("automatic-recovery", retainedRedispatchRequest.RequestedBy);
+        Assert.True(queue.TryMarkActiveOrDefer(retainedRedispatchRequest));
+    }
+
+    [Fact]
+    public async Task Queue_prefers_immediate_redispatch_when_recovery_and_immediate_requests_are_deferred()
+    {
+        var queue = new ProcessRuntimeDispatchQueue();
+        var runId = ProcessRunId.New();
+        var activeRequest = new ProcessRuntimeDispatchQueueRequest(runId, "active-dispatch");
+        var recoveryRequest = new ProcessRuntimeDispatchQueueRequest(
+            runId,
+            "recovery-poll",
+            IsRecovery: true);
+        var immediateRequest = new ProcessRuntimeDispatchQueueRequest(runId, "operator-rework");
+
+        Assert.True(queue.TryMarkActiveOrDefer(activeRequest));
+        Assert.False(queue.TryMarkActiveOrDefer(recoveryRequest));
+        Assert.False(queue.TryMarkActiveOrDefer(immediateRequest));
+
+        queue.MarkInactive(runId);
+
+        Assert.Equal(1, queue.FlushDeferredRequests());
+        Assert.True(queue.TryDequeueImmediate(out var retainedRequest));
+        Assert.Equal("operator-rework", retainedRequest.RequestedBy);
+        Assert.False(queue.TryDequeueRecovery(out _));
+    }
+
+    [Fact]
     public void Queue_rejects_non_positive_capacity()
     {
         var exception = Assert.Throws<InvalidOperationException>(() => new ProcessRuntimeDispatchQueue(

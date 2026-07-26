@@ -159,6 +159,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessLaunchApplicationService>();
         services.TryAddScoped<ProcessRuntimeDispatchApplicationService>();
         services.TryAddScoped<ProcessRuntimeOperatorApplicationService>();
+        services.TryAddScoped<IProcessBlockedRunRecoveryCommandExecutor, ProcessBlockedRunRecoveryCommandExecutor>();
+        services.TryAddScoped<IProcessBlockedRunRecoveryPolicyCatalog, ProcessBlockedRunRecoveryPolicyCatalog>();
+        services.TryAddScoped<IProcessBlockedRunRecoveryCoordinator, ProcessBlockedRunRecoveryCoordinator>();
         services.TryAddScoped<ProcessRuntimeProjectionQueryService>();
         services.TryAddScoped<IProcessDashboardActivityQueryService, ProcessDashboardActivityQueryService>();
         services.TryAddScoped<ProcessDefinitionCatalogProjectionService>();

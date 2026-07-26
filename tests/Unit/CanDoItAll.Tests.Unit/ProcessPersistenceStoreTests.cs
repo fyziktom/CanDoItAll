@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -9,6 +10,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -191,7 +193,10 @@ public sealed class ProcessPersistenceStoreTests
             {
                 RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
                 ResponsibleStepInstanceId = stepId
-            });
+            })
+        {
+            UserSafeSummary = "Persisted runtime recovery summary."
+        };
         var state = request.Mutation.State with
         {
             AppliedResults = [receipt]
@@ -203,15 +208,208 @@ public sealed class ProcessPersistenceStoreTests
 
         await unitOfWork.CommitAsync(request with { Mutation = mutation });
 
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        Assert.Equal("Persisted runtime recovery summary.", persistedReceipt.UserSafeSummary);
+        using var diagnosticsDocument = JsonDocument.Parse(persistedReceipt.DiagnosticsJson);
+        Assert.Equal(JsonValueKind.Array, diagnosticsDocument.RootElement.ValueKind);
+
         var loaded = await unitOfWork.LoadAsync(state.RunId);
         Assert.NotNull(loaded);
         var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.Equal("Persisted runtime recovery summary.", loadedReceipt.UserSafeSummary);
         Assert.Equal("process.runtime.test_blocked", Assert.Single(loadedReceipt.Diagnostics).Code);
         Assert.Equal(RequiredArtifactSlotId, Assert.Single(loadedReceipt.ProducedArtifacts).SlotId);
         Assert.NotNull(loadedReceipt.RecoveryDecision);
         Assert.Equal(ProcessFailureCategory.MissingArtifact, loadedReceipt.RecoveryDecision.FailureCategory);
         Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, loadedReceipt.RecoveryDecision.RouteKind);
         Assert.Equal(stepId, loadedReceipt.RecoveryDecision.ResponsibleStepInstanceId);
+    }
+
+    [Fact]
+    public async Task Commit_round_trips_applied_sequence_and_blocked_recovery_actions_exactly()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var sourceReceipt = Assert.Single(request.Mutation.State.AppliedResults) with
+        {
+            AppliedSequence = 7
+        };
+        var sourceStepId = sourceReceipt.StepInstanceId;
+        var targetStepId = ProcessStepInstanceId.New();
+        var recoveryAction = new ProcessRuntimeBlockedRecoveryActionReceipt(
+            sourceReceipt.IdempotencyKey,
+            sourceStepId,
+            targetStepId,
+            "sha256:missing-summary",
+            ProcessRecoveryRouteKind.UpstreamStepRework,
+            ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer,
+            Now);
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [sourceReceipt],
+            BlockedRecoveryActions = [recoveryAction]
+        };
+
+        await unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with
+            {
+                State = state
+            }
+        });
+        dbContext.ChangeTracker.Clear();
+
+        var loaded = await unitOfWork.LoadAsync(state.RunId);
+
+        Assert.NotNull(loaded);
+        Assert.Equal(7, Assert.Single(loaded.AppliedResults).AppliedSequence);
+        Assert.Equal(recoveryAction, Assert.Single(loaded.BlockedRecoveryActions));
+    }
+
+    [Fact]
+    public async Task Load_orders_receipts_by_applied_sequence_despite_reversed_persisted_order_and_nonchronological_keys()
+    {
+        var databaseName = $"process-persistence-restart-{Guid.NewGuid():N}";
+        var databaseRoot = new InMemoryDatabaseRoot();
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var stepId = Assert.Single(request.Mutation.State.Steps).StepInstanceId;
+        var laterReceiptKey = new StrategyResultIdempotencyKey(
+            new Guid("00000000-0000-0000-0000-000000000002"));
+        var earlierReceiptKey = new StrategyResultIdempotencyKey(
+            new Guid("ffffffff-ffff-ffff-ffff-fffffffffff1"));
+        var laterReceipt = NewResultReceipt(stepId, laterReceiptKey, appliedSequence: 2);
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [laterReceipt]
+        };
+
+        await using (var writeContext = CreateDbContext(databaseName, databaseRoot))
+        {
+            var writeUnitOfWork = new EfProcessRuntimeUnitOfWork(writeContext);
+            await writeUnitOfWork.CommitAsync(request with
+            {
+                Mutation = request.Mutation with
+                {
+                    State = state
+                }
+            });
+
+            writeContext.StrategyResultReceipts.Add(new ProcessStrategyResultReceiptEntity
+            {
+                RunId = state.RunId.Value,
+                StepInstanceId = stepId.Value,
+                StrategyId = "strategy.test",
+                IdempotencyKey = earlierReceiptKey.Value,
+                Outcome = StrategyOutcome.Succeeded.ToString(),
+                AppliedStepStatus = ProcessRuntimeStepStatus.Completed,
+                ResultHash = "hash:result-1",
+                AppliedSequence = 1,
+                DiagnosticsJson = "[]",
+                ProducedArtifactsJson = "[]"
+            });
+            await writeContext.SaveChangesAsync();
+        }
+
+        await using var readContext = CreateDbContext(databaseName, databaseRoot);
+        var readUnitOfWork = new EfProcessRuntimeUnitOfWork(readContext);
+        var loaded = await readUnitOfWork.LoadAsync(state.RunId);
+
+        Assert.NotNull(loaded);
+        Assert.Equal(
+            [1L, 2L],
+            loaded.AppliedResults.Select(receipt => receipt.AppliedSequence));
+        Assert.Equal(
+            [earlierReceiptKey, laterReceiptKey],
+            loaded.AppliedResults.Select(receipt => receipt.IdempotencyKey));
+    }
+
+    [Fact]
+    public async Task Load_rejects_malformed_blocked_recovery_action_ledger()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedState = await dbContext.RuntimeStates.SingleAsync();
+        persistedState.BlockedRecoveryActionsJson =
+            $$"""
+            [
+              {
+                "sourceResultIdempotencyKey": "{{Guid.NewGuid():D}}",
+                "sourceBlockedStepInstanceId": "{{Guid.NewGuid():D}}",
+                "targetStepInstanceId": "{{Guid.NewGuid():D}}",
+                "diagnosticFingerprint": "sha256:invalid-route",
+                "recoveryRouteKind": "None",
+                "phase": "CurrentStep",
+                "appliedAtUtc": "{{Now:O}}"
+              }
+            ]
+            """;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.Contains("invalid entry", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Load_rejects_nonpositive_persisted_receipt_sequence()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        persistedReceipt.AppliedSequence = 0;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.Contains("positive and unique", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Load_accepts_legacy_diagnostics_array_without_user_safe_summary()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        Assert.Null(persistedReceipt.UserSafeSummary);
+        persistedReceipt.DiagnosticsJson =
+            """
+            [
+              {
+                "code": "process.runtime.legacy_diagnostic",
+                "sensitivity": "Normal",
+                "evidenceHash": "hash:legacy-diagnostic",
+                "safeSummary": "Legacy diagnostic summary.",
+                "retrySafety": "UnsafeToRetry",
+                "idempotency": "Idempotent"
+              }
+            ]
+            """;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var loaded = await unitOfWork.LoadAsync(request.Mutation.State.RunId);
+
+        Assert.NotNull(loaded);
+        var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.Equal(string.Empty, loadedReceipt.UserSafeSummary);
+        Assert.Equal("process.runtime.legacy_diagnostic", Assert.Single(loadedReceipt.Diagnostics).Code);
     }
 
     [Fact]
@@ -930,6 +1128,16 @@ public sealed class ProcessPersistenceStoreTests
         return new ProcessPersistenceDbContext(options);
     }
 
+    private static ProcessPersistenceDbContext CreateDbContext(
+        string databaseName,
+        InMemoryDatabaseRoot databaseRoot)
+    {
+        var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>()
+            .UseInMemoryDatabase(databaseName, databaseRoot)
+            .Options;
+        return new ProcessPersistenceDbContext(options);
+    }
+
     private static void AssertHasUniqueConstraint<TEntity>(
         ProcessPersistenceDbContext dbContext,
         params string[] propertyNames)
@@ -1058,6 +1266,23 @@ public sealed class ProcessPersistenceStoreTests
                     ContentHash: "hash:artifact",
                     ConnectionHash: "hash:connected-input")
             ]
+        };
+    }
+
+    private static StrategyResultReceipt NewResultReceipt(
+        ProcessStepInstanceId stepId,
+        StrategyResultIdempotencyKey idempotencyKey,
+        long appliedSequence)
+    {
+        return new StrategyResultReceipt(
+            stepId,
+            new StrategyId("strategy.test"),
+            idempotencyKey,
+            StrategyOutcome.Succeeded,
+            ProcessRuntimeStepStatus.Completed,
+            $"hash:result-{appliedSequence}")
+        {
+            AppliedSequence = appliedSequence
         };
     }
 

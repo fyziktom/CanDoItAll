@@ -39,7 +39,33 @@ internal static class ProcessCompletionText
         @"^\s*(?:\*\*)?Branch\s+outcome\s+key(?:\*\*)?\s*:\s*`?(?<key>[A-Za-z0-9][A-Za-z0-9._-]*)`?\s*\.?\s*$",
         RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex MissingRequiredReceipt = new(
-        @"\bmissing\b[^\r\n]{0,80}\breceipts?\b|\breceipts?\b[^\r\n]{0,80}\b(?:missing|absent|unavailable)\b|\brequired\b[^\r\n]{0,80}\breceipts?\b[^\r\n]{0,80}\b(?:missing|absent|unavailable|not\s+(?:yet\s+)?(?:captured|recorded|produced|present))\b",
+        """
+        (?ix)
+        \bmissing\b
+        (?:(?![.!?;](?:\s|$))[^\r\n]){0,80}
+        \breceipts?\b
+        |
+        \breceipts?\b
+        (?:
+            \s*(?:[:=-]\s*)?(?:missing|absent|unavailable)\b
+            |
+            (?:(?![.!?;](?:\s|$))[^\r\n]){0,80}
+            \b(?:is|are|was|were|remain(?:s|ed)?)\s+
+            (?:missing|absent|unavailable)\b
+        )
+        |
+        \brequired\b
+        (?:(?![.!?;](?:\s|$))[^\r\n]){0,80}
+        \breceipts?\b
+        (?:
+            \s*(?:[:=-]\s*)?
+            (?:missing|absent|unavailable|not\s+(?:yet\s+)?(?:captured|recorded|produced|present))\b
+            |
+            (?:(?![.!?;](?:\s|$))[^\r\n]){0,80}
+            \b(?:is|are|was|were|remain(?:s|ed)?)\s+
+            (?:missing|absent|unavailable|not\s+(?:yet\s+)?(?:captured|recorded|produced|present))\b
+        )
+        """,
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex OutcomePathReference = new(
         @"(?ix)

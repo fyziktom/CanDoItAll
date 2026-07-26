@@ -25,7 +25,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
             return await UpsertSeedNonRelationalAsync(seed, cancellationToken).ConfigureAwait(false);
         }
 
-        if (seed.Validation == ProcessRunRecordSeedValidation.CurrentTerminalSource)
+        if (seed.Validation == ProcessRunRecordSeedValidation.CurrentReportableSource)
         {
             return await UpsertValidatedSeedRelationalAsync(seed, cancellationToken).ConfigureAwait(false);
         }
@@ -70,7 +70,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         await AcquireRunMutationLockAsync(seed.Identity.RunId.Value, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!await IsCurrentTerminalSourceAsync(seed, cancellationToken).ConfigureAwait(false))
+        if (!await IsCurrentReportableSourceAsync(seed, cancellationToken).ConfigureAwait(false))
         {
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return false;
@@ -655,8 +655,8 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         await NonRelationalMutationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (seed.Validation == ProcessRunRecordSeedValidation.CurrentTerminalSource &&
-                !await IsCurrentTerminalSourceAsync(seed, cancellationToken).ConfigureAwait(false))
+            if (seed.Validation == ProcessRunRecordSeedValidation.CurrentReportableSource &&
+                !await IsCurrentReportableSourceAsync(seed, cancellationToken).ConfigureAwait(false))
             {
                 return false;
             }
@@ -735,7 +735,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         }
     }
 
-    private async Task<bool> IsCurrentTerminalSourceAsync(
+    private async Task<bool> IsCurrentReportableSourceAsync(
         ProcessRunRecordSeed seed,
         CancellationToken cancellationToken)
     {
@@ -747,8 +747,10 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
                 (ProcessRuntimeStatus.Failed, ProcessRuntimeEventTypes.ProcessRunFailed.Value),
             ProcessRunDisposition.Cancelled =>
                 (ProcessRuntimeStatus.Cancelled, ProcessRuntimeEventTypes.ProcessRunCancelled.Value),
+            ProcessRunDisposition.Blocked =>
+                (ProcessRuntimeStatus.Blocked, ProcessRuntimeEventTypes.ProcessRunBlocked.Value),
             ProcessRunDisposition.Escalated => throw new InvalidOperationException(
-                "A backfill seed cannot validate the reserved escalated disposition without a terminal runtime event."),
+                "A backfill seed cannot validate an explicit escalated disposition without a canonical run escalation event."),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(seed),
                 seed.Disposition,
@@ -769,6 +771,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         var completedEventType = ProcessRuntimeEventTypes.ProcessRunCompleted.Value;
         var failedEventType = ProcessRuntimeEventTypes.ProcessRunFailed.Value;
         var cancelledEventType = ProcessRuntimeEventTypes.ProcessRunCancelled.Value;
+        var blockedEventType = ProcessRuntimeEventTypes.ProcessRunBlocked.Value;
         var reactivatedEventType = ProcessRuntimeEventTypes.ProcessRunReactivated.Value;
         var latestLifecycleEvent = await dbContext.RuntimeEvents
             .AsNoTracking()
@@ -777,6 +780,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
                 (runtimeEvent.EventType == completedEventType ||
                  runtimeEvent.EventType == failedEventType ||
                  runtimeEvent.EventType == cancelledEventType ||
+                 runtimeEvent.EventType == blockedEventType ||
                  runtimeEvent.EventType == reactivatedEventType))
             .OrderByDescending(runtimeEvent => runtimeEvent.GlobalSequence)
             .Select(runtimeEvent => new

@@ -100,6 +100,32 @@ public sealed class ProjectStructureProcessRunRecordProjectorTests
         Assert.DoesNotContain("Manager summary", projection.Notes, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(ProcessRunDisposition.Blocked, ProcessRuntimeStatus.Blocked)]
+    [InlineData(ProcessRunDisposition.Escalated, ProcessRuntimeStatus.Escalated)]
+    public async Task LoadAsync_preserves_blocked_and_escalated_statuses(
+        ProcessRunDisposition disposition,
+        ProcessRuntimeStatus expectedRuntimeStatus)
+    {
+        var projectId = Guid.NewGuid();
+        var summary = CreateSummary(
+            projectId,
+            disposition,
+            ProcessRunFactsStatus.Completed);
+        var projector = new ProjectStructureProcessRunRecordProjector(
+            new RecordingReader(new ProcessRunRecordPage([summary], NextCursor: null)),
+            NullLogger<ProjectStructureProcessRunRecordProjector>.Instance);
+
+        var projections = await projector.LoadAsync(projectId, CancellationToken.None);
+
+        var projection = Assert.Single(projections).Value;
+        Assert.Equal(expectedRuntimeStatus, projection.RuntimeStatus);
+        Assert.Equal(disposition.ToString(), projection.Status);
+        Assert.Equal(
+            disposition == ProcessRunDisposition.Blocked ? 1 : 0,
+            projection.Stats.BlockedStepCount);
+    }
+
     [Fact]
     public async Task LoadAsync_throws_when_paging_cursor_does_not_advance()
     {

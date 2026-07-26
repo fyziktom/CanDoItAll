@@ -54,6 +54,57 @@ public sealed class ProcessLaunchAtomicCommitTests
         Assert.Equal(commit.Mutation.State.PlanHash, commit.InitialPlan.PlanHash);
     }
 
+    [Fact]
+    public async Task Launch_selects_and_compiles_generic_simple_app_live_profile()
+    {
+        var executorResolver = new AllStepsExecutorResolver();
+        var service = new ProcessLaunchApplicationService(
+            new ProcessTemplatePackLoader(),
+            new TestClock(),
+            new TestDriverCatalogProvider(),
+            executorResolver,
+            new TrackingPlanStore(),
+            new RejectingUnitOfWork(),
+            stateStore: null!,
+            assignmentStore: null!,
+            artifactInitializer: null!,
+            new GenericProcessStepBriefBuilder(),
+            dispatchQueue: null!,
+            projectionCatchupService: null!,
+            new LaunchVariableTemplateResolver());
+
+        var result = await service.LaunchAsync(new ProcessLaunchRequest(
+            DefinitionKey: null,
+            ProcessDefinitionId: null,
+            LiveRunProfileKey: "generic-simple-local-app",
+            ProjectId: null,
+            ProjectNodeId: null,
+            RequestedBy: "unit-test",
+            Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["AppTopic"] = "Tetris",
+                ["ApplicationKind"] = "UI",
+                ["TechnologyStack"] = ".NET",
+                ["ProductRoot"] = ".",
+                ["AcceptanceCriteria"] = "The application builds and the declared game loop is testable."
+            },
+            RunReadiness: false,
+            Execute: false));
+
+        Assert.Equal("generic-simple-local-app", result.LaunchPlan.LiveRunProfileKey);
+        Assert.Equal("simple-app-delivery", result.LaunchPlan.DefinitionKey);
+        Assert.Equal(9, result.LaunchPlan.Steps.Count);
+        Assert.False(string.IsNullOrWhiteSpace(result.LaunchPlan.PlanHash));
+        var resolutionRequest = Assert.IsType<ProcessLaunchExecutorResolutionRequest>(
+            executorResolver.LastRequest);
+        Assert.Equal(
+            "generic-simple-local-app",
+            resolutionRequest.LiveRunProfile?.Key);
+        Assert.Equal(
+            "simple-app-delivery",
+            resolutionRequest.Definition.Key);
+    }
+
     private sealed class TestClock : IProcessProjectionClock
     {
         public DateTimeOffset GetUtcNow() => Now;
@@ -102,11 +153,14 @@ public sealed class ProcessLaunchAtomicCommitTests
 
     private sealed class AllStepsExecutorResolver : IProcessLaunchExecutorResolver
     {
+        public ProcessLaunchExecutorResolutionRequest? LastRequest { get; private set; }
+
         public ValueTask<ProcessLaunchExecutorResolution> ResolveAsync(
             ProcessLaunchExecutorResolutionRequest request,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            LastRequest = request;
             var templateSteps = request.Definition.Steps.ToDictionary(
                 step => step.Key,
                 StringComparer.OrdinalIgnoreCase);
