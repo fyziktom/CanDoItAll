@@ -33,8 +33,8 @@ These docs are for readers who need to understand what CanDoItAll does before th
 ## Setup Scripts
 
 - `tools\Install-CanDoItAllWebApp.ps1`: publishes the web app as a local Windows install with launcher and desktop shortcut.
-- `tools\Reinstall-CanDoItAllMcps.ps1`: rebuilds MCP projects from the sibling `CanDoItAll.Mcp` repo, updates Codex/VS Code MCP config, prepares DotNetWatch tray support, syncs skills from this repo, and removes stale retired MCP config sections.
-- `codex\scripts\install-candoitall-skills.ps1`: installs repo-managed CanDoItAll skills plus required public sibling skills.
+- `tools\Reinstall-CanDoItAllMcps.ps1`: rebuilds MCP projects from the sibling `CanDoItAll.Mcp` repo, updates Codex/VS Code MCP config, prepares DotNetWatch tray support, syncs canonical skills from the sibling `CanDoItAll.SharedInfo` repo, and removes stale retired MCP/config migration sections.
+- `codex\scripts\install-candoitall-skills.ps1`: installs canonical CanDoItAll skills from the sibling `CanDoItAll.SharedInfo` repo plus required public sibling skills.
 
 ## Components And UI
 

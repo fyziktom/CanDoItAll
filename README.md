@@ -116,8 +116,8 @@ powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skil
 What they do:
 
 - `tools\Install-CanDoItAllWebApp.ps1` publishes `CanDoItAll.Web` as a self-contained Windows app under `%LOCALAPPDATA%\CanDoItAll\WebApp` by default, creates `Start-CanDoItAll.ps1`, creates a desktop shortcut, and can launch the app with `-StartAfterInstall`.
-- `tools\Reinstall-CanDoItAllMcps.ps1` rebuilds MCP projects from the sibling `CanDoItAll.Mcp` repo, installs Components, CodeAnalytics, and SshOps sidecars plus companion tools under `.artifacts\mcp-installs`, prepares the DotNetWatch shadow artifact, updates VS Code and Codex MCP configuration, creates DotNetWatch tray shortcuts, syncs skills from this repo, and removes stale `candoitall_processes` and `candoitall_projectstructure` config sections.
-- `codex\scripts\install-candoitall-skills.ps1` installs repo-managed CanDoItAll skills into `$CODEX_HOME\skills` and installs required public sibling skills from `openai/skills` and `dotnet/skills`.
+- `tools\Reinstall-CanDoItAllMcps.ps1` rebuilds MCP projects from the sibling `CanDoItAll.Mcp` repo, installs Components, CodeAnalytics, and SshOps sidecars plus companion tools under `.artifacts\mcp-installs`, prepares the DotNetWatch shadow artifact, updates VS Code and Codex MCP configuration, creates DotNetWatch tray shortcuts, syncs canonical skills from the sibling `CanDoItAll.SharedInfo` repo, and removes stale retired MCP/config migration sections.
+- `codex\scripts\install-candoitall-skills.ps1` installs canonical CanDoItAll skills from the sibling `CanDoItAll.SharedInfo` repo into `$CODEX_HOME\skills` and installs required public sibling skills from `openai/skills` and `dotnet/skills`.
 
 Current active MCP sidecar source lives in `C:\repositories\CanDoItAll.Mcp`. Active sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, SshOps, and LocalRuntime helpers. Processes and ProjectStructure MCP servers are not active; use the HTTP API control plane and repo-managed `candoitall-api-*` skills for those surfaces.
 

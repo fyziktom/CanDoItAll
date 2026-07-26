@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$CodexHome = $(if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }),
+    [string]$CodexHome = $(if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path ([Environment]::GetFolderPath("UserProfile")) ".codex" }),
+    [string]$SharedInfoRepoRoot = "",
     [string]$OpenAiSkillsRepoUrl = "https://github.com/openai/skills.git",
     [string]$OpenAiSkillsCache = $(Join-Path $env:TEMP "codex-openai-skills-cache"),
     [string]$DotNetSkillsRepoUrl = "https://github.com/dotnet/skills.git",
@@ -12,7 +13,21 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$repoSkillRoot = Join-Path $repoRoot "codex\skills"
+if ([string]::IsNullOrWhiteSpace($SharedInfoRepoRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:CANDOITALL_SHAREDINFO_ROOT)) {
+        $SharedInfoRepoRoot = $env:CANDOITALL_SHAREDINFO_ROOT
+    }
+    else {
+        $SharedInfoRepoRoot = Join-Path (Split-Path -Parent $repoRoot) "CanDoItAll.SharedInfo"
+    }
+}
+
+$SharedInfoRepoRoot = [System.IO.Path]::GetFullPath($SharedInfoRepoRoot)
+$sharedInfoInstallerPath = Join-Path $SharedInfoRepoRoot "tools\install\codex\Install-CodexSkills.ps1"
+if (-not (Test-Path -LiteralPath $sharedInfoInstallerPath -PathType Leaf)) {
+    throw "The canonical SharedInfo Codex skill installer was not found at '$sharedInfoInstallerPath'."
+}
+
 $targetSkillRoot = Join-Path $CodexHome "skills"
 $publicSkillSources = @(
     [pscustomobject]@{
@@ -87,40 +102,6 @@ function Find-SkillDirectory {
     return $matches[0].FullName
 }
 
-function Get-RepoManagedSkillDirectories {
-    param(
-        [string]$Root
-    )
-
-    $directories = @(Get-ChildItem -Path $Root -Directory -Recurse |
-        Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } |
-        Sort-Object FullName)
-    $seenNames = @{}
-
-    foreach ($directory in $directories) {
-        if ($seenNames.ContainsKey($directory.Name)) {
-            throw "Found multiple repo-managed skills named '$($directory.Name)': $($seenNames[$directory.Name]); $($directory.FullName)"
-        }
-
-        $seenNames[$directory.Name] = $directory.FullName
-    }
-
-    return $directories
-}
-
-function Get-RepoManagedSupportDirectories {
-    param(
-        [string]$Root
-    )
-
-    return @(Get-ChildItem -Path $Root -Directory |
-        Where-Object {
-            $_.Name.StartsWith("_", [System.StringComparison]::Ordinal) -and
-            -not (Test-Path (Join-Path $_.FullName "SKILL.md"))
-        } |
-        Sort-Object FullName)
-}
-
 function Remove-TargetDirectoryIfPresent {
     param(
         [string]$TargetDirectory
@@ -152,24 +133,6 @@ function Install-SkillDirectory {
     Copy-Item -LiteralPath $SourceDirectory -Destination $targetSkillRoot -Recurse -Force
     $installedSkills.Add([pscustomobject]@{
         Skill  = $SkillName
-        Origin = $Origin
-        Target = $targetDirectory
-    }) | Out-Null
-}
-
-function Install-SupportDirectory {
-    param(
-        [string]$SourceDirectory,
-        [string]$ResourceName,
-        [string]$Origin
-    )
-
-    $targetDirectory = Join-Path $targetSkillRoot $ResourceName
-    Remove-TargetDirectoryIfPresent -TargetDirectory $targetDirectory
-
-    Copy-Item -LiteralPath $SourceDirectory -Destination $targetSkillRoot -Recurse -Force
-    $installedSkills.Add([pscustomobject]@{
-        Skill  = $ResourceName
         Origin = $Origin
         Target = $targetDirectory
     }) | Out-Null
@@ -212,14 +175,14 @@ function Sync-GitRepository {
 Ensure-Directory -Path $targetSkillRoot
 
 if (-not $SkipCustomSkills) {
-    Write-Step "Installing custom CanDoItAll skill support resources from repo"
-    foreach ($directory in Get-RepoManagedSupportDirectories -Root $repoSkillRoot) {
-        Install-SupportDirectory -SourceDirectory $directory.FullName -ResourceName $directory.Name -Origin "repo-support"
-    }
-
-    Write-Step "Installing custom CanDoItAll skills from repo"
-    foreach ($directory in Get-RepoManagedSkillDirectories -Root $repoSkillRoot) {
-        Install-SkillDirectory -SourceDirectory $directory.FullName -SkillName $directory.Name -Origin "repo"
+    Write-Step "Installing canonical CanDoItAll skills and support resources from SharedInfo"
+    $sharedInfoResults = @(& $sharedInfoInstallerPath -CodexHome $CodexHome -Force)
+    foreach ($result in $sharedInfoResults) {
+        $installedSkills.Add([pscustomobject]@{
+            Skill  = $result.Name
+            Origin = "CanDoItAll.SharedInfo"
+            Target = $result.Target
+        }) | Out-Null
     }
 }
 

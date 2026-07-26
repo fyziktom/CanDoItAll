@@ -2,6 +2,7 @@
 param(
     [string]$RepoRoot = "",
     [string]$McpRepoRoot = "",
+    [string]$SharedInfoRepoRoot = "",
     [string]$UserConfigPath = "",
     [string]$ShadowConfiguration = "Release",
     [switch]$SkipUserConfig,
@@ -481,7 +482,9 @@ function Update-CodexConfig {
         [Parameter(Mandatory = $true)]
         [string]$SharpToolsWorkingDirectory,
         [Parameter(Mandatory = $true)]
-        [string]$SharpToolsLogDirectory
+        [string]$SharpToolsLogDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$DeprecatedCodeAnalysisRepoRoot
     )
 
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -602,42 +605,28 @@ enabled = false
     Set-TomlSection -Path $Path -SectionName "mcp_servers.sharptools" -SectionContent $sharpToolsSection
     Remove-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_projectstructure"
     Remove-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_processes"
+    Remove-TomlSection -Path $Path -SectionName "projects.'$($DeprecatedCodeAnalysisRepoRoot.ToLowerInvariant())'"
 }
 
-function Sync-RepoSkills {
+function Sync-SharedInfoSkills {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$SkillSourceRoot,
+        [string]$InstallerPath,
         [Parameter(Mandatory = $true)]
         [string]$SkillTargetRoot
     )
 
-    if (-not (Test-Path -LiteralPath $SkillSourceRoot)) {
-        Write-Status "Repo skill root '$SkillSourceRoot' does not exist. Skipping skill sync."
-        return @()
+    if (-not (Test-Path -LiteralPath $InstallerPath)) {
+        throw "SharedInfo Codex skill installer was not found at '$InstallerPath'."
     }
 
-    New-Item -ItemType Directory -Force -Path $SkillTargetRoot | Out-Null
-    $syncedSkillNames = New-Object System.Collections.Generic.List[string]
-    $skillDirectories = @(Get-ChildItem -LiteralPath $SkillSourceRoot -Directory -Recurse |
-        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "SKILL.md") } |
-        Sort-Object FullName)
-    $seenSkillNames = @{}
-
-    foreach ($directory in $skillDirectories) {
-        if ($seenSkillNames.ContainsKey($directory.Name)) {
-            throw "Duplicate repo-managed skill folder name '$($directory.Name)' found in '$($directory.FullName)' and '$($seenSkillNames[$directory.Name])'."
-        }
-
-        $seenSkillNames[$directory.Name] = $directory.FullName
-        $targetPath = Join-Path $SkillTargetRoot $directory.Name
-        Remove-DirectoryRobust -Path $targetPath
-        Copy-Item -LiteralPath $directory.FullName -Destination $targetPath -Recurse -Force
-        [void]$syncedSkillNames.Add($directory.Name)
-        Write-Status "Synced Codex skill '$($directory.Name)' to $targetPath"
+    $codexHome = Split-Path -Parent $SkillTargetRoot
+    $results = @(& $InstallerPath -CodexHome $codexHome -Force)
+    foreach ($result in $results) {
+        Write-Status "Synced SharedInfo Codex $($result.Kind.ToLowerInvariant()) '$($result.Name)' to $($result.Target)"
     }
 
-    return $syncedSkillNames
+    return @($results | ForEach-Object { $_.Name })
 }
 
 function Set-Shortcut {
@@ -698,11 +687,21 @@ if ([string]::IsNullOrWhiteSpace($McpRepoRoot)) {
     $McpRepoRoot = Resolve-AbsolutePath (Join-Path (Split-Path -Parent $RepoRoot) "CanDoItAll.Mcp")
 }
 
+if ([string]::IsNullOrWhiteSpace($SharedInfoRepoRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:CANDOITALL_SHAREDINFO_ROOT)) {
+        $SharedInfoRepoRoot = $env:CANDOITALL_SHAREDINFO_ROOT
+    }
+    else {
+        $SharedInfoRepoRoot = Resolve-AbsolutePath (Join-Path (Split-Path -Parent $RepoRoot) "CanDoItAll.SharedInfo")
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($UserConfigPath)) {
     $UserConfigPath = Join-Path $env:USERPROFILE ".codex\config.toml"
 }
 
 $McpRepoRoot = Resolve-AbsolutePath $McpRepoRoot
+$SharedInfoRepoRoot = Resolve-AbsolutePath $SharedInfoRepoRoot
 $UserConfigPath = Resolve-AbsolutePath $UserConfigPath
 
 if (-not (Test-Path -LiteralPath (Join-Path $McpRepoRoot "CanDoItAll.Mcp.slnx"))) {
@@ -710,6 +709,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $McpRepoRoot "CanDoItAll.Mcp.slnx"))
 }
 
 $codeAnalysisRepoRoot = Resolve-AbsolutePath (Join-Path (Split-Path -Parent $McpRepoRoot) "CanDoItAll.CodeAnalysis")
+$deprecatedCodeAnalysisRepoRoot = Resolve-AbsolutePath (Join-Path (Split-Path -Parent $McpRepoRoot) "CanDoItAll.CodeAnalsis")
 $codeAnalysisApplicationProjectPath = Join-Path $codeAnalysisRepoRoot "src\CanDoItAll.CodeAnalytics.Application\CanDoItAll.CodeAnalytics.Application.csproj"
 if (-not (Test-Path -LiteralPath $codeAnalysisApplicationProjectPath)) {
     throw "Corrected CodeAnalysis repository root '$codeAnalysisRepoRoot' does not contain '$codeAnalysisApplicationProjectPath'."
@@ -736,7 +736,8 @@ $sshOpsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAl
 $sshOpsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.SshOps.settings.json")
 $managerProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj")
 $trayProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "tools\CanDoItAll.Mcp.DotNetWatch.Tray\CanDoItAll.Mcp.DotNetWatch.Tray.csproj")
-$repoSkillRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "codex\skills")
+$sharedInfoSkillRoot = Resolve-AbsolutePath (Join-Path $SharedInfoRepoRoot "codex\skills")
+$sharedInfoSkillInstallerPath = Resolve-AbsolutePath (Join-Path $SharedInfoRepoRoot "tools\install\codex\Install-CodexSkills.ps1")
 $userSkillRoot = Resolve-AbsolutePath (Join-Path $env:USERPROFILE ".codex\skills")
 $repoParentRoot = Split-Path -Parent $RepoRoot
 $sharpToolsEntrypoint = Resolve-AbsolutePath (Join-Path $repoParentRoot "SharpToolsMCP\SharpTools.StdioServer\bin\Release\net8.0\SharpTools.StdioServer.exe")
@@ -858,8 +859,8 @@ elseif (Test-Path -LiteralPath $desktopShortcutPath) {
 
 $syncedSkills = @()
 if (-not $SkipSkillSync.IsPresent) {
-    Write-Status "Syncing repo-managed Codex skills"
-    $syncedSkills = @(Sync-RepoSkills -SkillSourceRoot $repoSkillRoot -SkillTargetRoot $userSkillRoot)
+    Write-Status "Syncing canonical Codex skills from SharedInfo"
+    $syncedSkills = @(Sync-SharedInfoSkills -InstallerPath $sharedInfoSkillInstallerPath -SkillTargetRoot $userSkillRoot)
 }
 
 $installManifest = @{
@@ -915,7 +916,9 @@ $installManifest = @{
         arguments = $trayArguments
     }
     skills = @{
-        sourceRoot = $repoSkillRoot
+        sharedInfoRepoRoot = $SharedInfoRepoRoot
+        sourceRoot = $sharedInfoSkillRoot
+        installerPath = $sharedInfoSkillInstallerPath
         targetRoot = $userSkillRoot
         synced = $syncedSkills
     }
@@ -934,7 +937,7 @@ if (-not $SkipVsCodeConfig.IsPresent) {
 
 if (-not $SkipUserConfig.IsPresent) {
     Write-Status "Updating Codex config"
-    Update-CodexConfig -Path $UserConfigPath -McpRepoRoot $McpRepoRoot -DotNetWatchWrapperPath $dotNetWatchWrapperPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -MermaidEntrypoint $mermaidEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory
+    Update-CodexConfig -Path $UserConfigPath -McpRepoRoot $McpRepoRoot -DotNetWatchWrapperPath $dotNetWatchWrapperPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -MermaidEntrypoint $mermaidEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory -DeprecatedCodeAnalysisRepoRoot $deprecatedCodeAnalysisRepoRoot
 }
 
 Write-Status "Resetup completed."
