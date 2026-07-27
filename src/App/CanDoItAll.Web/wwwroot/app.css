@@ -238,3 +238,114 @@ a {
         --cda-canvas-maximize-top-offset: 6.5rem;
     }
 }
+
+/* BaseLib composes these Split utilities at runtime, so they are absent from its generated stylesheet. */
+@media (min-width: 40rem) {
+    [class~="sm:flex-row"] {
+        flex-direction: row;
+    }
+
+    [class~="sm:flex-wrap"] {
+        flex-wrap: wrap;
+    }
+
+    [class~="sm:items-start"] {
+        align-items: flex-start;
+    }
+
+    [class~="sm:items-center"] {
+        align-items: center;
+    }
+
+    [class~="sm:justify-between"] {
+        justify-content: space-between;
+    }
+}
+
+@media (min-width: 48rem) {
+    [class~="md:flex-row"] {
+        flex-direction: row;
+    }
+
+    [class~="md:flex-wrap"] {
+        flex-wrap: wrap;
+    }
+
+    [class~="md:items-start"] {
+        align-items: flex-start;
+    }
+
+    [class~="md:items-center"] {
+        align-items: center;
+    }
+
+    [class~="md:justify-between"] {
+        justify-content: space-between;
+    }
+}
+
+@media (min-width: 64rem) {
+    [class~="lg:flex-row"] {
+        flex-direction: row;
+    }
+
+    [class~="lg:flex-wrap"] {
+        flex-wrap: wrap;
+    }
+
+    [class~="lg:items-start"] {
+        align-items: flex-start;
+    }
+
+    [class~="lg:items-center"] {
+        align-items: center;
+    }
+
+    [class~="lg:justify-between"] {
+        justify-content: space-between;
+    }
+}
+
+@media (min-width: 80rem) {
+    [class~="xl:flex-row"] {
+        flex-direction: row;
+    }
+
+    [class~="xl:flex-wrap"] {
+        flex-wrap: wrap;
+    }
+
+    [class~="xl:items-start"] {
+        align-items: flex-start;
+    }
+
+    [class~="xl:items-center"] {
+        align-items: center;
+    }
+
+    [class~="xl:justify-between"] {
+        justify-content: space-between;
+    }
+}
+
+@media (min-width: 96rem) {
+    [class~="2xl:flex-row"] {
+        flex-direction: row;
+    }
+
+    [class~="2xl:flex-wrap"] {
+        flex-wrap: wrap;
+    }
+
+    [class~="2xl:items-start"] {
+        align-items: flex-start;
+    }
+
+    [class~="2xl:items-center"] {
+        align-items: center;
+    }
+
+    [class~="2xl:justify-between"] {
+        justify-content: space-between;
+    }
+}

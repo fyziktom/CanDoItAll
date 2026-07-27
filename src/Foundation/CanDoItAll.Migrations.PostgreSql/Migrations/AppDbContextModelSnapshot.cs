@@ -1600,6 +1600,71 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("CrmHr_CapacityBlocks", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RelatedPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedPartyId");
+
+                    b.HasIndex("AccountPartyId", "RelatedPartyId", "Role")
+                        .IsUnique();
+
+                    b.ToTable("CrmHr_AccountStakeholders", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountConnectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountConnectionId", "ProjectId")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "AccountConnectionId");
+
+                    b.ToTable("CrmHr_AccountConnectionProjects", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1643,46 +1708,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsUnique();
 
                     b.ToTable("CrmHr_AccountProfiles", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountStakeholderLink", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AccountPartyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("RelatedPartyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RelatedPartyId");
-
-                    b.HasIndex("AccountPartyId", "RelatedPartyId", "Role")
-                        .IsUnique();
-
-                    b.ToTable("CrmHr_AccountStakeholders", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmHrAuditEntry", b =>
@@ -6061,6 +6086,21 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("VersionId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CrmHr.CrmAccountConnection", null)
+                        .WithMany()
+                        .HasForeignKey("AccountConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

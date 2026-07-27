@@ -58,6 +58,9 @@ internal static class PartyRecordPresentation
             Meta = party.LifecycleStatus.ToString(),
             Icon = ResolvePartyIcon(party.PartyType),
             Tags = party.Tags,
+            KindTone = ResolvePartyBadgeTone(party.PartyType),
+            TagTone = ResolvePartyBadgeTone(party.PartyType),
+            CornerStatus = ResolveLifecycleStatus(party.LifecycleStatus),
             TestId = $"crmhr-party-option-{party.Id:N}"
         };
     }
@@ -114,5 +117,33 @@ internal static class PartyRecordPresentation
             PartyType.AiAgent => "smart_toy",
             _ => "category"
         };
+    }
+
+    private static PagedRecordBadgeTone ResolvePartyBadgeTone(PartyType partyType)
+    {
+        return partyType switch
+        {
+            PartyType.Person => PagedRecordBadgeTone.Accent,
+            PartyType.Organization => PagedRecordBadgeTone.Warning,
+            PartyType.OrganizationUnit => PagedRecordBadgeTone.Teal,
+            PartyType.AiAgent => PagedRecordBadgeTone.Info,
+            _ => PagedRecordBadgeTone.Neutral
+        };
+    }
+
+    private static PagedRecordCornerStatus ResolveLifecycleStatus(
+        PartyLifecycleStatus lifecycleStatus)
+    {
+        var tone = lifecycleStatus switch
+        {
+            PartyLifecycleStatus.Active => PagedRecordStatusTone.Success,
+            PartyLifecycleStatus.Inactive or PartyLifecycleStatus.Former => PagedRecordStatusTone.Danger,
+            PartyLifecycleStatus.Candidate => PagedRecordStatusTone.Warning,
+            PartyLifecycleStatus.Prospect => PagedRecordStatusTone.Info,
+            PartyLifecycleStatus.Draft or PartyLifecycleStatus.Archived => PagedRecordStatusTone.Neutral,
+            _ => PagedRecordStatusTone.Neutral
+        };
+
+        return new PagedRecordCornerStatus(lifecycleStatus.ToString(), tone);
     }
 }

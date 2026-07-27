@@ -2,12 +2,12 @@
              Icon="person_search"
              Description="Keep candidate identity in the shared registry, move stage explicitly, and preserve stage evidence without splitting recruiting into a disconnected tool.">
     <Grid Gap="LayoutGap.Large"
-          ColumnTemplate2Xl="minmax(0,1.65fr) minmax(18rem,0.75fr)">
+          ColumnTemplateXl="minmax(0,1.65fr) minmax(18rem,0.75fr)">
         <SurfaceCard>
             <p class="cda-eyebrow">Application editor</p>
             <h3 class="mt-1 text-lg font-semibold text-slate-950">Candidate and stage</h3>
             <p class="mt-2 text-sm leading-6 text-slate-600">
-                Select an existing person or create a new candidate inline, then keep role, ownership, stage, and decision on the same record.
+                Select an existing person or bound AI agent, or create a new human candidate inline, then keep role, ownership, stage, and decision on the same record.
             </p>
 
             <Tabs Variant="TabsVariant.ModalCompact"
@@ -23,11 +23,12 @@
                               data-testid="crmhr-recruiting-application-tab-candidate">
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnsMd="2">
                                 <PartyPicker Label="Candidate"
                                              TestIdPrefix="crmhr-recruiting-candidate-party"
-                                             AllowedScope="PartyRecordScope.People"
-                                             InitialScope="PartyRecordScope.People"
+                                             AllowedScope="@(PartyRecordScope.People | PartyRecordScope.AiAgents)"
+                                             InitialScope="@(PartyRecordScope.People | PartyRecordScope.AiAgents)"
                                              SelectedPartyId="@Draft.PartyId"
                                              SelectedPartyIdChanged="SetCandidatePartyAsync" />
                                 <FormField Text="Desired role">
@@ -37,7 +38,9 @@
                                 </FormField>
                             </Grid>
 
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnsMd="2"
+                                  ColumnsLg="3">
                                 <FormField Text="New candidate name">
                                     <InputText @bind-Value="Draft.CandidateName"
                                                class="cda-input"
@@ -108,7 +111,9 @@
                               data-testid="crmhr-recruiting-application-tab-ownership">
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnsMd="2"
+                                  ColumnsLg="3">
                                 <PartyPicker Label="Recruiter"
                                              TestIdPrefix="crmhr-recruiting-recruiter"
                                              AllowedScope="PartyRecordScope.People"
@@ -170,7 +175,8 @@
         <SurfaceCard Soft="true">
             <Split Gap="LayoutGap.Medium"
                    AlignItems="AlignItems.Center"
-                   JustifyContent="JustifyContent.SpaceBetween">
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
                 <div>
                     <p class="cda-eyebrow">Stage history</p>
                     <h3 class="mt-1 text-lg font-semibold text-slate-950">@StageHistory.Count update(s)</h3>
@@ -198,7 +204,8 @@
                         <PanelCard data-testid="crmhr-recruiting-stage-history-item">
                             <Split Gap="LayoutGap.Medium"
                                    AlignItems="AlignItems.Start"
-                                   JustifyContent="JustifyContent.SpaceBetween">
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0 space-y-1">
                                     <p class="text-base font-semibold text-slate-950">@item.Summary</p>
                                     <p class="text-sm text-slate-600">@item.ChangedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") / @item.ChangedBy</p>

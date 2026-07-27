@@ -23,6 +23,49 @@ public sealed class AgentRecruitingApiIntegrationTests
     private static readonly string HashB = $"sha256:{new string('b', 64)}";
 
     [Fact]
+    public async Task Human_review_endpoint_rejects_anonymous_callers_even_when_global_api_auth_is_disabled()
+    {
+        await using var host = await CreateHostAsync(
+            jwtEnabled: false,
+            new ConfigurableTargetResolver(CandidateId));
+
+        using var response = await host.Client.PostAsJsonAsync(
+            $"/api/agent-recruiting/interviews/{Guid.NewGuid():D}/reviews",
+            CreateReviewCommand(Guid.NewGuid()),
+            JsonOptions);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains(
+            "agent-recruiting.reviewer-authorization-required",
+            body,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Human_review_endpoint_requires_the_dedicated_reviewer_scope()
+    {
+        await using var host = await CreateHostAsync(jwtEnabled: true);
+        ConfigureBearer(
+            host,
+            "ordinary-api-client",
+            "Ordinary API Client",
+            includeHumanReviewScope: false);
+
+        using var response = await host.Client.PostAsJsonAsync(
+            $"/api/agent-recruiting/interviews/{Guid.NewGuid():D}/reviews",
+            CreateReviewCommand(Guid.NewGuid()),
+            JsonOptions);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains(
+            "agent-recruiting.reviewer-scope-required",
+            body,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Recruiting_api_round_trips_all_target_kinds_and_never_activates_candidate()
     {
         var resolver = new ConfigurableTargetResolver(CandidateId);
@@ -61,8 +104,16 @@ public sealed class AgentRecruitingApiIntegrationTests
             interviews.Add(attempted);
         }
 
-        var primary = interviews[0];
-        var primaryAttempt = Assert.Single(primary.Attempts);
+        var primaryEvidence = interviews
+            .SelectMany(interview => interview.Attempts.Select(attempt => (Interview: interview, Attempt: attempt)))
+            .OrderBy(item => item.Attempt.CreatedAtUtc)
+            .ThenBy(item => item.Interview.CreatedAtUtc)
+            .ThenBy(item => item.Interview.Id)
+            .ThenBy(item => item.Attempt.Sequence)
+            .ThenBy(item => item.Attempt.Id)
+            .Last();
+        var primary = primaryEvidence.Interview;
+        var primaryAttempt = primaryEvidence.Attempt;
         using var spoofedReviewResponse = await host.Client.PostAsJsonAsync(
             $"/api/agent-recruiting/interviews/{primary.Id:D}/reviews",
             CreateReviewCommand(primaryAttempt.Id) with
@@ -166,10 +217,106 @@ public sealed class AgentRecruitingApiIntegrationTests
     }
 
     [Fact]
+    public async Task Recruiting_api_lists_correlated_interviews_and_round_trips_analysis()
+    {
+        var resolver = new ConfigurableTargetResolver(CandidateId);
+        await using var host = await CreateHostAsync(jwtEnabled: true, resolver);
+        ConfigureBearer(host, "reviewer-subject", "Trusted Reviewer");
+        var seed = await SeedCatalogAsync(host);
+        var recruitmentApplicationId = Guid.NewGuid();
+        var otherApplicationId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        using var firstResponse = await host.Client.PostAsJsonAsync(
+            "/api/agent-recruiting/interviews",
+            new CreateAgentRecruitingInterviewCommand(
+                CandidateId,
+                seed.CandidateVersion,
+                "Correlated interview",
+                recruitmentApplicationId,
+                projectId),
+            JsonOptions);
+        var first = await ReadAsync<AgentRecruitingInterview>(firstResponse);
+        using var secondResponse = await host.Client.PostAsJsonAsync(
+            "/api/agent-recruiting/interviews",
+            new CreateAgentRecruitingInterviewCommand(
+                CandidateId,
+                seed.CandidateVersion,
+                "Other application",
+                otherApplicationId),
+            JsonOptions);
+        var second = await ReadAsync<AgentRecruitingInterview>(secondResponse);
+
+        using var allResponse = await host.Client.GetAsync(
+            $"/api/agent-recruiting/candidates/{CandidateId:D}/interviews");
+        var all = await ReadAsync<List<AgentRecruitingInterview>>(allResponse);
+        using var filteredResponse = await host.Client.GetAsync(
+            $"/api/agent-recruiting/candidates/{CandidateId:D}/interviews" +
+            $"?recruitmentApplicationId={recruitmentApplicationId:D}");
+        var filtered = await ReadAsync<List<AgentRecruitingInterview>>(filteredResponse);
+
+        var expectedOrder = new[] { first, second }
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ThenByDescending(item => item.Id)
+            .Select(item => item.Id);
+        Assert.Equal(HttpStatusCode.OK, allResponse.StatusCode);
+        Assert.Equal(expectedOrder, all.Select(item => item.Id));
+        Assert.Equal(first.Id, Assert.Single(filtered).Id);
+        Assert.Equal(recruitmentApplicationId, first.RecruitmentApplicationId);
+        Assert.Equal(projectId, first.ProjectId);
+
+        var target = new AgentRecruitingExecutionTarget(
+            AgentRecruitingTargetKind.WorkflowRun,
+            Guid.NewGuid());
+        using var attemptResponse = await host.Client.PostAsJsonAsync(
+            $"/api/agent-recruiting/interviews/{first.Id:D}/attempts",
+            CreateAttemptCommand(target, "analysis-round-trip") with
+            {
+                Analysis = new AgentRecruitingAssessmentAnalysis(
+                    AgentRecruitingAssessmentClassification.NeedsTraining,
+                    0.81m,
+                    "  Reliable output with a narrow planning gap.  ",
+                    AgentRecruitingProposedNextStep.AssignTraining,
+                    ["  Reliable output  "],
+                    ["  Multi-step planning  "])
+            },
+            JsonOptions);
+        var attempted = await ReadAsync<AgentRecruitingInterview>(attemptResponse);
+        var analysis = Assert.Single(attempted.Attempts).Analysis;
+
+        Assert.NotNull(analysis);
+        Assert.Equal(
+            AgentRecruitingAssessmentClassification.NeedsTraining,
+            analysis.Classification);
+        Assert.Equal(0.81m, analysis.Confidence);
+        Assert.Equal(
+            "Reliable output with a narrow planning gap.",
+            analysis.Summary);
+        Assert.Equal(
+            AgentRecruitingProposedNextStep.AssignTraining,
+            analysis.ProposedNextStep);
+        Assert.Equal(["Reliable output"], analysis.Strengths);
+        Assert.Equal(["Multi-step planning"], analysis.Gaps);
+
+        using var invalidAnalysisResponse = await host.Client.PostAsJsonAsync(
+            $"/api/agent-recruiting/interviews/{first.Id:D}/attempts",
+            CreateAttemptCommand(target, "invalid-analysis") with
+            {
+                Analysis = analysis with { Confidence = 1.01m }
+            },
+            JsonOptions);
+        await AssertErrorAsync(
+            invalidAnalysisResponse,
+            HttpStatusCode.BadRequest,
+            "agent-recruiting.analysis-confidence-invalid");
+    }
+
+    [Fact]
     public async Task Recruiting_api_rejects_unknown_mismatched_and_invalid_evidence()
     {
         var resolver = new ConfigurableTargetResolver(CandidateId);
-        await using var host = await CreateHostAsync(jwtEnabled: false, resolver);
+        await using var host = await CreateHostAsync(jwtEnabled: true, resolver);
+        ConfigureBearer(host, "reviewer-subject", "Trusted Reviewer");
         var seed = await SeedCatalogAsync(host);
 
         using var unknownCandidateResponse = await host.Client.PostAsJsonAsync(
@@ -235,7 +382,7 @@ public sealed class AgentRecruitingApiIntegrationTests
                 true,
                 "Completed",
                 true,
-                Guid.NewGuid()));
+                [Guid.NewGuid()]));
         using var mismatchResponse = await host.Client.PostAsJsonAsync(
             $"/api/agent-recruiting/interviews/{interview.Id:D}/attempts",
             CreateAttemptCommand(
@@ -396,6 +543,9 @@ public sealed class AgentRecruitingApiIntegrationTests
                 $"/api/agent-recruiting/interviews/{interviewId:D}"),
             new HttpRequestMessage(
                 HttpMethod.Get,
+                $"/api/agent-recruiting/candidates/{candidateId:D}/interviews"),
+            new HttpRequestMessage(
+                HttpMethod.Get,
                 $"/api/agent-recruiting/candidates/{candidateId:D}/readiness")
         };
 
@@ -434,6 +584,9 @@ public sealed class AgentRecruitingApiIntegrationTests
         var detail = paths
             .GetProperty("/api/agent-recruiting/interviews/{interviewId}")
             .GetProperty("get");
+        var candidateInterviews = paths
+            .GetProperty("/api/agent-recruiting/candidates/{candidateAgentId}/interviews")
+            .GetProperty("get");
         var readiness = paths
             .GetProperty("/api/agent-recruiting/candidates/{agentId}/readiness")
             .GetProperty("get");
@@ -445,6 +598,10 @@ public sealed class AgentRecruitingApiIntegrationTests
         AssertResponseSchema(appendAttempt, "201", "AgentRecruitingInterview");
         AssertResponseSchema(appendReview, "201", "AgentRecruitingInterview");
         AssertResponseSchema(detail, "200", "AgentRecruitingInterview");
+        AssertArrayResponseSchema(
+            candidateInterviews,
+            "200",
+            "AgentRecruitingInterview");
         AssertResponseSchema(readiness, "200", "AgentRecruitingCandidateReadiness");
         AssertResponseSchema(create, "400", "ApiErrorResponse");
         AssertResponseSchema(create, "404", "ApiErrorResponse");
@@ -456,6 +613,7 @@ public sealed class AgentRecruitingApiIntegrationTests
         AssertResponseSchema(appendReview, "404", "ApiErrorResponse");
         AssertResponseSchema(appendReview, "409", "ApiErrorResponse");
         AssertResponseSchema(detail, "404", "ApiErrorResponse");
+        AssertResponseSchema(candidateInterviews, "400", "ApiErrorResponse");
         AssertResponseSchema(readiness, "404", "ApiErrorResponse");
 
         var schemas = document.RootElement.GetProperty("components").GetProperty("schemas");
@@ -468,6 +626,12 @@ public sealed class AgentRecruitingApiIntegrationTests
         Assert.Equal(
             ["agent-execution-run", "workflow-run", "process-run"],
             targetKinds);
+        Assert.Equal(
+            ["StrongFit", "Suitable", "NeedsTraining", "NotSuitable", "Inconclusive"],
+            ReadEnumValues(schemas, "AgentRecruitingAssessmentClassification"));
+        Assert.Equal(
+            ["Advance", "RequestHumanReview", "AssignTraining", "Reassess", "Hold", "Reject"],
+            ReadEnumValues(schemas, "AgentRecruitingProposedNextStep"));
         var readinessProperties = schemas
             .GetProperty("AgentRecruitingCandidateReadiness")
             .GetProperty("properties");
@@ -500,14 +664,18 @@ public sealed class AgentRecruitingApiIntegrationTests
     private static void ConfigureBearer(
         ApiTestHost host,
         string subject,
-        string displayName)
+        string displayName,
+        bool includeHumanReviewScope = true)
     {
         var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
         var token = tokenService.IssueToken(
             new ApiTokenIssueRequest
             {
                 Subject = subject,
-                DisplayName = displayName
+                DisplayName = displayName,
+                Scopes = includeHumanReviewScope
+                    ? ["api", AgentRecruitingAuthorizationScopes.HumanReview]
+                    : ["api"]
             });
         host.Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token.Token);
@@ -697,6 +865,35 @@ public sealed class AgentRecruitingApiIntegrationTests
             StringComparison.Ordinal);
     }
 
+    private static void AssertArrayResponseSchema(
+        JsonElement operation,
+        string statusCode,
+        string expectedItemSchema)
+    {
+        var schema = operation
+            .GetProperty("responses")
+            .GetProperty(statusCode)
+            .GetProperty("content")
+            .GetProperty("application/json")
+            .GetProperty("schema");
+        Assert.Equal("array", schema.GetProperty("type").GetString());
+        Assert.EndsWith(
+            $"/{expectedItemSchema}",
+            schema.GetProperty("items").GetProperty("$ref").GetString(),
+            StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyList<string> ReadEnumValues(
+        JsonElement schemas,
+        string schemaName)
+        => schemas
+            .GetProperty(schemaName)
+            .GetProperty("enum")
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .OfType<string>()
+            .ToList();
+
     private static JsonSerializerOptions JsonOptions { get; } =
         new(JsonSerializerDefaults.Web);
 
@@ -736,9 +933,7 @@ public sealed class AgentRecruitingApiIntegrationTests
                     true,
                     "Completed",
                     true,
-                    target.Kind == AgentRecruitingTargetKind.AgentExecutionRun
-                        ? candidateId
-                        : null));
+                    [candidateId]));
         }
     }
 }

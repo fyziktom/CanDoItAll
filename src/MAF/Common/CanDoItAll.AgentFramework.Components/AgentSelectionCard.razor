@@ -1,5 +1,13 @@
 <article class="@ResolveContainerClass()"
          data-testid="@ShellTestId">
+    @if (ShowStatusRibbon)
+    {
+        <span class="@ResolveStatusRibbonClass()"
+              data-testid="agent-status-ribbon">
+            @Agent.Status
+        </span>
+    }
+
     @if (ShowFavorite)
     {
         <button type="button"
@@ -21,35 +29,58 @@
             @onclick="HandleSelectAsync"
             @ondblclick="HandleDoubleClickAsync">
         <Stack GapScale="@(Compact ? LayoutGap.Small : LayoutGap.Medium)"
-               AlignItems="@ResolveStackAlignment()">
+               AlignItems="@ResolveStackAlignment()"
+               Class="@ResolveContentClass()">
             <div class="@ResolveIdentityClass()">
-                <Avatar Alt="@ResolveAvatarAlt()"
-                        ImageUrl="@Agent.AvatarImageUrl"
-                        FallbackText="@ResolveAvatarFallbackText()"
-                        DefaultImageSeed="@ResolveAvatarSeed()"
-                        Size="@(Compact ? AvatarSize.Medium : AvatarSize.Large)"
-                        Shape="AvatarShape.Rounded" />
+                <div class="agent-selection-card__avatar-shell">
+                    <Avatar Alt="@ResolveAvatarAlt()"
+                            ImageUrl="@Agent.AvatarImageUrl"
+                            FallbackText="@ResolveAvatarFallbackText()"
+                            DefaultImageSeed="@ResolveAvatarSeed()"
+                            Size="@(Compact ? AvatarSize.Medium : AvatarSize.Large)"
+                            Shape="AvatarShape.Rounded" />
+                </div>
 
                 <div class="agent-selection-card__identity-copy">
                     <Cluster Gap="LayoutGap.XSmall"
                              Wrap="FlexWrap.Wrap"
                              Class="@ResolveBadgeClusterClass()">
-                        <StatusBadge Tone="@ResolveStatusTone(Agent.Status)" Text="@Agent.Status.ToString()" />
+                        @if (ShowKindBadge)
+                        {
+                            <StatusBadge Tone="info"
+                                         Text="@KindLabel"
+                                         NoWrap="true" />
+                        }
+                        @if (!ShowStatusRibbon)
+                        {
+                            <StatusBadge Tone="@ResolveStatusTone(Agent.Status)"
+                                         Text="@Agent.Status.ToString()"
+                                         NoWrap="true" />
+                        }
                         @if (ShowWorkload)
                         {
-                            <StatusBadge Tone="info" Text="@AgentWorkloadDisplay.ResolveLabel(Agent.Workload)" />
+                            <StatusBadge Tone="info"
+                                         Text="@AgentWorkloadDisplay.ResolveLabel(Agent.Workload)"
+                                         NoWrap="true" />
                         }
                         @if (IsPrivateProvider)
                         {
-                            <StatusBadge Tone="warning" Text="Private" data-testid="agent-private-provider-badge" />
+                            <StatusBadge Tone="warning"
+                                         Text="Private"
+                                         NoWrap="true"
+                                         data-testid="agent-private-provider-badge" />
                         }
                         @if (ShowChatHistory)
                         {
-                            <StatusBadge Tone="neutral" Text="@Agent.ChatHistoryMode.ToString()" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@Agent.ChatHistoryMode.ToString()"
+                                         NoWrap="true" />
                         }
                         @if (IsSelected)
                         {
-                            <StatusBadge Tone="info" Text="@SelectedLabel" />
+                            <StatusBadge Tone="info"
+                                         Text="@SelectedLabel"
+                                         NoWrap="true" />
                         }
                         @if (ShowDetailsTooltip)
                         {
@@ -64,18 +95,30 @@
                         }
                     </Cluster>
 
-                    <p class="agent-selection-card__name">@Agent.Name</p>
+                    <TooltipTarget Text="@Agent.Name"
+                                   Position="TooltipPosition.Bottom"
+                                   TriggerClass="agent-selection-card__name-target">
+                        <p class="agent-selection-card__name">@Agent.Name</p>
+                    </TooltipTarget>
 
                     @if (!string.IsNullOrWhiteSpace(ResolveAgentRole()))
                     {
-                        <p class="agent-selection-card__role">@ResolveAgentRole()</p>
+                        <TooltipTarget Text="@ResolveAgentRole()"
+                                       Position="TooltipPosition.Bottom"
+                                       TriggerClass="agent-selection-card__role-target">
+                            <p class="agent-selection-card__role">@ResolveAgentRole()</p>
+                        </TooltipTarget>
                     }
                 </div>
             </div>
 
             @if (ShowSummary)
             {
-                <p class="agent-selection-card__summary">@ResolveSummary()</p>
+                <TooltipTarget Text="@ResolveSummary()"
+                               Position="TooltipPosition.Bottom"
+                               TriggerClass="agent-selection-card__summary-target">
+                    <p class="agent-selection-card__summary">@ResolveSummary()</p>
+                </TooltipTarget>
             }
 
             @if (ShowTags)
@@ -83,33 +126,51 @@
                 var visibleTags = VisibleTags();
                 if (visibleTags.Count > 0)
                 {
-                    <Cluster Gap="LayoutGap.XSmall"
-                             Wrap="FlexWrap.Wrap"
-                             Class="@ResolveTagClusterClass()">
+                    <div class="@ResolveTagClusterClass()">
                         @foreach (var tag in visibleTags.Take(MaxVisibleTags))
                         {
-                            <StatusBadge Tone="neutral" Text="@tag" />
+                            <TooltipTarget Text="@tag"
+                                           Position="TooltipPosition.Bottom"
+                                           TriggerClass="agent-selection-card__tag-target">
+                                <StatusBadge Tone="info"
+                                             Text="@tag"
+                                             NoWrap="true" />
+                            </TooltipTarget>
                         }
-                    </Cluster>
+                        @if (visibleTags.Count > MaxVisibleTags)
+                        {
+                            <TooltipTarget Text="@BuildHiddenTags(visibleTags)"
+                                           Position="TooltipPosition.Bottom"
+                                           TriggerClass="agent-selection-card__tag-target">
+                                <StatusBadge Tone="info"
+                                             Text="@($"+{visibleTags.Count - MaxVisibleTags}")"
+                                             NoWrap="true" />
+                            </TooltipTarget>
+                        }
+                    </div>
                 }
             }
 
-            <div class="@ResolveMetaClass()">
-                @if (!string.IsNullOrWhiteSpace(Agent.Model))
-                {
-                    <span>@Agent.Model</span>
-                }
+            <TooltipTarget Text="@BuildMetaDetails()"
+                           Position="TooltipPosition.Bottom"
+                           TriggerClass="agent-selection-card__meta-target">
+                <div class="@ResolveMetaClass()">
+                    @if (!string.IsNullOrWhiteSpace(Agent.Model))
+                    {
+                        <span>@Agent.Model</span>
+                    }
 
-                @if (ShowCapabilityCount)
-                {
-                    <span>@FormatCapabilityCount()</span>
-                }
+                    @if (ShowCapabilityCount)
+                    {
+                        <span>@FormatCapabilityCount()</span>
+                    }
 
-                @if (ShowUpdatedAt)
-                {
-                    <span>@($"Updated {Agent.UpdatedAtUtc.LocalDateTime:g}")</span>
-                }
-            </div>
+                    @if (ShowUpdatedAt)
+                    {
+                        <span>@($"Updated {Agent.UpdatedAtUtc.LocalDateTime:g}")</span>
+                    }
+                </div>
+            </TooltipTarget>
         </Stack>
     </button>
 
@@ -133,6 +194,18 @@
 
     [Parameter]
     public bool CenterContent { get; set; }
+
+    [Parameter]
+    public bool EnterpriseLayout { get; set; }
+
+    [Parameter]
+    public bool ShowStatusRibbon { get; set; }
+
+    [Parameter]
+    public bool ShowKindBadge { get; set; }
+
+    [Parameter]
+    public string KindLabel { get; set; } = "AI agent";
 
     [Parameter]
     public bool ShowSummary { get; set; } = true;
@@ -213,9 +286,13 @@
             IsSelected ? "agent-selection-card--selected" : null,
             Compact ? "agent-selection-card--compact" : null,
             CenterContent ? "agent-selection-card--center" : null,
+            EnterpriseLayout ? "agent-selection-card--enterprise" : null,
             ShowFavorite ? "agent-selection-card--has-favorite" : null,
             Class);
     }
+
+    private string ResolveContentClass()
+        => EnterpriseLayout ? "agent-selection-card__content agent-selection-card__content--enterprise" : "agent-selection-card__content";
 
     private string ResolveFavoriteClass()
     {
@@ -237,6 +314,11 @@
 
     private string ResolveMetaClass()
         => CenterContent ? "agent-selection-card__meta agent-selection-card__meta--center" : "agent-selection-card__meta";
+
+    private string ResolveStatusRibbonClass()
+        => CssClassBuilder.Join(
+            "agent-selection-card__status-ribbon",
+            $"agent-selection-card__status-ribbon--{ResolveStatusTone(Agent.Status)}");
 
     private AlignItems ResolveStackAlignment()
         => CenterContent ? AlignItems.Center : AlignItems.Stretch;
@@ -314,6 +396,30 @@
 
         return $"{ResolveAgentRole()}. {provider}. {Agent.Workload}. {FormatCapabilityCount()}. {tagText} {ResolveSummary()}";
     }
+
+    private string BuildMetaDetails()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(Agent.Model))
+        {
+            parts.Add(Agent.Model);
+        }
+
+        if (ShowCapabilityCount)
+        {
+            parts.Add(FormatCapabilityCount());
+        }
+
+        if (ShowUpdatedAt)
+        {
+            parts.Add($"Updated {Agent.UpdatedAtUtc.LocalDateTime:g}");
+        }
+
+        return string.Join(" / ", parts);
+    }
+
+    private string BuildHiddenTags(IReadOnlyList<string> visibleTags)
+        => string.Join(", ", visibleTags.Skip(MaxVisibleTags));
 
     private static string BuildInitials(string value)
     {

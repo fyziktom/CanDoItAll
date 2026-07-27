@@ -2,7 +2,7 @@
 {
     <EmptyState Eyebrow="No account selected"
                 Title="Choose an account from the list"
-                Description="CRM details, stakeholders, recent interactions, and overdue follow-ups appear here after you select an organization.">
+                Description="CRM details, connected records, recent interactions, and overdue follow-ups appear here after you select an organization.">
         <Actions>
             <Button Text="Open directory"
                     Click="OpenDirectory" />
@@ -57,9 +57,9 @@ else
                 <CompactStat Label="roles"
                              Value="@(Account.Roles.Count == 0 ? "None" : string.Join(", ", Account.Roles))"
                              TooltipText="CRM-facing roles on the shared party record." />
-                <CompactStat Label="stakeholders"
-                             Value="@Account.Stakeholders.Count.ToString()"
-                             TooltipText="Stakeholders linked to this account." />
+                <CompactStat Label="connections"
+                             Value="@Account.ConnectedRecords.Count.ToString()"
+                             TooltipText="People and other directory records connected to this account." />
                 <CompactStat Label="opportunities"
                              Value="@Account.OpportunityCount.ToString()"
                              TooltipText="Opportunities currently attached to this account."

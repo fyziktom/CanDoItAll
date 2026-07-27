@@ -2,6 +2,11 @@ using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
+public static class AgentRecruitingAuthorizationScopes
+{
+    public const string HumanReview = "agent-recruiting.review";
+}
+
 [JsonConverter(typeof(JsonStringEnumConverter<AgentRecruitingTargetKind>))]
 public enum AgentRecruitingTargetKind
 {
@@ -47,6 +52,27 @@ public enum AgentRecruitingReadinessStatus
     Rejected
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<AgentRecruitingAssessmentClassification>))]
+public enum AgentRecruitingAssessmentClassification
+{
+    StrongFit = 1,
+    Suitable = 2,
+    NeedsTraining = 3,
+    NotSuitable = 4,
+    Inconclusive = 5
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<AgentRecruitingProposedNextStep>))]
+public enum AgentRecruitingProposedNextStep
+{
+    Advance = 1,
+    RequestHumanReview = 2,
+    AssignTraining = 3,
+    Reassess = 4,
+    Hold = 5,
+    Reject = 6
+}
+
 public sealed record AgentRecruitingExecutionTarget(
     AgentRecruitingTargetKind Kind,
     Guid Id);
@@ -60,6 +86,14 @@ public sealed record AgentRecruitingAutomatedEvaluation(
     string RubricVersion,
     IReadOnlyList<string> Findings,
     DateTimeOffset EvaluatedAtUtc);
+
+public sealed record AgentRecruitingAssessmentAnalysis(
+    AgentRecruitingAssessmentClassification Classification,
+    decimal Confidence,
+    string Summary,
+    AgentRecruitingProposedNextStep ProposedNextStep,
+    IReadOnlyList<string> Strengths,
+    IReadOnlyList<string> Gaps);
 
 public sealed record AgentRecruitingAttempt(
     Guid Id,
@@ -77,7 +111,8 @@ public sealed record AgentRecruitingAttempt(
     AgentRecruitingAutomatedEvaluation? AutomatedEvaluation,
     AgentRecruitingEvidenceCompleteness Completeness,
     IReadOnlyList<string> MissingEvidence,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    AgentRecruitingAssessmentAnalysis? Analysis = null);
 
 public sealed record AgentRecruitingHumanReview(
     Guid Id,
@@ -102,7 +137,9 @@ public sealed record AgentRecruitingInterview(
     string Purpose,
     DateTimeOffset CreatedAtUtc,
     IReadOnlyList<AgentRecruitingAttempt> Attempts,
-    IReadOnlyList<AgentRecruitingHumanReview> Reviews);
+    IReadOnlyList<AgentRecruitingHumanReview> Reviews,
+    Guid? RecruitmentApplicationId = null,
+    Guid? ProjectId = null);
 
 public sealed record AgentRecruitingAttemptComparison(
     Guid AttemptId,
@@ -132,12 +169,14 @@ public sealed record AgentRecruitingTargetResolution(
     bool Found,
     string State,
     bool IsTerminal,
-    Guid? ExecutedAgentId = null);
+    IReadOnlyList<Guid>? ParticipatingAgentIds = null);
 
 public sealed record CreateAgentRecruitingInterviewCommand(
     Guid CandidateAgentId,
     string CandidateConfigurationVersion,
-    string Purpose);
+    string Purpose,
+    Guid? RecruitmentApplicationId = null,
+    Guid? ProjectId = null);
 
 public sealed record AppendAgentRecruitingAttemptCommand(
     AgentRecruitingExecutionTarget Target,
@@ -149,7 +188,8 @@ public sealed record AppendAgentRecruitingAttemptCommand(
     string StructuredOutputContractKey,
     string StructuredOutputSchemaHash,
     string StructuredOutputValidationStatus,
-    AgentRecruitingAutomatedEvaluation? AutomatedEvaluation);
+    AgentRecruitingAutomatedEvaluation? AutomatedEvaluation,
+    AgentRecruitingAssessmentAnalysis? Analysis = null);
 
 public sealed record AppendAgentRecruitingReviewCommand(
     Guid AttemptId,

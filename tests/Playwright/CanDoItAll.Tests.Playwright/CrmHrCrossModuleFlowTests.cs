@@ -117,7 +117,7 @@ public sealed class CrmHrCrossModuleFlowTests
         await page.GetByTestId("crmhr-recruiting-record-dialog").WaitForAsync();
         await page.GetByTestId("crmhr-recruiting-tab-conversion").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-convert-existing-callout").WaitForAsync();
-        await page.GetByTestId("crmhr-recruiting-tab-lifecycle").ClickAsync();
+        await page.GetByTestId("crmhr-recruiting-tab-development").ClickAsync();
         await page.WaitForSelectorAsync($"text={seed.LifecycleTaskTitle}");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
 

@@ -105,7 +105,7 @@
         <div class="@ResultsClass"
              data-testid="@($"{DataTestId}-results")">
             <Grid Gap="LayoutGap.Medium"
-                  ColumnTemplate="@ColumnTemplate"
+                  ColumnTemplate="@ResolvedColumnTemplate"
                   Class="w-full">
                 @foreach (var option in page.Items)
                 {
@@ -121,85 +121,145 @@
                     {
                         <article class="@ResolveCardClass(option, isSelected)"
                                  data-testid="@ResolveShellTestId(option)">
+                            @if (option.CornerStatus is not null)
+                            {
+                                <span class="@ResolveCornerStatusClass(option.CornerStatus)"
+                                      aria-label="@option.CornerStatus.Text"
+                                      data-testid="@($"{ResolveOptionTestId(option)}-status")">
+                                    <span>@option.CornerStatus.Text</span>
+                                </span>
+                            }
+
                             <button type="button"
                                     class="paged-record-browser__select"
                                     aria-label="@($"Select {option.Title}")"
                                     aria-pressed="@(isSelected ? "true" : "false")"
                                     disabled="@option.IsDisabled"
-                                    title="@ResolveSelectTitle(option)"
                                     data-testid="@ResolveOptionTestId(option)"
                                     @onclick="@(() => SelectAsync(option))">
-                                <Stack GapScale="LayoutGap.Small"
-                                       AlignItems="AlignItems.Stretch">
-                                    <div class="paged-record-browser__identity">
+                                <div class="paged-record-browser__content">
+                                    <div class="paged-record-browser__media">
                                         <span class="paged-record-browser__icon"
                                               aria-hidden="true">
                                             <Icon Name="@option.Icon" />
                                         </span>
 
-                                        <div class="paged-record-browser__identity-copy">
-                                            <Cluster Gap="LayoutGap.XSmall"
-                                                     Wrap="FlexWrap.Wrap">
+                                        <div class="paged-record-browser__kind-row">
+                                            <TooltipTarget Text="@option.KindLabel"
+                                                           Position="TooltipPosition.Bottom"
+                                                           Duration="@((TimeSpan?)null)"
+                                                           TestId="@($"{ResolveOptionTestId(option)}-kind-tooltip")"
+                                                           TriggerClass="@ResolveBadgeTargetClass(option.KindTone, "paged-record-browser__kind-target")">
                                                 <StatusBadge Tone="neutral"
-                                                             Text="@option.KindLabel" />
-                                                @if (isSelected)
-                                                {
-                                                    <StatusBadge Tone="info"
-                                                                 Text="Selected" />
-                                                }
-                                            </Cluster>
-
-                                            <TextBlock TextStyle="TextStyle.Subtitle2"
-                                                       Value="@option.Title"
-                                                       Class="paged-record-browser__title" />
-
-                                            @if (!string.IsNullOrWhiteSpace(option.Subtitle))
+                                                             Text="@option.KindLabel"
+                                                             NoWrap="true" />
+                                            </TooltipTarget>
+                                            @if (isSelected)
                                             {
-                                                <TextBlock TextStyle="TextStyle.Note"
-                                                           Value="@option.Subtitle"
-                                                           Class="paged-record-browser__subtitle" />
+                                                <StatusBadge Tone="info"
+                                                             Text="Selected"
+                                                             NoWrap="true" />
                                             }
                                         </div>
                                     </div>
 
-                                    @if (!string.IsNullOrWhiteSpace(option.Description))
-                                    {
-                                        <TextBlock TextStyle="TextStyle.Note"
-                                                   Value="@option.Description"
-                                                   Class="paged-record-browser__description" />
-                                    }
+                                    <div class="paged-record-browser__title-slot">
+                                        <TooltipTarget Text="@option.Title"
+                                                       Position="TooltipPosition.Bottom"
+                                                       Duration="@((TimeSpan?)null)"
+                                                       TestId="@($"{ResolveOptionTestId(option)}-title-tooltip")"
+                                                       TriggerClass="paged-record-browser__tooltip-target">
+                                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                       Value="@option.Title"
+                                                       Class="paged-record-browser__title" />
+                                        </TooltipTarget>
+                                    </div>
 
-                                    @if (option.Tags.Count > 0)
-                                    {
-                                        <Cluster Gap="LayoutGap.XSmall"
-                                                 Wrap="FlexWrap.Wrap">
+                                    <div class="paged-record-browser__subtitle-slot">
+                                        @if (!string.IsNullOrWhiteSpace(option.Subtitle))
+                                        {
+                                            <TooltipTarget Text="@option.Subtitle"
+                                                           Position="TooltipPosition.Bottom"
+                                                           Duration="@((TimeSpan?)null)"
+                                                           TestId="@($"{ResolveOptionTestId(option)}-subtitle-tooltip")"
+                                                           TriggerClass="paged-record-browser__tooltip-target">
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.Subtitle"
+                                                           Class="paged-record-browser__subtitle" />
+                                            </TooltipTarget>
+                                        }
+                                    </div>
+
+                                    <div class="paged-record-browser__description-slot">
+                                        @if (!string.IsNullOrWhiteSpace(option.Description))
+                                        {
+                                            <TooltipTarget Text="@option.Description"
+                                                           Position="TooltipPosition.Bottom"
+                                                           Duration="@((TimeSpan?)null)"
+                                                           TestId="@($"{ResolveOptionTestId(option)}-description-tooltip")"
+                                                           TriggerClass="paged-record-browser__tooltip-target">
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.Description"
+                                                           Class="paged-record-browser__description" />
+                                            </TooltipTarget>
+                                        }
+                                    </div>
+
+                                    <div class="paged-record-browser__card-tags">
+                                        @if (option.Tags.Count > 0)
+                                        {
                                             @foreach (var tag in option.Tags.Take(MaximumVisibleTags))
                                             {
-                                                <StatusBadge Tone="neutral"
-                                                             Text="@tag" />
+                                                <TooltipTarget Text="@tag"
+                                                               Position="TooltipPosition.Bottom"
+                                                               Duration="@((TimeSpan?)null)"
+                                                               TriggerClass="@ResolveBadgeTargetClass(option.TagTone, "paged-record-browser__tag-target")">
+                                                    <StatusBadge Tone="neutral"
+                                                                 Text="@tag"
+                                                                 NoWrap="true" />
+                                                </TooltipTarget>
                                             }
                                             @if (option.Tags.Count > MaximumVisibleTags)
                                             {
-                                                <StatusBadge Tone="info"
-                                                             Text="@($"+{option.Tags.Count - MaximumVisibleTags}")" />
+                                                <TooltipTarget Text="@BuildHiddenTags(option.Tags)"
+                                                               Position="TooltipPosition.Bottom"
+                                                               Duration="@((TimeSpan?)null)"
+                                                               TriggerClass="@ResolveBadgeTargetClass(option.TagTone, "paged-record-browser__tag-target")">
+                                                    <StatusBadge Tone="neutral"
+                                                                 Text="@($"+{option.Tags.Count - MaximumVisibleTags}")"
+                                                                 NoWrap="true" />
+                                                </TooltipTarget>
                                             }
-                                        </Cluster>
-                                    }
+                                        }
+                                    </div>
 
-                                    @if (!string.IsNullOrWhiteSpace(option.Meta))
-                                    {
-                                        <TextBlock TextStyle="TextStyle.Note"
-                                                   Value="@option.Meta"
-                                                   Class="paged-record-browser__meta" />
-                                    }
+                                    <div class="paged-record-browser__footer">
+                                        @if (!string.IsNullOrWhiteSpace(option.Meta))
+                                        {
+                                            <TooltipTarget Text="@option.Meta"
+                                                           Position="TooltipPosition.Bottom"
+                                                           Duration="@((TimeSpan?)null)"
+                                                           TestId="@($"{ResolveOptionTestId(option)}-meta-tooltip")"
+                                                           TriggerClass="paged-record-browser__tooltip-target">
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.Meta"
+                                                           Class="paged-record-browser__meta" />
+                                            </TooltipTarget>
+                                        }
 
-                                    @if (option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason))
-                                    {
-                                        <TextBlock TextStyle="TextStyle.Note"
-                                                   Value="@option.DisabledReason"
-                                                   Class="paged-record-browser__disabled-reason" />
-                                    }
-                                </Stack>
+                                        @if (option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason))
+                                        {
+                                            <TooltipTarget Text="@option.DisabledReason"
+                                                           Position="TooltipPosition.Bottom"
+                                                           Duration="@((TimeSpan?)null)"
+                                                           TriggerClass="paged-record-browser__tooltip-target">
+                                                <TextBlock TextStyle="TextStyle.Note"
+                                                           Value="@option.DisabledReason"
+                                                           Class="paged-record-browser__disabled-reason" />
+                                            </TooltipTarget>
+                                        }
+                                    </div>
+                                </div>
                             </button>
                         </article>
                     }
@@ -280,10 +340,13 @@
     public int MaximumTags { get; set; } = 20;
 
     [Parameter]
-    public int MaximumVisibleTags { get; set; } = 4;
+    public int MaximumVisibleTags { get; set; } = 2;
 
     [Parameter]
     public string ColumnTemplate { get; set; } = "repeat(auto-fit,minmax(16rem,1fr))";
+
+    [Parameter]
+    public PagedRecordGridMode GridMode { get; set; } = PagedRecordGridMode.Fluid;
 
     [Parameter]
     public RenderFragment<PagedRecordItemTemplateContext<TKey>>? ItemTemplate { get; set; }
@@ -362,6 +425,16 @@
             nameof(ResultsScrollMode),
             ResultsScrollMode,
             "Unknown paged record results scroll mode.")
+    };
+
+    private string ResolvedColumnTemplate => GridMode switch
+    {
+        PagedRecordGridMode.Fluid => ColumnTemplate,
+        PagedRecordGridMode.BoundedCatalog => "repeat(auto-fill,minmax(min(100%,17rem),24rem))",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(GridMode),
+            GridMode,
+            "Unknown paged record grid mode.")
     };
 
     protected override async Task OnInitializedAsync()
@@ -589,17 +662,70 @@
         return string.Join(' ', new[]
         {
             "paged-record-browser__card",
+            ResolveCardToneClass(option.KindTone),
             isSelected ? "paged-record-browser__card--selected" : string.Empty,
             option.IsDisabled ? "paged-record-browser__card--disabled" : string.Empty
         }.Where(value => !string.IsNullOrWhiteSpace(value)));
     }
 
-    private static string ResolveSelectTitle(PagedRecordOption<TKey> option)
+    private static string ResolveCardToneClass(PagedRecordBadgeTone tone)
     {
-        return option.IsDisabled && !string.IsNullOrWhiteSpace(option.DisabledReason)
-            ? option.DisabledReason
-            : option.Title;
+        return tone switch
+        {
+            PagedRecordBadgeTone.Neutral => "paged-record-browser__card--tone-neutral",
+            PagedRecordBadgeTone.Info => "paged-record-browser__card--tone-info",
+            PagedRecordBadgeTone.Accent => "paged-record-browser__card--tone-accent",
+            PagedRecordBadgeTone.Success => "paged-record-browser__card--tone-success",
+            PagedRecordBadgeTone.Warning => "paged-record-browser__card--tone-warning",
+            PagedRecordBadgeTone.Teal => "paged-record-browser__card--tone-teal",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(tone),
+                tone,
+                "Unknown paged record badge tone.")
+        };
     }
+
+    private static string ResolveBadgeTargetClass(
+        PagedRecordBadgeTone tone,
+        string baseClass)
+    {
+        var toneClass = tone switch
+        {
+            PagedRecordBadgeTone.Neutral => "paged-record-browser__badge-tone--neutral",
+            PagedRecordBadgeTone.Info => "paged-record-browser__badge-tone--info",
+            PagedRecordBadgeTone.Accent => "paged-record-browser__badge-tone--accent",
+            PagedRecordBadgeTone.Success => "paged-record-browser__badge-tone--success",
+            PagedRecordBadgeTone.Warning => "paged-record-browser__badge-tone--warning",
+            PagedRecordBadgeTone.Teal => "paged-record-browser__badge-tone--teal",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(tone),
+                tone,
+                "Unknown paged record badge tone.")
+        };
+
+        return $"{baseClass} {toneClass}";
+    }
+
+    private static string ResolveCornerStatusClass(PagedRecordCornerStatus status)
+    {
+        var toneClass = status.Tone switch
+        {
+            PagedRecordStatusTone.Neutral => "paged-record-browser__status--neutral",
+            PagedRecordStatusTone.Info => "paged-record-browser__status--info",
+            PagedRecordStatusTone.Success => "paged-record-browser__status--success",
+            PagedRecordStatusTone.Warning => "paged-record-browser__status--warning",
+            PagedRecordStatusTone.Danger => "paged-record-browser__status--danger",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                status.Tone,
+                "Unknown paged record status tone.")
+        };
+
+        return $"paged-record-browser__status {toneClass}";
+    }
+
+    private string BuildHiddenTags(IReadOnlyList<string> tags)
+        => string.Join(", ", tags.Skip(MaximumVisibleTags));
 
     private static string ResolveOptionTestId(PagedRecordOption<TKey> option)
     {

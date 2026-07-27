@@ -54,6 +54,16 @@ internal static class AgentRecruitingApi
                 StatusCodes.Status401Unauthorized,
                 StatusCodes.Status403Forbidden);
 
+        recruiting.MapGet(
+                "/candidates/{candidateAgentId:guid}/interviews",
+                ListCandidateInterviewsAsync)
+            .WithName("ListAgentRecruitingCandidateInterviews")
+            .Produces<AgentRecruitingInterview[]>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .ProducesApiErrors(
+                StatusCodes.Status401Unauthorized,
+                StatusCodes.Status403Forbidden);
+
         recruiting.MapGet("/candidates/{agentId:guid}/readiness", GetReadinessAsync)
             .WithName("GetAgentRecruitingCandidateReadiness")
             .Produces<AgentRecruitingCandidateReadiness>(StatusCodes.Status200OK)
@@ -114,6 +124,22 @@ internal static class AgentRecruitingApi
         IAgentRecruitingEvidenceService service,
         CancellationToken cancellationToken)
     {
+        if (httpContext.User.Identity?.IsAuthenticated != true)
+        {
+            return ApiEndpointResults.Unauthorized(
+                "An authenticated reviewer is required to append a human recruiting decision.",
+                "agent-recruiting.reviewer-authorization-required");
+        }
+
+        if (!HasScope(
+                httpContext.User,
+                AgentRecruitingAuthorizationScopes.HumanReview))
+        {
+            return ApiEndpointResults.Forbidden(
+                $"The reviewer token must include the '{AgentRecruitingAuthorizationScopes.HumanReview}' scope.",
+                "agent-recruiting.reviewer-scope-required");
+        }
+
         try
         {
             request = BindAuthenticatedReviewer(request, httpContext.User);
@@ -147,14 +173,39 @@ internal static class AgentRecruitingApi
         }
     }
 
-    private static async Task<IResult> GetReadinessAsync(
-        Guid agentId,
+    private static async Task<IResult> ListCandidateInterviewsAsync(
+        Guid candidateAgentId,
+        Guid? recruitmentApplicationId,
         IAgentRecruitingEvidenceService service,
         CancellationToken cancellationToken)
     {
         try
         {
-            return Results.Ok(await service.GetCandidateReadinessAsync(agentId, cancellationToken));
+            var interviews = await service.ListCandidateInterviewsAsync(
+                candidateAgentId,
+                recruitmentApplicationId,
+                cancellationToken);
+            return Results.Ok(interviews.ToArray());
+        }
+        catch (AgentRecruitingEvidenceException exception)
+        {
+            return Error(exception);
+        }
+    }
+
+    private static async Task<IResult> GetReadinessAsync(
+        Guid agentId,
+        Guid? recruitmentApplicationId,
+        IAgentRecruitingEvidenceService service,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(
+                await service.GetCandidateReadinessAsync(
+                    agentId,
+                    recruitmentApplicationId,
+                    cancellationToken));
         }
         catch (AgentRecruitingEvidenceException exception)
         {
@@ -180,11 +231,6 @@ internal static class AgentRecruitingApi
         AppendAgentRecruitingReviewCommand request,
         ClaimsPrincipal principal)
     {
-        if (principal.Identity?.IsAuthenticated != true)
-        {
-            return request;
-        }
-
         var actorId = principal.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? principal.FindFirstValue("sub")
             ?? throw new AgentRecruitingEvidenceException(
@@ -200,7 +246,7 @@ internal static class AgentRecruitingApi
                 "The reviewer actor must match the authenticated API subject.");
         }
 
-        var displayName = principal.Identity.Name
+        var displayName = principal.Identity?.Name
             ?? principal.FindFirstValue(ClaimTypes.Name)
             ?? principal.FindFirstValue("name")
             ?? request.ReviewerDisplayName;
@@ -209,5 +255,15 @@ internal static class AgentRecruitingApi
             ReviewerActorId = actorId,
             ReviewerDisplayName = displayName
         };
+    }
+
+    private static bool HasScope(ClaimsPrincipal principal, string requiredScope)
+    {
+        return principal.Claims
+            .Where(claim => claim.Type is "scope" or "scopes")
+            .SelectMany(claim => claim.Value.Split(
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Contains(requiredScope, StringComparer.Ordinal);
     }
 }

@@ -58,6 +58,7 @@
                                         LoadFailed="HandleWorkforceBrowserLoadFailedAsync"
                                         PageSize="12"
                                         ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
+                                        GridMode="PagedRecordGridMode.BoundedCatalog"
                                         SearchPlaceholder="Search workforce name, code, summary, or tag"
                                         DataTestId="crmhr-workforce"
                                         OptionTestId="crmhr-workforce-item" />
@@ -77,7 +78,8 @@
                         OnClose="CloseRecordDialogAsync">
                     <ChildContent>
                         <SurfaceCard Soft="true">
-                            <Split Gap="LayoutGap.Medium">
+                            <Split Gap="LayoutGap.Medium"
+                                   Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
                                     <p class="cda-eyebrow">Selected workforce record</p>
                                     <h2 class="mt-1 text-lg font-semibold text-slate-950">@selectedWorkspace.DisplayName</h2>
@@ -112,7 +114,8 @@
                             <TabsItem Text="Overview"
                                       Icon="dashboard"
                                       data-testid="crmhr-workforce-tab-overview">
-                                <Stack GapScale="LayoutGap.Medium">
+                                <Stack GapScale="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Stretch">
                                     <SensitiveDataCallout IsSensitive="selectedWorkspace.IsSensitive"
                                                          LastChangedBy="@selectedWorkspace.LastChangedBy"
                                                          UpdatedAtUtc="selectedWorkspace.UpdatedAtUtc"

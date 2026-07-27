@@ -1,0 +1,235 @@
+@using CanDoItAll.Modules.Projects
+@using Microsoft.Extensions.Logging
+@inject IProjectRecordQueryService ProjectRecordQueryService
+@inject ILogger<ProjectMultiPicker> Logger
+
+<FormField Text="@Label">
+    <SurfaceCard Soft="true">
+        <Stack GapScale="LayoutGap.Small">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <div class="min-w-0">
+                    <TextBlock TextStyle="TextStyle.Note"
+                               Value="@Description" />
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    @if (SelectedProjectIds.Count > 0)
+                    {
+                        <StatusBadge Tone="info"
+                                     Text="@($"{SelectedProjectIds.Count} linked")"
+                                     NoWrap="true" />
+                    }
+                    <Button Text="Add project"
+                            Icon="add"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="OpenPicker"
+                            data-testid="@($"{TestIdPrefix}-add")" />
+                </Cluster>
+            </Split>
+
+            @if (isLoading)
+            {
+                <SmallText Text="Loading related projects..." />
+            }
+            else if (!string.IsNullOrWhiteSpace(loadError))
+            {
+                <SurfaceCard Soft="true" data-testid="@($"{TestIdPrefix}-error")">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                   Value="Related projects unavailable"
+                                   Class="text-rose-700" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@loadError" />
+                        <Button Text="Retry"
+                                Icon="refresh"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ReloadAsync"
+                                data-testid="@($"{TestIdPrefix}-retry")" />
+                    </Stack>
+                </SurfaceCard>
+            }
+            else if (resolvedProjects.Count == 0)
+            {
+                <SmallText Text="No projects linked. This connection applies to the company generally." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.XSmall">
+                    @foreach (var project in resolvedProjects)
+                    {
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.NoWrap"
+                               Class="project-multi-picker__row"
+                               data-testid="@($"{TestIdPrefix}-project-{project.Id:N}")">
+                            <div class="min-w-0">
+                                <TooltipTarget Text="@project.Name"
+                                               Position="TooltipPosition.Bottom"
+                                               TriggerClass="project-multi-picker__name-target">
+                                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                                               Value="@project.Name"
+                                               Class="project-multi-picker__name" />
+                                </TooltipTarget>
+                                <SmallText Text="@FormatProjectMeta(project)" />
+                            </div>
+                            <Button Text="Remove"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => RemoveProjectAsync(project.Id))"
+                                    data-testid="@($"{TestIdPrefix}-remove-{project.Id:N}")" />
+                        </Split>
+                    }
+                </Stack>
+            }
+        </Stack>
+    </SurfaceCard>
+</FormField>
+
+<ProjectRecordPickerDialog IsOpen="isPickerOpen"
+                           InitialScope="ProjectRecordScope.All"
+                           SelectionConfirmed="AddProjectAsync"
+                           OnClose="ClosePickerAsync"
+                           Title="Add a related project"
+                           Subtitle="Choose a project that this company connection participates in."
+                           DataTestId="@($"{TestIdPrefix}-dialog")" />
+
+@code {
+    private readonly List<ProjectRecordQueryItem> resolvedProjects = [];
+    private string resolvedSelectionKey = string.Empty;
+    private string loadError = string.Empty;
+    private long loadGeneration;
+    private bool isLoading;
+    private bool isPickerOpen;
+
+    [Parameter]
+    public string Label { get; set; } = "Related projects";
+
+    [Parameter]
+    public string Description { get; set; } = "Optionally scope this company connection to one or more projects.";
+
+    [Parameter]
+    public IReadOnlyList<Guid> SelectedProjectIds { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<Guid>> SelectedProjectIdsChanged { get; set; }
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "crmhr-project-multi-picker";
+
+    protected override Task OnParametersSetAsync()
+    {
+        var selectionKey = BuildSelectionKey(SelectedProjectIds);
+        return string.Equals(selectionKey, resolvedSelectionKey, StringComparison.Ordinal)
+            ? Task.CompletedTask
+            : ResolveProjectsAsync(selectionKey);
+    }
+
+    private async Task ResolveProjectsAsync(string selectionKey)
+    {
+        resolvedSelectionKey = selectionKey;
+        var generation = ++loadGeneration;
+        isLoading = true;
+        loadError = string.Empty;
+        resolvedProjects.Clear();
+        try
+        {
+            var selectedIds = NormalizeProjectIds(SelectedProjectIds);
+            var projects = await ProjectRecordQueryService.GetManyAsync(selectedIds);
+            if (generation != loadGeneration)
+            {
+                return;
+            }
+
+            var projectById = projects.ToDictionary(project => project.Id);
+            resolvedProjects.AddRange(selectedIds.Select(projectId =>
+                projectById.GetValueOrDefault(projectId)
+                ?? new ProjectRecordQueryItem(
+                    projectId,
+                    "Unavailable project",
+                    ProjectStatus.Archived,
+                    string.Empty,
+                    string.Empty,
+                    DateTimeOffset.MinValue)));
+        }
+        catch (Exception exception)
+        {
+            if (generation != loadGeneration)
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Failed to resolve {ProjectCount} CRM account connection projects.",
+                SelectedProjectIds.Count);
+            loadError = "The selected project records could not be loaded. Retry or remove unavailable links.";
+        }
+        finally
+        {
+            if (generation == loadGeneration)
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private Task ReloadAsync()
+        => ResolveProjectsAsync(BuildSelectionKey(SelectedProjectIds));
+
+    private void OpenPicker()
+    {
+        isPickerOpen = true;
+    }
+
+    private Task ClosePickerAsync()
+    {
+        isPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task AddProjectAsync(Guid projectId)
+    {
+        isPickerOpen = false;
+        var projectIds = NormalizeProjectIds(SelectedProjectIds);
+        if (!projectIds.Contains(projectId))
+        {
+            projectIds.Add(projectId);
+        }
+
+        await SelectedProjectIdsChanged.InvokeAsync(projectIds);
+    }
+
+    private Task RemoveProjectAsync(Guid projectId)
+    {
+        IReadOnlyList<Guid> projectIds = NormalizeProjectIds(SelectedProjectIds)
+            .Where(selectedProjectId => selectedProjectId != projectId)
+            .ToList();
+        return SelectedProjectIdsChanged.InvokeAsync(projectIds);
+    }
+
+    private static List<Guid> NormalizeProjectIds(IEnumerable<Guid> projectIds)
+        => projectIds
+            .Where(projectId => projectId != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+    private static string BuildSelectionKey(IEnumerable<Guid> projectIds)
+        => string.Join(
+            "|",
+            projectIds
+                .Where(projectId => projectId != Guid.Empty)
+                .Distinct()
+                .OrderBy(projectId => projectId));
+
+    private static string FormatProjectMeta(ProjectRecordQueryItem project)
+        => string.IsNullOrWhiteSpace(project.CurrentPhase)
+            ? project.Status.ToString()
+            : $"{project.Status} / {project.CurrentPhase}";
+}

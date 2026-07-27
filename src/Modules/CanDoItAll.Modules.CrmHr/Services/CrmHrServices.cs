@@ -263,14 +263,20 @@ public sealed record CrmOpportunityConversionResult(
     Guid ProjectId,
     bool CreatedNewProject);
 
-public sealed record CrmAccountStakeholderItemModel(
+public sealed record CrmAccountConnectionProjectItemModel(
+    Guid Id,
+    string Name,
+    ProjectStatus Status);
+
+public sealed record CrmAccountConnectedRecordItemModel(
     Guid Id,
     Guid RelatedPartyId,
     string DisplayName,
     PartyType PartyType,
-    CrmAccountStakeholderRole Role,
+    CrmAccountConnectionRole Role,
     bool IsPrimary,
-    string Notes);
+    string Notes,
+    IReadOnlyList<CrmAccountConnectionProjectItemModel> Projects);
 
 public sealed record CrmAccountActivityTimelineItemModel(
     Guid Id,
@@ -327,13 +333,14 @@ public sealed class CrmAccountProfileEditorModel
     public string LastChangedBy { get; set; } = "crm-hr-ui";
 }
 
-public sealed class CrmAccountStakeholderEditorModel
+public sealed class CrmAccountConnectionEditorModel
 {
     public Guid? Id { get; set; }
     public Guid RelatedPartyId { get; set; }
-    public CrmAccountStakeholderRole Role { get; set; } = CrmAccountStakeholderRole.Stakeholder;
+    public CrmAccountConnectionRole Role { get; set; } = CrmAccountConnectionRole.Stakeholder;
     public bool IsPrimary { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public List<Guid> ProjectIds { get; set; } = [];
 }
 
 public sealed class CrmInteractionEditorModel
@@ -360,8 +367,8 @@ public sealed record CrmAccountWorkspaceModel(
     string PrimaryEmail,
     string PrimaryPhone,
     CrmAccountProfileEditorModel Profile,
-    IReadOnlyList<CrmAccountStakeholderItemModel> Stakeholders,
-    IReadOnlyList<PartyOptionModel> StakeholderParties,
+    IReadOnlyList<CrmAccountConnectedRecordItemModel> ConnectedRecords,
+    IReadOnlyList<PartyOptionModel> ConnectedParties,
     int OpportunityCount);
 
 internal enum CrmRouteSelectionResolutionFailure
@@ -1542,40 +1549,79 @@ public sealed partial class CrmService(
             .ToListAsync(cancellationToken);
         var profile = await dbContext.Set<CrmAccountProfile>()
             .SingleOrDefaultAsync(item => item.AccountPartyId == accountPartyId, cancellationToken);
-        var stakeholderLinks = await dbContext.Set<CrmAccountStakeholderLink>()
+        var connections = await dbContext.Set<CrmAccountConnection>()
+            .AsNoTracking()
             .Where(item => item.AccountPartyId == accountPartyId)
             .OrderByDescending(item => item.IsPrimary)
             .ThenBy(item => item.Role)
             .ToListAsync(cancellationToken);
-        var relatedPartyIds = stakeholderLinks.Select(item => item.RelatedPartyId).Distinct().ToList();
+        var relatedPartyIds = connections.Select(item => item.RelatedPartyId).Distinct().ToList();
         var relatedParties = relatedPartyIds.Count == 0
             ? new Dictionary<Guid, PartyOptionModel>()
             : (await dbContext.Set<Party>()
+                .AsNoTracking()
                 .Where(item => relatedPartyIds.Contains(item.Id))
                 .Select(item => new PartyOptionModel(item.Id, item.DisplayName, item.PartyType))
                 .ToListAsync(cancellationToken))
                 .ToDictionary(item => item.Id);
-        var stakeholderParties = relatedParties.Values
+        var connectedParties = relatedParties.Values
             .OrderBy(item => item.DisplayName)
             .ToList();
+        var connectionIds = connections.Select(item => item.Id).ToList();
+        var connectionProjectLinks = connectionIds.Count == 0
+            ? []
+            : await dbContext.Set<CrmAccountConnectionProjectLink>()
+                .AsNoTracking()
+                .Where(item => connectionIds.Contains(item.AccountConnectionId))
+                .ToListAsync(cancellationToken);
+        var projectIds = connectionProjectLinks
+            .Select(item => item.ProjectId)
+            .Distinct()
+            .ToList();
+        var projects = projectIds.Count == 0
+            ? new Dictionary<Guid, CrmAccountConnectionProjectItemModel>()
+            : (await dbContext.Set<Project>()
+                .AsNoTracking()
+                .Where(item => projectIds.Contains(item.Id))
+                .Select(item => new CrmAccountConnectionProjectItemModel(
+                    item.Id,
+                    item.Name,
+                    item.Status))
+                .ToListAsync(cancellationToken))
+                .ToDictionary(item => item.Id);
+        var projectIdsByConnectionId = connectionProjectLinks
+            .GroupBy(item => item.AccountConnectionId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(item => item.ProjectId).Distinct().ToList());
 
         var opportunityCount = await dbContext.Set<Opportunity>()
             .AsNoTracking()
             .CountAsync(item => item.AccountPartyId == accountPartyId, cancellationToken);
 
-        var stakeholders = stakeholderLinks
+        var connectedRecords = connections
             .Select(item =>
             {
                 var relatedParty = relatedParties.GetValueOrDefault(item.RelatedPartyId)
                     ?? new PartyOptionModel(item.RelatedPartyId, "Unknown party", PartyType.Person);
-                return new CrmAccountStakeholderItemModel(
+                var relatedProjects = projectIdsByConnectionId
+                    .GetValueOrDefault(item.Id, [])
+                    .Select(projectId => projects.GetValueOrDefault(projectId)
+                        ?? new CrmAccountConnectionProjectItemModel(
+                            projectId,
+                            "Unavailable project",
+                            ProjectStatus.Archived))
+                    .OrderBy(project => project.Name)
+                    .ToList();
+                return new CrmAccountConnectedRecordItemModel(
                     item.Id,
                     item.RelatedPartyId,
                     relatedParty.DisplayName,
                     relatedParty.PartyType,
                     item.Role,
                     item.IsPrimary,
-                    item.Notes);
+                    item.Notes,
+                    relatedProjects);
             })
             .ToList();
         return new CrmAccountWorkspaceModel(
@@ -1597,8 +1643,8 @@ public sealed partial class CrmService(
                 TimingRiskNotes = profile?.TimingRiskNotes ?? string.Empty,
                 LastChangedBy = string.IsNullOrWhiteSpace(profile?.LastChangedBy) ? "crm-hr-ui" : profile.LastChangedBy
             },
-            stakeholders,
-            stakeholderParties,
+            connectedRecords,
+            connectedParties,
             opportunityCount);
     }
 
@@ -1753,17 +1799,20 @@ public sealed partial class CrmService(
         return Result<Guid>.Success(party.Id);
     }
 
-    public async Task<Result> SaveStakeholdersAsync(
+    public async Task<Result> SaveConnectedRecordsAsync(
         Guid accountPartyId,
-        IReadOnlyList<CrmAccountStakeholderEditorModel> stakeholders,
+        IReadOnlyList<CrmAccountConnectionEditorModel> connectedRecords,
         string actor,
         CancellationToken cancellationToken = default)
     {
         if (accountPartyId == Guid.Empty)
         {
-            return Result.Failure(Error.Validation("Choose an account before saving stakeholders.", "crmhr.crm.account-required"));
+            return Result.Failure(Error.Validation(
+                "Choose an account before saving connected records.",
+                "crmhr.crm.account-required"));
         }
 
+        ArgumentNullException.ThrowIfNull(connectedRecords);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var party = await dbContext.Set<Party>()
             .SingleOrDefaultAsync(item => item.Id == accountPartyId && item.PartyType == PartyType.Organization, cancellationToken);
@@ -1772,37 +1821,181 @@ public sealed partial class CrmService(
             return Result.Failure(Error.Failure("The selected account no longer exists.", "crmhr.crm.account-missing"));
         }
 
-        var existingLinks = await dbContext.Set<CrmAccountStakeholderLink>()
+        var normalizedConnections = connectedRecords
+            .Where(item => item.RelatedPartyId != Guid.Empty)
+            .Select(item => new CrmAccountConnectionEditorModel
+            {
+                Id = item.Id,
+                RelatedPartyId = item.RelatedPartyId,
+                Role = item.Role,
+                IsPrimary = item.IsPrimary,
+                Notes = item.Notes.Trim(),
+                ProjectIds = item.ProjectIds
+                    .Where(projectId => projectId != Guid.Empty)
+                    .Distinct()
+                    .ToList()
+            })
+            .ToList();
+        if (normalizedConnections.Any(item => item.RelatedPartyId == accountPartyId))
+        {
+            return Result.Failure(Error.Validation(
+                "An account cannot be connected to itself.",
+                "crmhr.crm.connection-self-reference"));
+        }
+
+        var duplicateConnection = normalizedConnections
+            .GroupBy(item => new { item.RelatedPartyId, item.Role })
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateConnection is not null)
+        {
+            return Result.Failure(Error.Validation(
+                "The same directory record and relationship role can only be connected once.",
+                "crmhr.crm.connection-duplicate"));
+        }
+
+        var relatedPartyIds = normalizedConnections
+            .Select(item => item.RelatedPartyId)
+            .Distinct()
+            .ToList();
+        var existingRelatedPartyIds = relatedPartyIds.Count == 0
+            ? []
+            : await dbContext.Set<Party>()
+                .AsNoTracking()
+                .Where(item => relatedPartyIds.Contains(item.Id))
+                .Select(item => item.Id)
+                .ToListAsync(cancellationToken);
+        if (existingRelatedPartyIds.Count != relatedPartyIds.Count)
+        {
+            return Result.Failure(Error.Validation(
+                "One or more connected directory records no longer exist.",
+                "crmhr.crm.connection-party-missing"));
+        }
+
+        var requestedProjectIds = normalizedConnections
+            .SelectMany(item => item.ProjectIds)
+            .Distinct()
+            .ToList();
+        var existingProjectIds = requestedProjectIds.Count == 0
+            ? []
+            : await dbContext.Set<Project>()
+                .AsNoTracking()
+                .Where(item => requestedProjectIds.Contains(item.Id))
+                .Select(item => item.Id)
+                .ToListAsync(cancellationToken);
+        if (existingProjectIds.Count != requestedProjectIds.Count)
+        {
+            return Result.Failure(Error.Validation(
+                "One or more related projects no longer exist.",
+                "crmhr.crm.connection-project-missing"));
+        }
+
+        var existingConnections = await dbContext.Set<CrmAccountConnection>()
             .Where(item => item.AccountPartyId == accountPartyId)
             .ToListAsync(cancellationToken);
-        dbContext.Set<CrmAccountStakeholderLink>().RemoveRange(existingLinks);
+        var existingConnectionIds = existingConnections.Select(item => item.Id).ToList();
+        var existingProjectLinks = existingConnectionIds.Count == 0
+            ? []
+            : await dbContext.Set<CrmAccountConnectionProjectLink>()
+                .Where(item => existingConnectionIds.Contains(item.AccountConnectionId))
+                .ToListAsync(cancellationToken);
 
         var now = clock.GetUtcNow();
         var normalizedActor = string.IsNullOrWhiteSpace(actor) ? "crm-hr-ui" : actor.Trim();
-        var distinctStakeholders = stakeholders
-            .Where(item => item.RelatedPartyId != Guid.Empty && item.RelatedPartyId != accountPartyId)
-            .GroupBy(item => new { item.RelatedPartyId, item.Role })
-            .Select(group => group.First())
+        var persistedEditorIds = normalizedConnections
+            .Where(item => item.Id.HasValue)
+            .Select(item => item.Id!.Value)
             .ToList();
-
-        dbContext.Set<CrmAccountStakeholderLink>().AddRange(distinctStakeholders.Select(item => new CrmAccountStakeholderLink
+        if (persistedEditorIds.Count != persistedEditorIds.Distinct().Count())
         {
-            Id = item.Id ?? Guid.NewGuid(),
-            AccountPartyId = accountPartyId,
-            RelatedPartyId = item.RelatedPartyId,
-            Role = item.Role,
-            IsPrimary = item.IsPrimary,
-            Notes = item.Notes.Trim(),
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now
-        }));
+            return Result.Failure(Error.Validation(
+                "The same saved connection cannot appear more than once.",
+                "crmhr.crm.connection-id-duplicate"));
+        }
+
+        var existingConnectionById = existingConnections.ToDictionary(item => item.Id);
+        if (persistedEditorIds.Any(connectionId => !existingConnectionById.ContainsKey(connectionId)))
+        {
+            return Result.Failure(Error.Validation(
+                "A connected record changed or belongs to another account. Reload and try again.",
+                "crmhr.crm.connection-stale"));
+        }
+
+        var requestedIds = persistedEditorIds.ToHashSet();
+        var removedConnections = existingConnections
+            .Where(item => !requestedIds.Contains(item.Id))
+            .ToList();
+        if (removedConnections.Count > 0)
+        {
+            dbContext.Set<CrmAccountConnection>().RemoveRange(removedConnections);
+        }
+
+        foreach (var editor in normalizedConnections)
+        {
+            var connection = editor.Id is Guid connectionId &&
+                             existingConnectionById.TryGetValue(connectionId, out var existingConnection)
+                ? existingConnection
+                : new CrmAccountConnection
+                {
+                    Id = editor.Id ?? Guid.NewGuid(),
+                    AccountPartyId = accountPartyId,
+                    CreatedAtUtc = now
+                };
+            if (connection.AccountPartyId != accountPartyId)
+            {
+                return Result.Failure(Error.Validation(
+                    "A connected record does not belong to the selected account.",
+                    "crmhr.crm.connection-account-mismatch"));
+            }
+
+            connection.RelatedPartyId = editor.RelatedPartyId;
+            connection.Role = editor.Role;
+            connection.IsPrimary = editor.IsPrimary;
+            connection.Notes = editor.Notes;
+            connection.UpdatedAtUtc = now;
+            if (dbContext.Entry(connection).State == EntityState.Detached)
+            {
+                dbContext.Set<CrmAccountConnection>().Add(connection);
+            }
+
+            var currentProjectLinks = existingProjectLinks
+                .Where(item => item.AccountConnectionId == connection.Id)
+                .ToList();
+            var desiredProjectIds = editor.ProjectIds.ToHashSet();
+            var removedProjectLinks = currentProjectLinks
+                .Where(item => !desiredProjectIds.Contains(item.ProjectId))
+                .ToList();
+            if (removedProjectLinks.Count > 0)
+            {
+                dbContext.Set<CrmAccountConnectionProjectLink>().RemoveRange(removedProjectLinks);
+            }
+
+            var currentProjectIds = currentProjectLinks
+                .Select(item => item.ProjectId)
+                .ToHashSet();
+            dbContext.Set<CrmAccountConnectionProjectLink>().AddRange(
+                desiredProjectIds
+                    .Where(projectId => !currentProjectIds.Contains(projectId))
+                    .Select(projectId => new CrmAccountConnectionProjectLink
+                    {
+                        AccountConnectionId = connection.Id,
+                        ProjectId = projectId,
+                        CreatedAtUtc = now
+                    }));
+        }
 
         AddAuditEntry(
             dbContext,
             accountPartyId,
-            "AccountStakeholdersUpdated",
-            $"Updated CRM stakeholders for '{party.DisplayName}'.",
-            distinctStakeholders.Select(item => new { item.RelatedPartyId, item.Role, item.IsPrimary, item.Notes }),
+            "AccountConnectionsUpdated",
+            $"Updated CRM connected records for '{party.DisplayName}'.",
+            normalizedConnections.Select(item => new
+            {
+                item.RelatedPartyId,
+                item.Role,
+                item.IsPrimary,
+                item.Notes,
+                item.ProjectIds
+            }),
             normalizedActor,
             party.IsSensitive);
 
@@ -1811,9 +2004,9 @@ public sealed partial class CrmService(
         await activityStream.RecordAsync(
             new ActivityWriteRequest(
                 "CRM / HR",
-                "AccountStakeholdersUpdated",
-                $"Updated stakeholders for {party.DisplayName}",
-                $"{distinctStakeholders.Count} stakeholder link(s) saved.",
+                "AccountConnectionsUpdated",
+                $"Updated connected records for {party.DisplayName}",
+                $"{normalizedConnections.Count} account connection(s) saved.",
                 ArtifactKind: CrmAccountEntityType,
                 ArtifactId: accountPartyId,
                 Route: $"/crm-hr/crm?accountId={accountPartyId}",
@@ -1856,10 +2049,10 @@ public sealed partial class CrmService(
 
         var now = clock.GetUtcNow();
         var normalizedActor = string.IsNullOrWhiteSpace(actor) ? "crm-hr-ui" : actor.Trim();
-        var stakeholderRoles = await dbContext.Set<CrmAccountStakeholderLink>()
+        var connectionRoles = await dbContext.Set<CrmAccountConnection>()
             .Where(item => item.AccountPartyId == accountPartyId && model.ParticipantPartyIds.Contains(item.RelatedPartyId))
             .ToListAsync(cancellationToken);
-        var stakeholderRoleByPartyId = stakeholderRoles
+        var connectionRoleByPartyId = connectionRoles
             .GroupBy(item => item.RelatedPartyId)
             .ToDictionary(group => group.Key, group => group.Select(item => item.Role).First());
 
@@ -1892,7 +2085,7 @@ public sealed partial class CrmService(
             {
                 InteractionId = interaction.Id,
                 PartyId = participantPartyId,
-                Role = ResolveInteractionRole(stakeholderRoleByPartyId.GetValueOrDefault(participantPartyId))
+                Role = ResolveInteractionRole(connectionRoleByPartyId.GetValueOrDefault(participantPartyId))
             });
         }
 
@@ -2694,14 +2887,14 @@ public sealed partial class CrmService(
             .ToListAsync(cancellationToken);
         var profile = await dbContext.Set<CrmAccountProfile>()
             .SingleOrDefaultAsync(item => item.AccountPartyId == accountPartyId, cancellationToken);
-        var stakeholders = await dbContext.Set<CrmAccountStakeholderLink>()
+        var connections = await dbContext.Set<CrmAccountConnection>()
             .Where(item => item.AccountPartyId == accountPartyId)
             .ToListAsync(cancellationToken);
-        var stakeholderPartyIds = stakeholders.Select(item => item.RelatedPartyId).Distinct().ToList();
-        var stakeholderNames = stakeholderPartyIds.Count == 0
+        var connectedPartyIds = connections.Select(item => item.RelatedPartyId).Distinct().ToList();
+        var connectedPartyNames = connectedPartyIds.Count == 0
             ? []
             : await dbContext.Set<Party>()
-                .Where(item => stakeholderPartyIds.Contains(item.Id))
+                .Where(item => connectedPartyIds.Contains(item.Id))
                 .OrderBy(item => item.DisplayName)
                 .Select(item => item.DisplayName)
                 .ToListAsync(cancellationToken);
@@ -2728,7 +2921,7 @@ public sealed partial class CrmService(
             profile?.CommercialNotes ?? string.Empty,
             profile?.ConstraintNotes ?? string.Empty,
             profile?.TimingRiskNotes ?? string.Empty,
-            string.Join(", ", stakeholderNames),
+            string.Join(", ", connectedPartyNames),
             string.Join(Environment.NewLine, recentInteractionSubjects)
         };
 
@@ -2824,14 +3017,14 @@ public sealed partial class CrmService(
         };
     }
 
-    private static InteractionPartyRole ResolveInteractionRole(CrmAccountStakeholderRole stakeholderRole)
+    private static InteractionPartyRole ResolveInteractionRole(CrmAccountConnectionRole connectionRole)
     {
-        return stakeholderRole switch
+        return connectionRole switch
         {
-            CrmAccountStakeholderRole.AccountManager
-                or CrmAccountStakeholderRole.DeliveryLead
-                or CrmAccountStakeholderRole.Sponsor
-                or CrmAccountStakeholderRole.Stakeholder => InteractionPartyRole.Stakeholder,
+            CrmAccountConnectionRole.AccountManager
+                or CrmAccountConnectionRole.DeliveryLead
+                or CrmAccountConnectionRole.Sponsor
+                or CrmAccountConnectionRole.Stakeholder => InteractionPartyRole.Stakeholder,
             _ => InteractionPartyRole.Contact
         };
     }

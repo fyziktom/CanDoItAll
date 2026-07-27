@@ -1,4 +1,6 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Projects;
@@ -7,9 +9,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.CrmHr;
 
+public sealed record RecruitmentTrainingRequest(
+    Guid InterviewId,
+    Guid AttemptId,
+    AgentRecruitingAssessmentClassification Classification,
+    IReadOnlyList<string> Gaps);
+
 public sealed record RecruitmentApplicationListItemModel(
     Guid Id,
     Guid PartyId,
+    PartyType CandidatePartyType,
     string CandidateName,
     string DesiredRole,
     RecruitmentStage Stage,
@@ -181,6 +190,9 @@ public sealed record RecruitmentWorkspaceModel(
     string CandidateSummary,
     string CandidatePrimaryEmail,
     string CandidatePrimaryPhone,
+    PartyType? CandidatePartyType,
+    Guid? CandidateTechnicalAgentId,
+    AiResourceBindingStatus CandidateBindingStatus,
     string RecruiterDisplayName,
     string HiringManagerDisplayName,
     bool HasWorkforceProfile,
@@ -190,13 +202,48 @@ public sealed record RecruitmentWorkspaceModel(
     RecruitmentSupportAssignmentsModel SupportAssignments,
     RecruitmentConversionEditorModel Conversion);
 
+public static class RecruitmentConversionPolicy
+{
+    public const string IneligibleStageErrorCode = "crmhr.recruiting.convert.stage-ineligible";
+    public const string DecisionNotApprovedErrorCode = "crmhr.recruiting.convert.decision-not-approved";
+    public const string AssessmentNotReadyErrorCode = "crmhr.recruiting.convert.assessment-not-ready";
+
+    public static Error? Evaluate(
+        RecruitmentStage stage,
+        RecruitmentDecision decision,
+        bool assessmentRequired = false,
+        bool assessmentReady = false)
+    {
+        if (stage is RecruitmentStage.Rejected or RecruitmentStage.Withdrawn)
+        {
+            return Error.Validation(
+                "Rejected or withdrawn applications cannot be converted. Reopen the application and complete approval first.",
+                IneligibleStageErrorCode);
+        }
+
+        if (decision != RecruitmentDecision.Approved)
+        {
+            return Error.Validation(
+                "Approve the recruitment decision before converting the candidate to workforce.",
+                DecisionNotApprovedErrorCode);
+        }
+
+        return assessmentRequired && !assessmentReady
+            ? Error.Validation(
+                "Complete the application-specific technical assessment and protected human approval before converting this AI candidate.",
+                AssessmentNotReadyErrorCode)
+            : null;
+    }
+}
+
 public sealed partial class RecruitingService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     HrService hrService,
     IProjectRecordQueryService projectRecordQueryService,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService)
+    ISearchIndexService searchIndexService,
+    IAgentRecruitingEvidenceService recruitingEvidenceService)
 {
     private const string RecruitmentApplicationEntityType = "RecruitmentApplication";
     private const string SupportBuddyLabel = "Buddy";
@@ -246,6 +293,10 @@ public sealed partial class RecruitingService(
             .Select(application => new RecruitmentApplicationListProjection(
                 application.Id,
                 application.PartyId,
+                dbContext.Set<Party>()
+                    .Where(party => party.Id == application.PartyId)
+                    .Select(party => party.PartyType)
+                    .FirstOrDefault(),
                 dbContext.Set<Party>()
                     .Where(party => party.Id == application.PartyId)
                     .Select(party => party.DisplayName)
@@ -339,6 +390,9 @@ public sealed partial class RecruitingService(
                 string.Empty,
                 string.Empty,
                 string.Empty,
+                null,
+                null,
+                AiResourceBindingStatus.Unbound,
                 string.Empty,
                 string.Empty,
                 false,
@@ -361,6 +415,9 @@ public sealed partial class RecruitingService(
                 string.Empty,
                 string.Empty,
                 string.Empty,
+                null,
+                null,
+                AiResourceBindingStatus.Unbound,
                 string.Empty,
                 string.Empty,
                 false,
@@ -432,6 +489,16 @@ public sealed partial class RecruitingService(
             .GroupBy(item => item.PartyId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<RecruitmentContactValue>)group.ToList());
         var candidateContacts = contactMap.GetValueOrDefault(application.PartyId) ?? [];
+        var candidatePartyType = partyMap.GetValueOrDefault(application.PartyId)?.PartyType;
+        var candidateBinding = candidatePartyType == PartyType.AiAgent
+            ? await dbContext.Set<AiResourceBinding>()
+                .AsNoTracking()
+                .Where(item => item.PartyId == application.PartyId)
+                .Select(item => new RecruitmentCandidateBindingProjection(
+                    item.TechnicalAgentId,
+                    item.BindingStatus))
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
 
         return new RecruitmentWorkspaceModel(
             MapApplication(application, partyMap, contactMap),
@@ -442,6 +509,9 @@ public sealed partial class RecruitingService(
                 : string.Empty,
             ResolvePrimaryContactValue(candidateContacts, PartyContactType.Email),
             ResolvePrimaryContactValue(candidateContacts, PartyContactType.Phone),
+            candidatePartyType,
+            candidateBinding?.TechnicalAgentId,
+            candidateBinding?.BindingStatus ?? AiResourceBindingStatus.Unbound,
             ResolvePartyDisplayName(partyMap, application.RecruiterPartyId),
             ResolvePartyDisplayName(partyMap, application.HiringManagerPartyId),
             workloadProfile is not null,
@@ -606,7 +676,7 @@ public sealed partial class RecruitingService(
 
         if (model.InterviewerPartyId.HasValue)
         {
-            var interviewerError = await ValidatePersonPartyAsync(
+            var interviewerError = await ValidatePeopleOnlyPartyAsync(
                 dbContext,
                 model.InterviewerPartyId.Value,
                 "Interviewer must reference an existing person.",
@@ -710,7 +780,7 @@ public sealed partial class RecruitingService(
             return Result<Guid>.Failure(Error.Validation("The selected candidate was not found.", "crmhr.recruiting.task.party-not-found"));
         }
 
-        var ownerError = await ValidatePersonPartyAsync(
+        var ownerError = await ValidatePeopleOnlyPartyAsync(
             dbContext,
             model.OwnerPartyId.Value,
             "Task owner must reference an existing person.",
@@ -826,7 +896,7 @@ public sealed partial class RecruitingService(
                 return Result.Failure(Error.Validation("Candidate support assignments cannot reference the same party.", "crmhr.recruiting.support.self-reference"));
             }
 
-            var validationError = await ValidatePersonPartyAsync(
+            var validationError = await ValidatePeopleOnlyPartyAsync(
                 dbContext,
                 assignment.Item1.Value,
                 assignment.Item2,
@@ -920,11 +990,58 @@ public sealed partial class RecruitingService(
             return Result<Guid>.Failure(Error.Validation("The recruitment application was not found.", "crmhr.recruiting.convert.application-not-found"));
         }
 
+        var conversionEligibilityError = RecruitmentConversionPolicy.Evaluate(
+            application.Stage,
+            application.Decision);
+        if (conversionEligibilityError is not null)
+        {
+            return Result<Guid>.Failure(conversionEligibilityError);
+        }
+
         var candidate = await validationContext.Set<Party>()
             .SingleOrDefaultAsync(item => item.Id == application.PartyId, cancellationToken);
         if (candidate is null)
         {
             return Result<Guid>.Failure(Error.Validation("The candidate party was not found.", "crmhr.recruiting.convert.party-not-found"));
+        }
+
+        if (candidate.PartyType == PartyType.AiAgent)
+        {
+            var technicalAgentId = await validationContext.Set<AiResourceBinding>()
+                .AsNoTracking()
+                .Where(binding =>
+                    binding.PartyId == candidate.Id &&
+                    binding.BindingStatus == AiResourceBindingStatus.Bound)
+                .Select(binding => binding.TechnicalAgentId)
+                .SingleOrDefaultAsync(cancellationToken);
+            AgentRecruitingCandidateReadiness? readiness = null;
+            if (technicalAgentId.HasValue)
+            {
+                try
+                {
+                    readiness = await recruitingEvidenceService.GetCandidateReadinessAsync(
+                        technicalAgentId.Value,
+                        application.Id,
+                        cancellationToken);
+                }
+                catch (AgentRecruitingEvidenceException exception)
+                {
+                    return Result<Guid>.Failure(
+                        Error.Validation(
+                            $"Technical assessment readiness could not be verified: {exception.Message}",
+                            RecruitmentConversionPolicy.AssessmentNotReadyErrorCode));
+                }
+            }
+
+            var assessmentEligibilityError = RecruitmentConversionPolicy.Evaluate(
+                application.Stage,
+                application.Decision,
+                assessmentRequired: true,
+                assessmentReady: readiness?.ReadyForProduction == true);
+            if (assessmentEligibilityError is not null)
+            {
+                return Result<Guid>.Failure(assessmentEligibilityError);
+            }
         }
 
         var supportAssignments = await LoadSupportAssignmentsAsync(validationContext, candidate.Id, cancellationToken);
@@ -1005,7 +1122,7 @@ public sealed partial class RecruitingService(
         await UpsertRecruitmentApplicationSearchDocumentAsync(refreshedApplication.Id, cancellationToken);
 
         return Result<Guid>.Success(candidate.Id);
-}
+    }
 
     private static RecruitmentApplicationEditorModel CreateEmptyApplicationEditor()
     {
@@ -1081,11 +1198,9 @@ public sealed partial class RecruitingService(
     {
         if (model.PartyId.HasValue)
         {
-            var candidateError = await ValidatePersonPartyAsync(
+            var candidateError = await ValidateRecruitmentCandidatePartyAsync(
                 dbContext,
                 model.PartyId.Value,
-                "Candidate must reference an existing person.",
-                "crmhr.recruiting.candidate-invalid",
                 cancellationToken);
             return candidateError is null
                 ? Result<Guid>.Success(model.PartyId.Value)
@@ -1100,7 +1215,7 @@ public sealed partial class RecruitingService(
         var savePartyResult = await partyDirectoryService.SavePartyAsync(new PartyEditorModel
         {
             PartyType = PartyType.Person,
-            LifecycleStatus = PartyLifecycleStatus.Active,
+            LifecycleStatus = PartyLifecycleStatus.Candidate,
             DisplayName = model.CandidateName.Trim(),
             Summary = model.CandidateSummary.Trim(),
             LastChangedBy = NormalizeActor(model.LastChangedBy),
@@ -1162,7 +1277,7 @@ public sealed partial class RecruitingService(
     {
         if (model.RecruiterPartyId.HasValue)
         {
-            var recruiterError = await ValidatePersonPartyAsync(
+            var recruiterError = await ValidatePeopleOnlyPartyAsync(
                 dbContext,
                 model.RecruiterPartyId.Value,
                 "Recruiter must reference an existing person.",
@@ -1181,7 +1296,7 @@ public sealed partial class RecruitingService(
                 return Error.Validation("Candidate cannot be the hiring manager.", "crmhr.recruiting.hiring-manager-self");
             }
 
-            var hiringManagerError = await ValidatePersonPartyAsync(
+            var hiringManagerError = await ValidatePeopleOnlyPartyAsync(
                 dbContext,
                 model.HiringManagerPartyId.Value,
                 "Hiring manager must reference an existing person.",
@@ -1212,7 +1327,27 @@ public sealed partial class RecruitingService(
         return null;
     }
 
-    private static async Task<Error?> ValidatePersonPartyAsync(
+    private static async Task<Error?> ValidateRecruitmentCandidatePartyAsync(
+        AppDbContext dbContext,
+        Guid partyId,
+        CancellationToken cancellationToken)
+    {
+        var party = await dbContext.Set<Party>()
+            .AsNoTracking()
+            .Where(item => item.Id == partyId)
+            .Select(item => new
+            {
+                item.PartyType
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return party is null || party.PartyType is not PartyType.Person and not PartyType.AiAgent
+            ? Error.Validation(
+                "Candidate must reference an existing person or AI agent.",
+                "crmhr.recruiting.candidate-invalid")
+            : null;
+    }
+
+    private static async Task<Error?> ValidatePeopleOnlyPartyAsync(
         AppDbContext dbContext,
         Guid partyId,
         string message,
@@ -1220,6 +1355,7 @@ public sealed partial class RecruitingService(
         CancellationToken cancellationToken)
     {
         var party = await dbContext.Set<Party>()
+            .AsNoTracking()
             .Select(item => new
             {
                 item.Id,
@@ -1230,6 +1366,10 @@ public sealed partial class RecruitingService(
             ? Error.Validation(message, code)
             : null;
     }
+
+    private sealed record RecruitmentCandidateBindingProjection(
+        Guid? TechnicalAgentId,
+        AiResourceBindingStatus BindingStatus);
 
     private async Task<RecruitmentSupportAssignmentsModel> LoadSupportAssignmentsAsync(
         AppDbContext dbContext,
@@ -1522,6 +1662,7 @@ public sealed partial class RecruitingService(
         return new RecruitmentApplicationListItemModel(
             item.Id,
             item.PartyId,
+            item.CandidatePartyType,
             item.CandidateName,
             item.DesiredRole,
             item.Stage,
@@ -1539,6 +1680,7 @@ public sealed partial class RecruitingService(
     private sealed record RecruitmentApplicationListProjection(
         Guid Id,
         Guid PartyId,
+        PartyType CandidatePartyType,
         string CandidateName,
         string DesiredRole,
         RecruitmentStage Stage,

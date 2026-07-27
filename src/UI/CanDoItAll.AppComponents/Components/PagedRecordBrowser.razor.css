@@ -41,29 +41,69 @@
 }
 
 .paged-record-browser__card {
-    background: rgb(248 250 252);
+    --paged-record-accent: rgb(71 85 105);
+    --paged-record-accent-border: rgb(203 213 225);
+    --paged-record-accent-soft: rgb(241 245 249);
+    --paged-record-accent-text: rgb(51 65 85);
+    background: rgb(255 255 255);
     border: 1px solid rgb(226 232 240);
     border-radius: 1rem;
     color: rgb(15 23 42);
     display: flex;
-    min-height: 10.5rem;
+    height: 21.5rem;
+    min-height: 21.5rem;
     overflow: hidden;
     position: relative;
     transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
     width: 100%;
 }
 
+.paged-record-browser__card--tone-info {
+    --paged-record-accent: rgb(2 132 199);
+    --paged-record-accent-border: rgb(125 211 252);
+    --paged-record-accent-soft: rgb(224 242 254);
+    --paged-record-accent-text: rgb(3 105 161);
+}
+
+.paged-record-browser__card--tone-accent {
+    --paged-record-accent: rgb(109 40 217);
+    --paged-record-accent-border: rgb(196 181 253);
+    --paged-record-accent-soft: rgb(245 243 255);
+    --paged-record-accent-text: rgb(91 33 182);
+}
+
+.paged-record-browser__card--tone-success {
+    --paged-record-accent: rgb(5 150 105);
+    --paged-record-accent-border: rgb(110 231 183);
+    --paged-record-accent-soft: rgb(236 253 245);
+    --paged-record-accent-text: rgb(4 120 87);
+}
+
+.paged-record-browser__card--tone-warning {
+    --paged-record-accent: rgb(217 119 6);
+    --paged-record-accent-border: rgb(252 211 77);
+    --paged-record-accent-soft: rgb(255 251 235);
+    --paged-record-accent-text: rgb(180 83 9);
+}
+
+.paged-record-browser__card--tone-teal {
+    --paged-record-accent: rgb(13 148 136);
+    --paged-record-accent-border: rgb(94 234 212);
+    --paged-record-accent-soft: rgb(240 253 250);
+    --paged-record-accent-text: rgb(15 118 110);
+}
+
 .paged-record-browser__card:hover,
 .paged-record-browser__card:focus-within {
-    border-color: rgb(14 165 233);
+    border-color: var(--paged-record-accent-border);
     box-shadow: 0 10px 24px rgb(15 23 42 / 0.08);
     transform: translateY(-1px);
 }
 
 .paged-record-browser__card--selected {
-    background: rgb(240 249 255);
-    border-color: rgb(56 189 248);
-    box-shadow: inset 0 0 0 1px rgb(56 189 248 / 0.4);
+    background: color-mix(in srgb, var(--paged-record-accent-soft) 56%, white);
+    border-color: var(--paged-record-accent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--paged-record-accent) 35%, transparent);
 }
 
 .paged-record-browser__card--disabled {
@@ -76,17 +116,17 @@
     border: 0;
     color: inherit;
     cursor: pointer;
-    display: block;
+    display: flex;
     flex: 1 1 auto;
     font: inherit;
     min-width: 0;
-    padding: 1rem;
-    text-align: left;
+    padding: 0;
+    text-align: center;
     width: 100%;
 }
 
 .paged-record-browser__select:focus-visible {
-    outline: 2px solid rgb(14 165 233);
+    outline: 2px solid var(--paged-record-accent);
     outline-offset: -0.25rem;
 }
 
@@ -95,58 +135,250 @@
     opacity: 0.66;
 }
 
-.paged-record-browser__identity {
-    align-items: flex-start;
+.paged-record-browser__content {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 0.5rem;
+    grid-template-rows: 5.55rem 2.9rem 1.25rem 3.95rem 1.8rem minmax(1.8rem, auto);
+    height: 100%;
+    min-width: 0;
+    padding: 0.9rem;
+    width: 100%;
+}
+
+.paged-record-browser__media {
+    align-items: center;
     display: flex;
-    gap: 0.85rem;
+    flex-direction: column;
+    gap: 0.45rem;
+    justify-content: flex-start;
     min-width: 0;
 }
 
-.paged-record-browser__identity-copy {
-    flex: 1 1 auto;
+.paged-record-browser__kind-row {
+    align-items: center;
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    max-width: min(13rem, calc(100% - 3.5rem));
+    min-height: 1.45rem;
     min-width: 0;
 }
 
 .paged-record-browser__icon {
     align-items: center;
-    background: rgb(224 242 254);
-    border-radius: 0.75rem;
-    color: rgb(3 105 161);
+    background: var(--paged-record-accent-soft);
+    border: 1px solid var(--paged-record-accent-border);
+    border-radius: 1.15rem;
+    color: var(--paged-record-accent-text);
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 1.35rem;
-    height: 2.5rem;
+    font-size: 1.6rem;
+    height: 3.55rem;
     justify-content: center;
-    width: 2.5rem;
+    width: 3.55rem;
 }
 
-.paged-record-browser__title {
-    margin-top: 0.65rem;
-    overflow-wrap: anywhere;
-}
-
-.paged-record-browser__subtitle,
-.paged-record-browser__description,
-.paged-record-browser__meta,
-.paged-record-browser__disabled-reason {
-    overflow-wrap: anywhere;
-}
-
-.paged-record-browser__description {
-    color: rgb(71 85 105);
-    display: -webkit-box;
+.paged-record-browser__kind-row ::deep .paged-record-browser__kind-target,
+.paged-record-browser__title-slot ::deep .paged-record-browser__tooltip-target,
+.paged-record-browser__subtitle-slot ::deep .paged-record-browser__tooltip-target,
+.paged-record-browser__description-slot ::deep .paged-record-browser__tooltip-target,
+.paged-record-browser__card-tags ::deep .paged-record-browser__tag-target,
+.paged-record-browser__footer ::deep .paged-record-browser__tooltip-target {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__kind-target {
+    flex: 0 1 auto;
+    max-width: 9rem;
+}
+
+.paged-record-browser__card-tags ::deep .paged-record-browser__tag-target {
+    flex: 0 1 auto;
+    max-width: 8.25rem;
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__kind-target .cda-status-badge,
+.paged-record-browser__card-tags ::deep .paged-record-browser__tag-target .cda-status-badge {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--info .cda-status-badge,
+.paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--info .cda-status-badge {
+    background: rgb(224 242 254);
+    border-color: rgb(125 211 252);
+    color: rgb(3 105 161);
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--accent .cda-status-badge,
+.paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--accent .cda-status-badge {
+    background: rgb(245 243 255);
+    border-color: rgb(196 181 253);
+    color: rgb(91 33 182);
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--success .cda-status-badge,
+.paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--success .cda-status-badge {
+    background: rgb(236 253 245);
+    border-color: rgb(110 231 183);
+    color: rgb(4 120 87);
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--warning .cda-status-badge,
+.paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--warning .cda-status-badge {
+    background: rgb(255 251 235);
+    border-color: rgb(252 211 77);
+    color: rgb(180 83 9);
+}
+
+.paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--teal .cda-status-badge,
+.paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--teal .cda-status-badge {
+    background: rgb(240 253 250);
+    border-color: rgb(94 234 212);
+    color: rgb(15 118 110);
+}
+
+.paged-record-browser__title-slot ::deep .paged-record-browser__title {
+    color: rgb(15 23 42);
+    display: -webkit-box;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0;
+    min-height: 2.8rem;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-align: center;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
 }
 
-.paged-record-browser__meta {
-    color: rgb(100 116 139);
+.paged-record-browser__subtitle-slot,
+.paged-record-browser__description-slot {
+    min-width: 0;
+    overflow: hidden;
 }
 
-.paged-record-browser__disabled-reason {
+.paged-record-browser__subtitle-slot ::deep .paged-record-browser__subtitle {
+    color: rgb(100 116 139);
+    margin: 0;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.paged-record-browser__description-slot ::deep .paged-record-browser__description {
+    color: rgb(71 85 105);
+    display: -webkit-box;
+    line-height: 1.45;
+    margin: 0;
+    min-height: 3.8rem;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.paged-record-browser__card-tags {
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    justify-content: center;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.paged-record-browser__footer {
+    align-items: center;
+    border-top: 1px solid rgb(226 232 240);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    overflow: hidden;
+    padding-top: 0.55rem;
+}
+
+.paged-record-browser__footer ::deep .paged-record-browser__meta {
+    color: rgb(100 116 139);
+    margin: 0;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.paged-record-browser__footer ::deep .paged-record-browser__disabled-reason {
     color: rgb(180 83 9);
     font-weight: 600;
+    margin: 0;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.paged-record-browser__status {
+    height: 5.2rem;
+    overflow: hidden;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 5.2rem;
+    z-index: 2;
+}
+
+.paged-record-browser__status > span {
+    background: rgb(241 245 249);
+    border-bottom: 1px solid rgb(203 213 225);
+    border-top: 1px solid rgb(203 213 225);
+    color: rgb(71 85 105);
+    display: block;
+    font-size: 0.61rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.22rem 0;
+    position: absolute;
+    right: -2.15rem;
+    text-align: center;
+    text-transform: uppercase;
+    top: 1rem;
+    transform: rotate(45deg);
+    width: 7.4rem;
+}
+
+.paged-record-browser__status--info > span {
+    background: rgb(224 242 254);
+    border-color: rgb(125 211 252);
+    color: rgb(3 105 161);
+}
+
+.paged-record-browser__status--success > span {
+    background: rgb(220 252 231);
+    border-color: rgb(134 239 172);
+    color: rgb(21 128 61);
+}
+
+.paged-record-browser__status--warning > span {
+    background: rgb(254 249 195);
+    border-color: rgb(253 224 71);
+    color: rgb(161 98 7);
+}
+
+.paged-record-browser__status--danger > span {
+    background: rgb(254 226 226);
+    border-color: rgb(252 165 165);
+    color: rgb(185 28 28);
 }
 
 .paged-record-browser__pager {

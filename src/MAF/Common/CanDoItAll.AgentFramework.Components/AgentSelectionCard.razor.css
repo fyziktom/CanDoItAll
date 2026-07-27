@@ -33,6 +33,12 @@
     text-align: center;
 }
 
+.agent-selection-card--enterprise {
+    background: rgb(255 255 255);
+    height: 21.5rem;
+    min-height: 21.5rem;
+}
+
 .agent-selection-card__select {
     align-items: stretch;
     background: transparent;
@@ -68,6 +74,21 @@
 
 .agent-selection-card--center .agent-selection-card__select {
     text-align: center;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__select {
+    padding: 0;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__select ::deep .agent-selection-card__content--enterprise {
+    align-items: stretch !important;
+    display: grid !important;
+    gap: 0.4rem !important;
+    grid-template-rows: 4rem 1.65rem 3rem 1.2rem 3.9rem 1.65rem minmax(2rem, 1fr);
+    height: 100%;
+    min-width: 0;
+    padding: 0.9rem;
+    width: 100%;
 }
 
 .agent-selection-card__select:focus-visible {
@@ -119,10 +140,69 @@
     min-width: 0;
 }
 
+.agent-selection-card__avatar-shell {
+    flex: 0 0 auto;
+}
+
 .agent-selection-card__identity--center {
     align-items: center;
     flex-direction: column;
     gap: 0.75rem;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__identity,
+.agent-selection-card--enterprise .agent-selection-card__identity-copy {
+    display: contents;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__avatar-shell {
+    align-items: center;
+    display: flex;
+    grid-row: 1;
+    justify-content: center;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__badges {
+    align-items: center;
+    flex-wrap: nowrap !important;
+    grid-row: 2;
+    justify-content: center;
+    max-width: calc(100% - 3.5rem);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__badges .cda-status-badge {
+    max-width: 7.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__name-target,
+.agent-selection-card--enterprise ::deep .agent-selection-card__role-target,
+.agent-selection-card--enterprise ::deep .agent-selection-card__summary-target,
+.agent-selection-card--enterprise ::deep .agent-selection-card__meta-target {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__name-target {
+    grid-row: 3;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__role-target {
+    grid-row: 4;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__summary-target {
+    grid-row: 5;
+}
+
+.agent-selection-card--enterprise ::deep .agent-selection-card__meta-target {
+    grid-row: 7;
 }
 
 .agent-selection-card__identity-copy {
@@ -139,6 +219,16 @@
     overflow-wrap: anywhere;
 }
 
+.agent-selection-card--enterprise .agent-selection-card__name {
+    display: -webkit-box;
+    margin: 0;
+    min-height: 2.8rem;
+    overflow: hidden;
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
 .agent-selection-card__role {
     color: rgb(100 116 139);
     font-size: 0.72rem;
@@ -148,6 +238,14 @@
     margin: 0.25rem 0 0;
     overflow-wrap: anywhere;
     text-transform: uppercase;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__role {
+    margin: 0;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .agent-selection-card__summary {
@@ -161,6 +259,45 @@
     -webkit-line-clamp: 3;
 }
 
+.agent-selection-card--enterprise .agent-selection-card__summary {
+    min-height: 3.8rem;
+    text-align: center;
+}
+
+.agent-selection-card__tags {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__tags {
+    flex-wrap: nowrap;
+    grid-row: 6;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__tags ::deep .agent-selection-card__tag-target {
+    display: block;
+    flex: 0 1 auto;
+    max-width: 7.75rem;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__tags ::deep .agent-selection-card__tag-target .cda-status-badge {
+    background: rgb(224 242 254);
+    border-color: rgb(125 211 252);
+    color: rgb(3 105 161);
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+}
+
 .agent-selection-card__meta {
     color: rgb(100 116 139);
     display: flex;
@@ -169,6 +306,24 @@
     gap: 0.25rem 0.75rem;
     line-height: 1.35;
     min-width: 0;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__meta {
+    align-items: center;
+    border-top: 1px solid rgb(226 232 240);
+    flex-wrap: nowrap;
+    height: 100%;
+    justify-content: center;
+    overflow: hidden;
+    padding-top: 0.55rem;
+}
+
+.agent-selection-card--enterprise .agent-selection-card__meta > span {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .agent-selection-card__meta--center {
@@ -184,4 +339,43 @@
     height: 1.4rem;
     justify-content: center;
     width: 1.4rem;
+}
+
+.agent-selection-card__status-ribbon {
+    background: rgb(224 242 254);
+    border-bottom: 1px solid rgb(125 211 252);
+    border-top: 1px solid rgb(125 211 252);
+    color: rgb(3 105 161);
+    display: block;
+    font-size: 0.61rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.22rem 0;
+    pointer-events: none;
+    position: absolute;
+    right: -2.15rem;
+    text-align: center;
+    text-transform: uppercase;
+    top: 1rem;
+    transform: rotate(45deg);
+    width: 7.4rem;
+    z-index: 3;
+}
+
+.agent-selection-card__status-ribbon--success {
+    background: rgb(220 252 231);
+    border-color: rgb(134 239 172);
+    color: rgb(21 128 61);
+}
+
+.agent-selection-card__status-ribbon--warning {
+    background: rgb(254 249 195);
+    border-color: rgb(253 224 71);
+    color: rgb(161 98 7);
+}
+
+.agent-selection-card__status-ribbon--neutral {
+    background: rgb(241 245 249);
+    border-color: rgb(203 213 225);
+    color: rgb(71 85 105);
 }

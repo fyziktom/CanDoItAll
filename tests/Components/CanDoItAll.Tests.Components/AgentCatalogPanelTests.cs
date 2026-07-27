@@ -36,6 +36,49 @@ public sealed class AgentCatalogPanelTests
     }
 
     [Fact]
+    public void Enterprise_agent_card_has_stable_status_type_tags_and_service_tooltips()
+    {
+        const string longName = "A deliberately long enterprise agent name for truncation";
+        const string longTag = "governance-classification-that-needs-truncation";
+        using var context = new TestContext();
+        context.Services.AddCanDoItAllBaseLib();
+        var agent = CreateAgent(Guid.NewGuid(), longName, string.Empty) with
+        {
+            Tags = [longTag, "review", "managed"],
+            Summary = "A complete summary that remains available through the shared tooltip service."
+        };
+
+        var cut = context.RenderComponent<AgentSelectionCard>(parameters => parameters
+            .Add(component => component.Agent, agent)
+            .Add(component => component.CenterContent, true)
+            .Add(component => component.EnterpriseLayout, true)
+            .Add(component => component.ShowStatusRibbon, true)
+            .Add(component => component.ShowKindBadge, true)
+            .Add(component => component.ShowWorkload, false)
+            .Add(component => component.MaxVisibleTags, 2));
+
+        Assert.Contains("agent-selection-card--enterprise", cut.Find("article").ClassList);
+        Assert.Equal(
+            "Active",
+            cut.Find("[data-testid='agent-status-ribbon']").TextContent.Trim());
+        Assert.Contains("AI agent", cut.Find(".agent-selection-card__badges").TextContent);
+        Assert.Equal(3, cut.FindAll(".agent-selection-card__tag-target").Count);
+        Assert.Contains("+1", cut.Find(".agent-selection-card__tags").TextContent);
+
+        cut.Find(".agent-selection-card__name-target").TriggerEvent(
+            "onmouseenter",
+            new MouseEventArgs
+            {
+                ClientX = 120,
+                ClientY = 80
+            });
+
+        var tooltip = context.Services.GetRequiredService<TooltipService>().Current;
+        Assert.Equal(longName, tooltip?.Text);
+        Assert.Equal(TooltipPosition.Bottom, tooltip?.Options.Position);
+    }
+
+    [Fact]
     public void Catalog_delegates_new_chat_to_global_launcher_only_for_the_stable_hr_agent()
     {
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);

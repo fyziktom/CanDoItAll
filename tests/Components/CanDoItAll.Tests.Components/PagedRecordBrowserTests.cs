@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -147,6 +148,27 @@ public sealed class PagedRecordBrowserTests : TestContext
     }
 
     [Fact]
+    public void Bounded_catalog_grid_keeps_sparse_cards_at_a_suitable_width()
+    {
+        var defaultCut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
+        var boundedCut = RenderBrowser(
+            LoaderWith(Option(AlphaId, "Alpha")),
+            gridMode: PagedRecordGridMode.BoundedCatalog);
+
+        var defaultGridStyle = defaultCut
+            .Find("[data-testid='records-results']")
+            .FirstElementChild!
+            .GetAttribute("style");
+        var boundedGridStyle = boundedCut
+            .Find("[data-testid='records-results']")
+            .FirstElementChild!
+            .GetAttribute("style");
+
+        Assert.Contains("repeat(auto-fit,minmax(16rem,1fr))", defaultGridStyle);
+        Assert.Contains("repeat(auto-fill,minmax(min(100%,17rem),24rem))", boundedGridStyle);
+    }
+
+    [Fact]
     public void Filter_toolbar_keeps_fields_flexible_and_actions_intrinsic()
     {
         var cut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
@@ -206,6 +228,57 @@ public sealed class PagedRecordBrowserTests : TestContext
 
         Assert.Equal(AlphaId, selectedId);
         Assert.Empty(cut.FindAll("[data-testid='record-alpha-shell']"));
+    }
+
+    [Fact]
+    public void Default_card_uses_typed_tones_stable_anatomy_and_service_tooltips()
+    {
+        const string longTag = "a-very-long-governance-classification";
+        var option = new PagedRecordOption<Guid>(
+            AlphaId,
+            "A deliberately long record title that needs a stable two-line slot",
+            "AI agent")
+        {
+            Subtitle = "Long business identity that remains aligned",
+            Description = "A long operational summary that is clamped visually while its complete value remains discoverable.",
+            Meta = "Updated 27.07.2026 09:45",
+            Icon = "smart_toy",
+            Tags = [longTag, "review", "governed"],
+            KindTone = PagedRecordBadgeTone.Accent,
+            TagTone = PagedRecordBadgeTone.Teal,
+            CornerStatus = new PagedRecordCornerStatus("Inactive", PagedRecordStatusTone.Danger),
+            TestId = "record-alpha"
+        };
+        var cut = RenderBrowser(LoaderWith(option));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='record-alpha']")));
+
+        var shell = cut.Find("[data-testid='record-alpha-shell']");
+        Assert.Contains("paged-record-browser__card--tone-accent", shell.ClassList);
+        Assert.Contains(
+            "paged-record-browser__status--danger",
+            shell.QuerySelector(".paged-record-browser__status")!.ClassList);
+        Assert.Equal("Inactive", shell.QuerySelector(".paged-record-browser__status span")!.TextContent.Trim());
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__media"));
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__title-slot"));
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__description-slot"));
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__footer"));
+
+        var tagTargets = shell.QuerySelectorAll(".paged-record-browser__tag-target");
+        Assert.Equal(3, tagTargets.Length);
+        Assert.Contains("+1", shell.QuerySelector(".paged-record-browser__card-tags")!.TextContent);
+
+        tagTargets[0].TriggerEvent(
+            "onmouseenter",
+            new MouseEventArgs
+            {
+                ClientX = 120,
+                ClientY = 80
+            });
+
+        var tooltip = Services.GetRequiredService<TooltipService>().Current;
+        Assert.Equal(longTag, tooltip?.Text);
+        Assert.Equal(TooltipPosition.Bottom, tooltip?.Options.Position);
     }
 
     [Fact]
@@ -342,7 +415,8 @@ public sealed class PagedRecordBrowserTests : TestContext
         PagedRecordLoader<Guid, RecordScope> loader,
         Action<Guid>? selectionChanged = null,
         Action<Exception>? loadFailed = null,
-        PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page)
+        PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page,
+        PagedRecordGridMode gridMode = PagedRecordGridMode.Fluid)
     {
         return RenderComponent<PagedRecordBrowser<Guid, RecordScope>>(parameters =>
         {
@@ -353,6 +427,7 @@ public sealed class PagedRecordBrowserTests : TestContext
                 .Add(component => component.TagSuggestions, ["priority", "partner"])
                 .Add(component => component.PageSize, 2)
                 .Add(component => component.ResultsScrollMode, resultsScrollMode)
+                .Add(component => component.GridMode, gridMode)
                 .Add(component => component.DataTestId, "records");
 
             if (selectionChanged is not null)

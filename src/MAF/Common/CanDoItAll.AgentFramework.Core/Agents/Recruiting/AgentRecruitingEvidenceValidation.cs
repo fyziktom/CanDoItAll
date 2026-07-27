@@ -88,6 +88,50 @@ internal static class AgentRecruitingEvidenceValidation
             };
     }
 
+    internal static AgentRecruitingAssessmentAnalysis? NormalizeAnalysis(
+        AgentRecruitingAssessmentAnalysis? analysis)
+    {
+        if (analysis is null)
+        {
+            return null;
+        }
+
+        if (!Enum.IsDefined(analysis.Classification))
+        {
+            throw Failure(
+                AgentRecruitingEvidenceFailureKind.InvalidRequest,
+                "agent-recruiting.analysis-classification-invalid",
+                "The assessment analysis classification is not supported.");
+        }
+
+        if (!Enum.IsDefined(analysis.ProposedNextStep))
+        {
+            throw Failure(
+                AgentRecruitingEvidenceFailureKind.InvalidRequest,
+                "agent-recruiting.analysis-next-step-invalid",
+                "The assessment analysis proposed next step is not supported.");
+        }
+
+        if (analysis.Confidence is < 0m or > 1m)
+        {
+            throw Failure(
+                AgentRecruitingEvidenceFailureKind.InvalidRequest,
+                "agent-recruiting.analysis-confidence-invalid",
+                "The assessment analysis confidence must be between 0 and 1.");
+        }
+
+        EnsureText(analysis.Summary, "analysis.summary", 4000);
+        EnsureAnalysisItems(analysis.Strengths, "analysis.strengths");
+        EnsureAnalysisItems(analysis.Gaps, "analysis.gaps");
+
+        return analysis with
+        {
+            Summary = analysis.Summary.Trim(),
+            Strengths = analysis.Strengths.Select(item => item.Trim()).ToList(),
+            Gaps = analysis.Gaps.Select(item => item.Trim()).ToList()
+        };
+    }
+
     internal static void EnsureTarget(AgentRecruitingExecutionTarget? target)
     {
         if (target is null || target.Id == Guid.Empty || !Enum.IsDefined(target.Kind))
@@ -181,4 +225,19 @@ internal static class AgentRecruitingEvidenceValidation
         string code,
         string message)
         => new(kind, code, message);
+
+    private static void EnsureAnalysisItems(
+        IReadOnlyList<string>? items,
+        string field)
+    {
+        if (items is null ||
+            items.Count > 20 ||
+            items.Any(item => string.IsNullOrWhiteSpace(item) || item.Trim().Length > 500))
+        {
+            throw Failure(
+                AgentRecruitingEvidenceFailureKind.InvalidRequest,
+                "agent-recruiting.analysis-items-invalid",
+                $"'{field}' must contain at most 20 non-empty items of up to 500 characters.");
+        }
+    }
 }
