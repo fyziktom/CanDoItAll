@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,13 +10,14 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class CrmInteractionIntegrationTests
 {
     [Fact]
-    public async Task Crm_service_persists_profile_stakeholders_interactions_and_search_projection()
+    public async Task Crm_service_persists_profile_connections_projects_interactions_and_search_projection()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var crmService = scope.ServiceProvider.GetRequiredService<CrmService>();
         var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var accountId = await CreatePartyAsync(
             partyDirectoryService,
@@ -31,6 +33,24 @@ public sealed class CrmInteractionIntegrationTests
             PartyLifecycleStatus.Active,
             PartyRoleKind.Stakeholder,
             "nina.sponsor@example.test");
+        var projectId = Guid.NewGuid();
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var now = DateTimeOffset.UtcNow;
+            dbContext.Set<Project>().Add(new Project
+            {
+                Id = projectId,
+                Name = "Fabrikam pilot",
+                Slug = $"fabrikam-pilot-{projectId:N}",
+                Description = "CRM connection project integration test.",
+                Objective = "Validate company connection project links.",
+                Status = ProjectStatus.Active,
+                CurrentPhase = "Pilot",
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            });
+            await dbContext.SaveChangesAsync();
+        }
 
         var profileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
@@ -41,15 +61,16 @@ public sealed class CrmInteractionIntegrationTests
             TimingRiskNotes = "Board sign-off may slip into next month.",
             LastChangedBy = "integration-tests"
         });
-        var stakeholderResult = await crmService.SaveStakeholdersAsync(
+        var connectionResult = await crmService.SaveConnectedRecordsAsync(
             accountId,
             [
-                new CrmAccountStakeholderEditorModel
+                new CrmAccountConnectionEditorModel
                 {
                     RelatedPartyId = sponsorId,
-                    Role = CrmAccountStakeholderRole.Sponsor,
+                    Role = CrmAccountConnectionRole.Sponsor,
                     IsPrimary = true,
-                    Notes = "Executive sponsor"
+                    Notes = "Executive sponsor",
+                    ProjectIds = [projectId]
                 }
             ],
             "integration-tests");
@@ -69,7 +90,7 @@ public sealed class CrmInteractionIntegrationTests
             "integration-tests");
 
         Assert.True(profileResult.IsSuccess);
-        Assert.True(stakeholderResult.IsSuccess);
+        Assert.True(connectionResult.IsSuccess);
         Assert.True(interactionResult.IsSuccess);
 
         var workspace = await crmService.GetAccountWorkspaceAsync(accountId);
@@ -79,7 +100,11 @@ public sealed class CrmInteractionIntegrationTests
 
         Assert.NotNull(workspace);
         Assert.Equal(CrmAccountRelationshipStage.ActiveCustomer, workspace.Profile.RelationshipStage);
-        Assert.Single(workspace.Stakeholders);
+        var connection = Assert.Single(workspace.ConnectedRecords);
+        Assert.Equal(sponsorId, connection.RelatedPartyId);
+        var relatedProject = Assert.Single(connection.Projects);
+        Assert.Equal(projectId, relatedProject.Id);
+        Assert.Equal("Fabrikam pilot", relatedProject.Name);
         Assert.Equal(1, activity.ActionCount);
         Assert.Equal(1, activity.OverdueActionCount);
         Assert.Contains(

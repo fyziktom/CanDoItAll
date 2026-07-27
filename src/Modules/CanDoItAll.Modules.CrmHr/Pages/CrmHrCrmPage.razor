@@ -17,7 +17,7 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="CRM workspace"
-                    Description="Review shared customer, partner, and vendor accounts, keep stakeholder ownership explicit, and log follow-ups before they disappear into side channels."
+                    Description="Review shared customer, partner, and vendor accounts, keep company connections explicit, and log follow-ups before they disappear into side channels."
                     Compact="true">
             <Stats>
                 <CompactStat Label="accounts"
@@ -70,7 +70,7 @@
                 <Dialog IsOpen="true"
                         Eyebrow="CRM account"
                         Title="@selectedAccount.DisplayName"
-                        Subtitle="Relationship profile, financials, stakeholders, interactions, and opportunities."
+                        Subtitle="Relationship profile, financials, connected records, interactions, and opportunities."
                         Size="ModalSize.Full"
                         DenseChrome="true"
                         CloseOnBackdrop="false"
@@ -111,7 +111,7 @@
                                         <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                             <p class="cda-eyebrow">Current scope</p>
                                             <p class="mt-2 text-sm leading-6 text-slate-700">
-                                                Account context, stakeholder ownership, follow-up history, opportunity progression, and recognized sold value stay grounded on the shared party record.
+                                                Account context, connected people, follow-up history, opportunity progression, and recognized sold value stay grounded on the shared party record.
                                             </p>
                                         </div>
                                     </Grid>
@@ -155,42 +155,44 @@
                                     <CrmFinancialsPanel AccountPartyId="@selectedAccount.AccountPartyId" />
                                 </TabsItem>
 
-                                <TabsItem Text="Stakeholders"
-                                          Icon="groups"
-                                          data-testid="crmhr-crm-tab-stakeholders">
-                            <FormSection Title="Stakeholders"
-                                         Description="Link account-specific contacts and ownership roles so billing, contract, delivery, and sponsor responsibilities remain explicit.">
+                                <TabsItem Text="Connected records"
+                                          Icon="hub"
+                                          data-testid="crmhr-crm-tab-connections">
+                            <FormSection Title="Connected records"
+                                         Description="Connect the people and other directory records you communicate or cooperate with at this company, then optionally scope each connection to related projects.">
                                 <Split Gap="LayoutGap.Medium"
                                        AlignItems="AlignItems.Center"
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div>
-                                        <p class="cda-eyebrow">Account contact map</p>
-                                        <p class="mt-1 text-sm leading-6 text-slate-600">Use explicit account roles instead of encoding billing, contract, or sponsor ownership in free text.</p>
+                                        <p class="cda-eyebrow">Company relationship map</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-600">Use typed relationship roles for employees, contacts, sponsors, partners, and delivery participants. Project links are optional.</p>
                                     </div>
-                                    <Button Text="Add stakeholder"
+                                    <Button Text="Add connection"
                                             ButtonStyle="ButtonStyle.Light"
                                             Size="ButtonSize.Small"
-                                            Click="AddStakeholder"
-                                            data-testid="crmhr-stakeholder-add" />
+                                            Click="AddConnectedRecord"
+                                            data-testid="crmhr-connection-add" />
                                 </Split>
 
-                                @if (stakeholderEditors.Count == 0)
+                                @if (connectedRecordEditors.Count == 0)
                                 {
                                     <div class="mt-5 rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
-                                        No account-specific stakeholders saved yet.
+                                        No connected records saved yet. Add a person or another directory record associated with this company.
                                     </div>
                                 }
                                 else
                                 {
-                                    <Stack GapScale="LayoutGap.Medium" Class="mt-5">
-                                        @for (var index = 0; index < stakeholderEditors.Count; index++)
+                                    <Stack GapScale="LayoutGap.Medium"
+                                           AlignItems="AlignItems.Stretch"
+                                           Class="mt-5">
+                                        @for (var index = 0; index < connectedRecordEditors.Count; index++)
                                         {
                                             var rowIndex = index;
-                                            var stakeholder = stakeholderEditors[index];
+                                            var connection = connectedRecordEditors[index];
                                             <PanelCard Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Related party</label>
+                                                        <label class="cda-field-label">Connected directory record</label>
                                                         <SurfaceCard Soft="true">
                                                             <Split Breakpoint="LayoutBreakpoint.None"
                                                                    Gap="LayoutGap.Medium"
@@ -198,33 +200,33 @@
                                                                    JustifyContent="JustifyContent.SpaceBetween"
                                                                    Wrap="FlexWrap.Wrap">
                                                                 <TextBlock TextStyle="TextStyle.Note"
-                                                                           Value="@ResolveStakeholderPartyLabel(stakeholder.RelatedPartyId)" />
+                                                                           Value="@ResolveConnectionPartyLabel(connection.RelatedPartyId)" />
                                                                 <Cluster Gap="LayoutGap.Small">
-                                                                    @if (stakeholder.RelatedPartyId != Guid.Empty)
+                                                                    @if (connection.RelatedPartyId != Guid.Empty)
                                                                     {
                                                                         <Button Text="Clear"
                                                                                 ButtonStyle="ButtonStyle.Light"
                                                                                 Size="ButtonSize.Small"
-                                                                                Click="@(() => ClearStakeholderParty(rowIndex))"
-                                                                                data-testid="@($"crmhr-stakeholder-party-clear-{rowIndex}")" />
+                                                                                Click="@(() => ClearConnectionParty(rowIndex))"
+                                                                                data-testid="@($"crmhr-connection-party-clear-{rowIndex}")" />
                                                                     }
-                                                                    <Button Text="Choose party"
+                                                                    <Button Text="Choose record"
                                                                             Icon="search"
                                                                             Size="ButtonSize.Small"
-                                                                            Click="@(() => OpenStakeholderPartyPicker(rowIndex))"
-                                                                            data-testid="@($"crmhr-stakeholder-party-{rowIndex}")" />
+                                                                            Click="@(() => OpenConnectionPartyPicker(rowIndex))"
+                                                                            data-testid="@($"crmhr-connection-party-{rowIndex}")" />
                                                                 </Cluster>
                                                             </Split>
                                                         </SurfaceCard>
                                                     </div>
                                                     <div>
-                                                        <label class="cda-field-label">Account role</label>
-                                                        <InputSelect @bind-Value="stakeholder.Role"
+                                                        <label class="cda-field-label">Relationship role</label>
+                                                        <InputSelect @bind-Value="connection.Role"
                                                                      class="cda-input"
-                                                                     data-testid="@($"crmhr-stakeholder-role-{rowIndex}")">
-                                                            @foreach (var role in Enum.GetValues<CrmAccountStakeholderRole>())
+                                                                     data-testid="@($"crmhr-connection-role-{rowIndex}")">
+                                                            @foreach (var role in Enum.GetValues<CrmAccountConnectionRole>())
                                                             {
-                                                                <option value="@role">@role</option>
+                                                                <option value="@role">@FormatConnectionRole(role)</option>
                                                             }
                                                         </InputSelect>
                                                     </div>
@@ -232,21 +234,27 @@
                                                         <Button Text="Remove"
                                                                 ButtonStyle="ButtonStyle.Danger"
                                                                 Size="ButtonSize.Small"
-                                                                Click="@(() => RemoveStakeholder(rowIndex))"
-                                                                data-testid="@($"crmhr-stakeholder-remove-{rowIndex}")" />
+                                                                Click="@(() => RemoveConnectedRecord(rowIndex))"
+                                                                data-testid="@($"crmhr-connection-remove-{rowIndex}")" />
                                                     </div>
                                                 </Grid>
 
+                                                <div class="mt-4">
+                                                    <ProjectMultiPicker SelectedProjectIds="@connection.ProjectIds"
+                                                                        SelectedProjectIdsChanged="@(projectIds => UpdateConnectedRecordProjects(rowIndex, projectIds))"
+                                                                        TestIdPrefix="@($"crmhr-connection-projects-{rowIndex}")" />
+                                                </div>
+
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Notes</label>
-                                                        <InputText @bind-Value="stakeholder.Notes"
+                                                        <label class="cda-field-label">Relationship notes</label>
+                                                        <InputText @bind-Value="connection.Notes"
                                                                    class="cda-input"
-                                                                   data-testid="@($"crmhr-stakeholder-notes-{rowIndex}")" />
+                                                                   data-testid="@($"crmhr-connection-notes-{rowIndex}")" />
                                                     </div>
                                                     <div class="flex items-end gap-3">
-                                                        <InputCheckbox @bind-Value="stakeholder.IsPrimary"
-                                                                       data-testid="@($"crmhr-stakeholder-primary-{rowIndex}")" />
+                                                        <InputCheckbox @bind-Value="connection.IsPrimary"
+                                                                       data-testid="@($"crmhr-connection-primary-{rowIndex}")" />
                                                         <label class="text-sm text-slate-700">Primary for this role</label>
                                                     </div>
                                                 </Grid>
@@ -256,9 +264,9 @@
                                 }
 
                                 <Cluster Gap="LayoutGap.Small" Class="mt-5">
-                                    <Button Text="Save stakeholders"
-                                            Click="SaveStakeholdersAsync"
-                                            data-testid="crmhr-stakeholder-save-button" />
+                                    <Button Text="Save connected records"
+                                            Click="SaveConnectedRecordsAsync"
+                                            data-testid="crmhr-connection-save-button" />
                                 </Cluster>
                             </FormSection>
                                 </TabsItem>
@@ -372,7 +380,7 @@
                                             @if (ParticipantOptions.Count == 0)
                                             {
                                                 <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
-                                                    Save at least one stakeholder to expose reusable participant shortcuts here.
+                                                    Save at least one connected record to expose reusable participant shortcuts here.
                                                 </div>
                                             }
                                             else
@@ -395,7 +403,7 @@
                                     </FormSection>
 
                                     <NextActionEditor Model="interactionEditor"
-                                                      OwnerOptions="selectedAccount.StakeholderParties" />
+                                                      OwnerOptions="selectedAccount.ConnectedParties" />
 
                                     <Cluster Gap="LayoutGap.Small">
                                         <Button Text="Log interaction"
@@ -476,16 +484,16 @@
                              Save="SaveOpportunityConversionAsync"
                              LoadFailed="HandleOpportunityPickerLoadFailedAsync" />
 
-<PartyRecordPickerDialog IsOpen="@stakeholderPartyPickerIndex.HasValue"
-                         SelectedPartyId="@SelectedStakeholderPartyId"
+<PartyRecordPickerDialog IsOpen="@connectionPartyPickerIndex.HasValue"
+                         SelectedPartyId="@SelectedConnectionPartyId"
                          ExcludedPartyId="selectedAccount?.AccountPartyId"
-                         SelectionConfirmed="ConfirmStakeholderPartyAsync"
-                         OnClose="CloseStakeholderPartyPickerAsync"
+                         SelectionConfirmed="ConfirmConnectionPartyAsync"
+                         OnClose="CloseConnectionPartyPickerAsync"
                          LoadFailed="HandleOpportunityPickerLoadFailedAsync"
-                         Eyebrow="Account stakeholders"
-                         Title="Choose a stakeholder"
-                         Subtitle="Search and page through the shared party directory."
-                         DataTestId="crmhr-stakeholder-party-picker" />
+                         Eyebrow="Connected records"
+                         Title="Choose a directory record"
+                         Subtitle="Search people, organizations, units, and AI agents that have a relationship with this company."
+                         DataTestId="crmhr-connection-party-picker" />
 
 <CrmAgentChatContextProvider AccountCount="accountCount"
                              Account="agentChatAccountContext"
@@ -505,13 +513,13 @@
     [SupplyParameterFromQuery(Name = "interactionId")]
     public Guid? InteractionIdQuery { get; set; }
 
-    private readonly Dictionary<Guid, string> stakeholderPartyLabels = [];
+    private readonly Dictionary<Guid, string> connectionPartyLabels = [];
     private CrmAccountWorkspaceModel? selectedAccount;
     private CrmInteractionDetailModel? selectedInteraction;
     private CrmOpportunityDetailModel? selectedOpportunity;
     private CrmActivityHistoryPage accountActivityPage = CrmActivityHistoryPage.Empty();
     private CrmAccountProfileEditorModel profileEditor = new();
-    private List<CrmAccountStakeholderEditorModel> stakeholderEditors = [];
+    private List<CrmAccountConnectionEditorModel> connectedRecordEditors = [];
     private CrmInteractionEditorModel interactionEditor = CreateInteractionEditor();
     private CrmOpportunityEditorModel opportunityEditor = new();
     private CrmOpportunityConversionEditorModel opportunityConversionEditor = new();
@@ -523,7 +531,7 @@
     private Guid? selectedOpportunityId;
     private Guid? selectedInteractionId;
     private Guid? accountActivityLoadedPartyId;
-    private int? stakeholderPartyPickerIndex;
+    private int? connectionPartyPickerIndex;
     private CrmRecordTab selectedCrmRecordTab = CrmRecordTab.Overview;
     private string? committedQueryKey;
     private readonly CrmQueryLoadGeneration queryLoadGeneration = new();
@@ -550,8 +558,8 @@
     private IReadOnlyList<PartyOptionModel> ParticipantOptions
         => selectedAccount is null
             ? []
-            : selectedAccount.StakeholderParties
-                .Where(option => stakeholderEditors.Any(stakeholder => stakeholder.RelatedPartyId == option.Id))
+            : selectedAccount.ConnectedParties
+                .Where(option => connectedRecordEditors.Any(connection => connection.RelatedPartyId == option.Id))
                 .ToList();
 
     private CrmOpportunityDetailModel? SelectedOpportunity
@@ -559,12 +567,12 @@
             ? selectedOpportunity
             : null;
 
-    private Guid? SelectedStakeholderPartyId
-        => stakeholderPartyPickerIndex is int index &&
+    private Guid? SelectedConnectionPartyId
+        => connectionPartyPickerIndex is int index &&
            index >= 0 &&
-           index < stakeholderEditors.Count &&
-           stakeholderEditors[index].RelatedPartyId != Guid.Empty
-            ? stakeholderEditors[index].RelatedPartyId
+           index < connectedRecordEditors.Count &&
+           connectedRecordEditors[index].RelatedPartyId != Guid.Empty
+            ? connectedRecordEditors[index].RelatedPartyId
             : null;
 
     private CrmInteractionDetailModel? SelectedInteraction
@@ -794,24 +802,25 @@
             TimingRiskNotes = account.Profile.TimingRiskNotes,
             LastChangedBy = account.Profile.LastChangedBy
         };
-        stakeholderEditors = account.Stakeholders
-            .Select(item => new CrmAccountStakeholderEditorModel
+        connectedRecordEditors = account.ConnectedRecords
+            .Select(item => new CrmAccountConnectionEditorModel
             {
                 Id = item.Id,
                 RelatedPartyId = item.RelatedPartyId,
                 Role = item.Role,
                 IsPrimary = item.IsPrimary,
-                Notes = item.Notes
+                Notes = item.Notes,
+                ProjectIds = item.Projects.Select(project => project.Id).ToList()
             })
             .ToList();
-        stakeholderPartyLabels.Clear();
-        foreach (var stakeholder in account.Stakeholders)
+        connectionPartyLabels.Clear();
+        foreach (var connection in account.ConnectedRecords)
         {
-            stakeholderPartyLabels[stakeholder.RelatedPartyId] =
-                $"{stakeholder.DisplayName} ({stakeholder.PartyType})";
+            connectionPartyLabels[connection.RelatedPartyId] =
+                $"{connection.DisplayName} ({connection.PartyType})";
         }
 
-        stakeholderPartyPickerIndex = null;
+        connectionPartyPickerIndex = null;
         ApplyContextSelection(
             requestedOpportunityId,
             preferredOpportunityId,
@@ -1117,9 +1126,9 @@
         selectedOpportunity = null;
         selectedInteraction = null;
         profileEditor = new();
-        stakeholderEditors = [];
-        stakeholderPartyLabels.Clear();
-        stakeholderPartyPickerIndex = null;
+        connectedRecordEditors = [];
+        connectionPartyLabels.Clear();
+        connectionPartyPickerIndex = null;
         interactionEditor = CreateInteractionEditor();
         opportunityEditor = new();
         opportunityConversionEditor = new();
@@ -1205,124 +1214,141 @@
         NotifySuccess("CRM account saved", "CRM account profile saved.");
     }
 
-    private void AddStakeholder()
+    private void AddConnectedRecord()
     {
-        stakeholderEditors.Add(new CrmAccountStakeholderEditorModel());
+        connectedRecordEditors.Add(new CrmAccountConnectionEditorModel());
         StateHasChanged();
     }
 
-    private void RemoveStakeholder(int index)
+    private void RemoveConnectedRecord(int index)
     {
-        if (index < 0 || index >= stakeholderEditors.Count)
+        if (index < 0 || index >= connectedRecordEditors.Count)
         {
             return;
         }
 
-        stakeholderEditors.RemoveAt(index);
-        if (stakeholderPartyPickerIndex == index)
+        connectedRecordEditors.RemoveAt(index);
+        if (connectionPartyPickerIndex == index)
         {
-            stakeholderPartyPickerIndex = null;
+            connectionPartyPickerIndex = null;
         }
-        else if (stakeholderPartyPickerIndex > index)
+        else if (connectionPartyPickerIndex > index)
         {
-            stakeholderPartyPickerIndex--;
+            connectionPartyPickerIndex--;
         }
 
         StateHasChanged();
     }
 
-    private void OpenStakeholderPartyPicker(int index)
+    private void OpenConnectionPartyPicker(int index)
     {
-        if (index < 0 || index >= stakeholderEditors.Count)
+        if (index < 0 || index >= connectedRecordEditors.Count)
         {
             return;
         }
 
-        stakeholderPartyPickerIndex = index;
+        connectionPartyPickerIndex = index;
     }
 
-    private Task CloseStakeholderPartyPickerAsync()
+    private Task CloseConnectionPartyPickerAsync()
     {
-        stakeholderPartyPickerIndex = null;
+        connectionPartyPickerIndex = null;
         return Task.CompletedTask;
     }
 
-    private async Task ConfirmStakeholderPartyAsync(Guid partyId)
+    private async Task ConfirmConnectionPartyAsync(Guid partyId)
     {
-        if (stakeholderPartyPickerIndex is not int index ||
+        if (connectionPartyPickerIndex is not int index ||
             index < 0 ||
-            index >= stakeholderEditors.Count)
+            index >= connectedRecordEditors.Count)
         {
-            stakeholderPartyPickerIndex = null;
+            connectionPartyPickerIndex = null;
             return;
         }
 
         if (!TryCaptureCrmAction(out var action))
         {
-            stakeholderPartyPickerIndex = null;
+            connectionPartyPickerIndex = null;
             return;
         }
 
         var party = await PartyRecordQueryService.GetAsync(partyId);
         if (!IsCurrentCrmAction(action) ||
-            stakeholderPartyPickerIndex != index ||
+            connectionPartyPickerIndex != index ||
             index < 0 ||
-            index >= stakeholderEditors.Count)
+            index >= connectedRecordEditors.Count)
         {
             return;
         }
 
         if (party is null)
         {
-            stakeholderPartyPickerIndex = null;
+            connectionPartyPickerIndex = null;
             NotifyError(
-                "Stakeholder unavailable",
+                "Directory record unavailable",
                 "The selected party no longer exists or is archived.");
             return;
         }
 
-        stakeholderEditors[index].RelatedPartyId = party.Id;
-        stakeholderPartyLabels[party.Id] = $"{party.DisplayName} ({party.PartyType})";
-        stakeholderPartyPickerIndex = null;
+        connectedRecordEditors[index].RelatedPartyId = party.Id;
+        connectionPartyLabels[party.Id] = $"{party.DisplayName} ({party.PartyType})";
+        connectionPartyPickerIndex = null;
     }
 
-    private void ClearStakeholderParty(int index)
+    private void ClearConnectionParty(int index)
     {
-        if (index < 0 || index >= stakeholderEditors.Count)
+        if (index < 0 || index >= connectedRecordEditors.Count)
         {
             return;
         }
 
-        stakeholderEditors[index].RelatedPartyId = Guid.Empty;
+        connectedRecordEditors[index].RelatedPartyId = Guid.Empty;
     }
 
-    private string ResolveStakeholderPartyLabel(Guid partyId)
+    private void UpdateConnectedRecordProjects(
+        int index,
+        IReadOnlyList<Guid> projectIds)
+    {
+        if (index < 0 || index >= connectedRecordEditors.Count)
+        {
+            return;
+        }
+
+        connectedRecordEditors[index].ProjectIds = projectIds
+            .Where(projectId => projectId != Guid.Empty)
+            .Distinct()
+            .ToList();
+    }
+
+    private string ResolveConnectionPartyLabel(Guid partyId)
     {
         if (partyId == Guid.Empty)
         {
-            return "No party selected";
+            return "No directory record selected";
         }
 
-        return stakeholderPartyLabels.GetValueOrDefault(partyId)
+        return connectionPartyLabels.GetValueOrDefault(partyId)
             ?? "Selected directory party";
     }
 
-    private async Task SaveStakeholdersAsync()
+    private async Task SaveConnectedRecordsAsync()
     {
         if (!TryCaptureCrmAction(out var action))
         {
             return;
         }
 
-        var result = await CrmService.SaveStakeholdersAsync(
+        var result = await CrmService.SaveConnectedRecordsAsync(
             action.AccountId,
-            stakeholderEditors,
+            connectedRecordEditors,
             profileEditor.LastChangedBy);
         if (result.IsFailure)
         {
             if (IsCurrentCrmAction(action))
             {
-                NotifyError("Stakeholders save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+                NotifyError(
+                    "Connected records save failed",
+                    string.Join(" ", result.Errors.Select(error => error.Message)));
             }
 
             return;
@@ -1333,7 +1359,7 @@
             return;
         }
 
-        NotifySuccess("Stakeholders saved", "Account stakeholders saved.");
+        NotifySuccess("Connected records saved", "Company connections and related projects saved.");
     }
 
     private async Task SaveInteractionAsync()
@@ -1811,6 +1837,25 @@
             "The selected account was refreshed after the agent run completed.");
     }
 
+    private static string FormatConnectionRole(CrmAccountConnectionRole role)
+    {
+        return role switch
+        {
+            CrmAccountConnectionRole.PrimaryContact => "Primary contact",
+            CrmAccountConnectionRole.Stakeholder => "Stakeholder",
+            CrmAccountConnectionRole.BillingContact => "Billing contact",
+            CrmAccountConnectionRole.ContractContact => "Contract contact",
+            CrmAccountConnectionRole.AccountManager => "Account manager",
+            CrmAccountConnectionRole.DeliveryLead => "Delivery lead",
+            CrmAccountConnectionRole.Sponsor => "Sponsor",
+            CrmAccountConnectionRole.TechnicalContact => "Technical contact",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(role),
+                role,
+                "Unknown CRM account connection role.")
+        };
+    }
+
     private static OpportunityStage ResolveNextOpportunityStage(OpportunityStage stage)
     {
         return stage switch
@@ -1875,7 +1920,7 @@
     {
         Overview,
         Financials,
-        Stakeholders,
+        ConnectedRecords,
         Interactions,
         Opportunities
     }

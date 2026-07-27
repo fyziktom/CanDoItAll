@@ -1,0 +1,20 @@
+.project-multi-picker__row {
+    background: rgb(255 255 255);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+}
+
+.project-multi-picker__row ::deep .project-multi-picker__name-target {
+    display: block;
+    max-width: 32rem;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.project-multi-picker__row ::deep .project-multi-picker__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

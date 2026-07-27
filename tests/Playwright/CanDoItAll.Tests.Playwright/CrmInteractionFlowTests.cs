@@ -15,7 +15,7 @@ public sealed class CrmInteractionFlowTests
 
     [Fact]
     [Trait("Category", "Quarantined")]
-    public async Task Crm_workspace_supports_account_profile_stakeholders_and_overdue_followups()
+    public async Task Crm_workspace_supports_account_profile_connections_and_overdue_followups()
     {
         var evidenceDirectory = @"C:\repositories\CanDoItAll\evidence\crm-hr\b04";
         Directory.CreateDirectory(evidenceDirectory);
@@ -64,20 +64,17 @@ public sealed class CrmInteractionFlowTests
         await page.GetByTestId("crmhr-account-save-button").ClickAsync();
         await page.WaitForSelectorAsync("text=CRM account profile saved.");
 
-        await page.GetByTestId("crmhr-crm-tab-stakeholders").ClickAsync();
-        await page.GetByTestId("crmhr-stakeholder-add").ClickAsync();
-        await page.GetByTestId("crmhr-stakeholder-party-0").SelectOptionAsync(new[]
-        {
-            new SelectOptionValue
-            {
-                Label = $"{contactName} ({PartyType.Person})"
-            }
-        });
-        await page.GetByTestId("crmhr-stakeholder-role-0").SelectOptionAsync(new[] { CrmAccountStakeholderRole.BillingContact.ToString() });
-        await page.GetByTestId("crmhr-stakeholder-primary-0").CheckAsync();
-        await page.GetByTestId("crmhr-stakeholder-notes-0").FillAsync("Primary invoicing contact");
-        await page.GetByTestId("crmhr-stakeholder-save-button").ClickAsync();
-        await page.WaitForSelectorAsync("text=Account stakeholders saved.");
+        await page.GetByTestId("crmhr-crm-tab-connections").ClickAsync();
+        await page.GetByTestId("crmhr-connection-add").ClickAsync();
+        await page.GetByTestId("crmhr-connection-party-0").ClickAsync();
+        await page.GetByTestId("crmhr-connection-party-picker-browser-search").FillAsync(contactName);
+        await page.GetByTestId("crmhr-connection-party-picker-browser").GetByText(contactName).ClickAsync();
+        await page.GetByTestId("crmhr-connection-party-picker-confirm").ClickAsync();
+        await page.GetByTestId("crmhr-connection-role-0").SelectOptionAsync(new[] { CrmAccountConnectionRole.BillingContact.ToString() });
+        await page.GetByTestId("crmhr-connection-primary-0").CheckAsync();
+        await page.GetByTestId("crmhr-connection-notes-0").FillAsync("Primary invoicing contact");
+        await page.GetByTestId("crmhr-connection-save-button").ClickAsync();
+        await page.WaitForSelectorAsync("text=Company connections and related projects saved.");
 
         await page.GetByTestId("crmhr-crm-tab-interactions").ClickAsync();
         await page.GetByLabel($"{contactName} ({PartyType.Person})", new() { Exact = true }).CheckAsync();

@@ -31,7 +31,7 @@ public enum CrmAccountRelationshipStage
     LostCustomer
 }
 
-public enum CrmAccountStakeholderRole
+public enum CrmAccountConnectionRole
 {
     PrimaryContact,
     Stakeholder,
@@ -230,16 +230,24 @@ public sealed class CrmAccountProfile
     public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
-public sealed class CrmAccountStakeholderLink
+public sealed class CrmAccountConnection
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid AccountPartyId { get; set; }
     public Guid RelatedPartyId { get; set; }
-    public CrmAccountStakeholderRole Role { get; set; } = CrmAccountStakeholderRole.Stakeholder;
+    public CrmAccountConnectionRole Role { get; set; } = CrmAccountConnectionRole.Stakeholder;
     public bool IsPrimary { get; set; }
     public string Notes { get; set; } = string.Empty;
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
+}
+
+public sealed class CrmAccountConnectionProjectLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid AccountConnectionId { get; set; }
+    public Guid ProjectId { get; set; }
+    public DateTimeOffset CreatedAtUtc { get; set; }
 }
 
 public sealed class Opportunity
@@ -476,9 +484,9 @@ internal sealed class CrmAccountProfileConfiguration : IEntityTypeConfiguration<
     }
 }
 
-internal sealed class CrmAccountStakeholderLinkConfiguration : IEntityTypeConfiguration<CrmAccountStakeholderLink>
+internal sealed class CrmAccountConnectionConfiguration : IEntityTypeConfiguration<CrmAccountConnection>
 {
-    public void Configure(EntityTypeBuilder<CrmAccountStakeholderLink> builder)
+    public void Configure(EntityTypeBuilder<CrmAccountConnection> builder)
     {
         builder.ToTable("CrmHr_AccountStakeholders");
         builder.HasKey(link => link.Id);
@@ -486,6 +494,26 @@ internal sealed class CrmAccountStakeholderLinkConfiguration : IEntityTypeConfig
         builder.Property(link => link.Notes).HasColumnType("TEXT");
         builder.HasIndex(link => new { link.AccountPartyId, link.RelatedPartyId, link.Role }).IsUnique();
         builder.HasIndex(link => link.RelatedPartyId);
+    }
+}
+
+internal sealed class CrmAccountConnectionProjectLinkConfiguration
+    : IEntityTypeConfiguration<CrmAccountConnectionProjectLink>
+{
+    public void Configure(EntityTypeBuilder<CrmAccountConnectionProjectLink> builder)
+    {
+        builder.ToTable("CrmHr_AccountConnectionProjects");
+        builder.HasKey(link => link.Id);
+        builder.HasIndex(link => new { link.AccountConnectionId, link.ProjectId }).IsUnique();
+        builder.HasIndex(link => new { link.ProjectId, link.AccountConnectionId });
+        builder.HasOne<CrmAccountConnection>()
+            .WithMany()
+            .HasForeignKey(link => link.AccountConnectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Project>()
+            .WithMany()
+            .HasForeignKey(link => link.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
