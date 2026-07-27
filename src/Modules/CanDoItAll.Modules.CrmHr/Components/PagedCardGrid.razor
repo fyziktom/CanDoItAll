@@ -3,8 +3,7 @@
 @if (Items.Count > 0)
 {
     <Grid Gap="LayoutGap.Medium"
-          ColumnsMd="2"
-          ColumnsXl="3"
+          ColumnTemplate="repeat(auto-fill,minmax(min(100%,20rem),30rem))"
           data-testid="@($"{TestIdPrefix}-grid")">
         @foreach (var item in VisibleItems)
         {

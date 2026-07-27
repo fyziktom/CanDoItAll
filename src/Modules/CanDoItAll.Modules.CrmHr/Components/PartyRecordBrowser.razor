@@ -10,6 +10,7 @@
                     LoadFailed="@LoadFailed"
                     PageSize="@PageSize"
                     ResultsScrollMode="@ResultsScrollMode"
+                    GridMode="@GridMode"
                     SearchPlaceholder="@SearchPlaceholder"
                     TagPlaceholder="Filter by all selected tags"
                     FilterAriaLabel="Party type"
@@ -54,6 +55,9 @@
 
     [Parameter]
     public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } = PagedRecordResultsScrollMode.Page;
+
+    [Parameter]
+    public PagedRecordGridMode GridMode { get; set; } = PagedRecordGridMode.Fluid;
 
     [Parameter]
     public string SearchPlaceholder { get; set; } = "Search name, code, or summary";

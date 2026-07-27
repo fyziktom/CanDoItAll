@@ -63,7 +63,7 @@
     else
     {
         <Grid Gap="LayoutGap.Medium"
-              ColumnTemplate="repeat(auto-fit,minmax(20rem,1fr))"
+              ColumnTemplate="repeat(auto-fill,minmax(min(100%,20rem),30rem))"
               data-testid="crmhr-staffing-request-grid">
             @foreach (var request in Requests)
             {

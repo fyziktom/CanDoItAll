@@ -6,6 +6,12 @@ public enum PagedRecordResultsScrollMode
     Bounded
 }
 
+public enum PagedRecordGridMode
+{
+    Fluid,
+    BoundedCatalog
+}
+
 public enum PagedRecordBadgeTone
 {
     Neutral,

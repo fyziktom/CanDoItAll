@@ -148,6 +148,27 @@ public sealed class PagedRecordBrowserTests : TestContext
     }
 
     [Fact]
+    public void Bounded_catalog_grid_keeps_sparse_cards_at_a_suitable_width()
+    {
+        var defaultCut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
+        var boundedCut = RenderBrowser(
+            LoaderWith(Option(AlphaId, "Alpha")),
+            gridMode: PagedRecordGridMode.BoundedCatalog);
+
+        var defaultGridStyle = defaultCut
+            .Find("[data-testid='records-results']")
+            .FirstElementChild!
+            .GetAttribute("style");
+        var boundedGridStyle = boundedCut
+            .Find("[data-testid='records-results']")
+            .FirstElementChild!
+            .GetAttribute("style");
+
+        Assert.Contains("repeat(auto-fit,minmax(16rem,1fr))", defaultGridStyle);
+        Assert.Contains("repeat(auto-fill,minmax(min(100%,17rem),24rem))", boundedGridStyle);
+    }
+
+    [Fact]
     public void Filter_toolbar_keeps_fields_flexible_and_actions_intrinsic()
     {
         var cut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
@@ -394,7 +415,8 @@ public sealed class PagedRecordBrowserTests : TestContext
         PagedRecordLoader<Guid, RecordScope> loader,
         Action<Guid>? selectionChanged = null,
         Action<Exception>? loadFailed = null,
-        PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page)
+        PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page,
+        PagedRecordGridMode gridMode = PagedRecordGridMode.Fluid)
     {
         return RenderComponent<PagedRecordBrowser<Guid, RecordScope>>(parameters =>
         {
@@ -405,6 +427,7 @@ public sealed class PagedRecordBrowserTests : TestContext
                 .Add(component => component.TagSuggestions, ["priority", "partner"])
                 .Add(component => component.PageSize, 2)
                 .Add(component => component.ResultsScrollMode, resultsScrollMode)
+                .Add(component => component.GridMode, gridMode)
                 .Add(component => component.DataTestId, "records");
 
             if (selectionChanged is not null)

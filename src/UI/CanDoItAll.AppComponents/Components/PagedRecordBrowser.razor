@@ -105,7 +105,7 @@
         <div class="@ResultsClass"
              data-testid="@($"{DataTestId}-results")">
             <Grid Gap="LayoutGap.Medium"
-                  ColumnTemplate="@ColumnTemplate"
+                  ColumnTemplate="@ResolvedColumnTemplate"
                   Class="w-full">
                 @foreach (var option in page.Items)
                 {
@@ -346,6 +346,9 @@
     public string ColumnTemplate { get; set; } = "repeat(auto-fit,minmax(16rem,1fr))";
 
     [Parameter]
+    public PagedRecordGridMode GridMode { get; set; } = PagedRecordGridMode.Fluid;
+
+    [Parameter]
     public RenderFragment<PagedRecordItemTemplateContext<TKey>>? ItemTemplate { get; set; }
 
     [Parameter]
@@ -422,6 +425,16 @@
             nameof(ResultsScrollMode),
             ResultsScrollMode,
             "Unknown paged record results scroll mode.")
+    };
+
+    private string ResolvedColumnTemplate => GridMode switch
+    {
+        PagedRecordGridMode.Fluid => ColumnTemplate,
+        PagedRecordGridMode.BoundedCatalog => "repeat(auto-fill,minmax(min(100%,17rem),24rem))",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(GridMode),
+            GridMode,
+            "Unknown paged record grid mode.")
     };
 
     protected override async Task OnInitializedAsync()
