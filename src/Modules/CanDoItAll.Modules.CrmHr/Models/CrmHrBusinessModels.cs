@@ -147,7 +147,8 @@ public enum RecruitmentInterviewOutcome
 public enum LifecycleTaskKind
 {
     Onboarding,
-    Offboarding
+    Offboarding,
+    Training
 }
 
 public enum LifecycleTaskStatus

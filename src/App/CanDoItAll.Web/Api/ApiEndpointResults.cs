@@ -81,6 +81,20 @@ internal static class ApiEndpointResults
         return Results.Conflict(MapErrors([Error.Failure(message, code)]));
     }
 
+    public static IResult Unauthorized(string message, string code)
+    {
+        return Results.Json(
+            MapErrors([Error.Validation(message, code)]),
+            statusCode: StatusCodes.Status401Unauthorized);
+    }
+
+    public static IResult Forbidden(string message, string code)
+    {
+        return Results.Json(
+            MapErrors([Error.Validation(message, code)]),
+            statusCode: StatusCodes.Status403Forbidden);
+    }
+
     public static IResult FromException(Exception exception)
     {
         return Results.BadRequest(MapErrors([Error.Failure(exception.Message, "api.request-failed")]));

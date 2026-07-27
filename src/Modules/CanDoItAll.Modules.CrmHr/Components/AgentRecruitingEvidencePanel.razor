@@ -1,0 +1,1044 @@
+@using System.Text
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using Microsoft.Extensions.Logging
+@inject IAgentRecruitingEvidenceService EvidenceService
+@inject IAgentFrameworkWorkspaceService AgentWorkspaceService
+@inject NotificationService NotificationService
+@inject ILogger<AgentRecruitingEvidencePanel> Logger
+
+<FormSection Title="Assessment evidence"
+             Icon="fact_check"
+             Description="Use append-only agent work, workflow, and process evidence to classify the candidate, request training, and recheck without changing application stage or activating the agent.">
+    @if (!CandidateAgentId.HasValue)
+    {
+        <EmptyState Eyebrow="Technical candidate required"
+                    Title="No bound AgentFramework candidate"
+                    Description="Select a bound AI-agent party to use agent work, workflow, or process evidence. Human interviews remain available on the Interviews tab." />
+    }
+    else if (isLoading)
+    {
+        <LoadingState Eyebrow="Assessment evidence"
+                      Title="Loading candidate readiness"
+                      Description="The current technical configuration and append-only assessment history are being loaded." />
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger">
+            <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                <TextBlock TextStyle="TextStyle.Body2" Value="@loadError" />
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Retry"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="ReloadAsync"
+                            data-testid="crmhr-assessment-retry" />
+                </Cluster>
+            </Stack>
+        </Alert>
+    }
+    else if (candidate is null || readiness is null)
+    {
+        <EmptyState Eyebrow="Candidate unavailable"
+                    Title="The technical agent could not be resolved"
+                    Description="Refresh the CRM-HR agent projection and confirm that the party is still bound to a workspace agent." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <div class="min-w-0">
+                    <p class="cda-eyebrow">Current technical candidate</p>
+                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@candidate.Name</h3>
+                    <p class="mt-1 text-sm text-slate-600">@FormatValue(candidate.RoleTitle) / configuration @readiness.CurrentConfigurationVersion</p>
+                </div>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="New assessment"
+                            Icon="add_task"
+                            Click="OpenCreateDialog"
+                            data-testid="crmhr-assessment-create" />
+                    <Button Text="Attach result"
+                            Icon="attach_file"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(interviews.Count == 0)"
+                            Click="OpenAttachDialog"
+                            data-testid="crmhr-assessment-attach" />
+                    <Button Text="Refresh"
+                            Icon="refresh"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="ReloadAsync"
+                            data-testid="crmhr-assessment-refresh" />
+                </Cluster>
+            </Split>
+
+            <CompactStatStrip>
+                <CompactStat Label="readiness"
+                             Value="@FormatReadiness(readiness.Status)"
+                             TooltipText="Derived from the latest current-version attempt, complete evidence, and a qualifying human review."
+                             Tone="@ResolveReadinessTone(readiness.Status)" />
+                <CompactStat Label="assessments"
+                             Value="@interviews.Count.ToString()"
+                             TooltipText="Assessments correlated to this recruitment application." />
+                <CompactStat Label="attempts"
+                             Value="@AttemptCount.ToString()"
+                             TooltipText="Append-only agent, workflow, or process result attachments."
+                             Tone="info" />
+                <CompactStat Label="latest score"
+                             Value="@FormatLatestScore()"
+                             TooltipText="Latest recorded automated score; it is evidence, not the HR decision." />
+                <CompactStat Label="next step"
+                             Value="@FormatLatestNextStep()"
+                             TooltipText="Latest typed recommendation. A person must authorize the actual decision."
+                             Tone="@ResolveNextStepTone(LatestAnalysis?.ProposedNextStep)" />
+            </CompactStatStrip>
+
+            <Alert AlertStyle="AlertStyle.Info">
+                Automated analysis and readiness are evidence only. They never change recruitment stage, convert a workforce profile, or activate the technical agent.
+            </Alert>
+
+            <Grid Gap="LayoutGap.Large"
+                  ColumnTemplateXl="minmax(0,1.65fr) minmax(20rem,0.75fr)">
+                <SurfaceCard>
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Center"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <div>
+                            <p class="cda-eyebrow">Assessment cycles</p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-950">@interviews.Count assessment(s)</h3>
+                        </div>
+                        <StatusBadge Tone="neutral" Text="Append-only evidence" />
+                    </Split>
+
+                    @if (interviews.Count == 0)
+                    {
+                        <div class="mt-4">
+                            <EmptyState Eyebrow="No assessment evidence"
+                                        Title="Create the first assessment"
+                                        Description="Define the purpose, then attach a terminal agent work, workflow, or process result. Missing hashes or evaluator provenance remain explicitly incomplete." />
+                        </div>
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" Class="mt-4">
+                            @foreach (var interview in interviews)
+                            {
+                                <PanelCard @key="interview.Id"
+                                           data-testid="crmhr-assessment-cycle">
+                                    <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                                        <Split Breakpoint="LayoutBreakpoint.None"
+                                               Gap="LayoutGap.Small"
+                                               AlignItems="AlignItems.Start"
+                                               JustifyContent="JustifyContent.SpaceBetween"
+                                               Wrap="FlexWrap.Wrap">
+                                            <div class="min-w-0">
+                                                <p class="text-base font-semibold text-slate-950">@interview.Purpose</p>
+                                                <p class="mt-1 text-sm text-slate-600">
+                                                    @interview.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") /
+                                                    configuration @interview.CandidateConfigurationVersion
+                                                </p>
+                                            </div>
+                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                <StatusBadge Tone="info" Text="@($"{interview.Attempts.Count} attempt(s)")" />
+                                                <StatusBadge Tone="neutral" Text="@($"{interview.Reviews.Count} review(s)")" />
+                                            </Cluster>
+                                        </Split>
+
+                                        @if (interview.Attempts.Count == 0)
+                                        {
+                                            <Alert AlertStyle="AlertStyle.Warning">
+                                                This assessment has no attached result yet.
+                                            </Alert>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var attempt in interview.Attempts.OrderByDescending(item => item.Sequence))
+                                            {
+                                                var latestReview = ResolveLatestReview(interview, attempt.Id);
+                                                <SurfaceCard Soft="true"
+                                                             @key="attempt.Id"
+                                                             data-testid="crmhr-assessment-attempt">
+                                                    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                                                        <Split Breakpoint="LayoutBreakpoint.None"
+                                                               Gap="LayoutGap.Small"
+                                                               AlignItems="AlignItems.Center"
+                                                               JustifyContent="JustifyContent.SpaceBetween"
+                                                               Wrap="FlexWrap.Wrap">
+                                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                                <StatusBadge Tone="primary" Text="@($"Attempt {attempt.Sequence}")" />
+                                                                <StatusBadge Tone="neutral" Text="@FormatTargetKind(attempt.Target.Kind)" />
+                                                                <StatusBadge Tone="@ResolveCompletenessTone(attempt.Completeness)"
+                                                                             Text="@FormatCompleteness(attempt.Completeness)" />
+                                                                @if (attempt.Analysis is { } attemptAnalysis)
+                                                                {
+                                                                    <StatusBadge Tone="@ResolveClassificationTone(attemptAnalysis.Classification)"
+                                                                                 Text="@FormatClassification(attemptAnalysis.Classification)" />
+                                                                }
+                                                            </Cluster>
+                                                            <SmallText Text="@attempt.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")" />
+                                                        </Split>
+
+                                                        <Grid Gap="LayoutGap.Small" ColumnsMd="4">
+                                                            <CompactStat Label="target"
+                                                                         Value="@attempt.Target.Id.ToString("D")"
+                                                                         TooltipText="Canonical execution target ID." />
+                                                            <CompactStat Label="score"
+                                                                         Value="@(attempt.AutomatedEvaluation?.Score?.ToString("0.#") ?? "Not scored")"
+                                                                         TooltipText="Automated evaluation score." />
+                                                            <CompactStat Label="review"
+                                                                         Value="@(latestReview is null ? "Pending" : latestReview.Decision.ToString())"
+                                                                         TooltipText="Latest human review for this attempt." />
+                                                            <CompactStat Label="next"
+                                                                         Value="@(attempt.Analysis is null ? "Not proposed" : FormatNextStep(attempt.Analysis.ProposedNextStep))"
+                                                                         TooltipText="Recorded recommendation only." />
+                                                        </Grid>
+
+                                                        @if (attempt.Analysis is { } analysis)
+                                                        {
+                                                            <p class="text-sm leading-6 text-slate-700">@analysis.Summary</p>
+                                                            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                                                @foreach (var strength in analysis.Strengths.Take(3))
+                                                                {
+                                                                    <StatusBadge Tone="success" Text="@strength" />
+                                                                }
+                                                                @foreach (var gap in analysis.Gaps.Take(3))
+                                                                {
+                                                                    <StatusBadge Tone="warning" Text="@gap" />
+                                                                }
+                                                            </Cluster>
+                                                        }
+
+                                                        @if (attempt.MissingEvidence.Count > 0)
+                                                        {
+                                                            <Alert AlertStyle="AlertStyle.Warning">
+                                                                Missing evidence: @string.Join(", ", attempt.MissingEvidence).
+                                                            </Alert>
+                                                        }
+
+                                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                                            @if (latestReview is null)
+                                                            {
+                                                                <StatusBadge Tone="warning"
+                                                                             Text="Protected human review required" />
+                                                            }
+                                                            @if (attempt.Analysis?.ProposedNextStep == AgentRecruitingProposedNextStep.AssignTraining)
+                                                            {
+                                                                <Button Text="Create training task"
+                                                                        ButtonStyle="ButtonStyle.Light"
+                                                                        Size="ButtonSize.Small"
+                                                                        Click="@(() => RequestTraining.InvokeAsync(
+                                                                            new RecruitmentTrainingRequest(
+                                                                                interview.Id,
+                                                                                attempt.Id,
+                                                                                attempt.Analysis.Classification,
+                                                                                attempt.Analysis.Gaps)))"
+                                                                        data-testid="crmhr-assessment-training" />
+                                                            }
+                                                            @if (attempt.Analysis?.ProposedNextStep is
+                                                                AgentRecruitingProposedNextStep.Reassess or
+                                                                AgentRecruitingProposedNextStep.AssignTraining)
+                                                            {
+                                                                <Button Text="Start recheck"
+                                                                        ButtonStyle="ButtonStyle.Light"
+                                                                        Size="ButtonSize.Small"
+                                                                        Click="@(() => OpenRecheckDialog(interview, attempt))"
+                                                                        data-testid="crmhr-assessment-recheck" />
+                                                            }
+                                                        </Cluster>
+                                                        @if (latestReview is null)
+                                                        {
+                                                            <SmallText Text="Human decisions are accepted only through the authenticated recruiting API; this page cannot self-assert reviewer identity or authorization." />
+                                                        }
+                                                    </Stack>
+                                                </SurfaceCard>
+                                            }
+                                        }
+                                    </Stack>
+                                </PanelCard>
+                            }
+                        </Stack>
+                    }
+                </SurfaceCard>
+
+                <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Current readiness</p>
+                        <h3 class="mt-1 text-lg font-semibold text-slate-950">@FormatReadiness(readiness.Status)</h3>
+                        <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch" Class="mt-4">
+                            @foreach (var reason in readiness.Reasons)
+                            {
+                                <p class="text-sm leading-6 text-slate-700">@reason</p>
+                            }
+                        </Stack>
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true">
+                        <p class="cda-eyebrow">Authority boundary</p>
+                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Separate activation required</h3>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                            Even a ready assessment leaves the agent lifecycle unchanged. Activation remains a separately authorized AgentFramework command.
+                        </p>
+                        <StatusBadge Tone="warning"
+                                     Text="Never activates automatically"
+                                     Class="mt-3" />
+                    </SurfaceCard>
+                </Stack>
+            </Grid>
+        </Stack>
+    }
+</FormSection>
+
+@if (isCreateDialogOpen && candidate is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Recruiting assessment"
+            Title="New assessment"
+            Subtitle="Create an application-correlated, configuration-fenced evidence cycle."
+            Size="ModalSize.Medium"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="crmhr-assessment-create-dialog"
+            OnClose="CloseCreateDialog">
+        <ChildContent>
+            <FormStack>
+                <FormField Text="Candidate">
+                    <InputText @bind-Value="createCandidateName" class="cda-input" disabled />
+                </FormField>
+                <FormField Text="Purpose">
+                    <InputTextArea @bind-Value="createPurpose"
+                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                   data-testid="crmhr-assessment-purpose" />
+                </FormField>
+                <Alert AlertStyle="AlertStyle.Info">
+                    This assessment is pinned to configuration @AgentConfigurationVersion.Create(candidate). Changing the agent later makes old evidence historical rather than silently current.
+                </Alert>
+            </FormStack>
+        </ChildContent>
+        <Footer>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Cancel"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="CloseCreateDialog" />
+                <Button Text="Create assessment"
+                        Disabled="@isSaving"
+                        Click="CreateAssessmentAsync"
+                        data-testid="crmhr-assessment-create-save" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (isAttachDialogOpen && candidate is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Assessment evidence"
+            Title="Attach and classify result"
+            Subtitle="Associate one terminal execution target and record a typed recommendation. Missing technical provenance remains incomplete."
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="crmhr-assessment-attach-dialog"
+            OnClose="CloseAttachDialog">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
+                    <FormField Text="Assessment">
+                        <InputSelect @bind-Value="attemptDraft.InterviewId"
+                                     class="cda-input"
+                                     data-testid="crmhr-assessment-interview">
+                            @foreach (var interview in interviews)
+                            {
+                                <option value="@interview.Id">@interview.Purpose</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <FormField Text="Target kind">
+                        <InputSelect @bind-Value="attemptDraft.TargetKind"
+                                     class="cda-input"
+                                     data-testid="crmhr-assessment-target-kind">
+                            @foreach (var targetKind in Enum.GetValues<AgentRecruitingTargetKind>())
+                            {
+                                <option value="@targetKind">@FormatTargetKind(targetKind)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <FormField Text="Target run ID">
+                        <InputText @bind-Value="attemptDraft.TargetId"
+                                   class="cda-input"
+                                   placeholder="00000000-0000-0000-0000-000000000000"
+                                   data-testid="crmhr-assessment-target-id" />
+                    </FormField>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
+                    <FormField Text="Challenge key">
+                        <InputText @bind-Value="attemptDraft.ChallengeKey"
+                                   class="cda-input"
+                                   data-testid="crmhr-assessment-challenge-key" />
+                    </FormField>
+                    <FormField Text="Challenge version">
+                        <InputText @bind-Value="attemptDraft.ChallengeVersion"
+                                   class="cda-input"
+                                   data-testid="crmhr-assessment-challenge-version" />
+                    </FormField>
+                    <FormField Text="Rubric version">
+                        <InputText @bind-Value="attemptDraft.RubricVersion"
+                                   class="cda-input"
+                                   data-testid="crmhr-assessment-rubric-version" />
+                    </FormField>
+                </Grid>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Typed analysis</p>
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
+                        <FormField Text="Classification">
+                            <InputSelect @bind-Value="attemptDraft.Classification"
+                                         class="cda-input"
+                                         data-testid="crmhr-assessment-classification">
+                                @foreach (var classification in Enum.GetValues<AgentRecruitingAssessmentClassification>())
+                                {
+                                    <option value="@classification">@FormatClassification(classification)</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <FormField Text="Confidence (0-1)">
+                            <InputNumber @bind-Value="attemptDraft.Confidence"
+                                         class="cda-input"
+                                         min="0"
+                                         max="1"
+                                         step="0.01"
+                                         data-testid="crmhr-assessment-confidence" />
+                        </FormField>
+                        <FormField Text="Proposed next step">
+                            <InputSelect @bind-Value="attemptDraft.ProposedNextStep"
+                                         class="cda-input"
+                                         data-testid="crmhr-assessment-next-step">
+                                @foreach (var nextStep in Enum.GetValues<AgentRecruitingProposedNextStep>())
+                                {
+                                    <option value="@nextStep">@FormatNextStep(nextStep)</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                    </Grid>
+                    <FormField Text="Analysis summary" Class="mt-4">
+                        <InputTextArea @bind-Value="attemptDraft.AnalysisSummary"
+                                       class="cda-input cda-input--textarea min-h-[6rem]"
+                                       data-testid="crmhr-assessment-analysis-summary" />
+                    </FormField>
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                        <FormField Text="Strengths (one per line)">
+                            <InputTextArea @bind-Value="attemptDraft.Strengths"
+                                           class="cda-input cda-input--textarea min-h-[6rem]"
+                                           data-testid="crmhr-assessment-strengths" />
+                        </FormField>
+                        <FormField Text="Gaps (one per line)">
+                            <InputTextArea @bind-Value="attemptDraft.Gaps"
+                                           class="cda-input cda-input--textarea min-h-[6rem]"
+                                           data-testid="crmhr-assessment-gaps" />
+                        </FormField>
+                    </Grid>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Automated evaluator provenance</p>
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
+                        <FormField Text="Decision">
+                            <InputSelect @bind-Value="attemptDraft.AutomatedDecision"
+                                         class="cda-input">
+                                @foreach (var decision in Enum.GetValues<AgentRecruitingAutomatedDecision>())
+                                {
+                                    <option value="@decision">@decision</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <FormField Text="Score (0-100)">
+                            <InputNumber @bind-Value="attemptDraft.Score"
+                                         class="cda-input"
+                                         min="0"
+                                         max="100" />
+                        </FormField>
+                        <FormField Text="Evaluator agent">
+                            <InputSelect @bind-Value="attemptDraft.EvaluatorAgentId"
+                                         class="cda-input">
+                                <option value="">Not supplied</option>
+                                @foreach (var option in evaluatorAgents)
+                                {
+                                    <option value="@option.Id">@option.Name</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                        <FormField Text="Provider">
+                            <InputSelect @bind-Value="attemptDraft.ProviderProfileId"
+                                         class="cda-input">
+                                <option value="">Not supplied</option>
+                                @foreach (var provider in providers)
+                                {
+                                    <option value="@provider.Id">@provider.Name</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                    </Grid>
+                    <FormField Text="Model" Class="mt-4">
+                        <InputText @bind-Value="attemptDraft.Model"
+                                   class="cda-input"
+                                   placeholder="Evaluator model name" />
+                    </FormField>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Evidence integrity</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                        Hashes and structured-output provenance are optional for attachment, but readiness stays incomplete until all required evidence is present.
+                    </p>
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                        <FormField Text="Input SHA-256">
+                            <InputText @bind-Value="attemptDraft.InputHash" class="cda-input" />
+                        </FormField>
+                        <FormField Text="Output SHA-256">
+                            <InputText @bind-Value="attemptDraft.OutputHash" class="cda-input" />
+                        </FormField>
+                        <FormField Text="Structured output contract">
+                            <InputText @bind-Value="attemptDraft.StructuredOutputContractKey" class="cda-input" />
+                        </FormField>
+                        <FormField Text="Schema SHA-256">
+                            <InputText @bind-Value="attemptDraft.StructuredOutputSchemaHash" class="cda-input" />
+                        </FormField>
+                    </Grid>
+                </SurfaceCard>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <SmallText Text="The target is validated in the current workspace before the append succeeds." />
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="CloseAttachDialog" />
+                    <Button Text="Attach result"
+                            Disabled="@isSaving"
+                            Click="AttachResultAsync"
+                            data-testid="crmhr-assessment-attach-save" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private AgentDefinition? candidate;
+    private AgentRecruitingCandidateReadiness? readiness;
+    private IReadOnlyList<AgentRecruitingInterview> interviews = [];
+    private IReadOnlyList<AgentDefinition> evaluatorAgents = [];
+    private IReadOnlyList<ProviderProfile> providers = [];
+    private LoadIdentity? loadedIdentity;
+    private string createCandidateName = string.Empty;
+    private string createPurpose = string.Empty;
+    private string loadError = string.Empty;
+    private AttemptDraft attemptDraft = new();
+    private long loadGeneration;
+    private bool isLoading;
+    private bool isSaving;
+    private bool isCreateDialogOpen;
+    private bool isAttachDialogOpen;
+
+    [Parameter]
+    public Guid? CandidateAgentId { get; set; }
+
+    [Parameter]
+    public Guid? RecruitmentApplicationId { get; set; }
+
+    [Parameter]
+    public Guid? ProjectId { get; set; }
+
+    [Parameter]
+    public EventCallback<RecruitmentTrainingRequest> RequestTraining { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentRecruitingCandidateReadiness?> ReadinessChanged { get; set; }
+
+    private int AttemptCount => interviews.Sum(item => item.Attempts.Count);
+
+    private AgentRecruitingAssessmentAnalysis? LatestAnalysis => interviews
+        .SelectMany(item => item.Attempts)
+        .OrderByDescending(item => item.CreatedAtUtc)
+        .Select(item => item.Analysis)
+        .FirstOrDefault(item => item is not null);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var identity = new LoadIdentity(CandidateAgentId, RecruitmentApplicationId);
+        if (loadedIdentity == identity)
+        {
+            return;
+        }
+
+        loadedIdentity = identity;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        var generation = Interlocked.Increment(ref loadGeneration);
+        var identity = new LoadIdentity(
+            CandidateAgentId,
+            RecruitmentApplicationId);
+        loadError = string.Empty;
+        candidate = null;
+        readiness = null;
+        interviews = [];
+        evaluatorAgents = [];
+        providers = [];
+        await ReadinessChanged.InvokeAsync(null);
+        if (!IsCurrentLoad(generation, identity))
+        {
+            return;
+        }
+
+        if (!identity.CandidateAgentId.HasValue)
+        {
+            isLoading = false;
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var agentsTask = AgentWorkspaceService.ListAgentsAsync();
+            var providersTask = AgentWorkspaceService.ListProvidersAsync();
+            var readinessTask = EvidenceService.GetCandidateReadinessAsync(
+                identity.CandidateAgentId.Value,
+                identity.RecruitmentApplicationId);
+            var interviewsTask = EvidenceService.ListCandidateInterviewsAsync(
+                identity.CandidateAgentId.Value,
+                identity.RecruitmentApplicationId);
+            await Task.WhenAll(agentsTask, providersTask, readinessTask, interviewsTask);
+            if (!IsCurrentLoad(generation, identity))
+            {
+                return;
+            }
+
+            var agents = await agentsTask;
+            candidate = agents.FirstOrDefault(
+                item => item.Id == identity.CandidateAgentId.Value);
+            evaluatorAgents = agents
+                .Where(item => !item.IsTemplate)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            providers = (await providersTask)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            readiness = await readinessTask;
+            interviews = await interviewsTask;
+            await ReadinessChanged.InvokeAsync(readiness);
+        }
+        catch when (!IsCurrentLoad(generation, identity))
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Failed to load recruiting evidence for candidate agent {CandidateAgentId} and application {ApplicationId}.",
+                identity.CandidateAgentId,
+                identity.RecruitmentApplicationId);
+            loadError = exception is AgentRecruitingEvidenceException evidenceException
+                ? evidenceException.Message
+                : "Assessment evidence could not be loaded. Refresh the workspace and try again.";
+        }
+        finally
+        {
+            if (IsCurrentLoad(generation, identity))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private bool IsCurrentLoad(long generation, LoadIdentity identity)
+    {
+        return generation == Volatile.Read(ref loadGeneration) &&
+               loadedIdentity == identity;
+    }
+
+    private Task OpenCreateDialog()
+    {
+        createCandidateName = candidate?.Name ?? string.Empty;
+        createPurpose = string.Empty;
+        isCreateDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseCreateDialog()
+    {
+        isCreateDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenRecheckDialog(
+        AgentRecruitingInterview interview,
+        AgentRecruitingAttempt attempt)
+    {
+        createCandidateName = candidate?.Name ?? string.Empty;
+        createPurpose =
+            $"Recheck after assessment {interview.Id:D}, attempt {attempt.Id:D}: " +
+            (attempt.Analysis?.Summary ?? interview.Purpose);
+        isCreateDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task CreateAssessmentAsync()
+    {
+        if (candidate is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(createPurpose))
+        {
+            NotificationService.Error("Assessment purpose required", "Describe what this assessment must prove.");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            await EvidenceService.CreateInterviewAsync(
+                new CreateAgentRecruitingInterviewCommand(
+                    candidate.Id,
+                    AgentConfigurationVersion.Create(candidate),
+                    createPurpose,
+                    RecruitmentApplicationId,
+                    ProjectId));
+            isCreateDialogOpen = false;
+            NotificationService.Success("Assessment created", "The configuration-fenced assessment is ready for evidence.");
+            await ReloadAsync();
+        }
+        catch (Exception exception)
+        {
+            HandleSaveFailure(exception, "The assessment could not be created.");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private Task OpenAttachDialog()
+    {
+        var latestInterview = interviews.FirstOrDefault();
+        if (latestInterview is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        attemptDraft = new AttemptDraft
+        {
+            InterviewId = latestInterview.Id
+        };
+        isAttachDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseAttachDialog()
+    {
+        isAttachDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task AttachResultAsync()
+    {
+        if (!attemptDraft.InterviewId.HasValue ||
+            !Guid.TryParse(attemptDraft.TargetId, out var targetId) ||
+            targetId == Guid.Empty)
+        {
+            NotificationService.Error("Execution target required", "Choose an assessment and enter one valid target run ID.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(attemptDraft.AnalysisSummary))
+        {
+            NotificationService.Error("Analysis summary required", "Record the evidence-grounded classification summary.");
+            return;
+        }
+
+        if (HasPartialEvaluatorProvenance(attemptDraft))
+        {
+            NotificationService.Error(
+                "Evaluator provenance incomplete",
+                "Evaluator agent, provider, and model must either all be supplied or all remain empty.");
+            return;
+        }
+
+        var strengths = SplitLines(attemptDraft.Strengths);
+        var gaps = SplitLines(attemptDraft.Gaps);
+        var automatedEvaluation = HasCompleteEvaluatorProvenance(attemptDraft)
+            ? new AgentRecruitingAutomatedEvaluation(
+                attemptDraft.AutomatedDecision,
+                attemptDraft.Score,
+                attemptDraft.EvaluatorAgentId,
+                attemptDraft.ProviderProfileId,
+                attemptDraft.Model,
+                attemptDraft.RubricVersion,
+                strengths.Concat(gaps).ToArray(),
+                DateTimeOffset.UtcNow)
+            : null;
+        var analysis = new AgentRecruitingAssessmentAnalysis(
+            attemptDraft.Classification,
+            attemptDraft.Confidence,
+            attemptDraft.AnalysisSummary,
+            attemptDraft.ProposedNextStep,
+            strengths,
+            gaps);
+
+        isSaving = true;
+        try
+        {
+            await EvidenceService.AppendAttemptAsync(
+                attemptDraft.InterviewId.Value,
+                new AppendAgentRecruitingAttemptCommand(
+                    new AgentRecruitingExecutionTarget(attemptDraft.TargetKind, targetId),
+                    attemptDraft.ChallengeKey,
+                    attemptDraft.ChallengeVersion,
+                    attemptDraft.RubricVersion,
+                    attemptDraft.InputHash,
+                    attemptDraft.OutputHash,
+                    attemptDraft.StructuredOutputContractKey,
+                    attemptDraft.StructuredOutputSchemaHash,
+                    string.IsNullOrWhiteSpace(attemptDraft.StructuredOutputContractKey)
+                        ? string.Empty
+                        : "succeeded",
+                    automatedEvaluation,
+                    analysis));
+            isAttachDialogOpen = false;
+            NotificationService.Success("Result attached", "The target and typed analysis were appended to the assessment.");
+            await ReloadAsync();
+        }
+        catch (Exception exception)
+        {
+            HandleSaveFailure(exception, "The result could not be attached.");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void HandleSaveFailure(Exception exception, string fallbackMessage)
+    {
+        Logger.LogError(
+            exception,
+            "Recruiting evidence mutation failed for candidate agent {CandidateAgentId} and application {ApplicationId}.",
+            CandidateAgentId,
+            RecruitmentApplicationId);
+        NotificationService.Error(
+            "Assessment update failed",
+            exception is AgentRecruitingEvidenceException evidenceException
+                ? evidenceException.Message
+                : fallbackMessage);
+    }
+
+    private static AgentRecruitingHumanReview? ResolveLatestReview(
+        AgentRecruitingInterview interview,
+        Guid attemptId)
+    {
+        return interview.Reviews
+            .Where(item => item.AttemptId == attemptId)
+            .OrderByDescending(item => item.ReviewedAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static bool HasCompleteEvaluatorProvenance(AttemptDraft draft)
+    {
+        return draft.EvaluatorAgentId.HasValue &&
+               draft.ProviderProfileId.HasValue &&
+               !string.IsNullOrWhiteSpace(draft.Model);
+    }
+
+    private static bool HasPartialEvaluatorProvenance(AttemptDraft draft)
+    {
+        var supplied = new[]
+        {
+            draft.EvaluatorAgentId.HasValue,
+            draft.ProviderProfileId.HasValue,
+            !string.IsNullOrWhiteSpace(draft.Model)
+        };
+        return supplied.Any(item => item) && supplied.Any(item => !item);
+    }
+
+    private string FormatLatestScore()
+    {
+        var score = interviews
+            .SelectMany(item => item.Attempts)
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .Select(item => item.AutomatedEvaluation?.Score)
+            .FirstOrDefault(item => item.HasValue);
+        return score.HasValue ? $"{score.Value:0.#}/100" : "Not scored";
+    }
+
+    private string FormatLatestNextStep()
+    {
+        return LatestAnalysis is null
+            ? "Create assessment"
+            : FormatNextStep(LatestAnalysis.ProposedNextStep);
+    }
+
+    private static IReadOnlyList<string> SplitLines(string value)
+    {
+        return value
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string FormatValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+    }
+
+    private static string FormatReadiness(AgentRecruitingReadinessStatus status)
+    {
+        return status switch
+        {
+            AgentRecruitingReadinessStatus.NoInterviews => "No assessments",
+            AgentRecruitingReadinessStatus.IncompleteEvidence => "Incomplete evidence",
+            AgentRecruitingReadinessStatus.AwaitingHumanApproval => "Needs human review",
+            _ => SplitPascalCase(status.ToString())
+        };
+    }
+
+    private static string FormatTargetKind(AgentRecruitingTargetKind targetKind)
+    {
+        return targetKind switch
+        {
+            AgentRecruitingTargetKind.AgentExecutionRun => "Agent work",
+            AgentRecruitingTargetKind.WorkflowRun => "Workflow",
+            AgentRecruitingTargetKind.ProcessRun => "Process",
+            _ => targetKind.ToString()
+        };
+    }
+
+    private static string FormatClassification(AgentRecruitingAssessmentClassification classification)
+    {
+        return SplitPascalCase(classification.ToString());
+    }
+
+    private static string FormatNextStep(AgentRecruitingProposedNextStep nextStep)
+    {
+        return nextStep switch
+        {
+            AgentRecruitingProposedNextStep.RequestHumanReview => "Human review",
+            AgentRecruitingProposedNextStep.AssignTraining => "Training",
+            AgentRecruitingProposedNextStep.Reassess => "Recheck",
+            _ => SplitPascalCase(nextStep.ToString())
+        };
+    }
+
+    private static string FormatCompleteness(AgentRecruitingEvidenceCompleteness completeness)
+    {
+        return completeness == AgentRecruitingEvidenceCompleteness.Complete
+            ? "Evidence complete"
+            : "Evidence incomplete";
+    }
+
+    private static string SplitPascalCase(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        var builder = new StringBuilder(value.Length + 8);
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+            if (index > 0 && char.IsUpper(character) && !char.IsUpper(value[index - 1]))
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(character);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ResolveReadinessTone(AgentRecruitingReadinessStatus status)
+    {
+        return status switch
+        {
+            AgentRecruitingReadinessStatus.Ready => "success",
+            AgentRecruitingReadinessStatus.Rejected => "danger",
+            AgentRecruitingReadinessStatus.AwaitingHumanApproval => "warning",
+            AgentRecruitingReadinessStatus.IncompleteEvidence => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveNextStepTone(AgentRecruitingProposedNextStep? nextStep)
+    {
+        return nextStep switch
+        {
+            AgentRecruitingProposedNextStep.Advance => "success",
+            AgentRecruitingProposedNextStep.Reject => "danger",
+            AgentRecruitingProposedNextStep.AssignTraining => "warning",
+            AgentRecruitingProposedNextStep.Reassess => "info",
+            AgentRecruitingProposedNextStep.Hold => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveCompletenessTone(AgentRecruitingEvidenceCompleteness completeness)
+    {
+        return completeness == AgentRecruitingEvidenceCompleteness.Complete ? "success" : "warning";
+    }
+
+    private static string ResolveClassificationTone(AgentRecruitingAssessmentClassification classification)
+    {
+        return classification switch
+        {
+            AgentRecruitingAssessmentClassification.StrongFit => "success",
+            AgentRecruitingAssessmentClassification.Suitable => "info",
+            AgentRecruitingAssessmentClassification.NeedsTraining => "warning",
+            AgentRecruitingAssessmentClassification.NotSuitable => "danger",
+            _ => "neutral"
+        };
+    }
+
+    private sealed class AttemptDraft
+    {
+        public Guid? InterviewId { get; set; }
+        public AgentRecruitingTargetKind TargetKind { get; set; } = AgentRecruitingTargetKind.AgentExecutionRun;
+        public string TargetId { get; set; } = string.Empty;
+        public string ChallengeKey { get; set; } = "crm-hr-assessment";
+        public string ChallengeVersion { get; set; } = "v1";
+        public string RubricVersion { get; set; } = "v1";
+        public AgentRecruitingAssessmentClassification Classification { get; set; } = AgentRecruitingAssessmentClassification.Inconclusive;
+        public decimal Confidence { get; set; } = 0.5m;
+        public AgentRecruitingProposedNextStep ProposedNextStep { get; set; } = AgentRecruitingProposedNextStep.RequestHumanReview;
+        public string AnalysisSummary { get; set; } = string.Empty;
+        public string Strengths { get; set; } = string.Empty;
+        public string Gaps { get; set; } = string.Empty;
+        public AgentRecruitingAutomatedDecision AutomatedDecision { get; set; } = AgentRecruitingAutomatedDecision.NeedsHumanReview;
+        public decimal? Score { get; set; }
+        public Guid? EvaluatorAgentId { get; set; }
+        public Guid? ProviderProfileId { get; set; }
+        public string Model { get; set; } = string.Empty;
+        public string InputHash { get; set; } = string.Empty;
+        public string OutputHash { get; set; } = string.Empty;
+        public string StructuredOutputContractKey { get; set; } = string.Empty;
+        public string StructuredOutputSchemaHash { get; set; } = string.Empty;
+    }
+
+    private readonly record struct LoadIdentity(
+        Guid? CandidateAgentId,
+        Guid? RecruitmentApplicationId);
+}

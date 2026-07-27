@@ -18,7 +18,7 @@
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Recruiting workspace"
-                    Description="Create candidate records in the shared registry, move them through stage with history, capture interviews and feedback, and hand off to workforce without duplicating the person."
+                    Description="Recruit people and AI agents through interviews, execution evidence, typed analysis, training, rechecks, and an explicitly authorized handoff."
                     Compact="true">
             <Stats>
                 <CompactStat Label="applications"
@@ -34,7 +34,7 @@
                              Tone="success" />
                 <CompactStat Label="open tasks"
                              Value="@(currentWorkspace?.LifecycleTasks.Count(item => item.Status is not LifecycleTaskStatus.Completed and not LifecycleTaskStatus.Cancelled).ToString() ?? "0")"
-                             TooltipText="Selected candidate onboarding or offboarding actions."
+                             TooltipText="Selected candidate training, onboarding, or offboarding actions."
                              Tone="warning" />
             </Stats>
             <Actions>
@@ -96,7 +96,7 @@
                 <Dialog IsOpen="true"
                         Eyebrow="Recruitment record"
                         Title="@RecruitmentDialogTitle"
-                        Subtitle="Application, interviews, lifecycle preparation, and workforce conversion."
+                        Subtitle="Application, interviews, assessment evidence, development, and controlled conversion."
                         Size="ModalSize.Full"
                         DenseChrome="true"
                         CloseOnBackdrop="false"
@@ -106,7 +106,10 @@
                     @if (recruitmentWorkspace.HasSelectedApplication)
                     {
                         <SurfaceCard>
-                            <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween">
+                            <Split Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
                                     <p class="cda-eyebrow">Candidate summary</p>
                                     <h2 class="mt-1 text-lg font-semibold text-slate-950">@recruitmentWorkspace.CandidateDisplayName</h2>
@@ -115,18 +118,35 @@
                                         <p class="mt-3 text-sm leading-6 text-slate-600">@recruitmentWorkspace.CandidateSummary</p>
                                     }
                                 </div>
-                                <Cluster Gap="LayoutGap.Small">
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    @if (recruitmentWorkspace.CandidatePartyType is { } candidatePartyType)
+                                    {
+                                        <StatusBadge Tone="neutral" Text="@FormatCandidateType(candidatePartyType)" />
+                                    }
+                                    @if (recruitmentWorkspace.CandidatePartyType == PartyType.AiAgent)
+                                    {
+                                        <StatusBadge Tone="@ResolveBindingTone(recruitmentWorkspace.CandidateBindingStatus)"
+                                                     Text="@FormatBinding(recruitmentWorkspace.CandidateBindingStatus)" />
+                                    }
                                     <StatusBadge Tone="@ResolveStageTone(applicationEditor.Stage)" Text="@applicationEditor.Stage.ToString()" />
                                     <StatusBadge Tone="@ResolveDecisionTone(applicationEditor.Decision)" Text="@applicationEditor.Decision.ToString()" />
                                 </Cluster>
                             </Split>
 
-                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-5">
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Email</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.CandidatePrimaryEmail)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Phone</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.CandidatePrimaryPhone)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Recruiter</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.RecruiterDisplayName)</p></div>
-                                <div class="rounded-[1.2rem] border border-slate-200 bg-slate-50/80 px-4 py-4"><p class="text-xs uppercase tracking-[0.18em] text-slate-500">Hiring manager</p><p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(recruitmentWorkspace.HiringManagerDisplayName)</p></div>
-                            </Grid>
+                            <CompactStatStrip Class="mt-5">
+                                <CompactStat Label="email"
+                                             Value="@FormatValue(recruitmentWorkspace.CandidatePrimaryEmail)"
+                                             TooltipText="Candidate primary email." />
+                                <CompactStat Label="phone"
+                                             Value="@FormatValue(recruitmentWorkspace.CandidatePrimaryPhone)"
+                                             TooltipText="Candidate primary phone." />
+                                <CompactStat Label="recruiter"
+                                             Value="@FormatValue(recruitmentWorkspace.RecruiterDisplayName)"
+                                             TooltipText="Recruiter responsible for this application." />
+                                <CompactStat Label="hiring manager"
+                                             Value="@FormatValue(recruitmentWorkspace.HiringManagerDisplayName)"
+                                             TooltipText="Hiring manager responsible for the decision." />
+                            </CompactStatStrip>
                         </SurfaceCard>
                     }
                     else
@@ -168,9 +188,18 @@
                                                     DeleteInterview="DeleteInterviewAsync" />
                             </TabsItem>
 
-                            <TabsItem Text="Lifecycle"
-                                      Icon="checklist"
-                                      data-testid="crmhr-recruiting-tab-lifecycle">
+                            <TabsItem Text="Assessments"
+                                      Icon="fact_check"
+                                      data-testid="crmhr-recruiting-tab-assessments">
+                            <AgentRecruitingEvidencePanel CandidateAgentId="recruitmentWorkspace.CandidateTechnicalAgentId"
+                                                          RecruitmentApplicationId="recruitmentWorkspace.Application.Id"
+                                                          ReadinessChanged="HandleAssessmentReadinessChangedAsync"
+                                                          RequestTraining="OpenTrainingAsync" />
+                            </TabsItem>
+
+                            <TabsItem Text="Development"
+                                      Icon="school"
+                                      data-testid="crmhr-recruiting-tab-development">
                             <OnboardingChecklistPanel SupportDraft="supportEditor"
                                                       CurrentAssignments="recruitmentWorkspace.SupportAssignments"
                                                       TaskDraft="taskEditor"
@@ -185,13 +214,20 @@
                                       Icon="group_add"
                                       data-testid="crmhr-recruiting-tab-conversion">
                             <FormSection Title="Hiring conversion"
-                                         Description="Turn a hired candidate into a workforce profile on the same Party identity so recruiting handoff does not create duplicates.">
+                                         Description="Convert an approved candidate on the same Party identity. Technical-agent activation remains a separate AgentFramework command.">
                                     <SurfaceCard>
                                         @if (recruitmentWorkspace.HasWorkforceProfile)
                                         {
                                             <div class="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700" data-testid="crmhr-recruiting-convert-existing-callout">
                                                 This candidate already has a workforce profile. Saving conversion updates that existing identity instead of creating another person.
                                             </div>
+                                        }
+
+                                        @if (ConversionEligibilityError is { } conversionError)
+                                        {
+                                            <Alert AlertStyle="AlertStyle.Warning" Class="mt-4">
+                                                @conversionError.Message
+                                            </Alert>
                                         }
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
@@ -243,8 +279,11 @@
                                             </FormField>
                                         </div>
 
-                                        <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                            <Button Text="Convert to workforce" Click="ConvertCandidateAsync" data-testid="crmhr-recruiting-convert-save-button" />
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                                            <Button Text="Convert to workforce"
+                                                    Disabled="@(ConversionEligibilityError is not null)"
+                                                    Click="ConvertCandidateAsync"
+                                                    data-testid="crmhr-recruiting-convert-save-button" />
                                             @if (SelectedPartyId.HasValue)
                                             {
                                                 <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="OpenWorkforceAsync" data-testid="crmhr-recruiting-convert-open-workforce" />
@@ -262,8 +301,8 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween"
                                Wrap="FlexWrap.Wrap">
-                            <SmallText Text="Save each recruitment area from its own tab." />
-                            <Cluster Gap="LayoutGap.Small">
+                            <SmallText Text="Automated evidence never changes stage, converts workforce, or activates an agent." />
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 @if (SelectedPartyId.HasValue)
                                 {
                                     <Button Text="Open workforce"
@@ -308,6 +347,7 @@
     private LifecycleTaskEditorModel taskEditor = new();
     private RecruitmentSupportAssignmentsEditorModel supportEditor = new();
     private RecruitmentConversionEditorModel conversionEditor = new();
+    private AgentRecruitingCandidateReadiness? assessmentReadiness;
     private RecruitmentApplicationSummary applicationSummary = new(0, 0, 0);
     private int applicationBrowserRevision;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
@@ -322,6 +362,14 @@
     private bool isDisposed;
 
     private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
+
+    private Error? ConversionEligibilityError => currentWorkspace?.HasSelectedApplication == true
+        ? RecruitmentConversionPolicy.Evaluate(
+            applicationEditor.Stage,
+            applicationEditor.Decision,
+            assessmentRequired: currentWorkspace.CandidatePartyType == PartyType.AiAgent,
+            assessmentReady: assessmentReadiness?.ReadyForProduction == true)
+        : Error.Validation("Save or select an application first.");
 
     private PagedRecordSelection<Guid>? ApplicationSelection => currentWorkspace?.Application.Id is { } applicationId
         ? new PagedRecordSelection<Guid>(applicationId)
@@ -451,6 +499,7 @@
 
     private void ApplyWorkspace(RecruitmentWorkspaceModel workspace)
     {
+        assessmentReadiness = null;
         applicationEditor = CloneApplication(workspace.Application);
         interviewEditor = workspace.HasSelectedApplication && workspace.Application.Id.HasValue
             ? CreateInterviewDraft(workspace.Application.Id.Value)
@@ -468,6 +517,13 @@
             }
             : new RecruitmentSupportAssignmentsEditorModel();
         conversionEditor = CloneConversion(workspace.Conversion);
+    }
+
+    private Task HandleAssessmentReadinessChangedAsync(
+        AgentRecruitingCandidateReadiness? value)
+    {
+        assessmentReadiness = value;
+        return Task.CompletedTask;
     }
 
     private async Task<PagedRecordPage<Guid>> LoadApplicationPageAsync(
@@ -723,6 +779,27 @@
         return Task.CompletedTask;
     }
 
+    private Task OpenTrainingAsync(RecruitmentTrainingRequest request)
+    {
+        if (currentWorkspace?.HasSelectedApplication != true ||
+            !currentWorkspace.Application.PartyId.HasValue)
+        {
+            SetError([Error.Validation("Save or select an application first.")]);
+            return Task.CompletedTask;
+        }
+
+        taskEditor = CreateTaskDraft(currentWorkspace.Application.PartyId.Value);
+        taskEditor.TaskKind = LifecycleTaskKind.Training;
+        taskEditor.Title = $"{FormatClassification(request.Classification)} development plan";
+        taskEditor.Notes =
+            $"Assessment {request.InterviewId:D}; attempt {request.AttemptId:D}. " +
+            (request.Gaps.Count == 0
+                ? "No structured gaps were supplied."
+                : $"Target gaps: {string.Join(", ", request.Gaps)}.");
+        selectedRecruitingTab = RecruitingRecordTab.Development;
+        return Task.CompletedTask;
+    }
+
     private async Task DeleteTaskAsync(Guid taskId)
     {
         var action = CaptureRecruitmentAction();
@@ -926,6 +1003,7 @@
     {
         var tags = new List<string>
         {
+            FormatCandidateType(item.CandidatePartyType),
             item.Stage.ToString(),
             item.Decision.ToString()
         };
@@ -943,7 +1021,7 @@
             Description = BuildApplicationMeta(item),
             Meta = $"Updated {item.UpdatedAtUtc.LocalDateTime:g}",
             Tags = tags,
-            Icon = "person_search",
+            Icon = item.CandidatePartyType == PartyType.AiAgent ? "smart_toy" : "person_search",
             TestId = $"crmhr-recruiting-application-{item.Id:N}"
         };
     }
@@ -1019,11 +1097,51 @@
         return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
     }
 
+    private static string FormatCandidateType(PartyType partyType)
+    {
+        return partyType == PartyType.AiAgent ? "AI agent" : "Person";
+    }
+
+    private static string FormatClassification(
+        AgentRecruitingAssessmentClassification classification)
+    {
+        return classification switch
+        {
+            AgentRecruitingAssessmentClassification.StrongFit => "Strong fit",
+            AgentRecruitingAssessmentClassification.NeedsTraining => "Needs training",
+            AgentRecruitingAssessmentClassification.NotSuitable => "Not suitable",
+            _ => classification.ToString()
+        };
+    }
+
+    private static string FormatBinding(AiResourceBindingStatus bindingStatus)
+    {
+        return bindingStatus switch
+        {
+            AiResourceBindingStatus.Bound => "Technical binding ready",
+            AiResourceBindingStatus.PendingBackfill => "Binding pending",
+            AiResourceBindingStatus.Error => "Binding error",
+            _ => "Not technically bound"
+        };
+    }
+
+    private static string ResolveBindingTone(AiResourceBindingStatus bindingStatus)
+    {
+        return bindingStatus switch
+        {
+            AiResourceBindingStatus.Bound => "success",
+            AiResourceBindingStatus.Error => "danger",
+            AiResourceBindingStatus.PendingBackfill => "warning",
+            _ => "neutral"
+        };
+    }
+
     private enum RecruitingRecordTab
     {
         Application,
         Interviews,
-        Lifecycle,
+        Assessments,
+        Development,
         Conversion
     }
 

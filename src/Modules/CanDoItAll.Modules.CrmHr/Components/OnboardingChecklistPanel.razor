@@ -1,5 +1,5 @@
-<FormSection Title="Lifecycle tasks and support roles"
-             Description="Keep onboarding and offboarding work owned, due-dated, and visible together with manager, buddy, and mentor assignments.">
+<FormSection Title="Development, lifecycle tasks, and support"
+             Description="Keep assessment training, onboarding, and offboarding work owned, due-dated, and visible with manager, buddy, and mentor assignments.">
     @if (SupportDraft.PartyId == Guid.Empty)
     {
         <EmptyState Eyebrow="No candidate selected"
@@ -58,7 +58,7 @@
 
             <SurfaceCard Soft="true">
                 <p class="cda-eyebrow">Checklist item</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Onboarding or offboarding task</h3>
+                <h3 class="mt-1 text-lg font-semibold text-slate-950">Training or lifecycle task</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Task kind">
@@ -137,9 +137,9 @@
             @if (Tasks.Count == 0)
             {
                 <div class="mt-4">
-                    <EmptyState Eyebrow="No lifecycle tasks"
+                    <EmptyState Eyebrow="No development tasks"
                                 Title="Create the first task"
-                                Description="Equipment, access, onboarding, and offboarding follow-up items appear here with ownership and due dates." />
+                                Description="Assessment training, equipment, access, onboarding, and offboarding follow-up appear here with ownership and due dates." />
                 </div>
             }
             else

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -224,6 +226,71 @@ public sealed class AgentRecruitingEvidenceTests
     }
 
     [Fact]
+    public void Project_later_rejected_recheck_revokes_earlier_qualifying_approval()
+    {
+        var initialAttempt = CreateAttempt(
+            sequence: 1,
+            completeness: AgentRecruitingEvidenceCompleteness.Complete,
+            automatedDecision: AgentRecruitingAutomatedDecision.Passed,
+            createdAtUtc: Now);
+        var recheckAttempt = CreateAttempt(
+            sequence: 2,
+            completeness: AgentRecruitingEvidenceCompleteness.Complete,
+            automatedDecision: AgentRecruitingAutomatedDecision.Passed,
+            createdAtUtc: Now.AddMinutes(10));
+        var interview = CreateInterview(
+            "current-version",
+            [initialAttempt, recheckAttempt],
+            [
+                CreateReview(
+                    initialAttempt.Id,
+                    AgentRecruitingHumanDecision.Approved,
+                    qualifiesForReadiness: true,
+                    reviewedAtUtc: Now.AddMinutes(1)),
+                CreateReview(
+                    recheckAttempt.Id,
+                    AgentRecruitingHumanDecision.Rejected,
+                    qualifiesForReadiness: false,
+                    reviewedAtUtc: Now.AddMinutes(11))
+            ]);
+
+        var readiness = AgentRecruitingReadinessProjector.Project(
+            CandidateId,
+            "current-version",
+            [interview]);
+
+        Assert.Equal(AgentRecruitingReadinessStatus.Rejected, readiness.Status);
+        Assert.False(readiness.ReadyForProduction);
+        Assert.Null(readiness.QualifyingAttemptId);
+        Assert.Null(readiness.QualifyingReviewId);
+    }
+
+    [Fact]
+    public void Existing_json_without_optional_extension_fields_remains_readable()
+    {
+        var attempt = CreateAttempt(
+            sequence: 1,
+            completeness: AgentRecruitingEvidenceCompleteness.Incomplete,
+            automatedDecision: AgentRecruitingAutomatedDecision.NeedsHumanReview);
+        var source = CreateInterview("current-version", [attempt]);
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        var json = JsonSerializer.Serialize(source, options);
+        var restored = JsonSerializer.Deserialize<AgentRecruitingInterview>(json, options);
+
+        Assert.DoesNotContain("\"analysis\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"recruitmentApplicationId\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"projectId\"", json, StringComparison.Ordinal);
+        Assert.NotNull(restored);
+        Assert.Null(restored.RecruitmentApplicationId);
+        Assert.Null(restored.ProjectId);
+        Assert.Null(Assert.Single(restored.Attempts).Analysis);
+    }
+
+    [Fact]
     public async Task Create_interview_requires_current_candidate_version_without_mutating_catalog()
     {
         var candidate = CreateAgent(CandidateId, AgentLifecycleStatus.Draft);
@@ -251,6 +318,119 @@ public sealed class AgentRecruitingEvidenceTests
                     "Stale interview")));
         Assert.Equal(AgentRecruitingEvidenceFailureKind.Conflict, conflict.Kind);
         Assert.Equal("agent-recruiting.candidate-version-conflict", conflict.Code);
+    }
+
+    [Fact]
+    public async Task Create_interview_preserves_recruitment_and_project_correlations()
+    {
+        var candidate = CreateAgent(CandidateId, AgentLifecycleStatus.Draft);
+        var store = new InMemoryEvidenceStore();
+        var service = CreateService(
+            new RecordingCatalogStore(candidate, CreateProvider()),
+            store);
+        var recruitmentApplicationId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        var interview = await service.CreateInterviewAsync(
+            new CreateAgentRecruitingInterviewCommand(
+                CandidateId,
+                AgentConfigurationVersion.Create(candidate),
+                "Correlated assessment",
+                recruitmentApplicationId,
+                projectId));
+
+        Assert.Equal(recruitmentApplicationId, interview.RecruitmentApplicationId);
+        Assert.Equal(projectId, interview.ProjectId);
+
+        var invalidCorrelation = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
+            () => service.CreateInterviewAsync(
+                new CreateAgentRecruitingInterviewCommand(
+                    CandidateId,
+                    AgentConfigurationVersion.Create(candidate),
+                    "Invalid correlation",
+                    Guid.Empty)));
+        Assert.Equal("agent-recruiting.identifier-invalid", invalidCorrelation.Code);
+    }
+
+    [Fact]
+    public async Task List_candidate_interviews_filters_by_application_and_orders_newest_first()
+    {
+        var recruitmentApplicationId = Guid.NewGuid();
+        var otherApplicationId = Guid.NewGuid();
+        var oldest = CreateInterview("current-version") with
+        {
+            Id = Guid.Parse("10000000-0000-0000-0000-000000000000"),
+            CreatedAtUtc = Now.AddMinutes(-2),
+            RecruitmentApplicationId = recruitmentApplicationId
+        };
+        var newest = CreateInterview("current-version") with
+        {
+            Id = Guid.Parse("30000000-0000-0000-0000-000000000000"),
+            CreatedAtUtc = Now,
+            RecruitmentApplicationId = recruitmentApplicationId
+        };
+        var other = CreateInterview("current-version") with
+        {
+            Id = Guid.Parse("20000000-0000-0000-0000-000000000000"),
+            CreatedAtUtc = Now.AddMinutes(-1),
+            RecruitmentApplicationId = otherApplicationId
+        };
+        var service = CreateService(
+            new RecordingCatalogStore(CreateAgent(CandidateId), CreateProvider()),
+            new InMemoryEvidenceStore(oldest, other, newest));
+
+        var all = await service.ListCandidateInterviewsAsync(CandidateId);
+        var filtered = await service.ListCandidateInterviewsAsync(
+            CandidateId,
+            recruitmentApplicationId);
+
+        Assert.Equal([newest.Id, other.Id, oldest.Id], all.Select(item => item.Id));
+        Assert.Equal([newest.Id, oldest.Id], filtered.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task Readiness_is_scoped_to_the_selected_recruitment_application()
+    {
+        var candidate = CreateAgent(CandidateId);
+        var currentVersion = AgentConfigurationVersion.Create(candidate);
+        var approvedApplicationId = Guid.NewGuid();
+        var pendingApplicationId = Guid.NewGuid();
+        var attempt = CreateAttempt(
+            sequence: 1,
+            completeness: AgentRecruitingEvidenceCompleteness.Complete,
+            automatedDecision: AgentRecruitingAutomatedDecision.Passed);
+        var approvedInterview = CreateInterview(
+            currentVersion,
+            [attempt],
+            [CreateReview(
+                attempt.Id,
+                AgentRecruitingHumanDecision.Approved,
+                qualifiesForReadiness: true)]) with
+        {
+            RecruitmentApplicationId = approvedApplicationId
+        };
+        var pendingInterview = CreateInterview(currentVersion) with
+        {
+            RecruitmentApplicationId = pendingApplicationId
+        };
+        var service = CreateService(
+            new RecordingCatalogStore(candidate, CreateProvider()),
+            new InMemoryEvidenceStore(approvedInterview, pendingInterview));
+
+        var approved = await service.GetCandidateReadinessAsync(
+            CandidateId,
+            approvedApplicationId);
+        var pending = await service.GetCandidateReadinessAsync(
+            CandidateId,
+            pendingApplicationId);
+
+        Assert.Equal(AgentRecruitingReadinessStatus.Ready, approved.Status);
+        Assert.True(approved.ReadyForProduction);
+        Assert.Equal(
+            AgentRecruitingReadinessStatus.IncompleteEvidence,
+            pending.Status);
+        Assert.False(pending.ReadyForProduction);
+        Assert.Empty(pending.AttemptHistory);
     }
 
     [Fact]
@@ -290,7 +470,7 @@ public sealed class AgentRecruitingEvidenceTests
                 target.Id == targetId,
                 "Completed",
                 IsTerminal: true,
-                kind == AgentRecruitingTargetKind.AgentExecutionRun ? CandidateId : null));
+                [CandidateId]));
         var service = CreateService(
             new RecordingCatalogStore(candidate, CreateAgent(EvaluatorId), CreateProvider()),
             store,
@@ -334,7 +514,7 @@ public sealed class AgentRecruitingEvidenceTests
                     true,
                     "Completed",
                     true,
-                    Guid.NewGuid())));
+                    [Guid.NewGuid()])));
         var mismatch = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
             () => mismatchService.AppendAttemptAsync(
                 interview.Id,
@@ -360,7 +540,11 @@ public sealed class AgentRecruitingEvidenceTests
             new RecordingCatalogStore(candidate, CreateAgent(EvaluatorId), CreateProvider()),
             store,
             new DelegateTargetResolver(
-                _ => new AgentRecruitingTargetResolution(true, "Running", false)));
+                _ => new AgentRecruitingTargetResolution(
+                    true,
+                    "Running",
+                    false,
+                    [CandidateId])));
         var target = new AgentRecruitingExecutionTarget(
             AgentRecruitingTargetKind.WorkflowRun,
             Guid.NewGuid());
@@ -405,6 +589,145 @@ public sealed class AgentRecruitingEvidenceTests
         Assert.Contains("evaluator-provider-profile-id", attempt.MissingEvidence);
         Assert.Contains("evaluator-model", attempt.MissingEvidence);
         Assert.Contains("evaluation-timestamp", attempt.MissingEvidence);
+    }
+
+    [Fact]
+    public async Task Append_attempt_normalizes_strongly_typed_assessment_analysis()
+    {
+        var candidate = CreateAgent(CandidateId);
+        var interview = CreateInterview(AgentConfigurationVersion.Create(candidate));
+        var store = new InMemoryEvidenceStore(interview);
+        var service = CreateService(
+            new RecordingCatalogStore(candidate, CreateAgent(EvaluatorId), CreateProvider()),
+            store);
+        var target = new AgentRecruitingExecutionTarget(
+            AgentRecruitingTargetKind.WorkflowRun,
+            Guid.NewGuid());
+
+        var updated = await service.AppendAttemptAsync(
+            interview.Id,
+            CreateAttemptCommand(target) with
+            {
+                Analysis = new AgentRecruitingAssessmentAnalysis(
+                    AgentRecruitingAssessmentClassification.NeedsTraining,
+                    0.82m,
+                    "  Strong reasoning with a repeatable tool-selection gap.  ",
+                    AgentRecruitingProposedNextStep.AssignTraining,
+                    ["  Clear decomposition  "],
+                    ["  Tool selection  "])
+            });
+
+        var analysis = Assert.Single(updated.Attempts).Analysis;
+        Assert.NotNull(analysis);
+        Assert.Equal(
+            AgentRecruitingAssessmentClassification.NeedsTraining,
+            analysis.Classification);
+        Assert.Equal(0.82m, analysis.Confidence);
+        Assert.Equal(
+            "Strong reasoning with a repeatable tool-selection gap.",
+            analysis.Summary);
+        Assert.Equal(
+            AgentRecruitingProposedNextStep.AssignTraining,
+            analysis.ProposedNextStep);
+        Assert.Equal(["Clear decomposition"], analysis.Strengths);
+        Assert.Equal(["Tool selection"], analysis.Gaps);
+    }
+
+    [Fact]
+    public async Task Append_attempt_rejects_invalid_assessment_analysis_without_appending()
+    {
+        var candidate = CreateAgent(CandidateId);
+        var interview = CreateInterview(AgentConfigurationVersion.Create(candidate));
+        var store = new InMemoryEvidenceStore(interview);
+        var service = CreateService(
+            new RecordingCatalogStore(candidate, CreateAgent(EvaluatorId), CreateProvider()),
+            store);
+        var target = new AgentRecruitingExecutionTarget(
+            AgentRecruitingTargetKind.WorkflowRun,
+            Guid.NewGuid());
+        var valid = new AgentRecruitingAssessmentAnalysis(
+            AgentRecruitingAssessmentClassification.Suitable,
+            0.75m,
+            "Suitable for supervised work.",
+            AgentRecruitingProposedNextStep.RequestHumanReview,
+            ["Deterministic output"],
+            ["Needs broader evidence"]);
+
+        var invalidClassification = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
+            () => service.AppendAttemptAsync(
+                interview.Id,
+                CreateAttemptCommand(target) with
+                {
+                    Analysis = valid with
+                    {
+                        Classification = (AgentRecruitingAssessmentClassification)0
+                    }
+                }));
+        var invalidConfidence = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
+            () => service.AppendAttemptAsync(
+                interview.Id,
+                CreateAttemptCommand(target) with
+                {
+                    Analysis = valid with { Confidence = 1.01m }
+                }));
+        var invalidSummary = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
+            () => service.AppendAttemptAsync(
+                interview.Id,
+                CreateAttemptCommand(target) with
+                {
+                    Analysis = valid with { Summary = new string('x', 4001) }
+                }));
+        var invalidItems = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
+            () => service.AppendAttemptAsync(
+                interview.Id,
+                CreateAttemptCommand(target) with
+                {
+                    Analysis = valid with { Gaps = [" "] }
+                }));
+
+        Assert.Equal(
+            "agent-recruiting.analysis-classification-invalid",
+            invalidClassification.Code);
+        Assert.Equal(
+            "agent-recruiting.analysis-confidence-invalid",
+            invalidConfidence.Code);
+        Assert.Equal("agent-recruiting.text-invalid", invalidSummary.Code);
+        Assert.Equal("agent-recruiting.analysis-items-invalid", invalidItems.Code);
+        Assert.Empty(store.Interviews.Single().Attempts);
+    }
+
+    [Theory]
+    [InlineData(AgentRecruitingTargetKind.AgentExecutionRun)]
+    [InlineData(AgentRecruitingTargetKind.WorkflowRun)]
+    [InlineData(AgentRecruitingTargetKind.ProcessRun)]
+    public async Task Append_attempt_rejects_target_without_candidate_participation(
+        AgentRecruitingTargetKind targetKind)
+    {
+        var candidate = CreateAgent(CandidateId);
+        var interview = CreateInterview(AgentConfigurationVersion.Create(candidate));
+        var store = new InMemoryEvidenceStore(interview);
+        var service = CreateService(
+            new RecordingCatalogStore(candidate, CreateProvider()),
+            store,
+            new DelegateTargetResolver(
+                _ => new AgentRecruitingTargetResolution(
+                    true,
+                    "Completed",
+                    true,
+                    [Guid.NewGuid()])));
+
+        var exception = await Assert.ThrowsAsync<AgentRecruitingEvidenceException>(
+            () => service.AppendAttemptAsync(
+                interview.Id,
+                CreateAttemptCommand(
+                    new AgentRecruitingExecutionTarget(
+                        targetKind,
+                        Guid.NewGuid()))));
+
+        Assert.Equal(
+            "agent-recruiting.target-candidate-conflict",
+            exception.Code);
+        Assert.Empty(store.Interviews.Single().Attempts);
     }
 
     [Fact]
@@ -454,7 +777,11 @@ public sealed class AgentRecruitingEvidenceTests
             catalog,
             store,
             resolver ?? new DelegateTargetResolver(
-                _ => new AgentRecruitingTargetResolution(true, "Completed", true)),
+                _ => new AgentRecruitingTargetResolution(
+                    true,
+                    "Completed",
+                    true,
+                    [CandidateId])),
             new FixedTimeProvider(Now));
 
     private static AgentDefinition CreateAgent(

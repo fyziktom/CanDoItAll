@@ -182,7 +182,14 @@ public sealed class CrmHrCatalogDialogTests
         cut.WaitForElement("[data-testid='crmhr-recruiting-interview-type']");
         Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-role']"));
 
-        cut.Find("[data-testid='crmhr-recruiting-tab-lifecycle']").Click();
+        cut.Find("[data-testid='crmhr-recruiting-tab-assessments']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No bound AgentFramework candidate", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-interview-type']"));
+        });
+
+        cut.Find("[data-testid='crmhr-recruiting-tab-development']").Click();
         cut.WaitForElement("[data-testid='crmhr-recruiting-support-save-button']");
         Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-interview-type']"));
 

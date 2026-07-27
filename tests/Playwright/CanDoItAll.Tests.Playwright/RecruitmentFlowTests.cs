@@ -72,7 +72,7 @@ public sealed class RecruitmentFlowTests
         await page.GetByTestId("crmhr-recruiting-interview-save-button").ClickAsync();
         await page.GetByTestId("crmhr-recruiting-interview-item").WaitForAsync();
 
-        await page.GetByTestId("crmhr-recruiting-tab-lifecycle").ClickAsync();
+        await page.GetByTestId("crmhr-recruiting-tab-development").ClickAsync();
         await ChoosePartyAsync(page, "crmhr-recruiting-support-manager", seed.HiringManagerId);
         await ChoosePartyAsync(page, "crmhr-recruiting-support-buddy", seed.BuddyId);
         await ChoosePartyAsync(page, "crmhr-recruiting-support-mentor", seed.MentorId);

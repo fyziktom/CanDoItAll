@@ -71,7 +71,13 @@ public interface IAgentRecruitingEvidenceService
         Guid interviewId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<AgentRecruitingInterview>> ListCandidateInterviewsAsync(
+        Guid candidateAgentId,
+        Guid? recruitmentApplicationId = null,
+        CancellationToken cancellationToken = default);
+
     Task<AgentRecruitingCandidateReadiness> GetCandidateReadinessAsync(
         Guid candidateAgentId,
+        Guid? recruitmentApplicationId = null,
         CancellationToken cancellationToken = default);
 }

@@ -69,14 +69,7 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
         Assert.True(resolution.Found);
         Assert.Equal(state, resolution.State);
         Assert.Equal(expectedTerminal, resolution.IsTerminal);
-        if (kind == AgentRecruitingTargetKind.AgentExecutionRun)
-        {
-            Assert.Equal(CandidateAgentId, resolution.ExecutedAgentId);
-        }
-        else
-        {
-            Assert.Null(resolution.ExecutedAgentId);
-        }
+        Assert.Contains(CandidateAgentId, resolution.ParticipatingAgentIds ?? []);
     }
 
     [Theory]
@@ -94,7 +87,7 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
         Assert.False(resolution.Found);
         Assert.Equal("not-found", resolution.State);
         Assert.False(resolution.IsTerminal);
-        Assert.Null(resolution.ExecutedAgentId);
+        Assert.Null(resolution.ParticipatingAgentIds);
     }
 
     [Fact]
@@ -136,15 +129,37 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
             Assert.False(hidden.Found);
             Assert.Equal("not-found", hidden.State);
             Assert.False(hidden.IsTerminal);
-            Assert.Null(hidden.ExecutedAgentId);
+            Assert.Null(hidden.ParticipatingAgentIds);
         }
+    }
+
+    [Fact]
+    public async Task Resolve_workflow_does_not_treat_unexecuted_agent_node_as_participation()
+    {
+        var fixture = new ResolverFixture();
+        var targetId = Guid.NewGuid();
+        await fixture.SeedWorkflowAsync(
+            targetId,
+            WorkflowRunState.Failed,
+            candidateExecuted: false);
+
+        var resolution = await fixture.Resolver.ResolveAsync(
+            new AgentRecruitingExecutionTarget(
+                AgentRecruitingTargetKind.WorkflowRun,
+                targetId));
+
+        Assert.True(resolution.Found);
+        Assert.True(resolution.IsTerminal);
+        Assert.Empty(resolution.ParticipatingAgentIds ?? []);
     }
 
     private sealed class ResolverFixture
     {
         private readonly RecordingExecutionRunStore executionRuns = new();
         private readonly InMemoryWorkflowRunStore workflowRuns = new();
+        private readonly RecordingWorkflowCatalogService workflowCatalog = new();
         private readonly InMemoryProcessProjectionStore processProjections = new();
+        private readonly RecordingProcessRunRecordReader processRecords = new();
 
         public ResolverFixture()
         {
@@ -155,7 +170,9 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
             Resolver = new WorkspaceAgentRecruitingTargetResolver(
                 executionRuns,
                 workflowRuns,
-                processQueries);
+                workflowCatalog,
+                processQueries,
+                processRecords);
         }
 
         public WorkspaceAgentRecruitingTargetResolver Resolver { get; }
@@ -173,19 +190,44 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
                         Enum.Parse<ExecutionState>(state)));
                     break;
                 case AgentRecruitingTargetKind.WorkflowRun:
-                    await workflowRuns.SaveRunAsync(CreateWorkflowRun(
+                    await SeedWorkflowAsync(
                         targetId,
-                        Enum.Parse<WorkflowRunState>(state)));
+                        Enum.Parse<WorkflowRunState>(state),
+                        candidateExecuted: true);
                     break;
                 case AgentRecruitingTargetKind.ProcessRun:
                     await processProjections.UpsertSnapshotAsync(
                         CreateProcessSnapshot(
                             targetId,
                             Enum.Parse<ProcessProjectedRunStatus>(state)));
+                    processRecords.Add(targetId, CandidateAgentId);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
+        }
+
+        public async Task SeedWorkflowAsync(
+            Guid targetId,
+            WorkflowRunState state,
+            bool candidateExecuted)
+        {
+            var workflowRun = CreateWorkflowRun(targetId, state);
+            await workflowRuns.SaveRunAsync(workflowRun);
+            workflowCatalog.Add(CreateWorkflowDefinition(workflowRun));
+            if (!candidateExecuted)
+            {
+                return;
+            }
+
+            await workflowRuns.SaveEventAsync(new WorkflowEventRecord(
+                Guid.NewGuid(),
+                workflowRun.RunId,
+                WorkflowEventKind.ExecutorInvoked,
+                new WorkflowNodeId("candidate"),
+                "Candidate node started.",
+                "{}",
+                Now));
         }
     }
 
@@ -245,6 +287,43 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
                 ? Now
                 : null
         };
+
+    private static WorkflowDefinitionDetail CreateWorkflowDefinition(
+        WorkflowRunSnapshot run)
+    {
+        var nodeId = new WorkflowNodeId("candidate");
+        var node = new WorkflowNode(
+            nodeId,
+            WorkflowNodeKind.AgentStep,
+            "Candidate",
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: CandidateAgentId,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: "Complete the recruiting assessment.",
+                InputShape: null,
+                ResultShape: null));
+        var definition = new WorkflowDefinition(
+            run.WorkflowId,
+            run.VersionId,
+            "Recruiting assessment workflow",
+            "Runs the candidate through a bounded assessment.",
+            WorkflowLifecycleStatus.Active,
+            new WorkflowGraph(nodeId, [node], []),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            Now,
+            Now);
+        return new WorkflowDefinitionDetail(
+            definition,
+            WorkflowValidationResult.Success);
+    }
 
     private static ProcessProjectionSnapshot CreateProcessSnapshot(
         Guid runId,
@@ -307,6 +386,156 @@ public sealed class WorkspaceAgentRecruitingTargetResolverTests
             runs[detail.Run.Id] = detail.Run;
             return Task.FromResult(detail);
         }
+    }
+
+    private sealed class RecordingWorkflowCatalogService : IWorkflowCatalogService
+    {
+        private readonly Dictionary<(WorkflowId, WorkflowVersionId), WorkflowDefinitionDetail>
+            definitions = [];
+
+        public void Add(WorkflowDefinitionDetail detail)
+        {
+            definitions[(detail.Definition.Id, detail.Definition.VersionId)] = detail;
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var detail = versionId.HasValue
+                ? definitions.GetValueOrDefault((workflowId, versionId.Value))
+                : definitions.Values.FirstOrDefault(item => item.Definition.Id == workflowId);
+            return Task.FromResult(detail);
+        }
+
+        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+            WorkflowId workflowId,
+            WorkflowLifecycleStatus status,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> SaveDefinitionAsync(
+            WorkflowDefinitionSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+            WorkflowDefinitionStatusChangeRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ImportDefinitionAsync(
+            WorkflowDefinitionImportRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteDefinitionAsync(
+            WorkflowId workflowId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowValidationResult> ValidateDefinitionAsync(
+            WorkflowDefinition definition,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingProcessRunRecordReader : IProcessRunRecordReader
+    {
+        private readonly Dictionary<ProcessRunId, ProcessRunRecordSummary> records = [];
+
+        public void Add(Guid runId, Guid participantAgentId)
+        {
+            var processRunId = new ProcessRunId(runId);
+            records[processRunId] = CreateProcessRunRecordSummary(
+                processRunId,
+                participantAgentId);
+        }
+
+        public Task<ProcessRunRecordPage> ListAsync(
+            ProcessRunRecordListQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            var selected = query.RunIds
+                .Select(runId => records.GetValueOrDefault(runId))
+                .OfType<ProcessRunRecordSummary>()
+                .Take(query.Take)
+                .ToArray();
+            return Task.FromResult(
+                new ProcessRunRecordPage(selected, NextCursor: null));
+        }
+    }
+
+    private static ProcessRunRecordSummary CreateProcessRunRecordSummary(
+        ProcessRunId runId,
+        Guid participantAgentId)
+    {
+        return new ProcessRunRecordSummary(
+            new ProcessRunRecordIdentity(
+                runId,
+                runId,
+                ParentRunId: null,
+                PlanId: null,
+                DefinitionId: null,
+                DefinitionVersionId: null,
+                ProjectId: null),
+            ProcessRunDisposition.Succeeded,
+            ProcessRunRecordLifecycleState.Current,
+            ProcessRunRecordCompleteness.Complete,
+            ProcessRunEvidenceSource.All,
+            ProcessRunEvidenceSource.None,
+            [],
+            ProcessRunFactsStatus.Completed,
+            FactsAttemptCount: 1,
+            FactsNextAttemptAtUtc: null,
+            FactsLastErrorClass: null,
+            FactsLastErrorDiagnosticReference: null,
+            ProcessRunNarrativeStatus.Pending,
+            NarrativeAttemptCount: 0,
+            NarrativeNextAttemptAtUtc: null,
+            NarrativeLastErrorClass: null,
+            NarrativeLastErrorDiagnosticReference: null,
+            new ProcessRunRecordMetrics(
+                StartedAtUtc: Now,
+                EndedAtUtc: Now,
+                DurationMilliseconds: 0,
+                TotalStepCount: 1,
+                ExecutableStepCount: 1,
+                CompletedStepCount: 1,
+                FailedStepCount: 0,
+                CancelledStepCount: 0,
+                RepetitionCount: 0,
+                ExecutionCount: 1,
+                ReworkCount: 0,
+                IncidentCount: 0,
+                EscalationCount: 0,
+                InputTokenCount: 0,
+                CachedInputTokenCount: 0,
+                OutputTokenCount: 0,
+                ReasoningTokenCount: 0,
+                TotalTokenCount: 0,
+                EstimatedCost: 0,
+                ActualCost: 0,
+                ToolCallCount: 0,
+                ArtifactCount: 0,
+                SubprocessCount: 0),
+            [new ProcessRunParticipantId(participantAgentId.ToString("D"))],
+            Narrative: null,
+            SourceGlobalSequence: 1,
+            SourceRootSequence: 1,
+            ProcessRunRecordSchema.CurrentVersion,
+            Now);
     }
 
     private sealed class InMemoryProcessProjectionStore : IProcessProjectionStore

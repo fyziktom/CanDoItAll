@@ -17,6 +17,15 @@ public sealed class AgentRecruitingEvidenceService(
         EnsureNonEmpty(command.CandidateAgentId, "candidateAgentId");
         EnsureText(command.CandidateConfigurationVersion, "candidateConfigurationVersion", 128);
         EnsureText(command.Purpose, "purpose", 500);
+        if (command.RecruitmentApplicationId.HasValue)
+        {
+            EnsureNonEmpty(command.RecruitmentApplicationId.Value, "recruitmentApplicationId");
+        }
+
+        if (command.ProjectId.HasValue)
+        {
+            EnsureNonEmpty(command.ProjectId.Value, "projectId");
+        }
 
         var candidate = await GetCandidateAsync(command.CandidateAgentId, cancellationToken);
         var currentVersion = AgentConfigurationVersion.Create(candidate);
@@ -41,7 +50,9 @@ public sealed class AgentRecruitingEvidenceService(
             command.Purpose.Trim(),
             now,
             [],
-            []);
+            [],
+            command.RecruitmentApplicationId,
+            command.ProjectId);
         return await evidenceStore.CreateInterviewAsync(interview, cancellationToken);
     }
 
@@ -59,6 +70,7 @@ public sealed class AgentRecruitingEvidenceService(
         EnsureOptionalText(command.StructuredOutputContractKey, "structuredOutputContractKey", 200);
         EnsureOptionalHash(command.StructuredOutputSchemaHash, "structuredOutputSchemaHash");
         EnsureOptionalText(command.StructuredOutputValidationStatus, "structuredOutputValidationStatus", 100);
+        var analysis = NormalizeAnalysis(command.Analysis);
 
         var interview = await GetInterviewAsync(interviewId, cancellationToken);
         var target = await targetResolver.ResolveAsync(command.Target, cancellationToken);
@@ -70,13 +82,13 @@ public sealed class AgentRecruitingEvidenceService(
                 "The evidence target was not found in the current workspace.");
         }
 
-        if (command.Target.Kind == AgentRecruitingTargetKind.AgentExecutionRun &&
-            target.ExecutedAgentId != interview.CandidateAgentId)
+        if (target.ParticipatingAgentIds is null ||
+            !target.ParticipatingAgentIds.Contains(interview.CandidateAgentId))
         {
             throw Failure(
                 AgentRecruitingEvidenceFailureKind.Conflict,
                 "agent-recruiting.target-candidate-conflict",
-                "The agent execution target does not belong to the interview candidate.");
+                "The execution target does not contain verifiable participation by the interview candidate.");
         }
 
         await ValidateAutomatedEvaluationAsync(
@@ -103,7 +115,8 @@ public sealed class AgentRecruitingEvidenceService(
                 ? AgentRecruitingEvidenceCompleteness.Complete
                 : AgentRecruitingEvidenceCompleteness.Incomplete,
             missing,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            analysis);
         try
         {
             return await evidenceStore.AppendAttemptAsync(interviewId, attempt, cancellationToken);
@@ -182,11 +195,40 @@ public sealed class AgentRecruitingEvidenceService(
                 "The interview was not found in the current workspace.");
     }
 
-    public async Task<AgentRecruitingCandidateReadiness> GetCandidateReadinessAsync(
+    public async Task<IReadOnlyList<AgentRecruitingInterview>> ListCandidateInterviewsAsync(
         Guid candidateAgentId,
+        Guid? recruitmentApplicationId = null,
         CancellationToken cancellationToken = default)
     {
         EnsureNonEmpty(candidateAgentId, "candidateAgentId");
+        if (recruitmentApplicationId.HasValue)
+        {
+            EnsureNonEmpty(recruitmentApplicationId.Value, "recruitmentApplicationId");
+        }
+
+        var interviews = await evidenceStore.ListCandidateInterviewsAsync(
+            candidateAgentId,
+            cancellationToken);
+        return interviews
+            .Where(
+                item => !recruitmentApplicationId.HasValue ||
+                        item.RecruitmentApplicationId == recruitmentApplicationId.Value)
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ThenByDescending(item => item.Id)
+            .ToList();
+    }
+
+    public async Task<AgentRecruitingCandidateReadiness> GetCandidateReadinessAsync(
+        Guid candidateAgentId,
+        Guid? recruitmentApplicationId = null,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureNonEmpty(candidateAgentId, "candidateAgentId");
+        if (recruitmentApplicationId.HasValue)
+        {
+            EnsureNonEmpty(recruitmentApplicationId.Value, "recruitmentApplicationId");
+        }
+
         var candidate = await GetCandidateAsync(candidateAgentId, cancellationToken);
         var currentVersion = AgentConfigurationVersion.Create(candidate);
         var interviews = await evidenceStore.ListCandidateInterviewsAsync(
@@ -195,7 +237,10 @@ public sealed class AgentRecruitingEvidenceService(
         return AgentRecruitingReadinessProjector.Project(
             candidateAgentId,
             currentVersion,
-            interviews);
+            interviews.Where(
+                item => !recruitmentApplicationId.HasValue ||
+                        item.RecruitmentApplicationId == recruitmentApplicationId.Value)
+                .ToArray());
     }
 
     private async Task<AgentDefinition> GetCandidateAsync(
