@@ -6,6 +6,29 @@ public enum PagedRecordResultsScrollMode
     Bounded
 }
 
+public enum PagedRecordBadgeTone
+{
+    Neutral,
+    Info,
+    Accent,
+    Success,
+    Warning,
+    Teal
+}
+
+public enum PagedRecordStatusTone
+{
+    Neutral,
+    Info,
+    Success,
+    Warning,
+    Danger
+}
+
+public sealed record PagedRecordCornerStatus(
+    string Text,
+    PagedRecordStatusTone Tone);
+
 public sealed record PagedRecordRequest<TFilter>(
     string SearchText,
     IReadOnlyList<string> Tags,
@@ -41,6 +64,12 @@ public sealed record PagedRecordOption<TKey>(
     public string Icon { get; init; } = "category";
 
     public IReadOnlyList<string> Tags { get; init; } = [];
+
+    public PagedRecordBadgeTone KindTone { get; init; } = PagedRecordBadgeTone.Neutral;
+
+    public PagedRecordBadgeTone TagTone { get; init; } = PagedRecordBadgeTone.Neutral;
+
+    public PagedRecordCornerStatus? CornerStatus { get; init; }
 
     public bool IsDisabled { get; init; }
 

@@ -1022,7 +1022,51 @@
             Meta = $"Updated {item.UpdatedAtUtc.LocalDateTime:g}",
             Tags = tags,
             Icon = item.CandidatePartyType == PartyType.AiAgent ? "smart_toy" : "person_search",
+            KindTone = item.CandidatePartyType == PartyType.AiAgent
+                ? PagedRecordBadgeTone.Info
+                : PagedRecordBadgeTone.Accent,
+            TagTone = ResolveApplicationTagTone(item),
+            CornerStatus = ResolveApplicationCornerStatus(item),
             TestId = $"crmhr-recruiting-application-{item.Id:N}"
+        };
+    }
+
+    private static PagedRecordBadgeTone ResolveApplicationTagTone(
+        RecruitmentApplicationListItemModel item)
+    {
+        return item.Stage switch
+        {
+            RecruitmentStage.Hired => PagedRecordBadgeTone.Success,
+            RecruitmentStage.Offer => PagedRecordBadgeTone.Info,
+            RecruitmentStage.Interviewing => PagedRecordBadgeTone.Accent,
+            RecruitmentStage.Rejected => PagedRecordBadgeTone.Warning,
+            RecruitmentStage.Withdrawn => PagedRecordBadgeTone.Neutral,
+            _ => PagedRecordBadgeTone.Teal
+        };
+    }
+
+    private static PagedRecordCornerStatus ResolveApplicationCornerStatus(
+        RecruitmentApplicationListItemModel item)
+    {
+        if (item.Decision == RecruitmentDecision.Rejected ||
+            item.Stage == RecruitmentStage.Rejected)
+        {
+            return new PagedRecordCornerStatus("Rejected", PagedRecordStatusTone.Danger);
+        }
+
+        if (item.Decision == RecruitmentDecision.Withdrawn ||
+            item.Stage == RecruitmentStage.Withdrawn)
+        {
+            return new PagedRecordCornerStatus("Withdrawn", PagedRecordStatusTone.Neutral);
+        }
+
+        return item.Stage switch
+        {
+            RecruitmentStage.Hired => new("Hired", PagedRecordStatusTone.Success),
+            RecruitmentStage.Offer => new("Offer", PagedRecordStatusTone.Info),
+            RecruitmentStage.Interviewing => new("Interview", PagedRecordStatusTone.Info),
+            RecruitmentStage.Screening => new("Screening", PagedRecordStatusTone.Info),
+            _ => new("Applied", PagedRecordStatusTone.Neutral)
         };
     }
 

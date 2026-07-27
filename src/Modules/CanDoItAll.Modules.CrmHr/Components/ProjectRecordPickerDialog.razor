@@ -101,7 +101,22 @@
             Description = project.Description,
             Meta = $"Updated {project.UpdatedAtUtc.LocalDateTime:g}",
             Icon = "folder_open",
+            KindTone = PagedRecordBadgeTone.Info,
+            TagTone = PagedRecordBadgeTone.Teal,
+            CornerStatus = ResolveProjectCornerStatus(project.Status),
             TestId = $"crmhr-project-option-{project.Id:N}"
+        };
+    }
+
+    private static PagedRecordCornerStatus ResolveProjectCornerStatus(ProjectStatus status)
+    {
+        return status switch
+        {
+            ProjectStatus.Active => new("Active", PagedRecordStatusTone.Success),
+            ProjectStatus.OnHold => new("On hold", PagedRecordStatusTone.Warning),
+            ProjectStatus.Completed => new("Completed", PagedRecordStatusTone.Info),
+            ProjectStatus.Archived => new("Archived", PagedRecordStatusTone.Neutral),
+            _ => new("Draft", PagedRecordStatusTone.Neutral)
         };
     }
 }

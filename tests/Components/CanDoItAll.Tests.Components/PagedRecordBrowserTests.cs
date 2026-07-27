@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -206,6 +207,57 @@ public sealed class PagedRecordBrowserTests : TestContext
 
         Assert.Equal(AlphaId, selectedId);
         Assert.Empty(cut.FindAll("[data-testid='record-alpha-shell']"));
+    }
+
+    [Fact]
+    public void Default_card_uses_typed_tones_stable_anatomy_and_service_tooltips()
+    {
+        const string longTag = "a-very-long-governance-classification";
+        var option = new PagedRecordOption<Guid>(
+            AlphaId,
+            "A deliberately long record title that needs a stable two-line slot",
+            "AI agent")
+        {
+            Subtitle = "Long business identity that remains aligned",
+            Description = "A long operational summary that is clamped visually while its complete value remains discoverable.",
+            Meta = "Updated 27.07.2026 09:45",
+            Icon = "smart_toy",
+            Tags = [longTag, "review", "governed"],
+            KindTone = PagedRecordBadgeTone.Accent,
+            TagTone = PagedRecordBadgeTone.Teal,
+            CornerStatus = new PagedRecordCornerStatus("Inactive", PagedRecordStatusTone.Danger),
+            TestId = "record-alpha"
+        };
+        var cut = RenderBrowser(LoaderWith(option));
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='record-alpha']")));
+
+        var shell = cut.Find("[data-testid='record-alpha-shell']");
+        Assert.Contains("paged-record-browser__card--tone-accent", shell.ClassList);
+        Assert.Contains(
+            "paged-record-browser__status--danger",
+            shell.QuerySelector(".paged-record-browser__status")!.ClassList);
+        Assert.Equal("Inactive", shell.QuerySelector(".paged-record-browser__status span")!.TextContent.Trim());
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__media"));
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__title-slot"));
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__description-slot"));
+        Assert.NotNull(shell.QuerySelector(".paged-record-browser__footer"));
+
+        var tagTargets = shell.QuerySelectorAll(".paged-record-browser__tag-target");
+        Assert.Equal(3, tagTargets.Length);
+        Assert.Contains("+1", shell.QuerySelector(".paged-record-browser__card-tags")!.TextContent);
+
+        tagTargets[0].TriggerEvent(
+            "onmouseenter",
+            new MouseEventArgs
+            {
+                ClientX = 120,
+                ClientY = 80
+            });
+
+        var tooltip = Services.GetRequiredService<TooltipService>().Current;
+        Assert.Equal(longTag, tooltip?.Text);
+        Assert.Equal(TooltipPosition.Bottom, tooltip?.Options.Position);
     }
 
     [Fact]
