@@ -20,7 +20,8 @@ public sealed class PersistentWorkflowCatalogService(
     IProviderProfileRegistry? providerRegistry = null,
     IProviderProfileService? providerProfileService = null,
     IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null,
-    PromptGalleryCompatibilityEvaluator? promptCompatibilityEvaluator = null) :
+    PromptGalleryCompatibilityEvaluator? promptCompatibilityEvaluator = null,
+    IProviderRuntimeProfileSource? providerSource = null) :
     IWorkflowCatalogService,
     IWorkflowCatalogSearchService,
     IWorkflowCatalogLookupService,
@@ -31,6 +32,8 @@ public sealed class PersistentWorkflowCatalogService(
 
     private const string DefaultSettingsId = "default";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly IProviderRuntimeProfileSource? runtimeProviderSource =
+        providerSource ?? providerRegistry as IProviderRuntimeProfileSource;
     private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
     private readonly PromptGalleryCompatibilityEvaluator promptCompatibilityEvaluator =
         promptCompatibilityEvaluator ?? new PromptGalleryCompatibilityEvaluator();
@@ -962,12 +965,12 @@ public sealed class PersistentWorkflowCatalogService(
         LlmCallComponent component,
         CancellationToken cancellationToken)
     {
-        if (!component.ProviderProfileId.HasValue || providerRegistry is null)
+        if (!component.ProviderProfileId.HasValue || runtimeProviderSource is null)
         {
             return new ProviderResolution(ShouldValidate: false, Provider: null);
         }
 
-        var provider = await providerRegistry.GetProviderAsync(component.ProviderProfileId.Value, cancellationToken);
+        var provider = await runtimeProviderSource.GetProviderAsync(component.ProviderProfileId.Value, cancellationToken);
         return new ProviderResolution(
             ShouldValidate: true,
             provider is null ? null : NormalizeProvider(provider));
@@ -977,7 +980,7 @@ public sealed class PersistentWorkflowCatalogService(
         IReadOnlyCollection<LlmCallComponent> components,
         CancellationToken cancellationToken)
     {
-        if (providerRegistry is null)
+        if (runtimeProviderSource is null)
         {
             return new Dictionary<Guid, ProviderProfile>();
         }
@@ -991,7 +994,7 @@ public sealed class PersistentWorkflowCatalogService(
             return new Dictionary<Guid, ProviderProfile>();
         }
 
-        var providers = await providerRegistry.ListProvidersAsync(cancellationToken);
+        var providers = await runtimeProviderSource.ListProvidersAsync(cancellationToken);
         return providers
             .Where(provider => providerIds.Contains(provider.Id))
             .Select(NormalizeProvider)
@@ -1002,7 +1005,7 @@ public sealed class PersistentWorkflowCatalogService(
         LlmCallComponent component,
         IReadOnlyDictionary<Guid, ProviderProfile> providerSnapshot)
     {
-        if (!component.ProviderProfileId.HasValue || providerRegistry is null)
+        if (!component.ProviderProfileId.HasValue || runtimeProviderSource is null)
         {
             return new ProviderResolution(ShouldValidate: false, Provider: null);
         }

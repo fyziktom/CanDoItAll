@@ -802,7 +802,10 @@ public sealed class AgentVoiceTests
         }
     }
 
-    private class InMemoryProviderRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
+    private class InMemoryProviderRegistry(
+        IReadOnlyList<ProviderProfile> providers) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
         {

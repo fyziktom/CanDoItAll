@@ -9,11 +9,14 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.Charts;
 using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Processes.AgentChat;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -84,6 +87,102 @@ public sealed class ProcessWorkspaceShellTests
             Assert.Equal("runs.activity", position.View);
             Assert.Contains(position.Facts, fact => fact.Name == "runtime-history");
             Assert.DoesNotContain(position.Facts, fact => fact.Name.Contains("event-ledger", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void Process_workspace_publishes_scope_fragment_and_attachment_atomically_without_extra_query()
+    {
+        using var context = CreateContext(
+            out var client,
+            timeProvider: new ManualTimeProvider(Now));
+        ConfigureReadyRefresh(client, () => Now);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        AgentChatContextSnapshot initial = null!;
+        cut.WaitForAssertion(() =>
+        {
+            initial = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, initial.Scope.AccessState);
+            var fragment = Assert.Single(initial.Fragments);
+            var attachment = Assert.Single(initial.Attachments);
+            Assert.Equal(fragment.ContributorId, attachment.ContributorId);
+            Assert.Equal(
+                ProcessInvocationSnapshotMapper.AttachmentKindValue,
+                attachment.Kind.Value);
+            Assert.True(attachment.TryGetAttachment<ProcessInvocationSnapshot>(out var snapshot));
+            Assert.NotNull(snapshot);
+            Assert.Equal(ProcessInvocationSnapshotSurface.Workspace, snapshot.Surface);
+        });
+        var requestCount = client.Requests.Count;
+        Assert.Equal(requestCount, client.Requests.Count);
+    }
+
+    [Fact]
+    public void Process_workspace_expires_runtime_context_without_an_implicit_projection_read()
+    {
+        var timeProvider = new ManualTimeProvider(Now);
+        using var context = CreateContext(out var client, timeProvider: timeProvider);
+        ConfigureReadyRefresh(client, timeProvider.GetUtcNow);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        AgentChatContextSnapshot initial = null!;
+        AgentChatContextAttachmentEnvelope initialAttachment = null!;
+        cut.WaitForAssertion(() =>
+        {
+            initial = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            initialAttachment = Assert.Single(initial.Attachments);
+            Assert.Equal(Now, initialAttachment.CapturedAtUtc);
+            Assert.Equal(
+                Now.Add(ProcessInvocationSnapshotMapper.FreshnessLifetime),
+                initialAttachment.FreshUntilUtc);
+        });
+        var requestCount = client.Requests.Count;
+
+        timeProvider.Advance(ProcessInvocationSnapshotMapper.FreshnessLifetime);
+
+        cut.WaitForAssertion(() =>
+        {
+            var expired = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.True(expired.Version > initial.Version);
+            Assert.Empty(expired.Attachments);
+            Assert.Equal(requestCount, client.Requests.Count);
+        });
+    }
+
+    [Fact]
+    public void Live_processes_expires_runtime_context_without_an_implicit_projection_read()
+    {
+        var timeProvider = new ManualTimeProvider(Now);
+        using var context = CreateContext(out var client, timeProvider: timeProvider);
+        ConfigureReadyRefresh(client, timeProvider.GetUtcNow);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        var cut = context.RenderComponent<LiveProcessesDashboard>();
+
+        AgentChatContextSnapshot initial = null!;
+        AgentChatContextAttachmentEnvelope initialAttachment = null!;
+        cut.WaitForAssertion(() =>
+        {
+            initial = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            initialAttachment = Assert.Single(initial.Attachments);
+            Assert.Equal(Now, initialAttachment.CapturedAtUtc);
+            Assert.Equal(
+                Now.Add(ProcessInvocationSnapshotMapper.FreshnessLifetime),
+                initialAttachment.FreshUntilUtc);
+        });
+        var requestCount = client.Requests.Count;
+
+        timeProvider.Advance(ProcessInvocationSnapshotMapper.FreshnessLifetime);
+
+        cut.WaitForAssertion(() =>
+        {
+            var expired = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.True(expired.Version > initial.Version);
+            Assert.Empty(expired.Attachments);
+            Assert.Equal(requestCount, client.Requests.Count);
         });
     }
 
@@ -1442,10 +1541,14 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public void Manager_chat_prompt_includes_selected_run_usage_and_keeps_runtime_tools_enabled_for_cost_token_question()
+    public void Manager_chat_sends_only_user_prompt_and_uses_published_runtime_snapshot()
     {
         var workspaceService = new RecordingManagerChatWorkspaceService();
-        using var context = CreateContext(out var client, workspaceService);
+        using var context = CreateContext(
+            out var client,
+            workspaceService,
+            timeProvider: new ManualTimeProvider(Now));
+        ConfigureReadyRefresh(client, () => Now);
         var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
 
         var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
@@ -1463,18 +1566,99 @@ public sealed class ProcessWorkspaceShellTests
             Assert.True(runtimeOptions.IncludeUsageTelemetry);
         });
 
-        cut.Find("[data-testid='chat-prompt-input']").Input("Tell me please about this last run, how much did it cost and how much tokens did it use?");
+        const string userPrompt =
+            "Tell me please about this last run, how much did it cost and how much tokens did it use?";
+        SetPrivateField<IReadOnlyList<string>>(
+            cut.Instance,
+            "managerChatDraftAttachmentPaths",
+            ["artifacts/selected-run-summary.md"]);
+        cut.Render();
+        cut.Find("[data-testid='chat-prompt-input']").Input(userPrompt);
         cut.Find("[data-testid='chat-send-button']").Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(workspaceService.LastOptions));
-        Assert.Contains("Selected run usage telemetry:", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Actual cost: USD 0.12", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Input tokens: 1,234", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Cached input tokens: 234", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Output tokens: 432", workspaceService.LastPrompt, StringComparison.Ordinal);
-        Assert.Contains("Total tokens: 1,666", workspaceService.LastPrompt, StringComparison.Ordinal);
+        Assert.Equal(userPrompt, workspaceService.LastPrompt);
         Assert.True(workspaceService.LastOptions!.RuntimeToolProvidersEnabled);
         Assert.True(workspaceService.LastOptions.WorkspaceToolsEnabled);
+        var orchestrator = Assert.IsType<RecordingManagerChatExecutionOrchestrator>(
+            context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>());
+        cut.WaitForAssertion(() =>
+        {
+            var status = cut.Find("[data-testid='agent-execution-activity-status']");
+            Assert.Equal(
+                orchestrator.LastStreamId?.OperationId.ToString(),
+                status.GetAttribute("data-activity-operation-id"));
+            Assert.Equal(
+                "Accepted",
+                cut.Find("[data-testid='agent-execution-activity-phase']").TextContent.Trim());
+        });
+        Assert.Equal(userPrompt, orchestrator.LastSendRequest?.Prompt);
+        Assert.NotNull(orchestrator.LastSendRequest?.AttachmentPaths);
+        Assert.Equal(
+            ["artifacts/selected-run-summary.md"],
+            orchestrator.LastSendRequest!.AttachmentPaths!.ToArray());
+        var contextSnapshot = Assert.IsType<AgentChatContextSnapshot>(
+            orchestrator.LastCapturedContext);
+        var attachment = Assert.Single(contextSnapshot.Attachments);
+        Assert.True(attachment.TryGetAttachment<ProcessInvocationSnapshot>(out var processSnapshot));
+        Assert.Equal(runId, processSnapshot!.SelectedRunId);
+        Assert.True(processSnapshot.Usage.HasValue);
+        Assert.Equal(1_666, processSnapshot.Usage.Value.TotalTokens);
+        Assert.Equal(0.123456m, processSnapshot.Usage.Value.ActualCost);
+        var currentAttachment = Assert.Single(
+            Assert.IsType<AgentChatContextSnapshot>(
+                context.Services.GetRequiredService<IAgentChatContextRegistry>().Capture())
+                .Attachments);
+        Assert.Equal(attachment.ContentFingerprint, currentAttachment.ContentFingerprint);
+    }
+
+    [Fact]
+    public void Manager_chat_preserves_classifier_behavior_through_typed_orchestrator_request()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out _, workspaceService);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        const string userPrompt =
+            "Report the selected run total tokens, input tokens, cached input tokens, output tokens, actual cost, completed status, and current operator actions. Use only the runtime telemetry already in this manager chat context.";
+        cut.Find("[data-testid='chat-prompt-input']").Input(userPrompt);
+        cut.Find("[data-testid='chat-send-button']").Click();
+
+        var orchestrator = Assert.IsType<RecordingManagerChatExecutionOrchestrator>(
+            context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>());
+        cut.WaitForAssertion(() => Assert.NotNull(orchestrator.LastSendRequest));
+        Assert.Equal(userPrompt, orchestrator.LastSendRequest!.Prompt);
+        Assert.False(orchestrator.LastSendRequest.Behavior.RuntimeToolProvidersEnabled);
+        Assert.False(orchestrator.LastSendRequest.Behavior.WorkspaceToolsEnabled);
+        Assert.True(orchestrator.LastSendRequest.Behavior.ToolCapabilitiesEnabled);
+    }
+
+    [Fact]
+    public async Task Manager_chat_routes_approval_continuation_through_orchestrator()
+    {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out _, workspaceService);
+        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForAssertion(() => Assert.NotNull(workspaceService.LastWorkspaceSessionId));
+        var method = typeof(ProcessWorkspaceShell).GetMethod(
+            "ContinueManagerChatApprovalAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var continuation = Assert.IsAssignableFrom<Task>(
+                method.Invoke(cut.Instance, [true, true]));
+            await continuation;
+        });
+
+        var orchestrator = Assert.IsType<RecordingManagerChatExecutionOrchestrator>(
+            context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>());
+        Assert.True(orchestrator.LastApprovalDecision);
+        Assert.True(orchestrator.LastAutoApprovePendingToolCalls);
     }
 
     [Fact]
@@ -1715,16 +1899,28 @@ public sealed class ProcessWorkspaceShellTests
     private static TestContext CreateContext(
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
-        IAgentVoiceService? voiceService = null)
+        IAgentVoiceService? voiceService = null,
+        TimeProvider? timeProvider = null)
     {
+        var effectiveTimeProvider = timeProvider ?? TimeProvider.System;
         var context = new TestContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
+        context.Services.AddSingleton(effectiveTimeProvider);
+        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
+        context.Services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
-        context.Services.AddSingleton<IAgentChatContextRegistry>(
-            new AgentChatContextRegistry(TimeProvider.System));
+        var contextRegistry = new AgentChatContextRegistry(effectiveTimeProvider);
+        context.Services.AddSingleton<IAgentChatContextRegistry>(contextRegistry);
+        context.Services.AddSingleton<IAgentChatExecutionOrchestrator>(
+            new RecordingManagerChatExecutionOrchestrator(
+                agentWorkspaceService,
+                contextRegistry));
+        context.Services.AddSingleton<IAgentExecutionActivityReader>(
+            new AcceptedActivityReader());
         if (agentWorkspaceService is not null)
         {
             context.Services.AddSingleton(agentWorkspaceService);
@@ -1746,6 +1942,190 @@ public sealed class ProcessWorkspaceShellTests
         return context;
     }
 
+    private sealed class ManualTimeProvider(DateTimeOffset initialUtcNow) : TimeProvider
+    {
+        private readonly object gate = new();
+        private readonly List<ManualTimer> timers = [];
+        private DateTimeOffset utcNow = initialUtcNow.ToUniversalTime();
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            lock (gate)
+            {
+                return utcNow;
+            }
+        }
+
+        public override ITimer CreateTimer(
+            TimerCallback callback,
+            object? state,
+            TimeSpan dueTime,
+            TimeSpan period)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            ValidateTimerInterval(dueTime, nameof(dueTime));
+            ValidateTimerInterval(period, nameof(period));
+
+            lock (gate)
+            {
+                var timer = new ManualTimer(this, callback, state);
+                timer.SetSchedule(utcNow, dueTime, period);
+                timers.Add(timer);
+                return timer;
+            }
+        }
+
+        public void Advance(TimeSpan duration)
+        {
+            if (duration < TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(duration),
+                    duration,
+                    "Manual time cannot move backwards.");
+            }
+
+            lock (gate)
+            {
+                utcNow = utcNow.Add(duration);
+            }
+
+            while (TryTakeDueInvocation(out var invocation))
+            {
+                invocation.Callback(invocation.State);
+            }
+        }
+
+        private bool TryTakeDueInvocation(out TimerInvocation invocation)
+        {
+            lock (gate)
+            {
+                var dueTimer = timers
+                    .Where(candidate => candidate.IsDue(utcNow))
+                    .OrderBy(candidate => candidate.NextDueUtc)
+                    .FirstOrDefault();
+                if (dueTimer is null)
+                {
+                    invocation = default;
+                    return false;
+                }
+
+                invocation = dueTimer.TakeInvocation();
+                return true;
+            }
+        }
+
+        private bool Change(
+            ManualTimer timer,
+            TimeSpan dueTime,
+            TimeSpan period)
+        {
+            ValidateTimerInterval(dueTime, nameof(dueTime));
+            ValidateTimerInterval(period, nameof(period));
+
+            lock (gate)
+            {
+                if (timer.IsDisposed)
+                {
+                    return false;
+                }
+
+                timer.SetSchedule(utcNow, dueTime, period);
+                return true;
+            }
+        }
+
+        private void Dispose(ManualTimer timer)
+        {
+            lock (gate)
+            {
+                if (timer.IsDisposed)
+                {
+                    return;
+                }
+
+                timer.MarkDisposed();
+                timers.Remove(timer);
+            }
+        }
+
+        private static void ValidateTimerInterval(
+            TimeSpan interval,
+            string parameterName)
+        {
+            if (interval < TimeSpan.Zero && interval != Timeout.InfiniteTimeSpan)
+            {
+                throw new ArgumentOutOfRangeException(
+                    parameterName,
+                    interval,
+                    "A timer interval must be non-negative or infinite.");
+            }
+        }
+
+        private sealed class ManualTimer(
+            ManualTimeProvider owner,
+            TimerCallback callback,
+            object? state) : ITimer
+        {
+            private TimeSpan period = Timeout.InfiniteTimeSpan;
+
+            public DateTimeOffset? NextDueUtc { get; private set; }
+
+            public bool IsDisposed { get; private set; }
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+                => owner.Change(this, dueTime, period);
+
+            public void Dispose()
+                => owner.Dispose(this);
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+
+            public bool IsDue(DateTimeOffset currentUtc)
+                => !IsDisposed &&
+                   NextDueUtc is { } nextDueUtc &&
+                   nextDueUtc <= currentUtc;
+
+            public void SetSchedule(
+                DateTimeOffset currentUtc,
+                TimeSpan dueTime,
+                TimeSpan nextPeriod)
+            {
+                period = nextPeriod;
+                NextDueUtc = dueTime == Timeout.InfiniteTimeSpan
+                    ? null
+                    : currentUtc.Add(dueTime);
+            }
+
+            public TimerInvocation TakeInvocation()
+            {
+                if (NextDueUtc is null)
+                {
+                    throw new InvalidOperationException("The timer is not due.");
+                }
+
+                NextDueUtc = period > TimeSpan.Zero
+                    ? NextDueUtc.Value.Add(period)
+                    : null;
+                return new TimerInvocation(callback, state);
+            }
+
+            public void MarkDisposed()
+            {
+                IsDisposed = true;
+                NextDueUtc = null;
+            }
+        }
+
+        private readonly record struct TimerInvocation(
+            TimerCallback Callback,
+            object? State);
+    }
+
     private static string ResolveProcessName(Guid runId)
         => runId == ProjectSubprocessRunId
             ? "Long-running customer onboarding process with multiple external approvals"
@@ -1758,6 +2138,191 @@ public sealed class ProcessWorkspaceShellTests
         public string Format(decimal value)
         {
             return $"{CurrencyCode} {value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}";
+        }
+    }
+
+    private sealed class RecordingManagerChatExecutionOrchestrator(
+        IAgentFrameworkWorkspaceService? workspaceService,
+        IAgentChatContextRegistry contextRegistry) : IAgentChatExecutionOrchestrator
+    {
+        public AgentChatSendRequest? LastSendRequest { get; private set; }
+
+        public AgentChatContextSnapshot? LastCapturedContext { get; private set; }
+
+        public bool? LastApprovalDecision { get; private set; }
+
+        public bool? LastAutoApprovePendingToolCalls { get; private set; }
+
+        public AgentExecutionActivityStreamId? LastStreamId { get; private set; }
+
+        public AgentChatOperationHandle StartSendMessage(
+            AgentChatSendRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var completion = SendMessageAsync(request, cancellationToken);
+            return CreateHandle(completion);
+        }
+
+        public AgentChatOperationHandle StartSendMessage(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            IReadOnlyList<string>? attachmentPaths = null,
+            CancellationToken cancellationToken = default)
+            => StartSendMessage(
+                new AgentChatSendRequest(agentId, chatSessionId, prompt)
+                {
+                    AttachmentPaths = attachmentPaths
+                },
+                cancellationToken);
+
+        public AgentChatOperationHandle StartApprovalContinuation(
+            Guid agentId,
+            Guid chatSessionId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default)
+        {
+            var completion = RespondToPendingApprovalsAsync(
+                agentId,
+                chatSessionId,
+                approved,
+                autoApprovePendingToolCalls,
+                cancellationToken);
+            return CreateHandle(completion);
+        }
+
+        public Task<AgentChatRunResult> SendMessageAsync(
+            AgentChatSendRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastSendRequest = request;
+            LastCapturedContext = contextRegistry.Capture();
+            var service = workspaceService
+                ?? throw new InvalidOperationException(
+                    "The manager chat execution orchestrator was called without a workspace service.");
+            return service.SendMessageAsync(
+                request.AgentId,
+                request.ChatSessionId,
+                request.Prompt,
+                new AgentChatRunOptions(
+                    AgentExecutionOperationId.New(),
+                    request.Behavior.RuntimeToolProvidersEnabled,
+                    request.Behavior.WorkspaceToolsEnabled)
+                {
+                    ToolCapabilitiesEnabled = request.Behavior.ToolCapabilitiesEnabled
+                },
+                cancellationToken,
+                request.AttachmentPaths);
+        }
+
+        public Task<AgentChatRunResult> SendMessageAsync(
+            Guid agentId,
+            Guid? chatSessionId,
+            string prompt,
+            IReadOnlyList<string>? attachmentPaths = null,
+            CancellationToken cancellationToken = default)
+            => SendMessageAsync(
+                new AgentChatSendRequest(agentId, chatSessionId, prompt)
+                {
+                    AttachmentPaths = attachmentPaths
+                },
+                cancellationToken);
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default)
+        {
+            LastApprovalDecision = approved;
+            LastAutoApprovePendingToolCalls = autoApprovePendingToolCalls;
+            var assistantMessage = new ChatMessageRecord(
+                Guid.NewGuid(),
+                ChatMessageRole.Assistant,
+                "Approval continuation completed.",
+                Now,
+                TokenEstimate: 0);
+            var metric = new AgentRunMetric(
+                Guid.NewGuid(),
+                agentId,
+                chatSessionId,
+                Now,
+                RunOutcome.Succeeded,
+                ProviderName: "TestProvider",
+                Model: "test-model",
+                DurationMs: 1,
+                InputTokens: 0,
+                OutputTokens: 0,
+                ToolCalls: 0);
+            return Task.FromResult(
+                new AgentChatRunResult(chatSessionId, assistantMessage, metric));
+        }
+
+        private AgentChatOperationHandle CreateHandle(
+            Task<AgentChatRunResult> completion)
+        {
+            var identity = AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
+                WorkspaceScopeDescriptor.Organization("test"));
+            LastStreamId = identity.CreateStreamId(AgentExecutionOperationId.New());
+            return new AgentChatOperationHandle(
+                LastStreamId,
+                completion);
+        }
+    }
+
+    private sealed class AcceptedActivityReader : IAgentExecutionActivityReader
+    {
+        public ISequencedStreamReader<AgentExecutionActivity> OpenReader(
+            AgentExecutionActivityStreamId streamId,
+            StreamSequence fromInclusive)
+        {
+            Assert.Equal(StreamSequence.Beginning, fromInclusive);
+            return new AcceptedSequencedStreamReader();
+        }
+    }
+
+    private sealed class AcceptedSequencedStreamReader :
+        ISequencedStreamReader<AgentExecutionActivity>
+    {
+        private bool emitted;
+
+        public StreamSequence NextSequence => emitted
+            ? new StreamSequence(2)
+            : StreamSequence.First;
+
+        public ValueTask<SequencedStreamReadResult<AgentExecutionActivity>> ReadAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (emitted)
+            {
+                return ValueTask.FromResult<
+                    SequencedStreamReadResult<AgentExecutionActivity>>(
+                    new SequencedStreamCompleted<AgentExecutionActivity>(
+                        StreamSequence.First));
+            }
+
+            emitted = true;
+            var activity = new AgentExecutionActivity(
+                AgentExecutionActivityPhase.Accepted,
+                Now,
+                agentId: null,
+                "Agent request accepted.");
+            return ValueTask.FromResult<
+                SequencedStreamReadResult<AgentExecutionActivity>>(
+                new SequencedStreamEvents<AgentExecutionActivity>(
+                [
+                    new SequencedStreamEnvelope<AgentExecutionActivity>(
+                        StreamSequence.First,
+                        activity)
+                ]));
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
         }
     }
 
@@ -1951,6 +2516,7 @@ public sealed class ProcessWorkspaceShellTests
 
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(
             Guid executionRunId,
+            AgentExecutionOperationId activityOperationId,
             bool approved,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
@@ -1959,9 +2525,9 @@ public sealed class ProcessWorkspaceShellTests
             Guid agentId,
             Guid? chatSessionId,
             string prompt,
+            AgentChatRunOptions options,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<string>? attachmentPaths = null,
-            AgentChatRunOptions? options = null)
+            IReadOnlyList<string>? attachmentPaths = null)
         {
             LastPrompt = prompt;
             LastOptions = options;
@@ -2005,6 +2571,7 @@ public sealed class ProcessWorkspaceShellTests
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
             Guid agentId,
             Guid chatSessionId,
+            AgentExecutionOperationId activityOperationId,
             bool approved,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
@@ -2177,6 +2744,21 @@ public sealed class ProcessWorkspaceShellTests
             "definition-criticality" or
             "definition-operating-mode" or
             "definition-compatibility-issues";
+
+    private static void ConfigureReadyRefresh(
+        RecordingProcessWorkspaceProjectionClient client,
+        Func<DateTimeOffset> observedAtUtc)
+    {
+        client.ShellResultTransform = (_, projection) => projection with
+        {
+            Refresh = new ProcessWorkspaceProjectionRefreshProjection(
+                ProcessWorkspaceProjectionStatus.Ready,
+                observedAtUtc().ToUniversalTime(),
+                SourceGlobalSequence: 0,
+                BacklogEventCount: 0,
+                "Projection data is ready.")
+        };
+    }
 
     private sealed class RecordingProcessWorkspaceProjectionClient : IProcessWorkspaceProjectionClient
     {
@@ -2438,6 +3020,12 @@ public sealed class ProcessWorkspaceShellTests
                 CanOpenAgentContext: true,
                 CanEditDefinitions: false,
                 CanLaunchRuns: false);
+            var runtime = CreateRuntimeWorkspace(request);
+            var provenance = CreateTestProvenance(request, runtime);
+            runtime = runtime with
+            {
+                Provenance = provenance
+            };
 
             return new ProcessWorkspaceShellProjection(
                 request.Scope,
@@ -2461,8 +3049,121 @@ public sealed class ProcessWorkspaceShellTests
                 CreateCommands(),
                 CreateAgentEntry(request))
             {
-                Runtime = CreateRuntimeWorkspace(request)
+                Runtime = runtime,
+                Provenance = provenance
             };
+        }
+
+        private static ProcessWorkspaceProvenanceVector CreateTestProvenance(
+            ProcessWorkspaceShellRequest request,
+            ProcessRuntimeWorkspaceProjection runtime)
+        {
+            var options = request.RuntimeQuery?.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
+
+            ProcessProjectionComponentProvenance Present(
+                ProcessWorkspaceProvenanceComponent component,
+                object content)
+                => ProcessProjectionComponentProvenance.Present(
+                    ProcessProjectionComponentSource.ShellProjection,
+                    ProcessProjectionContentFingerprintFactory.Create(component, content),
+                    runtime.Freshness);
+
+            ProcessProjectionComponentProvenance Requested(
+                bool include,
+                ProcessWorkspaceProvenanceComponent component,
+                object content)
+                => include
+                    ? Present(component, content)
+                    : ProcessProjectionComponentProvenance.NotRequested(
+                        ProcessProjectionComponentAbsenceReason.LoadOptionDisabled);
+
+            var selectedRunRequested = options.IncludeSelectedRun;
+            var selectedRunPresent = selectedRunRequested && runtime.SelectedRun is not null;
+            var selectedRunProvenance = !selectedRunRequested
+                ? ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled)
+                : selectedRunPresent
+                    ? Present(
+                        ProcessWorkspaceProvenanceComponent.SelectedRunDetail,
+                        runtime.SelectedRun!)
+                    : ProcessProjectionComponentProvenance.Absent(
+                        ProcessProjectionComponentSource.ShellProjection,
+                        ProcessProjectionComponentAbsenceReason.NoSelection);
+            var selectedRecordProvenance = !selectedRunRequested
+                ? ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled)
+                : selectedRunPresent
+                    ? Present(
+                        ProcessWorkspaceProvenanceComponent.SelectedRunRecord,
+                        new
+                        {
+                            runtime.SelectedRunId,
+                            runtime.SelectedRun!.Status
+                        })
+                    : ProcessProjectionComponentProvenance.Absent(
+                        ProcessProjectionComponentSource.ShellProjection,
+                        ProcessProjectionComponentAbsenceReason.NoSelection);
+
+            return new ProcessWorkspaceProvenanceVector(
+                Present(
+                    ProcessWorkspaceProvenanceComponent.Selection,
+                    new
+                    {
+                        request.Scope,
+                        request.Selection,
+                        runtime.SelectedRunId
+                    }),
+                Present(
+                    ProcessWorkspaceProvenanceComponent.ShellRefresh,
+                    new
+                    {
+                        request.ForceRefresh,
+                        runtime.Freshness
+                    }),
+                Present(
+                    ProcessWorkspaceProvenanceComponent.DefinitionCatalog,
+                    request.DefinitionCatalogQuery),
+                Present(
+                    ProcessWorkspaceProvenanceComponent.LiveRunSummary,
+                    new
+                    {
+                        runtime.Stats.ActiveRunCount,
+                        runtime.Stats.AttentionRunCount,
+                        runtime.Stats.FailedRunCount
+                    }),
+                Present(
+                    ProcessWorkspaceProvenanceComponent.LiveRuns,
+                    runtime.Runs.Select(run => new
+                    {
+                        run.RunId,
+                        run.Status,
+                        run.LastEventAtUtc
+                    }).ToArray()),
+                selectedRunProvenance,
+                selectedRecordProvenance,
+                Requested(
+                    options.IncludeHistory,
+                    ProcessWorkspaceProvenanceComponent.HistoryPage,
+                    runtime.Events),
+                Requested(
+                    options.IncludeMetricHistory,
+                    ProcessWorkspaceProvenanceComponent.MetricHistory,
+                    runtime.MetricPoints),
+                Requested(
+                    options.IncludeActiveAgents,
+                    ProcessWorkspaceProvenanceComponent.ActiveAgents,
+                    runtime.ActiveAgents),
+                Requested(
+                    options.IncludeUsageTelemetry,
+                    ProcessWorkspaceProvenanceComponent.UsageTelemetry,
+                    runtime.Stats),
+                Present(
+                    ProcessWorkspaceProvenanceComponent.DerivedProjection,
+                    new
+                    {
+                        runtime.Stats,
+                        runtime.AttentionSummary
+                    }));
         }
 
         private static ProcessRuntimeWorkspaceProjection CreateRuntimeWorkspace(ProcessWorkspaceShellRequest request)

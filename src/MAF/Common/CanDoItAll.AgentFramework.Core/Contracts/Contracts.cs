@@ -5,7 +5,11 @@ namespace CanDoItAll.AgentFramework.Core;
 public interface ISandboxWorkspaceCatalogStore
 {
     Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default);
-    Task SaveCatalogAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken = default);
+    Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
+        CancellationToken cancellationToken = default);
+    Task<SandboxWorkspaceCatalog> SaveCatalogAsync(
+        SandboxWorkspaceCatalog catalog,
+        CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         CancellationToken cancellationToken = default);
@@ -48,8 +52,99 @@ public interface ISandboxWorkspaceExecutionRunStore
         CancellationToken cancellationToken = default);
 }
 
+public interface ISandboxWorkspaceChatRunStartStore
+{
+    Task<ChatBackedRunStartResult> BeginChatBackedRunAsync(
+        ChatBackedRunStartRequest request,
+        Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record ChatBackedRunStartRequest
+{
+    public ChatBackedRunStartRequest(
+        Guid agentId,
+        Guid expectedAgentProviderProfileId,
+        CatalogDataRevision expectedCatalogRevision,
+        Guid? chatSessionId)
+    {
+        if (agentId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "An agent identifier is required.",
+                nameof(agentId));
+        }
+
+        if (expectedAgentProviderProfileId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "An expected agent provider profile identifier is required.",
+                nameof(expectedAgentProviderProfileId));
+        }
+
+        if (!expectedCatalogRevision.IsAssigned)
+        {
+            throw new ArgumentException(
+                "An assigned expected catalog revision is required.",
+                nameof(expectedCatalogRevision));
+        }
+
+        if (chatSessionId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A selected chat session identifier cannot be empty.",
+                nameof(chatSessionId));
+        }
+
+        AgentId = agentId;
+        ExpectedAgentProviderProfileId = expectedAgentProviderProfileId;
+        ExpectedCatalogRevision = expectedCatalogRevision;
+        ChatSessionId = chatSessionId;
+    }
+
+    public Guid AgentId { get; }
+
+    public Guid ExpectedAgentProviderProfileId { get; }
+
+    public CatalogDataRevision ExpectedCatalogRevision { get; }
+
+    public Guid? ChatSessionId { get; }
+}
+
+public sealed record ChatBackedRunStartContext(
+    SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
+    AgentDefinition Agent,
+    ChatSessionRecord? Session);
+
+public sealed record ChatBackedRunStartMutation(
+    ExecutionRunDetail Detail,
+    ChatMessageRecord UserMessage);
+
+public abstract record ChatBackedRunStartResult(
+    SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
+    AgentDefinition Agent);
+
+public sealed record ChatBackedRunStarted(
+    SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
+    AgentDefinition Agent,
+    ExecutionRunDetail Detail,
+    ChatMessageRecord UserMessage)
+    : ChatBackedRunStartResult(CatalogSnapshot, Agent);
+
+public sealed record ChatBackedRunBlocked(
+    SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
+    AgentDefinition Agent,
+    ChatSessionRecord Session,
+    ExecutionRunRecord BlockingRun)
+    : ChatBackedRunStartResult(CatalogSnapshot, Agent);
+
 public interface ISandboxWorkspaceExecutionRunMutationStore
 {
+    Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
+        Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update,
+        CancellationToken cancellationToken = default);
+
     Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,
@@ -60,7 +155,9 @@ public interface ISandboxWorkspaceStore : ISandboxWorkspaceCatalogStore, ISandbo
 {
     Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotAsync(CancellationToken cancellationToken = default);
-    Task SaveAsync(SandboxWorkspaceDocument document, CancellationToken cancellationToken = default);
+    Task<SandboxWorkspaceDocument> SaveAsync(
+        SandboxWorkspaceDocument document,
+        CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceDocument> UpdateWorkspaceAsync(
         Func<SandboxWorkspaceDocument, SandboxWorkspaceDocument> update,
         CancellationToken cancellationToken = default);
@@ -279,6 +376,23 @@ public interface IAgentProviderCredentialResolver
     ProviderCredentialResolution Resolve(ProviderProfile provider);
 }
 
+public interface IAgentProviderCredentialDispatchScope : IDisposable
+{
+    ProviderCredentialResolution Resolve(ProviderProfile provider);
+}
+
+public interface IAgentProviderCredentialDispatchScopePreparation : IDisposable
+{
+    IAgentProviderCredentialDispatchScope BeginScope();
+}
+
+public interface IAgentProviderCredentialDispatchScopeFactory
+{
+    ValueTask<IAgentProviderCredentialDispatchScopePreparation> PrepareAsync(
+        IReadOnlyList<ProviderProfile> providers,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProviderProfileService
 {
     ProviderProfileEditorModel CreateEditor(ProviderProfile? provider = null);
@@ -314,6 +428,16 @@ public interface IProviderProfileRegistry
     Task<ProviderProfile> UpdateProviderAsync(
         Guid providerId,
         Func<ProviderProfile, ProviderProfile> update,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IProviderRuntimeProfileSource
+{
+    Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ProviderProfile?> GetProviderAsync(
+        Guid providerId,
         CancellationToken cancellationToken = default);
 }
 
@@ -458,17 +582,23 @@ public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
         throw new NotSupportedException(
             "This workspace does not support atomic same-source execution reservation.");
     }
-    Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default);
+    Task<ExecutionRunResult> ContinueExecutionRunAsync(
+        Guid executionRunId,
+        AgentExecutionOperationId activityOperationId,
+        bool approved,
+        bool autoApprovePendingToolCalls = false,
+        CancellationToken cancellationToken = default);
     Task<AgentChatRunResult> SendMessageAsync(
         Guid agentId,
         Guid? chatSessionId,
         string prompt,
+        AgentChatRunOptions options,
         CancellationToken cancellationToken = default,
-        IReadOnlyList<string>? attachmentPaths = null,
-        AgentChatRunOptions? options = null);
+        IReadOnlyList<string>? attachmentPaths = null);
     Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,
+        AgentExecutionOperationId activityOperationId,
         bool approved,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);

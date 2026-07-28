@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
 
 public sealed class ImageGenerationWorkflowExecutor(
-    IProviderProfileRegistry providerRegistry,
+    IProviderRuntimeProfileSource providerSource,
     IAgentImageGenerationService imageGenerationService,
     IWorkspacePathResolutionService paths) : IWorkflowExecutor
 {
@@ -73,7 +73,7 @@ public sealed class ImageGenerationWorkflowExecutor(
         Guid? providerProfileId,
         CancellationToken cancellationToken)
     {
-        var providers = await providerRegistry.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var providers = await providerSource.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
         var provider = providerProfileId.HasValue
             ? providers.FirstOrDefault(item => item.Id == providerProfileId.Value)
             : providers.FirstOrDefault(item => item.IsEnabled && item.Purpose == ProviderProfilePurpose.ImageGeneration);

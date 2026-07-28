@@ -48,8 +48,11 @@ There is no direct process runtime tool provider. Process steps execute through 
 | Process persistence | EF-backed process persistence | `src/Processes/CanDoItAll.Processes.Persistence/*` |
 | Process projections | Projection contracts/projector/query services | `src/Processes/CanDoItAll.Processes.Projections/*`, `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeProjectionQueryService.cs` |
 | Process UI | Blazor module | `src/Modules/CanDoItAll.Modules.Processes/Pages/*`, `src/Modules/CanDoItAll.Modules.Processes/Components/*` |
+| Process invocation snapshot | Processes agent-chat adapter | `src/Modules/CanDoItAll.Modules.Processes/AgentChat/ProcessInvocationSnapshot.cs` |
 | Project-structure process bridge | Workbench module | `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureProcessNodeService.cs` |
 | Project-structure runtime tools | Workbench runtime tool provider | `src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs` |
+| Typed agent activity and preparation | AgentFramework Core | `src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionActivityCoordinator.cs`, `src/MAF/Common/CanDoItAll.AgentFramework.Core/Preparation/*` |
+| Canonical provider profile snapshot | AgentFramework module | `src/Modules/CanDoItAll.Modules.AgentFramework/Providers/ProviderRuntimeProfileSnapshotService.cs` |
 | MAF runtime | AgentFramework MAF adapter | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs` |
 | MAF workflow adapter | AgentFramework MAF workflows | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/*` |
 | Provider runtime | AgentFramework providers and MAF provider gateway | `src/MAF/Common/CanDoItAll.AgentFramework.Providers/*`, `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/*` |
@@ -70,6 +73,8 @@ Two details matter for hardening:
 
 - Processes are registered before AgentFramework, but process execution still depends on AgentFramework abstractions through `CanDoItAll.Modules.Processes`.
 - Runtime database profile readiness seeds provider bootstrap state in `AppDatabaseBootstrapper`, including the managed OpenAI provider profile and secret record when `OPENAI_API_KEY` is configured.
+- `AppDatabaseBootstrapper` initializes the canonical immutable provider-runtime-profile snapshot after the active database profile is ready.
+- The process-local typed agent-activity coordinator is singleton and bounded; its current-profile reader is scoped and rejects/cancels cross-profile-generation access.
 
 ## Process Module Registration
 
@@ -194,6 +199,20 @@ Active process routes:
 
 `ProcessWorkspaceShell` is projection-first. It uses application projection services rather than reading persistence directly. Current panels cover definition metadata, roles, steps/canvas, runs, graphs, analytics, exchange, template library, and manager chat UI state. The live dashboard is a projection consumer, not the dispatcher.
 
+The process workspace and live dashboard publish a bounded
+`ProcessInvocationSnapshot` from the `ProcessWorkspaceShellProjection` they already
+hold. The snapshot includes per-component `NotRequested`/`Absent`/`Present` state,
+source, absence reason, content fingerprint, freshness, and optional durable run-record
+revision. Fields are copied only from provenance components marked `Present`.
+
+Snapshot publication requires a ready shell refresh. Freshness is anchored to the
+projection observation (`ObservedAtUtc + 5 minutes`), not extended merely because the
+UI copied it again. A timer reevaluates publication at expiry and removes the
+attachment unless the shell has received a newer valid source observation. The
+snapshot is bounded to 32 runs, 6 recent events per run, and 32 active agents, with an
+even smaller prompt projection. It is read context, not process mutation authority or
+a replacement for the projection/application query services.
+
 Hardening implication: UI tests should assert projection contracts and visible runtime states, not private persistence rows.
 
 ## Project-Structure Process Bridge
@@ -280,6 +299,13 @@ Concrete provider drivers currently registered:
 
 `AgentProviderFailureDisplayFormatter` normalizes quota/billing, rate-limit, and general provider failures into user-actionable messages with redacted provider detail.
 
+This MAF handle pool is distinct from
+`CanonicalProviderRuntimeProfileSnapshotService`. The latter is the immutable provider
+configuration projection used during agent preparation. It is database-profile and
+generation fenced, stores persistent provider `ConcurrencyToken` values as typed
+revisions, probes those revisions at use time, refreshes changed providers, and fails
+closed when canonical revision verification fails.
+
 ## Provider Profile And Bootstrap Behavior
 
 `AppDatabaseBootstrapper` seeds or repairs the managed OpenAI provider profile for the active database profile:
@@ -291,6 +317,12 @@ Concrete provider drivers currently registered:
 
 `ProviderProfileService.ResolveFeatureMatrix` is the central feature gate for structured output, tool support, hosted/local MCP, service-managed history, vision, compaction, image generation, and approval support.
 
+Provider save/delete commit observers update the canonical runtime profile snapshot
+only after the database commit. A projection failure is explicit and faults the
+snapshot; it does not roll back or conceal the successful canonical commit. Resolved
+credential values are not stored in that singleton. They live in a fingerprint-checked,
+one-dispatch credential scope and are cleared when it is disposed.
+
 ## Known Gaps
 
 | Gap | Why it matters | Current handling |
@@ -299,7 +331,7 @@ Concrete provider drivers currently registered:
 | Process API route scope is narrower than old docs | Old docs mention definitions/templates/artifacts/assignments/escalations/approvals/analytics routes that are absent. | Current API docs must match `ProcessesApi.cs`; broader endpoints require implementation. |
 | In-memory singleton dispatch queue | Works for local process lifetime, but not durable cross-process dispatch coordination. | EF stores hold run state/events; queue durability and multi-node dispatch need hardening. |
 | Projection freshness depends on catch-up calls and worker behavior | API/UI correctness depends on projector catch-up after mutations and dispatch. | Existing services call catch-up, but release gates should assert freshness under failure/recovery. |
-| Provider runtime descriptor invalidation is implicit at operation entry | Descriptor upsert happens before gateway operation, but profile edits should have explicit invalidation proof. | Pool supports invalidation; doc/test coverage should prove edit-to-handle lifecycle. |
+| Provider snapshots and handle pools have different invalidation boundaries | Provider-profile commits update the immutable canonical snapshot, while MAF runtime handles are still keyed/replaced by runtime descriptors at operation entry. A remote writer can bypass this host's commit observer. | Use-time database revision probes fail closed or refresh the profile snapshot; multi-host edit-to-handle propagation still needs deployment-level proof. |
 | MAF direct product-tool boundary is intentionally narrow | Project-structure and image generation use runtime providers; process control is API/adapter/bridge based. | Treat missing `processes_*` tools as a product decision point, not a MAF attachment failure. |
 | Historical proof docs remain broad and stale | Old class names can mislead agents into coding against removed surfaces. | Active docs should link here, `docs/api-control-plane.md`, and `docs/agent-runtime-tool-surface.md`, and mark historical proof as historical. |
 
@@ -374,7 +406,8 @@ Validation:
 
 Goal: make provider profile edits, quota failures, lane limits, and credentials operationally predictable.
 
-- Add tests proving provider profile edits invalidate or replace runtime handles.
+- Implemented foundation: canonical immutable provider snapshots, database/profile-generation fences, provider concurrency-revision probes, post-commit upsert/remove, explicit projection faults, and per-dispatch credential scopes.
+- Keep tests proving provider profile edits refresh/fault the canonical snapshot and invalidate or replace affected runtime handles.
 - Make dispatch lane limits visible in provider diagnostics.
 - Record provider failure category and redacted provider detail on execution runs.
 - Add credential-resolution diagnostics that never log secret values.
@@ -383,6 +416,7 @@ Goal: make provider profile edits, quota failures, lane limits, and credentials 
 Validation:
 
 - `ProviderRuntimeLifecycleTests`
+- `ProviderRuntimeProfileSnapshotServiceTests`
 - `ProviderDispatchLaneGateTests`
 - `AgentProviderFailureDisplayFormatterTests`
 - provider fake-driver integration tests
@@ -403,6 +437,9 @@ Validation:
 - `MafAgentRuntimeToolProviderCompositionTests`
 - `MafAgentRuntimeAttachmentTests`
 - `MafAgentRuntimeProviderHealthTests`
+
+Typed activity, preparation, provider-snapshot, and module-snapshot details are in
+[Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md).
 
 ### Phase 6: Project-Structure Process Bridge Hardening
 

@@ -141,7 +141,12 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
         IReadOnlyList<string> requiredMarkers,
         CancellationToken cancellationToken)
     {
-        var result = await workspaceService.SendMessageAsync(agentId, null, prompt, cancellationToken);
+        var result = await workspaceService.SendMessageAsync(
+            agentId,
+            null,
+            prompt,
+            new AgentChatRunOptions(AgentExecutionOperationId.New()),
+            cancellationToken);
         var content = result.AssistantMessage.Content;
 
         foreach (var marker in requiredMarkers)

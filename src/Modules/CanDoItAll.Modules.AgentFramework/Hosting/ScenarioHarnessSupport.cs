@@ -355,6 +355,7 @@ internal sealed class ScenarioHarnessService(ICanDoItAllAgentWorkspaceFactory wo
             new ExecutionRunRequest(
                 AgentId: agentId,
                 Prompt: definition.Prompt,
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 Context: new ExecutionInvocationContext(
                     SourceKind: "scenario-harness",
                     SourceId: definition.Id,
@@ -386,6 +387,7 @@ internal sealed class ScenarioHarnessService(ICanDoItAllAgentWorkspaceFactory wo
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
         await workspaceService.ContinueExecutionRunAsync(
             executionRunId,
+            AgentExecutionOperationId.New(),
             approved,
             autoApprovePendingToolCalls,
             cancellationToken);

@@ -111,12 +111,12 @@ public sealed class AgentExternalProvisioningServiceTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(new SandboxWorkspaceDocumentSnapshot(Document, 0));
 
-        public Task SaveAsync(
+        public Task<SandboxWorkspaceDocument> SaveAsync(
             SandboxWorkspaceDocument document,
             CancellationToken cancellationToken = default)
         {
             Document = document;
-            return Task.CompletedTask;
+            return Task.FromResult(Document);
         }
 
         public Task<SandboxWorkspaceDocument> UpdateWorkspaceAsync(
@@ -137,12 +137,21 @@ public sealed class AgentExternalProvisioningServiceTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(Document.ToCatalog());
 
-        public Task SaveCatalogAsync(
+        public async Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
+            CancellationToken cancellationToken = default)
+        {
+            var catalog = await LoadCatalogAsync(cancellationToken);
+            return new SandboxWorkspaceCatalogSnapshot(
+                catalog,
+                catalog.CatalogDataRevision);
+        }
+
+        public Task<SandboxWorkspaceCatalog> SaveCatalogAsync(
             SandboxWorkspaceCatalog catalog,
             CancellationToken cancellationToken = default)
         {
             Document = SandboxWorkspaceDocument.Combine(catalog, Document.ToExecutionState());
-            return Task.CompletedTask;
+            return Task.FromResult(catalog);
         }
 
         public Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(

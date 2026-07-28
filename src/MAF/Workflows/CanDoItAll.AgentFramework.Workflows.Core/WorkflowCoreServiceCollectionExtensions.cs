@@ -43,7 +43,8 @@ public static class WorkflowCoreServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkflowDefinitionValidator>(),
             serviceProvider.GetRequiredService<IProviderProfileRegistry>(),
             serviceProvider.GetRequiredService<IProviderProfileService>(),
-            serviceProvider.GetRequiredService<IWorkflowRuntimeBackendCatalog>()));
+            serviceProvider.GetRequiredService<IWorkflowRuntimeBackendCatalog>(),
+            serviceProvider.GetRequiredService<IProviderRuntimeProfileSource>()));
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogLookupService>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowCatalogService>());

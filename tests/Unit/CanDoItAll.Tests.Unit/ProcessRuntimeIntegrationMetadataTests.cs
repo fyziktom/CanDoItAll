@@ -345,13 +345,20 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("BuildChatMetadataJson method was not found.");
         const string baseMetadataJson = "{\"marker\":\"preserved\"}";
+        var operationId = AgentExecutionOperationId.New();
 
         var defaultMetadataJson = Assert.IsType<string>(method.Invoke(
             null,
-            [new AgentChatRunOptions(), baseMetadataJson]));
+            [new AgentChatRunOptions(operationId), baseMetadataJson]));
         var toolFreeMetadataJson = Assert.IsType<string>(method.Invoke(
             null,
-            [new AgentChatRunOptions { ToolCapabilitiesEnabled = false }, baseMetadataJson]));
+            [
+                new AgentChatRunOptions(operationId)
+                {
+                    ToolCapabilitiesEnabled = false
+                },
+                baseMetadataJson
+            ]));
 
         using var defaultDocument = JsonDocument.Parse(defaultMetadataJson);
         using var toolFreeDocument = JsonDocument.Parse(toolFreeMetadataJson);
@@ -1438,19 +1445,20 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
 
         public Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, AgentExecutionOperationId activityOperationId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<AgentChatRunResult> SendMessageAsync(
             Guid agentId,
             Guid? chatSessionId,
             string prompt,
+            AgentChatRunOptions options,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<string>? attachmentPaths = null,
-            AgentChatRunOptions? options = null) => throw Unused();
+            IReadOnlyList<string>? attachmentPaths = null) => throw Unused();
 
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
             Guid agentId,
             Guid chatSessionId,
+            AgentExecutionOperationId activityOperationId,
             bool approved,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();

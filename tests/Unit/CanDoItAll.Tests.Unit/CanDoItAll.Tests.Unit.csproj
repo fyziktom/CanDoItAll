@@ -75,6 +75,7 @@
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />

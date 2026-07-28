@@ -9,8 +9,6 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 {
     public bool ExecutionStorageExists() => layout.ExecutionStorageExists();
 
-    public bool HasPersistedIndex() => File.Exists(layout.ExecutionIndexPath);
-
     public async Task<SandboxWorkspaceExecutionState> LoadAsync(CancellationToken cancellationToken)
     {
         if (ExecutionStorageExists())
@@ -121,6 +119,852 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 .OrderByDescending(item => item.CompletedAtUtc)
                 .ToList()
         };
+    }
+
+    public async Task<NewExecutionRunPersistencePlan> PrepareNewRunAsync(
+        ExecutionRunDetail detail,
+        ChatSessionRecord? previousSession,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(detail);
+
+        var normalizedDetail = NormalizeRunDetail(detail);
+        EnsureRunDetailConsistency(normalizedDetail);
+        if (normalizedDetail.ChatSession is null)
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{normalizedDetail.Run.Id:N}' requires a chat session for atomic chat-run persistence.");
+        }
+
+        if (previousSession is not null &&
+            (previousSession.Id != normalizedDetail.ChatSession.Id ||
+             previousSession.AgentId != normalizedDetail.ChatSession.AgentId))
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{normalizedDetail.Run.Id:N}' was prepared with a different chat session.");
+        }
+
+        var previousIndex = await ResolveExecutionIndexAsync(cancellationToken);
+        var targetIndex = CreateNewRunTargetIndex(
+            previousIndex,
+            normalizedDetail,
+            sessionExistedBefore: previousSession is not null,
+            DateTimeOffset.UtcNow);
+        var previousUsageProjection =
+            await LoadOrBuildUsageProjectionAsync(
+                previousIndex,
+                cancellationToken);
+        if (previousUsageProjection.Revision != previousIndex.Revision ||
+            !string.Equals(
+                previousUsageProjection.Version,
+                previousIndex.Version,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Execution run '{normalizedDetail.Run.Id:N}' cannot be created because its usage projection revision does not match the execution index.");
+        }
+
+        return new NewExecutionRunPersistencePlan(
+            previousSession,
+            normalizedDetail,
+            previousIndex,
+            targetIndex);
+    }
+
+    public async Task<GenericNewExecutionRunPersistencePlan> PrepareGenericNewRunAsync(
+        ExecutionRunDetail detail,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(detail);
+
+        var normalizedDetail = NormalizeRunDetail(detail);
+        EnsureRunDetailConsistency(normalizedDetail);
+        if (File.Exists(layout.RunPath(normalizedDetail.Run.Id)))
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{normalizedDetail.Run.Id:N}' already exists.");
+        }
+
+        var previousSession = normalizedDetail.ChatSession is null
+            ? null
+            : await jsonStore.ReadJsonAsync<ChatSessionRecord>(
+                layout.SessionPath(normalizedDetail.ChatSession.Id),
+                cancellationToken);
+        if (previousSession is not null &&
+            (previousSession.Id != normalizedDetail.ChatSession!.Id ||
+             previousSession.AgentId != normalizedDetail.ChatSession.AgentId))
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{normalizedDetail.Run.Id:N}' references an incompatible persisted chat session.");
+        }
+
+        var previousIndex = await ResolveExecutionIndexAsync(
+            cancellationToken);
+        var targetIndex = CreateNewRunTargetIndex(
+            previousIndex,
+            normalizedDetail,
+            sessionExistedBefore: previousSession is not null,
+            DateTimeOffset.UtcNow);
+        var previousUsageProjection =
+            await LoadOrBuildUsageProjectionAsync(
+                previousIndex,
+                cancellationToken);
+        if (previousUsageProjection.Revision != previousIndex.Revision ||
+            !string.Equals(
+                previousUsageProjection.Version,
+                previousIndex.Version,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Execution run '{normalizedDetail.Run.Id:N}' cannot be created because its usage projection revision does not match the execution index.");
+        }
+
+        var targetUsageProjection = ApplyUsageProjectionDelta(
+            previousUsageProjection,
+            previousDetail: null,
+            normalizedDetail,
+            targetIndex);
+        return new GenericNewExecutionRunPersistencePlan(
+            previousSession,
+            normalizedDetail,
+            previousIndex,
+            targetIndex,
+            previousUsageProjection,
+            targetUsageProjection);
+    }
+
+    public async Task<ExecutionRunDetail> PersistGenericNewRunSlicesAsync(
+        GenericNewExecutionRunPersistencePlan plan,
+        bool validatePersistedState,
+        CancellationToken cancellationToken)
+    {
+        ValidateGenericNewRunPlan(plan);
+
+        var detail = plan.Detail;
+        var targetSession = detail.ChatSession;
+        var storedSession = targetSession is not null && validatePersistedState
+            ? await jsonStore.ReadJsonAsync<ChatSessionRecord>(
+                layout.SessionPath(targetSession.Id),
+                cancellationToken)
+            : plan.PreviousSession;
+        if (targetSession is not null &&
+            storedSession is not null &&
+            !HasSamePayload(storedSession, targetSession) &&
+            (plan.PreviousSession is null ||
+             !HasSamePayload(storedSession, plan.PreviousSession)))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' found an unexpected session payload for '{targetSession.Id:N}'.");
+        }
+
+        var storedDetail = validatePersistedState
+            ? await LoadRunDetailAsync(
+                detail.Run.Id,
+                cancellationToken)
+            : null;
+        if (storedDetail is not null)
+        {
+            EnsurePersistedGenericNewRunDetailIsCompatible(
+                storedDetail,
+                detail);
+        }
+
+        if (targetSession is not null)
+        {
+            await jsonStore.WriteJsonIfChangedAsync(
+                layout.SessionPath(targetSession.Id),
+                targetSession,
+                cancellationToken);
+        }
+
+        await PersistRunAsync(
+            storedDetail?.Run,
+            detail.Run,
+            storedDetail?.ExecutionLog ?? [],
+            detail.ExecutionLog,
+            storedDetail?.Metrics ?? [],
+            detail.Metrics,
+            storedDetail?.UsageObservations ?? [],
+            detail.UsageObservations,
+            storedDetail?.Approvals ?? [],
+            detail.Approvals,
+            storedDetail?.Artifacts ?? [],
+            detail.Artifacts,
+            storedDetail?.Checkpoints ?? [],
+            detail.Checkpoints,
+            storedDetail?.ToolReceipts ?? [],
+            detail.ToolReceipts,
+            cancellationToken);
+
+        return detail;
+    }
+
+    public async Task ValidateGenericNewRunPersistedStateAsync(
+        GenericNewExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        ValidateGenericNewRunPlan(plan);
+
+        var detail = plan.Detail;
+        if (detail.ChatSession is not null)
+        {
+            var storedSession =
+                await jsonStore.ReadJsonAsync<ChatSessionRecord>(
+                    layout.SessionPath(detail.ChatSession.Id),
+                    cancellationToken);
+            if (storedSession is not null &&
+                !HasSamePayload(storedSession, detail.ChatSession) &&
+                (plan.PreviousSession is null ||
+                 !HasSamePayload(storedSession, plan.PreviousSession)))
+            {
+                throw new InvalidDataException(
+                    $"Pending generic execution-run creation '{detail.Run.Id:N}' found an unexpected session payload for '{detail.ChatSession.Id:N}'.");
+            }
+        }
+
+        var storedDetail = await LoadRunDetailAsync(
+            detail.Run.Id,
+            cancellationToken);
+        if (storedDetail is not null)
+        {
+            EnsurePersistedGenericNewRunDetailIsCompatible(
+                storedDetail,
+                detail);
+        }
+
+        var currentIndex =
+            await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+                layout.ExecutionIndexPath,
+                cancellationToken);
+        if (currentIndex is null ||
+            !HasSamePayload(currentIndex, plan.PreviousIndex) &&
+            !HasSamePayload(currentIndex, plan.TargetIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' found an unexpected execution index.");
+        }
+
+        var currentUsageProjection =
+            await jsonStore.ReadJsonAsync<AgentUsageProjection>(
+                layout.ExecutionUsageIndexPath,
+                cancellationToken);
+        if (currentUsageProjection is null ||
+            !HasSamePayload(
+                currentUsageProjection,
+                plan.PreviousUsageProjection) &&
+            !HasSamePayload(
+                currentUsageProjection,
+                plan.TargetUsageProjection))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' found an unexpected usage projection.");
+        }
+    }
+
+    public async Task PersistGenericNewRunExecutionIndexAsync(
+        GenericNewExecutionRunPersistencePlan plan,
+        bool validatePersistedState,
+        CancellationToken cancellationToken)
+    {
+        ValidateGenericNewRunPlan(plan);
+        if (validatePersistedState)
+        {
+            var currentIndex =
+                await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+                    layout.ExecutionIndexPath,
+                    cancellationToken);
+            if (currentIndex is null ||
+                !HasSamePayload(currentIndex, plan.PreviousIndex) &&
+                !HasSamePayload(currentIndex, plan.TargetIndex))
+            {
+                throw new InvalidDataException(
+                    $"Pending generic execution-run creation '{plan.Detail.Run.Id:N}' found an unexpected execution index.");
+            }
+        }
+
+        if (validatePersistedState)
+        {
+            await jsonStore.WriteJsonIfChangedAsync(
+                layout.ExecutionIndexPath,
+                plan.TargetIndex,
+                cancellationToken);
+            return;
+        }
+
+        await jsonStore.WriteJsonAtomicallyAsync(
+            layout.ExecutionIndexPath,
+            plan.TargetIndex,
+            cancellationToken);
+    }
+
+    public async Task PersistGenericNewRunUsageIndexAsync(
+        GenericNewExecutionRunPersistencePlan plan,
+        bool validatePersistedState,
+        CancellationToken cancellationToken)
+    {
+        ValidateGenericNewRunPlan(plan);
+        if (validatePersistedState)
+        {
+            var currentUsageProjection =
+                await jsonStore.ReadJsonAsync<AgentUsageProjection>(
+                    layout.ExecutionUsageIndexPath,
+                    cancellationToken);
+            if (currentUsageProjection is null ||
+                !HasSamePayload(
+                    currentUsageProjection,
+                    plan.PreviousUsageProjection) &&
+                !HasSamePayload(
+                    currentUsageProjection,
+                    plan.TargetUsageProjection))
+            {
+                throw new InvalidDataException(
+                    $"Pending generic execution-run creation '{plan.Detail.Run.Id:N}' found an unexpected usage projection.");
+            }
+        }
+
+        if (validatePersistedState)
+        {
+            await jsonStore.WriteJsonIfChangedAsync(
+                layout.ExecutionUsageIndexPath,
+                plan.TargetUsageProjection,
+                cancellationToken);
+            return;
+        }
+
+        await jsonStore.WriteJsonAtomicallyAsync(
+            layout.ExecutionUsageIndexPath,
+            plan.TargetUsageProjection,
+            cancellationToken);
+    }
+
+    public async Task<ExecutionRunDetail> PersistNewRunSlicesAsync(
+        NewExecutionRunPersistencePlan plan,
+        bool validatePersistedState,
+        CancellationToken cancellationToken)
+    {
+        ValidateNewRunPlan(plan);
+
+        var detail = plan.Detail;
+        var targetSession = detail.ChatSession!;
+        var storedSession = validatePersistedState
+            ? await jsonStore.ReadJsonAsync<ChatSessionRecord>(
+                layout.SessionPath(targetSession.Id),
+                cancellationToken)
+            : plan.PreviousSession;
+        if (storedSession is not null &&
+            !HasSamePayload(storedSession, targetSession) &&
+            (plan.PreviousSession is null ||
+             !HasSamePayload(storedSession, plan.PreviousSession)))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{detail.Run.Id:N}' found an unexpected session payload for '{targetSession.Id:N}'.");
+        }
+
+        var storedDetail = validatePersistedState
+            ? await LoadRunDetailAsync(
+                detail.Run.Id,
+                cancellationToken)
+            : null;
+        if (storedDetail is not null)
+        {
+            EnsurePersistedDetailIsCompatible(storedDetail, detail);
+        }
+
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.SessionPath(targetSession.Id),
+            targetSession,
+            cancellationToken);
+        await PersistRunAsync(
+            storedDetail?.Run,
+            detail.Run,
+            storedDetail?.ExecutionLog ?? [],
+            detail.ExecutionLog,
+            storedDetail?.Metrics ?? [],
+            detail.Metrics,
+            storedDetail?.UsageObservations ?? [],
+            detail.UsageObservations,
+            storedDetail?.Approvals ?? [],
+            detail.Approvals,
+            storedDetail?.Artifacts ?? [],
+            detail.Artifacts,
+            storedDetail?.Checkpoints ?? [],
+            detail.Checkpoints,
+            storedDetail?.ToolReceipts ?? [],
+            detail.ToolReceipts,
+            cancellationToken);
+
+        return detail;
+    }
+
+    public async Task PersistNewRunIndexesAsync(
+        NewExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        ValidateNewRunPlan(plan);
+
+        var currentIndex = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+            layout.ExecutionIndexPath,
+            cancellationToken);
+        if (currentIndex is null ||
+            !HasSamePayload(currentIndex, plan.PreviousIndex) &&
+            !HasSamePayload(currentIndex, plan.TargetIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{plan.Detail.Run.Id:N}' found an unexpected execution index.");
+        }
+
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionIndexPath,
+            plan.TargetIndex,
+            cancellationToken);
+
+        var currentUsageProjection =
+            await jsonStore.ReadJsonAsync<AgentUsageProjection>(
+                layout.ExecutionUsageIndexPath,
+                cancellationToken);
+        AgentUsageProjection targetUsageProjection;
+        if (currentUsageProjection is not null &&
+            currentUsageProjection.Revision == plan.PreviousIndex.Revision &&
+            string.Equals(
+                currentUsageProjection.Version,
+                plan.PreviousIndex.Version,
+                StringComparison.Ordinal))
+        {
+            targetUsageProjection = ApplyUsageProjectionDelta(
+                currentUsageProjection,
+                previousDetail: null,
+                plan.Detail,
+                plan.TargetIndex);
+        }
+        else if (currentUsageProjection is not null &&
+                 currentUsageProjection.Revision ==
+                    plan.TargetIndex.Revision &&
+                 string.Equals(
+                     currentUsageProjection.Version,
+                     plan.TargetIndex.Version,
+                     StringComparison.Ordinal))
+        {
+            targetUsageProjection = currentUsageProjection;
+        }
+        else
+        {
+            targetUsageProjection = BuildUsageProjection(
+                await LoadUsageProjectionSourceAsync(cancellationToken),
+                plan.TargetIndex);
+        }
+
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionUsageIndexPath,
+            targetUsageProjection,
+            cancellationToken);
+    }
+
+    public void ValidateNewRunPlan(NewExecutionRunPersistencePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(plan.Detail);
+        ArgumentNullException.ThrowIfNull(plan.PreviousIndex);
+        ArgumentNullException.ThrowIfNull(plan.TargetIndex);
+
+        var detail = NormalizeRunDetail(plan.Detail);
+        EnsureRunDetailConsistency(detail);
+        if (detail.Run.Id == Guid.Empty)
+        {
+            throw new InvalidDataException(
+                "A pending chat-run transaction must identify its execution run.");
+        }
+
+        if (detail.ChatSession is null ||
+            detail.Run.ChatSessionId != detail.ChatSession.Id)
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{detail.Run.Id:N}' does not contain one matching chat session.");
+        }
+
+        if (plan.PreviousSession is not null &&
+            (plan.PreviousSession.Id != detail.ChatSession.Id ||
+             plan.PreviousSession.AgentId != detail.ChatSession.AgentId))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{detail.Run.Id:N}' contains an invalid previous session.");
+        }
+
+        if (!HasSamePayload(detail, plan.Detail))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{detail.Run.Id:N}' contains a non-normalized execution detail.");
+        }
+
+        var expectedTargetIndex = CreateNewRunTargetIndex(
+            plan.PreviousIndex,
+            detail,
+            sessionExistedBefore: plan.PreviousSession is not null,
+            plan.TargetIndex.UpdatedAtUtc);
+        if (!HasSamePayload(expectedTargetIndex, plan.TargetIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{detail.Run.Id:N}' contains an invalid target execution index.");
+        }
+    }
+
+    public void ValidateGenericNewRunPlan(
+        GenericNewExecutionRunPersistencePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(plan.Detail);
+        ArgumentNullException.ThrowIfNull(plan.PreviousIndex);
+        ArgumentNullException.ThrowIfNull(plan.TargetIndex);
+        ArgumentNullException.ThrowIfNull(plan.PreviousUsageProjection);
+        ArgumentNullException.ThrowIfNull(plan.TargetUsageProjection);
+
+        var detail = NormalizeRunDetail(plan.Detail);
+        EnsureRunDetailConsistency(detail);
+        if (detail.Run.Id == Guid.Empty)
+        {
+            throw new InvalidDataException(
+                "A pending generic execution-run creation must identify its execution run.");
+        }
+
+        if (!HasSamePayload(detail, plan.Detail))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' contains a non-normalized execution detail.");
+        }
+
+        if (plan.PreviousSession is not null &&
+            (detail.ChatSession is null ||
+             plan.PreviousSession.Id != detail.ChatSession.Id ||
+             plan.PreviousSession.AgentId != detail.ChatSession.AgentId))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' contains an invalid previous session.");
+        }
+
+        var expectedTargetIndex = CreateNewRunTargetIndex(
+            plan.PreviousIndex,
+            detail,
+            sessionExistedBefore: plan.PreviousSession is not null,
+            plan.TargetIndex.UpdatedAtUtc);
+        if (!HasSamePayload(expectedTargetIndex, plan.TargetIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' contains an invalid target execution index.");
+        }
+
+        if (plan.PreviousUsageProjection.Revision !=
+                plan.PreviousIndex.Revision ||
+            !string.Equals(
+                plan.PreviousUsageProjection.Version,
+                plan.PreviousIndex.Version,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' contains an invalid previous usage projection.");
+        }
+
+        var expectedTargetUsageProjection = ApplyUsageProjectionDelta(
+            plan.PreviousUsageProjection,
+            previousDetail: null,
+            detail,
+            plan.TargetIndex);
+        if (!HasSamePayload(
+                expectedTargetUsageProjection,
+                plan.TargetUsageProjection))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{detail.Run.Id:N}' contains an invalid target usage projection.");
+        }
+    }
+
+    public bool HasSameRunDetailPayload(
+        ExecutionRunDetail previousDetail,
+        ExecutionRunDetail targetDetail)
+    {
+        ArgumentNullException.ThrowIfNull(previousDetail);
+        ArgumentNullException.ThrowIfNull(targetDetail);
+
+        return HasSamePayload(
+            NormalizeRunDetail(previousDetail),
+            NormalizeRunDetail(targetDetail));
+    }
+
+    public async Task<ExistingExecutionRunPersistencePlan> PrepareExistingRunUpdateAsync(
+        ExecutionRunDetail previousDetail,
+        ExecutionRunDetail targetDetail,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(previousDetail);
+        ArgumentNullException.ThrowIfNull(targetDetail);
+
+        var normalizedPrevious = NormalizeRunDetail(previousDetail);
+        var normalizedTarget = NormalizeRunDetail(targetDetail);
+        EnsureRunDetailConsistency(normalizedPrevious);
+        EnsureRunDetailConsistency(normalizedTarget);
+        EnsureExistingRunIdentityIsStable(
+            normalizedPrevious,
+            normalizedTarget);
+        if (HasSamePayload(normalizedPrevious, normalizedTarget))
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{normalizedPrevious.Run.Id:N}' update does not change its persisted payload.");
+        }
+
+        var previousIndex = await ResolveExecutionIndexAsync(
+            cancellationToken);
+        var targetIndex = CreateExistingRunTargetIndex(
+            previousIndex,
+            normalizedPrevious,
+            normalizedTarget,
+            DateTimeOffset.UtcNow);
+        var previousUsageProjection = await LoadOrBuildUsageProjectionAsync(
+            previousIndex,
+            cancellationToken);
+        if (previousUsageProjection.Revision != previousIndex.Revision)
+        {
+            throw new InvalidDataException(
+                $"Execution run '{normalizedPrevious.Run.Id:N}' cannot be updated because its usage projection revision does not match the execution index.");
+        }
+
+        var targetUsageProjection = ApplyUsageProjectionDelta(
+            previousUsageProjection,
+            normalizedPrevious,
+            normalizedTarget,
+            targetIndex);
+
+        return new ExistingExecutionRunPersistencePlan(
+            normalizedPrevious,
+            normalizedTarget,
+            previousIndex,
+            targetIndex,
+            previousUsageProjection,
+            targetUsageProjection);
+    }
+
+    public async Task PersistExistingRunSessionAsync(
+        ExistingExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        if (plan.TargetDetail.ChatSession is null)
+        {
+            return;
+        }
+
+        var storedSession = await jsonStore.ReadJsonAsync<ChatSessionRecord>(
+            layout.SessionPath(plan.TargetDetail.ChatSession.Id),
+            cancellationToken);
+        EnsureStoredPayloadIsTransitionCompatible(
+            storedSession,
+            plan.PreviousDetail.ChatSession,
+            plan.TargetDetail.ChatSession,
+            plan.TargetDetail.Run.Id,
+            "chat session");
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.SessionPath(plan.TargetDetail.ChatSession.Id),
+            plan.TargetDetail.ChatSession,
+            cancellationToken);
+    }
+
+    public async Task PersistExistingRunRecordAsync(
+        ExistingExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        var storedRun = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(
+            layout.RunPath(plan.TargetDetail.Run.Id),
+            cancellationToken);
+        EnsureStoredPayloadIsTransitionCompatible(
+            storedRun,
+            plan.PreviousDetail.Run,
+            plan.TargetDetail.Run,
+            plan.TargetDetail.Run.Id,
+            "execution run");
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.RunPath(plan.TargetDetail.Run.Id),
+            plan.TargetDetail.Run,
+            cancellationToken);
+    }
+
+    public async Task PersistExistingRunApprovalRecordsAsync(
+        ExistingExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunApprovalsRoot(plan.TargetDetail.Run.Id),
+            plan.PreviousDetail.Approvals,
+            plan.TargetDetail.Approvals,
+            item => item.ApprovalId,
+            item => $"{jsonStore.NormalizeFileName(item.ApprovalId)}.json",
+            plan.TargetDetail.Run.Id,
+            "execution approval",
+            StringComparer.OrdinalIgnoreCase,
+            cancellationToken);
+    }
+
+    public async Task PersistExistingRunRemainingRecordsAsync(
+        ExistingExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        var runId = plan.TargetDetail.Run.Id;
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunLogsRoot(runId),
+            plan.PreviousDetail.ExecutionLog,
+            plan.TargetDetail.ExecutionLog,
+            item => item.Id,
+            item => $"{item.Id:N}.json",
+            runId,
+            "execution log",
+            EqualityComparer<Guid>.Default,
+            cancellationToken);
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunMetricsRoot(runId),
+            plan.PreviousDetail.Metrics,
+            plan.TargetDetail.Metrics,
+            item => item.Id,
+            item => $"{item.Id:N}.json",
+            runId,
+            "execution metric",
+            EqualityComparer<Guid>.Default,
+            cancellationToken);
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunUsageRoot(runId),
+            plan.PreviousDetail.UsageObservations,
+            plan.TargetDetail.UsageObservations,
+            item => item.Id,
+            item => $"{item.Id:N}.json",
+            runId,
+            "provider usage observation",
+            EqualityComparer<Guid>.Default,
+            cancellationToken);
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunArtifactsRoot(runId),
+            plan.PreviousDetail.Artifacts,
+            plan.TargetDetail.Artifacts,
+            item => item.Id,
+            item => $"{item.Id:N}.json",
+            runId,
+            "execution artifact",
+            EqualityComparer<Guid>.Default,
+            cancellationToken);
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunWorkflowCheckpointsRoot(runId),
+            plan.PreviousDetail.Checkpoints,
+            plan.TargetDetail.Checkpoints,
+            item => item.Id,
+            item => $"{item.Id:N}.json",
+            runId,
+            "execution checkpoint",
+            EqualityComparer<Guid>.Default,
+            cancellationToken);
+        await PersistExistingRunRecordCollectionAsync(
+            layout.RunReceiptsRoot(runId),
+            plan.PreviousDetail.ToolReceipts,
+            plan.TargetDetail.ToolReceipts,
+            item => item.Id,
+            item => $"{item.Id:N}.json",
+            runId,
+            "tool execution receipt",
+            EqualityComparer<Guid>.Default,
+            cancellationToken);
+    }
+
+    public async Task PersistExistingRunExecutionIndexAsync(
+        ExistingExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        var currentIndex = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+            layout.ExecutionIndexPath,
+            cancellationToken);
+        EnsureStoredPayloadIsTransitionCompatible(
+            currentIndex,
+            plan.PreviousIndex,
+            plan.TargetIndex,
+            plan.TargetDetail.Run.Id,
+            "execution index");
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionIndexPath,
+            plan.TargetIndex,
+            cancellationToken);
+    }
+
+    public async Task PersistExistingRunUsageIndexAsync(
+        ExistingExecutionRunPersistencePlan plan,
+        CancellationToken cancellationToken)
+    {
+        var currentProjection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(
+            layout.ExecutionUsageIndexPath,
+            cancellationToken);
+        EnsureStoredPayloadIsTransitionCompatible(
+            currentProjection,
+            plan.PreviousUsageProjection,
+            plan.TargetUsageProjection,
+            plan.TargetDetail.Run.Id,
+            "usage index");
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionUsageIndexPath,
+            plan.TargetUsageProjection,
+            cancellationToken);
+    }
+
+    public void ValidateExistingRunUpdatePlan(
+        ExistingExecutionRunPersistencePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(plan.PreviousDetail);
+        ArgumentNullException.ThrowIfNull(plan.TargetDetail);
+        ArgumentNullException.ThrowIfNull(plan.PreviousIndex);
+        ArgumentNullException.ThrowIfNull(plan.TargetIndex);
+        ArgumentNullException.ThrowIfNull(plan.PreviousUsageProjection);
+        ArgumentNullException.ThrowIfNull(plan.TargetUsageProjection);
+
+        var previousDetail = NormalizeRunDetail(plan.PreviousDetail);
+        var targetDetail = NormalizeRunDetail(plan.TargetDetail);
+        EnsureRunDetailConsistency(previousDetail);
+        EnsureRunDetailConsistency(targetDetail);
+        EnsureExistingRunIdentityIsStable(previousDetail, targetDetail);
+        if (!HasSamePayload(previousDetail, plan.PreviousDetail) ||
+            !HasSamePayload(targetDetail, plan.TargetDetail))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' contains a non-normalized detail.");
+        }
+
+        if (HasSamePayload(previousDetail, targetDetail))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' does not change its persisted payload.");
+        }
+
+        var expectedTargetIndex = CreateExistingRunTargetIndex(
+            plan.PreviousIndex,
+            previousDetail,
+            targetDetail,
+            plan.TargetIndex.UpdatedAtUtc);
+        if (!HasSamePayload(expectedTargetIndex, plan.TargetIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' contains an invalid target execution index.");
+        }
+
+        if (plan.PreviousUsageProjection.Revision !=
+                plan.PreviousIndex.Revision ||
+            plan.TargetUsageProjection.Revision !=
+                plan.TargetIndex.Revision)
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' contains an invalid usage projection revision.");
+        }
+
+        var expectedTargetUsageProjection = ApplyUsageProjectionDelta(
+            plan.PreviousUsageProjection,
+            previousDetail,
+            targetDetail,
+            plan.TargetIndex);
+        if (!HasSamePayload(
+                expectedTargetUsageProjection,
+                plan.TargetUsageProjection))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' contains an invalid target usage projection.");
+        }
     }
 
     public async Task<ExecutionSliceSaveResult> SaveRunDetailAsync(
@@ -659,10 +1503,70 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return run is not null && IsIndexedFailedRun(run) ? 1 : 0;
     }
 
+    private static ExecutionStorageIndex CreateNewRunTargetIndex(
+        ExecutionStorageIndex currentIndex,
+        ExecutionRunDetail detail,
+        bool sessionExistedBefore,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new ExecutionStorageIndex(
+            Version: string.IsNullOrWhiteSpace(currentIndex.Version) ? "3.0" : currentIndex.Version,
+            Revision: currentIndex.Revision + 1L,
+            UpdatedAtUtc: updatedAtUtc,
+            SessionCount: currentIndex.SessionCount + (sessionExistedBefore ? 0 : 1),
+            RunCount: currentIndex.RunCount + 1,
+            LogCount: currentIndex.LogCount + detail.ExecutionLog.Count,
+            MetricCount: currentIndex.MetricCount + detail.Metrics.Count,
+            ApprovalCount: currentIndex.ApprovalCount + detail.Approvals.Count,
+            ArtifactCount: currentIndex.ArtifactCount + detail.Artifacts.Count,
+            CheckpointCount: currentIndex.CheckpointCount + detail.Checkpoints.Count,
+            ReceiptCount: currentIndex.ReceiptCount + detail.ToolReceipts.Count,
+            ActiveRunCount:
+                currentIndex.ActiveRunCount +
+                CountIndexedActiveRuns(detail.Run),
+            FailedRunCount: currentIndex.FailedRunCount + CountIndexedFailedRuns(detail.Run),
+            UsageObservationCount: currentIndex.UsageObservationCount + detail.UsageObservations.Count);
+    }
+
+    private static ExecutionStorageIndex CreateExistingRunTargetIndex(
+        ExecutionStorageIndex currentIndex,
+        ExecutionRunDetail previousDetail,
+        ExecutionRunDetail targetDetail,
+        DateTimeOffset updatedAtUtc)
+    {
+        return new ExecutionStorageIndex(
+            Version: string.IsNullOrWhiteSpace(currentIndex.Version) ? "3.0" : currentIndex.Version,
+            Revision: currentIndex.Revision + 1L,
+            UpdatedAtUtc: updatedAtUtc,
+            SessionCount: currentIndex.SessionCount,
+            RunCount: currentIndex.RunCount,
+            LogCount: currentIndex.LogCount + targetDetail.ExecutionLog.Count - previousDetail.ExecutionLog.Count,
+            MetricCount: currentIndex.MetricCount + targetDetail.Metrics.Count - previousDetail.Metrics.Count,
+            ApprovalCount: currentIndex.ApprovalCount + targetDetail.Approvals.Count - previousDetail.Approvals.Count,
+            ArtifactCount: currentIndex.ArtifactCount + targetDetail.Artifacts.Count - previousDetail.Artifacts.Count,
+            CheckpointCount: currentIndex.CheckpointCount + targetDetail.Checkpoints.Count - previousDetail.Checkpoints.Count,
+            ReceiptCount: currentIndex.ReceiptCount + targetDetail.ToolReceipts.Count - previousDetail.ToolReceipts.Count,
+            ActiveRunCount:
+                currentIndex.ActiveRunCount +
+                CountIndexedActiveRuns(targetDetail.Run) -
+                CountIndexedActiveRuns(previousDetail.Run),
+            FailedRunCount:
+                currentIndex.FailedRunCount +
+                CountIndexedFailedRuns(targetDetail.Run) -
+                CountIndexedFailedRuns(previousDetail.Run),
+            UsageObservationCount:
+                currentIndex.UsageObservationCount +
+                targetDetail.UsageObservations.Count -
+                previousDetail.UsageObservations.Count);
+    }
+
     private static bool IsIndexedActiveRun(ExecutionRunRecord run)
     {
-        return run.UpdatedAtUtc >= DateTimeOffset.UtcNow.AddHours(-1) &&
-               run.State is ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting;
+        return run.State is
+            ExecutionState.Preparing or
+            ExecutionState.Running or
+            ExecutionState.WaitingOnTool or
+            ExecutionState.Persisting;
     }
 
     private static bool IsIndexedFailedRun(ExecutionRunRecord run)
@@ -673,6 +1577,15 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     private async Task<AgentUsageProjection> LoadOrBuildUsageProjectionAsync(CancellationToken cancellationToken)
     {
         var executionIndex = await ResolveExecutionIndexAsync(cancellationToken);
+        return await LoadOrBuildUsageProjectionAsync(
+            executionIndex,
+            cancellationToken);
+    }
+
+    private async Task<AgentUsageProjection> LoadOrBuildUsageProjectionAsync(
+        ExecutionStorageIndex executionIndex,
+        CancellationToken cancellationToken)
+    {
         var projection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(layout.ExecutionUsageIndexPath, cancellationToken);
         if (projection is not null &&
             projection.Revision == executionIndex.Revision &&
@@ -763,10 +1676,19 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             .ToDictionary(item => item.AgentId);
         var providerRows = currentProjection.Providers
             .Select(CreateProviderAccumulator)
-            .ToDictionary(item => CreateProviderKey(item.ProviderName, item.ProviderKind), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                item => CreateProviderKey(
+                    item.ProviderName,
+                    item.ProviderKind),
+                ProviderUsageProjectionKeyComparer.Instance);
         var modelRows = currentProjection.Models
             .Select(CreateModelAccumulator)
-            .ToDictionary(item => CreateModelKey(item.ProviderName, item.ProviderKind, item.Model), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                item => CreateModelKey(
+                    item.ProviderName,
+                    item.ProviderKind,
+                    item.Model),
+                ModelUsageProjectionKeyComparer.Instance);
 
         if (previousDetail is not null)
         {
@@ -789,8 +1711,14 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         ExecutionStorageIndex executionIndex)
     {
         var agentRows = new Dictionary<Guid, AgentUsageProjectionAccumulator>();
-        var providerRows = new Dictionary<string, ProviderUsageProjectionAccumulator>(StringComparer.OrdinalIgnoreCase);
-        var modelRows = new Dictionary<string, ModelUsageProjectionAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var providerRows = new Dictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator>(
+            ProviderUsageProjectionKeyComparer.Instance);
+        var modelRows = new Dictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator>(
+            ModelUsageProjectionKeyComparer.Instance);
         var details = executionState.ExecutionRuns
             .Select(run => new ExecutionRunDetail(
                 run,
@@ -834,8 +1762,12 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
     private static void AddRunContribution(
         IDictionary<Guid, AgentUsageProjectionAccumulator> agentRows,
-        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
-        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator> modelRows,
         ExecutionRunDetail detail)
     {
         AddAgentRun(agentRows, detail, delta: 1);
@@ -854,8 +1786,12 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
     private static void SubtractRunContribution(
         IDictionary<Guid, AgentUsageProjectionAccumulator> agentRows,
-        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
-        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator> modelRows,
         ExecutionRunDetail detail)
     {
         AddAgentRun(agentRows, detail, delta: -1);
@@ -897,7 +1833,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void AddProviderUsage(
-        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> providerRows,
         ProviderUsageObservation observation,
         int failedRunDelta)
     {
@@ -910,7 +1848,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void SubtractProviderUsage(
-        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> providerRows,
         ProviderUsageObservation observation)
     {
         var key = CreateProviderKey(observation.ProviderName, observation.ProviderKind);
@@ -924,7 +1864,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void AddProviderFailure(
-        IDictionary<string, ProviderUsageProjectionAccumulator> providerRows,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> providerRows,
         string providerName,
         int failedRunDelta)
     {
@@ -944,7 +1886,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void AddModelUsage(
-        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        IDictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator> modelRows,
         ProviderUsageObservation observation)
     {
         var key = CreateModelKey(observation.ProviderName, observation.ProviderKind, observation.Model);
@@ -955,7 +1899,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void SubtractModelUsage(
-        IDictionary<string, ModelUsageProjectionAccumulator> modelRows,
+        IDictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator> modelRows,
         ProviderUsageObservation observation)
     {
         var key = CreateModelKey(observation.ProviderName, observation.ProviderKind, observation.Model);
@@ -1040,7 +1986,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static ProviderUsageProjectionAccumulator GetOrAddProvider(
-        IDictionary<string, ProviderUsageProjectionAccumulator> rows,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> rows,
         string providerName,
         ProviderKind providerKind)
     {
@@ -1075,7 +2023,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static ModelUsageProjectionAccumulator GetOrAddModel(
-        IDictionary<string, ModelUsageProjectionAccumulator> rows,
+        IDictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator> rows,
         string providerName,
         ProviderKind providerKind,
         string model)
@@ -1110,24 +2060,24 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         };
     }
 
-    private static string CreateProviderKey(ProviderUsageProjectionRow row)
+    private static ProviderUsageProjectionKey CreateProviderKey(
+        string providerName,
+        ProviderKind providerKind)
     {
-        return CreateProviderKey(row.ProviderName, row.ProviderKind);
+        return new ProviderUsageProjectionKey(
+            providerKind,
+            NormalizeProviderName(providerName));
     }
 
-    private static string CreateProviderKey(string providerName, ProviderKind providerKind)
+    private static ModelUsageProjectionKey CreateModelKey(
+        string providerName,
+        ProviderKind providerKind,
+        string model)
     {
-        return $"{providerKind:D}:{NormalizeProviderName(providerName)}";
-    }
-
-    private static string CreateModelKey(ModelUsageProjectionRow row)
-    {
-        return CreateModelKey(row.ProviderName, row.ProviderKind, row.Model);
-    }
-
-    private static string CreateModelKey(string providerName, ProviderKind providerKind, string model)
-    {
-        return $"{providerKind:D}:{NormalizeProviderName(providerName)}:{NormalizeModel(model)}";
+        return new ModelUsageProjectionKey(
+            providerKind,
+            NormalizeProviderName(providerName),
+            NormalizeModel(model));
     }
 
     private static string NormalizeProviderName(string providerName)
@@ -1187,8 +2137,10 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void RemoveIfEmpty(
-        IDictionary<string, ProviderUsageProjectionAccumulator> rows,
-        string key,
+        IDictionary<
+            ProviderUsageProjectionKey,
+            ProviderUsageProjectionAccumulator> rows,
+        ProviderUsageProjectionKey key,
         ProviderUsageProjectionAccumulator row)
     {
         if (row.IsEmpty)
@@ -1198,8 +2150,10 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     private static void RemoveIfEmpty(
-        IDictionary<string, ModelUsageProjectionAccumulator> rows,
-        string key,
+        IDictionary<
+            ModelUsageProjectionKey,
+            ModelUsageProjectionAccumulator> rows,
+        ModelUsageProjectionKey key,
         ModelUsageProjectionAccumulator row)
     {
         if (row.IsEmpty)
@@ -1282,7 +2236,439 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 $"The supplied {label} collection contains records that do not belong to execution run '{executionRunId:N}'.");
         }
     }
+
+    private async Task PersistExistingRunRecordCollectionAsync<T, TKey>(
+        string directoryPath,
+        IReadOnlyList<T> previousRecords,
+        IReadOnlyList<T> targetRecords,
+        Func<T, TKey> keySelector,
+        Func<T, string> fileNameSelector,
+        Guid executionRunId,
+        string label,
+        IEqualityComparer<TKey> keyComparer,
+        CancellationToken cancellationToken)
+        where TKey : notnull
+    {
+        var storedRecords = await jsonStore.LoadRecordsFromDirectoryAsync<T>(
+            directoryPath,
+            cancellationToken);
+        EnsureStoredRecordsAreTransitionCompatible(
+            storedRecords,
+            previousRecords,
+            targetRecords,
+            keySelector,
+            executionRunId,
+            label,
+            keyComparer);
+        await jsonStore.PersistRecordDirectoryDiffAsync(
+            directoryPath,
+            storedRecords,
+            targetRecords,
+            fileNameSelector,
+            cancellationToken);
+    }
+
+    private void EnsureStoredPayloadIsTransitionCompatible<T>(
+        T? stored,
+        T? previous,
+        T? target,
+        Guid executionRunId,
+        string label)
+        where T : class
+    {
+        if (stored is not null &&
+            (previous is null || !HasSamePayload(stored, previous)) &&
+            (target is null || !HasSamePayload(stored, target)))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{executionRunId:N}' found an unexpected {label} payload.");
+        }
+
+        if (stored is null &&
+            previous is not null &&
+            target is not null)
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{executionRunId:N}' found a missing {label} payload.");
+        }
+    }
+
+    private void EnsureStoredRecordsAreTransitionCompatible<T, TKey>(
+        IReadOnlyList<T> storedRecords,
+        IReadOnlyList<T> previousRecords,
+        IReadOnlyList<T> targetRecords,
+        Func<T, TKey> keySelector,
+        Guid executionRunId,
+        string label,
+        IEqualityComparer<TKey> keyComparer)
+        where TKey : notnull
+    {
+        var previousByKey = previousRecords.ToDictionary(
+            keySelector,
+            keyComparer);
+        var targetByKey = targetRecords.ToDictionary(
+            keySelector,
+            keyComparer);
+        var storedKeys = new HashSet<TKey>(keyComparer);
+
+        foreach (var storedRecord in storedRecords)
+        {
+            var key = keySelector(storedRecord);
+            if (!storedKeys.Add(key))
+            {
+                throw new InvalidDataException(
+                    $"Pending execution-run update '{executionRunId:N}' found duplicate {label} records.");
+            }
+
+            var matchesPrevious =
+                previousByKey.TryGetValue(key, out var previousRecord) &&
+                HasSamePayload(storedRecord, previousRecord);
+            var matchesTarget =
+                targetByKey.TryGetValue(key, out var targetRecord) &&
+                HasSamePayload(storedRecord, targetRecord);
+            if (!matchesPrevious && !matchesTarget)
+            {
+                throw new InvalidDataException(
+                    $"Pending execution-run update '{executionRunId:N}' found a conflicting {label} record.");
+            }
+        }
+    }
+
+    private static void EnsureExistingRunIdentityIsStable(
+        ExecutionRunDetail previousDetail,
+        ExecutionRunDetail targetDetail)
+    {
+        if (previousDetail.Run.Id == Guid.Empty ||
+            previousDetail.Run.Id != targetDetail.Run.Id)
+        {
+            throw new InvalidDataException(
+                "A pending execution-run update has an invalid execution-run identity.");
+        }
+
+        if (previousDetail.Run.AgentId != targetDetail.Run.AgentId ||
+            previousDetail.Run.ChatSessionId != targetDetail.Run.ChatSessionId)
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' cannot change the run's agent or chat-session identity.");
+        }
+
+        if (targetDetail.Run.UpdatedAtUtc <
+                previousDetail.Run.UpdatedAtUtc ||
+            !string.Equals(
+                previousDetail.Run.ProviderName,
+                targetDetail.Run.ProviderName,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                previousDetail.Run.Model,
+                targetDetail.Run.Model,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{targetDetail.Run.Id:N}' cannot move its update timestamp backwards or change its provider/model identity.");
+        }
+
+        EnsureUsageObservationTransition(
+            previousDetail.Run.Id,
+            previousDetail.UsageObservations,
+            targetDetail.UsageObservations);
+    }
+
+    private static void EnsureUsageObservationTransition(
+        Guid executionRunId,
+        IReadOnlyList<ProviderUsageObservation> previous,
+        IReadOnlyList<ProviderUsageObservation> target)
+    {
+        Dictionary<Guid, ProviderUsageObservation> targetById;
+        try
+        {
+            targetById = target.ToDictionary(observation => observation.Id);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{executionRunId:N}' contains duplicate provider usage observation identities.",
+                exception);
+        }
+
+        var previousIds = new HashSet<Guid>();
+        foreach (var prior in previous)
+        {
+            if (!previousIds.Add(prior.Id))
+            {
+                throw new InvalidDataException(
+                    $"Pending execution-run update '{executionRunId:N}' contains duplicate prior provider usage observation identities.");
+            }
+
+            if (!targetById.TryGetValue(prior.Id, out var current))
+            {
+                throw new InvalidDataException(
+                    $"Pending execution-run update '{executionRunId:N}' cannot remove provider usage observation '{prior.Id:N}'.");
+            }
+
+            if (prior.CreatedAtUtc != current.CreatedAtUtc ||
+                prior.ProviderKind != current.ProviderKind ||
+                prior.TransportKind != current.TransportKind ||
+                prior.ExecutionRunId != current.ExecutionRunId ||
+                prior.AgentId != current.AgentId ||
+                prior.ChatSessionId != current.ChatSessionId ||
+                !string.Equals(
+                    prior.ProviderName,
+                    current.ProviderName,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    prior.Model,
+                    current.Model,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    $"Pending execution-run update '{executionRunId:N}' cannot change the identity, timestamp, provider, or model of provider usage observation '{prior.Id:N}'.");
+            }
+        }
+    }
+
+    private readonly record struct ProviderUsageProjectionKey(
+        ProviderKind ProviderKind,
+        string ProviderName);
+
+    private readonly record struct ModelUsageProjectionKey(
+        ProviderKind ProviderKind,
+        string ProviderName,
+        string Model);
+
+    private sealed class ProviderUsageProjectionKeyComparer :
+        IEqualityComparer<ProviderUsageProjectionKey>
+    {
+        public static ProviderUsageProjectionKeyComparer Instance { get; } =
+            new();
+
+        public bool Equals(
+            ProviderUsageProjectionKey left,
+            ProviderUsageProjectionKey right)
+        {
+            return left.ProviderKind == right.ProviderKind &&
+                   string.Equals(
+                       left.ProviderName,
+                       right.ProviderName,
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode(ProviderUsageProjectionKey value)
+        {
+            return HashCode.Combine(
+                value.ProviderKind,
+                StringComparer.OrdinalIgnoreCase.GetHashCode(
+                    value.ProviderName));
+        }
+    }
+
+    private sealed class ModelUsageProjectionKeyComparer :
+        IEqualityComparer<ModelUsageProjectionKey>
+    {
+        public static ModelUsageProjectionKeyComparer Instance { get; } =
+            new();
+
+        public bool Equals(
+            ModelUsageProjectionKey left,
+            ModelUsageProjectionKey right)
+        {
+            return left.ProviderKind == right.ProviderKind &&
+                   string.Equals(
+                       left.ProviderName,
+                       right.ProviderName,
+                       StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(
+                       left.Model,
+                       right.Model,
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode(ModelUsageProjectionKey value)
+        {
+            return HashCode.Combine(
+                value.ProviderKind,
+                StringComparer.OrdinalIgnoreCase.GetHashCode(
+                    value.ProviderName),
+                StringComparer.OrdinalIgnoreCase.GetHashCode(
+                    value.Model));
+        }
+    }
+
+    private bool HasSamePayload<T>(T left, T right)
+    {
+        return !jsonStore.RequiresSave(left, right);
+    }
+
+    private void EnsurePersistedDetailIsCompatible(
+        ExecutionRunDetail persisted,
+        ExecutionRunDetail target)
+    {
+        if (!HasSamePayload(persisted.Run, target.Run))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{target.Run.Id:N}' found a conflicting execution run.");
+        }
+
+        if (persisted.ChatSession is null ||
+            target.ChatSession is null ||
+            !HasSamePayload(persisted.ChatSession, target.ChatSession))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{target.Run.Id:N}' found a conflicting chat session.");
+        }
+
+        EnsurePersistedRecordsAreSubset(
+            persisted.ExecutionLog,
+            target.ExecutionLog,
+            item => item.Id,
+            target.Run.Id,
+            "execution log");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Metrics,
+            target.Metrics,
+            item => item.Id,
+            target.Run.Id,
+            "execution metric");
+        EnsurePersistedRecordsAreSubset(
+            persisted.UsageObservations,
+            target.UsageObservations,
+            item => item.Id,
+            target.Run.Id,
+            "provider usage observation");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Approvals,
+            target.Approvals,
+            item => item.ApprovalId,
+            target.Run.Id,
+            "execution approval");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Artifacts,
+            target.Artifacts,
+            item => item.Id,
+            target.Run.Id,
+            "execution artifact");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Checkpoints,
+            target.Checkpoints,
+            item => item.Id,
+            target.Run.Id,
+            "execution checkpoint");
+        EnsurePersistedRecordsAreSubset(
+            persisted.ToolReceipts,
+            target.ToolReceipts,
+            item => item.Id,
+            target.Run.Id,
+            "tool execution receipt");
+    }
+
+    private void EnsurePersistedGenericNewRunDetailIsCompatible(
+        ExecutionRunDetail persisted,
+        ExecutionRunDetail target)
+    {
+        if (!HasSamePayload(persisted.Run, target.Run))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{target.Run.Id:N}' found a conflicting execution run.");
+        }
+
+        if ((persisted.ChatSession is null) !=
+                (target.ChatSession is null) ||
+            persisted.ChatSession is not null &&
+            target.ChatSession is not null &&
+            !HasSamePayload(
+                persisted.ChatSession,
+                target.ChatSession))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{target.Run.Id:N}' found a conflicting chat session.");
+        }
+
+        EnsurePersistedRecordsAreSubset(
+            persisted.ExecutionLog,
+            target.ExecutionLog,
+            item => item.Id,
+            target.Run.Id,
+            "execution log");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Metrics,
+            target.Metrics,
+            item => item.Id,
+            target.Run.Id,
+            "execution metric");
+        EnsurePersistedRecordsAreSubset(
+            persisted.UsageObservations,
+            target.UsageObservations,
+            item => item.Id,
+            target.Run.Id,
+            "provider usage observation");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Approvals,
+            target.Approvals,
+            item => item.ApprovalId,
+            target.Run.Id,
+            "execution approval");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Artifacts,
+            target.Artifacts,
+            item => item.Id,
+            target.Run.Id,
+            "execution artifact");
+        EnsurePersistedRecordsAreSubset(
+            persisted.Checkpoints,
+            target.Checkpoints,
+            item => item.Id,
+            target.Run.Id,
+            "execution checkpoint");
+        EnsurePersistedRecordsAreSubset(
+            persisted.ToolReceipts,
+            target.ToolReceipts,
+            item => item.Id,
+            target.Run.Id,
+            "tool execution receipt");
+    }
+
+    private void EnsurePersistedRecordsAreSubset<T, TKey>(
+        IReadOnlyList<T> persisted,
+        IReadOnlyList<T> target,
+        Func<T, TKey> keySelector,
+        Guid executionRunId,
+        string label)
+        where TKey : notnull
+    {
+        var targetByKey = target.ToDictionary(keySelector);
+        foreach (var item in persisted)
+        {
+            var key = keySelector(item);
+            if (!targetByKey.TryGetValue(key, out var targetItem) ||
+                !HasSamePayload(item, targetItem))
+            {
+                throw new InvalidDataException(
+                    $"Pending chat-run transaction '{executionRunId:N}' found a conflicting {label} record.");
+            }
+        }
+    }
 }
+
+internal sealed record NewExecutionRunPersistencePlan(
+    ChatSessionRecord? PreviousSession,
+    ExecutionRunDetail Detail,
+    ExecutionStorageIndex PreviousIndex,
+    ExecutionStorageIndex TargetIndex);
+
+internal sealed record GenericNewExecutionRunPersistencePlan(
+    ChatSessionRecord? PreviousSession,
+    ExecutionRunDetail Detail,
+    ExecutionStorageIndex PreviousIndex,
+    ExecutionStorageIndex TargetIndex,
+    AgentUsageProjection PreviousUsageProjection,
+    AgentUsageProjection TargetUsageProjection);
+
+internal sealed record ExistingExecutionRunPersistencePlan(
+    ExecutionRunDetail PreviousDetail,
+    ExecutionRunDetail TargetDetail,
+    ExecutionStorageIndex PreviousIndex,
+    ExecutionStorageIndex TargetIndex,
+    AgentUsageProjection PreviousUsageProjection,
+    AgentUsageProjection TargetUsageProjection);
 
 internal sealed record ExecutionSliceSaveResult(
     bool Changed,

@@ -18,7 +18,8 @@ public sealed record AgentChatAttachmentStagingResult(
 public sealed class AgentChatAttachmentStagingService(IWorkspacePathResolutionService pathResolutionService)
     : IAgentChatAttachmentStagingService
 {
-    public const long MaxImageAttachmentBytes = 10 * 1024 * 1024;
+    public const long MaxImageAttachmentBytes =
+        AgentRuntimeInputAttachmentPolicy.MaximumImageBytes;
 
     private static readonly IReadOnlyDictionary<string, string> AllowedImageContentTypesByExtension =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -80,16 +81,42 @@ public sealed class AgentChatAttachmentStagingService(IWorkspacePathResolutionSe
             Directory.CreateDirectory(directory);
         }
 
-        await using var output = new FileStream(
-            resolved.FullPath,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 81920,
-            FileOptions.Asynchronous);
-        await content.CopyToAsync(output, cancellationToken);
+        long copiedBytes;
+        try
+        {
+            await using var output = new FileStream(
+                resolved.FullPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                FileOptions.Asynchronous);
+            copiedBytes =
+                await AgentRuntimeInputAttachmentPolicy.CopyBoundedAsync(
+                    content,
+                    output,
+                    safeFileName,
+                    MaxImageAttachmentBytes,
+                    cancellationToken);
+            await output.FlushAsync(cancellationToken);
+        }
+        catch
+        {
+            DeleteFailedStagingFile(resolved.FullPath);
+            throw;
+        }
 
-        return new AgentChatAttachmentStagingResult(relativePath, expectedContentType, sizeBytes);
+        if (copiedBytes != sizeBytes)
+        {
+            DeleteFailedStagingFile(resolved.FullPath);
+            throw new InvalidOperationException(
+                $"Attachment image declared {sizeBytes:N0} bytes but supplied {copiedBytes:N0} bytes.");
+        }
+
+        return new AgentChatAttachmentStagingResult(
+            relativePath,
+            expectedContentType,
+            copiedBytes);
     }
 
     private static string BuildAttachmentRelativePath(string fileName)
@@ -129,5 +156,13 @@ public sealed class AgentChatAttachmentStagingService(IWorkspacePathResolutionSe
         }
 
         return $"{safeBaseName}{extension.ToLowerInvariant()}";
+    }
+
+    private static void DeleteFailedStagingFile(string fullPath)
+    {
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+        }
     }
 }

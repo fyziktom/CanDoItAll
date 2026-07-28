@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
+using System.Globalization;
 using System.Text;
 
 namespace CanDoItAll.Modules.Workbench.ProjectStructure;
@@ -117,8 +118,12 @@ public static class ProjectStructureAgentChatContextBuilder
             $"""
 {ContextualAgentWorkspaceContextBuilder.BuildProjectStructureBaseContext(projectId)}
 Selected-node operation contract:
+- In interactive project-structure chat, `project_structure_read` request.source=ContextDefault resolves to the invocation snapshot captured atomically from the held UI surface. It never falls back to storage.
+- request.source=InvocationSnapshot explicitly selects that same captured surface and fails closed when the context, scope, project, profile generation, freshness, fingerprints, or requested coverage do not match.
+- The invocation snapshot covers safe hierarchy, classification, status, progress, priority, schedule, project relationships, links, and selection facts. It intentionally omits notes, metadata, assets, layout, routes, action capabilities, storage references, and file contents.
+- Set request.source=CanonicalCurrent explicitly when omitted or deeper canonical facts are required. Governed-process and non-project contexts resolve ContextDefault to CanonicalCurrent.
 - `project_structure_read` request.nodeIds is exact-node-only; it returns the named nodes and does not return their descendants.
-- For a request to summarize, analyze, review, or operate on a selected container or branch and its contents, you must call `project_structure_read` with request.subtreeRootIds set to the selected node ids and request.includeLinks, request.includeNotes, request.includeMetadata, and request.includeAssets all set to true. Do not substitute request.nodeIds or `project_structure_hierarchy_get`; project hierarchy is not node-subtree content.
+- For a request to summarize, analyze, review, or operate on a selected container or branch and its contents, use request.subtreeRootIds with the selected node ids and request.includeLinks when relationships are required. Add request.includeNotes, request.includeMetadata, request.includeAssets, or request.includeLayout only together with request.source=CanonicalCurrent. Do not substitute request.nodeIds or `project_structure_hierarchy_get`; project hierarchy is not node-subtree content.
 - When the user asks to add or create something "here" and exactly one project-structure node is selected, use that selected node id as request.parentNodeKey.
 - To create a generated Markdown or text asset, write it to a managed relative workspace path with `workspace_write_file`, then pass that exact path as request.sourceWorkspacePath to `project_structure_asset_create`; no external-target path is needed.
 - After `project_structure_asset_create`, read the created asset back with `project_structure_asset_get` for metadata and `project_structure_asset_content_get` for content. Both readbacks are required completion evidence.
@@ -134,16 +139,17 @@ Selected-node operation contract:
     }
 
     public static AgentChatContextFragment BuildSelectionFragment(
-        IReadOnlyList<ProjectStructureNode>? selectedNodeDetails,
+        ProjectStructureInvocationSnapshot snapshot,
         IReadOnlyList<AgentChatContextEntityReference>? selectedNodes)
     {
+        ArgumentNullException.ThrowIfNull(snapshot);
         var normalizedSelections = NormalizeSelectedNodes(selectedNodes);
-        return BuildSelectionFragmentCore(normalizedSelections, selectedNodeDetails);
+        return BuildSelectionFragmentCore(normalizedSelections, snapshot.Nodes);
     }
 
     private static AgentChatContextFragment BuildSelectionFragmentCore(
         IReadOnlyList<AgentChatContextEntityReference> normalizedSelections,
-        IReadOnlyList<ProjectStructureNode>? selectedNodeDetails)
+        IReadOnlyList<ProjectStructureInvocationSnapshotNode>? selectedNodeDetails)
     {
         var summarizedSelections = normalizedSelections
             .Take(MaximumSelectionSummaryCount)
@@ -190,7 +196,7 @@ Selected-node operation contract:
 
     private static string BuildSelectedNodeDetails(
         IReadOnlyList<AgentChatContextEntityReference> normalizedSelections,
-        IReadOnlyList<ProjectStructureNode>? selectedNodeDetails)
+        IReadOnlyList<ProjectStructureInvocationSnapshotNode>? selectedNodeDetails)
     {
         if (normalizedSelections.Count == 0 || selectedNodeDetails is null || selectedNodeDetails.Count == 0)
         {
@@ -201,7 +207,7 @@ Selected-node operation contract:
             .Select(node => node.Id)
             .ToHashSet(StringComparer.Ordinal);
         var details = selectedNodeDetails
-            .Where(node => node is not null && selectedIds.Contains(node.Id))
+            .Where(node => selectedIds.Contains(node.Id))
             .DistinctBy(node => node.Id, StringComparer.Ordinal)
             .OrderBy(node => node.Id, StringComparer.Ordinal)
             .Take(MaximumDetailedSelectionCount)
@@ -223,16 +229,16 @@ Selected-node operation contract:
             builder.Append("  objectSubtype: ").AppendLine(BoundValue(node.ObjectSubtype));
             builder.Append("  artifactKind: ").AppendLine(BoundValue(node.ArtifactKind));
             builder.Append("  status: ").AppendLine(BoundValue(node.Status));
-            builder.Append("  subtitle: ").AppendLine(BoundValue(node.Subtitle));
-            builder.Append("  notes: ").AppendLine(BoundValue(node.Notes));
-            builder.Append("  metadataJson: ").AppendLine(BoundValue(node.MetadataJson));
-            builder.Append("  mediaRelativePath: ").AppendLine(BoundValue(node.MediaRelativePath));
-            builder.Append("  mediaContentType: ").AppendLine(BoundValue(node.MediaContentType));
-            builder.Append("  mediaOriginalFileName: ").Append(BoundValue(node.MediaOriginalFileName));
+            builder.Append("  progressMode: ").AppendLine(BoundValue(node.ProgressMode));
+            builder.Append("  progressPercent: ").AppendLine(node.ProgressPercent.ToString(CultureInfo.InvariantCulture));
+            builder.Append("  priority: ").AppendLine(node.Priority.ToString(CultureInfo.InvariantCulture));
+            builder.Append("  effectivePriority: ").AppendLine(node.EffectivePriority.ToString(CultureInfo.InvariantCulture));
+            builder.Append("  startUtc: ").AppendLine(node.StartUtc?.ToString("O", CultureInfo.InvariantCulture) ?? "none");
+            builder.Append("  endUtc: ").Append(node.EndUtc?.ToString("O", CultureInfo.InvariantCulture) ?? "none");
         }
 
         var availableDetailCount = selectedNodeDetails
-            .Where(node => node is not null && selectedIds.Contains(node.Id))
+            .Where(node => selectedIds.Contains(node.Id))
             .Select(node => node.Id)
             .Distinct(StringComparer.Ordinal)
             .Count();
@@ -258,26 +264,29 @@ Selected-node operation contract:
             return "none";
         }
 
-        var normalized = string.Join(
-            ' ',
-            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        return normalized.Length <= maximumLength
-            ? normalized
-            : string.Concat(normalized.AsSpan(0, maximumLength - 1), "…");
+        return ProjectStructureInvocationSnapshotMapper.NormalizeContextValue(
+            value,
+            maximumLength,
+            "none");
     }
 
     public static IReadOnlyList<AgentChatContextEntityReference> BuildSelectedNodes(
         IEnumerable<ProjectStructureNode>? selectedNodes)
     {
         return selectedNodes?
-            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
-            .DistinctBy(node => node.Id, StringComparer.Ordinal)
-            .OrderBy(node => node.Id, StringComparer.Ordinal)
+            .Select(node => (
+                Node: node,
+                Id: ProjectStructureInvocationSnapshotMapper.NormalizeIdentifier(node.Id)))
+            .Where(static item => item.Id is not null)
+            .DistinctBy(static item => item.Id, StringComparer.Ordinal)
+            .OrderBy(static item => item.Id, StringComparer.Ordinal)
             .Take(AgentChatPositionLimits.MaximumSelectedEntities)
-            .Select(node => new AgentChatContextEntityReference(
+            .Select(item => new AgentChatContextEntityReference(
                 "project-node",
-                node.Id,
-                string.IsNullOrWhiteSpace(node.Title) ? node.Id : node.Title))
+                item.Id!,
+                string.IsNullOrWhiteSpace(item.Node.Title) ? item.Id! : BoundValue(
+                    item.Node.Title,
+                    MaximumSelectionLabelLength)))
             .ToArray()
             ?? [];
     }
@@ -362,9 +371,17 @@ Current project workspace view: project calendar.
     {
         return selectedNodes?
             .Where(node => node is not null && string.Equals(node.Kind, "project-node", StringComparison.Ordinal))
-            .DistinctBy(node => node.Id, StringComparer.Ordinal)
-            .OrderBy(node => node.Id, StringComparer.Ordinal)
+            .Select(node => (
+                Node: node,
+                Id: ProjectStructureInvocationSnapshotMapper.NormalizeIdentifier(node.Id)))
+            .Where(static item => item.Id is not null)
+            .DistinctBy(static item => item.Id, StringComparer.Ordinal)
+            .OrderBy(static item => item.Id, StringComparer.Ordinal)
             .Take(AgentChatPositionLimits.MaximumSelectedEntities)
+            .Select(item => new AgentChatContextEntityReference(
+                "project-node",
+                item.Id!,
+                BoundValue(item.Node.DisplayName, MaximumSelectionLabelLength)))
             .ToArray()
             ?? [];
     }

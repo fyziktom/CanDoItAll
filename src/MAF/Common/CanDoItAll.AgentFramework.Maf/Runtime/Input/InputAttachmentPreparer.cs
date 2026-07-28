@@ -66,7 +66,7 @@ internal sealed class InputAttachmentPreparer(
                     [new ProviderChatAttachment(
                         attachment.Name,
                         attachment.ContentType,
-                        attachment.Bytes)],
+                        attachment.Bytes.ToArray())],
                     InputAttachmentAnalysisModelParameterConfigurationJson,
                     cancellationToken)
                 .ConfigureAwait(false);

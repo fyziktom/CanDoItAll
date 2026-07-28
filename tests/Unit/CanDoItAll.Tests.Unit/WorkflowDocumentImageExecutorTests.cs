@@ -499,9 +499,9 @@ public sealed class WorkflowDocumentImageExecutorTests
         Assert.Same(realService, provider.GetRequiredService<IAgentImageAnalysisService>());
     }
 
-    private static ImageAnalyzeWorkflowExecutor CreateAnalyzeExecutor(IProviderProfileRegistry registry)
+    private static ImageAnalyzeWorkflowExecutor CreateAnalyzeExecutor(IProviderRuntimeProfileSource providerSource)
         => new(
-            registry,
+            providerSource,
             new RecordingImageOperationService
             {
                 ContentResult = CreateImageContentResult(succeeded: true)
@@ -762,7 +762,10 @@ public sealed class WorkflowDocumentImageExecutorTests
         }
     }
 
-    private sealed class RecordingProviderRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
+    private sealed class RecordingProviderRegistry(
+        IReadOnlyList<ProviderProfile> providers) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(providers);

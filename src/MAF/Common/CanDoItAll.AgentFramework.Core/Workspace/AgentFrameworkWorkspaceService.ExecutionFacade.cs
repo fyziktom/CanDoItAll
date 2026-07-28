@@ -39,20 +39,98 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<ExecutionRunResult> ExecuteRunAsync(
         ExecutionRunRequest request,
         CancellationToken cancellationToken = default)
-        => executionService.ExecuteRunAsync(request, cancellationToken);
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(
+            request.InitialActivityOperationId,
+            nameof(request));
+        return ExecuteNewActivityOperationAsync(
+            request.InitialActivityOperationId,
+            request.AgentId,
+            request.ChatSessionId,
+            "Agent execution request accepted.",
+            operation => executionService.ExecuteRunWithinOperationAsync(
+                operation,
+                request,
+                cancellationToken));
+    }
+
+    public Task<ExecutionRunResult> ExecuteRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+        => executionService.ExecuteRunWithinOperationAsync(
+            operation,
+            request,
+            cancellationToken);
 
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,
         ExecutionRunRequest request,
         CancellationToken cancellationToken = default)
-        => executionService.ExecuteSameSourceRunAsync(source, request, cancellationToken);
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(
+            request.InitialActivityOperationId,
+            nameof(request));
+        return ExecuteNewActivityOperationAsync(
+            request.InitialActivityOperationId,
+            request.AgentId,
+            request.ChatSessionId,
+            "Source execution request accepted.",
+            operation => executionService.ExecuteSameSourceRunWithinOperationAsync(
+                operation,
+                source,
+                request,
+                cancellationToken));
+    }
+
+    public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken = default)
+        => executionService.ExecuteSameSourceRunWithinOperationAsync(
+            operation,
+            source,
+            request,
+            cancellationToken);
 
     public Task<ExecutionRunResult> ContinueExecutionRunAsync(
+        Guid executionRunId,
+        AgentExecutionOperationId activityOperationId,
+        bool approved,
+        bool autoApprovePendingToolCalls = false,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureRequiredActivityOperationId(
+            activityOperationId,
+            nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(
+            activityOperationId,
+            agentId: null,
+            chatSessionId: null,
+            "Execution continuation accepted.",
+            operation => executionService.ContinueExecutionRunWithinOperationAsync(
+                operation,
+                executionRunId,
+                approved,
+                autoApprovePendingToolCalls,
+                cancellationToken));
+    }
+
+    public Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         Guid executionRunId,
         bool approved,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
-        => executionService.ContinueExecutionRunAsync(executionRunId, approved, autoApprovePendingToolCalls, cancellationToken);
+        => executionService.ContinueExecutionRunWithinOperationAsync(
+            operation,
+            executionRunId,
+            approved,
+            autoApprovePendingToolCalls,
+            cancellationToken);
 
     public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         ExecutionRunQuery query,
@@ -83,18 +161,85 @@ public sealed partial class AgentFrameworkWorkspaceService
         Guid agentId,
         Guid? chatSessionId,
         string prompt,
+        AgentChatRunOptions options,
         CancellationToken cancellationToken = default,
-        IReadOnlyList<string>? attachmentPaths = null,
-        AgentChatRunOptions? options = null)
-        => executionService.SendMessageAsync(agentId, chatSessionId, prompt, cancellationToken, attachmentPaths, options);
+        IReadOnlyList<string>? attachmentPaths = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        EnsureRequiredActivityOperationId(
+            options.InitialActivityOperationId,
+            nameof(options));
+        return ExecuteNewActivityOperationAsync(
+            options.InitialActivityOperationId,
+            agentId,
+            chatSessionId,
+            "Agent chat request accepted.",
+            operation => executionService.SendMessageWithinOperationAsync(
+                operation,
+                agentId,
+                chatSessionId,
+                prompt,
+                options,
+                cancellationToken,
+                attachmentPaths));
+    }
+
+    public Task<AgentChatRunResult> SendMessageWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
+        Guid agentId,
+        Guid? chatSessionId,
+        string prompt,
+        AgentChatRunOptions options,
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<string>? attachmentPaths = null)
+        => executionService.SendMessageWithinOperationAsync(
+            operation,
+            agentId,
+            chatSessionId,
+            prompt,
+            options,
+            cancellationToken,
+            attachmentPaths);
 
     public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+        Guid agentId,
+        Guid chatSessionId,
+        AgentExecutionOperationId activityOperationId,
+        bool approved,
+        bool autoApprovePendingToolCalls = false,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureRequiredActivityOperationId(
+            activityOperationId,
+            nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(
+            activityOperationId,
+            agentId,
+            chatSessionId,
+            "Approval response accepted.",
+            operation => executionService.RespondToPendingApprovalsWithinOperationAsync(
+                operation,
+                agentId,
+                chatSessionId,
+                approved,
+                autoApprovePendingToolCalls,
+                cancellationToken));
+    }
+
+    public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
         bool approved,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
-        => executionService.RespondToPendingApprovalsAsync(agentId, chatSessionId, approved, autoApprovePendingToolCalls, cancellationToken);
+        => executionService.RespondToPendingApprovalsWithinOperationAsync(
+            operation,
+            agentId,
+            chatSessionId,
+            approved,
+            autoApprovePendingToolCalls,
+            cancellationToken);
 
     public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(
         Guid agentId,
@@ -112,4 +257,121 @@ public sealed partial class AgentFrameworkWorkspaceService
         Guid agentId,
         CancellationToken cancellationToken = default)
         => executionService.ListMetricsAsync(agentId, cancellationToken);
+
+    private Task<TResult> ExecuteNewActivityOperationAsync<TResult>(
+        AgentExecutionOperationId operationId,
+        Guid? agentId,
+        Guid? chatSessionId,
+        string acceptedMessage,
+        Func<IAgentExecutionActivityOperationLease, Task<TResult>> dispatch)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(acceptedMessage);
+        ArgumentNullException.ThrowIfNull(dispatch);
+
+        var streamId = activityWorkspaceIdentity.CreateStreamId(operationId);
+        var operation = activityCoordinator.AdmitOperation(
+            streamId,
+            agentId,
+            chatSessionId,
+            acceptedMessage) switch
+        {
+            AgentExecutionActivityAdmitted admitted => admitted.Operation,
+            AgentExecutionActivityRejected rejected =>
+                throw new AgentExecutionActivityAdmissionException(
+                    rejected.StreamId,
+                    rejected.Reason),
+            _ => throw new InvalidOperationException(
+                "The activity coordinator returned an unknown admission result.")
+        };
+
+        Task<TResult> completion;
+        try
+        {
+            completion = dispatch(operation);
+        }
+        catch (OperationCanceledException)
+        {
+            TerminalizeOwnedCancellation(operation);
+            operation.Dispose();
+            throw;
+        }
+        catch
+        {
+            TerminalizeOwnedFailure(operation);
+            operation.Dispose();
+            throw;
+        }
+
+        return AwaitOwnedActivityOperationAsync(
+            operation,
+            completion);
+    }
+
+    private static async Task<TResult> AwaitOwnedActivityOperationAsync<TResult>(
+        IAgentExecutionActivityOperationLease operation,
+        Task<TResult> completion)
+    {
+        try
+        {
+            var result = await completion.ConfigureAwait(false);
+            if (!operation.IsTerminal)
+            {
+                TerminalizeOwnedFailure(operation);
+                throw new InvalidOperationException(
+                    "The workspace execution completed without a terminal activity outcome.");
+            }
+
+            return result;
+        }
+        catch (AgentExecutionActivityPublicationException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            TerminalizeOwnedCancellation(operation);
+            throw;
+        }
+        catch
+        {
+            TerminalizeOwnedFailure(operation);
+            throw;
+        }
+        finally
+        {
+            operation.Dispose();
+        }
+    }
+
+    private static void EnsureRequiredActivityOperationId(
+        AgentExecutionOperationId operationId,
+        string parameterName)
+    {
+        if (operationId.Value == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "An activity operation id is required.",
+                parameterName);
+        }
+    }
+
+    private static void TerminalizeOwnedCancellation(
+        IAgentExecutionActivityOperationLease operation)
+    {
+        if (!operation.IsTerminal)
+        {
+            operation.Cancel("The agent operation was cancelled.");
+        }
+    }
+
+    private static void TerminalizeOwnedFailure(
+        IAgentExecutionActivityOperationLease operation)
+    {
+        if (!operation.IsTerminal)
+        {
+            operation.Fail(
+                "The agent operation failed.",
+                AgentExecutionActivityFailureCodes.UnhandledExecutionFailure);
+        }
+    }
 }

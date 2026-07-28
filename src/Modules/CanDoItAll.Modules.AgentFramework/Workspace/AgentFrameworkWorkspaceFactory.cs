@@ -3,9 +3,11 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.AgentFramework;
@@ -27,14 +29,32 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
     IProviderProfileService providerProfileService,
     IProviderProfileRegistry providerProfileRegistry,
+    IProviderRuntimeProfileSource providerRuntimeProfileSource,
     IAgentProviderCredentialResolver providerCredentialResolver,
     ICapabilityProofService capabilityProofService,
-    IOptions<ProcessMockAgentOptions> processMockAgentOptions) : ICanDoItAllAgentWorkspaceFactory
+    IAgentExecutionActivityCoordinator activityCoordinator,
+    IAgentExecutionPreparationCache executionPreparationCache,
+    IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
+    IDatabaseSwitchNotificationService databaseSwitchNotificationService,
+    ILogger<CanDoItAllAgentWorkspaceFactory> logger,
+    IOptions<ProcessMockAgentOptions> processMockAgentOptions) :
+    ICanDoItAllAgentWorkspaceFactory,
+    IDisposable
 {
-    private readonly Dictionary<string, IAgentFrameworkWorkspaceService> workspaceServices = new(StringComparer.Ordinal);
+    private readonly Lock workspaceServicesGate = new();
+    private readonly Dictionary<
+        AgentExecutionActivityWorkspaceIdentity,
+        AgentFrameworkWorkspaceService> workspaceServices = [];
+    private bool disposed;
+    private bool subscribedToProfileChanges;
 
     public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService()
     {
+        lock (workspaceServicesGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+        }
+
         return serviceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
     }
 
@@ -42,13 +62,58 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     {
         ArgumentNullException.ThrowIfNull(scope);
 
-        var key = scope.DisplayName;
-        if (workspaceServices.TryGetValue(key, out var existing))
+        var profile = databaseProfileRuntimeAccessor
+            .ResolveCurrentProfile()
+            .Profile;
+        var profileGeneration =
+            executionProfileGenerationSource.GetGeneration();
+        var workspaceRoot = GetWorkspaceRoot();
+        var confirmedProfile = databaseProfileRuntimeAccessor
+            .ResolveCurrentProfile()
+            .Profile;
+        var confirmedProfileGeneration =
+            executionProfileGenerationSource.GetGeneration();
+        if (confirmedProfile.Id != profile.Id ||
+            !string.Equals(
+                confirmedProfile.Runtime.Fingerprint,
+                profile.Runtime.Fingerprint,
+                StringComparison.Ordinal) ||
+            confirmedProfileGeneration != profileGeneration)
         {
-            return existing;
+            throw new InvalidOperationException(
+                "The database profile changed while resolving the agent workspace.");
         }
 
-        var workspaceRoot = GetWorkspaceRoot();
+        var workspaceIdentity = new AgentExecutionActivityWorkspaceIdentity(
+            confirmedProfile.Id,
+            scope,
+            confirmedProfileGeneration);
+        lock (workspaceServicesGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            EnsureProfileChangeSubscription();
+
+            if (workspaceServices.TryGetValue(
+                    workspaceIdentity,
+                    out var existing))
+            {
+                return existing;
+            }
+
+            var workspaceService = CreateWorkspaceService(
+                scope,
+                workspaceIdentity,
+                workspaceRoot);
+            workspaceServices[workspaceIdentity] = workspaceService;
+            return workspaceService;
+        }
+    }
+
+    private AgentFrameworkWorkspaceService CreateWorkspaceService(
+        WorkspaceScopeDescriptor scope,
+        AgentExecutionActivityWorkspaceIdentity workspaceIdentity,
+        string workspaceRoot)
+    {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
         var processHost = new LocalWorkspaceProcessHost();
         var fileService = new WorkspaceFileService(workspaceRoot, scope);
@@ -77,6 +142,11 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             new ZipAgentPackageService(workspaceRoot, scope),
             runtime,
             capabilityProofService,
+            serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AgentFrameworkWorkspaceService>>(),
+            activityCoordinator,
+            workspaceIdentity,
+            executionPreparationCache,
+            executionProfileGenerationSource,
             providerProfileService,
             providerProfileRegistry,
             providerCredentialResolver,
@@ -86,9 +156,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             checkpointBridge,
             processHost,
             serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
-            workspacePathResolutionService: new WorkspacePathResolutionService(workspaceRoot, scope));
-
-        workspaceServices[key] = workspaceService;
+            workspacePathResolutionService: new WorkspacePathResolutionService(workspaceRoot, scope),
+            providerRuntimeProfileSource: providerRuntimeProfileSource);
         return workspaceService;
     }
 
@@ -101,5 +170,110 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     public string GetWorkspaceRoot()
     {
         return workspacePathResolver.ResolveWorkspaceRoot();
+    }
+
+    public void Dispose()
+    {
+        AgentFrameworkWorkspaceService[] ownedWorkspaceServices;
+        lock (workspaceServicesGate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            disposed = true;
+            if (subscribedToProfileChanges)
+            {
+                databaseSwitchNotificationService.Changed -=
+                    HandleDatabaseProfileChanged;
+                subscribedToProfileChanges = false;
+            }
+
+            ownedWorkspaceServices = [.. workspaceServices.Values];
+            workspaceServices.Clear();
+        }
+
+        DisposeWorkspaceServices(
+            ownedWorkspaceServices,
+            throwOnFailure: true);
+    }
+
+    private void EnsureProfileChangeSubscription()
+    {
+        if (subscribedToProfileChanges)
+        {
+            return;
+        }
+
+        databaseSwitchNotificationService.Changed +=
+            HandleDatabaseProfileChanged;
+        subscribedToProfileChanges = true;
+    }
+
+    private void HandleDatabaseProfileChanged(
+        object? sender,
+        DatabaseProfileChangedNotification notification)
+    {
+        AgentFrameworkWorkspaceService[] supersededWorkspaceServices;
+        lock (workspaceServicesGate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            var supersededIdentities = workspaceServices.Keys
+                .Where(identity =>
+                    identity.DatabaseProfileId != notification.CurrentProfileId ||
+                    identity.DatabaseProfileGeneration.Value !=
+                        notification.Generation)
+                .ToArray();
+            supersededWorkspaceServices = supersededIdentities
+                .Select(identity => workspaceServices[identity])
+                .ToArray();
+            foreach (var identity in supersededIdentities)
+            {
+                workspaceServices.Remove(identity);
+            }
+        }
+
+        DisposeWorkspaceServices(
+            supersededWorkspaceServices,
+            throwOnFailure: false);
+    }
+
+    private void DisposeWorkspaceServices(
+        IReadOnlyList<AgentFrameworkWorkspaceService> workspaceServicesToDispose,
+        bool throwOnFailure)
+    {
+        List<Exception>? failures = null;
+        foreach (var workspaceService in workspaceServicesToDispose)
+        {
+            try
+            {
+                workspaceService.Dispose();
+            }
+            catch (Exception exception)
+            {
+                (failures ??= []).Add(exception);
+            }
+        }
+
+        if (failures is not null)
+        {
+            var aggregate = new AggregateException(
+                "One or more agent workspace services failed to dispose.",
+                failures);
+            if (throwOnFailure)
+            {
+                throw aggregate;
+            }
+
+            logger.LogError(
+                aggregate,
+                "Failed to dispose {WorkspaceServiceCount} superseded agent workspace service(s) after a database profile change.",
+                workspaceServicesToDispose.Count);
+        }
     }
 }

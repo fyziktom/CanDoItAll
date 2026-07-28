@@ -1,0 +1,39 @@
+Run label: SB02-A2-R01-R02-failing-first
+Invariant ids: SB02-INV-03, SB02-INV-04
+Review findings: A2-R01, A2-R02
+Working directory: C:\repositories\CanDoItAll
+Production state: second-A2-reviewed source before the A2-R01/A2-R02 repairs
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -nologo -v:minimal --filter "FullyQualifiedName~Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation|FullyQualifiedName~Profile_switch_discards_old_workspace_events_queued_behind_blocked_subscriber"
+
+Exit code: 1
+
+Relevant output:
+Failed Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation(SendMessage)
+Failed Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation(ExecuteRun)
+Failed Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation(ContinueExecutionRun)
+Failed Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation(ExecuteSameSourceRun)
+Failed Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation(RespondToPendingApprovals)
+
+For each direct-entry theory case:
+Assert.IsType() Failure: Value is not the exact type
+Expected: typeof(CanDoItAll.SharedKernel.Streaming.SequencedStreamEvents<CanDoItAll.AgentFramework.Models.AgentExecutionActivity>)
+Actual:   typeof(CanDoItAll.SharedKernel.Streaming.SequencedStreamUnknown<CanDoItAll.AgentFramework.Models.AgentExecutionActivity>)
+at CurrentProfileAgentExecutionActivityAdmissionTests.ReadEventsAsync line 393
+at CurrentProfileAgentExecutionActivityAdmissionTests.Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation line 135
+
+Failed Profile_switch_discards_old_workspace_events_queued_behind_blocked_subscriber
+Assert.False() Failure
+Expected: False
+Actual:   True
+at ExecutionUpdatedCompatibilityIsolationTests.Profile_switch_discards_old_workspace_events_queued_behind_blocked_subscriber line 349
+
+Failed! - Failed: 6, Passed: 0, Skipped: 0, Total: 6, Duration: 57 ms
+
+Interpretation:
+- All five current-profile direct workspace execution-run entries reached blocked cold
+  workspace resolution before coordinator admission, so the stream was Unknown rather
+  than exposing Accepted.
+- An event queued from the old profile behind a blocked subscriber was delivered after
+  the profile switch.
+- Existing NU1903 advisories appeared during build and are unrelated to these failures.

@@ -653,6 +653,7 @@
                 new ExecutionRunRequest(
                     AgentId: selectedAgentId.Value,
                     Prompt: BuildContextualPrompt(prompt),
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: selectedSessionId,
                     Context: BuildInvocationContext(),
                     AutoApprovePendingToolCalls: ShouldAutoApproveContextualRun(),
@@ -702,6 +703,7 @@
             var result = await WorkspaceService.RespondToPendingApprovalsAsync(
                 selectedAgentId.Value,
                 selectedSessionId.Value,
+                AgentExecutionOperationId.New(),
                 approved,
                 autoApprovePendingToolCalls);
             await LoadWorkspaceAsync(selectedAgentId.Value, selectedSessionId.Value);

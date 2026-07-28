@@ -117,8 +117,10 @@ public static class WorkflowExecutorRedaction
             return string.Empty;
         }
 
-        var redacted = SecretKeyValueRegex.Replace(value, match => $"{match.Groups[1].Value}[REDACTED]");
-        redacted = BearerTokenRegex.Replace(redacted, "Bearer [REDACTED]");
+        var redacted = BearerTokenRegex.Replace(value, "Bearer [REDACTED]");
+        redacted = SecretKeyValueRegex.Replace(
+            redacted,
+            match => $"{match.Groups[1].Value}[REDACTED]");
         return OpenAiStyleKeyRegex.Replace(redacted, "[REDACTED]");
     }
 

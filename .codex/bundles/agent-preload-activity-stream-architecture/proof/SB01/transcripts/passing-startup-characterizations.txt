@@ -1,0 +1,53 @@
+Evidence: SB01-INV-01, SB01-INV-02
+Run label: root independent finalized integration characterizations
+Working directory: C:\repositories\CanDoItAll
+Command:
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~Legacy_ExecutionUpdated_subscriber_failure_occurs_after_persistence_and_stops_later_execution|FullyQualifiedName~SendMessageAsync_existing_session_records_current_startup_baseline" --logger "console;verbosity=normal"
+
+Execution environment:
+The focused tests ran outside the filesystem sandbox because the integration bootstrap writes an isolated DPAPI-backed test secret below the configured local application-data directory. `StartupBarrierAgentRuntime` replaced the production runtime, so no provider or LLM was invoked.
+
+Exit code: 0
+Process wall time: 53.2923 seconds
+Test execution time: 24.2499 seconds
+
+Relevant output:
+Passed CanDoItAll.Tests.Integration.AgentFrameworkExecutionRunTrackingIntegrationTests.SendMessageAsync_existing_session_records_current_startup_baseline [14 s]
+Passed CanDoItAll.Tests.Integration.AgentFrameworkExecutionRunTrackingIntegrationTests.Legacy_ExecutionUpdated_subscriber_failure_occurs_after_persistence_and_stops_later_execution [7 s]
+
+Total tests: 2
+Passed: 2
+
+Baseline contract asserted at runtime entry for a fresh existing session:
+- Catalog loads: 2
+- Provider-profile gets: 1
+- Chat-session gets: 2
+- Chat-run-summary lists: 1
+- Execution-run-detail gets: 1
+- Execution-run-detail saves: 2
+- Observed order: second canonical Planning persistence precedes `ExecutionUpdated`, which precedes the execution-event sink, which precedes runtime entry.
+
+Legacy defect characterization:
+- A throwing `ExecutionUpdated` subscriber faults `SendMessageAsync`.
+- The `Preparing`/`Planning` entry remains present in canonical execution-run detail.
+- The execution-event sink is not reached.
+- The runtime is not entered.
+
+Existing NU1903 warnings for System.Security.Cryptography.Xml 10.0.7 were emitted during the build and are not suppressed or claimed as resolved by this evidence.
+
+Exact final-state rerun:
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter "FullyQualifiedName~Legacy_ExecutionUpdated_subscriber_failure_occurs_after_persistence_and_stops_later_execution" --logger "console;verbosity=normal"
+
+Exit code: 0
+Process wall time: 16.1391 seconds
+Test execution time: 15.1756 seconds
+Passed: 1
+
+Fail-closed runtime exact-state rerun:
+dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter "FullyQualifiedName~SendMessageAsync_records_current_startup_baseline|FullyQualifiedName~Legacy_ExecutionUpdated_subscriber_failure_occurs_after_persistence_and_stops_later_execution" --logger "console;verbosity=detailed"
+
+Exit code: 0
+Test execution time: 45.3161 seconds
+Passed: 5
+
+The four startup rows and the legacy throwing-subscriber characterization passed after all non-execution provider methods on `StartupBarrierAgentRuntime` were changed to throw `NotSupportedException`.

@@ -9,23 +9,106 @@ using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderP
 
 internal sealed class SecretStoreAgentProviderCredentialResolver(
     ISecretRuntimeResolver secretResolver,
-    IConfiguration configuration) : IAgentProviderCredentialResolver
+    IConfiguration configuration) :
+    IAgentProviderCredentialResolver,
+    IAgentProviderCredentialDispatchScopeFactory
 {
+    private readonly AsyncLocal<CredentialDispatchScopeState?> currentScope =
+        new();
+
     public ProviderCredentialResolution Resolve(
         AgentFrameworkProviderProfile provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var secretRecordId = AgentFrameworkProviderMetadata.ResolveSecretRecordId(provider);
+        var scope = currentScope.Value;
+        return scope is null
+            ? ResolveUnscoped(provider)
+            : scope.Resolve(provider);
+    }
+
+    public async ValueTask<IAgentProviderCredentialDispatchScopePreparation>
+        PrepareAsync(
+        IReadOnlyList<AgentFrameworkProviderProfile> providers,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+        if (providers.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one provider is required for a credential dispatch scope.",
+                nameof(providers));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var entries = new Dictionary<Guid, CredentialDispatchEntry>();
+        try
+        {
+            foreach (var provider in providers)
+            {
+                ArgumentNullException.ThrowIfNull(provider);
+                cancellationToken.ThrowIfCancellationRequested();
+                var fingerprint =
+                    ProviderConfigurationFingerprintFactory.Create(provider);
+                if (entries.TryGetValue(provider.Id, out var existing))
+                {
+                    if (existing.ConfigurationFingerprint != fingerprint)
+                    {
+                        throw CreateFingerprintMismatchException(provider.Id);
+                    }
+
+                    continue;
+                }
+
+                var resolution = await ResolveCoreAsync(
+                        provider,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                entries.Add(
+                    provider.Id,
+                    new CredentialDispatchEntry(
+                        fingerprint,
+                        resolution));
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            return new CredentialDispatchScopePreparation(this, entries);
+        }
+        catch
+        {
+            entries.Clear();
+            throw;
+        }
+    }
+
+    private ProviderCredentialResolution ResolveUnscoped(
+        AgentFrameworkProviderProfile provider)
+    {
+        return Task.Run(
+                async () => await ResolveCoreAsync(
+                        provider,
+                        CancellationToken.None)
+                    .ConfigureAwait(false))
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    private async ValueTask<ProviderCredentialResolution> ResolveCoreAsync(
+        AgentFrameworkProviderProfile provider,
+        CancellationToken cancellationToken)
+    {
+        var secretRecordId =
+            AgentFrameworkProviderMetadata.ResolveSecretRecordId(provider);
         if (secretRecordId.HasValue)
         {
             try
             {
-                // IAgentProviderCredentialResolver is synchronous; run async secret I/O outside the Blazor renderer context before blocking.
-                var secretValue = Task.Run(() => secretResolver.ResolveValueAsync(
-                        new SecretRuntimeRequest(secretRecordId.Value, SecretRuntimePurposes.AgentProviderApiKey)))
-                    .GetAwaiter()
-                    .GetResult();
+                var secretValue = await secretResolver.ResolveValueAsync(
+                        new SecretRuntimeRequest(
+                            secretRecordId.Value,
+                            SecretRuntimePurposes.AgentProviderApiKey),
+                        cancellationToken)
+                    .ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(secretValue))
                 {
                     return new ProviderCredentialResolution(
@@ -40,6 +123,11 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
                     string.Empty,
                     ShouldPromoteToProcessEnvironment: false);
             }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception exception)
             {
                 return new ProviderCredentialResolution(
@@ -49,6 +137,7 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable))
         {
             return new ProviderCredentialResolution(
@@ -58,7 +147,8 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         }
 
         var variableName = provider.ApiKeyEnvironmentVariable.Trim();
-        var value = AgentProviderEnvironmentCredential.ResolveAndPromote(variableName);
+        var value =
+            AgentProviderEnvironmentCredential.ResolveAndPromote(variableName);
         if (!string.IsNullOrWhiteSpace(value))
         {
             return new ProviderCredentialResolution(
@@ -70,7 +160,9 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         var configuredValue = configuration[variableName];
         if (!string.IsNullOrWhiteSpace(configuredValue))
         {
-            AgentProviderEnvironmentCredential.PromoteProcessValue(variableName, configuredValue);
+            AgentProviderEnvironmentCredential.PromoteProcessValue(
+                variableName,
+                configuredValue);
             return new ProviderCredentialResolution(
                 configuredValue.Trim(),
                 $"application configuration key '{variableName}'",
@@ -81,5 +173,169 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
             string.Empty,
             $"environment variable '{variableName}'",
             $"Environment variable '{variableName}' is not set and application configuration key '{variableName}' is empty. {AgentProviderEnvironmentCredential.DescribePresence(variableName)}");
+    }
+
+    private IAgentProviderCredentialDispatchScope BeginScope(
+        Dictionary<Guid, CredentialDispatchEntry> entries)
+    {
+        var previous = currentScope.Value;
+        var state = new CredentialDispatchScopeState(entries);
+        currentScope.Value = state;
+        return new CredentialDispatchScope(this, state, previous);
+    }
+
+    private void EndScope(
+        CredentialDispatchScopeState state,
+        CredentialDispatchScopeState? previous)
+    {
+        state.Dispose();
+        if (ReferenceEquals(currentScope.Value, state))
+        {
+            currentScope.Value = previous;
+        }
+    }
+
+    private readonly record struct CredentialDispatchEntry(
+        ProviderConfigurationFingerprint ConfigurationFingerprint,
+        ProviderCredentialResolution Resolution);
+
+    private sealed class CredentialDispatchScopePreparation :
+        IAgentProviderCredentialDispatchScopePreparation
+    {
+        private readonly object gate = new();
+        private SecretStoreAgentProviderCredentialResolver? owner;
+        private Dictionary<Guid, CredentialDispatchEntry>? entries;
+
+        public CredentialDispatchScopePreparation(
+            SecretStoreAgentProviderCredentialResolver owner,
+            Dictionary<Guid, CredentialDispatchEntry> entries)
+        {
+            this.owner = owner;
+            this.entries = entries;
+        }
+
+        public IAgentProviderCredentialDispatchScope BeginScope()
+        {
+            SecretStoreAgentProviderCredentialResolver preparedOwner;
+            Dictionary<Guid, CredentialDispatchEntry> preparedEntries;
+            lock (gate)
+            {
+                preparedOwner = owner
+                    ?? throw new ObjectDisposedException(
+                        nameof(CredentialDispatchScopePreparation));
+                preparedEntries = entries
+                    ?? throw new ObjectDisposedException(
+                        nameof(CredentialDispatchScopePreparation));
+                owner = null;
+                entries = null;
+            }
+
+            return preparedOwner.BeginScope(preparedEntries);
+        }
+
+        public void Dispose()
+        {
+            lock (gate)
+            {
+                owner = null;
+                entries?.Clear();
+                entries = null;
+            }
+        }
+
+        public override string ToString()
+        {
+            return nameof(CredentialDispatchScopePreparation);
+        }
+    }
+
+    private sealed class CredentialDispatchScope(
+        SecretStoreAgentProviderCredentialResolver owner,
+        CredentialDispatchScopeState state,
+        CredentialDispatchScopeState? previous) :
+        IAgentProviderCredentialDispatchScope
+    {
+        private SecretStoreAgentProviderCredentialResolver? owner = owner;
+
+        public ProviderCredentialResolution Resolve(
+            AgentFrameworkProviderProfile provider)
+        {
+            return state.Resolve(provider);
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref owner, null)
+                ?.EndScope(state, previous);
+        }
+
+        public override string ToString()
+        {
+            return nameof(CredentialDispatchScope);
+        }
+    }
+
+    private sealed class CredentialDispatchScopeState(
+        Dictionary<Guid, CredentialDispatchEntry> entries) :
+        IDisposable
+    {
+        private Dictionary<Guid, CredentialDispatchEntry>? entries = entries;
+        private int disposed;
+
+        public ProviderCredentialResolution Resolve(
+            AgentFrameworkProviderProfile provider)
+        {
+            ArgumentNullException.ThrowIfNull(provider);
+            ThrowIfDisposed();
+            var currentEntries = Volatile.Read(ref entries)
+                ?? throw new ObjectDisposedException(
+                    nameof(CredentialDispatchScopeState));
+            var fingerprint =
+                ProviderConfigurationFingerprintFactory.Create(provider);
+            if (!currentEntries.TryGetValue(provider.Id, out var entry))
+            {
+                throw new InvalidOperationException(
+                    $"Provider '{provider.Id:N}' was not prepared for the active credential dispatch scope.");
+            }
+
+            if (entry.ConfigurationFingerprint != fingerprint)
+            {
+                throw CreateFingerprintMismatchException(provider.Id);
+            }
+
+            ThrowIfDisposed();
+            return entry.Resolution;
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref disposed, 1) != 0)
+            {
+                return;
+            }
+
+            Interlocked.Exchange(ref entries, null)?.Clear();
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (Volatile.Read(ref disposed) != 0)
+            {
+                throw new ObjectDisposedException(
+                    nameof(CredentialDispatchScopeState));
+            }
+        }
+
+        public override string ToString()
+        {
+            return nameof(CredentialDispatchScopeState);
+        }
+    }
+
+    private static InvalidOperationException
+        CreateFingerprintMismatchException(Guid providerId)
+    {
+        return new(
+            $"Provider '{providerId:N}' changed configuration within one credential dispatch.");
     }
 }

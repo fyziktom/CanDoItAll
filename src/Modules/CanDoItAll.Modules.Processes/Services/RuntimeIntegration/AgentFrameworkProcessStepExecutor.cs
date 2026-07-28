@@ -213,6 +213,7 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                             assignment.LaunchVariables,
                             assignment.StepKey,
                             subprocessContract),
+                        AgentExecutionOperationId.New(),
                         Context: new ExecutionInvocationContext(
                             SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
                             SourceId: assignment.StepKey,

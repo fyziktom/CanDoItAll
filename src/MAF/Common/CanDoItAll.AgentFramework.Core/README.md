@@ -18,7 +18,12 @@ dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFrame
 
 Project references:
 
+- `../../../Memory/CanDoItAll.Memory.SourceGateway.Abstractions/CanDoItAll.Memory.SourceGateway.Abstractions.csproj`
 - `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
+- `../../WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj`
+- `../../Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj`
+- `../../../Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj`
+- `../../../Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 
 Framework references:
 
@@ -26,11 +31,40 @@ Framework references:
 
 Direct package references:
 
+- `Microsoft.Extensions.Logging.Abstractions (10.0.0)`
 - `OpenTelemetry.Api (1.15.3)`
 
 ## Architecture Notes
 
 Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. MAF-specific workflow adapters and checkpoint helpers belong in `CanDoItAll.AgentFramework.Maf`. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly.
+
+## Execution Activity
+
+`AgentExecutionActivityCoordinator` owns the provider-neutral operation lifecycle over
+`PartitionedSequencedStream<AgentExecutionActivityStreamId, AgentExecutionActivity>`.
+An operation publishes `Accepted` at admission, binds agent/context/session/run
+identities as they become known, enforces typed phase transitions, and finishes exactly
+once as succeeded, failed, cancelled, or suspended.
+
+Suspension is represented by terminal outcome `Suspended` on phase
+`AwaitingApproval`. It completes the current activity partition while the durable run
+continues to wait for approval. Approval continuation uses a new operation identity.
+
+The activity stream is bounded, process-local UI/transport feedback. It is not durable
+execution truth. Consumers must use persisted run/session state, approvals, receipts,
+artifacts, logs, and metrics for canonical decisions.
+
+## Execution Preparation
+
+`AgentExecutionPreparationService` and its scoped
+`AgentExecutionPreparationCache` reuse immutable agent/provider/capability/memory
+blueprints. Entries are keyed by database profile, workspace scope, and agent and
+versioned by catalog revision, database-profile generation, and provider-configuration
+fingerprint. Single-flight creation, bounded capacity, invalidation, use-time
+validation, and explicit stale/churn/capacity failures prevent silent reuse.
+
+This cache must not contain a live `RuntimeBuildResult`, `AIAgent`, credential, tool
+delegate, runtime client, attachment, or session. Those values remain per execution.
 
 ## Runtime Tool Ownership Receipts
 
@@ -60,4 +94,5 @@ Current gap: policy constants and some tests still mention legacy or planned dir
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
+- Agent execution activity and runtime snapshots: `docs/architecture/agent-execution-activity-and-runtime-snapshots.md`
 - Process/MAF/provider implementation map: `docs/processes-maf-providers-implementation-map.md`

@@ -12,6 +12,9 @@
     public IReadOnlyList<AgentChatContextFragment> Fragments { get; set; } = [];
 
     [Parameter]
+    public IReadOnlyList<AgentChatContextContributorPublication>? ContributorPublications { get; set; }
+
+    [Parameter]
     public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
 
     [Parameter]
@@ -19,8 +22,10 @@
 
     private readonly Dictionary<AgentChatContextContributorId, FragmentRegistration> fragmentRegistrations = [];
     private IAgentChatContextScopeLease? scopeLease;
+    private IAgentChatContextPublicationLease? publicationLease;
     private AgentChatContextSource? activeSource;
     private AgentChatContextSurface? activeSurface;
+    private AgentChatContextPublication? activePublication;
     private bool isDisposed;
 
     protected override void OnParametersSet()
@@ -29,6 +34,12 @@
         ArgumentNullException.ThrowIfNull(Surface);
         ArgumentNullException.ThrowIfNull(Fragments);
         ValidateFragments(Fragments);
+        if (ContributorPublications is not null && Fragments.Count != 0)
+        {
+            throw new InvalidOperationException(
+                "Contributor publications and legacy fragments cannot be supplied together.");
+        }
+
         if (ContextAccessState.HasValue && !Enum.IsDefined(ContextAccessState.Value))
         {
             throw new ArgumentOutOfRangeException(
@@ -38,6 +49,11 @@
         }
 
         var surface = ResolveSurface();
+        if (ContributorPublications is not null)
+        {
+            ReconcilePublication(surface, ContributorPublications);
+            return;
+        }
 
         if (scopeLease is null || activeSource != surface.Source)
         {
@@ -48,6 +64,47 @@
         UpdateSurface(surface);
         ReconcileFragments();
         scopeLease.SynchronizeNavigation(CurrentNavigationIdentity);
+    }
+
+    private void ReconcilePublication(
+        AgentChatContextSurface surface,
+        IReadOnlyList<AgentChatContextContributorPublication> contributors)
+    {
+        if (publicationLease is null || activeSource != surface.Source)
+        {
+            ActivatePublication(surface, contributors);
+            return;
+        }
+
+        var publication = new AgentChatContextPublication(
+            surface.ToScope(publicationLease.ScopeId),
+            contributors);
+        if (activeSurface is null ||
+            activePublication is null ||
+            !AreEquivalent(activeSurface, surface) ||
+            !AreEquivalent(activePublication.Contributors, publication.Contributors))
+        {
+            publicationLease.Update(publication);
+            activeSurface = surface;
+            activePublication = publication;
+        }
+
+        publicationLease.SynchronizeNavigation(CurrentNavigationIdentity);
+    }
+
+    private void ActivatePublication(
+        AgentChatContextSurface surface,
+        IReadOnlyList<AgentChatContextContributorPublication> contributors)
+    {
+        DisposeRegistrations();
+        var publication = new AgentChatContextPublication(
+            surface.ToScope(AgentChatContextScopeId.Create()),
+            contributors);
+        publicationLease = ContextRegistry.PublishModuleContext(publication);
+        activeSource = surface.Source;
+        activeSurface = surface;
+        activePublication = publication;
+        publicationLease.SynchronizeNavigation(CurrentNavigationIdentity);
     }
 
     private void ActivateSurface(AgentChatContextSurface surface)
@@ -180,6 +237,66 @@
     }
 
     private static bool AreEquivalent(
+        IReadOnlyList<AgentChatContextContributorPublication> left,
+        IReadOnlyList<AgentChatContextContributorPublication> right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < left.Count; index++)
+        {
+            var leftContributor = left[index];
+            var rightContributor = right[index];
+            if (leftContributor.Fragment.ContributorId != rightContributor.Fragment.ContributorId ||
+                leftContributor.Fragment.Order != rightContributor.Fragment.Order ||
+                !string.Equals(
+                    leftContributor.Fragment.Content,
+                    rightContributor.Fragment.Content,
+                    StringComparison.Ordinal) ||
+                !AreEquivalent(
+                    leftContributor.AttachmentDrafts,
+                    rightContributor.AttachmentDrafts))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreEquivalent(
+        IReadOnlyList<AgentChatContextAttachmentDraft> left,
+        IReadOnlyList<AgentChatContextAttachmentDraft> right)
+    {
+        // Fingerprints and capture stamps are the equality contract; opaque payloads are never inspected here.
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < left.Count; index++)
+        {
+            var leftDraft = left[index];
+            var rightDraft = right[index];
+            if (leftDraft.AttachmentType != rightDraft.AttachmentType ||
+                leftDraft.Kind != rightDraft.Kind ||
+                leftDraft.ContentFingerprint != rightDraft.ContentFingerprint ||
+                leftDraft.CoverageFingerprint != rightDraft.CoverageFingerprint ||
+                leftDraft.DatabaseProfileGeneration != rightDraft.DatabaseProfileGeneration ||
+                leftDraft.FreshnessFingerprint != rightDraft.FreshnessFingerprint ||
+                leftDraft.CapturedAtUtc != rightDraft.CapturedAtUtc ||
+                leftDraft.FreshUntilUtc != rightDraft.FreshUntilUtc)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreEquivalent(
         AgentChatSurfacePosition left,
         AgentChatSurfacePosition right)
     {
@@ -202,8 +319,11 @@
         fragmentRegistrations.Clear();
         scopeLease?.Dispose();
         scopeLease = null;
+        publicationLease?.Dispose();
+        publicationLease = null;
         activeSource = null;
         activeSurface = null;
+        activePublication = null;
     }
 
     public void Dispose()

@@ -9954,6 +9954,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(
             Guid executionRunId,
+            AgentExecutionOperationId activityOperationId,
             bool approved,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
@@ -9962,14 +9963,15 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Guid agentId,
             Guid? chatSessionId,
             string prompt,
+            AgentChatRunOptions options,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<string>? attachmentPaths = null,
-            AgentChatRunOptions? options = null)
+            IReadOnlyList<string>? attachmentPaths = null)
             => throw Unused();
 
         public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
             Guid agentId,
             Guid chatSessionId,
+            AgentExecutionOperationId activityOperationId,
             bool approved,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();

@@ -1,0 +1,23 @@
+Run label: SB02 post-repair manifest hash verification
+Working directory: C:\repositories\CanDoItAll
+Hash convention: SHA-256 over UTF-8 text after CRLF-to-LF normalization
+Command: original PowerShell command text was not captured; its exact verified behavior and result are preserved below
+
+Command behavior:
+- parse every production/test `repo://` after-hash row in the SB02 manifest;
+- resolve each path from the repository root and compare the current normalized hash;
+- parse every hashed `bundle://` artifact row;
+- resolve each path from the durable bundle root and compare the current normalized
+  hash;
+- report row and mismatch counts.
+
+ExitCode: 0
+
+Exact result:
+RepoRows         : 60
+RepoMismatches   : 0
+BundleRows       : 27
+BundleMismatches : 0
+
+The manifest deliberately omits its own hash because that value would be
+self-referential.

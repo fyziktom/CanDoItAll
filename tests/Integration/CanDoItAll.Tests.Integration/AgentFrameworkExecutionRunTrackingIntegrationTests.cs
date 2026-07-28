@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
@@ -8,11 +12,213 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
+public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutputHelper output)
 {
+    [Fact]
+    public async Task ExecutionUpdated_subscriber_failure_is_isolated_after_persistence()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-startup-subscriber-failure");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: UseStartupBaselineHarness);
+
+        await using var scope = provider.CreateAsyncScope();
+        var milestones = scope.ServiceProvider.GetRequiredService<StartupMilestoneRecorder>();
+        var runtime = scope.ServiceProvider.GetRequiredService<StartupBarrierAgentRuntime>();
+        var eventSink = scope.ServiceProvider.GetRequiredService<RecordingAgentExecutionEventSink>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+        var planningObserved = new TaskCompletionSource<ExecutionLogEntry>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var laterSubscriberObserved = new TaskCompletionSource<ExecutionLogEntry>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        milestones.Reset();
+        workspaceService.ExecutionUpdated += (_, entry) =>
+        {
+            if (!string.Equals(entry.Phase, "Planning", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            milestones.Record(StartupMilestone.ExecutionUpdated);
+            planningObserved.TrySetResult(entry);
+            throw new InvalidOperationException("Intentional startup subscriber failure.");
+        };
+        workspaceService.ExecutionUpdated += (_, entry) =>
+        {
+            if (string.Equals(entry.Phase, "Planning", StringComparison.Ordinal))
+            {
+                laterSubscriberObserved.TrySetResult(entry);
+            }
+        };
+
+        var sendTask = workspaceService.SendMessageAsync(
+            agent.Id,
+            session.Id,
+            "Record deterministic startup milestones without invoking a provider.",
+            options: new AgentChatRunOptions(AgentExecutionOperationId.New()));
+        ExecutionLogEntry planningEntry;
+        try
+        {
+            planningEntry = await WaitForObservationOrPropagateAsync(
+                planningObserved.Task,
+                sendTask,
+                "Planning execution update");
+            var laterEntry = await laterSubscriberObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var publishedEvent = await eventSink.PlanningPublished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var runtimeExecutionRunId = await runtime.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var persistedDetail = await executionRunStore.GetExecutionRunDetailAsync(planningEntry.ExecutionRunId);
+
+            Assert.Equal(planningEntry.Id, laterEntry.Id);
+            Assert.Equal(planningEntry.ExecutionRunId, publishedEvent.ExecutionRunId);
+            Assert.Equal(planningEntry.ExecutionRunId, runtimeExecutionRunId);
+            Assert.NotNull(persistedDetail);
+            Assert.Contains(
+                persistedDetail.ExecutionLog,
+                entry => entry.ExecutionRunId == planningEntry.ExecutionRunId &&
+                         entry.State == ExecutionState.Preparing &&
+                         entry.Phase == "Planning");
+        }
+        finally
+        {
+            runtime.Release.TrySetResult(true);
+        }
+
+        await sendTask;
+
+        var completedDetail = await executionRunStore.GetExecutionRunDetailAsync(planningEntry.ExecutionRunId);
+
+        Assert.NotNull(completedDetail);
+        Assert.Equal(ExecutionState.Completed, completedDetail.Run.State);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task SendMessageAsync_records_current_startup_baseline(
+        bool preparationWarmed,
+        bool existingSession)
+    {
+        var scenario = $"{(preparationWarmed ? "warm" : "cold")}-{(existingSession ? "existing" : "new")}";
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create(
+            $"integration-agentframework-startup-baseline-{scenario}");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: UseStartupBaselineHarness);
+
+        await using var scope = provider.CreateAsyncScope();
+        var milestones = scope.ServiceProvider.GetRequiredService<StartupMilestoneRecorder>();
+        var runtime = scope.ServiceProvider.GetRequiredService<StartupBarrierAgentRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var preparationCache = scope.ServiceProvider.GetRequiredService<IAgentExecutionPreparationCache>();
+        Guid? chatSessionId = null;
+        if (existingSession)
+        {
+            var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+            chatSessionId = session.Id;
+        }
+
+        if (preparationWarmed)
+        {
+            var preparationService = new AgentExecutionPreparationService(
+                scope.ServiceProvider.GetRequiredService<IStartupBaselineWorkspaceStore>(),
+                scope.ServiceProvider.GetRequiredService<
+                    IProviderRuntimeProfileSnapshotSource>(),
+                preparationCache,
+                scope.ServiceProvider.GetRequiredService<IAgentExecutionProfileGenerationSource>(),
+                scope.ServiceProvider.GetRequiredService<AgentExecutionActivityWorkspaceIdentity>());
+            var warmedPreparation = await preparationService.AcquireForAtomicConsumerAsync(agent.Id);
+
+            Assert.Equal(AgentExecutionPreparationSource.Refreshed, warmedPreparation.Source);
+            Assert.Equal(agent.Id, warmedPreparation.Blueprint.Agent.Id);
+        }
+
+        milestones.Reset();
+        var cacheBeforeSend = preparationCache.Snapshot();
+        var planningObserved = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        workspaceService.ExecutionUpdated += (_, entry) =>
+        {
+            if (string.Equals(entry.Phase, "Planning", StringComparison.Ordinal))
+            {
+                milestones.Record(StartupMilestone.ExecutionUpdated);
+                planningObserved.TrySetResult();
+            }
+        };
+
+        var sendTask = workspaceService.SendMessageAsync(
+            agent.Id,
+            chatSessionId,
+            "Record deterministic startup milestones without invoking a provider.",
+            options: new AgentChatRunOptions(AgentExecutionOperationId.New()));
+
+        await WaitForObservationOrPropagateAsync(
+            runtime.Entered.Task,
+            sendTask,
+            "Runtime entry");
+        await planningObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var cacheAfterSend = preparationCache.Snapshot();
+
+        Assert.Equal(0, milestones.Count(StartupMilestone.CatalogLoad));
+        Assert.Equal(1, milestones.Count(StartupMilestone.CatalogSnapshotLoad));
+        Assert.Equal(
+            1,
+            milestones.Count(
+                StartupMilestone.ActivityAcceptedPublished));
+        Assert.Equal(0, milestones.Count(StartupMilestone.ProviderProfileGet));
+        Assert.Equal(1, milestones.Count(StartupMilestone.ProviderSnapshotAcquire));
+        Assert.Equal(3, milestones.Count(StartupMilestone.ProviderSnapshotCapture));
+        Assert.Equal(0, milestones.Count(StartupMilestone.ChatSessionGet));
+        Assert.Equal(0, milestones.Count(StartupMilestone.ChatRunSummariesList));
+        Assert.Equal(1, milestones.Count(StartupMilestone.AtomicChatRunStart));
+        Assert.Equal(0, milestones.Count(StartupMilestone.ExecutionRunDetailGet));
+        Assert.Equal(0, milestones.Count(StartupMilestone.ExecutionRunDetailSave));
+        Assert.Equal(
+            1,
+            milestones.Count(StartupMilestone.ExecutionRunDetailUpdate));
+        Assert.Equal(
+            preparationWarmed ? 0 : 1,
+            cacheAfterSend.RefreshedCount - cacheBeforeSend.RefreshedCount);
+        Assert.Equal(
+            preparationWarmed ? 1 : 0,
+            cacheAfterSend.ReusedCount - cacheBeforeSend.ReusedCount);
+        Assert.Equal(
+            0,
+            cacheAfterSend.RejectedCount - cacheBeforeSend.RejectedCount);
+        AssertMilestoneOrder(
+            milestones,
+            StartupMilestone.ActivityAcceptedPublished,
+            StartupMilestone.CatalogSnapshotLoad,
+            StartupMilestone.ProviderSnapshotAcquire,
+            StartupMilestone.ExecutionEventPublished,
+            StartupMilestone.RuntimeEntered);
+
+        output.WriteLine(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"{milestones.CreateDiagnosticLine(scenario)} preparation-cache-refreshed-delta={cacheAfterSend.RefreshedCount - cacheBeforeSend.RefreshedCount} preparation-cache-reused-delta={cacheAfterSend.ReusedCount - cacheBeforeSend.ReusedCount}"));
+
+        runtime.Release.TrySetResult(true);
+        await sendTask;
+    }
+
     [Fact]
     public async Task ExecuteRunAsync_refreshes_run_header_while_progress_logs_are_streaming()
     {
@@ -42,6 +248,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Implement the current process step.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 new ExecutionInvocationContext(
                     SourceKind: "process-step",
@@ -108,6 +315,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Run a slow provider-backed validation.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 new ExecutionInvocationContext(
                     SourceKind: "chat-session",
@@ -184,6 +392,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Confirm that chat start avoids unrelated run slices.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 new ExecutionInvocationContext(
                     SourceKind: "chat-session",
@@ -245,7 +454,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         var result = await workspaceService.SendMessageAsync(
             agent.Id,
             session.Id,
-            "Confirm that SendMessageAsync avoids unrelated run slices.");
+            "Confirm that SendMessageAsync avoids unrelated run slices.",
+            options: new AgentChatRunOptions(AgentExecutionOperationId.New()));
         var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
 
         Assert.NotNull(detail);
@@ -295,7 +505,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         var pendingResult = await workspaceService.SendMessageAsync(
             agent.Id,
             session.Id,
-            "Request approval before completing this chat run.");
+            "Request approval before completing this chat run.",
+            options: new AgentChatRunOptions(AgentExecutionOperationId.New()));
         var pendingDetail = await executionRunStore.GetExecutionRunDetailAsync(pendingResult.ExecutionRunId);
 
         Assert.NotNull(pendingDetail);
@@ -305,6 +516,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         var completedResult = await workspaceService.RespondToPendingApprovalsAsync(
             agent.Id,
             session.Id,
+            AgentExecutionOperationId.New(),
             approved: true,
             autoApprovePendingToolCalls: false);
         var completedDetail = await executionRunStore.GetExecutionRunDetailAsync(completedResult.ExecutionRunId);
@@ -345,6 +557,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Implement the process step and request approval for the write.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 CreateProcessStepContext(),
                 AutoApprovePendingToolCalls: false,
@@ -359,6 +572,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
 
         var continuationResult = await workspaceService.ContinueExecutionRunAsync(
             initialResult.ExecutionRunId,
+            AgentExecutionOperationId.New(),
             approved: true,
             autoApprovePendingToolCalls: false);
 
@@ -412,6 +626,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Complete the process step after the approval is automatically granted.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 CreateProcessStepContext(),
                 AutoApprovePendingToolCalls: true,
@@ -474,6 +689,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Run with context manifest.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 CreateProcessStepContext(),
                 AutoApprovePendingToolCalls: true));
@@ -520,6 +736,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Read the process context.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 CreateProcessStepContext(
                     CreateProcessStepMetadata(
@@ -534,6 +751,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Run validation.",
+                AgentExecutionOperationId.New(),
                 session.Id,
                 CreateProcessStepContext(
                     CreateProcessStepMetadata(
@@ -598,6 +816,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 new ExecutionRunRequest(
                     agent.Id,
                     "Fail after provider usage is available.",
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: null,
                     Context: CreateProcessStepContext())));
 
@@ -648,6 +867,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Repair invalid structured output.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: null,
                 Context: CreateProcessStepContext(),
                 StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
@@ -698,6 +918,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 new ExecutionRunRequest(
                     agent.Id,
                     "Return invalid machine output for the process step.",
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: null,
                     Context: CreateProcessStepContext(),
                     AutoApprovePendingToolCalls: false,
@@ -754,6 +975,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Complete the process step and submit the shadow finalizer.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: null,
                 Context: CreateProcessStepContext(),
                 AutoApprovePendingToolCalls: false,
@@ -813,6 +1035,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Complete through a finalizer short-circuit with unavailable usage.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: null,
                 Context: CreateProcessStepContext(),
                 AutoApprovePendingToolCalls: false,
@@ -866,6 +1089,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Complete the process step through the required finalizer.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: null,
                 Context: CreateProcessStepContext(CreateRequiredFinalizerMetadata()),
                 AutoApprovePendingToolCalls: false,
@@ -930,6 +1154,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 new ExecutionRunRequest(
                     agent.Id,
                     "Complete the process step through the required finalizer.",
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: null,
                     Context: CreateProcessStepContext(CreateRequiredFinalizerMetadata()),
                     AutoApprovePendingToolCalls: false,
@@ -979,6 +1204,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Complete the process step through the required finalizer.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: session.Id,
                 Context: CreateProcessStepContext(CreateRequiredFinalizerMetadata()),
                 AutoApprovePendingToolCalls: false,
@@ -1024,6 +1250,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             new ExecutionRunRequest(
                 agent.Id,
                 "Complete the process step with repairable machine output.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: null,
                 Context: CreateProcessStepContext(),
                 AutoApprovePendingToolCalls: false,
@@ -1073,6 +1300,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 new ExecutionRunRequest(
                     agent.Id,
                     "Return structured output without the required finalizer.",
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: null,
                     Context: CreateProcessStepContext(CreateRequiredFinalizerMetadata()),
                     AutoApprovePendingToolCalls: false,
@@ -1232,6 +1460,150 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         return JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
     }
 
+    private static void UseStartupBaselineHarness(IServiceCollection services)
+    {
+        UseDirectWorkspaceService(services);
+
+        var storeDescriptor = services.LastOrDefault(descriptor => descriptor.ServiceType == typeof(ISandboxWorkspaceStore))
+            ?? throw new InvalidOperationException("The real sandbox workspace store registration was not found.");
+        var providerRegistryDescriptor = services.LastOrDefault(descriptor => descriptor.ServiceType == typeof(IProviderProfileRegistry))
+            ?? throw new InvalidOperationException("The real provider profile registry registration was not found.");
+        var providerRuntimeSourceDescriptor = services.LastOrDefault(
+                descriptor => descriptor.ServiceType == typeof(IProviderRuntimeProfileSource))
+            ?? throw new InvalidOperationException(
+                "The real runtime provider source registration was not found.");
+        var providerSnapshotSourceDescriptor = services.LastOrDefault(
+                descriptor => descriptor.ServiceType ==
+                    typeof(IProviderRuntimeProfileSnapshotSource))
+            ?? throw new InvalidOperationException(
+                "The real runtime provider snapshot source registration was not found.");
+
+        services.AddSingleton<StartupMilestoneRecorder>();
+        services.RemoveAll<IAgentExecutionActivityCoordinator>();
+        services.AddSingleton<IAgentExecutionActivityCoordinator>(
+            serviceProvider => new RecordingAgentExecutionActivityCoordinator(
+                serviceProvider.GetRequiredService<
+                    AgentExecutionActivityCoordinator>(),
+                serviceProvider.GetRequiredService<
+                    StartupMilestoneRecorder>()));
+
+        services.RemoveAll<ISandboxWorkspaceStore>();
+        services.AddScoped<IStartupBaselineWorkspaceStore>(serviceProvider =>
+        {
+            var realStore = CreateRegisteredService<ISandboxWorkspaceStore>(serviceProvider, storeDescriptor);
+            if (realStore is not FileSandboxWorkspaceStore)
+            {
+                throw new InvalidOperationException(
+                    $"The startup baseline requires {nameof(FileSandboxWorkspaceStore)}, but resolved {realStore.GetType().Name}.");
+            }
+
+            return RecordingWorkspaceStoreProxy.Create(
+                realStore,
+                serviceProvider.GetRequiredService<StartupMilestoneRecorder>());
+        });
+        services.AddScoped<ISandboxWorkspaceStore>(
+            serviceProvider => serviceProvider.GetRequiredService<IStartupBaselineWorkspaceStore>());
+
+        services.RemoveAll<IProviderProfileRegistry>();
+        services.RemoveAll<IProviderRuntimeProfileSource>();
+        services.RemoveAll<IProviderRuntimeProfileSnapshotSource>();
+        services.AddScoped<RecordingProviderProfileRegistry>(serviceProvider =>
+            new RecordingProviderProfileRegistry(
+                CreateRegisteredService<IProviderProfileRegistry>(serviceProvider, providerRegistryDescriptor),
+                CreateRegisteredService<IProviderRuntimeProfileSource>(
+                    serviceProvider,
+                    providerRuntimeSourceDescriptor),
+                CreateRegisteredService<IProviderRuntimeProfileSnapshotSource>(
+                    serviceProvider,
+                    providerSnapshotSourceDescriptor),
+                serviceProvider.GetRequiredService<StartupMilestoneRecorder>()));
+        services.AddScoped<IProviderProfileRegistry>(serviceProvider =>
+            serviceProvider.GetRequiredService<RecordingProviderProfileRegistry>());
+        services.AddScoped<IProviderRuntimeProfileSource>(serviceProvider =>
+            serviceProvider.GetRequiredService<RecordingProviderProfileRegistry>());
+        services.AddScoped<IProviderRuntimeProfileSnapshotSource>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    RecordingProviderProfileRegistry>());
+
+        services.RemoveAll<IAgentExecutionEventSink>();
+        services.AddScoped<RecordingAgentExecutionEventSink>();
+        services.AddScoped<IAgentExecutionEventSink>(
+            serviceProvider => serviceProvider.GetRequiredService<RecordingAgentExecutionEventSink>());
+
+        services.RemoveAll<IAgentRuntime>();
+        services.AddSingleton<StartupBarrierAgentRuntime>();
+        services.AddSingleton<IAgentRuntime>(
+            serviceProvider => serviceProvider.GetRequiredService<StartupBarrierAgentRuntime>());
+    }
+
+    private static TService CreateRegisteredService<TService>(
+        IServiceProvider serviceProvider,
+        ServiceDescriptor descriptor)
+    {
+        object? service = descriptor.ImplementationInstance;
+        if (service is null && descriptor.ImplementationFactory is not null)
+        {
+            service = descriptor.ImplementationFactory(serviceProvider);
+        }
+
+        if (service is null && descriptor.ImplementationType is not null)
+        {
+            service = ActivatorUtilities.CreateInstance(serviceProvider, descriptor.ImplementationType);
+        }
+
+        return service is TService typedService
+            ? typedService
+            : throw new InvalidOperationException($"Unable to create the registered {typeof(TService).Name} implementation.");
+    }
+
+    private static void AssertMilestoneOrder(
+        StartupMilestoneRecorder milestones,
+        params StartupMilestone[] expectedOrder)
+    {
+        long? priorSequence = null;
+        foreach (var milestone in expectedOrder)
+        {
+            var sequence = milestones.FirstSequence(milestone);
+            Assert.True(sequence.HasValue, $"Startup milestone {milestone} was not observed.");
+            if (priorSequence.HasValue)
+            {
+                Assert.True(
+                    priorSequence.Value < sequence.Value,
+                    $"Startup milestone {milestone} was observed out of order.");
+            }
+
+            priorSequence = sequence;
+        }
+    }
+
+    private static async Task<TObservation> WaitForObservationOrPropagateAsync<TObservation>(
+        Task<TObservation> observationTask,
+        Task operationTask,
+        string observationName)
+    {
+        ArgumentNullException.ThrowIfNull(observationTask);
+        ArgumentNullException.ThrowIfNull(operationTask);
+        ArgumentException.ThrowIfNullOrWhiteSpace(observationName);
+
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+        var completedTask = await Task.WhenAny(observationTask, operationTask, timeoutTask);
+        if (completedTask == observationTask)
+        {
+            return await observationTask;
+        }
+
+        if (completedTask == operationTask)
+        {
+            await operationTask;
+            throw new InvalidOperationException(
+                $"{observationName} was not observed before the operation completed.");
+        }
+
+        throw new TimeoutException(
+            $"{observationName} was not observed within five seconds.");
+    }
+
     private static void UseDirectWorkspaceService(IServiceCollection services)
     {
         services.RemoveAll<IAgentFrameworkWorkspaceService>();
@@ -1252,6 +1624,20 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         services.AddScoped<IAgentExecutionGovernanceBridge>(serviceProvider => new DurableAgentExecutionGovernanceBridge(
             serviceProvider.GetRequiredService<IAgentExecutionCheckpointBridge>()));
         services.AddScoped<IAgentExecutionEventSink, NullAgentExecutionEventSink>();
+        services.AddScoped(serviceProvider =>
+        {
+            var profile = serviceProvider
+                .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+                .ResolveCurrentProfile()
+                .Profile;
+            return new AgentExecutionActivityWorkspaceIdentity(
+                profile.Id,
+                WorkspaceScopeDescriptor.Organization(
+                    profile.Id.ToString("N")),
+                serviceProvider
+                    .GetRequiredService<IAgentExecutionProfileGenerationSource>()
+                    .GetGeneration());
+        });
         services.AddScoped<IAgentFrameworkWorkspaceService, AgentFrameworkWorkspaceService>();
     }
 
@@ -1324,6 +1710,412 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 }
             ],
             []);
+    }
+
+    public interface IStartupBaselineWorkspaceStore :
+        ISandboxWorkspaceStore,
+        ISandboxWorkspaceChatQueryStore,
+        ISandboxWorkspaceChatProjectionQueryStore,
+        ISandboxWorkspaceChatSessionStore,
+        ISandboxWorkspaceChatRunStartStore,
+        ISandboxWorkspaceExecutionRunStore,
+        ISandboxWorkspaceExecutionRunMutationStore,
+        ISandboxWorkspaceExecutionRunReservationStore,
+        IAgentRecruitingEvidenceStore
+    {
+    }
+
+    internal enum StartupMilestone
+    {
+        CatalogLoad,
+        CatalogSnapshotLoad,
+        ActivityAcceptedPublished,
+        ProviderProfileGet,
+        ProviderSnapshotAcquire,
+        ProviderSnapshotCapture,
+        ChatSessionGet,
+        ChatRunSummariesList,
+        AtomicChatRunStart,
+        ExecutionRunDetailGet,
+        ExecutionRunDetailSave,
+        ExecutionRunDetailUpdate,
+        ExecutionUpdated,
+        ExecutionEventPublished,
+        RuntimeEntered
+    }
+
+    private sealed record StartupMilestoneRecord(
+        long Sequence,
+        long Timestamp,
+        StartupMilestone Milestone);
+
+    internal sealed class StartupMilestoneRecorder
+    {
+        private readonly Lock gate = new();
+        private readonly List<StartupMilestoneRecord> records = [];
+        private long sequence;
+
+        public void Record(StartupMilestone milestone)
+        {
+            var record = new StartupMilestoneRecord(
+                Interlocked.Increment(ref sequence),
+                Stopwatch.GetTimestamp(),
+                milestone);
+
+            lock (gate)
+            {
+                records.Add(record);
+            }
+        }
+
+        public int Count(StartupMilestone milestone)
+        {
+            lock (gate)
+            {
+                return records.Count(record => record.Milestone == milestone);
+            }
+        }
+
+        public long? FirstSequence(StartupMilestone milestone)
+        {
+            lock (gate)
+            {
+                return records
+                    .Where(record => record.Milestone == milestone)
+                    .Select(record => (long?)record.Sequence)
+                    .FirstOrDefault();
+            }
+        }
+
+        public string CreateDiagnosticLine(string scenario)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(scenario);
+
+            lock (gate)
+            {
+                var activityAcceptedPublished = records.FirstOrDefault(
+                    record => record.Milestone ==
+                        StartupMilestone.ActivityAcceptedPublished);
+                var runtimeEntered = records.FirstOrDefault(
+                    record => record.Milestone == StartupMilestone.RuntimeEntered);
+                if (activityAcceptedPublished is null || runtimeEntered is null)
+                {
+                    throw new InvalidOperationException(
+                        "Accepted-activity-to-runtime diagnostic timing requires both startup milestones.");
+                }
+
+                var elapsedMilliseconds = Stopwatch
+                    .GetElapsedTime(
+                        activityAcceptedPublished.Timestamp,
+                        runtimeEntered.Timestamp)
+                    .TotalMilliseconds;
+
+                return string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"startup-baseline scenario={scenario} measurement=diagnostic accepted-publications={CountCore(StartupMilestone.ActivityAcceptedPublished)} catalog-loads={CountCore(StartupMilestone.CatalogLoad)} catalog-snapshot-loads={CountCore(StartupMilestone.CatalogSnapshotLoad)} provider-gets={CountCore(StartupMilestone.ProviderProfileGet)} provider-snapshot-acquires={CountCore(StartupMilestone.ProviderSnapshotAcquire)} provider-snapshot-captures={CountCore(StartupMilestone.ProviderSnapshotCapture)} session-gets={CountCore(StartupMilestone.ChatSessionGet)} run-summary-lists={CountCore(StartupMilestone.ChatRunSummariesList)} atomic-chat-starts={CountCore(StartupMilestone.AtomicChatRunStart)} run-detail-gets={CountCore(StartupMilestone.ExecutionRunDetailGet)} run-detail-saves={CountCore(StartupMilestone.ExecutionRunDetailSave)} run-detail-updates={CountCore(StartupMilestone.ExecutionRunDetailUpdate)} accepted-published-to-runtime-entered-ms={elapsedMilliseconds:F3}");
+            }
+        }
+
+        public void Reset()
+        {
+            lock (gate)
+            {
+                records.Clear();
+                Interlocked.Exchange(ref sequence, 0);
+            }
+        }
+
+        private int CountCore(StartupMilestone milestone)
+        {
+            return records.Count(record => record.Milestone == milestone);
+        }
+    }
+
+    private sealed class RecordingAgentExecutionActivityCoordinator(
+        AgentExecutionActivityCoordinator inner,
+        StartupMilestoneRecorder milestones) :
+        IAgentExecutionActivityCoordinator
+    {
+        public AgentExecutionActivityAdmission AdmitOperation(
+            AgentExecutionActivityStreamId streamId,
+            Guid? agentId,
+            Guid? chatSessionId,
+            string acceptedMessage)
+        {
+            var admission = inner.AdmitOperation(
+                streamId,
+                agentId,
+                chatSessionId,
+                acceptedMessage);
+            if (admission is AgentExecutionActivityAdmitted)
+            {
+                milestones.Record(
+                    StartupMilestone.ActivityAcceptedPublished);
+            }
+
+            return admission;
+        }
+    }
+
+    public class RecordingWorkspaceStoreProxy : DispatchProxy
+    {
+        private object? target;
+        private StartupMilestoneRecorder? milestones;
+
+        internal static IStartupBaselineWorkspaceStore Create(
+            ISandboxWorkspaceStore target,
+            StartupMilestoneRecorder milestones)
+        {
+            var proxy = Create<IStartupBaselineWorkspaceStore, RecordingWorkspaceStoreProxy>();
+            var recordingProxy = (RecordingWorkspaceStoreProxy)(object)proxy;
+            recordingProxy.target = target;
+            recordingProxy.milestones = milestones;
+            return proxy;
+        }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod is null)
+            {
+                throw new InvalidOperationException("The proxied workspace-store method was not supplied.");
+            }
+
+            var resolvedTarget = target
+                ?? throw new InvalidOperationException("The proxied workspace store was not initialized.");
+            var resolvedMilestones = milestones
+                ?? throw new InvalidOperationException("The startup milestone recorder was not initialized.");
+
+            RecordWorkspaceCall(resolvedMilestones, targetMethod.Name);
+
+            try
+            {
+                return targetMethod.Invoke(resolvedTarget, args);
+            }
+            catch (TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+                throw;
+            }
+        }
+
+        private static void RecordWorkspaceCall(
+            StartupMilestoneRecorder milestones,
+            string methodName)
+        {
+            var milestone = methodName switch
+            {
+                nameof(ISandboxWorkspaceCatalogStore.LoadCatalogAsync) => StartupMilestone.CatalogLoad,
+                nameof(ISandboxWorkspaceCatalogStore.LoadCatalogSnapshotAsync) => StartupMilestone.CatalogSnapshotLoad,
+                nameof(ISandboxWorkspaceChatQueryStore.GetChatSessionAsync) => StartupMilestone.ChatSessionGet,
+                nameof(ISandboxWorkspaceChatQueryStore.ListChatRunSummariesAsync) => StartupMilestone.ChatRunSummariesList,
+                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunAsync) => StartupMilestone.AtomicChatRunStart,
+                nameof(ISandboxWorkspaceExecutionRunStore.GetExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailGet,
+                nameof(ISandboxWorkspaceExecutionRunStore.SaveExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailSave,
+                nameof(ISandboxWorkspaceExecutionRunMutationStore.UpdateExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailUpdate,
+                _ => (StartupMilestone?)null
+            };
+
+            if (milestone.HasValue)
+            {
+                milestones.Record(milestone.Value);
+            }
+        }
+    }
+
+    private sealed class RecordingProviderProfileRegistry(
+        IProviderProfileRegistry inner,
+        IProviderRuntimeProfileSource runtimeSource,
+        IProviderRuntimeProfileSnapshotSource snapshotSource,
+        StartupMilestoneRecorder milestones) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource,
+        IProviderRuntimeProfileSnapshotSource
+    {
+        public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return inner.ListProvidersAsync(cancellationToken);
+        }
+
+        public Task<ProviderProfile?> GetProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+        {
+            milestones.Record(StartupMilestone.ProviderProfileGet);
+            return inner.GetProviderAsync(providerId, cancellationToken);
+        }
+
+        public Task<ProviderProfileEditorModel> GetProviderEditorAsync(
+            Guid? providerId = null,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.GetProviderEditorAsync(providerId, cancellationToken);
+        }
+
+        public Task<Guid> SaveProviderAsync(
+            ProviderProfileEditorModel model,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.SaveProviderAsync(model, cancellationToken);
+        }
+
+        public Task DeleteProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.DeleteProviderAsync(providerId, cancellationToken);
+        }
+
+        public Task<ProviderProfile> UpdateProviderAsync(
+            Guid providerId,
+            Func<ProviderProfile, ProviderProfile> update,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.UpdateProviderAsync(providerId, update, cancellationToken);
+        }
+
+        Task<IReadOnlyList<ProviderProfile>>
+            IProviderRuntimeProfileSource.ListProvidersAsync(
+            CancellationToken cancellationToken)
+        {
+            return runtimeSource.ListProvidersAsync(cancellationToken);
+        }
+
+        Task<ProviderProfile?>
+            IProviderRuntimeProfileSource.GetProviderAsync(
+            Guid providerId,
+            CancellationToken cancellationToken)
+        {
+            milestones.Record(StartupMilestone.ProviderProfileGet);
+            return runtimeSource.GetProviderAsync(
+                providerId,
+                cancellationToken);
+        }
+
+        public Task<ProviderRuntimeProfileSnapshotLease?> AcquireProviderAsync(
+            Guid providerId,
+            SandboxWorkspaceCatalogSnapshot catalogSnapshot,
+            CancellationToken cancellationToken = default)
+        {
+            milestones.Record(
+                StartupMilestone.ProviderSnapshotAcquire);
+            return snapshotSource.AcquireProviderAsync(
+                providerId,
+                catalogSnapshot,
+                cancellationToken);
+        }
+
+        public ProviderRuntimeProfileSnapshotLease? CaptureProvider(
+            Guid providerId,
+            SandboxWorkspaceCatalogSnapshot catalogSnapshot)
+        {
+            milestones.Record(
+                StartupMilestone.ProviderSnapshotCapture);
+            return snapshotSource.CaptureProvider(
+                providerId,
+                catalogSnapshot);
+        }
+    }
+
+    private sealed class RecordingAgentExecutionEventSink(
+        StartupMilestoneRecorder milestones) : IAgentExecutionEventSink
+    {
+        public TaskCompletionSource<ExecutionEvent> PlanningPublished { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task PublishAsync(
+            ExecutionEvent executionEvent,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.Equals(executionEvent.Phase, "Planning", StringComparison.Ordinal))
+            {
+                milestones.Record(StartupMilestone.ExecutionEventPublished);
+                PlanningPublished.TrySetResult(executionEvent);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class StartupBarrierAgentRuntime(
+        StartupMilestoneRecorder milestones) : IAgentRuntime
+    {
+        public TaskCompletionSource<Guid> Entered { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<bool> Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ProviderHealthResult> TestProviderAsync(
+            ProviderProfile provider,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Provider tests are not part of the startup baseline.");
+        }
+
+        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
+            ProviderProfile provider,
+            ProviderTestChatRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Provider test chats are not part of the startup baseline.");
+        }
+
+        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
+            ProviderProfile provider,
+            ProviderModelMaintenanceEditorRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Provider model maintenance is not part of the startup baseline.");
+        }
+
+        public async Task<AgentRuntimeResponse> RunAsync(
+            AgentDefinition agent,
+            ProviderProfile provider,
+            ChatSessionRecord session,
+            IReadOnlyList<CapabilityCatalogItem> capabilities,
+            IReadOnlyList<AgentMemoryRecord> memory,
+            string prompt,
+            string? runtimeSessionKey,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken = default,
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
+        {
+            var executionRunId = session.LatestExecutionRunId
+                ?? throw new InvalidOperationException("The startup runtime requires a chat-backed execution run.");
+
+            milestones.Record(StartupMilestone.RuntimeEntered);
+            Entered.TrySetResult(executionRunId);
+            await Release.Task.WaitAsync(cancellationToken);
+
+            return new AgentRuntimeResponse(
+                ResponseText: "Startup baseline completed.",
+                InputTokens: 0,
+                OutputTokens: 0,
+                ToolCalls: 0,
+                RuntimeSessionKey: string.Empty,
+                SerializedSessionStateJson: null,
+                PendingApprovals: []);
+        }
+
+        public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+            AgentDefinition agent,
+            ProviderProfile provider,
+            ChatSessionRecord session,
+            IReadOnlyList<CapabilityCatalogItem> capabilities,
+            IReadOnlyList<AgentMemoryRecord> memory,
+            bool approved,
+            string? runtimeSessionKey,
+            Func<ExecutionState, string, string, Task> progressCallback,
+            CancellationToken cancellationToken = default,
+            bool suppressApprovalRequirements = false,
+            AgentStructuredOutputContract? structuredOutput = null,
+            AgentRuntimeExecutionOptions? executionOptions = null)
+        {
+            throw new NotSupportedException("Pending approval continuation is not part of the startup baseline.");
+        }
     }
 
     private sealed class FakeProgressAgentRuntime : IAgentRuntime

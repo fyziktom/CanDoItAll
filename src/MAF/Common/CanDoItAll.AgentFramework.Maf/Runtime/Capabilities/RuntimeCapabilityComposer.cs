@@ -39,7 +39,8 @@ internal interface IRuntimeCapabilityComposer
         bool suppressApprovalRequirements,
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent,
-        string runtimeSessionKey = "");
+        string runtimeSessionKey = "",
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null);
 }
 
 internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
@@ -174,7 +175,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         bool suppressApprovalRequirements,
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent,
-        string runtimeSessionKey = "")
+        string runtimeSessionKey = "",
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
     {
         var totalStopwatch = Stopwatch.StartNew();
         try
@@ -244,7 +246,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     ResolveContextPolicyKind(agent, suppressApprovalRequirements),
                     contextWorkspaceScope,
                     contextIntent,
-                    runtimeSessionKey));
+                    runtimeSessionKey,
+                    contextAttachments));
             await TrackAsync(
                 "capability.a2a-tools",
                 () => AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements));

@@ -1,0 +1,34 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "horizontalOverflow": 0,
+  "statusText": "Approval requiredThe agent operation is suspended pending an approval decision.",
+  "operationId": "a9301646c6724408a30c09f0b6a969ab",
+  "status": {
+    "x": 49.515625,
+    "y": 450.921875,
+    "width": 675.09375,
+    "height": 30
+  },
+  "panel": {
+    "x": 28.515625,
+    "y": 134.53125,
+    "width": 717.09375,
+    "height": 588.953125
+  },
+  "composer": {
+    "x": 49.515625,
+    "y": 496.296875,
+    "width": 519.515625,
+    "height": 125.1875
+  },
+  "approval": {
+    "x": 302.03125,
+    "y": 660.484375,
+    "width": 132.671875,
+    "height": 42
+  },
+  "blazorErrorDisplay": "none"
+}

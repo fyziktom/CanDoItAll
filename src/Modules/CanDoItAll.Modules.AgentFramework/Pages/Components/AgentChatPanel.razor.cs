@@ -107,6 +107,7 @@ public partial class AgentChatPanel : IAsyncDisposable
     private string voiceStatusTone = "neutral";
     private string focusedAgentLoadError = string.Empty;
     private Task trackedChatOperation = Task.CompletedTask;
+    private AgentExecutionActivityStreamId? activeActivityStreamId;
     private Guid? terminalWorkspaceRefreshRunId;
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
     private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
@@ -262,6 +263,7 @@ public partial class AgentChatPanel : IAsyncDisposable
         selectedAgent = null;
         selectedAgentId = null;
         selectedSessionId = null;
+        activeActivityStreamId = null;
         executionLog = [];
         metrics = [];
         if (hadSelectedAgent)
@@ -492,11 +494,14 @@ public partial class AgentChatPanel : IAsyncDisposable
         var executionCompleted = false;
         try
         {
-            var result = await ChatExecutionOrchestrator.SendMessageAsync(
+            var operation = ChatExecutionOrchestrator.StartSendMessage(
                 executionAgentId,
                 executionSessionId,
                 prompt,
                 attachmentPaths);
+            activeActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            var result = await operation.Completion;
             executionCompleted = true;
             if (isDisposed || selectedAgentId != executionAgentId)
             {
@@ -593,11 +598,14 @@ public partial class AgentChatPanel : IAsyncDisposable
         var executionCompleted = false;
         try
         {
-            await ChatExecutionOrchestrator.RespondToPendingApprovalsAsync(
+            var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
                 executionAgentId,
                 executionSessionId,
                 approved,
                 autoApprovePendingToolCalls);
+            activeActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            await operation.Completion;
             executionCompleted = true;
             if (isDisposed ||
                 selectedAgentId != executionAgentId ||
@@ -796,6 +804,14 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     private async Task LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId)
     {
+        if (selectedAgentId != agentId ||
+            selectedSessionId.HasValue &&
+            preferredSessionId.HasValue &&
+            selectedSessionId != preferredSessionId)
+        {
+            activeActivityStreamId = null;
+        }
+
         var loadGeneration = Interlocked.Increment(ref workspaceLoadGeneration);
         await PublishAccessStateAsync(AgentChatContextAccessState.Loading);
         if (isDisposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration))

@@ -71,6 +71,18 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
     }
 
     [Fact]
+    public void Redaction_removes_bearer_value_when_authorization_is_key_value_text()
+    {
+        const string secret = "raw-bearer-secret";
+
+        var redacted = WorkflowExecutorRedaction.RedactText(
+            $"authorization=Bearer {secret}");
+
+        Assert.DoesNotContain(secret, redacted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task PluginPolicy_invoker_rejects_oversized_plugin_output_payload()
     {
         var descriptor = CreatePluginDescriptor("plugin.policy.large-output");

@@ -6,7 +6,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed class MafWorkflowLlmComponentInvoker(
     IAgentRuntime agentRuntime,
-    IProviderProfileRegistry providerRegistry,
+    IProviderRuntimeProfileSource providerSource,
     IProviderProfileService providerProfileService,
     TimeProvider? timeProvider = null) : IWorkflowLlmComponentInvoker
 {
@@ -159,13 +159,13 @@ public sealed class MafWorkflowLlmComponentInvoker(
     {
         if (component.ProviderProfileId is { } providerId)
         {
-            var provider = await providerRegistry.GetProviderAsync(providerId, cancellationToken)
+            var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
                 ?? throw new InvalidOperationException($"LLM workflow component '{component.Id}' references provider '{providerId:D}', but that provider is not registered.");
 
             return ValidateProvider(provider, component);
         }
 
-        var providers = await providerRegistry.ListProvidersAsync(cancellationToken);
+        var providers = await providerSource.ListProvidersAsync(cancellationToken);
         var matchingProvider = providers
             .Select(providerProfileService.NormalizeImportedProfile)
             .Where(provider => provider.IsEnabled && provider.Purpose == ProviderProfilePurpose.Chat)

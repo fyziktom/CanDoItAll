@@ -12,11 +12,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     }
 
     private sealed record PreparedExecutionRunContinuation(
-        SandboxWorkspaceCatalog Catalog,
+        AgentExecutionPreparationBlueprint Blueprint,
+        SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
         ExecutionRunRecord OriginalRun,
         ExecutionRunRecord TransitionedRun,
         ChatSessionRecord? Session,
         AgentDefinition Agent,
+        ProviderProfile Provider,
         IReadOnlyList<ExecutionApprovalRecord> RunApprovals,
         IReadOnlyList<ExecutionApprovalRecord> DecidedApprovals);
 
@@ -63,7 +65,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     }
 
     private async Task<ExecutionRunContinuationStart> BeginPendingApprovalContinuationAsync(
+        AgentExecutionPreparationSnapshot preparation,
         ExecutionRunRecord expectedRun,
+        ProviderProfile provider,
         bool approved,
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
@@ -72,7 +76,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             return await BeginPendingApprovalContinuationWithSplitStoreAsync(
                 mutationStore,
+                preparation,
                 expectedRun,
+                provider,
                 approved,
                 autoApprovePendingToolCalls,
                 cancellationToken);
@@ -83,6 +89,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         await store.UpdateWorkspaceAsync(document =>
         {
             var catalog = document.ToCatalog();
+            var catalogSnapshot = new SandboxWorkspaceCatalogSnapshot(
+                catalog,
+                catalog.CatalogDataRevision);
             var executionState = document.ToExecutionState();
             var currentRun = executionState.ExecutionRuns.FirstOrDefault(item => item.Id == expectedRun.Id)
                 ?? throw new InvalidOperationException("Execution run was not found.");
@@ -112,12 +121,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     "This execution run's pending approval state changed before the continuation could start. Reload the workspace and try again.");
             }
 
+            EnsurePreparationCurrentForUse(
+                preparation.Blueprint,
+                catalogSnapshot);
             var agent = catalog.Agents.FirstOrDefault(item => item.Id == currentRun.AgentId)
                 ?? throw new InvalidOperationException("Agent was not found.");
             if (!agent.ProviderProfileId.HasValue)
             {
                 throw new InvalidOperationException("The selected agent does not have a provider profile.");
             }
+            EnsureContinuationProviderLeaseMatches(currentRun, provider);
 
             var decidedAtUtc = DateTimeOffset.UtcNow;
             var effectiveAutoApprove = approved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
@@ -154,11 +167,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             result = new(
                 ExecutionRunContinuationDisposition.Started,
                 new PreparedExecutionRunContinuation(
-                    catalog,
+                    preparation.Blueprint,
+                    catalogSnapshot,
                     currentRun,
                     transitionedRun,
                     transitionedSession,
                     agent,
+                    provider,
                     approvalDecision.RunApprovals,
                     approvalDecision.Decided));
 
@@ -170,7 +185,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private async Task<ExecutionRunContinuationStart> BeginPendingApprovalContinuationWithSplitStoreAsync(
         ISandboxWorkspaceExecutionRunMutationStore mutationStore,
+        AgentExecutionPreparationSnapshot preparation,
         ExecutionRunRecord expectedRun,
+        ProviderProfile provider,
         bool approved,
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
@@ -181,6 +198,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             expectedRun.Id,
             (catalog, currentDetail) =>
             {
+                var catalogSnapshot = new SandboxWorkspaceCatalogSnapshot(
+                    catalog,
+                    catalog.CatalogDataRevision);
                 var currentRun = currentDetail.Run;
                 var currentSession = currentRun.ChatSessionId.HasValue
                     ? currentDetail.ChatSession
@@ -208,12 +228,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         "This execution run's pending approval state changed before the continuation could start. Reload the workspace and try again.");
                 }
 
+                EnsurePreparationCurrentForUse(
+                    preparation.Blueprint,
+                    catalogSnapshot);
                 var agent = catalog.Agents.FirstOrDefault(item => item.Id == currentRun.AgentId)
                     ?? throw new InvalidOperationException("Agent was not found.");
                 if (!agent.ProviderProfileId.HasValue)
                 {
                     throw new InvalidOperationException("The selected agent does not have a provider profile.");
                 }
+                EnsureContinuationProviderLeaseMatches(
+                    currentRun,
+                    provider);
 
                 var decidedAtUtc = DateTimeOffset.UtcNow;
                 var effectiveAutoApprove = approved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
@@ -239,11 +265,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 result = new(
                     ExecutionRunContinuationDisposition.Started,
                     new PreparedExecutionRunContinuation(
-                        catalog,
+                        preparation.Blueprint,
+                        catalogSnapshot,
                         currentRun,
                         transitionedRun,
                         transitionedSession,
                         agent,
+                        provider,
                         approvalDecision.RunApprovals,
                         approvalDecision.Decided));
 

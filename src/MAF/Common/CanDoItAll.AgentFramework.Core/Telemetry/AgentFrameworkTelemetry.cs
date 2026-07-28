@@ -4,6 +4,19 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
+public enum ProviderSnapshotRevisionProbeKind
+{
+    Provider,
+    ProviderSet
+}
+
+public enum ProviderSnapshotRevisionProbeOutcome
+{
+    Current,
+    Changed,
+    Failed
+}
+
 public static class AgentFrameworkTelemetry
 {
     public const string SourceName = "CanDoItAll.AgentFramework";
@@ -19,6 +32,13 @@ public static class AgentFrameworkTelemetry
     private static readonly Counter<long> ToolExecutionCounter = Meter.CreateCounter<long>("agentframework.tool.execution.count");
     private static readonly Counter<long> ArtifactCounter = Meter.CreateCounter<long>("agentframework.artifact.count");
     private static readonly Counter<long> ProviderErrorCounter = Meter.CreateCounter<long>("agentframework.provider.error.count");
+    private static readonly Counter<long> ProviderSnapshotRevisionProbeCounter =
+        Meter.CreateCounter<long>(
+            "agentframework.provider.snapshot_revision_probe.count");
+    private static readonly Histogram<double>
+        ProviderSnapshotRevisionProbeDurationMs =
+        Meter.CreateHistogram<double>(
+            "agentframework.provider.snapshot_revision_probe.duration.ms");
     private static readonly Counter<long> CommandTimeoutCounter = Meter.CreateCounter<long>("agentframework.command.timeout.count");
 
     public static Activity? StartRunActivity(string activityName, ExecutionRunRecord run)
@@ -137,6 +157,24 @@ public static class AgentFrameworkTelemetry
         tags.Add("agentframework.provider_name", provider.Name);
         tags.Add("agentframework.model", model);
         ProviderErrorCounter.Add(1, tags);
+    }
+
+    public static void RecordProviderSnapshotRevisionProbe(
+        ProviderSnapshotRevisionProbeKind kind,
+        ProviderSnapshotRevisionProbeOutcome outcome,
+        TimeSpan duration)
+    {
+        TagList tags = [];
+        tags.Add(
+            "agentframework.provider_revision_probe.kind",
+            kind.ToString());
+        tags.Add(
+            "agentframework.provider_revision_probe.outcome",
+            outcome.ToString());
+        ProviderSnapshotRevisionProbeCounter.Add(1, tags);
+        ProviderSnapshotRevisionProbeDurationMs.Record(
+            duration.TotalMilliseconds,
+            tags);
     }
 
     public static void RecordCommandTimeout(string recipeId, string riskClass)

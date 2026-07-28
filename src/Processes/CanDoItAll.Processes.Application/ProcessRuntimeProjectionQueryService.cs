@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using System.Globalization;
+using System.Text;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
@@ -19,14 +21,27 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private const int LiveSnapshotReadOverscanFactor = 2;
     private const int RuntimeMetricEventReadLimit = 10_000;
     private const int OperatorActionObservationTakePerRun = 100;
+    private const int ProvenanceIdentityTextMaximumLength = 180;
+    private const int ProvenanceSafeSummaryMaximumLength = 800;
     private const string MissingBlockedDiagnosticCode = "process.runtime.blocked_without_diagnostics";
     private const string MissingBlockedDiagnosticSummary =
         "Step blocked without strategy diagnostics. Inspect the result receipt, assignment, and execution observation for the missing cause.";
     private static readonly TimeSpan ActiveExecutionStaleAfter = TimeSpan.FromMinutes(30);
 
-    public async Task<ProcessLiveProcessesResult> GetLiveProcessesAsync(
+    public Task<ProcessLiveProcessesResult> GetLiveProcessesAsync(
         ProcessLiveProcessesQuery query,
         CancellationToken cancellationToken = default)
+    {
+        return GetLiveProcessesCoreAsync(
+            query,
+            enrichmentCache: null,
+            cancellationToken);
+    }
+
+    private async Task<ProcessLiveProcessesResult> GetLiveProcessesCoreAsync(
+        ProcessLiveProcessesQuery query,
+        RuntimeRunEnrichmentCache? enrichmentCache,
+        CancellationToken cancellationToken)
     {
         ValidateTake(query.Take, nameof(query.Take));
         if (query.Window <= TimeSpan.Zero)
@@ -50,7 +65,13 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.Add(jsonCodec.ReadSnapshot<ProcessLiveProcessSnapshot>(snapshot));
         }
 
-        return await PrepareLiveProcessesAsync(query, runs, nowUtc, windowStartUtc, cancellationToken)
+        return await PrepareLiveProcessesAsync(
+                query,
+                runs,
+                nowUtc,
+                windowStartUtc,
+                enrichmentCache,
+                cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -59,10 +80,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
         IReadOnlyList<ProcessLiveProcessSnapshot> sourceRuns,
         DateTimeOffset nowUtc,
         DateTimeOffset windowStartUtc,
+        RuntimeRunEnrichmentCache? enrichmentCache,
         CancellationToken cancellationToken)
     {
         var runs = sourceRuns
             .Where(run => run.LastEventAtUtc >= windowStartUtc)
+            .Select(FreezeLiveRun)
             .ToList();
         runs.Sort(static (left, right) =>
         {
@@ -76,9 +99,18 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs.RemoveRange(query.Take, runs.Count - query.Take);
         }
 
-        var reusableRuns = runs.ToArray();
+        var reusableRuns = runs.ToImmutableArray();
         var loadOptions = query.LoadOptions ?? ProcessLiveProcessesLoadOptions.Full;
-        var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
+        enrichmentCache ??=
+            new RuntimeRunEnrichmentCache(
+                runtimeStateStore,
+                assignmentStore);
+        await enrichmentCache.PrimeAsync(
+                runs.Select(run => run.RunId).ToArray(),
+                RequiresRuntimeStates(loadOptions),
+                RequiresRuntimeAssignments(loadOptions),
+                cancellationToken)
+            .ConfigureAwait(false);
         if (loadOptions.IncludeAttentionReconciliation)
         {
             runs = (await ReconcileLiveActivityAsync(runs, nowUtc, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
@@ -110,15 +142,29 @@ public sealed class ProcessRuntimeProjectionQueryService(
             runs = (await EnrichRunMetadataAsync(runs, enrichmentCache, cancellationToken).ConfigureAwait(false)).ToList();
         }
 
-        return new ProcessLiveProcessesResult(runs, CombineFreshness(runs))
+        var immutableRuns = runs
+            .Select(FreezeLiveRun)
+            .ToImmutableArray();
+        return new ProcessLiveProcessesResult(immutableRuns, CombineFreshness(immutableRuns))
         {
             ReusableRuns = reusableRuns
         };
     }
 
-    public async Task<ProcessRunHistoryResult> GetRunHistoryAsync(
+    public Task<ProcessRunHistoryResult> GetRunHistoryAsync(
         ProcessRunHistoryQuery query,
         CancellationToken cancellationToken = default)
+    {
+        return GetRunHistoryCoreAsync(
+            query,
+            enrichmentCache: null,
+            cancellationToken);
+    }
+
+    private async Task<ProcessRunHistoryResult> GetRunHistoryCoreAsync(
+        ProcessRunHistoryQuery query,
+        RuntimeRunEnrichmentCache? enrichmentCache,
+        CancellationToken cancellationToken)
     {
         ValidateTake(query.Take, nameof(query.Take));
         if (query.Skip < 0)
@@ -152,6 +198,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var enrichedEvents = await EnrichTimelineDiagnosticsAsync(
             query.RunId,
             events,
+            enrichmentCache,
             cancellationToken).ConfigureAwait(false);
 
         return new ProcessRunHistoryResult(enrichedEvents, CombineFreshness(enrichedEvents));
@@ -180,20 +227,29 @@ public sealed class ProcessRuntimeProjectionQueryService(
             query.Window,
             query.TakeRuns,
             loadOptions.LiveProcesses);
+        var enrichmentCache = new RuntimeRunEnrichmentCache(
+            runtimeStateStore,
+            assignmentStore);
         var liveProcesses = query.PreviouslyLoadedRuns is null
-            ? await GetLiveProcessesAsync(liveQuery, cancellationToken).ConfigureAwait(false)
+            ? await GetLiveProcessesCoreAsync(
+                    liveQuery,
+                    enrichmentCache,
+                    cancellationToken)
+                .ConfigureAwait(false)
             : await PrepareLiveProcessesAsync(
                     liveQuery,
-                    query.PreviouslyLoadedRuns,
+                    FreezeLiveRuns(query.PreviouslyLoadedRuns),
                     nowUtc,
                     nowUtc - query.Window,
+                    enrichmentCache,
                     cancellationToken)
                 .ConfigureAwait(false);
+        var runs = liveProcesses.Runs.ToImmutableArray();
         var selectedRunId = RequiresSelectedRunId(loadOptions)
-            ? ResolveSelectedRunId(liveProcesses.Runs, query.SelectedRunId, query.AutoSelectRun)
+            ? ResolveSelectedRunId(runs, query.SelectedRunId, query.AutoSelectRun)
             : query.SelectedRunId;
         var selectedRunSnapshot = selectedRunId is { } resolvedSelectedRunId
-            ? liveProcesses.Runs.FirstOrDefault(run => run.RunId == resolvedSelectedRunId)
+            ? runs.FirstOrDefault(run => run.RunId == resolvedSelectedRunId)
             : null;
         var selectedRunNeedsRecordLookup = selectedRunId is not null &&
             (selectedRunSnapshot is null ||
@@ -222,7 +278,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
         ProcessRunDetailProjection? selectedRun = null;
         if (loadOptions.IncludeSelectedRun && selectedRunId is not null)
         {
-            selectedRun = await GetRunDetailAsync(new ProcessRunDetailQuery(selectedRunId.Value), cancellationToken)
+            selectedRun = await GetRunDetailCoreAsync(
+                    new ProcessRunDetailQuery(selectedRunId.Value),
+                    enrichmentCache,
+                    cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -234,12 +293,13 @@ public sealed class ProcessRuntimeProjectionQueryService(
             includeMetricHistory &&
             CanShareMetricHistoryWithPage(historySkip, query.EventPageSize))
         {
-            metricHistory = await GetRunHistoryAsync(
+            metricHistory = await GetRunHistoryCoreAsync(
                     new ProcessRunHistoryQuery(
                         selectedRunId,
                         nowUtc - query.Window,
                         nowUtc,
                         Take: RuntimeMetricEventReadLimit),
+                    enrichmentCache,
                     cancellationToken)
                 .ConfigureAwait(false);
             history = SliceHistoryPage(metricHistory, historySkip, query.EventPageSize);
@@ -247,46 +307,645 @@ public sealed class ProcessRuntimeProjectionQueryService(
         else
         {
             history = loadOptions.IncludeHistory
-                ? await GetRunHistoryAsync(
+                ? await GetRunHistoryCoreAsync(
                         new ProcessRunHistoryQuery(
                             selectedRunId,
                             nowUtc - query.Window,
                             nowUtc,
                             Take: query.EventPageSize + 1,
                             Skip: historySkip),
+                        enrichmentCache,
                         cancellationToken)
                     .ConfigureAwait(false)
                 : new ProcessRunHistoryResult([], Freshness: null);
             metricHistory = includeMetricHistory
-                ? await GetRunHistoryAsync(
+                ? await GetRunHistoryCoreAsync(
                         new ProcessRunHistoryQuery(
                             selectedRunId,
                             nowUtc - query.Window,
                             nowUtc,
                             Take: RuntimeMetricEventReadLimit),
+                        enrichmentCache,
                         cancellationToken)
                     .ConfigureAwait(false)
                 : new ProcessRunHistoryResult([], Freshness: null);
         }
-        var events = history.Events.Take(query.EventPageSize).ToArray();
+        var events = history.Events
+            .Take(query.EventPageSize)
+            .ToImmutableArray();
+        var metricEvents = metricHistory.Events.ToImmutableArray();
         var activeAgents = loadOptions.IncludeActiveAgents
-            ? await LoadActiveAgentsAsync(liveProcesses.Runs, nowUtc, cancellationToken).ConfigureAwait(false)
-            : [];
+            ? (await LoadActiveAgentsAsync(
+                    runs,
+                    nowUtc,
+                    enrichmentCache,
+                    cancellationToken)
+                .ConfigureAwait(false)).ToImmutableArray()
+            : ImmutableArray<ProcessRuntimeActiveAgentProjection>.Empty;
         var freshness = CombineFreshness(liveProcesses.Freshness, history.Freshness, metricHistory.Freshness, selectedRun?.Freshness);
+        var provenance = CreateRuntimeProvenance(
+            query,
+            nowUtc,
+            loadOptions,
+            runs,
+            liveProcesses.Freshness,
+            selectedRunId,
+            selectedRunSnapshot,
+            selectedRun,
+            selectedRunRecord,
+            events,
+            history.Events.Count > query.EventPageSize,
+            history.Freshness,
+            metricEvents,
+            metricHistory.Freshness,
+            activeAgents);
 
         return new ProcessRuntimeWorkspaceResult(
-            liveProcesses.Runs,
+            runs,
             selectedRun,
             events,
-            metricHistory.Events,
+            metricEvents,
             history.Events.Count > query.EventPageSize,
             activeAgents,
             freshness)
         {
             SelectedRunRecord = selectedRunRecord,
-            ReusableRuns = liveProcesses.ReusableRuns
+            ReusableRuns = liveProcesses.ReusableRuns?.ToImmutableArray(),
+            Provenance = provenance
         };
     }
+
+    private static ImmutableArray<ProcessLiveProcessSnapshot> FreezeLiveRuns(
+        IReadOnlyList<ProcessLiveProcessSnapshot> runs)
+    {
+        var builder = ImmutableArray.CreateBuilder<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            builder.Add(FreezeLiveRun(run));
+        }
+
+        return builder.MoveToImmutable();
+    }
+
+    private static ProcessLiveProcessSnapshot FreezeLiveRun(ProcessLiveProcessSnapshot run)
+        => run with
+        {
+            RecentEvents = run.RecentEvents
+                .Select(runtimeEvent => runtimeEvent with
+                {
+                    Diagnostics = runtimeEvent.Diagnostics
+                        .Select(FreezeDiagnostic)
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray(),
+            Incidents = run.Incidents.ToImmutableArray(),
+            OperatorActions = run.OperatorActions.ToImmutableArray(),
+            WaitingOnChildRuns = run.WaitingOnChildRuns.ToImmutableArray(),
+            CurrentStep = run.CurrentStep is null
+                ? null
+                : run.CurrentStep with
+                {
+                    Diagnostics = run.CurrentStep.Diagnostics
+                        .Select(FreezeDiagnostic)
+                        .ToImmutableArray(),
+                    ProducedArtifacts = run.CurrentStep.ProducedArtifacts.ToImmutableArray()
+                },
+            Diagnostics = run.Diagnostics
+                .Select(FreezeDiagnostic)
+                .ToImmutableArray()
+        };
+
+    private static bool RequiresRuntimeStates(
+        ProcessLiveProcessesLoadOptions loadOptions)
+    {
+        return loadOptions.IncludeAttentionReconciliation ||
+               loadOptions.IncludeOperatorActions ||
+               loadOptions.IncludeCurrentSteps ||
+               loadOptions.IncludeChildRunWaits ||
+               loadOptions.IncludeDiagnostics;
+    }
+
+    private static bool RequiresRuntimeAssignments(
+        ProcessLiveProcessesLoadOptions loadOptions)
+    {
+        return loadOptions.IncludeOperatorActions ||
+               loadOptions.IncludeCurrentSteps ||
+               loadOptions.IncludeChildRunWaits ||
+               loadOptions.IncludeDiagnostics;
+    }
+
+    private static ProcessRuntimeDiagnosticProjection FreezeDiagnostic(
+        ProcessRuntimeDiagnosticProjection diagnostic)
+        => diagnostic with
+        {
+            OperatorDetails = diagnostic.OperatorDetails is null
+                ? null
+                : diagnostic.OperatorDetails with
+                {
+                    FailedCriteriaIds = diagnostic.OperatorDetails.FailedCriteriaIds.ToImmutableArray(),
+                    ReceiptRuleIds = diagnostic.OperatorDetails.ReceiptRuleIds.ToImmutableArray()
+                }
+        };
+
+    private ProcessWorkspaceProvenanceVector CreateRuntimeProvenance(
+        ProcessRuntimeWorkspaceQuery query,
+        DateTimeOffset nowUtc,
+        ProcessRuntimeWorkspaceLoadOptions loadOptions,
+        ImmutableArray<ProcessLiveProcessSnapshot> runs,
+        ProcessProjectionFreshness? liveRunsFreshness,
+        ProcessRunId? selectedRunId,
+        ProcessLiveProcessSnapshot? selectedRunSnapshot,
+        ProcessRunDetailProjection? selectedRun,
+        ProcessRunRecord? selectedRunRecord,
+        ImmutableArray<ProcessTimelineEventProjection> historyEvents,
+        bool hasMoreHistoryEvents,
+        ProcessProjectionFreshness? historyFreshness,
+        ImmutableArray<ProcessTimelineEventProjection> metricEvents,
+        ProcessProjectionFreshness? metricHistoryFreshness,
+        ImmutableArray<ProcessRuntimeActiveAgentProjection> activeAgents)
+    {
+        var liveRunsSource = query.PreviouslyLoadedRuns is null
+            ? ProcessProjectionComponentSource.RuntimeProjectionStore
+            : ProcessProjectionComponentSource.ReusedRuntimeProjection;
+        var liveRunsFingerprint = ProcessProjectionContentFingerprintFactory.Create(
+            ProcessWorkspaceProvenanceComponent.LiveRuns,
+            CreateLiveRunsProvenanceContent(runs));
+        var liveRunsProvenance = runs.IsEmpty
+            ? ProcessProjectionComponentProvenance.Absent(
+                liveRunsSource,
+                ProcessProjectionComponentAbsenceReason.NoData,
+                liveRunsFingerprint)
+            : ProcessProjectionComponentProvenance.Present(
+                liveRunsSource,
+                liveRunsFingerprint,
+                liveRunsFreshness);
+
+        var selectedRunDetailProvenance = CreateSelectedRunDetailProvenance(
+            loadOptions,
+            selectedRunId,
+            selectedRun);
+        var selectedRunRecordProvenance = CreateSelectedRunRecordProvenance(
+            loadOptions,
+            selectedRunId,
+            selectedRunSnapshot,
+            selectedRunRecord);
+        ProcessProjectionComponentProvenance historyProvenance;
+        if (!loadOptions.IncludeHistory)
+        {
+            historyProvenance = ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.LoadOptionDisabled);
+        }
+        else
+        {
+            var historyContent = new RuntimeHistoryPageProvenanceContent(
+                nowUtc - query.Window,
+                nowUtc,
+                query.EventPage,
+                query.EventPageSize,
+                selectedRunId,
+                hasMoreHistoryEvents,
+                CreateTimelineEventsProvenanceContent(historyEvents));
+            var historyFingerprint = ProcessProjectionContentFingerprintFactory.Create(
+                ProcessWorkspaceProvenanceComponent.HistoryPage,
+                historyContent);
+            historyProvenance = historyEvents.IsEmpty
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    ProcessProjectionComponentAbsenceReason.NoData,
+                    historyFingerprint)
+                : ProcessProjectionComponentProvenance.Present(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    historyFingerprint,
+                    historyFreshness);
+        }
+
+        ProcessProjectionComponentProvenance metricHistoryProvenance;
+        if (!loadOptions.IncludeMetricHistory)
+        {
+            metricHistoryProvenance = ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.LoadOptionDisabled);
+        }
+        else if (selectedRunRecord is not null)
+        {
+            metricHistoryProvenance = ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.SupersededByDurableRecord);
+        }
+        else
+        {
+            var metricHistoryContent = new RuntimeMetricHistoryProvenanceContent(
+                nowUtc - query.Window,
+                nowUtc,
+                selectedRunId,
+                CreateTimelineEventsProvenanceContent(metricEvents));
+            var metricHistoryFingerprint = ProcessProjectionContentFingerprintFactory.Create(
+                ProcessWorkspaceProvenanceComponent.MetricHistory,
+                metricHistoryContent);
+            metricHistoryProvenance = metricEvents.IsEmpty
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    ProcessProjectionComponentAbsenceReason.NoData,
+                    metricHistoryFingerprint)
+                : ProcessProjectionComponentProvenance.Present(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    metricHistoryFingerprint,
+                    metricHistoryFreshness);
+        }
+
+        ProcessProjectionComponentProvenance activeAgentsProvenance;
+        if (!loadOptions.IncludeActiveAgents)
+        {
+            activeAgentsProvenance = ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.LoadOptionDisabled);
+        }
+        else if (!runs.Any(CanHaveActiveAgents))
+        {
+            var activeAgentsFingerprint = ProcessProjectionContentFingerprintFactory.Create(
+                ProcessWorkspaceProvenanceComponent.ActiveAgents,
+                CreateActiveAgentsProvenanceContent(activeAgents));
+            activeAgentsProvenance = ProcessProjectionComponentProvenance.Absent(
+                ProcessProjectionComponentSource.RuntimeState,
+                ProcessProjectionComponentAbsenceReason.NoData,
+                activeAgentsFingerprint);
+        }
+        else if (runtimeStateStore is null || assignmentStore is null)
+        {
+            activeAgentsProvenance = ProcessProjectionComponentProvenance.Absent(
+                ProcessProjectionComponentSource.RuntimeState,
+                ProcessProjectionComponentAbsenceReason.SourceUnavailable);
+        }
+        else
+        {
+            var activeAgentsFingerprint = ProcessProjectionContentFingerprintFactory.Create(
+                ProcessWorkspaceProvenanceComponent.ActiveAgents,
+                CreateActiveAgentsProvenanceContent(activeAgents));
+            activeAgentsProvenance = activeAgents.IsEmpty
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeState,
+                    ProcessProjectionComponentAbsenceReason.NoData,
+                    activeAgentsFingerprint)
+                : ProcessProjectionComponentProvenance.Present(
+                    ProcessProjectionComponentSource.RuntimeState,
+                    activeAgentsFingerprint);
+        }
+
+        return ProcessWorkspaceProvenanceVector.Empty with
+        {
+            LiveRuns = liveRunsProvenance,
+            SelectedRunDetail = selectedRunDetailProvenance,
+            SelectedRunRecord = selectedRunRecordProvenance,
+            HistoryPage = historyProvenance,
+            MetricHistory = metricHistoryProvenance,
+            ActiveAgents = activeAgentsProvenance
+        };
+    }
+
+    private static ProcessProjectionComponentProvenance CreateSelectedRunDetailProvenance(
+        ProcessRuntimeWorkspaceLoadOptions loadOptions,
+        ProcessRunId? selectedRunId,
+        ProcessRunDetailProjection? selectedRun)
+    {
+        if (!loadOptions.IncludeSelectedRun)
+        {
+            return ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.LoadOptionDisabled);
+        }
+
+        if (selectedRunId is null)
+        {
+            return ProcessProjectionComponentProvenance.Absent(
+                ProcessProjectionComponentSource.RuntimeProjectionStore,
+                ProcessProjectionComponentAbsenceReason.NoSelection);
+        }
+
+        if (selectedRun is null)
+        {
+            return ProcessProjectionComponentProvenance.Absent(
+                ProcessProjectionComponentSource.RuntimeProjectionStore,
+                ProcessProjectionComponentAbsenceReason.NoData);
+        }
+
+        return ProcessProjectionComponentProvenance.Present(
+            ProcessProjectionComponentSource.RuntimeProjectionStore,
+            ProcessProjectionContentFingerprintFactory.Create(
+                ProcessWorkspaceProvenanceComponent.SelectedRunDetail,
+                CreateSelectedRunDetailProvenanceContent(selectedRun)),
+            selectedRun.Freshness);
+    }
+
+    private static ProcessProjectionComponentProvenance CreateSelectedRunRecordProvenance(
+        ProcessRuntimeWorkspaceLoadOptions loadOptions,
+        ProcessRunId? selectedRunId,
+        ProcessLiveProcessSnapshot? selectedRunSnapshot,
+        ProcessRunRecord? selectedRunRecord)
+    {
+        if (!loadOptions.IncludeRunRecord)
+        {
+            return ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.LoadOptionDisabled);
+        }
+
+        if (selectedRunId is null)
+        {
+            return ProcessProjectionComponentProvenance.Absent(
+                ProcessProjectionComponentSource.RunRecordStore,
+                ProcessProjectionComponentAbsenceReason.NoSelection);
+        }
+
+        var needsRecordLookup = selectedRunSnapshot is null ||
+            selectedRunSnapshot.Status is
+                ProcessProjectedRunStatus.Completed or
+                ProcessProjectedRunStatus.Failed or
+                ProcessProjectedRunStatus.Cancelled;
+        if (!needsRecordLookup)
+        {
+            return ProcessProjectionComponentProvenance.NotRequested(
+                ProcessProjectionComponentAbsenceReason.NotApplicable);
+        }
+
+        if (selectedRunRecord is null)
+        {
+            return ProcessProjectionComponentProvenance.Absent(
+                ProcessProjectionComponentSource.RunRecordStore,
+                ProcessProjectionComponentAbsenceReason.NoData);
+        }
+
+        var summary = selectedRunRecord.Summary;
+        return ProcessProjectionComponentProvenance.Present(
+            ProcessProjectionComponentSource.RunRecordStore,
+            ProcessProjectionContentFingerprintFactory.Create(
+                ProcessWorkspaceProvenanceComponent.SelectedRunRecord,
+                CreateSelectedRunRecordProvenanceContent(selectedRunRecord)),
+            runRecordRevision: new ProcessRunRecordProjectionRevision(
+                summary.SourceGlobalSequence,
+                summary.SourceRootSequence,
+                summary.UpdatedAtUtc));
+    }
+
+    private static ImmutableArray<RuntimeLiveRunProvenanceContent> CreateLiveRunsProvenanceContent(
+        ImmutableArray<ProcessLiveProcessSnapshot> runs)
+        => runs
+            .OrderByDescending(run => run.LastEventAtUtc)
+            .ThenBy(run => run.RunId.Value)
+            .Select(run => new RuntimeLiveRunProvenanceContent(
+                run.RootRunId,
+                run.RunId,
+                run.Status,
+                run.IsActive,
+                run.FirstEventAtUtc,
+                run.LastEventAtUtc,
+                run.ProjectId,
+                NormalizeProvenanceText(run.ProjectName, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(run.ProcessName, ProvenanceIdentityTextMaximumLength),
+                run.IsSubprocess,
+                run.ExecutableStepCount,
+                run.CompletedStepCount,
+                run.TerminalStepCount,
+                NormalizeProvenanceText(run.ProgressLabel, ProvenanceSafeSummaryMaximumLength),
+                run.CurrentStep is null
+                    ? null
+                    : new RuntimeCurrentStepProvenanceContent(
+                        run.CurrentStep.RunId,
+                        run.CurrentStep.StepInstanceId,
+                        NormalizeProvenanceText(run.CurrentStep.StepKey, ProvenanceIdentityTextMaximumLength),
+                        NormalizeProvenanceText(run.CurrentStep.StepStatus, ProvenanceIdentityTextMaximumLength),
+                        NormalizeProvenanceText(run.CurrentStep.RoleKey, ProvenanceIdentityTextMaximumLength),
+                        NormalizeProvenanceText(run.CurrentStep.RoleDisplayName, ProvenanceIdentityTextMaximumLength),
+                        NormalizeProvenanceText(run.CurrentStep.ExecutorDisplayName, ProvenanceIdentityTextMaximumLength),
+                        run.CurrentStep.AttemptNumber,
+                        run.CurrentStep.IsWorking,
+                        run.CurrentStep.IsLeaseExpired,
+                        run.CurrentStep.UpdatedAtUtc,
+                        run.CurrentStep.ClaimedAtUtc,
+                        run.CurrentStep.LeaseExpiresAtUtc,
+                        NormalizeProvenanceText(run.CurrentStep.Summary, ProvenanceSafeSummaryMaximumLength))))
+            .ToImmutableArray();
+
+    private static RuntimeSelectedRunDetailProvenanceContent CreateSelectedRunDetailProvenanceContent(
+        ProcessRunDetailProjection selectedRun)
+        => new(
+            selectedRun.RootRunId,
+            selectedRun.RunId,
+            selectedRun.Status,
+            selectedRun.FirstEventAtUtc,
+            selectedRun.LastEventAtUtc,
+            CreateLiveEventsProvenanceContent(selectedRun.RecentEvents));
+
+    private static RuntimeSelectedRunRecordProvenanceContent CreateSelectedRunRecordProvenanceContent(
+        ProcessRunRecord record)
+        => new(record.Summary.Identity);
+
+    private static ImmutableArray<RuntimeEventProvenanceContent> CreateLiveEventsProvenanceContent(
+        IReadOnlyList<ProcessLiveRunEventProjection> events)
+        => events
+            .OrderBy(runtimeEvent => runtimeEvent.OccurredAtUtc)
+            .ThenBy(runtimeEvent => runtimeEvent.GlobalSequence)
+            .ThenBy(runtimeEvent => runtimeEvent.EventId.ToString(), StringComparer.Ordinal)
+            .Select(runtimeEvent => new RuntimeEventProvenanceContent(
+                runtimeEvent.EventId,
+                runtimeEvent.GlobalSequence,
+                runtimeEvent.RootRunId,
+                runtimeEvent.RunId,
+                NormalizeProvenanceText(runtimeEvent.EventType, ProvenanceIdentityTextMaximumLength),
+                runtimeEvent.OccurredAtUtc,
+                runtimeEvent.Sensitivity,
+                NormalizeProvenanceText(runtimeEvent.Summary, ProvenanceSafeSummaryMaximumLength)))
+            .ToImmutableArray();
+
+    private static ImmutableArray<RuntimeEventProvenanceContent> CreateTimelineEventsProvenanceContent(
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+        => events
+            .OrderBy(runtimeEvent => runtimeEvent.OccurredAtUtc)
+            .ThenBy(runtimeEvent => runtimeEvent.GlobalSequence)
+            .ThenBy(runtimeEvent => runtimeEvent.EventId.ToString(), StringComparer.Ordinal)
+            .Select(runtimeEvent => new RuntimeEventProvenanceContent(
+                runtimeEvent.EventId,
+                runtimeEvent.GlobalSequence,
+                runtimeEvent.RootRunId,
+                runtimeEvent.RunId,
+                NormalizeProvenanceText(runtimeEvent.EventType, ProvenanceIdentityTextMaximumLength),
+                runtimeEvent.OccurredAtUtc,
+                runtimeEvent.Sensitivity,
+                NormalizeProvenanceText(runtimeEvent.Summary, ProvenanceSafeSummaryMaximumLength)))
+            .ToImmutableArray();
+
+    private static ImmutableArray<RuntimeActiveAgentProvenanceContent> CreateActiveAgentsProvenanceContent(
+        ImmutableArray<ProcessRuntimeActiveAgentProjection> activeAgents)
+        => activeAgents
+            .OrderBy(agent => agent.RunId)
+            .ThenBy(agent => agent.StepInstanceId)
+            .ThenBy(agent => agent.ExecutorId, StringComparer.Ordinal)
+            .Select(agent => new RuntimeActiveAgentProvenanceContent(
+                agent.RunId,
+                agent.StepInstanceId,
+                NormalizeProvenanceText(agent.RunLabel, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.StepKey, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.RoleKey, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.ExecutorKind, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.ExecutorId, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.ExecutorDisplayName, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.Status, ProvenanceIdentityTextMaximumLength),
+                agent.IsWorking,
+                agent.IsLeaseExpired,
+                agent.UpdatedAtUtc,
+                agent.ClaimedAtUtc,
+                agent.LeaseExpiresAtUtc,
+                NormalizeProvenanceText(agent.Summary, ProvenanceSafeSummaryMaximumLength),
+                agent.ExecutionRunId,
+                agent.AgentId,
+                NormalizeProvenanceText(agent.AgentName, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.ProviderName, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.Model, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.ExecutionState, ProvenanceIdentityTextMaximumLength),
+                NormalizeProvenanceText(agent.ExecutionOutcome, ProvenanceIdentityTextMaximumLength),
+                agent.ExecutionStartedAtUtc,
+                agent.ExecutionUpdatedAtUtc,
+                NormalizeProvenanceText(agent.CurrentActivity, ProvenanceSafeSummaryMaximumLength),
+                NormalizeProvenanceText(agent.ObservationSource, ProvenanceIdentityTextMaximumLength)))
+            .ToImmutableArray();
+
+    private static string NormalizeProvenanceText(string? value, int maximumLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(Math.Min(value.Length, maximumLength));
+        var previousWasWhitespace = false;
+        foreach (var character in value.Trim())
+        {
+            var isWhitespace = char.IsControl(character) || char.IsWhiteSpace(character);
+            if (isWhitespace)
+            {
+                if (!previousWasWhitespace &&
+                    builder.Length > 0 &&
+                    builder.Length < maximumLength)
+                {
+                    builder.Append(' ');
+                }
+
+                previousWasWhitespace = true;
+                continue;
+            }
+
+            if (builder.Length >= maximumLength)
+            {
+                break;
+            }
+
+            builder.Append(character);
+            previousWasWhitespace = false;
+        }
+
+        if (builder.Length > 0 && char.IsHighSurrogate(builder[^1]))
+        {
+            builder.Length--;
+        }
+
+        if (builder.Length > 0 && builder[^1] == ' ')
+        {
+            builder.Length--;
+        }
+
+        return builder.ToString();
+    }
+
+    private sealed record RuntimeHistoryPageProvenanceContent(
+        DateTimeOffset FromUtc,
+        DateTimeOffset ToUtc,
+        int EventPage,
+        int EventPageSize,
+        ProcessRunId? SelectedRunId,
+        bool HasMoreEvents,
+        ImmutableArray<RuntimeEventProvenanceContent> Events);
+
+    private sealed record RuntimeMetricHistoryProvenanceContent(
+        DateTimeOffset FromUtc,
+        DateTimeOffset ToUtc,
+        ProcessRunId? SelectedRunId,
+        ImmutableArray<RuntimeEventProvenanceContent> Events);
+
+    private sealed record RuntimeLiveRunProvenanceContent(
+        ProcessRunId RootRunId,
+        ProcessRunId RunId,
+        ProcessProjectedRunStatus Status,
+        bool IsActive,
+        DateTimeOffset FirstEventAtUtc,
+        DateTimeOffset LastEventAtUtc,
+        Guid? ProjectId,
+        string ProjectName,
+        string ProcessName,
+        bool IsSubprocess,
+        int ExecutableStepCount,
+        int CompletedStepCount,
+        int TerminalStepCount,
+        string ProgressLabel,
+        RuntimeCurrentStepProvenanceContent? CurrentStep);
+
+    private sealed record RuntimeCurrentStepProvenanceContent(
+        Guid RunId,
+        Guid StepInstanceId,
+        string StepKey,
+        string StepStatus,
+        string RoleKey,
+        string RoleDisplayName,
+        string ExecutorDisplayName,
+        int AttemptNumber,
+        bool IsWorking,
+        bool IsLeaseExpired,
+        DateTimeOffset UpdatedAtUtc,
+        DateTimeOffset? ClaimedAtUtc,
+        DateTimeOffset? LeaseExpiresAtUtc,
+        string Summary);
+
+    private sealed record RuntimeSelectedRunDetailProvenanceContent(
+        ProcessRunId RootRunId,
+        ProcessRunId RunId,
+        ProcessProjectedRunStatus Status,
+        DateTimeOffset FirstEventAtUtc,
+        DateTimeOffset LastEventAtUtc,
+        ImmutableArray<RuntimeEventProvenanceContent> RecentEvents);
+
+    private sealed record RuntimeEventProvenanceContent(
+        RuntimeEventId EventId,
+        long GlobalSequence,
+        ProcessRunId RootRunId,
+        ProcessRunId RunId,
+        string EventType,
+        DateTimeOffset OccurredAtUtc,
+        ProcessProjectedSensitivity Sensitivity,
+        string Summary);
+
+    private sealed record RuntimeSelectedRunRecordProvenanceContent(
+        ProcessRunRecordIdentity Identity);
+
+    private sealed record RuntimeActiveAgentProvenanceContent(
+        Guid RunId,
+        Guid StepInstanceId,
+        string RunLabel,
+        string StepKey,
+        string RoleKey,
+        string ExecutorKind,
+        string ExecutorId,
+        string ExecutorDisplayName,
+        string Status,
+        bool IsWorking,
+        bool IsLeaseExpired,
+        DateTimeOffset UpdatedAtUtc,
+        DateTimeOffset? ClaimedAtUtc,
+        DateTimeOffset? LeaseExpiresAtUtc,
+        string Summary,
+        Guid? ExecutionRunId,
+        Guid? AgentId,
+        string AgentName,
+        string ProviderName,
+        string Model,
+        string ExecutionState,
+        string ExecutionOutcome,
+        DateTimeOffset? ExecutionStartedAtUtc,
+        DateTimeOffset? ExecutionUpdatedAtUtc,
+        string CurrentActivity,
+        string ObservationSource);
 
     private async Task<ProcessRunRecord?> LoadSelectedRunRecordAsync(
         ProcessRunId runId,
@@ -341,9 +1000,20 @@ public sealed class ProcessRuntimeProjectionQueryService(
             loadOptions.IncludeMetricHistory ||
             loadOptions.IncludeActiveAgents;
 
-    public async Task<ProcessRunDetailProjection?> GetRunDetailAsync(
+    public Task<ProcessRunDetailProjection?> GetRunDetailAsync(
         ProcessRunDetailQuery query,
         CancellationToken cancellationToken = default)
+    {
+        return GetRunDetailCoreAsync(
+            query,
+            enrichmentCache: null,
+            cancellationToken);
+    }
+
+    private async Task<ProcessRunDetailProjection?> GetRunDetailCoreAsync(
+        ProcessRunDetailQuery query,
+        RuntimeRunEnrichmentCache? enrichmentCache,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -360,14 +1030,21 @@ public sealed class ProcessRuntimeProjectionQueryService(
         }
 
         var detail = jsonCodec.ReadSnapshot<ProcessRunDetailProjection>(snapshot);
-        return await EnrichRunDetailDiagnosticsAsync(detail, cancellationToken).ConfigureAwait(false);
+        return await EnrichRunDetailDiagnosticsAsync(
+                detail,
+                enrichmentCache ??
+                    new RuntimeRunEnrichmentCache(
+                        runtimeStateStore,
+                        assignmentStore),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<ProcessRunDetailProjection> EnrichRunDetailDiagnosticsAsync(
         ProcessRunDetailProjection detail,
+        RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
-        var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
         var enrichment = await BuildRunDiagnosticEnrichmentAsync(
             detail.RunId,
             enrichmentCache,
@@ -388,6 +1065,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private async Task<IReadOnlyList<ProcessTimelineEventProjection>> EnrichTimelineDiagnosticsAsync(
         ProcessRunId? runId,
         IReadOnlyList<ProcessTimelineEventProjection> events,
+        RuntimeRunEnrichmentCache? enrichmentCache,
         CancellationToken cancellationToken)
     {
         if (runId is null || events.Count == 0)
@@ -395,7 +1073,10 @@ public sealed class ProcessRuntimeProjectionQueryService(
             return events;
         }
 
-        var enrichmentCache = new RuntimeRunEnrichmentCache(runtimeStateStore, assignmentStore);
+        enrichmentCache ??=
+            new RuntimeRunEnrichmentCache(
+                runtimeStateStore,
+                assignmentStore);
         var diagnostics = await BuildRunDiagnosticsAsync(
             runId.Value,
             enrichmentCache,
@@ -839,6 +1520,81 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
         public bool CanLoadAssignments => assignmentStore is not null;
 
+        public async Task PrimeAsync(
+            IReadOnlyList<ProcessRunId> runIds,
+            bool loadStates,
+            bool loadAssignments,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(runIds);
+            var distinctRunIds = runIds
+                .Distinct()
+                .OrderBy(runId => runId.Value)
+                .ToArray();
+            if (distinctRunIds.Length == 0)
+            {
+                return;
+            }
+
+            if (loadStates && runtimeStateStore is not null)
+            {
+                var missingStateRunIds = distinctRunIds
+                    .Where(runId => !stateByRunId.ContainsKey(runId))
+                    .ToArray();
+                if (missingStateRunIds.Length > 0)
+                {
+                    var states = await runtimeStateStore
+                        .LoadManyAsync(
+                            missingStateRunIds,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    var loadedByRunId =
+                        states.ToDictionary(state => state.RunId);
+                    foreach (var runId in missingStateRunIds)
+                    {
+                        stateByRunId[runId] =
+                            loadedByRunId.GetValueOrDefault(runId);
+                    }
+                }
+            }
+
+            if (loadAssignments && assignmentStore is not null)
+            {
+                var missingAssignmentRunIds = distinctRunIds
+                    .Where(runId => !assignmentsByRunId.ContainsKey(runId))
+                    .ToArray();
+                if (missingAssignmentRunIds.Length == 0)
+                {
+                    return;
+                }
+
+                var assignments = await assignmentStore
+                    .LoadByRunsAsync(
+                        missingAssignmentRunIds,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                var loadedByRunId = assignments
+                    .GroupBy(assignment => assignment.RunId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => (IReadOnlyDictionary<
+                            ProcessStepInstanceId,
+                            ProcessRuntimeStepAssignment>)group
+                            .GroupBy(assignment => assignment.StepInstanceId)
+                            .ToDictionary(
+                                group => group.Key,
+                                group => group.First()));
+                foreach (var runId in missingAssignmentRunIds)
+                {
+                    assignmentsByRunId[runId] =
+                        loadedByRunId.GetValueOrDefault(runId) ??
+                        new Dictionary<
+                            ProcessStepInstanceId,
+                            ProcessRuntimeStepAssignment>();
+                }
+            }
+        }
+
         public async ValueTask<ProcessRuntimeStateSnapshot?> LoadStateAsync(
             ProcessRunId runId,
             CancellationToken cancellationToken)
@@ -884,6 +1640,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
     private async Task<IReadOnlyList<ProcessRuntimeActiveAgentProjection>> LoadActiveAgentsAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,
         DateTimeOffset nowUtc,
+        RuntimeRunEnrichmentCache enrichmentCache,
         CancellationToken cancellationToken)
     {
         var activeRuns = runs.Where(CanHaveActiveAgents).ToArray();
@@ -899,17 +1656,26 @@ public sealed class ProcessRuntimeProjectionQueryService(
         var observedCandidateRunIds = new HashSet<ProcessRunId>();
         var runById = activeRuns.ToDictionary(run => run.RunId);
 
+        await enrichmentCache.PrimeAsync(
+                activeRuns.Select(run => run.RunId).ToArray(),
+                loadStates: true,
+                loadAssignments: true,
+                cancellationToken)
+            .ConfigureAwait(false);
         foreach (var run in activeRuns)
         {
-            var assignments = await assignmentStore.LoadByRunAsync(run.RunId, cancellationToken).ConfigureAwait(false);
-            assignmentsByRun[run.RunId] = assignments
-                .GroupBy(assignment => assignment.StepInstanceId)
-                .ToDictionary(group => group.Key, group => group.First());
+            assignmentsByRun[run.RunId] =
+                await enrichmentCache.LoadAssignmentsByStepAsync(
+                        run.RunId,
+                        cancellationToken)
+                    .ConfigureAwait(false);
         }
 
         foreach (var run in activeRuns)
         {
-            var state = await runtimeStateStore.LoadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            var state = await enrichmentCache
+                .LoadStateAsync(run.RunId, cancellationToken)
+                .ConfigureAwait(false);
             if (state is null)
             {
                 continue;
@@ -1108,19 +1874,17 @@ public sealed class ProcessRuntimeProjectionQueryService(
             return runs;
         }
 
-        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        var contexts = new Dictionary<ProcessRunId, OperatorActionEnrichmentContext>();
         foreach (var run in runs)
         {
             if (!CanHaveOperatorActions(run))
             {
-                enriched.Add(run);
                 continue;
             }
 
             var state = await enrichmentCache.LoadStateAsync(run.RunId, cancellationToken).ConfigureAwait(false);
             if (state is null)
             {
-                enriched.Add(run);
                 continue;
             }
 
@@ -1143,29 +1907,57 @@ public sealed class ProcessRuntimeProjectionQueryService(
                 }
             }
 
-            var observationsByStep = actionableSteps.Count == 0
-                ? new Dictionary<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId), ProcessExecutionObservation>()
-                : await LoadLatestExecutionObservationsByStepAsync(
-                    [run],
-                    actionableSteps
+            contexts.Add(
+                run.RunId,
+                new OperatorActionEnrichmentContext(
+                    run,
+                    state,
+                    assignmentsByStep,
+                    actionableSteps));
+        }
+
+        var actionableContexts = contexts.Values
+            .Where(context => context.ActionableSteps.Count > 0)
+            .ToArray();
+        var observationsByStep = actionableContexts.Length == 0
+            ? new Dictionary<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId), ProcessExecutionObservation>()
+            : await LoadLatestExecutionObservationsByStepAsync(
+                    actionableContexts
+                        .Select(context => context.Run)
+                        .ToArray(),
+                    actionableContexts
+                        .SelectMany(context => context.ActionableSteps)
                         .Select(item => item.Step.StepInstanceId)
                         .Distinct()
                         .ToArray(),
                     nowUtc,
-                    cancellationToken).ConfigureAwait(false);
-            var actions = actionableSteps
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var enriched = new List<ProcessLiveProcessSnapshot>(runs.Count);
+        foreach (var run in runs)
+        {
+            if (!contexts.TryGetValue(run.RunId, out var context))
+            {
+                enriched.Add(run);
+                continue;
+            }
+
+            var actions = context.ActionableSteps
                 .OrderByDescending(item => item.ExpiredClaim is not null)
                 .ThenByDescending(item => item.Step.Status == ProcessRuntimeStepStatus.Failed)
                 .ThenByDescending(item => item.Step.Status == ProcessRuntimeStepStatus.Blocked)
-                .ThenBy(item => ResolveStepKey(item.Step, assignmentsByStep), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(
+                    item => ResolveStepKey(item.Step, context.AssignmentsByStep),
+                    StringComparer.OrdinalIgnoreCase)
                 .Select((item, index) =>
                 {
                     observationsByStep.TryGetValue((run.RunId, item.Step.StepInstanceId), out var observation);
                     return CreateOperatorActionProjection(
                         run,
-                        state,
+                        context.State,
                         item.Step,
-                        assignmentsByStep,
+                        context.AssignmentsByStep,
                         item.ExpiredClaim,
                         observation,
                         primaryRootCause: index == 0);
@@ -1177,6 +1969,12 @@ public sealed class ProcessRuntimeProjectionQueryService(
 
         return enriched;
     }
+
+    private sealed record OperatorActionEnrichmentContext(
+        ProcessLiveProcessSnapshot Run,
+        ProcessRuntimeStateSnapshot State,
+        IReadOnlyDictionary<ProcessStepInstanceId, ProcessRuntimeStepAssignment> AssignmentsByStep,
+        IReadOnlyList<(ProcessRuntimeStepState Step, DispatchClaimState? ExpiredClaim)> ActionableSteps);
 
     private async Task<IReadOnlyDictionary<(ProcessRunId RunId, ProcessStepInstanceId StepInstanceId), ProcessExecutionObservation>> LoadLatestExecutionObservationsByStepAsync(
         IReadOnlyList<ProcessLiveProcessSnapshot> runs,

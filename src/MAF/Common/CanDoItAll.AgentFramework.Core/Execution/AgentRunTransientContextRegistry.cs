@@ -22,7 +22,7 @@ internal sealed class AgentRunTransientContextRegistry
                 $"Execution run '{run.Id:N}' does not declare a transient context digest.");
         }
 
-        var actualDigest = AgentChatContextDigest.Compute(context.Content);
+        var actualDigest = AgentChatContextDigest.Compute(context);
         if (!string.Equals(expectedDigest, actualDigest, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
@@ -33,7 +33,7 @@ internal sealed class AgentRunTransientContextRegistry
         {
             if (contexts.TryGetValue(run.Id, out var existing))
             {
-                if (existing != context)
+                if (!ReferenceEquals(existing, context))
                 {
                     throw new InvalidOperationException(
                         $"Execution run '{run.Id:N}' already has a different transient context lease.");

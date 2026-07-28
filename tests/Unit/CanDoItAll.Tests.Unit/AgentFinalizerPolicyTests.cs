@@ -1211,6 +1211,7 @@ public sealed class AgentFinalizerPolicyTests
         var request = new ExecutionRunRequest(
             Guid.NewGuid(),
             "Classify the application.",
+            InitialActivityOperationId: AgentExecutionOperationId.New(),
             Context: new ExecutionInvocationContext(
                 SourceKind: "process-step",
                 SourceId: "classify-dotnet-application",
@@ -1545,11 +1546,22 @@ public sealed class AgentFinalizerPolicyTests
             WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
         var run = CreateRun(metadataJson);
         var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
-            "CreateRuntimeExecutionOptions",
+            "BuildRuntimeExecutionOptions",
             BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("CreateRuntimeExecutionOptions method was not found.");
+            ?? throw new InvalidOperationException("BuildRuntimeExecutionOptions method was not found.");
 
-        var options = Assert.IsType<AgentRuntimeExecutionOptions>(method.Invoke(null, [run, null, null, Array.Empty<AgentRuntimeInputAttachment>()]));
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(
+            method.Invoke(
+                null,
+                [
+                    run,
+                    null,
+                    null,
+                    null,
+                    Array.Empty<AgentRuntimeInputAttachment>(),
+                    null,
+                    null
+                ]));
 
         Assert.NotNull(options.ContextWorkspaceScope);
         Assert.Equal(WorkspaceScopeKind.Project, options.ContextWorkspaceScope!.Kind);

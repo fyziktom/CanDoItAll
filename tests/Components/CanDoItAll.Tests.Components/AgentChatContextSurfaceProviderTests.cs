@@ -94,6 +94,233 @@ public sealed class AgentChatContextSurfaceProviderTests
     }
 
     [Fact]
+    public void Provider_publishes_and_updates_atomic_contributor_publications()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        var initialAttachment = new SurfaceContextAttachment("initial");
+
+        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+            .Add(component => component.Surface, CreateSurface(
+                "processes",
+                "processes",
+                "board",
+                "/processes"))
+            .Add(
+                component => component.ContributorPublications,
+                [CreateContributorPublication(
+                    "processes.board",
+                    "State: initial",
+                    "content-initial",
+                    initialAttachment)]));
+
+        var initial = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var initialEnvelope = Assert.Single(initial.Attachments);
+        Assert.Equal("State: initial", Assert.Single(initial.Fragments).Content);
+        Assert.Equal(1, initialEnvelope.PublicationRevision.Value);
+        Assert.True(
+            initialEnvelope.TryGetAttachment<SurfaceContextAttachment>(
+                out var capturedInitialAttachment));
+        Assert.Same(initialAttachment, capturedInitialAttachment);
+
+        var updatedAttachment = new SurfaceContextAttachment("updated");
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.Surface, CreateSurface(
+                "processes",
+                "processes",
+                "detail",
+                "/processes"))
+            .Add(
+                component => component.ContributorPublications,
+                [CreateContributorPublication(
+                    "processes.board",
+                    "State: updated",
+                    "content-updated",
+                    updatedAttachment)]));
+
+        var updated = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var updatedEnvelope = Assert.Single(updated.Attachments);
+        Assert.Equal(initial.Scope.Id, updated.Scope.Id);
+        Assert.Equal("detail", updated.Scope.SurfacePosition?.View);
+        Assert.Equal("State: updated", Assert.Single(updated.Fragments).Content);
+        Assert.Equal(2, updatedEnvelope.PublicationRevision.Value);
+        Assert.True(
+            updatedEnvelope.TryGetAttachment<SurfaceContextAttachment>(
+                out var capturedUpdatedAttachment));
+        Assert.Same(updatedAttachment, capturedUpdatedAttachment);
+
+        cut.Instance.Dispose();
+        cut.Dispose();
+
+        Assert.Null(registry.Capture());
+    }
+
+    [Fact]
+    public void Provider_rejects_mixed_atomic_publications_and_legacy_fragments()
+    {
+        using var context = new TestContext();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(
+            new AgentChatContextRegistry(TimeProvider.System));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+                .Add(component => component.Surface, CreateSurface(
+                    "processes",
+                    "processes",
+                    "board",
+                    "/processes"))
+                .Add(
+                    component => component.Fragments,
+                    [CreateFragment("processes.legacy", "Legacy")])
+                .Add(
+                    component => component.ContributorPublications,
+                    [CreateContributorPublication(
+                        "processes.atomic",
+                        "Atomic",
+                        "content-atomic",
+                        new SurfaceContextAttachment("atomic"))])));
+    }
+
+    [Fact]
+    public void Provider_transitions_between_legacy_and_atomic_publication_ownership()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+
+        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+            .Add(component => component.Surface, CreateSurface(
+                "processes",
+                "processes",
+                "board",
+                "/processes"))
+            .Add(
+                component => component.Fragments,
+                [CreateFragment("processes.legacy", "Legacy: initial")]));
+
+        var legacy = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.True(legacy.Attachments.IsEmpty);
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.Surface, CreateSurface(
+                "processes",
+                "processes",
+                "board",
+                "/processes"))
+            .Add(
+                component => component.Fragments,
+                Array.Empty<AgentChatContextFragment>())
+            .Add(
+                component => component.ContributorPublications,
+                [CreateContributorPublication(
+                    "processes.atomic",
+                    "Atomic",
+                    "content-atomic",
+                    new SurfaceContextAttachment("atomic"))]));
+
+        var atomic = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.NotEqual(legacy.Scope.Id, atomic.Scope.Id);
+        Assert.Equal("Atomic", Assert.Single(atomic.Fragments).Content);
+        Assert.Single(atomic.Attachments);
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.Surface, CreateSurface(
+                "processes",
+                "processes",
+                "board",
+                "/processes"))
+            .Add(
+                component => component.ContributorPublications,
+                (IReadOnlyList<AgentChatContextContributorPublication>?)null)
+            .Add(
+                component => component.Fragments,
+                [CreateFragment("processes.legacy", "Legacy: restored")]));
+
+        var restoredLegacy = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.NotEqual(atomic.Scope.Id, restoredLegacy.Scope.Id);
+        Assert.Equal(
+            "Legacy: restored",
+            Assert.Single(restoredLegacy.Fragments).Content);
+        Assert.True(restoredLegacy.Attachments.IsEmpty);
+
+        cut.Instance.Dispose();
+        cut.Dispose();
+
+        Assert.Null(registry.Capture());
+    }
+
+    [Fact]
+    public void Provider_uses_attachment_fingerprints_and_stamps_as_atomic_equivalence_contract()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        var surface = CreateSurface(
+            "processes",
+            "processes",
+            "board",
+            "/processes");
+        var initialAttachment = new SurfaceContextAttachment("initial");
+
+        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+            .Add(component => component.Surface, surface)
+            .Add(
+                component => component.ContributorPublications,
+                [CreateContributorPublication(
+                    "processes.atomic",
+                    "Atomic",
+                    "content-stable",
+                    initialAttachment)]));
+
+        var initial = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var equivalentPayload = new SurfaceContextAttachment("different-instance");
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.Surface, surface)
+            .Add(
+                component => component.ContributorPublications,
+                [CreateContributorPublication(
+                    "processes.atomic",
+                    "Atomic",
+                    "content-stable",
+                    equivalentPayload)]));
+
+        var equivalent = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var equivalentEnvelope = Assert.Single(equivalent.Attachments);
+        Assert.Equal(initial.Version, equivalent.Version);
+        Assert.Equal(1, equivalentEnvelope.PublicationRevision.Value);
+        Assert.True(
+            equivalentEnvelope.TryGetAttachment<SurfaceContextAttachment>(
+                out var retainedAttachment));
+        Assert.Same(initialAttachment, retainedAttachment);
+
+        var laterCapture = new DateTimeOffset(
+            2026,
+            7,
+            27,
+            12,
+            0,
+            1,
+            TimeSpan.Zero);
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(component => component.Surface, surface)
+            .Add(
+                component => component.ContributorPublications,
+                [CreateContributorPublication(
+                    "processes.atomic",
+                    "Atomic",
+                    "content-stable",
+                    equivalentPayload,
+                    laterCapture)]));
+
+        var restamped = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.True(restamped.Version > equivalent.Version);
+        Assert.Equal(
+            2,
+            Assert.Single(restamped.Attachments).PublicationRevision.Value);
+    }
+
+    [Fact]
     public async Task Access_state_override_blocks_capture_during_transition_and_recovers_same_scope()
     {
         using var context = new TestContext();
@@ -156,4 +383,37 @@ public sealed class AgentChatContextSurfaceProviderTests
             new AgentChatContextContributorId(contributorId),
             order: 100,
             content);
+
+    private static AgentChatContextContributorPublication CreateContributorPublication(
+        string contributorId,
+        string content,
+        string contentFingerprint,
+        SurfaceContextAttachment attachment,
+        DateTimeOffset? capturedAtUtc = null)
+    {
+        var capturedAt = capturedAtUtc ?? new DateTimeOffset(
+            2026,
+            7,
+            27,
+            12,
+            0,
+            0,
+            TimeSpan.Zero);
+        return new AgentChatContextContributorPublication(
+            CreateFragment(contributorId, content),
+            [
+                new AgentChatContextAttachmentDraft(
+                    new AgentChatContextAttachmentKind("processes.snapshot"),
+                    new SnapshotContentFingerprint(contentFingerprint),
+                    new SnapshotCoverageFingerprint("processes-board"),
+                    new DatabaseProfileGeneration(4),
+                    new SnapshotFreshnessFingerprint("freshness-4"),
+                    capturedAt,
+                    capturedAt.AddMinutes(5),
+                    attachment)
+            ]);
+    }
+
+    private sealed record SurfaceContextAttachment(string Value) :
+        IAgentChatContextAttachment;
 }

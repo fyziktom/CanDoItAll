@@ -4,60 +4,75 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
 using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+
+public enum ProviderCatalogProjectionOperationKind
+{
+    Upsert,
+    Delete
+}
+
+public sealed class ProviderCatalogProjectionException(
+    Guid providerId,
+    ProviderCatalogProjectionOperationKind operationKind,
+    string repairAction,
+    Exception innerException) :
+    InvalidOperationException(
+        $"Canonical provider '{providerId:D}' committed successfully, but catalog projection '{operationKind}' failed. {repairAction}",
+        innerException)
+{
+    public Guid ProviderId { get; } = providerId;
+
+    public ProviderCatalogProjectionOperationKind OperationKind { get; } =
+        operationKind;
+
+    public bool CanonicalCommitSucceeded { get; } = true;
+
+    public string RepairAction { get; } = repairAction;
+}
 
 internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ISandboxWorkspaceStore store,
     ProviderRegistry providerRegistry,
-    IProviderProfileService providerProfileService) : IProviderProfileRegistry
+    IProviderProfileService providerProfileService,
+    WorkspaceAgentProviderProfileMapper providerMapper,
+    IEnumerable<IWorkspaceProviderProfileCommitObserver>
+        providerProfileCommitObservers,
+    ILogger<WorkspaceBackedAgentProviderProfileRegistry> logger) :
+    IProviderProfileRegistry
 {
-    private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
-    private const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
-    private static readonly Guid RuntimeFallbackOllamaProviderId = Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
-
     public async Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
         CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var providers = await dbContext.Set<WorkspaceProviderProfile>()
-            .AsNoTracking()
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken);
-
-        var mappedProviders = providers
-            .Select(MapToAgentFrameworkProvider)
-            .ToList();
-
-        return await MergeWithCatalogProvidersAsync(mappedProviders, cancellationToken);
+        var mappedProviders = await LoadDatabaseProvidersAsync(cancellationToken);
+        return mappedProviders
+            .Where(item =>
+                item.Id != WorkspaceAgentProviderProfileMapper
+                    .RuntimeFallbackOllamaProviderId)
+            .Append(providerMapper.CreateRuntimeFallback())
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public async Task<AgentFrameworkProviderProfile?> GetProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default)
     {
-        if (providerId == RuntimeFallbackOllamaProviderId)
+        if (providerId ==
+            WorkspaceAgentProviderProfileMapper.RuntimeFallbackOllamaProviderId)
         {
-            return CreateRuntimeFallbackOllamaProvider();
+            return providerMapper.CreateRuntimeFallback();
         }
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
-
-        if (provider is null)
-        {
-            return await LoadCatalogProviderAsync(providerId, cancellationToken);
-        }
-
-        return MapToAgentFrameworkProvider(provider);
+        var provider = await LoadDatabaseProviderAsync(providerId, cancellationToken);
+        return provider;
     }
 
     public async Task<AgentFrameworkProviderProfileEditorModel> GetProviderEditorAsync(
@@ -143,7 +158,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = secretRecordId;
         entity.DefaultModel = string.IsNullOrWhiteSpace(model.DefaultModel)
-            ? ResolveDefaultModel(providerAdapter.Manifest.PluginKey)
+            ? WorkspaceAgentProviderProfileMapper.ResolveDefaultModel(
+                providerAdapter.Manifest.PluginKey)
             : model.DefaultModel.Trim();
         entity.TimeoutSeconds = timeoutSeconds;
         entity.IsEnabled = model.IsEnabled;
@@ -174,7 +190,14 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             modelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await UpsertCatalogProvidersAsync([MapToAgentFrameworkProvider(entity)], cancellationToken);
+        await NotifyProviderSavedAsync(entity.Id);
+        await ProjectCatalogAsync(
+            entity.Id,
+            ProviderCatalogProjectionOperationKind.Upsert,
+            projectionCancellationToken =>
+                UpsertCatalogProvidersAsync(
+                    [providerMapper.Map(entity)],
+                    projectionCancellationToken));
 
         return entity.Id;
     }
@@ -192,12 +215,17 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        await store.UpdateCatalogAsync(catalog => catalog with
-        {
-            Providers = catalog.Providers
-                .Where(item => item.Id != providerId)
-                .ToList()
-        }, cancellationToken);
+        await NotifyProviderDeletedAsync(providerId);
+        await ProjectCatalogAsync(
+            providerId,
+            ProviderCatalogProjectionOperationKind.Delete,
+            projectionCancellationToken =>
+                store.UpdateCatalogAsync(catalog => catalog with
+                {
+                    Providers = catalog.Providers
+                        .Where(item => item.Id != providerId)
+                        .ToList()
+                }, projectionCancellationToken));
     }
 
     public async Task<AgentFrameworkProviderProfile> UpdateProviderAsync(
@@ -241,226 +269,95 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         }, cancellationToken);
     }
 
-    private async Task<IReadOnlyList<AgentFrameworkProviderProfile>> MergeWithCatalogProvidersAsync(
-        IReadOnlyList<AgentFrameworkProviderProfile> providers,
-        CancellationToken cancellationToken)
+    private async Task NotifyProviderSavedAsync(Guid providerId)
     {
-        var catalog = await store.LoadCatalogAsync(cancellationToken);
-        var workspaceProviderIds = providers
-            .Select(item => item.Id)
-            .ToHashSet();
-
-        var mergedProviders = catalog.Providers
-            .Concat(providers)
-            .GroupBy(item => item.Id)
-            .Select(group => group.Last())
-            .GroupBy(CreateProviderListIdentity)
-            .Select(group => group
-                .OrderByDescending(item => workspaceProviderIds.Contains(item.Id))
-                .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .First())
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (!mergedProviders.Any(item =>
-                item.Kind == AgentFrameworkProviderKind.Ollama &&
-                string.Equals(item.Name, ManagedSeedProviderFallbacks.FallbackProviderName, StringComparison.OrdinalIgnoreCase)))
+        foreach (var observer in providerProfileCommitObservers)
         {
-            mergedProviders.Add(CreateRuntimeFallbackOllamaProvider());
-            mergedProviders = mergedProviders
-                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            await observer.ProviderSavedAsync(
+                providerId,
+                CancellationToken.None);
         }
-
-        return mergedProviders;
     }
 
-    private async Task<AgentFrameworkProviderProfile?> LoadCatalogProviderAsync(
+    private async Task NotifyProviderDeletedAsync(Guid providerId)
+    {
+        foreach (var observer in providerProfileCommitObservers)
+        {
+            await observer.ProviderDeletedAsync(
+                providerId,
+                CancellationToken.None);
+        }
+    }
+
+    private async Task ProjectCatalogAsync(
+        Guid providerId,
+        ProviderCatalogProjectionOperationKind operationKind,
+        Func<CancellationToken, Task> projection)
+    {
+        try
+        {
+            await projection(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            var repairAction = operationKind switch
+            {
+                ProviderCatalogProjectionOperationKind.Upsert =>
+                    $"Set the provider editor Id to '{providerId:D}' and retry SaveProviderAsync to upsert the catalog projection.",
+                ProviderCatalogProjectionOperationKind.Delete =>
+                    $"Retry DeleteProviderAsync for provider '{providerId:D}' to remove the catalog projection.",
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(operationKind),
+                    operationKind,
+                    "Unsupported provider catalog projection operation.")
+            };
+            var projectionException =
+                new ProviderCatalogProjectionException(
+                    providerId,
+                    operationKind,
+                    repairAction,
+                    exception);
+            logger.LogError(
+                projectionException,
+                "Provider catalog projection failed after the canonical database commit. ProviderId={ProviderId} OperationKind={OperationKind} CanonicalCommitSucceeded={CanonicalCommitSucceeded} RepairAction={RepairAction}",
+                projectionException.ProviderId,
+                projectionException.OperationKind,
+                projectionException.CanonicalCommitSucceeded,
+                projectionException.RepairAction);
+            throw projectionException;
+        }
+    }
+
+    private async Task<IReadOnlyList<AgentFrameworkProviderProfile>>
+        LoadDatabaseProvidersAsync(
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext =
+            await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var providers = await dbContext.Set<WorkspaceProviderProfile>()
+            .AsNoTracking()
+            .OrderBy(item => item.Name)
+            .ToListAsync(cancellationToken);
+        return providers
+            .Select(providerMapper.Map)
+            .ToArray();
+    }
+
+    private async Task<AgentFrameworkProviderProfile?>
+        LoadDatabaseProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken)
     {
-        var catalog = await store.LoadCatalogAsync(cancellationToken);
-        var provider = catalog.Providers.FirstOrDefault(item => item.Id == providerId);
-        return provider;
-    }
-
-    private AgentFrameworkProviderProfile MapToAgentFrameworkProvider(
-        WorkspaceProviderProfile provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        var mappedKind = ResolveMappedProviderKind(provider.ConnectorPluginKey);
-        var legacyMappedTransport = ResolveLegacyMappedTransport(provider);
-        var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(provider, legacyMappedTransport);
-        var legacyMappedPurpose = ResolveLegacyMappedPurpose(provider);
-        var mappedPurpose = AgentFrameworkProviderMetadata.ResolvePurpose(provider, legacyMappedPurpose);
-        var preferFrameworkManagedChatHistory = mappedKind is AgentFrameworkProviderKind.Ollama or AgentFrameworkProviderKind.ComfyUi ||
-                                                mappedTransport == ProviderTransportKind.ChatCompletions;
-        var supportsBackgroundResponses = mappedKind == AgentFrameworkProviderKind.OpenAi &&
-                                          mappedTransport == ProviderTransportKind.Responses;
-        var mappedProvider = new AgentFrameworkProviderProfile(
-            provider.Id,
-            provider.Name,
-            mappedKind,
-            provider.BaseUrl,
-            ResolveApiKeyEnvironmentVariable(provider, mappedKind),
-            provider.DefaultModel,
-            mappedTransport,
-            provider.IsEnabled,
-            provider.SupportsStreaming,
-            provider.SupportsToolCalling,
-            preferFrameworkManagedChatHistory,
-            supportsBackgroundResponses,
-            AgentFrameworkProviderMetadata.BuildConfigurationJson(provider),
-            providerRegistry.Resolve(provider)?.Manifest.DisplayName ?? provider.ConnectorPluginKey,
-            provider.LastHealthStatus ?? "Not checked",
-            provider.LastHealthCheckAtUtc,
-            ResolveWorkspaceProviderSuggestedModels(provider, mappedKind, mappedPurpose),
-            mappedPurpose)
-        {
-            Tags = ResolveWorkspaceProviderTags(provider, mappedKind, mappedTransport)
-        };
-
-        return providerProfileService.NormalizeImportedProfile(mappedProvider);
-    }
-
-    private static IReadOnlyList<string> ResolveWorkspaceProviderSuggestedModels(
-        WorkspaceProviderProfile provider,
-        AgentFrameworkProviderKind mappedKind,
-        ProviderProfilePurpose mappedPurpose)
-    {
-        IReadOnlyList<string> defaultModels = string.IsNullOrWhiteSpace(provider.DefaultModel)
-            ? []
-            : [provider.DefaultModel.Trim()];
-        if (provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey ||
-            mappedKind != AgentFrameworkProviderKind.OpenAi ||
-            mappedPurpose != ProviderProfilePurpose.Chat)
-        {
-            return defaultModels;
-        }
-
-        return ManagedSeedProviderFallbacks.OpenAiSuggestedModels
-            .Concat(defaultModels)
-            .Where(model => !string.IsNullOrWhiteSpace(model))
-            .Select(model => model.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static IReadOnlyList<string> ResolveWorkspaceProviderTags(
-        WorkspaceProviderProfile provider,
-        AgentFrameworkProviderKind mappedKind,
-        ProviderTransportKind mappedTransport)
-    {
-        var storedTags = AgentFrameworkProviderMetadata.ReadTags(provider);
-        if (storedTags.Count > 0)
-        {
-            return storedTags;
-        }
-
-        var tags = new List<string>();
-        tags.Add(mappedKind switch
-        {
-            AgentFrameworkProviderKind.Ollama => "ollama",
-            AgentFrameworkProviderKind.ComfyUi => "comfyui",
-            _ => "openai"
-        });
-        tags.Add(provider.BaseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
-                 provider.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
-            ? "local"
-            : "cloud");
-        tags.Add(mappedTransport == ProviderTransportKind.Responses ? "responses" : "chat-completions");
-        tags.Add(mappedKind == AgentFrameworkProviderKind.ComfyUi ? "image-generation" : "chat");
-        return tags
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static AgentFrameworkProviderKind ResolveMappedProviderKind(string connectorPluginKey)
-    {
-        return connectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
-            ComfyUiProviderAdapter.PluginKey => AgentFrameworkProviderKind.ComfyUi,
-            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => AgentFrameworkProviderKind.Ollama,
-            _ => throw new InvalidOperationException($"No AgentFramework provider kind mapping exists for connector plugin '{connectorPluginKey}'.")
-        };
-    }
-
-    private static ProviderTransportKind ResolveLegacyMappedTransport(WorkspaceProviderProfile provider)
-    {
-        return provider.ConnectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            ProcessMockProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            OpenAiProviderAdapter.PluginKey when IsOpenAiChatCompletionsProvider(provider) => ProviderTransportKind.ChatCompletions,
-            OpenAiProviderAdapter.PluginKey => ProviderTransportKind.Responses,
-            ComfyUiProviderAdapter.PluginKey => ProviderTransportKind.ChatCompletions,
-            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => ProviderTransportKind.ChatCompletions,
-            _ => throw new InvalidOperationException($"No AgentFramework provider transport mapping exists for connector plugin '{provider.ConnectorPluginKey}'.")
-        };
-    }
-
-    private static ProviderProfilePurpose ResolveLegacyMappedPurpose(
-        WorkspaceProviderProfile provider)
-    {
-        if (provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey)
-        {
-            return ProviderProfilePurpose.ImageGeneration;
-        }
-
-        return provider.ConnectorPluginKey == OpenAiProviderAdapter.PluginKey &&
-               LooksLikeLegacyOpenAiImageGenerationProvider(provider)
-            ? ProviderProfilePurpose.ImageGeneration
-            : ProviderProfilePurpose.Chat;
-    }
-
-    private static bool LooksLikeLegacyOpenAiImageGenerationProvider(
-        WorkspaceProviderProfile provider)
-    {
-        if (provider.Name.Contains("image", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (LooksLikeOpenAiImageGenerationModel(provider.DefaultModel))
-        {
-            return true;
-        }
-
-        return AgentFrameworkProviderMetadata.ReadTags(provider)
-            .Any(tag => string.Equals(tag, "image", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(tag, "image-generation", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool LooksLikeOpenAiImageGenerationModel(
-        string? model)
-    {
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            return false;
-        }
-
-        var normalizedModel = model.Trim();
-        return normalizedModel.StartsWith("gpt-image", StringComparison.OrdinalIgnoreCase) ||
-               normalizedModel.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ResolveApiKeyEnvironmentVariable(
-        WorkspaceProviderProfile provider,
-        AgentFrameworkProviderKind mappedKind)
-    {
-        if (provider.ApiKeySecretId.HasValue)
-        {
-            return $"secret:{provider.ApiKeySecretId.Value:D}";
-        }
-
-        return mappedKind == AgentFrameworkProviderKind.OpenAi
-            ? OpenAiApiKeyEnvironmentVariable
-            : string.Empty;
+        await using var dbContext =
+            await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.Id == providerId,
+                cancellationToken);
+        return provider is null
+            ? null
+            : providerMapper.Map(provider);
     }
 
     private static bool IsEnvironmentVariableSecretReference(string apiKeyEnvironmentVariable)
@@ -473,68 +370,4 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         return !apiKeyEnvironmentVariable.Trim().StartsWith("secret:", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsOpenAiChatCompletionsProvider(
-        WorkspaceProviderProfile provider)
-    {
-        return string.Equals(provider.Name, OpenAiChatCompletionsProviderName, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static ProviderListIdentity CreateProviderListIdentity(AgentFrameworkProviderProfile provider)
-    {
-        return new ProviderListIdentity(
-            provider.Kind,
-            provider.Name.Trim().ToUpperInvariant());
-    }
-
-    private static AgentFrameworkProviderProfile CreateRuntimeFallbackOllamaProvider()
-    {
-        return new AgentFrameworkProviderProfile(
-            RuntimeFallbackOllamaProviderId,
-            ManagedSeedProviderFallbacks.FallbackProviderName,
-            AgentFrameworkProviderKind.Ollama,
-            ManagedSeedProviderFallbacks.FallbackBaseUrl,
-            string.Empty,
-            ManagedSeedProviderFallbacks.FallbackModel,
-            ProviderTransportKind.ChatCompletions,
-            true,
-            true,
-            true,
-            true,
-            false,
-            ManagedSeedProviderFallbacks.CreateFallbackConfigurationJson("runtime-remote-ollama"),
-            "Remote Ollama fallback provider kept available for seeded agents.",
-            "Not checked",
-            null,
-            [
-                ManagedSeedProviderFallbacks.FallbackModel,
-                "qwen3.5:9b",
-                "gemma3-12b-128k:latest",
-                "deepseek-r1:8b-32k",
-                "phi4-16k"
-            ])
-        {
-            IsPrivateProvider = true,
-            ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
-                AgentFrameworkProviderKind.Ollama,
-                ManagedSeedProviderFallbacks.FallbackModel),
-            Tags = ["ollama", "remote", "fallback", "chat"]
-        };
-    }
-
-    private static string ResolveDefaultModel(
-        string connectorPluginKey)
-    {
-        return connectorPluginKey switch
-        {
-            ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
-            ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
-            OpenAiProviderAdapter.PluginKey => OpenAiProviderAdapter.DefaultModel,
-            ComfyUiProviderAdapter.PluginKey => ComfyUiProviderAdapter.DefaultModel,
-            _ => "llama3.1"
-        };
-    }
-
-    private readonly record struct ProviderListIdentity(
-        AgentFrameworkProviderKind Kind,
-        string NormalizedName);
 }

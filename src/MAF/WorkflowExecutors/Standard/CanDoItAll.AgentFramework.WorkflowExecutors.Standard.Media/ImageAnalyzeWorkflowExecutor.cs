@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
 
 public sealed class ImageAnalyzeWorkflowExecutor(
-    IProviderProfileRegistry providerRegistry,
+    IProviderRuntimeProfileSource providerSource,
     IWorkspaceImageOperationService imageOperationService,
     IAgentImageAnalysisService imageAnalysisService,
     TimeProvider? timeProvider = null) : IWorkflowExecutor
@@ -132,7 +132,7 @@ public sealed class ImageAnalyzeWorkflowExecutor(
     {
         if (settings.ProviderProfileId is { } providerProfileId)
         {
-            var provider = await providerRegistry
+            var provider = await providerSource
                 .GetProviderAsync(providerProfileId, cancellationToken)
                 .ConfigureAwait(false);
             if (provider is null)
@@ -151,7 +151,7 @@ public sealed class ImageAnalyzeWorkflowExecutor(
             return new ProviderSelection(provider, model);
         }
 
-        var providers = await providerRegistry.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var providers = await providerSource.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
         foreach (var candidate in providers)
         {
             var provider = ProviderFeatureService.NormalizeImportedProfile(candidate);

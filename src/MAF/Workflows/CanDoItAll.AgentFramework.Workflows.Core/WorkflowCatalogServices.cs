@@ -13,6 +13,7 @@ public sealed class InMemoryWorkflowCatalogService :
     private readonly InMemoryWorkflowCatalogStore store;
     private readonly IWorkflowDefinitionValidator validator;
     private readonly IProviderProfileRegistry? providerRegistry;
+    private readonly IProviderRuntimeProfileSource? providerSource;
     private readonly IProviderProfileService? providerProfileService;
     private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog;
 
@@ -26,7 +27,8 @@ public sealed class InMemoryWorkflowCatalogService :
         IWorkflowDefinitionValidator validator,
         IProviderProfileRegistry? providerRegistry = null,
         IProviderProfileService? providerProfileService = null,
-        IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null)
+        IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null,
+        IProviderRuntimeProfileSource? providerSource = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(validator);
@@ -34,6 +36,7 @@ public sealed class InMemoryWorkflowCatalogService :
         this.store = store;
         this.validator = validator;
         this.providerRegistry = providerRegistry;
+        this.providerSource = providerSource ?? providerRegistry as IProviderRuntimeProfileSource;
         this.providerProfileService = providerProfileService;
         this.runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
     }
@@ -592,12 +595,12 @@ public sealed class InMemoryWorkflowCatalogService :
         LlmCallComponent component,
         CancellationToken cancellationToken)
     {
-        if (!component.ProviderProfileId.HasValue || providerRegistry is null)
+        if (!component.ProviderProfileId.HasValue || providerSource is null)
         {
             return [];
         }
 
-        var provider = await providerRegistry.GetProviderAsync(component.ProviderProfileId.Value, cancellationToken);
+        var provider = await providerSource.GetProviderAsync(component.ProviderProfileId.Value, cancellationToken);
         if (provider is null)
         {
             return

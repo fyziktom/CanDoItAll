@@ -182,6 +182,88 @@ public sealed class FileSandboxWorkspaceChatProjectionStoreTests
         }
     }
 
+    [Fact]
+    public async Task Active_run_index_is_state_based_and_remains_delta_stable_across_old_run_updates()
+    {
+        var rootPath = TestFileSystem.CreateTemporaryRoot(
+            "agent-execution-index-active-invariant");
+        try
+        {
+            var layout = new FileSandboxWorkspaceStorageLayout(rootPath);
+            var jsonStore = new FileSandboxWorkspaceJsonStore();
+            var store = new FileSandboxWorkspaceStore(rootPath);
+            var agentId = Guid.NewGuid();
+            var sessionId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var initialUpdatedAt = DateTimeOffset.UtcNow.AddHours(-3);
+            var session = new ChatSessionRecord(
+                sessionId,
+                agentId,
+                "Long-running thread",
+                initialUpdatedAt.AddMinutes(-1),
+                initialUpdatedAt,
+                Messages: [],
+                LatestExecutionRunId: executionRunId);
+            var running = CreateRun(
+                executionRunId,
+                agentId,
+                sessionId,
+                ExecutionState.Running,
+                outcome: null,
+                initialUpdatedAt);
+
+            await jsonStore.WriteJsonAtomicallyAsync(
+                layout.SessionPath(sessionId),
+                session,
+                CancellationToken.None);
+            await jsonStore.WriteJsonAtomicallyAsync(
+                layout.RunPath(executionRunId),
+                running,
+                CancellationToken.None);
+
+            var rebuilt = await store.LoadExecutionSummaryAsync();
+
+            Assert.Equal(1, rebuilt.ActiveRuns);
+
+            await store.UpdateExecutionRunDetailAsync(
+                executionRunId,
+                detail => detail with
+                {
+                    Run = detail.Run with
+                    {
+                        UpdatedAtUtc = DateTimeOffset.UtcNow
+                    }
+                });
+            var afterActiveUpdate = await store.LoadExecutionSummaryAsync();
+
+            Assert.Equal(1, afterActiveUpdate.ActiveRuns);
+
+            await store.UpdateExecutionRunDetailAsync(
+                executionRunId,
+                detail =>
+                {
+                    var completedAtUtc = DateTimeOffset.UtcNow;
+                    return detail with
+                    {
+                        Run = detail.Run with
+                        {
+                            State = ExecutionState.Completed,
+                            Outcome = RunOutcome.Succeeded,
+                            UpdatedAtUtc = completedAtUtc,
+                            CompletedAtUtc = completedAtUtc
+                        }
+                    };
+                });
+            var afterCompletion = await store.LoadExecutionSummaryAsync();
+
+            Assert.Equal(0, afterCompletion.ActiveRuns);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(rootPath);
+        }
+    }
+
     private static ChatSessionSummaryRecord CreateSessionSummary(Guid agentId, string title)
     {
         var now = DateTimeOffset.UtcNow;

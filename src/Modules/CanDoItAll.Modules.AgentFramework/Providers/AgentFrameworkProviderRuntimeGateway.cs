@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -8,6 +9,7 @@ using WorkspaceProviderHealthResult = CanDoItAll.Modules.Workspace.ProviderHealt
 
 internal sealed class AgentFrameworkProviderRuntimeGateway(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IProviderRuntimeProfileSource providerSource,
     IActivityStream activityStream) : IProviderRuntimeGateway
 {
     public async Task<WorkspaceProviderHealthResult> CheckHealthAsync(
@@ -17,8 +19,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
         try
         {
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-            var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-            var provider = providers.FirstOrDefault(item => item.Id == providerProfileId);
+            var provider = await providerSource.GetProviderAsync(providerProfileId, cancellationToken);
             if (provider is null)
             {
                 return new WorkspaceProviderHealthResult(false, "Provider profile not found.");
@@ -51,8 +52,11 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
         try
         {
             var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-            var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-            var provider = providers.FirstOrDefault(item => item.Id == request.ProviderProfileId && item.IsEnabled);
+            var provider = await providerSource.GetProviderAsync(request.ProviderProfileId, cancellationToken);
+            if (provider is { IsEnabled: false })
+            {
+                provider = null;
+            }
             if (provider is null)
             {
                 return Result<ProviderExecutionResponse>.Failure(

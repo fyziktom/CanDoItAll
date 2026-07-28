@@ -4,8 +4,11 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,7 +22,9 @@ public sealed class AgentChatPanelResponsivenessTests
     {
         var agent = CreateAgent();
         var session = CreateSession(agent.Id);
-        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DeferredWorkspaceProxy>();
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
         var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
         workspace.Service = workspaceService;
         workspace.InitialWorkspace = CreateWorkspace(agent.Id, session);
@@ -40,6 +45,13 @@ public sealed class AgentChatPanelResponsivenessTests
         await sendEvent.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.True(orchestrator.Started.Task.IsCompleted);
         await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() =>
+        {
+            var status = cut.Find("[data-testid='agent-execution-activity-status']");
+            Assert.Equal(
+                orchestrator.LastStreamId?.OperationId.ToString(),
+                status.GetAttribute("data-activity-operation-id"));
+        });
         await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.False(workspace.PostRunWorkspace.Task.IsCompleted);
 
@@ -56,11 +68,13 @@ public sealed class AgentChatPanelResponsivenessTests
     }
 
     [Fact]
-    public async Task Send_captures_registry_context_before_releasing_the_ui_event()
+    public async Task Send_captures_registry_context_before_workspace_execution()
     {
         var agent = CreateAgent();
         var session = CreateSession(agent.Id);
-        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DeferredWorkspaceProxy>();
+        var workspaceService = DispatchProxy.Create<
+            IResponsiveWorkspaceService,
+            DeferredWorkspaceProxy>();
         var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
         workspace.Service = workspaceService;
         workspace.InitialWorkspace = CreateWorkspace(agent.Id, session);
@@ -74,11 +88,9 @@ public sealed class AgentChatPanelResponsivenessTests
         using var fragment = registry.RegisterFragment(
             scopeId,
             CreateContextFragment("Original selected project"));
-        var orchestrator = new AgentChatExecutionOrchestrator(
+        var orchestrator = CreateExecutionOrchestrator(
             workspaceService,
-            registry,
-            new AgentChatExecutionNotificationHub(
-                NullLogger<AgentChatExecutionNotificationHub>.Instance));
+            registry);
 
         using var context = CreateContext(workspaceService, orchestrator);
         var cut = RenderFocusedChat(context, agent, session);
@@ -89,7 +101,7 @@ public sealed class AgentChatPanelResponsivenessTests
             .ClickAsync(new MouseEventArgs())
             .WaitAsync(TimeSpan.FromSeconds(2));
 
-        Assert.True(workspace.SendStarted.Task.IsCompleted);
+        await workspace.SendStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         scope.Update(CreateContextScope(
             scopeId,
             agent.Id,
@@ -230,10 +242,39 @@ public sealed class AgentChatPanelResponsivenessTests
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(workspaceService);
         context.Services.AddSingleton(orchestratorService);
+        context.Services.AddSingleton<IAgentExecutionActivityReader>(
+            new UnknownActivityReader());
         context.Services.AddSingleton(DispatchProxy.Create<IAgentVoiceService, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IAgentChatAttachmentStagingService, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IFloatingAgentChatCoordinator, UnexpectedCallProxy>());
+        context.Services.AddSingleton(DispatchProxy.Create<IPromptGalleryService, UnexpectedCallProxy>());
         return context;
+    }
+
+    private static AgentChatExecutionOrchestrator CreateExecutionOrchestrator(
+        IResponsiveWorkspaceService workspace,
+        IAgentChatContextRegistry registry)
+    {
+        var profileId = Guid.NewGuid();
+        var scope = WorkspaceScopeDescriptor.Organization(profileId.ToString("N"));
+        var coordinator = new AgentExecutionActivityCoordinator(
+            new PartitionedSequencedStream<
+                AgentExecutionActivityStreamId,
+                AgentExecutionActivity>(
+                PartitionedSequencedStreamPolicy.Default,
+                TimeProvider.System),
+            TimeProvider.System);
+        return new AgentChatExecutionOrchestrator(
+            workspace,
+            registry,
+            new AgentChatExecutionNotificationHub(
+                NullLogger<AgentChatExecutionNotificationHub>.Instance),
+            coordinator,
+            new ResponsiveWorkspaceFactory(workspace, scope),
+            new ResponsiveDatabaseProfileRuntimeAccessor(profileId),
+            new FixedAgentExecutionProfileGenerationSource(
+                new DatabaseProfileGeneration(0)),
+            TimeProvider.System);
     }
 
     private static IRenderedComponent<AgentChatPanel> RenderFocusedChat(
@@ -440,6 +481,16 @@ public sealed class AgentChatPanelResponsivenessTests
         };
     }
 
+    private static AgentExecutionActivityStreamId CreateActivityStreamId()
+    {
+        var profileId = Guid.NewGuid();
+        return new AgentExecutionActivityStreamId(
+            profileId,
+            WorkspaceScopeDescriptor.Organization(profileId.ToString("N")),
+            new DatabaseProfileGeneration(0),
+            AgentExecutionOperationId.New());
+    }
+
     private class DeferredWorkspaceProxy : DispatchProxy
     {
         private int workspaceRequestCount;
@@ -471,6 +522,8 @@ public sealed class AgentChatPanelResponsivenessTests
                 "remove_ExecutionUpdated" => RemoveExecutionUpdated((EventHandler<ExecutionLogEntry>)args![0]!),
                 nameof(IAgentFrameworkWorkspaceService.GetChatAgentWorkspaceAsync) => GetWorkspace(),
                 nameof(IAgentFrameworkWorkspaceService.SendMessageAsync) => SendMessage(args!),
+                nameof(IAgentFrameworkWorkspaceActivityExecutionService.SendMessageWithinOperationAsync) =>
+                    SendMessageWithinOperationAsync(args!),
                 nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) => Task.FromResult(
                     InitialRunDetail ?? throw new InvalidOperationException("No initial execution detail was configured.")),
                 _ => throw new InvalidOperationException(
@@ -506,9 +559,95 @@ public sealed class AgentChatPanelResponsivenessTests
 
         private Task<AgentChatRunResult> SendMessage(object?[] args)
         {
-            CapturedSendOptions = Assert.IsType<AgentChatRunOptions>(args[5]);
+            CapturedSendOptions = Assert.IsType<AgentChatRunOptions>(args[3]);
             SendStarted.TrySetResult();
             return SendResult.Task;
+        }
+
+        private async Task<AgentChatRunResult> SendMessageWithinOperationAsync(
+            object?[] args)
+        {
+            var operation = Assert.IsAssignableFrom<
+                IAgentExecutionActivityOperationLease>(args[0]);
+            CapturedSendOptions = Assert.IsType<AgentChatRunOptions>(args[4]);
+            SendStarted.TrySetResult();
+            var result = await SendResult.Task;
+            if (!operation.ChatSessionId.HasValue)
+            {
+                operation.BindChatSession(result.ChatSessionId);
+            }
+
+            operation.BindExecutionRun(
+                result.ExecutionRunId,
+                result.ChatSessionId);
+            operation.Report(
+                AgentExecutionActivityPhase.PersistingResult,
+                "Persisting test result.");
+            operation.Complete("Test operation completed.");
+            return result;
+        }
+    }
+
+    private interface IResponsiveWorkspaceService :
+        IAgentFrameworkWorkspaceService,
+        IAgentFrameworkWorkspaceActivityExecutionService
+    {
+    }
+
+    private sealed class ResponsiveWorkspaceFactory(
+        IAgentFrameworkWorkspaceService workspace,
+        WorkspaceScopeDescriptor organizationScope)
+        : ICanDoItAllAgentWorkspaceFactory
+    {
+        public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService()
+        {
+            return workspace;
+        }
+
+        public IAgentFrameworkWorkspaceService GetWorkspaceService(
+            WorkspaceScopeDescriptor scope)
+        {
+            return workspace;
+        }
+
+        public WorkspaceScopeDescriptor GetOrganizationScope()
+        {
+            return organizationScope;
+        }
+
+        public string GetWorkspaceRoot()
+        {
+            return "test-workspace";
+        }
+    }
+
+    private sealed class ResponsiveDatabaseProfileRuntimeAccessor(
+        Guid profileId) : IDatabaseProfileRuntimeAccessor
+    {
+        private readonly ResolvedDatabaseProfile profile = new(
+            new DatabaseProfileRecord
+            {
+                Id = profileId,
+                DisplayName = "Test profile",
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory
+            },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            "test");
+
+        public ResolvedDatabaseProfile ResolveCurrentProfile()
+        {
+            return profile;
+        }
+
+        public ResolvedDatabaseProfile ResolveProfile(Guid requestedProfileId)
+        {
+            if (requestedProfileId != profileId)
+            {
+                throw new KeyNotFoundException();
+            }
+
+            return profile;
         }
     }
 
@@ -520,22 +659,59 @@ public sealed class AgentChatPanelResponsivenessTests
 
         public TaskCompletionSource ApprovalStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        public AgentExecutionActivityStreamId? LastStreamId { get; private set; }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
-            if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.SendMessageAsync))
+            if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.StartSendMessage))
             {
                 Started.TrySetResult();
-                return Task.FromResult(Result);
+                LastStreamId = CreateActivityStreamId();
+                return new AgentChatOperationHandle(
+                    LastStreamId,
+                    Task.FromResult(Result));
             }
 
-            if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.RespondToPendingApprovalsAsync))
+            if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.StartApprovalContinuation))
             {
                 ApprovalStarted.TrySetResult();
-                return Task.FromResult(Result);
+                LastStreamId = CreateActivityStreamId();
+                return new AgentChatOperationHandle(
+                    LastStreamId,
+                    Task.FromResult(Result));
             }
 
             throw new InvalidOperationException(
                 $"Agent chat orchestrator member '{targetMethod?.Name}' was not expected in this component test.");
+        }
+    }
+
+    private sealed class UnknownActivityReader : IAgentExecutionActivityReader
+    {
+        public ISequencedStreamReader<AgentExecutionActivity> OpenReader(
+            AgentExecutionActivityStreamId streamId,
+            StreamSequence fromInclusive)
+        {
+            return new UnknownSequencedStreamReader();
+        }
+    }
+
+    private sealed class UnknownSequencedStreamReader :
+        ISequencedStreamReader<AgentExecutionActivity>
+    {
+        public StreamSequence NextSequence => StreamSequence.Beginning;
+
+        public ValueTask<SequencedStreamReadResult<AgentExecutionActivity>> ReadAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult<
+                SequencedStreamReadResult<AgentExecutionActivity>>(
+                new SequencedStreamUnknown<AgentExecutionActivity>());
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
         }
     }
 

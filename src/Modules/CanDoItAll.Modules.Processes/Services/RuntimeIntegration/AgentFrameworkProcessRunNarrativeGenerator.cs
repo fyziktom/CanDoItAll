@@ -73,6 +73,7 @@ internal sealed class AgentFrameworkProcessRunNarrativeGenerator(
                 new ExecutionRunRequest(
                     manager.Id,
                     BuildPrompt(record),
+                    AgentExecutionOperationId.New(),
                     Context: new ExecutionInvocationContext(
                         SourceKind: source.SourceKind,
                         SourceId: source.SourceId,

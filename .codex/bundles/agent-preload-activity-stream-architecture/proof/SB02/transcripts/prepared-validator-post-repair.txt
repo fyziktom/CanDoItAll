@@ -1,0 +1,8 @@
+Run label: SB02 post-repair prepared-bundle validator
+Working directory: C:\repositories\CanDoItAll
+Command:
+python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\.codex\bundles\agent-preload-activity-stream-architecture --profile initiative --stage prepared --repo-root C:\repositories\CanDoItAll
+
+Exit code: 0
+Exact output:
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\.codex\bundles\agent-preload-activity-stream-architecture

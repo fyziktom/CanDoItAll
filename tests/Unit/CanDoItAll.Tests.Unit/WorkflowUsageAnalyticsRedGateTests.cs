@@ -815,7 +815,9 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
             => throw new NotSupportedException();
     }
 
-    private sealed class SingleProviderRegistry(ProviderProfile provider) : IProviderProfileRegistry
+    private sealed class SingleProviderRegistry(ProviderProfile provider) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProviderProfile>>([provider]);

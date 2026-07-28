@@ -56,6 +56,26 @@ Use `/api/project-structure` for agent-oriented structure operations:
 
 Acquire a lease before mutating shared project structure. Prefer focused reads after mutations.
 
+`ProjectStructureReadRequest` now includes the typed `source` selector:
+
+| `ProjectStructureReadSource` | Internal runtime-tool meaning |
+| --- | --- |
+| `ContextDefault` | Uses the held invocation snapshot only for eligible interactive Project Structure chat; otherwise resolves to `CanonicalCurrent`. |
+| `InvocationSnapshot` | Requires the exact typed Project Structure snapshot captured for that interactive invocation and fails closed on scope, project, profile-generation, freshness, fingerprint, or coverage mismatch. |
+| `CanonicalCurrent` | Reads the canonical Project Structure application service. |
+
+The HTTP route `POST /api/project-structure/projects/{projectId}/structure/read`
+does not carry an in-process invocation attachment and calls
+`ProjectStructureAgentService.GetStructureAsync` with an explicitly normalized
+canonical request. `ContextDefault` resolves to `CanonicalCurrent` for backward
+compatibility, and `CanonicalCurrent` is accepted directly. `InvocationSnapshot`
+fails closed with HTTP 400 and error code
+`ProjectStructureReadSourceUnavailable`; it is never silently replaced with a
+database read. Invocation-snapshot selection is implemented by
+`ProjectStructureInvocationSnapshotReadDispatcher` for the internal
+`project_structure_read` runtime tool, not by the HTTP transport. See
+[Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md#project-structure).
+
 ### Processes
 
 Use `/api/processes` for the current process runtime control plane. The source-grounded route set is intentionally smaller than older process-rewrite docs:
@@ -88,6 +108,16 @@ Use `/api/agents` for AgentFramework catalog, provider, capability, chat, and ex
 - execution runs, pending approvals, artifacts, checkpoints, tool receipts, logs, metrics, approvals, runtime snapshots
 
 Validate execution by reading run detail, artifacts, tool receipts, checkpoints, and metrics. A single status field is not enough for process-critical work.
+
+The typed `AgentExecutionActivity` stream currently has no HTTP or SSE route.
+Agent HTTP commands create operation IDs internally and await the command result.
+An `ExecutionRunRecord` can expose `initialActivityOperationId` as durable
+correlation metadata, but it is not a subscription handle, idempotency key, or
+authorization grant; an external client cannot subscribe to the process-local
+activity partition. Continue to use durable execution-run
+detail/log/receipt/metric routes for API truth. A future SSE transport must be an
+authorized projection of the typed reader and is explicitly not implemented. See
+[Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md#httpsse-projection-status).
 
 Use capability setup tests for external tool and MCP descriptors before enabling them for agents or process roles. MCP setup tests start the descriptor, list tools, compare allowed tools, and clean up the runtime client; failures should be repaired from typed diagnostic fields rather than interpreted as generic setup errors.
 

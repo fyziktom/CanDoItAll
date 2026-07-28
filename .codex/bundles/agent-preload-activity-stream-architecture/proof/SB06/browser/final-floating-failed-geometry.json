@@ -1,0 +1,28 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "horizontalOverflow": 0,
+  "statusText": "FailedThe agent operation failed.",
+  "operationId": "aa410bae19b24ce1bbbb128919daea48",
+  "status": {
+    "x": 49.515625,
+    "y": 531.921875,
+    "width": 675.09375,
+    "height": 30
+  },
+  "panel": {
+    "x": 28.515625,
+    "y": 134.53125,
+    "width": 717.09375,
+    "height": 588.953125
+  },
+  "composer": {
+    "x": 49.515625,
+    "y": 577.296875,
+    "width": 519.515625,
+    "height": 125.1875
+  },
+  "blazorErrorDisplay": "none"
+}

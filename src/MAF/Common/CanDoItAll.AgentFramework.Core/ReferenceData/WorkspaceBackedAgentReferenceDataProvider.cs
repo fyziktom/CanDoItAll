@@ -5,14 +5,24 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class WorkspaceBackedAgentReferenceDataProvider(
     IAgentFrameworkWorkspaceService workspaceService,
-    AgentReferenceDataCache cache) : IAgentReferenceDataProvider
+    AgentReferenceDataCache cache) : IAgentReferenceDataProvider, IDisposable
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(20);
+    private readonly object lifecycleGate = new();
+    private readonly CancellationTokenSource lifetimeCancellation = new();
+    private readonly SemaphoreSlim workspaceReadGate = new(1, 1);
+    private int activeLoadCount;
+    private bool disposed;
+    private bool lifetimeCancellationCompleted;
+    private bool resourcesDisposed;
 
     public Task<AgentReferenceDataSnapshot> GetAsync(
         AgentReferenceDataRequest request,
         CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(request);
+
         var normalizedRequest = request.Normalize();
         var now = DateTimeOffset.UtcNow;
         if (normalizedRequest.Sections == AgentReferenceDataSections.None)
@@ -30,43 +40,163 @@ public sealed class WorkspaceBackedAgentReferenceDataProvider(
             normalizedRequest,
             now,
             CacheTtl,
-            () => LoadAsync(normalizedRequest, cancellationToken));
+            factoryCancellationToken => LoadAsync(
+                normalizedRequest,
+                factoryCancellationToken),
+            cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        lock (lifecycleGate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            disposed = true;
+        }
+
+        try
+        {
+            lifetimeCancellation.Cancel();
+        }
+        finally
+        {
+            CompleteLifetimeCancellation();
+        }
     }
 
     private async Task<AgentReferenceDataSnapshot> LoadAsync(
         AgentReferenceDataRequest request,
         CancellationToken cancellationToken)
     {
-        var stopwatch = Stopwatch.StartNew();
-        var agentsTask = request.Sections.HasFlag(AgentReferenceDataSections.Agents)
-            ? workspaceService.ListAgentsAsync(request.IncludeAgentTemplates, cancellationToken)
-            : null;
-        var providersTask = request.Sections.HasFlag(AgentReferenceDataSections.Providers)
-            ? workspaceService.ListProvidersAsync(cancellationToken)
-            : null;
-
-        IReadOnlyList<AgentDefinition> agents = [];
-        IReadOnlyList<ProviderProfile> providers = [];
-        if (agentsTask is not null)
+        BeginLoad();
+        try
         {
-            agents = await agentsTask.ConfigureAwait(false);
-            agents = FilterAgents(agents, request);
+            using var loadCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken,
+                    lifetimeCancellation.Token);
+            var loadCancellationToken = loadCancellation.Token;
+            var stopwatch = Stopwatch.StartNew();
+            await workspaceReadGate
+                .WaitAsync(loadCancellationToken)
+                .ConfigureAwait(false);
+            try
+            {
+                IReadOnlyList<AgentDefinition> agents = [];
+                if (request.Sections.HasFlag(AgentReferenceDataSections.Agents))
+                {
+                    agents = await workspaceService
+                        .ListAgentsAsync(
+                            request.IncludeAgentTemplates,
+                            loadCancellationToken)
+                        .ConfigureAwait(false);
+                    agents = FilterAgents(agents, request);
+                }
+
+                IReadOnlyList<ProviderProfile> providers = [];
+                if (request.Sections.HasFlag(AgentReferenceDataSections.Providers))
+                {
+                    providers = await workspaceService
+                        .ListProvidersAsync(loadCancellationToken)
+                        .ConfigureAwait(false);
+                    providers = FilterProviders(providers, request);
+                }
+
+                stopwatch.Stop();
+                return new AgentReferenceDataSnapshot(
+                    request.Sections,
+                    agents,
+                    providers,
+                    providers.ToDictionary(provider => provider.Id),
+                    DateTimeOffset.UtcNow,
+                    stopwatch.Elapsed);
+            }
+            finally
+            {
+                workspaceReadGate.Release();
+            }
+        }
+        finally
+        {
+            EndLoad();
+        }
+    }
+
+    private void BeginLoad()
+    {
+        lock (lifecycleGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            activeLoadCount++;
+        }
+    }
+
+    private void EndLoad()
+    {
+        var disposeResources = false;
+        lock (lifecycleGate)
+        {
+            activeLoadCount--;
+            disposeResources = TryMarkResourcesForDisposal();
         }
 
-        if (providersTask is not null)
+        if (disposeResources)
         {
-            providers = await providersTask.ConfigureAwait(false);
-            providers = FilterProviders(providers, request);
+            DisposeResources();
+        }
+    }
+
+    private void CompleteLifetimeCancellation()
+    {
+        var disposeResources = false;
+        lock (lifecycleGate)
+        {
+            lifetimeCancellationCompleted = true;
+            disposeResources = TryMarkResourcesForDisposal();
         }
 
-        stopwatch.Stop();
-        return new AgentReferenceDataSnapshot(
-            request.Sections,
-            agents,
-            providers,
-            providers.ToDictionary(provider => provider.Id),
-            DateTimeOffset.UtcNow,
-            stopwatch.Elapsed);
+        if (disposeResources)
+        {
+            DisposeResources();
+        }
+    }
+
+    private bool TryMarkResourcesForDisposal()
+    {
+        if (!disposed ||
+            !lifetimeCancellationCompleted ||
+            activeLoadCount != 0 ||
+            resourcesDisposed)
+        {
+            return false;
+        }
+
+        resourcesDisposed = true;
+        return true;
+    }
+
+    private void DisposeResources()
+    {
+        try
+        {
+            workspaceReadGate.Dispose();
+        }
+        finally
+        {
+            lifetimeCancellation.Dispose();
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        lock (lifecycleGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+        }
     }
 
     private static IReadOnlyList<AgentDefinition> FilterAgents(

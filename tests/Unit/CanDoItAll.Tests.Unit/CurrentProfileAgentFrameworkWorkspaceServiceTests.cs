@@ -2,8 +2,11 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -110,9 +113,27 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         var loggerType = typeof(ILogger<>).MakeGenericType(implementationType);
         var logger = serviceProvider.GetRequiredService(loggerType);
         var constructor = Assert.Single(implementationType.GetConstructors());
+        var timeProvider = TimeProvider.System;
+        var coordinator = new AgentExecutionActivityCoordinator(
+            new PartitionedSequencedStream<
+                AgentExecutionActivityStreamId,
+                AgentExecutionActivity>(
+                PartitionedSequencedStreamPolicy.Default,
+                timeProvider),
+            timeProvider);
 
         return Assert.IsAssignableFrom<IAgentFrameworkWorkspaceService>(constructor.Invoke(
-            [workspaceFactory, technicalAgentBridge, referenceDataCacheInvalidator, logger]));
+            [
+                workspaceFactory,
+                technicalAgentBridge,
+                referenceDataCacheInvalidator,
+                new StubDatabaseProfileRuntimeAccessor(),
+                new DatabaseSwitchNotificationService(),
+                coordinator,
+                new FixedAgentExecutionProfileGenerationSource(
+                    new DatabaseProfileGeneration(0)),
+                logger
+            ]));
     }
 
     private static async Task ExecuteDirectoryProjectionMutationAsync(
@@ -340,6 +361,24 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
             InvalidationCallCount++;
             throw new InvalidOperationException("Reference-data invalidation failure.");
         }
+    }
+
+    private sealed class StubDatabaseProfileRuntimeAccessor : IDatabaseProfileRuntimeAccessor
+    {
+        private readonly ResolvedDatabaseProfile profile = new(
+            new DatabaseProfileRecord
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = "Test",
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory
+            },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            "not-used");
+
+        public ResolvedDatabaseProfile ResolveCurrentProfile() => profile;
+
+        public ResolvedDatabaseProfile ResolveProfile(Guid profileId) => profile;
     }
 
     private sealed class CapturingLoggerProvider : ILoggerProvider

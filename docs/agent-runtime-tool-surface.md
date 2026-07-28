@@ -1,6 +1,6 @@
 # Agent Runtime Tool Surface
 
-Last source review: 2026-07-16.
+Last source review: 2026-07-27.
 
 This page defines the boundary between internal MAF/runtime-provider tools and the HTTP control-plane APIs.
 
@@ -36,6 +36,8 @@ If direct process tools are reintroduced, they must be implemented as a concrete
 Source:
 
 - `src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`
+- `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvocationSnapshotReadDispatcher.cs`
+- `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentContracts.cs`
 - `src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs`
 - `src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
 - `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`
@@ -53,6 +55,35 @@ Current direct runtime tools: 54.
 | Leases | `project_structure_project_lease_acquire`, `project_structure_repo_branch_lease_acquire`, `project_structure_lease_get`, `project_structure_lease_renew`, `project_structure_lease_release` |
 
 `project_plan_summary_get` is a bounded plan/economic projection, not a generic graph read. It attaches only when the active non-template agent can use tools, has read access to the requested project, and has exact assigned catalog mappings for both `project-plan-summary-get` and `project-plan-analysis-inline-skill`. Expected-cost totals remain separated by currency; resource binding share is distinct from overlapping task coverage; completeness counters and warnings are part of the result contract. Callers can request zero task previews for aggregate-only dashboards; blocker ids are sampled separately from their full counts.
+
+### Project Structure Read Source
+
+`project_structure_read` accepts `ProjectStructureReadRequest.source` and returns
+the effective `ProjectStructureReadSource` in `ProjectStructureReadToolData.source`.
+The values are:
+
+- `ContextDefault`: selects `InvocationSnapshot` only for non-governed,
+  interactive chat whose runtime source is the active Project Structure surface;
+  every other purpose selects `CanonicalCurrent`.
+- `InvocationSnapshot`: reads the exact immutable surface snapshot attached to that
+  invocation. It performs no canonical structure read when eligible and covered.
+  It is rejected for governed-process automation and non-Project Structure context.
+- `CanonicalCurrent`: calls the canonical Project Structure service explicitly.
+
+The invocation snapshot is bounded to 512 nodes and 1,024 links with a five-minute
+freshness lifetime. It covers hierarchy, classification, status, progress, priority,
+schedule, project relationships, links, and selection. It intentionally omits notes,
+metadata, assets, layout, routes, action capabilities, storage references, and file
+contents.
+
+Snapshot reads fail with typed `409` errors rather than silently falling back when the
+attachment is missing, ambiguous, wrong-typed, wrong-scope, for a different project or
+database-profile generation, expired, fingerprint-mismatched, or too incomplete for
+the requested fields/nodes/links. The agent must then make its need explicit with
+`source=CanonicalCurrent`.
+
+This snapshot is context only. All writes continue through the canonical service and
+the existing project/tool authorization gates.
 
 Project-structure write authority has two independent narrow modes. `CanWriteTasks` authorizes only registered task-specific mutation tools for projects in scope. `CanWriteNonTaskStructure` authorizes generic structure mutations, but the runtime rejects task creation, direct task mutation or reclassification, task links, and operations over subtrees containing tasks. It may create or move a non-task node beneath a task because the task record itself is not changed. Broad `CanWrite` remains the unrestricted superset for existing agents. `project_task_update` uses optimistic current values and accepts `currentProgressPercent: -1` for an untracked persisted task; proposed progress remains restricted to 0-100.
 
@@ -72,3 +103,6 @@ Adding a direct tool is a runtime/security change, not documentation cleanup. Th
 - Unit or integration coverage that proves descriptor availability, policy behavior, and the intended service call.
 
 If that set is not implemented, document the operation as HTTP-only and direct agents to the relevant API skill.
+
+Related architecture:
+[Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md).

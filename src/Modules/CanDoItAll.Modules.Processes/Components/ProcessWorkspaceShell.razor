@@ -5,18 +5,29 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.AgentFramework.Voice
 @using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Infrastructure.Persistence
 @using CanDoItAll.Modules.AgentFramework
 @using CanDoItAll.Modules.Processes.AgentChat
 @using CanDoItAll.Processes.Application
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.JSInterop
+@implements IDisposable
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject IServiceProvider Services
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
+@inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject TimeProvider TimeProvider
+@inject IAgentChatExecutionOrchestrator ChatExecutionOrchestrator
+@inject ILogger<ProcessWorkspaceShell> Logger
 
-<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+@{
+    var agentChatContextPublication = ResolveAgentChatPublication();
+}
+
+<AgentChatContextSurfaceProvider Surface="@agentChatContextPublication.Surface"
+                                 ContributorPublications="@agentChatContextPublication.ContributorPublications"
                                  ContextNavigationIdentity="@AgentChatNavigationFence" />
 
 <PageScaffold FillHeight="true"
@@ -292,6 +303,7 @@
     private Guid? managerChatLoadedAgentId;
     private readonly Dictionary<string, Guid> managerChatSessionIdsByRun = new(StringComparer.Ordinal);
     private IReadOnlyList<ExecutionLogEntry> managerChatExecutionLog = [];
+    private AgentExecutionActivityStreamId? managerChatActivityStreamId;
     private string managerChatDraftPrompt = string.Empty;
     private string managerChatPendingPrompt = string.Empty;
     private IReadOnlyList<string> managerChatDraftAttachmentPaths = [];
@@ -309,6 +321,9 @@
     private string managerChatVoiceStatusTone = "neutral";
     private readonly HashSet<Guid> managerChatSessionsWithVoiceIdentifierOmissionNotice = [];
     private bool managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
+    private ProcessAgentChatContextPublication? agentChatPublication;
+    private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
+    private bool isDisposed;
     private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
@@ -545,20 +560,48 @@
         }
     }
 
-    private AgentChatContextSurface AgentChatSurface
-        => ProcessAgentChatContextBuilder.BuildWorkspaceSurface(
-            new ProcessWorkspaceAgentChatContext(
-                Navigation.Uri,
-                ProjectId,
-                AgentChatWorkspaceView,
-                AgentChatRunView,
-                HasUnresolvedNonRunRouteSelection
-                    ? null
-                    : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
-                AgentChatShell,
-                !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
-                !HasUnresolvedRouteSelection && eventDetailDialogOpen ? eventDetail : null,
-                AgentChatAccessState));
+    private ProcessAgentChatContextPublication ResolveAgentChatPublication()
+    {
+        var context = new ProcessWorkspaceAgentChatContext(
+            Navigation.Uri,
+            ProjectId,
+            AgentChatWorkspaceView,
+            AgentChatRunView,
+            HasUnresolvedNonRunRouteSelection
+                ? null
+                : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
+            AgentChatShell,
+            !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
+            !HasUnresolvedRouteSelection && eventDetailDialogOpen ? eventDetail : null,
+            AgentChatAccessState);
+        agentChatPublication = ProcessInvocationSnapshotMapper.BuildWorkspacePublication(
+            context,
+            new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
+            TimeProvider.GetUtcNow(),
+            agentChatPublication);
+        AgentChatFreshnessLease.Schedule(
+            agentChatPublication.SnapshotCapture?.AttachmentDraft);
+        return agentChatPublication;
+    }
+
+    private ProcessAgentChatFreshnessLease AgentChatFreshnessLease
+        => agentChatFreshnessLease ??= new ProcessAgentChatFreshnessLease(
+            TimeProvider,
+            ExpireAgentChatPublicationAsync,
+            exception => Logger.LogError(
+                exception,
+                "Failed to expire the process workspace agent context at its freshness deadline."));
+
+    private Task ExpireAgentChatPublicationAsync()
+        => InvokeAsync(() =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            StateHasChanged();
+        });
 
     private AgentChatContextAccessState AgentChatAccessState
         => isBusy
@@ -1530,10 +1573,11 @@
                                     DraftPromptChanged="HandleManagerChatDraftPromptChangedAsync"
                                     IsBusy="@managerChatIsBusy"
                                     ComposerKey="@managerChatComposerKey"
-                                    RunStateText="@managerChatRunStateText"
-                                    RunStateTone="@managerChatRunStateTone"
-                                    PendingUserPrompt="@managerChatPendingPrompt"
-                                    DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                     RunStateText="@managerChatRunStateText"
+                                     RunStateTone="@managerChatRunStateTone"
+                                     PendingUserPrompt="@managerChatPendingPrompt"
+                                     ActivityStreamId="@managerChatActivityStreamId"
+                                     DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
                                     CanUseVoiceMode="@CanUseManagerChatVoiceMode"
                                     IsVoiceModeEnabled="@managerChatVoiceModeEnabled"
                                     IsVoiceRecording="@managerChatVoiceRecording"
@@ -2453,11 +2497,6 @@
             managerChatLoadedRunId = selectedRunId;
             managerChatLoadedAgentId = managerChatAgentId;
             ResolveManagerChatRunState();
-            if (string.IsNullOrWhiteSpace(managerChatDraftPrompt))
-            {
-                managerChatDraftPrompt = BuildManagerChatPrompt();
-                managerChatComposerKey++;
-            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -2475,6 +2514,7 @@
         managerChatAgentId = Guid.TryParse(ReadChangeValue(args), out var parsed) && parsed != Guid.Empty
             ? parsed
             : null;
+        managerChatActivityStreamId = null;
         managerChatSessionId = null;
         managerChatWorkspace = null;
         managerChatLoadedRunId = null;
@@ -2498,7 +2538,7 @@
             return;
         }
 
-        var prompt = BuildManagerChatPromptWithContext();
+        var prompt = managerChatDraftPrompt.Trim();
         if (string.IsNullOrWhiteSpace(prompt))
         {
             managerChatErrorMessage = "Enter a manager prompt before sending.";
@@ -2514,15 +2554,22 @@
         try
         {
             var disableManagerTelemetryTools = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(previousDraft);
-            var options = new AgentChatRunOptions(
-                RuntimeToolProvidersEnabled: !disableManagerTelemetryTools,
-                WorkspaceToolsEnabled: !disableManagerTelemetryTools);
-            var result = await workspaceService.SendMessageAsync(
-                managerChatAgentId.Value,
-                managerChatSessionId,
-                prompt,
-                attachmentPaths: managerChatDraftAttachmentPaths,
-                options: options);
+            var operation = ChatExecutionOrchestrator.StartSendMessage(
+                new AgentChatSendRequest(
+                    managerChatAgentId.Value,
+                    managerChatSessionId,
+                    prompt)
+                {
+                    AttachmentPaths = managerChatDraftAttachmentPaths,
+                    Behavior = disableManagerTelemetryTools
+                        ? new AgentChatExecutionBehavior(
+                            RuntimeToolProvidersEnabled: false,
+                            WorkspaceToolsEnabled: false)
+                        : AgentChatExecutionBehavior.Default
+                });
+            managerChatActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            var result = await operation.Completion;
             managerChatSessionId = result.ChatSessionId;
             TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
             managerChatDraftAttachmentPaths = [];
@@ -2570,11 +2617,14 @@
         managerChatIsBusy = true;
         try
         {
-            await workspaceService.RespondToPendingApprovalsAsync(
+            var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
                 managerChatAgentId.Value,
                 managerChatSessionId.Value,
                 approved,
                 autoApprovePendingToolCalls);
+            managerChatActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            await operation.Completion;
             managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
             var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
@@ -2635,14 +2685,7 @@
 
     private IAgentFrameworkWorkspaceService? ResolveManagerChatWorkspaceService()
     {
-        var directWorkspaceService = Services.GetService<IAgentFrameworkWorkspaceService>();
-        if (directWorkspaceService is not null)
-        {
-            return directWorkspaceService;
-        }
-
-        var workspaceFactory = Services.GetService<ICanDoItAllAgentWorkspaceFactory>();
-        return workspaceFactory?.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
+        return Services.GetService<IAgentFrameworkWorkspaceService>();
     }
 
     private Guid? ResolveManagerAgentId(IReadOnlyList<AgentDefinition> agents, Guid? currentAgentId)
@@ -2709,6 +2752,7 @@
     private void ResetManagerChatForSelectedRunChange()
     {
         managerChatDraftPrompt = string.Empty;
+        managerChatActivityStreamId = null;
         managerChatSessionId = null;
         managerChatWorkspace = null;
         managerChatExecutionLog = [];
@@ -2951,92 +2995,6 @@
         managerChatRunStateTone = ResolveExecutionTone(managerChatWorkspace.SelectedRun.State);
     }
 
-    private string BuildManagerChatPromptWithContext()
-    {
-        var prompt = BuildManagerChatPromptWithAttachments();
-        if (string.IsNullOrWhiteSpace(prompt))
-        {
-            return string.Empty;
-        }
-
-        return $"{BuildManagerChatPrompt()}{Environment.NewLine}{Environment.NewLine}User request:{Environment.NewLine}{prompt}";
-    }
-
-    private string BuildManagerChatPromptWithAttachments()
-    {
-        if (managerChatDraftAttachmentPaths.Count == 0)
-        {
-            return managerChatDraftPrompt.Trim();
-        }
-
-        var attachmentText = string.Join(
-            Environment.NewLine,
-            managerChatDraftAttachmentPaths.Select(item => $"- {item}"));
-
-        return $"""
-            Use these workspace artifacts as input:
-            {attachmentText}
-
-            {managerChatDraftPrompt.Trim()}
-            """;
-    }
-
-    private string BuildManagerChatPrompt()
-    {
-        var selectedRun = CurrentShell.Runtime.SelectedRun;
-        var runId = ResolveSelectedManagerChatRunId();
-        var loadedRuns = CurrentShell.Runtime.Runs.Take(10)
-            .Select(run => $"- {run.RunId.Value:D} / {run.Status} / latest {run.LastEventAtUtc:u}")
-            .ToArray();
-        var runText = loadedRuns.Length == 0
-            ? "- No runtime runs were found in the selected history window."
-            : string.Join(Environment.NewLine, loadedRuns);
-        var selectedRunUsageText = BuildManagerChatSelectedRunUsageText(runId);
-
-        return $"""
-            Process manager context
-            Scope: {CurrentShell.AgentEntry.ContextKey}
-            Selected run: {(runId.HasValue ? runId.Value.ToString("D") : "none")}
-            Status: {selectedRun?.Status.ToString() ?? "unknown"}
-            Attention summary: {CurrentShell.Runtime.AttentionSummary}
-            History window: {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}
-
-            Loaded runs:
-            {runText}
-
-            Selected run usage telemetry:
-            {selectedRunUsageText}
-
-            Manager response rule:
-            Answer run-selection, status, cost, and token questions from the selected-run context above when it contains the requested data. For runtime events, artifacts, or operator-action details that are not shown here, use the appropriate runtime or artifact tools instead of guessing.
-            """;
-    }
-
-    private string BuildManagerChatSelectedRunUsageText(Guid? runId)
-    {
-        if (!runId.HasValue)
-        {
-            return "- No run is selected, so selected-run usage telemetry is not available.";
-        }
-
-        var stats = CurrentShell.Runtime.Stats;
-        if (!HasRuntimeUsageTelemetry(stats))
-        {
-            return "- No provider usage telemetry is loaded for the selected run in this history window.";
-        }
-
-        var cost = ResolveRuntimeUsageCost(stats);
-        var costLabel = stats.ActualCost > 0m ? "Actual cost" : "Estimated cost";
-        return $"""
-            - Scope: selected run and related root or child run observations in {FormatHistoryWindow(CurrentShell.Runtime.HistoryWindow)}.
-            - {costLabel}: {FormatCurrency(cost)}
-            - Input tokens: {FormatManagerChatTokenCount(stats.InputTokens)}
-            - Cached input tokens: {FormatManagerChatTokenCount(stats.CachedInputTokens)}
-            - Output tokens: {FormatManagerChatTokenCount(stats.OutputTokens)}
-            - Total tokens: {FormatManagerChatTokenCount(ResolveRuntimeTotalTokens(stats))}
-            """;
-    }
-
     private static string BuildRunTitle(ProcessRunDetailProjection run)
         => $"Run {run.RunId.Value.ToString("N")[..8]}";
 
@@ -3149,17 +3107,6 @@
             ? stats.TotalTokens
             : Math.Max(0, stats.InputTokens) + Math.Max(0, stats.OutputTokens);
 
-    private static bool HasRuntimeUsageTelemetry(ProcessRuntimeStatsProjection stats)
-        => stats.InputTokens > 0 ||
-           stats.CachedInputTokens > 0 ||
-           stats.OutputTokens > 0 ||
-           stats.TotalTokens > 0 ||
-           stats.EstimatedCost > 0m ||
-           stats.ActualCost > 0m;
-
-    private static decimal ResolveRuntimeUsageCost(ProcessRuntimeStatsProjection stats)
-        => Math.Max(0m, stats.ActualCost > 0m ? stats.ActualCost : stats.EstimatedCost);
-
     private static int ResolveRuntimeTotalTokens(ProcessRuntimeMetricPointProjection point)
         => point.TotalTokens > 0
             ? point.TotalTokens
@@ -3182,9 +3129,6 @@
 
     private static string FormatTokenCount(int value)
         => value.ToString("N0", CultureInfo.CurrentCulture);
-
-    private static string FormatManagerChatTokenCount(int value)
-        => value.ToString("N0", CultureInfo.InvariantCulture);
 
     private static string FormatDuration(long durationMs)
     {
@@ -4056,6 +4000,18 @@
 
     private static string FormatObservedAt(DateTimeOffset observedAtUtc)
         => observedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+
+    void IDisposable.Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        agentChatFreshnessLease?.Dispose();
+        agentChatFreshnessLease = null;
+    }
 
     private enum ProcessWorkspaceDetailTabKey
     {

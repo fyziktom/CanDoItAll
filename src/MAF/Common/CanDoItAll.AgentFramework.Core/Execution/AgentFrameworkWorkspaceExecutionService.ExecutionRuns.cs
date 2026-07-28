@@ -6,11 +6,35 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService
 {
-    public async Task<ExecutionRunResult> ExecuteRunAsync(
+    public Task<ExecutionRunResult> ExecuteRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         ExecutionRunRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ValidateActivityOperation(
+            operation,
+            request.AgentId,
+            request.ChatSessionId,
+            request.InitialActivityOperationId);
+        return ExecuteWithinActivityBoundaryAsync(
+            operation,
+            () => ExecuteRunEntryAsync(
+                operation,
+                request,
+                cancellationToken));
+    }
+
+    private async Task<ExecutionRunResult> ExecuteRunEntryAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken,
+        bool persistTranscript = false)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(
+            request.InitialActivityOperationId,
+            nameof(request));
 
         if (request.StructuredOutput is not null && request.JsonSchemaOutput is not null)
         {
@@ -25,62 +49,68 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("Prompt is required.");
         }
 
-        if (TryGetExecutionRunStore() is not null)
-        {
-            var catalogOnly = await store.LoadCatalogAsync(cancellationToken);
-            var agentOnly = EnsureAgentExists(catalogOnly, request.AgentId);
-            var providerOnly = await ResolveProviderForExecutionRequestAsync(
-                agentOnly,
-                catalogOnly,
-                request,
-                await ResolveProviderForAgentAsync(agentOnly, catalogOnly, cancellationToken).ConfigureAwait(false),
-                cancellationToken).ConfigureAwait(false);
+        persistTranscript |= request.ChatSessionId.HasValue;
+        activityOperation.Report(
+            AgentExecutionActivityPhase.PreparingInput,
+            "Preparing input attachments.");
+        var inputAttachments = await ResolveRuntimeInputAttachmentsAsync(
+            request.InputAttachmentPaths,
+            cancellationToken);
+        var preparation = await AcquireExecutionPreparationAsync(
+            activityOperation,
+            request.AgentId,
+            atomicConsumer:
+                persistTranscript &&
+                store is ISandboxWorkspaceChatRunStartStore,
+            cancellationToken).ConfigureAwait(false);
+        var provider = await ResolvePreparedProviderAsync(
+            activityOperation,
+            preparation,
+            request,
+            cancellationToken).ConfigureAwait(false);
 
-            if (request.ChatSessionId.HasValue &&
-                store is ISandboxWorkspaceChatQueryStore chatQueryStore)
-            {
-                var sessionOnly = EnsureAgentOwnsSession(
-                    await chatQueryStore.GetChatSessionAsync(request.ChatSessionId.Value, cancellationToken),
-                    request.AgentId,
-                    request.ChatSessionId.Value);
-
-                return await ExecuteRunCoreAsync(
-                    agentOnly,
-                    providerOnly,
-                    catalogOnly,
-                    SandboxWorkspaceExecutionState.Empty,
-                    sessionOnly,
-                    request,
-                    persistTranscript: true,
-                    cancellationToken);
-            }
-
-            if (request.ChatSessionId.HasValue)
-            {
-                return await ExecuteRunWithWorkspaceDocumentAsync(request, cancellationToken);
-            }
-
-            return await ExecuteRunCoreAsync(
-                agentOnly,
-                providerOnly,
-                catalogOnly,
-                SandboxWorkspaceExecutionState.Empty,
-                session: null,
-                request,
-                persistTranscript: false,
-                cancellationToken);
-        }
-
-        return await ExecuteRunWithWorkspaceDocumentAsync(request, cancellationToken);
+        return await ExecuteRunCoreAsync(
+            preparation,
+            provider,
+            request,
+            persistTranscript,
+            inputAttachments,
+            cancellationToken,
+            activityOperation);
     }
 
-    public async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
+    public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         ExecutionRunSourceKey source,
         ExecutionRunRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateActivityOperation(
+            operation,
+            request.AgentId,
+            request.ChatSessionId,
+            request.InitialActivityOperationId);
+        return ExecuteWithinActivityBoundaryAsync(
+            operation,
+            () => ExecuteSameSourceRunEntryAsync(
+                operation,
+                source,
+                request,
+                cancellationToken));
+    }
+
+    private async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunEntryAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionRunSourceKey source,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(
+            request.InitialActivityOperationId,
+            nameof(request));
 
         if (string.IsNullOrWhiteSpace(request.Prompt))
         {
@@ -106,14 +136,31 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         };
         request = request with { Context = context };
 
-        var catalog = await store.LoadCatalogAsync(cancellationToken);
-        var agent = EnsureAgentExists(catalog, request.AgentId);
-        var provider = await ResolveProviderForExecutionRequestAsync(
-            agent,
-            catalog,
-            request,
-            await ResolveProviderForAgentAsync(agent, catalog, cancellationToken).ConfigureAwait(false),
+        activityOperation.Report(
+            AgentExecutionActivityPhase.PreparingInput,
+            "Preparing input attachments.");
+        var inputAttachments = await ResolveRuntimeInputAttachmentsAsync(
+            request.InputAttachmentPaths,
+            cancellationToken);
+        var preparation = await AcquireExecutionPreparationAsync(
+            activityOperation,
+            request.AgentId,
+            atomicConsumer: false,
             cancellationToken).ConfigureAwait(false);
+        var provider = await ResolvePreparedProviderAsync(
+            activityOperation,
+            preparation,
+            request,
+            cancellationToken).ConfigureAwait(false);
+        activityOperation.Report(
+            AgentExecutionActivityPhase.CreatingExecution,
+            "Preparing source execution admission.");
+        var agent = CreateProviderCompatibleRuntimeAgent(
+            preparation.Blueprint.Agent,
+            provider,
+            ResolveEffectiveManagedSeedModel(
+                preparation.Blueprint.Agent,
+                provider));
         var prompt = request.Prompt.Trim();
         var run = CreatePreparingRun(
             agent,
@@ -124,6 +171,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             prompt,
             DateTimeOffset.UtcNow,
             request.AutoApprovePendingToolCalls,
+            request.InitialActivityOperationId,
             request.StructuredOutput);
         var reservation = await reservationStore
             .ReserveExecutionRunAsync(
@@ -143,21 +191,31 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         if (reservation.Disposition != ExecutionRunSourceDisposition.Created)
         {
+            EnsureActivityRunBinding(activityOperation, reservation.Run);
+            TerminalizeSameSourceReservationActivity(
+                activityOperation,
+                reservation);
             return new ExecutionRunSourceExecutionResult(
                 reservation.Disposition,
                 reservation.Run,
                 CreatedExecutionResult: null);
         }
 
+        EnsureActivityRunBinding(activityOperation, reservation.Run);
+        var startup = new AgentExecutionStartupAggregate(
+            preparation.Blueprint,
+            preparation.CatalogSnapshot,
+            agent,
+            provider,
+            Session: null,
+            reservation.Run,
+            UserMessage: null,
+            inputAttachments);
         var result = await CompletePreparedExecutionRunAsync(
-                agent,
-                provider,
-                catalog,
-                session: null,
+                startup,
                 request,
-                reservation.Run,
-                userMessage: null,
-                cancellationToken)
+                cancellationToken,
+                activityOperation)
             .ConfigureAwait(false);
         return new ExecutionRunSourceExecutionResult(
             ExecutionRunSourceDisposition.Created,
@@ -165,62 +223,118 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             result);
     }
 
-    private async Task<ExecutionRunResult> ExecuteRunWithWorkspaceDocumentAsync(
-        ExecutionRunRequest request,
-        CancellationToken cancellationToken)
-    {
-        var document = await store.LoadAsync(cancellationToken);
-        var catalog = document.ToCatalog();
-        var executionState = document.ToExecutionState();
-        var agent = EnsureAgentExists(catalog, request.AgentId);
-        var provider = await ResolveProviderForExecutionRequestAsync(
-            agent,
-            catalog,
-            request,
-            await ResolveProviderForAgentAsync(agent, catalog, cancellationToken).ConfigureAwait(false),
-            cancellationToken).ConfigureAwait(false);
-        var session = request.ChatSessionId.HasValue
-            ? EnsureAgentOwnsSession(executionState, request.AgentId, request.ChatSessionId.Value)
-            : null;
-
-        return await ExecuteRunCoreAsync(
-            agent,
-            provider,
-            catalog,
-            executionState,
-            session,
-            request,
-            persistTranscript: request.ChatSessionId.HasValue,
-            cancellationToken);
-    }
-
-    public async Task<ExecutionRunResult> ContinueExecutionRunAsync(
+    public Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         Guid executionRunId,
         bool approved,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(operation);
+        ValidateActivityOperationScope(operation);
+        EnsureRequiredActivityOperationId(
+            operation.StreamId.OperationId,
+            nameof(operation));
+        return ExecuteWithinActivityBoundaryAsync(
+            operation,
+            () => ContinueExecutionRunEntryAsync(
+                operation,
+                executionRunId,
+                operation.StreamId.OperationId,
+                approved,
+                autoApprovePendingToolCalls,
+                cancellationToken));
+    }
+
+    private async Task<ExecutionRunResult> ContinueExecutionRunEntryAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        Guid executionRunId,
+        AgentExecutionOperationId activityOperationId,
+        bool approved,
+        bool autoApprovePendingToolCalls,
+        CancellationToken cancellationToken)
+    {
+        EnsureRequiredActivityOperationId(
+            activityOperationId,
+            nameof(activityOperationId));
+        if (activityOperation.StreamId.OperationId != activityOperationId)
+        {
+            throw new InvalidOperationException(
+                "The activity lease operation id does not match the continuation operation id.");
+        }
+
+        activityOperation.Report(
+            AgentExecutionActivityPhase.ResolvingSession,
+            "Loading the execution run awaiting approval.");
         var currentRun = await LoadExecutionRunAsync(executionRunId, cancellationToken);
+        EnsureActivityRunBinding(activityOperation, currentRun);
         if (currentRun.PendingApprovals.Count == 0)
         {
             if (currentRun.State is ExecutionState.Completed or ExecutionState.Failed)
             {
-                return await LoadExistingExecutionRunResultAsync(executionRunId, cancellationToken);
+                var existingResult = await LoadExistingExecutionRunResultAsync(
+                    executionRunId,
+                    cancellationToken);
+                ReportAndTerminalizeExistingResult(activityOperation, existingResult);
+                return existingResult;
             }
 
             throw new InvalidOperationException("This execution run is already being continued.");
         }
 
-        var restoredCheckpoint = await executionCheckpointBridge.ValidatePendingApprovalResumeAsync(currentRun, cancellationToken);
-        var continuationStart = await BeginPendingApprovalContinuationAsync(
-            currentRun,
-            approved,
-            autoApprovePendingToolCalls,
-            cancellationToken);
+        var restoredCheckpoint = await executionCheckpointBridge
+            .ValidatePendingApprovalResumeAsync(
+                currentRun,
+                cancellationToken);
+        var preparation = await AcquireExecutionPreparationAsync(
+            activityOperation,
+            currentRun.AgentId,
+            atomicConsumer: true,
+            cancellationToken).ConfigureAwait(false);
+        ExecutionRunContinuationStart continuationStart;
+        const int maximumContinuationStartAttempts = 3;
+        for (var attempt = 1; ; attempt++)
+        {
+            var continuationProvider =
+                await ResolveContinuationProviderLeaseAsync(
+                    currentRun,
+                    preparation,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            try
+            {
+                continuationStart =
+                    await BeginPendingApprovalContinuationAsync(
+                        preparation,
+                        currentRun,
+                        continuationProvider,
+                        approved,
+                        autoApprovePendingToolCalls,
+                        cancellationToken);
+                break;
+            }
+            catch (AgentExecutionPreparationStaleException)
+                when (attempt < maximumContinuationStartAttempts)
+            {
+                activityOperation.Report(
+                    AgentExecutionActivityPhase.ResolvingPreparation,
+                    "The agent configuration changed before approval continuation; refreshing the prepared data.");
+                preparation = await AcquireExecutionPreparationAsync(
+                    activityOperation,
+                    currentRun.AgentId,
+                    atomicConsumer: true,
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
 
         if (continuationStart.Disposition == ExecutionRunContinuationDisposition.AlreadyFinalized)
         {
-            return await LoadExistingExecutionRunResultAsync(executionRunId, cancellationToken);
+            var existingResult = await LoadExistingExecutionRunResultAsync(
+                executionRunId,
+                cancellationToken);
+            ReportAndTerminalizeExistingResult(activityOperation, existingResult);
+            return existingResult;
         }
 
         if (continuationStart.Disposition == ExecutionRunContinuationDisposition.AlreadyInProgress)
@@ -230,73 +344,114 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         var prepared = continuationStart.Prepared
             ?? throw new InvalidOperationException("Execution run continuation start did not return a prepared state.");
-        var catalog = prepared.Catalog;
         var run = prepared.TransitionedRun;
         var session = prepared.Session;
         var agent = prepared.Agent;
-        var configuredProvider = await ResolveProviderForAgentAsync(agent, catalog, cancellationToken);
-        var provider = ResolveContinuationProvider(run, configuredProvider, catalog.Providers);
-        var runtimeAgent = CreateProviderCompatibleRuntimeAgent(agent, provider, run.Model);
-        var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
-        var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
-        var structuredOutput = ResolveContinuationStructuredOutputContract(run);
-        var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
-        using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run.resume", prepared.OriginalRun);
-        AgentFrameworkTelemetry.RecordRunResume(prepared.OriginalRun);
-
-        PrimeProviderCredentialEnvironment(provider);
-
-        if (restoredCheckpoint is not null)
-        {
-            await AppendExecutionLogAsync(
-                run.Id,
-                agent.Id,
-                run.ChatSessionId,
-                ExecutionState.WaitingOnTool,
-                "Workflow",
-                $"Restored workflow checkpoint '{restoredCheckpoint.WorkflowCheckpointId}' before replaying the approval decision.",
-                cancellationToken);
-        }
-
-        if (approved && autoApprovePendingToolCalls && !prepared.OriginalRun.AutoApprovePendingToolCalls)
-        {
-            await AppendExecutionLogAsync(
-                run.Id,
-                agent.Id,
-                run.ChatSessionId,
-                ExecutionState.WaitingOnTool,
-                "Approval policy",
-                "Run-level auto-approve enabled for future approval continuations.",
-                cancellationToken);
-        }
-
-        if (prepared.DecidedApprovals.Count > 0)
-        {
-            await executionGovernanceBridge.OnApprovalsDecidedAsync(run, prepared.DecidedApprovals, cancellationToken);
-        }
-
-        await AppendExecutionLogAsync(
-            run.Id,
-            agent.Id,
-            run.ChatSessionId,
-            ExecutionState.WaitingOnTool,
-            approved ? "Approval granted" : "Approval rejected",
-            approved
-                ? "Continuing the execution run after approving the pending tool request."
-                : "Continuing the execution run after rejecting the pending tool request.",
-            cancellationToken);
-
+        var provider = prepared.Provider;
+        var attachedCapabilities = prepared.Blueprint.Capabilities;
+        IReadOnlyList<AgentMemoryRecord> memory =
+            IsGovernedMachineCriticalRun(run)
+                ? []
+                : prepared.Blueprint.Memory;
+        var structuredOutput =
+            ResolveContinuationStructuredOutputContract(currentRun);
         var startedAt = DateTimeOffset.UtcNow;
+        AgentRuntimeHandoffExecutionOptions? handoffOptions = null;
+        AgentDefinition? runtimeAgent = null;
         AgentRuntimeResponse? lastRuntimeResponse = null;
         IAgentExecutionCancellationRegistration? executionCancellation = null;
+        AgentProviderCredentialDispatchLease? credentialDispatch = null;
+        IAgentProviderCredentialDispatchScope? credentialScope = null;
         try
         {
+            activityOperation.Report(
+                AgentExecutionActivityPhase.ResolvingProvider,
+                "Using the canonical provider lease for approval continuation.");
+            activityOperation.Report(
+                AgentExecutionActivityPhase.PreparingCapabilities,
+                "Using prepared tools and memory for approval continuation.");
+            activityOperation.Report(
+                AgentExecutionActivityPhase.PreparingRuntime,
+                "Preparing the agent runtime for approval continuation.");
+            handoffOptions = await ResolveHandoffExecutionOptionsAsync(
+                    agent,
+                    prepared.CatalogSnapshot.Catalog,
+                    currentRun,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            credentialDispatch =
+                await providerCredentialDispatchScopeFactory.PrepareAsync(
+                    ResolveProviderCredentialDispatchProviders(
+                        provider,
+                        handoffOptions),
+                    cancellationToken);
+            credentialScope = credentialDispatch.BeginScope();
+            runtimeAgent = CreateProviderCompatibleRuntimeAgent(
+                agent,
+                provider,
+                currentRun.Model);
+            PrimeProviderCredentialEnvironment(
+                provider,
+                credentialScope.Resolve(provider));
+            using var runActivity = AgentFrameworkTelemetry.StartRunActivity(
+                "agent.run.resume",
+                prepared.OriginalRun);
+            AgentFrameworkTelemetry.RecordRunResume(prepared.OriginalRun);
+
+            if (restoredCheckpoint is not null)
+            {
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    agent.Id,
+                    run.ChatSessionId,
+                    ExecutionState.WaitingOnTool,
+                    "Workflow",
+                    $"Restored workflow checkpoint '{restoredCheckpoint.WorkflowCheckpointId}' before replaying the approval decision.",
+                    cancellationToken);
+            }
+
+            if (approved &&
+                autoApprovePendingToolCalls &&
+                !prepared.OriginalRun.AutoApprovePendingToolCalls)
+            {
+                await AppendExecutionLogAsync(
+                    run.Id,
+                    agent.Id,
+                    run.ChatSessionId,
+                    ExecutionState.WaitingOnTool,
+                    "Approval policy",
+                    "Run-level auto-approve enabled for future approval continuations.",
+                    cancellationToken);
+            }
+
+            if (prepared.DecidedApprovals.Count > 0)
+            {
+                await executionGovernanceBridge.OnApprovalsDecidedAsync(
+                    run,
+                    prepared.DecidedApprovals,
+                    cancellationToken);
+            }
+
+            await AppendExecutionLogAsync(
+                run.Id,
+                agent.Id,
+                run.ChatSessionId,
+                ExecutionState.WaitingOnTool,
+                approved ? "Approval granted" : "Approval rejected",
+                approved
+                    ? "Continuing the execution run after approving the pending tool request."
+                    : "Continuing the execution run after rejecting the pending tool request.",
+                cancellationToken);
+
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
             AgentRuntimeResponse runtimeResponse;
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
+                activityOperation.Report(
+                    AgentExecutionActivityPhase.WaitingForProvider,
+                    "Waiting for the configured provider to continue the run.");
                 runtimeResponse = await runtime.RespondToPendingApprovalsAsync(
                     runtimeAgent,
                     provider,
@@ -305,12 +460,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     memory,
                     approved,
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
-                    (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                    (state, phase, message) => ReportRuntimeProgressAsync(
+                        activityOperation,
+                        run,
+                        agent.Id,
+                        state,
+                        phase,
+                        message,
+                        cancellationToken),
                     runtimeCancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
                     executionOptions: CreateRuntimeExecutionOptionsCore(
                         run,
+                        activityOperationId,
                         structuredOutput,
                         handoffOptions,
                         inputAttachments: null,
@@ -326,6 +489,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     var continuation = await ContinueAutoApprovedRunAsync(
                         run,
+                        activityOperationId,
                         runtimeAgent,
                         provider,
                         runtimeSession,
@@ -333,7 +497,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         attachedCapabilities,
                         memory,
                         runtimeResponse,
-                        (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                        (state, phase, message) => ReportRuntimeProgressAsync(
+                            activityOperation,
+                            run,
+                            agent.Id,
+                            state,
+                            phase,
+                            message,
+                            cancellationToken),
                         structuredOutput,
                         handoffOptions,
                         runtimeCancellationToken);
@@ -416,6 +587,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse.PendingApprovals,
                     DateTimeOffset.UtcNow);
 
+                activityOperation.Report(
+                    completionState == ExecutionState.WaitingOnTool
+                        ? AgentExecutionActivityPhase.AwaitingApproval
+                        : AgentExecutionActivityPhase.PersistingResult,
+                    completionState == ExecutionState.WaitingOnTool
+                        ? "The agent still requires a tool approval decision."
+                        : "Persisting the continued agent result.");
                 if (session is not null)
                 {
                     var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
@@ -480,6 +658,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     },
                     cancellationToken);
 
+                TerminalizePersistedActivity(
+                    activityOperation,
+                    completionState);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -487,6 +668,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
                 };
             }
+        }
+        catch (AgentExecutionActivityPublicationException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -511,7 +696,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     CreatedAtUtc: DateTimeOffset.UtcNow,
                     Outcome: outcome,
                     ProviderName: provider.Name,
-                    Model: ResolveModel(runtimeAgent, provider),
+                    Model: runtimeAgent?.Model ?? run.Model,
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: 0,
                     OutputTokens: 0,
@@ -521,8 +706,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 },
                 provider);
             var failureUsageObservations = lastRuntimeResponse is null
-                ? BuildFailureUsageObservations(run, runtimeAgent, provider, failureMetric, exception)
-                : BuildRuntimeResponseUsageObservations(run, runtimeAgent, provider, failureMetric, lastRuntimeResponse);
+                ? BuildFailureUsageObservations(
+                    run,
+                    runtimeAgent ?? agent,
+                    provider,
+                    failureMetric,
+                    exception)
+                : BuildRuntimeResponseUsageObservations(
+                    run,
+                    runtimeAgent ?? agent,
+                    provider,
+                    failureMetric,
+                    lastRuntimeResponse);
 
             var failedRun = run with
             {
@@ -572,6 +767,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     : $"Execution run approval continuation failed for {provider.Name}: {failureDisplay!.Message}",
                 terminalPersistenceToken);
 
+            TerminalizeFailedActivity(
+                activityOperation,
+                wasCancelled);
             if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
@@ -588,7 +786,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     session.Id,
                     provider.Name,
-                    ResolveModel(runtimeAgent, provider),
+                    runtimeAgent?.Model ?? run.Model,
                     exception,
                     failureDisplay!.Message)
                 : new AgentRunFailedException(
@@ -596,13 +794,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     run.ChatSessionId,
                     provider.Name,
-                    ResolveModel(runtimeAgent, provider),
+                    runtimeAgent?.Model ?? run.Model,
                     exception,
                     failureDisplay!.Message);
         }
         finally
         {
             executionCancellation?.Dispose();
+            credentialScope?.Dispose();
+            credentialDispatch?.Dispose();
         }
     }
 
@@ -750,129 +950,211 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     }
 
     private async Task<ExecutionRunResult> ExecuteRunCoreAsync(
-        AgentDefinition agent,
+        AgentExecutionPreparationSnapshot preparation,
         ProviderProfile provider,
-        SandboxWorkspaceCatalog catalog,
-        SandboxWorkspaceExecutionState executionState,
-        ChatSessionRecord? session,
         ExecutionRunRequest request,
         bool persistTranscript,
-        CancellationToken cancellationToken)
+        IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
+        CancellationToken cancellationToken,
+        IAgentExecutionActivityOperationLease activityOperation)
     {
         var prompt = request.Prompt.Trim();
         var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Prepare(request.JsonSchemaOutput);
         var context = PrepareInvocationContext(request);
         request = request with { Context = context };
-        ChatMessageRecord? userMessage = null;
-        ExecutionRunRecord run;
+        activityOperation.Report(
+            AgentExecutionActivityPhase.CreatingExecution,
+            persistTranscript
+                ? "Preparing atomic chat execution admission."
+                : "Preparing execution admission.");
+        AgentExecutionStartupAggregate startup;
 
         if (persistTranscript)
         {
-            var prepared = await BeginChatBackedRunAsync(
-                agent.Id,
-                provider,
-                session?.Id,
-                prompt,
-                context,
-                request.AutoApprovePendingToolCalls,
-                request.StructuredOutput,
-                jsonSchemaOutput,
-                cancellationToken);
-
-            catalog = prepared.Catalog;
-            agent = prepared.Agent;
-            provider = prepared.Provider;
-            session = prepared.Session;
-            run = prepared.Run;
-            userMessage = prepared.UserMessage;
+            const int maximumStartAttempts = 3;
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    startup = await BeginChatBackedRunAsync(
+                        preparation,
+                        provider,
+                        request.ChatSessionId,
+                        prompt,
+                        context,
+                        request.AutoApprovePendingToolCalls,
+                        request.StructuredOutput,
+                        jsonSchemaOutput,
+                        inputAttachments,
+                        request.InitialActivityOperationId,
+                        cancellationToken);
+                    break;
+                }
+                catch (Exception exception)
+                    when (attempt < maximumStartAttempts &&
+                          exception is
+                              AgentExecutionPreparationStaleException or
+                              SandboxWorkspaceCatalogConcurrencyException)
+                {
+                    activityOperation.Report(
+                        AgentExecutionActivityPhase.ResolvingPreparation,
+                        "The agent configuration changed before execution creation; refreshing the prepared data.");
+                    preparation = await AcquireExecutionPreparationAsync(
+                        activityOperation,
+                        request.AgentId,
+                        atomicConsumer:
+                            store is ISandboxWorkspaceChatRunStartStore,
+                        cancellationToken).ConfigureAwait(false);
+                    provider = await ResolvePreparedProviderAsync(
+                        activityOperation,
+                        preparation,
+                        request,
+                        cancellationToken).ConfigureAwait(false);
+                }
+            }
         }
         else
         {
-            if (session is not null && TryGetBlockingSessionRun(executionState, session, out _))
-            {
-                throw new InvalidOperationException(DescribeSessionBusyMessage(executionState, session));
-            }
-
             var now = DateTimeOffset.UtcNow;
-            run = CreatePreparingRun(
+            EnsurePreparationCurrentForUse(
+                preparation.Blueprint,
+                preparation.CatalogSnapshot);
+            var agent = CreateProviderCompatibleRuntimeAgent(
+                preparation.Blueprint.Agent,
+                provider,
+                ResolveEffectiveManagedSeedModel(
+                    preparation.Blueprint.Agent,
+                    provider));
+            var run = CreatePreparingRun(
                 agent,
                 provider,
-                session?.Id,
-                session?.Title ?? CreateSessionTitle(prompt),
+                chatSessionId: null,
+                CreateSessionTitle(prompt),
                 context,
                 prompt,
                 now,
                 request.AutoApprovePendingToolCalls,
+                request.InitialActivityOperationId,
                 request.StructuredOutput,
                 jsonSchemaOutput);
 
-            if (session is not null)
-            {
-                session = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
-                    session,
-                    session.UpdatedAtUtc,
-                    run.Id);
-                await PersistExecutionMutationAsync(
-                    new ExecutionStateMutation(
-                        Run: run,
-                        Session: session),
-                    cancellationToken);
-            }
-            else
-            {
-                await PersistExecutionMutationAsync(
-                    new ExecutionStateMutation(Run: run),
-                    cancellationToken);
-            }
+            await PersistNewExecutionRunAsync(
+                run,
+                cancellationToken);
+            startup = new AgentExecutionStartupAggregate(
+                preparation.Blueprint,
+                preparation.CatalogSnapshot,
+                agent,
+                provider,
+                Session: null,
+                run,
+                UserMessage: null,
+                inputAttachments);
         }
 
+        activityOperation.BindExecutionRun(
+            startup.Run.Id,
+            startup.Run.ChatSessionId);
+
         return await CompletePreparedExecutionRunAsync(
-            agent,
-            provider,
-            catalog,
-            session,
+            startup,
             request,
-            run,
-            userMessage,
-            cancellationToken);
+            cancellationToken,
+            activityOperation);
     }
 
     private async Task<ExecutionRunResult> CompletePreparedExecutionRunAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        SandboxWorkspaceCatalog catalog,
-        ChatSessionRecord? session,
+        AgentExecutionStartupAggregate startup,
         ExecutionRunRequest request,
-        ExecutionRunRecord run,
-        ChatMessageRecord? userMessage,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IAgentExecutionActivityOperationLease activityOperation)
     {
+        EnsureRequiredActivityOperationId(
+            request.InitialActivityOperationId,
+            nameof(request));
+        if (activityOperation.StreamId.OperationId != request.InitialActivityOperationId)
+        {
+            throw new InvalidOperationException(
+                "The activity operation does not match the execution request.");
+        }
+
+        var agent = startup.Agent;
+        var provider = startup.Provider;
+        var catalog = startup.CatalogSnapshot.Catalog;
+        var session = startup.Session;
+        var run = startup.Run;
+        var userMessage = startup.UserMessage;
         var prompt = request.Prompt.Trim();
-        var runtimeAgent = CreateProviderCompatibleRuntimeAgent(agent, provider, run.Model);
-        var attachedCapabilities = ResolveAttachedCapabilities(catalog, agent);
-        var memory = ResolveAgentMemoryForRun(catalog, agent.Id, run);
-        var handoffOptions = await ResolveHandoffExecutionOptionsAsync(agent, catalog, run, cancellationToken);
-        var inputAttachments = await ResolveRuntimeInputAttachmentsAsync(request.InputAttachmentPaths, cancellationToken);
         var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Restore(run);
         using var runActivity = AgentFrameworkTelemetry.StartRunActivity("agent.run", run);
-
-        PrimeProviderCredentialEnvironment(provider);
-
-        await AppendExecutionLogAsync(
-            run.Id,
-            agent.Id,
-            run.ChatSessionId,
-            ExecutionState.Preparing,
-            "Planning",
-            $"Preparing provider {provider.Name}.",
-            cancellationToken);
-        await AppendProcessCooperationLogAsync(run, agent.Id, run.ChatSessionId, cancellationToken);
-
         var startedAt = DateTimeOffset.UtcNow;
+        AgentDefinition? runtimeAgent = null;
         AgentRuntimeResponse? lastRuntimeResponse = null;
         IAgentExecutionCancellationRegistration? executionCancellation = null;
+        AgentProviderCredentialDispatchLease? credentialDispatch = null;
+        IAgentProviderCredentialDispatchScope? credentialScope = null;
         try
         {
+            if (!run.ChatSessionId.HasValue)
+            {
+                var currentCatalogSnapshot = await store
+                    .LoadCatalogSnapshotAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                EnsurePreparationCurrentForUse(
+                    startup.Blueprint,
+                    currentCatalogSnapshot);
+                catalog = currentCatalogSnapshot.Catalog;
+            }
+
+            activityOperation.Report(
+                AgentExecutionActivityPhase.PreparingCapabilities,
+                "Validating prepared tools, memory, and handoff capabilities.");
+            EnsurePreparationCurrentForUse(
+                startup.Blueprint,
+                startup.CatalogSnapshot);
+            var attachedCapabilities = startup.Blueprint.Capabilities;
+            IReadOnlyList<AgentMemoryRecord> memory =
+                IsGovernedMachineCriticalRun(run)
+                    ? []
+                    : startup.Blueprint.Memory;
+            var handoffOptions = await ResolveHandoffExecutionOptionsAsync(
+                agent,
+                catalog,
+                run,
+                cancellationToken);
+            activityOperation.Report(
+                AgentExecutionActivityPhase.PreparingRuntime,
+                "Preparing the agent runtime.");
+
+            credentialDispatch =
+                await providerCredentialDispatchScopeFactory.PrepareAsync(
+                    ResolveProviderCredentialDispatchProviders(
+                        provider,
+                        handoffOptions),
+                    cancellationToken);
+            credentialScope = credentialDispatch.BeginScope();
+            runtimeAgent = CreateProviderCompatibleRuntimeAgent(
+                agent,
+                provider,
+                run.Model);
+            PrimeProviderCredentialEnvironment(
+                provider,
+                credentialScope.Resolve(provider));
+
+            await AppendExecutionLogAsync(
+                run.Id,
+                agent.Id,
+                run.ChatSessionId,
+                ExecutionState.Preparing,
+                "Planning",
+                $"Preparing provider {provider.Name}.",
+                cancellationToken);
+            await AppendProcessCooperationLogAsync(
+                run,
+                agent.Id,
+                run.ChatSessionId,
+                cancellationToken);
+
             if (request.TransientContext is not null)
             {
                 transientContextRegistry.Register(run, request.TransientContext);
@@ -884,6 +1166,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AgentRuntimeResponse runtimeResponse;
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
+                activityOperation.Report(
+                    AgentExecutionActivityPhase.WaitingForProvider,
+                    "Waiting for the configured provider.");
                 runtimeResponse = await runtime.RunAsync(
                     runtimeAgent,
                     provider,
@@ -892,15 +1177,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     memory,
                     prompt,
                     string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
-                    (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                    (state, phase, message) => ReportRuntimeProgressAsync(
+                        activityOperation,
+                        run,
+                        agent.Id,
+                        state,
+                        phase,
+                        message,
+                        cancellationToken),
                     runtimeCancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
                     executionOptions: CreateRuntimeExecutionOptionsCore(
                         run,
+                        activityOperation.StreamId.OperationId,
                         request.StructuredOutput,
                         handoffOptions,
-                        inputAttachments,
+                        startup.InputAttachments,
                         jsonSchemaOutput));
                 lastRuntimeResponse = runtimeResponse;
 
@@ -913,6 +1206,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     var continuation = await ContinueAutoApprovedRunAsync(
                         run,
+                        activityOperation.StreamId.OperationId,
                         runtimeAgent,
                         provider,
                         runtimeSession,
@@ -920,7 +1214,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         attachedCapabilities,
                         memory,
                         runtimeResponse,
-                        (state, phase, message) => AppendExecutionLogAsync(run.Id, agent.Id, run.ChatSessionId, state, phase, message, cancellationToken),
+                        (state, phase, message) => ReportRuntimeProgressAsync(
+                            activityOperation,
+                            run,
+                            agent.Id,
+                            state,
+                            phase,
+                            message,
+                            cancellationToken),
                         request.StructuredOutput,
                         handoffOptions,
                         runtimeCancellationToken);
@@ -1003,6 +1304,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeResponse.PendingApprovals,
                     DateTimeOffset.UtcNow);
 
+                activityOperation.Report(
+                    completionState == ExecutionState.WaitingOnTool
+                        ? AgentExecutionActivityPhase.AwaitingApproval
+                        : AgentExecutionActivityPhase.PersistingResult,
+                    completionState == ExecutionState.WaitingOnTool
+                        ? "The agent is waiting for a tool approval decision."
+                        : "Persisting the agent result.");
                 if (session is not null)
                 {
                     var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
@@ -1067,6 +1375,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     },
                     cancellationToken);
 
+                TerminalizePersistedActivity(
+                    activityOperation,
+                    completionState);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -1074,6 +1385,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ContextCompletionNotification = AgentChatContextInvocationFactory.CreateCompletionNotification(updatedRun)
                 };
             }
+        }
+        catch (AgentExecutionActivityPublicationException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -1098,7 +1413,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     CreatedAtUtc: DateTimeOffset.UtcNow,
                     Outcome: outcome,
                     ProviderName: provider.Name,
-                    Model: ResolveModel(runtimeAgent, provider),
+                    Model: runtimeAgent?.Model ?? run.Model,
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
                     OutputTokens: 0,
@@ -1108,8 +1423,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 },
                 provider);
             var failureUsageObservations = lastRuntimeResponse is null
-                ? BuildFailureUsageObservations(run, runtimeAgent, provider, failureMetric, exception)
-                : BuildRuntimeResponseUsageObservations(run, runtimeAgent, provider, failureMetric, lastRuntimeResponse);
+                ? BuildFailureUsageObservations(
+                    run,
+                    runtimeAgent ?? agent,
+                    provider,
+                    failureMetric,
+                    exception)
+                : BuildRuntimeResponseUsageObservations(
+                    run,
+                    runtimeAgent ?? agent,
+                    provider,
+                    failureMetric,
+                    lastRuntimeResponse);
 
             var failedRun = run with
             {
@@ -1158,6 +1483,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     : $"Execution run failed for {provider.Name}: {failureDisplay!.Message}",
                 terminalPersistenceToken);
 
+            TerminalizeFailedActivity(
+                activityOperation,
+                wasCancelled);
             if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
@@ -1174,7 +1502,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     session.Id,
                     provider.Name,
-                    ResolveModel(runtimeAgent, provider),
+                    runtimeAgent?.Model ?? run.Model,
                     exception,
                     failureDisplay!.Message)
                 : new AgentRunFailedException(
@@ -1182,19 +1510,274 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     run.Id,
                     run.ChatSessionId,
                     provider.Name,
-                    ResolveModel(runtimeAgent, provider),
+                    runtimeAgent?.Model ?? run.Model,
                     exception,
                     failureDisplay!.Message);
         }
         finally
         {
             executionCancellation?.Dispose();
+            credentialScope?.Dispose();
+            credentialDispatch?.Dispose();
         }
     }
 
-    private void PrimeProviderCredentialEnvironment(ProviderProfile provider)
+    private async Task ReportRuntimeProgressAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionRunRecord run,
+        Guid agentId,
+        ExecutionState state,
+        string phase,
+        string message,
+        CancellationToken cancellationToken)
     {
-        var resolution = providerCredentialResolver.Resolve(provider);
+        var activityPhase = state switch
+        {
+            ExecutionState.Preparing => AgentExecutionActivityPhase.PreparingRuntime,
+            ExecutionState.Running => AgentExecutionActivityPhase.Streaming,
+            ExecutionState.WaitingOnTool => AgentExecutionActivityPhase.UsingTool,
+            ExecutionState.Persisting => AgentExecutionActivityPhase.PersistingResult,
+            _ => (AgentExecutionActivityPhase?)null
+        };
+        if (activityPhase.HasValue)
+        {
+            activityOperation.Report(
+                activityPhase.Value,
+                AgentExecutionActivityRuntimeProgressPolicy.ResolveMessage(
+                    state,
+                    phase));
+        }
+
+        await AppendExecutionLogAsync(
+            run.Id,
+            agentId,
+            run.ChatSessionId,
+            state,
+            phase,
+            message,
+            cancellationToken);
+    }
+
+    private static void EnsureActivityRunBinding(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionRunRecord run)
+    {
+        if (activityOperation.AgentId is { } boundAgentId)
+        {
+            if (boundAgentId != run.AgentId)
+            {
+                throw new InvalidOperationException(
+                    "The activity operation belongs to a different agent.");
+            }
+        }
+        else
+        {
+            activityOperation.BindAgent(run.AgentId);
+        }
+
+        if (activityOperation.ChatSessionId is { } boundSessionId &&
+            run.ChatSessionId != boundSessionId)
+        {
+            throw new InvalidOperationException(
+                "The activity operation belongs to a different chat session.");
+        }
+
+        if (activityOperation.ExecutionRunId is { } boundRunId)
+        {
+            if (boundRunId != run.Id)
+            {
+                throw new InvalidOperationException(
+                    "The activity operation is bound to a different execution run.");
+            }
+
+            return;
+        }
+
+        activityOperation.BindExecutionRun(run.Id, run.ChatSessionId);
+    }
+
+    private static void TerminalizeSameSourceReservationActivity(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionRunSourceReservationResult reservation)
+    {
+        switch (reservation.Disposition)
+        {
+            case ExecutionRunSourceDisposition.ReusedCompleted:
+                activityOperation.Report(
+                    AgentExecutionActivityPhase.PersistingResult,
+                    "A completed execution run already exists for this source.");
+                TerminalizePersistedActivity(
+                    activityOperation,
+                    reservation.Run.State);
+                break;
+            case ExecutionRunSourceDisposition.ExistingActive:
+                activityOperation.Report(
+                    AgentExecutionActivityPhase.PersistingResult,
+                    "An active execution run already exists for this source.");
+                activityOperation.Complete(
+                    "The existing active execution run was returned.");
+                break;
+            case ExecutionRunSourceDisposition.Created:
+                throw new ArgumentOutOfRangeException(
+                    nameof(reservation),
+                    reservation.Disposition,
+                    "A created reservation is terminalized by execution.");
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(reservation),
+                    reservation.Disposition,
+                    null);
+        }
+    }
+
+    private static async Task<TResult> ExecuteWithinActivityBoundaryAsync<TResult>(
+        IAgentExecutionActivityOperationLease activityOperation,
+        Func<Task<TResult>> executeAsync)
+    {
+        ArgumentNullException.ThrowIfNull(activityOperation);
+        ArgumentNullException.ThrowIfNull(executeAsync);
+
+        try
+        {
+            var result = await executeAsync().ConfigureAwait(false);
+            if (!activityOperation.IsTerminal)
+            {
+                activityOperation.Fail(
+                    "The agent operation completed without a terminal activity outcome.",
+                    AgentExecutionActivityFailureCodes.UnhandledExecutionFailure);
+                throw new InvalidOperationException(
+                    "The workspace execution completed without a terminal activity outcome.");
+            }
+
+            return result;
+        }
+        catch (AgentExecutionActivityPublicationException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            TerminalizeFailedActivity(
+                activityOperation,
+                wasCancelled: true);
+            throw;
+        }
+        catch
+        {
+            TerminalizeFailedActivity(
+                activityOperation,
+                wasCancelled: false);
+            throw;
+        }
+    }
+
+    private static void ReportAndTerminalizeExistingResult(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionRunResult result)
+    {
+        activityOperation.Report(
+            result.State == ExecutionState.WaitingOnTool
+                ? AgentExecutionActivityPhase.AwaitingApproval
+                : AgentExecutionActivityPhase.PersistingResult,
+            "The execution run was already finalized.");
+        TerminalizePersistedActivity(activityOperation, result.State);
+    }
+
+    private static void TerminalizePersistedActivity(
+        IAgentExecutionActivityOperationLease activityOperation,
+        ExecutionState completionState)
+    {
+        if (activityOperation.IsTerminal)
+        {
+            return;
+        }
+
+        var terminalPhase = completionState switch
+        {
+            ExecutionState.Completed => AgentExecutionActivityPhase.Completed,
+            ExecutionState.Failed => AgentExecutionActivityPhase.Failed,
+            ExecutionState.WaitingOnTool => AgentExecutionActivityPhase.AwaitingApproval,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(completionState),
+                completionState,
+                "The execution state is not terminal for an agent operation.")
+        };
+        try
+        {
+            switch (completionState)
+            {
+                case ExecutionState.Completed:
+                    activityOperation.Complete("The agent operation completed.");
+                    break;
+                case ExecutionState.Failed:
+                    activityOperation.Fail(
+                        "The agent output did not satisfy its required contract.",
+                        AgentExecutionActivityFailureCodes.OutputValidationFailure);
+                    break;
+                case ExecutionState.WaitingOnTool:
+                    activityOperation.Suspend(
+                        "The agent operation is suspended pending an approval decision.");
+                    break;
+            }
+        }
+        catch (Exception exception)
+        {
+            throw new AgentExecutionActivityPublicationException(
+                activityOperation.StreamId,
+                terminalPhase,
+                exception);
+        }
+    }
+
+    private static void TerminalizeFailedActivity(
+        IAgentExecutionActivityOperationLease activityOperation,
+        bool wasCancelled)
+    {
+        if (activityOperation.IsTerminal)
+        {
+            return;
+        }
+
+        var terminalPhase = wasCancelled
+            ? AgentExecutionActivityPhase.Cancelled
+            : AgentExecutionActivityPhase.Failed;
+        try
+        {
+            if (wasCancelled)
+            {
+                activityOperation.Cancel("The agent operation was cancelled.");
+            }
+            else
+            {
+                activityOperation.Fail(
+                    "The agent operation failed.",
+                    AgentExecutionActivityFailureCodes.UnhandledExecutionFailure);
+            }
+        }
+        catch (Exception exception)
+        {
+            throw new AgentExecutionActivityPublicationException(
+                activityOperation.StreamId,
+                terminalPhase,
+                exception);
+        }
+    }
+
+    private static IReadOnlyList<ProviderProfile>
+        ResolveProviderCredentialDispatchProviders(
+        ProviderProfile provider,
+        AgentRuntimeHandoffExecutionOptions? handoffOptions)
+    {
+        return handoffOptions is null
+            ? [provider]
+            : [provider, .. handoffOptions.Participants.Select(
+                participant => participant.Provider)];
+    }
+
+    private static void PrimeProviderCredentialEnvironment(
+        ProviderProfile provider,
+        ProviderCredentialResolution resolution)
+    {
         if (!resolution.IsResolved ||
             !resolution.ShouldPromoteToProcessEnvironment)
         {
@@ -1542,24 +2125,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             string.IsNullOrWhiteSpace(run.CorrelationId) ? run.Id.ToString("D") : run.CorrelationId);
     }
 
-    private static AgentRuntimeExecutionOptions CreateRuntimeExecutionOptions(
-        ExecutionRunRecord run,
-        AgentStructuredOutputContract? structuredOutput,
-        AgentRuntimeHandoffExecutionOptions? handoffOptions = null,
-        IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments = null)
-    {
-        var jsonSchemaOutput = AgentJsonSchemaOutputContractProcessor.Restore(run);
-        return BuildRuntimeExecutionOptions(
-            run,
-            structuredOutput,
-            handoffOptions,
-            inputAttachments,
-            jsonSchemaOutput,
-            transientContext: null);
-    }
-
     private AgentRuntimeExecutionOptions CreateRuntimeExecutionOptionsCore(
         ExecutionRunRecord run,
+        AgentExecutionOperationId? activityOperationId,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeHandoffExecutionOptions? handoffOptions,
         IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments,
@@ -1571,6 +2139,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var transientContext = transientContextRegistry.Resolve(run);
         return BuildRuntimeExecutionOptions(
             run,
+            activityOperationId,
             structuredOutput,
             handoffOptions,
             inputAttachments,
@@ -1580,6 +2149,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private static AgentRuntimeExecutionOptions BuildRuntimeExecutionOptions(
         ExecutionRunRecord run,
+        AgentExecutionOperationId? activityOperationId,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeHandoffExecutionOptions? handoffOptions,
         IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments,
@@ -1604,6 +2174,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ContextIntent: CreateRuntimeContextIntent(run),
             InputAttachments: inputAttachments)
         {
+            ActivityOperationId = activityOperationId,
             TransientContext = transientContext
         };
     }
@@ -1617,7 +2188,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return context;
         }
 
-        var digest = AgentChatContextDigest.Compute(request.TransientContext.Content);
+        var digest = AgentChatContextDigest.Compute(request.TransientContext);
         return context with
         {
             MetadataJson = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
@@ -1626,9 +2197,55 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         };
     }
 
+    private async Task<AgentExecutionPreparationSnapshot>
+        AcquireExecutionPreparationAsync(
+            IAgentExecutionActivityOperationLease activityOperation,
+            Guid agentId,
+            bool atomicConsumer,
+            CancellationToken cancellationToken)
+    {
+        activityOperation.Report(
+            AgentExecutionActivityPhase.ResolvingPreparation,
+            "Checking prepared agent and provider configuration.");
+        var preparation = atomicConsumer
+            ? await executionPreparationService
+                .AcquireForAtomicConsumerAsync(agentId, cancellationToken)
+                .ConfigureAwait(false)
+            : await executionPreparationService
+                .AcquireAsync(agentId, cancellationToken)
+                .ConfigureAwait(false);
+        var action = preparation.Source ==
+                     AgentExecutionPreparationSource.Reused
+            ? "Reused"
+            : "Refreshed";
+        activityOperation.Report(
+            AgentExecutionActivityPhase.ResolvingPreparation,
+            $"{action} agent preparation revision {preparation.Blueprint.Request.Version.CatalogRevision.Value} in {Math.Max(0, (long)preparation.Elapsed.TotalMilliseconds)} ms.");
+        return preparation;
+    }
+
+    private async Task<ProviderProfile> ResolvePreparedProviderAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        AgentExecutionPreparationSnapshot preparation,
+        ExecutionRunRequest request,
+        CancellationToken cancellationToken)
+    {
+        activityOperation.Report(
+            AgentExecutionActivityPhase.ResolvingProvider,
+            "Applying the current provider and execution policy.");
+        var configuredProvider = ApplyCredentialAwareManagedSeedFallback(
+            preparation.Blueprint.Agent,
+            preparation.Blueprint.Provider);
+        return await ResolveProviderForExecutionRequestAsync(
+                preparation.Blueprint.Agent,
+                request,
+                configuredProvider,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     private async Task<ProviderProfile> ResolveProviderForExecutionRequestAsync(
         AgentDefinition agent,
-        SandboxWorkspaceCatalog? catalog,
         ExecutionRunRequest request,
         ProviderProfile configuredProvider,
         CancellationToken cancellationToken)
@@ -1638,9 +2255,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             return configuredProvider;
         }
 
-        var candidates = await ResolveGovernedProcessProviderOverrideCandidatesAsync(configuredProvider, catalog, cancellationToken).ConfigureAwait(false);
+        var candidates = await ResolveGovernedProcessProviderOverrideCandidatesAsync(
+                configuredProvider,
+                cancellationToken)
+            .ConfigureAwait(false);
         var selected = candidates.FirstOrDefault();
-        return selected is null ? configuredProvider : selected;
+        return selected is null
+            ? configuredProvider
+            : ApplyCredentialAwareManagedSeedFallback(agent, selected);
     }
 
     internal static ProviderProfile ResolveContinuationProvider(
@@ -1657,6 +2279,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
              (string.IsNullOrWhiteSpace(run.ProviderName) ||
               string.Equals(run.ProviderName, configuredProvider.Name, StringComparison.OrdinalIgnoreCase))))
         {
+            EnsureContinuationProviderEnabled(run, configuredProvider);
             return configuredProvider;
         }
 
@@ -1675,13 +2298,84 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         var provider = matches[0];
+        EnsureContinuationProviderEnabled(run, provider);
+        return provider;
+    }
+
+    private async Task<ProviderProfile> ResolveContinuationProviderLeaseAsync(
+        ExecutionRunRecord run,
+        AgentExecutionPreparationSnapshot preparation,
+        CancellationToken cancellationToken)
+    {
+        var agent = preparation.Blueprint.Agent;
+        var configuredProvider = ApplyCredentialAwareManagedSeedFallback(
+            agent,
+            preparation.Blueprint.Provider);
+        if (RunUsesProvider(run, configuredProvider))
+        {
+            EnsureContinuationProviderEnabled(run, configuredProvider);
+            return configuredProvider;
+        }
+
+        IReadOnlyList<ProviderProfile> candidates;
+        if (run.ProviderProfileId is Guid providerId)
+        {
+            var provider = await providerSource
+                .GetProviderAsync(providerId, cancellationToken)
+                .ConfigureAwait(false);
+            candidates = provider is null
+                ? []
+                : [provider];
+        }
+        else
+        {
+            candidates = await providerSource
+                .ListProvidersAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var selected = ResolveContinuationProvider(
+            run,
+            configuredProvider,
+            candidates);
+        return ApplyCredentialAwareManagedSeedFallback(agent, selected);
+    }
+
+    private static bool RunUsesProvider(
+        ExecutionRunRecord run,
+        ProviderProfile provider)
+    {
+        return run.ProviderProfileId == provider.Id ||
+               (!run.ProviderProfileId.HasValue &&
+                (string.IsNullOrWhiteSpace(run.ProviderName) ||
+                 string.Equals(
+                     run.ProviderName,
+                     provider.Name,
+                     StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static void EnsureContinuationProviderEnabled(
+        ExecutionRunRecord run,
+        ProviderProfile provider)
+    {
         if (!provider.IsEnabled)
         {
             throw new InvalidOperationException(
                 $"Provider '{provider.Name}' was disabled while execution run '{run.Id:N}' was waiting for approval.");
         }
+    }
 
-        return provider;
+    private static void EnsureContinuationProviderLeaseMatches(
+        ExecutionRunRecord run,
+        ProviderProfile provider)
+    {
+        if (!RunUsesProvider(run, provider))
+        {
+            throw new InvalidOperationException(
+                $"The canonical provider lease does not match the provider recorded for execution run '{run.Id:N}'.");
+        }
+
+        EnsureContinuationProviderEnabled(run, provider);
     }
 
     internal static bool ShouldOverrideProviderForGovernedProcessStep(
@@ -1700,10 +2394,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private async Task<IReadOnlyList<ProviderProfile>> ResolveGovernedProcessProviderOverrideCandidatesAsync(
         ProviderProfile configuredProvider,
-        SandboxWorkspaceCatalog? catalog,
         CancellationToken cancellationToken)
     {
-        var providers = catalog?.Providers ?? await providerRegistry.ListProvidersAsync(cancellationToken).ConfigureAwait(false);
+        var providers = await providerSource
+            .ListProvidersAsync(cancellationToken)
+            .ConfigureAwait(false);
         return OrderGovernedProcessProviderOverrideCandidates(providers, configuredProvider, ProviderFeatureService)
             .ToArray();
     }
@@ -1836,38 +2531,35 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             throw new InvalidOperationException("Workspace attachment resolution is not available for this agent workspace.");
         }
 
-        const int maxImageAttachmentCount = 8;
-        const long maxImageAttachmentBytes = 10 * 1024 * 1024;
         var attachments = new List<AgentRuntimeInputAttachment>();
         foreach (var requestedPath in requestedPaths)
         {
             if (!TryResolveImageContentType(requestedPath, out var contentType))
             {
-                continue;
+                throw new InvalidOperationException(
+                    $"Attachment '{requestedPath}' is not a supported PNG, JPEG, GIF, or WebP image.");
             }
 
-            if (attachments.Count >= maxImageAttachmentCount)
+            if (attachments.Count >=
+                AgentRuntimeInputAttachmentPolicy.MaximumImageCount)
             {
                 throw new InvalidOperationException(
-                    $"A single agent request can include at most {maxImageAttachmentCount:N0} image attachment(s).");
+                    $"A single agent request can include at most {AgentRuntimeInputAttachmentPolicy.MaximumImageCount:N0} image attachment(s).");
             }
 
             var resolved = workspacePathResolutionService.ResolveFilePath(requestedPath, allowMissing: false);
-            var info = new FileInfo(resolved.FullPath);
-            if (info.Length > maxImageAttachmentBytes)
-            {
-                throw new InvalidOperationException(
-                    $"Image attachment '{resolved.RelativePath}' is {info.Length:N0} bytes, which exceeds the {maxImageAttachmentBytes:N0}-byte per-image limit.");
-            }
-
             attachments.Add(new AgentRuntimeInputAttachment(
                 Name: Path.GetFileName(resolved.FullPath),
                 ContentType: contentType,
-                Bytes: await File.ReadAllBytesAsync(resolved.FullPath, cancellationToken).ConfigureAwait(false),
+                Bytes: await AgentRuntimeInputAttachmentPolicy.ReadFileAsync(
+                        resolved.FullPath,
+                        resolved.RelativePath,
+                        cancellationToken)
+                    .ConfigureAwait(false),
                 SourcePath: resolved.RelativePath));
         }
 
-        return attachments;
+        return attachments.AsReadOnly();
     }
 
     private static bool TryResolveImageContentType(

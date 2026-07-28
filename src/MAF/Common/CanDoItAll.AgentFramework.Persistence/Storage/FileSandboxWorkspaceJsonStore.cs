@@ -3,6 +3,33 @@ using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
+internal enum FileSandboxWorkspaceJsonReadKind
+{
+    Deserialization,
+    RawText
+}
+
+internal readonly record struct FileSandboxWorkspacePhysicalJsonRead(
+    string FullPath,
+    Type? PayloadType,
+    FileSandboxWorkspaceJsonReadKind Kind,
+    long LengthBytes);
+
+internal sealed class FileSandboxWorkspaceJsonReadDiagnostics
+{
+    private readonly Action<FileSandboxWorkspacePhysicalJsonRead> record;
+
+    public FileSandboxWorkspaceJsonReadDiagnostics(
+        Action<FileSandboxWorkspacePhysicalJsonRead> record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        this.record = record;
+    }
+
+    public void Record(FileSandboxWorkspacePhysicalJsonRead physicalRead)
+        => record(physicalRead);
+}
+
 internal sealed class FileSandboxWorkspaceJsonStore
 {
     private static readonly char[] InvalidFileNameCharacters = Path.GetInvalidFileNameChars();
@@ -15,6 +42,14 @@ internal sealed class FileSandboxWorkspaceJsonStore
         TimeSpan.FromMilliseconds(200),
         TimeSpan.FromMilliseconds(400)
     ];
+    private readonly FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics;
+
+    public FileSandboxWorkspaceJsonStore(
+        FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics = null)
+    {
+        this.readDiagnostics = readDiagnostics;
+    }
+
     public JsonSerializerOptions SerializerOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -51,6 +86,12 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
                 await using (stream)
                 {
+                    readDiagnostics?.Record(
+                        new FileSandboxWorkspacePhysicalJsonRead(
+                            fullPath,
+                            typeof(T),
+                            FileSandboxWorkspaceJsonReadKind.Deserialization,
+                            stream.Length));
                     return await JsonSerializer.DeserializeAsync<T>(stream, SerializerOptions, cancellationToken);
                 }
             }
@@ -81,6 +122,12 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
         await using (stream)
         {
+            readDiagnostics?.Record(
+                new FileSandboxWorkspacePhysicalJsonRead(
+                    fullPath,
+                    PayloadType: null,
+                    Kind: FileSandboxWorkspaceJsonReadKind.RawText,
+                    LengthBytes: stream.Length));
             using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
             return await reader.ReadToEndAsync(cancellationToken);
         }

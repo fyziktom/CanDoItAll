@@ -5,6 +5,8 @@ This folder contains current operational and architecture documentation for the 
 ## Architecture
 
 - [Architecture beta](architecture-beta.md): current source-grounded architecture with GitHub-safe Mermaid flowcharts, C4, class, and sequence diagrams.
+- [Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md): typed startup phases, bounded operation streams, preparation/provider lifetimes, module runtime snapshots, source-of-truth rules, and the not-yet-implemented SSE projection boundary.
+- [Reusable floating agent chats](architecture/reusable-floating-agent-chats.md): circuit-scoped chat lifecycle, immutable per-turn context, preparation decisions, and current correctness gates.
 - [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md): source-grounded process runtime, AgentFramework, provider, API, and tool-boundary map.
 - [Agent runtime tool surface](agent-runtime-tool-surface.md): current direct runtime tools versus HTTP-only API operations.
 

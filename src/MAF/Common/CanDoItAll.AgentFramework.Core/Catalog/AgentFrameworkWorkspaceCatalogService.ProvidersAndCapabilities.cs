@@ -43,7 +43,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
     public async Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
-        var provider = await providerRegistry.GetProviderAsync(providerId, cancellationToken)
+        var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
         var result = await providerDiagnosticsService.TestProviderAsync(provider, cancellationToken);
@@ -62,7 +62,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         ProviderTestChatRequest request,
         CancellationToken cancellationToken = default)
     {
-        var provider = await providerRegistry.GetProviderAsync(providerId, cancellationToken)
+        var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
         return await providerDiagnosticsService.RunProviderTestChatAsync(provider, request, cancellationToken);
@@ -73,7 +73,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
-        var provider = await providerRegistry.GetProviderAsync(providerId, cancellationToken)
+        var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
         var result = await providerDiagnosticsService.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
@@ -202,10 +202,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var capability = catalog.Capabilities.FirstOrDefault(item => item.Id == capabilityId)
             ?? throw new InvalidOperationException("Capability was not found.");
         var provider = agent.ProviderProfileId.HasValue
-            ? providerRegistry is ICatalogShadowProviderProfileRegistry catalogShadowProviderRegistry
-                ? catalogShadowProviderRegistry.TryGetProviderFromCatalog(catalog, agent.ProviderProfileId.Value)
-                    ?? await providerRegistry.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken)
-                : await providerRegistry.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken)
+            ? await providerSource.GetProviderAsync(agent.ProviderProfileId.Value, cancellationToken)
             : null;
 
         var verification = await capabilityProofService.VerifyAsync(agent, provider, capability, cancellationToken);
