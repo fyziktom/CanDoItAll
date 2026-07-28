@@ -28,7 +28,9 @@ internal static class ProcessesApi
                 "GET /api/processes/runs/{runId}",
                 "GET /api/processes/runs/{runId}/summary",
                 "GET /api/processes/runs/{runId}/graph",
-                "GET /api/processes/runs/{runId}/history"
+                "GET /api/processes/runs/{runId}/history",
+                "GET /api/processes/events/stream",
+                "GET /api/processes/runs/{runId}/events/stream"
             ],
             "Runtime/core/dispatch remain generic. Module adapters resolve CanDoItAll agent execution through process driver strategies.")))
             .WithName("GetProcessesApiContract");

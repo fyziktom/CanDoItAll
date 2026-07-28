@@ -165,7 +165,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddSingleton<AgentExecutionActivityCoordinator>();
         services.TryAddSingleton<IAgentExecutionActivityCoordinator>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentExecutionActivityCoordinator>());
-        services.AddScoped<IAgentExecutionActivityReader, CurrentProfileAgentExecutionActivityReader>();
+        services.AddScoped<CurrentProfileAgentExecutionActivityReader>();
+        services.AddScoped<IAgentExecutionActivityReader>(serviceProvider =>
+            serviceProvider.GetRequiredService<CurrentProfileAgentExecutionActivityReader>());
+        services.AddScoped<ICurrentProfileAgentExecutionActivityReader>(serviceProvider =>
+            serviceProvider.GetRequiredService<CurrentProfileAgentExecutionActivityReader>());
         services.AddScoped<AgentChatContextRegistry>();
         services.AddScoped<IAgentChatContextRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatContextRegistry>());

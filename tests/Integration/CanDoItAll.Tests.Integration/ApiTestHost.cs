@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration;
@@ -57,6 +58,10 @@ internal sealed class ApiTestHost : IAsyncDisposable
             [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind,
             ["Api:Enabled"] = "true",
             ["Api:OpenApiEnabled"] = "true",
+            ["Api:SwaggerUiEnabled"] = "true",
+            ["Api:ServerSentEvents:ReplayCapacity"] = "64",
+            ["Api:ServerSentEvents:MaxBatchSize"] = "16",
+            ["Api:ServerSentEvents:HeartbeatIntervalSeconds"] = "5",
             ["Api:Authorization:Enabled"] = jwtEnabled.ToString(),
             ["Api:Authorization:Issuer"] = "CanDoItAll.Api.Tests",
             ["Api:Authorization:Audience"] = "CanDoItAll.Api.Tests",
@@ -78,6 +83,8 @@ internal sealed class ApiTestHost : IAsyncDisposable
             builder.Configuration,
             builder.Environment,
             registerTestHostApplicationLifetime: false);
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
         builder.Services.AddCanDoItAllApi(builder.Configuration);
         configureServices?.Invoke(builder.Services);
 
@@ -91,16 +98,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
             app.UseAuthorization();
         }
 
-        if (options.OpenApiEnabled)
-        {
-            var openApiEndpoint = app.MapOpenApi();
-            var swaggerEndpoint = app.MapOpenApi("/swagger/{documentName}/swagger.json");
-            if (options.Authorization.Enabled)
-            {
-                openApiEndpoint.RequireAuthorization();
-                swaggerEndpoint.RequireAuthorization();
-            }
-        }
+        app.MapCanDoItAllApiDocumentation();
 
         app.MapProjectStructureAgentApi();
         app.MapCanDoItAllApi();

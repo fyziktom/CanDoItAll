@@ -21,14 +21,36 @@ public sealed class AgentExecutionActivityAccessException(
     public AgentExecutionActivityAccessRejectionReason Reason { get; } = reason;
 }
 
+public interface ICurrentProfileAgentExecutionActivityReader
+{
+    ISequencedStreamReader<AgentExecutionActivity> OpenReader(
+        AgentExecutionOperationId operationId,
+        StreamSequence fromInclusive);
+}
+
 internal sealed partial class CurrentProfileAgentExecutionActivityReader(
     AgentExecutionActivityCoordinator reader,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
     IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
     IDatabaseSwitchNotificationService databaseSwitchNotificationService,
     ILogger<CurrentProfileAgentExecutionActivityReader> logger)
-    : IAgentExecutionActivityReader
+    : IAgentExecutionActivityReader,
+      ICurrentProfileAgentExecutionActivityReader
 {
+    public ISequencedStreamReader<AgentExecutionActivity> OpenReader(
+        AgentExecutionOperationId operationId,
+        StreamSequence fromInclusive)
+    {
+        var currentProfile = databaseProfileRuntimeAccessor.ResolveCurrentProfile();
+        var currentProfileGeneration = executionProfileGenerationSource.GetGeneration();
+        var streamId = new AgentExecutionActivityStreamId(
+            currentProfile.Profile.Id,
+            WorkspaceScopeDescriptor.Organization(currentProfile.Profile.Id.ToString("N")),
+            currentProfileGeneration,
+            operationId);
+        return OpenReader(streamId, fromInclusive);
+    }
+
     public ISequencedStreamReader<AgentExecutionActivity> OpenReader(
         AgentExecutionActivityStreamId streamId,
         StreamSequence fromInclusive)

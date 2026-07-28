@@ -16,11 +16,42 @@ public sealed class ApiAccessOptions
 
     public bool OpenApiEnabled { get; set; } = true;
 
+    public bool SwaggerUiEnabled { get; set; } = true;
+
+    public ApiServerSentEventsOptions ServerSentEvents { get; set; } = new();
+
     public ApiAuthorizationOptions Authorization { get; set; } = new();
 
     public static IReadOnlyList<string> Validate(ApiAccessOptions options)
     {
         var errors = new List<string>();
+        if (options.ServerSentEvents is null)
+        {
+            errors.Add("Api:ServerSentEvents configuration is required.");
+        }
+        else if (options.ServerSentEvents.ReplayCapacity <= 0)
+        {
+            errors.Add("Api:ServerSentEvents:ReplayCapacity must be greater than zero.");
+        }
+
+        if (options.ServerSentEvents is not null &&
+            options.ServerSentEvents.MaxBatchSize <= 0)
+        {
+            errors.Add("Api:ServerSentEvents:MaxBatchSize must be greater than zero.");
+        }
+
+        if (options.ServerSentEvents is not null &&
+            options.ServerSentEvents.MaxBatchSize > options.ServerSentEvents.ReplayCapacity)
+        {
+            errors.Add("Api:ServerSentEvents:MaxBatchSize cannot exceed ReplayCapacity.");
+        }
+
+        if (options.ServerSentEvents is not null &&
+            options.ServerSentEvents.HeartbeatIntervalSeconds <= 0)
+        {
+            errors.Add("Api:ServerSentEvents:HeartbeatIntervalSeconds must be greater than zero.");
+        }
+
         if (options.Authorization.DefaultTokenLifetimeMinutes <= 0)
         {
             errors.Add("Api:Authorization:DefaultTokenLifetimeMinutes must be greater than zero.");
@@ -61,6 +92,18 @@ public sealed class ApiAccessOptions
     }
 }
 
+public sealed class ApiServerSentEventsOptions
+{
+    public int ReplayCapacity { get; set; } = 1024;
+
+    public int MaxBatchSize { get; set; } = 128;
+
+    public int HeartbeatIntervalSeconds { get; set; } = 15;
+
+    [JsonIgnore]
+    public TimeSpan HeartbeatInterval => TimeSpan.FromSeconds(HeartbeatIntervalSeconds);
+}
+
 public sealed class ApiAuthorizationOptions
 {
     public bool Enabled { get; set; }
@@ -79,6 +122,7 @@ public sealed class ApiAuthorizationOptions
 public sealed record ApiAccessStatus(
     bool ApiEnabled,
     bool OpenApiEnabled,
+    bool SwaggerUiEnabled,
     bool AuthorizationEnabled,
     bool SigningKeyConfigured,
     string Issuer,
@@ -127,6 +171,7 @@ public sealed class ApiTokenService(
         return new ApiAccessStatus(
             value.Enabled,
             value.OpenApiEnabled,
+            value.SwaggerUiEnabled && value.OpenApiEnabled,
             value.Authorization.Enabled,
             !string.IsNullOrWhiteSpace(value.Authorization.SigningKey),
             value.Authorization.Issuer,
