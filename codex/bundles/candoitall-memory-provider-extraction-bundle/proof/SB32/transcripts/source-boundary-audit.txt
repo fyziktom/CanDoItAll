@@ -1,3 +1,0 @@
-SB32 source boundary audit passed.
-Generic memory tests do not import native Cognitive Memory, Qdrant, or SemanticCompletion driver namespaces.
-Generic memory source projects do not reference native Cognitive Memory, Qdrant, or SemanticCompletion driver namespaces.

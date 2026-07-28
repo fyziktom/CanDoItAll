@@ -1,5 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" Templates\Capabilities\skills\instructions\development-image-analysis.md Templates\Capabilities\skills.json Templates\Processes\processes\dotnet-ui-screenshot-writeback\definition.json tests\Unit\CanDoItAll.Tests.Unit\ProcessCapabilityScopeContractTests.cs
-Test: SB05 anti-stub audit
-Invariant: MAF-SB05-DEVELOPMENT-SKILL-SCOPE
-Output: no TODO, NotImplemented, or placeholder exception matches
-ExitCode: 1

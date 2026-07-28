@@ -1,3 +1,0 @@
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"codex-bundle-workflow","version":"1.0"}}}
-{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"code_analytics_snapshot_build","arguments":{"request":{"solutionPath":"C:\\repositories\\CanDoItAll\\CanDoItAll.slnx","forceRefresh":true,"includeDi":true,"includePersistence":false,"includeRisks":true,"includeXmlDocs":false,"includeMermaidExports":true,"scopeProjectNames":["CanDoItAll.Infrastructure","CanDoItAll.FileTools.Integration.Abstractions","CanDoItAll.FileTools.Integration","CanDoItAll.Composition"]}}}}

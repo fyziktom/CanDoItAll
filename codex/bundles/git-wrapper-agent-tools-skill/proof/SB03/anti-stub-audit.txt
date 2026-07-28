@@ -1,5 +1,0 @@
-Command:
-rg -n "TODO|throw new NotImplementedException|stub|placeholder" Templates/Capabilities/tools.json Templates/Capabilities/skills.json Templates/Capabilities/skills/instructions/git-standard-operations.md Templates/Agents/teams/dotnet-delivery/members/dotnet-application-developer/skills.json Templates/Agents/teams/dotnet-delivery/members/blazor-application-developer/skills.json Templates/Agents/teams/dotnet-delivery/members/dotnet-solution-architect/skills.json Templates/Agents/teams/javascript-delivery/members/javascript-application-developer/skills.json Templates/Agents/teams/javascript-delivery/members/javascript-solution-architect/skills.json Templates/Agents/teams/delivery-platform/members/programming-workspace-analyst/skills.json Templates/Agents/teams/delivery-platform/members/portfolio-architect/skills.json Templates/Agents/teams/delivery-platform/members/security-reviewer/skills.json Templates/Agents/teams/business-and-research/members/research-deep-dive-analyst/skills.json tests/CanDoItAll.Tests.Unit/CapabilityTemplateSeedMaterializationTests.cs
-
-Result:
-No matches. Exit code 1 from ripgrep means the scan found no matching lines.

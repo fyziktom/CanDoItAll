@@ -1,4 +1,0 @@
-Command: audit SB01 proof for placeholder-only diagnosis
-Exit code: 0
-Invariant: MTE-SB01-DIAGNOSIS
-Result: no stub diagnosis remains; report cites concrete run ids, failing step kinds, assigned roles, and the contract/readiness cause.

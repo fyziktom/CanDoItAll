@@ -1,6 +1,0 @@
-Command: dotnet build CanDoItAll.slnx -v minimal; dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --blame-hang --blame-hang-timeout 5m -v minimal; Invoke-WebRequest localhost:5032 -UseBasicParsing
-WorkingDirectory: repo://
-ExitCode: 0
-Invariant: SB05-FULL-RUNTIME-SMOKE
-Result: build passed, 1823 unit tests passed, and localhost:5032 returned HTTP 200.
-

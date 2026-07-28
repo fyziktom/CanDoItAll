@@ -1,3 +1,0 @@
-Command: SB30 host composition/source boundary audit
-RgExitCode: 1
-PASS: Base host, MAF, generic memory, and solution source have no forbidden native Cognitive Memory, Qdrant, or semantic projection driver references.

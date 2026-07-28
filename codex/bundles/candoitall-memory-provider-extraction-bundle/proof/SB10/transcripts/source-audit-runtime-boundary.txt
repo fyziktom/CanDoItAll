@@ -1,3 +1,0 @@
-Command: Historical SB10 proof transcript: source-audit-runtime-boundary.txt
-No generic memory runtime native/Qdrant/OpenAI dependency references found.
-ExitCode: 0

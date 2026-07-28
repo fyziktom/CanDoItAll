@@ -1,5 +1,0 @@
-Command: git diff --check
-ExitCode: 0
-Invariant IDs: SB01-I01
-Passing proof: whitespace validation passed with line-ending warnings only.
-Anti-stub audit: no stubs; runtime symbols were moved to focused collaborators and downstream build/test proof passed.

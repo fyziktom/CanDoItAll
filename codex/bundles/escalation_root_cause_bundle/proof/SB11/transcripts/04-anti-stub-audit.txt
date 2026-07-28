@@ -1,4 +1,0 @@
-Command: rg anti-stub audit for SB11 changed files
-Exit code: 0
-No stub markers found in SB11 changed source/test files.
-

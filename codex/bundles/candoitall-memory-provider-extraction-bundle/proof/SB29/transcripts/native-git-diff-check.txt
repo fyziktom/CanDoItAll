@@ -1,4 +1,0 @@
-Command: Historical SB29 proof transcript: native-git-diff-check.txt
-warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
-ExitCode: 0
-

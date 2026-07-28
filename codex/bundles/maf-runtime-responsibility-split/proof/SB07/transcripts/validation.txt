@@ -1,5 +1,0 @@
-Command: dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj --no-restore -p:BuildProjectReferences=false
-ExitCode: 0
-Invariant IDs: SB07-I01
-Passing proof: MAF build passed with advisory-source warnings and 0 errors; focused unit command passed 63 tests.
-Anti-stub audit: no stubs; MafAgentRuntime delegates to extracted collaborators and old helper partials were deleted.

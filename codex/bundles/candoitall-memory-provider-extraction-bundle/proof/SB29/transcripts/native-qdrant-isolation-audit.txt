@@ -1,3 +1,0 @@
-Command: rg -n -g *.cs -g *.csproj -g *.json -g !**/bin/** -g !**/obj/** "Qdrant|CanDoItAll\.AgentFramework\.Rag" C:\repositories\CanDoItAll.CognitiveMemory\src
-ExitCode: 1
-PASS: Native service/application/persistence/worker source has no Qdrant or CanDoItAll.AgentFramework.Rag references.

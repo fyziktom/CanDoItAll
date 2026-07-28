@@ -1,9 +1,0 @@
-{"kind":"sheet","id":"ws/ztlf1b","name":"Summary","index":0,"range":"A1:H13","address":"A1:H13"}
-{"kind":"sheet","id":"ws/4b7c5b","name":"Source Map","index":1,"range":"A1:H31","address":"A1:H31"}
-{"kind":"sheet","id":"ws/u860g3","name":"Project Targets","index":2,"range":"A1:G26","address":"A1:G26"}
-{"kind":"sheet","id":"ws/4m0ssr","name":"Subbundles","index":3,"range":"A1:H18","address":"A1:H18"}
-{"kind":"sheet","id":"ws/pore0d","name":"Executor Categories","index":4,"range":"A1:G16","address":"A1:G16"}
-{"kind":"sheet","id":"ws/oa3u20","name":"Plugin Consequences","index":5,"range":"A1:G15","address":"A1:G15"}
-{"kind":"sheet","id":"ws/vstvqb","name":"Validation Matrix","index":6,"range":"A1:G25","address":"A1:G25"}
-{"kind":"sheet","id":"ws/wskcpj","name":"Error States","index":7,"range":"A1:F18","address":"A1:F18"}
-{"kind":"sheet","id":"ws/kha1qj","name":"Performance Signals","index":8,"range":"A1:F13","address":"A1:F13"}

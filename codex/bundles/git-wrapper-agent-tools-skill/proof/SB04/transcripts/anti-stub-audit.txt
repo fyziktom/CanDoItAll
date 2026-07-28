@@ -1,3 +1,0 @@
-Command: rg -n "TODO|throw new NotImplementedException|stub|placeholder" codex/bundles/git-wrapper-agent-tools-skill/proof/SB04 codex/bundles/git-wrapper-agent-tools-skill/reviews/01-execution-report.md
-Result: No matches in SB04 closure proof scope; SB04 is process/non-production closure evidence and introduced no production stubs.
-Exit Code: 0

@@ -1,4 +1,0 @@
-Command: SB29 anti-stub audit
-ExitCode: 1
-PASS: SB29 touched files contain no TODO, NotImplemented, placeholder, stub, fake, or scaffold heartbeat markers.
-InvariantIds: SB29-CLOSURE

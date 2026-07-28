@@ -1,5 +1,0 @@
-Command: Historical SB27 proof transcript: anti-stub-audit.txt
-PASS: SB27 implementation/test files contain no TODO/stub/placeholder/NotImplementedException markers.
-ExitCode: 0
-
-InvariantIds: SB27-CLOSURE

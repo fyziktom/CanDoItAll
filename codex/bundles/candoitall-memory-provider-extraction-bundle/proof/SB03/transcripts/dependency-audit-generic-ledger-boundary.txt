@@ -1,7 +1,0 @@
-Command: Select-String -Path src\Memory\CanDoItAll.Memory.Abstractions\*.cs,src\Memory\CanDoItAll.Memory.Application\*.cs -Pattern CanDoItAll.Modules.CognitiveMemory|CognitiveMemorySignal|CognitiveMemoryProfessor|Qdrant|OpenAI|OpenAi|CanDoItAll.AgentFramework.Rag|AppDbContext|Microsoft.EntityFrameworkCore
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB03 generic ledger dependency audit
-Invariant IDs: SB03_LG001, SB03_LG002, SB03_LG003, SB03_LG004, SB03_LG005
-ExitCode: 0
-Output:
-No native Cognitive Memory, Qdrant, OpenAI, RAG, AppDbContext, or EF dependency references found in SB03 generic ledger paths.

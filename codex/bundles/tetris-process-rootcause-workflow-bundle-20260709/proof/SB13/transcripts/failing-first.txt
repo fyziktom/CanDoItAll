@@ -1,5 +1,0 @@
-SB13 failing-first invariant INV-SB13-001
-
-Pre-refactor source assertions found .NET lifecycle tool identifiers, software-delivery step keys, and subprocess contract mappings inside generic adapter/runtime-integration files. Moving those literals to a constants helper would still have failed the boundary invariant because generic services would retain the dependency.
-
-The corrective test contract required injected contributions/providers, explicit ambiguous-ownership failure, and unrelated-tool negative cases.

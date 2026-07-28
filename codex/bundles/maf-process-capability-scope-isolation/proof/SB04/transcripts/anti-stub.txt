@@ -1,5 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\AgentFrameworkProcessCapabilityScopeTranslator.cs src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\AgentFrameworkProcessExecutionAdapter.Metadata.cs src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionInvocationMetadata.cs src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs
-Test: SB04 anti-stub audit
-Invariant: MAF-SB04-RUNTIME-HANDOFF
-Output: no TODO, NotImplemented, or placeholder exception matches
-ExitCode: 1

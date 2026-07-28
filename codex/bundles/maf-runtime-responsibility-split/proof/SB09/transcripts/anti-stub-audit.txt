@@ -1,4 +1,0 @@
-Command: rg -n "TODO|HACK|NotImplementedException|throw new NotImplemented|MCP-UI-LOCAL-OK|MCP-LOCAL-OK|UI-SEND-LOCAL-OK" changed SB09 source/test files
-ExitCode: 0
-
-No placeholder/stub markers and no live-proof response markers found in changed source/test files.

@@ -1,7 +1,0 @@
-Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProcessCapabilityScopeContractTests|FullyQualifiedName~ProcessRuntimeIntegrationMetadataTests|FullyQualifiedName~ProcessRuntimeIntegrationAdapterTests" --logger "console;verbosity=minimal"
-ExitCode: 0
-Raw log: bundle://proof/
-SB03
-/transcripts/focused-tests.log
-Invariant ID: SB03-missing-proof-manager-retry
-Test name: Blocked_step_with_missing_process_receipt_gets_manager_retry_diagnostic

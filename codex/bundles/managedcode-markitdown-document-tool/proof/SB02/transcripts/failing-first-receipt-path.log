@@ -1,4 +1,0 @@
-Command: Playwright live 5032 E2E before bounded receipt filename fix
-Exit code: 1
-Invariant ID: SB02-INV-001
-Result: The first live conversion wrote markdown but failed while writing the receipt because the receipt filename embedded long source and output paths. This drove the bounded filename and hash repair in WorkspaceFileReceiptWriter.

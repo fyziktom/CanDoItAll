@@ -1,4 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\.artifacts\maf-runtime-phase2-proof-unit-post-factory\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:   151, Přeskočeno:     0, Celkem:   151, Doba trvání: 815 ms - CanDoItAll.Tests.Unit.dll (net10.0)

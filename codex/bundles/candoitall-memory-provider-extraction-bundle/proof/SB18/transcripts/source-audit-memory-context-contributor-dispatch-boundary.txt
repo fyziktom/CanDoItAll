@@ -1,7 +1,0 @@
-Command: rg "IMemoryOperationHandler|operationHandler\.|MemoryOperationRequestBuilder|IMemoryProviderRegistry|IMemoryProviderDriver|MemoryProviderRegistry|MemoryProviderDriver" src\Modules\CanDoItAll.Modules.AgentFramework\Context -n
-src\Modules\CanDoItAll.Modules.AgentFramework\Context\MemoryAgentContextContributor.cs:47:    IMemoryOperationHandler operationHandler,
-src\Modules\CanDoItAll.Modules.AgentFramework\Context\MemoryAgentContextContributor.cs:56:    private readonly IMemoryOperationHandler operationHandler = operationHandler;
-src\Modules\CanDoItAll.Modules.AgentFramework\Context\MemoryAgentContextContributor.cs:111:        var handlerRequest = MemoryOperationRequestBuilder.Query(
-src\Modules\CanDoItAll.Modules.AgentFramework\Context\MemoryAgentContextContributor.cs:116:        var result = await operationHandler.ExecuteQueryAsync(handlerRequest, cancellationToken).ConfigureAwait(false);
-rg exit code: 0
-Result: PASS - generic context contributor dispatches through IMemoryOperationHandler and request builder; no provider registry or driver references are present.

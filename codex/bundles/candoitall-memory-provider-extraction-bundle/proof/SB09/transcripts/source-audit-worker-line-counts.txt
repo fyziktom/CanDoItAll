@@ -1,3 +1,0 @@
-Command: Historical SB09 proof transcript: source-audit-worker-line-counts.txt
-No generic memory source files exceed 220 lines.
-ExitCode: 0

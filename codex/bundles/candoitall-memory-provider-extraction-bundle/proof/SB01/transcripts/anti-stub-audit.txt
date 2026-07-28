@@ -1,8 +1,0 @@
-Command: Select-String -Path src\Memory\CanDoItAll.Memory.Abstractions\*.cs,tests\Memory\CanDoItAll.Memory.Tests\*.cs -Pattern TODO,NotImplemented,throw new NotImplementedException,template-only,fixture-specific
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB01 anti-stub audit
-Invariant IDs: SB01_MP001, SB01_MP002, SB01_MP003, SB01_MP004, SB01_MP005, SB01_MP006
-ExitCode: 0
-Output:
-No TODO, NotImplemented, template-only, or fixture-specific markers found in SB01 production/test paths.
-InvariantIds: SB01-CLOSURE

@@ -1,8 +1,0 @@
-Šablona Samostatná aplikace Blazor WebAssembly se úspěšně vytvořila.
-Tato šablona obsahuje technologie jiných dodavatelů než Microsoftu, podrobnosti najdete tady: https://aka.ms/aspnetcore/10.0-third-party-notices
-
-Zpracovávají se akce po vytvoření...
-Obnovování C:\programovani\dotnet\calculator-output\src\Calculator\Calculator.csproj:
-  Zjišťují se projekty, které se mají obnovit...
-  Obnovil se projekt C:\programovani\dotnet\calculator-output\src\Calculator\Calculator.csproj (v 940 ms).
-Obnovení proběhlo úspěšně.

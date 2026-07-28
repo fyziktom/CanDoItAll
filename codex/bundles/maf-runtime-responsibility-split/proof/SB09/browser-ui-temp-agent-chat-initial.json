@@ -1,9 +1,0 @@
-{
-  "bodyStart": "CD\nCanDoItAll local delivery workbench\nchevron_right\ndashboard\nfolder_open\nforum\n90\ngroups\nsmart_toy\naccount_tree\naccount_tree\nexpand_less\nweb_asset\n1\nsettings\nSettings\nstorage\nSwitch Database\nDashboard\npush_pin\nAgents\nProjects\nQuotationPDFs Tests · Structure\nDELIVERY WORKSPACE\nAgents\nInteractive Server\nLive items 1\nTabs 4\n\nAGENTFRAMEWORK\n\nIntegrated technical agent runtime\n29 technical agents\n9 providers\n29 bound resources\n65 capabilities\n0 active runs\n329 failed runs\n?\nsync\nCLOUD SYNC\ngroups\nGROUPS\naccount_tree\nFLOW\naccount_tree\nFLOW\nOverview\nAgents29\nProviders9\nVoice\nChat\nCapabilities65\nGovernance0\nScenarios\nDiagnostics329\n\nAgent threads\n\n?\nSelected agent: SB09 UI Local Ollama MCP 20260704-191547\nsync\nSwitch Agent\nRefresh\nNew thread\n\nTHREADS\n\n0 of 0\n\nThe selected agent does not have a thread yet.\n\nIdle\n\nSelect or create a thread\n\nterminal\nRuntime details\n\nCONVERSATION\n\nNothing is open in the center panel\n\nChoose a thread from the left rail or create a new one to keep the active transcript in view.\n\nimage\nadd\nadd\nsend\nsend\nmic\nmic\nvolume_up\nvolume up\nhearing\nhearing",
-  "hasInput": true,
-  "hasSend": true,
-  "selected": "Selected agent: SB09 UI Local Ollama MCP 20260704-191547",
-  "sendDisabled": false,
-  "title": "Agents",
-  "url": "http://127.0.0.1:5032/agents?tab=chat&agentId=a22e9f8f-98de-4884-b4e7-995281f46f1b"
-}

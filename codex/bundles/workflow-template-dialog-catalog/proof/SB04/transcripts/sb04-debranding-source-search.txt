@@ -1,7 +1,0 @@
-COMMAND: rg -n "SEAMARK|Seamark|seamark|X-5600|X-6600|ZM-x5600|X Ray Machine Agent Quotation|Quotation List2018|\$35,000|\$41,500|\$66,000" Templates tests/CanDoItAll.Tests.Playwright tests/CanDoItAll.Tests.Components --glob '!**/bin/**' --glob '!**/obj/**'
-
-NOTE: tests/CanDoItAll.Tests.Unit/WorkflowTemplatePackLoaderTests.cs intentionally contains these strings as forbidden-term assertions and is covered by sb04-template-unit-tests.txt.
-EXIT CODE: 1
-RESULT: Passed; no branded or sensitive source terms found in shipped templates or UI-facing tests.
-Invariant ID: SB04-INV-001
-Invariant ID: SB04-INV-002

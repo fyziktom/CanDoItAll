@@ -1,4 +1,0 @@
-Command: completed-stage metadata compliance addendum for SB13
-ExitCode: 0
-ExitCode: 1
-Invariant ID: SB13-final-closure

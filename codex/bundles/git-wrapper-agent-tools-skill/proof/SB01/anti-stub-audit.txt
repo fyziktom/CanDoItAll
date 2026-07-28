@@ -1,5 +1,0 @@
-Command:
-rg -n "TODO|throw new NotImplementedException|return null;|return default;|stub|placeholder" src/CanDoItAll.Git tests/CanDoItAll.Tests.Unit/ProcessTemplateGitFoundationTests.cs
-
-Result:
-No matches. Exit code 1 from ripgrep means the scan found no matching lines.

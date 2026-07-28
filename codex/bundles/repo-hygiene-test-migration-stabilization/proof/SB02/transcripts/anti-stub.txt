@@ -1,6 +1,0 @@
-Command: Test-Path src/App/CanDoItAll.Web/CanDoItAll.Web.csproj; Test-Path src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj
-WorkingDirectory: repo://
-ExitCode: 0
-Invariant: SB02-RUNTIME-LAUNCH-WATCH
-Result: no fake fixture path was used; both referenced projects exist.
-

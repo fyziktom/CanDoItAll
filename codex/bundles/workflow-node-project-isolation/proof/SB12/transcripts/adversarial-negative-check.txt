@@ -1,7 +1,0 @@
-SB12 adversarial negative check
-Timestamp: 2026-06-29T19:38:09.7104707-04:00
-Working directory: C:\repositories\CanDoItAll
-Command 1: rg -n "@workflowEvent\.Message|Truncate\(workflowEvent\.Message|ToUserMessage\(workflowEvent\.Message\)" src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs
-Command 2: rg -n "Message = message|Summary = message|workflowEvent\.Message\)" src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs
-PASS: Raw workflow event messages are not used as the UI event display path, and Workbench failure summaries are not message-only assignments.
-Exit code: 0

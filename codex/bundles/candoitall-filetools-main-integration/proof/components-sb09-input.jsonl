@@ -1,4 +1,0 @@
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"codex-bundle-workflow","version":"1.0"}}}
-{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"components_libraries_list","arguments":{}}}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"components_recommend","arguments":{"useCase":"A desktop Blazor project files pilot that embeds the existing FileTools FileBrowser and FileInteraction components inside the CanDoItAll app shell, with one scroll owner and no custom replacement controls.","constraints":"Use existing CanDoItAll Components wrappers and styling; no mobile work; FileTools owns file browsing and interaction behavior; SB09 is readiness only and adds no UI.","limit":5}}}

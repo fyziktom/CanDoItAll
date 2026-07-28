@@ -1,4 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\maf-runtime-responsibility-split --profile initiative --stage completed --repo-root . --bundle-root codex\bundles\maf-runtime-responsibility-split
-ExitCode: 0
-
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\maf-runtime-responsibility-split

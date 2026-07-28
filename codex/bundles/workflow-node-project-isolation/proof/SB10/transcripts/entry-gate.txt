@@ -1,7 +1,0 @@
-# SB10 Entry Gate
-
-SB09 closure proof exists under codex/bundles/workflow-node-project-isolation/proof/SB09.
-SB09 prepared-stage validator transcript exists at proof/SB09/transcripts/prepared-validator.txt.
-SB10 prerequisite in subbundles/10-workflow-template-and-descriptor-loading/README.md is SB09 passed.
-
-Result: entry gate passed. SB10 implementation may proceed.

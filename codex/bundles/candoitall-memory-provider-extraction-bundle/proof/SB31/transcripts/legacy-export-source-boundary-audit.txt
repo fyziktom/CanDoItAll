@@ -1,5 +1,0 @@
-Legacy export source boundary audit
-Passed: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportContracts.cs
-Passed: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\LegacyCognitiveMemoryExportService.cs
-Passed: .\src\Foundation\CanDoItAll.Infrastructure\Persistence\PostgreSqlLegacyCognitiveMemoryDataReader.cs
-Production export source contains no native module/native service/Qdrant/SemanticCompletion references and no SQL write keywords.

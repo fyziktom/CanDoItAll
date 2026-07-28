@@ -1,4 +1,0 @@
-Command: dotnet test focused process-contract suite; dotnet build CanDoItAll.slnx; restart app on 5032; verify runtime, database, and launch/check
-Exit code: 0
-Invariant: MTE-SB04-E2E
-Observed pass: 125 focused tests passed, solution build passed with 0 warnings and 0 errors, runtime reported Development and ready, database was candoitall_development, and launch/check returned process.launch.readiness_ok.

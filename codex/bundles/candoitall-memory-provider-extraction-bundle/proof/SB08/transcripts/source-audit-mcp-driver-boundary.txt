@@ -1,7 +1,0 @@
-Command: rg -n CanDoItAll.Modules.CognitiveMemory|CognitiveMemory|Qdrant|OpenAI|OpenAi|CanDoItAll.AgentFramework.Rag|CanDoItAll.Infrastructure|AppDbContext|EntityFrameworkCore|CanDoItAll.AgentFramework.Mcp; src\Memory\CanDoItAll.Memory.Mcp
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB08 MCP driver dependency boundary audit
-ExitCode: 0
-Summary: MCP memory driver project contains no native memory, Qdrant, OpenAI, RAG, AppDbContext, Infrastructure, EF, or concrete MCP runtime dependency strings.
-Output:
-

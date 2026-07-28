@@ -1,4 +1,0 @@
-Command: rg "ConvertDocumentWithMarkItDown|BuildConvertDocumentWithMarkItDown|python -m markitdown|python.*markitdown" src tests
-Exit code: 1
-Invariant ID: SB02-INV-001
-Result: No old Python MarkItDown command path remains after the workspace tool wiring change.

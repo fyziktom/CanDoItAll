@@ -1,5 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" codex\bundles\maf-process-capability-scope-isolation\reviews\csharp-architecture-gate.md codex\bundles\maf-process-capability-scope-isolation\reviews\01-execution-report.md codex\bundles\maf-process-capability-scope-isolation\README.md
-Test: SB06 anti-stub audit
-Invariant: MAF-SB06-ARCHITECTURE-CLOSURE
-Output: no TODO, NotImplemented, or placeholder exception matches in closure artifacts
-ExitCode: 1

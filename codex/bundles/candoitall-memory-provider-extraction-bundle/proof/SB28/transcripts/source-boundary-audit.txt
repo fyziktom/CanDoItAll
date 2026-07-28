@@ -1,7 +1,0 @@
-Workdir: C:\repositories\CanDoItAll
-Started: 2026-07-05T20:38:17.5334887-04:00
-
-Command: rg -n -g "*.cs" -g "*.csproj" "CanDoItAll\.Modules\.AgentFramework|CanDoItAll\.Composition|CanDoItAll\.Web|AppDbContext|CanDoItAll\.Modules\." native MAF project
-No forbidden host Web, composition, AppDbContext, or main module implementation references found in native MAF production source/project files.
-
-ExitCode: 0

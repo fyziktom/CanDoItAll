@@ -1,6 +1,0 @@
-SB13 anti-stub audit
-
-PASS: domain literals were not merely moved to a generic constants/helper class.
-PASS: interfaces have multiple meaningful contributions/providers or establish a real domain boundary used by composition.
-PASS: ambiguous receipt ownership throws instead of silently selecting a fallback.
-PASS: unrelated tools and generic-only subprocess resolution are explicit red-team tests.

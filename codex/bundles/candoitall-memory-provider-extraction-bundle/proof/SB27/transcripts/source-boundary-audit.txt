@@ -1,4 +1,0 @@
-Command: Historical SB27 proof transcript: source-boundary-audit.txt
-PASS: native CognitiveMemory production source has no host Web/AppDbContext/module compile-time coupling for SB27.
-ExitCode: 0
-
