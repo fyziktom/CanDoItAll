@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "snapshot_sha": "59f558bc866d39d438b53f5f743dd5e87c2a6253",
+  "gates": [
+    {
+      "id": "A1",
+      "name": "Baseline and fixture gate",
+      "before": "Any MAF package edit",
+      "required": [
+        "Branch drift classified",
+        "Full MAF and optional-surface discovery complete",
+        "Resolved package graph and warning baseline captured",
+        "1.13 cross-version fixtures captured and hashed",
+        "File-tool inventory captured",
+        "Rollback state snapshot documented"
+      ],
+      "failure_action": "Stop before package edits"
+    },
+    {
+      "id": "A2",
+      "name": "Approval security and state gate",
+      "before": "Mutation-capable rollout",
+      "required": [
+        "Approval response binding proven active on every provider path",
+        "Initial mixed-approval parity behavior explicit",
+        "Per-ID decisions or strict one-request invariant proven",
+        "Random request-ID fallback removed",
+        "Native 1.15 restart continuation passes",
+        "Forged, substituted, replayed, and cross-session approvals fail closed",
+        "Legacy 1.13 pending approvals have a tested migration outcome",
+        "Attachment scrub preserves approval binding state"
+      ],
+      "failure_action": "Stop mutation-capable rollout"
+    },
+    {
+      "id": "A3",
+      "name": "Runtime semantics gate",
+      "before": "Workaround removal and deployment",
+      "required": [
+        "Full runtime returns authoritative terminal handoff output",
+        "Intermediate activity remains visible but is not machine output",
+        "Tool-call/result and reasoning/text ordering pass",
+        "Returned response and persisted history agree",
+        "Handoff depth enforcement remains effective",
+        "Session and workflow checkpoint cross-version outcomes are explicit",
+        "Session persistence failures are diagnosable",
+        "Required-finalizer semantics remain correct"
+      ],
+      "failure_action": "Do not remove runtime workarounds or deploy"
+    },
+    {
+      "id": "A4",
+      "name": "Final closure gate",
+      "before": "General rollout",
+      "required": [
+        "File and capability security regression passes",
+        "A2A smoke test passes",
+        "Resolved package graph contains one intended release train",
+        "Optional feature register is complete",
+        "Warning suppressions are narrowed and justified",
+        "Full build, tests, and real-provider validation pass",
+        "Canary and rollback rehearsal pass",
+        "Legacy approval bridge is disabled or has a dated removal plan",
+        "Execution report maps every requirement to proof"
+      ],
+      "failure_action": "Do not complete the migration"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+id,mechanism,decision,owner,proof
+W01,HandoffDepthGuardAgent RunCoreAsync stream remerge,Rewrite,SB04,Direct/full runtime fixture
+W02,Main runtime updates.ToAgentResponse,Keep then specialize workflow projection,SB04,Ordinary/workflow merge matrix
+W03,Snapshot sorting/grouping/ID transforms,Audit/remove only duplicate,SB01/SB04,Failing-first
+W04,Required finalizer,Keep,SB04/SB08,Typed output and sequence tests
+W05,Finalizer repair,Keep until isolated proof,SB04/SB08,Failure taxonomy
+W06,Process-local approval cache,Optimization only,SB03,Restart/multi-instance
+W07,Approval request rehydration,Rewrite for binding,SB03,Native/legacy/function/MCP
+W08,Random approval ID fallback,Remove,SB03,Missing ID fail closed
+W09,One bool for all approvals,Replace/constrain,SB03,Per-ID/mixed tests
+W10,Always-false approval replay hook,Remove or implement,SB05,Behavior/static proof
+W11,conversationId JSON sniff,Keep parity; refactor later,SB05,Cross-version matrix
+W12,5s serialization timeout,Keep,SB05,Timeout/cancel telemetry
+W13,Catch-all null persistence,Rewrite diagnostics,SB05,Failure categories
+W14,Attachment scrubber,Keep,SB03/SB05,Binding state survives
+W15,Governed step isolation,Keep,SB05,Process regression
+W16,Custom workspace tools,Keep,SB06,Security suite
+W17,Application tool policy,Keep,SB06,Governance suite
+W18,Unsupported approval transport filter,Keep,SB06,Provider matrix
+W19,AllowMultipleToolCalls false with approvals,Keep parity/reassess,SB03/SB08,Mixed calls
+W20,Broad MAF NoWarn,Narrow,SB02/SB07,Warning inventory
+W21,Checkpoint assembly workaround if found,Candidate remove,SB05,1.13 native resume
+W22,Custom reorder/dedupe if found,Candidate remove,SB04,Order/history proof
+W23,Custom approval substitution checks if found,Defense-in-depth review,SB03,Threat mapping
+W24,Immutable preparation snapshots,Keep,SB06/SB08,Concurrency/stale revision

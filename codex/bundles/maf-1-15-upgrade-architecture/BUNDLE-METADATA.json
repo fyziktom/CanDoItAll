@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "bundle_name": "maf-1-15-upgrade-architecture",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "agents-loading-refactor",
+  "snapshot_sha": "59f558bc866d39d438b53f5f743dd5e87c2a6253",
+  "target": {
+    "stable_maf": "1.15.0",
+    "a2a_preview": "1.15.0-preview.260722.1"
+  },
+  "prepared_on": "2026-07-27",
+  "implementation_status": "not_started",
+  "subbundles": 8,
+  "requirements": 22,
+  "migration_tasks": 15
+}

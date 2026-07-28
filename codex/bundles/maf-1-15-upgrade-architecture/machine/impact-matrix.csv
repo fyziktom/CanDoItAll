@@ -1,0 +1,19 @@
+id,priority,area,impact,action,owner,confidence
+I01,P0,Approval binding state,1.13 pending session has no 1.15 binding state,Reissue or controlled trusted bridge; never disable binding,SB03,Confirmed
+I02,P0,Mixed approval default,Bypass changes from opt-in/off to default/on,"Disable explicitly for parity, adopt later",SB02/SB03,Confirmed
+I03,P0,Handoff terminal output,Custom wrapper/full stream remerge can bypass non-streaming fix,Characterize and add authoritative terminal projection,SB04,Confirmed
+I04,P0,Message ordering,Separate application merge can reintroduce workflow ordering defects,Audit snapshot/merge and test response plus history,SB04,Confirmed
+I05,P0,Session scrub,New StateBag approval data may be lost if scrubber is broad,Serialize/scrub/restore/approve test,SB03/SB05,High
+I06,P0,Approval ID fallback,Random fallback incompatible with exact binding,Fail closed,SB03,Confirmed
+I07,P0,Batch decisions,One bool for all pending approvals,Per-ID decisions,SB03,Confirmed
+I08,P1,A2A preview,Direct package and host registration,Exact matching preview and smoke,SB02/SB07,Confirmed
+I09,P1,Workflow checkpoint type identity,Custom bridge registered; native envelope unknown,Trace and cross-version fixture,SB05,Inference
+I10,P1,FileAccess opt-in,Custom FileTools unaffected unless hidden Harness path,Full grep; no replacement,SB01/SB06,Confirmed/Discovery
+I11,P1,Warning suppression,Broad MAAI suppression may hide changed API status,Unsuppressed inventory and narrow,SB02/SB07,Confirmed
+I12,P1,Session diagnostics,Catch-all null hides migration failures,"Typed diagnostics, retain timeout",SB05,Confirmed
+I13,P2,MEAI 10.8 vs upstream 10.6,Actual merge behavior may differ,Do not downgrade; test resolved version,SB02/SB04,Confirmed
+I14,P2,ToolApprovalAgent stable,No confirmed use,Grep/defer optional adoption,SB07,Discovery
+I15,P2,AG-UI split,No confirmed use,Grep; migrate only if active,SB07,Discovery
+I16,P2,Declarative autoSend,No confirmed use,Grep; test only if active,SB07,Discovery
+I17,P3,FileMemory/Harness,Potential future scratch/harness use,Separate architecture bundle,Future,Optional
+I18,P3,OpenAI Responses hosting,Not provider polling replacement,Defer hosting redesign,Future,Confirmed distinction
