@@ -1,6 +1,8 @@
 # CanDoItAll C# Architecture Skills Package
 
-This package contains a Codex skill suite for high-quality C# architecture design, modular refactoring, project-boundary extraction, provider/tool isolation, and bundle-time architecture gates.
+This directory documents C# architecture assets retained in the checked-in compatibility mirror. Canonical CanDoItAll skills are maintained in `CanDoItAll.SharedInfo`; see [Codex skills](../README.md) for ownership and installation. Do not copy this mirror into another active skill root.
+
+The package covers high-quality C# architecture design, modular refactoring, project-boundary extraction, provider/tool isolation, and bundle-time architecture gates.
 
 The package is designed for repositories that have grown into large runtime classes, broad partial-class files, scattered tool/provider definitions, cyclic reference pressure, and hard-to-test orchestration logic. It is intentionally strict: a partial class is not treated as a module boundary, a nested class is not treated as a separate component, and a large facade is not treated as an architecture improvement.
 
@@ -17,25 +19,9 @@ The package is designed for repositories that have grown into large runtime clas
 - Integration snippets for existing CanDoItAll bundle preparation, execution, bundle validator, and subbundle validator skills.
 - Example refactoring playbooks and templates that can be copied into new bundles.
 
-## Recommended install location
+## Installation
 
-Copy the contents of `codex/skills/` into the repository's active skill root:
-
-```text
-<repo>/codex/skills/
-```
-
-The bundle guard can be installed as:
-
-```text
-<repo>/codex/skills/bundles/candoitall-csharp-architecture-bundle-guard/SKILL.md
-```
-
-Keep the shared references folder together with the skills:
-
-```text
-<repo>/codex/skills/_csharp-architecture-shared/
-```
+Use the repository installer described in [Codex skills](../README.md). It delegates CanDoItAll skill installation to the canonical `CanDoItAll.SharedInfo` installer and preserves required shared resources and bundle guards together.
 
 ## Core operating rule
 

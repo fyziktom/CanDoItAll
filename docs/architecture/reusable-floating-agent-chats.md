@@ -7,9 +7,9 @@ The current typed activity, preparation, provider-snapshot, and module-runtime-s
 contract is maintained in
 [Agent execution activity and runtime snapshots](agent-execution-activity-and-runtime-snapshots.md).
 
-## Context
+## Original Context
 
-The Project Structure canvas has a useful contextual agent catalog and chat, but the implementation is mounted inside `CanvasWorkbench.OverlayContent`. It is consequently bounded by the Canvas tab and is destroyed when the user switches to Gantt or navigates to another module. The same component also combines catalog filtering, access resolution, window state, durable chat sessions, run execution, approvals, attachments, history export, voice, runtime diagnostics, and module-specific prompt construction in one 1,550-line Razor file.
+Before this decision was implemented, the Project Structure canvas had a contextual agent catalog and chat mounted inside `CanvasWorkbench.OverlayContent`. It was consequently bounded by the Canvas tab and was destroyed when the user switched to Gantt or navigated to another module. The component also combined catalog filtering, access resolution, window state, durable chat sessions, run execution, approvals, attachments, history export, voice, runtime diagnostics, and module-specific prompt construction in one large Razor file.
 
 The required behavior has three independent axes:
 
@@ -130,7 +130,7 @@ Successful mutation-capable runs publish a typed completion notification contain
 
 ## Current user-position propagation extension
 
-Status: Accepted for implementation, 2026-07-17
+Status: Implemented; extension accepted 2026-07-17.
 
 The first implementation proves that a conversation can move between Project Structure, Projects, and CRM. It does not yet describe the user's position consistently across the shell and feature modules. The architectural scan in CodeAnalytics snapshot `snap-20260717142824-88cfa7be` found the context registry in Core with a high fan-in and confirmed that the requested feature modules can depend on Core without a reverse dependency from Core to a module. Source inspection found these distinct responsibilities:
 

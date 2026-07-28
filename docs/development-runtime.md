@@ -1,63 +1,99 @@
 # Development Runtime
 
-The default local runtime is PostgreSQL-first. Visual Studio `http` and `https` launch profiles, plus `appsettings.Development.json`, point at:
+The supported application runtime uses PostgreSQL. The default `http` and `https` launch profiles and `appsettings.Development.json` use:
 
 ```text
 Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true
 ```
 
-Development workspace and control-plane files resolve to `%LOCALAPPDATA%\CanDoItAll\workspace` and `%LOCALAPPDATA%\CanDoItAll\control-plane`. They should not depend on repo `.artifacts` folders.
+The InMemory database driver exists for tests only. SQLite profiles are retired and are rejected instead of being silently reactivated.
 
 ## Prepare PostgreSQL
 
-For the repo-managed containers on a clean machine:
+Start the repository-managed service from the repository root:
 
 ```powershell
-docker compose up -d postgres qdrant
+docker compose up -d postgres
+docker compose ps postgres
 ```
 
-The compose services expose PostgreSQL on `127.0.0.1:5432`, Qdrant HTTP on `localhost:6333`, and Qdrant gRPC on `localhost:6334`. The PostgreSQL service uses database `candoitall_development`, role `candoitall`, and password `candoitall`.
-
-Check container health:
-
-```powershell
-docker compose ps
-```
+The service publishes host port `5432` and uses the database, role, and development password shown above. The checked-in Compose mapping is not restricted to loopback; use it only on a trusted development host and restrict the binding before joining an untrusted network.
 
 For a native PostgreSQL service:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\dev\Ensure-DevelopmentPostgres.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\dev\Ensure-DevelopmentPostgres.ps1
 ```
 
-The script creates or updates the `candoitall` role and ensures the `candoitall_development` database exists. If your local PostgreSQL admin login is not `postgres/postgres`, pass `-AdminUsername`, `-AdminPassword`, `-AdminHost`, or `-AdminPort`.
+The script ensures the `candoitall` role and `candoitall_development` database exist. Supply its `-AdminUsername`, `-AdminPassword`, `-AdminHost`, or `-AdminPort` parameters when the local administrator connection differs from the script defaults.
 
-## Run From Visual Studio
+The checked-in credentials are for local development only. Do not expose these credentials or the checked-in port bindings. Use secret-backed configuration and enable API authorization before running in any shared environment.
 
-Start `CanDoItAll.Web` with the default `http` or `https` profile. Startup applies PostgreSQL EF migrations and initializes the runtime schemas. The first launch against an empty database can take a few minutes while migrations and seed data are applied. Confirm startup with:
+## Run The Host
+
+```powershell
+dotnet run --project .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
+```
+
+Open `http://localhost:5032`. Startup applies the PostgreSQL migrations and initializes runtime data. A first launch against an empty database can take longer while migrations and seed data run.
+
+Confirm readiness at:
 
 ```text
 http://localhost:5032/_dev/runtime
 http://localhost:5032/_dev/database/selection
 ```
 
-The database selection endpoint should report provider `PostgreSql` and database `candoitall_development`.
+The database-selection endpoint should report provider `PostgreSql` and database `candoitall_development`.
+
+## Local State
+
+The default development roots are:
+
+```text
+%LOCALAPPDATA%\CanDoItAll\workspace
+%LOCALAPPDATA%\CanDoItAll\control-plane
+```
+
+Override them with `Storage__WorkspaceRoot` and `ControlPlane__RootPath`. Keep machine-specific state, credentials, and generated artifacts outside Git.
+
+An explicit connection override uses the normal .NET configuration keys:
+
+```powershell
+$env:Database__Provider = "PostgreSql"
+$env:Database__ConnectionString = "<secret-backed PostgreSQL connection string>"
+dotnet run --project .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
+```
+
+Do not commit the connection string or include it in diagnostic output.
+
+## Memory Defaults
+
+The base host composes the provider-neutral Memory subsystem. These provider drivers can be registered through configuration but are disabled by default:
+
+- deterministic mock
+- HTTP
+- native remote
+- MCP
+
+Memory background workers are also disabled by default. Enabling a provider or worker is an explicit environment-specific decision; a missing provider must fail predictably rather than falling back to another provider.
+
+The legacy `/api/cognitive-memory` surface is not a Memory provider API. Its contract endpoint reports retirement, and legacy operations return `410 Gone`.
 
 ## Qdrant
 
-Qdrant is configured in `src\App\CanDoItAll.Web\appsettings.json` at `localhost:6334` with collection `candoitall-knowledge`, vector size `384`, cosine distance, and create-collection-if-missing enabled. It is needed for Cognitive Memory projection and vector recall validation. It is not authoritative storage; PostgreSQL remains the durable AppDbContext profile.
-
-If the local vector index becomes disposable during development, reset only the container-backed Qdrant volume with:
+Qdrant is not configured or required by the base host. The `qdrant` Compose service remains only for optional external-provider or legacy integration work:
 
 ```powershell
-docker compose stop qdrant
-docker compose rm -f qdrant
-docker volume rm candoitall_qdrant_data
 docker compose up -d qdrant
 ```
 
-Use that reset only for local development data. It deletes the Qdrant collection storage.
+Starting that service alone does not enable a Memory provider. Follow the owning provider repository's configuration and data-lifecycle documentation. PostgreSQL remains the authoritative application database.
 
-## Main Runtime Database Status
+## Troubleshooting
 
-The main CanDoItAll runtime is PostgreSQL-only. Legacy local profile catalog entries that reference SQLite are rejected with an explicit unsupported-provider message instead of being silently reactivated. Snapshot export and restore are deferred until they can be reintroduced as a portable package workflow outside the main AppDbContext provider contract.
+- If startup cannot connect, run `docker compose ps postgres` and inspect `docker compose logs postgres`.
+- If the selection endpoint reports anything other than PostgreSQL, check launch-profile and environment overrides.
+- If a retired SQLite profile exists in local control-plane data, replace it with a PostgreSQL profile; there is no SQLite fallback.
+- If Memory tools are absent, verify that the intended provider and its authorization policy are explicitly enabled.
+- If a clean checkout behaves differently from an existing machine, compare environment variables and the two `%LOCALAPPDATA%` roots before changing repository configuration.

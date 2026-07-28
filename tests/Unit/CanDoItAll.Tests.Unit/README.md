@@ -2,7 +2,20 @@
 
 ## Purpose
 
-Test project for the corresponding CanDoItAll runtime, module, component, or integration behavior. MCP-specific tests live in the sibling `CanDoItAll.Mcp` repository.
+Broad unit and architecture-regression suite for the repository. MCP-specific tests live
+in the sibling `CanDoItAll.Mcp` repository.
+
+## Prerequisites
+
+The unit project retains compatibility coverage that references two sibling source
+repositories. Clone them beside this repository before restoring or running the project:
+
+```text
+<parent>\
+  CanDoItAll\
+  CanDoItAll.AgentFramework.Rag\
+  CanDoItAll.AgentFramework.SemanticCompletion\
+```
 
 ## Project Type
 
@@ -14,31 +27,9 @@ Test project for the corresponding CanDoItAll runtime, module, component, or int
 dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj`
-- `../../src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../../src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../../src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
-- `../../tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `coverlet.collector (6.0.4)`
-- `Microsoft.NET.Test.Sdk (17.14.1)`
-- `xunit (2.9.3)`
-- `xunit.runner.visualstudio (3.1.4)`
-- `CanDoItAll.Components.WebGlLib (0.1.0)`
+The authoritative project and package dependency list is in [CanDoItAll.Tests.Unit.csproj](CanDoItAll.Tests.Unit.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

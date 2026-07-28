@@ -1,196 +1,179 @@
-# CanDoItAll Architecture Beta
+# CanDoItAll Architecture (Beta)
 
-Last source review: 2026-06-25.
+Last source review: 2026-07-28.
 
-This page is the broad current architecture overview. For source-level details around process runtime, Microsoft Agent Framework, providers, and the next hardening roadmap, read [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md).
+CanDoItAll is a local-first .NET 10 Blazor Web App. The base host composes product modules, PostgreSQL persistence, HTTP APIs, the provider-neutral Memory subsystem, Microsoft Agent Framework (MAF), and selected development integrations.
 
-## Current Shape
+The durable boundary rule is: domain and application services own behavior; Blazor components, HTTP endpoints, runtime tools, and MCP sidecars adapt that behavior. They must not become parallel implementations.
 
-CanDoItAll is a local-first .NET 10 Blazor Web App. The web host composes product modules, infrastructure, shared components, database profile control, HTTP APIs, selected development MCP sidecars, and an AgentFramework-backed AI execution runtime.
-
-The important architecture rule is still simple: product semantics live in modules and application services. HTTP APIs, Blazor components, runtime tools, and MCP sidecars expose those semantics; they must not become competing implementations.
-
-Primary source references:
-
-- [`src/App/CanDoItAll.Web/Program.cs`](../src/App/CanDoItAll.Web/Program.cs)
-- [`src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs)
-- [`src/App/CanDoItAll.Web/Api/ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
-- [`src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs)
-- [`src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`](../src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs)
-- [`src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs)
-- [`src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`](../src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs)
-- [`src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`](../src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs)
-- [`src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs)
-- [`src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs`](../src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs)
-- [`src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs`](../src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs)
-- [`src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs)
-- [`src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs)
-- [`src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`](../src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs)
-
-## Architecture Overview
+## System Shape
 
 ```mermaid
 flowchart LR
-    Browser["Blazor browser"] --> Web["CanDoItAll.Web"]
-    Agent["AI or automation client"] --> Api["HTTP API control plane"]
-    Agent --> Mcp["Selected local MCP sidecars"]
+    Browser["Blazor client"] --> Web["CanDoItAll.Web"]
+    Automation["Operator or automation client"] --> Api["HTTP API"]
+    Development["Development tools"] --> Mcp["Selected MCP sidecars"]
 
     Api --> Web
+    Mcp --> DevSurfaces["Repository development surfaces"]
+    Mcp --> DotNetWatch["DotNetWatch"]
+    DotNetWatch -. supervises .-> Web
     Web --> Composition["Composition root"]
     Composition --> Infrastructure["Infrastructure"]
-    Composition --> Modules["Runtime modules"]
+    Composition --> Modules["Product modules"]
 
-    Modules --> Processes["Processes module"]
-    Modules --> Workbench["Projects and workbench"]
-    Modules --> AgentModule["AgentFramework module"]
-    Modules --> Memory["Cognitive Memory"]
-    Modules --> OtherModules["Security, workspace, plugins, prompts, scheduler, CRM/HR"]
+    Modules --> Workbench["Projects and Workbench"]
+    Modules --> Processes["Processes"]
+    Modules --> Agents["AgentFramework"]
+    Modules --> Memory["Generic Memory"]
+    Modules --> Other["Prompts, workflows, scheduler, plugins, CRM/HR, security"]
 
-    Processes --> ProcessLibraries["CanDoItAll.Processes.*"]
-    Processes --> AgentModule
+    Processes --> ProcessCore["CanDoItAll.Processes.*"]
+    Processes --> Agents
     Workbench --> Processes
-    AgentModule --> AgentCore["AgentFramework core"]
-    AgentCore --> Maf["MAF adapter"]
-    Maf --> ProviderRuntime["Provider runtime"]
-    Maf --> RuntimeTools["Built-in, project-structure, image, skill, MCP, and provider-native tools"]
+    Agents --> Maf["MAF 1.15 adapter"]
+    Maf --> Providers["OpenAI, Azure OpenAI, Ollama, ComfyUI"]
+    Maf --> Tools["Built-in and registered runtime tools"]
 
-    Infrastructure --> AppDb[("Active AppDbContext profile")]
-    Infrastructure --> ControlPlane[("Control-plane files")]
-    AgentCore --> WorkspaceFiles[("Agent workspace files")]
-    Processes --> ProcessDb[("Process EF stores and projections")]
+    Infrastructure --> Postgres[("PostgreSQL")]
+    Infrastructure --> ControlPlane[("Local control-plane files")]
+    Agents --> Workspace[("Agent workspace and artifacts")]
 ```
 
-## Module Boundaries
+## Composition And Ownership
 
-| Area | Responsibility |
+The active module list is defined by [`ModuleAssemblies.cs`](../src/App/CanDoItAll.Composition/ModuleAssemblies.cs) and registered by [`RuntimeHostServiceCollectionExtensions.cs`](../src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs).
+
+| Area | Owns |
 | --- | --- |
-| `CanDoItAll.Web` | Blazor host, minimal APIs, route mapping, OpenAPI, development endpoints, managed file routes, health/readiness. |
-| `CanDoItAll.Composition` | Runtime module registration, OpenAI credential promotion, Qdrant RAG wiring, database bootstrap/switching. |
-| `CanDoItAll.Infrastructure` | AppDbContext factory, control plane, profile runtime, storage, search, managed files, DataProtection, readiness. |
-| `CanDoItAll.Processes.*` | Generic process ids, graph/kernel contracts, builder/compiler, runtime engine/scheduler/dispatcher, EF stores, projections, templates, application services, driver abstractions. |
-| `CanDoItAll.Modules.Processes` | Process DI, Blazor process workspace, AgentFramework process execution adapter, launch/dispatch queue workers, process shell navigation. |
-| `CanDoItAll.Modules.Workbench` | Project structure UI/API/services and current project-structure runtime tools, including process definition link/start and subprocess launch tools. |
-| `CanDoItAll.Modules.AgentFramework` | Current-profile AgentFramework facade, provider runtime gateway for workspace APIs, catalog repair/warmup, image-generation runtime tools. |
-| `CanDoItAll.AgentFramework.Core` | Provider-neutral catalog, execution service, workspace file/command/artifact services, tool policy, output contracts, telemetry. |
-| `CanDoItAll.AgentFramework.Maf` | Microsoft Agent Framework runtime adapter, capability composition, provider dispatch, MCP/A2A/workflow integration, structured output/finalizer handling. |
-| `CanDoItAll.AgentFramework.Providers` | Provider driver contracts, runtime handles, dispatch lane gates, batching, concrete provider driver registry support. |
-| `CanDoItAll.AppComponents` and `CanDoItAll.Components.*` | Shared Blazor shell, UI primitives, canvas, overlays, charts, Git/WebGL components. |
-| Sibling `CanDoItAll.Mcp` repo | Development sidecars such as code analytics, components, dotnet watch, Mermaid, SSH, and local runtime helpers. |
+| `CanDoItAll.Web` | Blazor host, endpoint mapping, OpenAPI, readiness, health, and managed-file routes. |
+| `CanDoItAll.Composition` | Module registration, active database bootstrap, managed provider seeding, and generic Memory driver selection. |
+| `CanDoItAll.Infrastructure` | Database profiles, `AppDbContext`, control-plane state, secrets, managed files, and runtime readiness. |
+| `CanDoItAll.Modules.Workbench` | Project Structure UI/application boundary, API adapter, runtime tools, and process/workflow node bridges. |
+| `CanDoItAll.Processes.*` | Process identifiers, definitions, compiler, runtime engine, persistence, projections, run records, and application services. |
+| `CanDoItAll.Modules.Processes` | Process UI, DI, launch/dispatch workers, AgentFramework execution adapter, recovery, and operator integration. |
+| `CanDoItAll.AgentFramework.*` | Provider-neutral agent models/runtime contracts, MAF adapter, provider drivers, workflows, memory integration, tools, telemetry, and persistence. |
+| `CanDoItAll.Memory.*` and `CanDoItAll.Modules.Memory` | Generic memory contracts, provider profiles/drivers, persistence/workers, runtime tools, and `/memory` UI. |
+| Other product modules | Projects, prompts, plugins, scheduler, collaboration, CRM/HR, resources, security, workspace, and test-lab behavior. |
+| `CanDoItAll.AppComponents` | Product-facing component facade over shared component packages. Shared component source remains in the sibling `CanDoItAll.Components` repository. |
 
-## Runtime Startup
+The legacy `CanDoItAll.Modules.CognitiveMemory` project is not part of the base-host composition. The compatibility HTTP surface is retired; native Cognitive Memory is an explicit remote-provider integration.
+
+## Startup
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Host as Web host
     participant Infra as Infrastructure
-    participant Composition as Composition root
-    participant Db as Runtime database profile
-    participant Readiness as Runtime readiness
+    participant Modules as Product modules
+    participant Db as Active database profile
+    participant Runtime as Runtime readiness
 
-    Host->>Host: Build Blazor web app and API services
-    Host->>Infra: Register infrastructure and profile-aware DbContext services
-    Host->>Composition: Register runtime database switching
-    Host->>Composition: Register product modules
-    Composition->>Composition: Promote configured OPENAI_API_KEY when present
-    Composition->>Db: Ensure active profile schema and provider bootstrap
-    Host->>Host: Map APIs, Razor components, managed files, health, and dev endpoints
-    Host->>Readiness: Mark runtime ready after profile bootstrap
+    Host->>Infra: Register profile-aware persistence
+    Host->>Modules: Register product modules
+    Host->>Db: Apply PostgreSQL migrations
+    Host->>Db: Repair managed provider seeds
+    Host->>Host: Map APIs, Blazor, files, health, and OpenAPI
+    Host->>Runtime: Mark ready after profile bootstrap
 ```
 
-`/_dev/runtime` is the local readiness and diagnostics endpoint. API status starts at `GET /api/access/status`.
+`GET /_dev/runtime` is the local diagnostics/readiness endpoint. `GET /api/access/status` reports API access configuration.
+
+## Persistence
+
+PostgreSQL is the supported runtime database. The InMemory driver exists for tests. SQLite runtime profiles and migrations are retired and must not be reintroduced through documentation or fallback logic.
+
+The system separates:
+
+- PostgreSQL state: module data, process state/events, projections, run records, provider profiles, and other EF-managed state.
+- Local control-plane/workspace state: profile metadata, Data Protection keys, agent workspace files, artifacts, receipts, and local tool output.
+
+Switching the selected database profile is restart-bound. A successful profile selection does not mutate the current process into the new canonical profile.
 
 ## Process Runtime
 
-The current process implementation uses the rebuilt `CanDoItAll.Processes.*` libraries and module adapter, not the older `ProcessesService`/outbox-dispatch architecture from historical docs.
-
-Current process flow:
+[`ProcessLaunchApplicationService`](../src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs) prepares and persists a compiled launch. [`ProcessRuntimeDispatchApplicationService`](../src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs) claims ready work and delegates AgentFramework steps through [`AgentFrameworkProcessExecutionAdapter`](../src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.cs).
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Caller as UI/API/project-structure tool
-    participant Launch as ProcessLaunchApplicationService
-    participant Stores as Process EF stores
-    participant Queue as ProcessRuntimeDispatchQueue
-    participant Dispatch as ProcessRuntimeDispatchApplicationService
-    participant Runtime as ProcessRuntimeEngine
-    participant Adapter as AgentFrameworkProcessExecutionAdapter
-    participant MAF as MafAgentRuntime
-    participant Provider as Provider runtime
-    participant Projection as Process projections
+    participant Caller as UI, API, or Project Structure
+    participant Launch as Launch service
+    participant Store as PostgreSQL stores
+    participant Queue as Local dispatch queue
+    participant Dispatch as Dispatch service
+    participant Engine as Process runtime engine
+    participant Agent as AgentFramework adapter
+    participant Projection as Projections and run records
 
-    Caller->>Launch: LaunchAsync(request)
-    Launch->>Launch: Load template, build kernel, compile plan
-    Launch->>Stores: Persist plan, run state, assignments, artifact root
-    Launch->>Runtime: Activate and schedule ready steps
-    Launch->>Projection: Catch up projections
-    Launch->>Queue: Enqueue when Execute=true
-    Queue->>Dispatch: ExecuteReadyAsync(run id)
-    Dispatch->>Runtime: Claim ready work and submit strategy results
-    Dispatch->>Adapter: Execute process strategy
-    Adapter->>MAF: Run assigned AgentFramework agent
-    MAF->>Provider: Dispatch model/tool work
-    Provider-->>MAF: Response, usage, provider failures when any
-    MAF-->>Adapter: Agent runtime result
-    Adapter-->>Dispatch: Strategy result
-    Dispatch->>Runtime: Commit result and schedule next work
+    Caller->>Launch: Preview or launch
+    Launch->>Store: Persist plan, run, assignments, and events
+    Launch->>Engine: Activate and schedule ready steps
+    Launch->>Queue: Enqueue when execute=true
+    Queue->>Dispatch: Execute ready work
+    Dispatch->>Engine: Claim step
+    Dispatch->>Agent: Execute governed strategy
+    Agent-->>Dispatch: Result and evidence
+    Dispatch->>Engine: Commit outcome and schedule successors
     Dispatch->>Projection: Catch up projections
 ```
 
-The active `/api/processes` route set is contract, launch, dispatch, cancel, rework, live, run detail, and run history. See [API control plane](api-control-plane.md).
+The dispatch queue is bounded and process-local; process state and run records are durable. Recovery scans reconcile persisted active work. See the [process operator runbook](process-agent-operator-runbook.md) for current defaults and routes.
 
 ## MAF And Runtime Tools
 
-MAF composes runtime capabilities through `MafAgentRuntime`. It attaches built-in tools, skills, MCP/A2A capabilities, context contributions, provider-native capabilities, and registered `IAgentRuntimeToolProvider` implementations.
+Package versions are centralized in [`MicrosoftAgentFramework.Packages.props`](../src/MAF/MicrosoftAgentFramework.Packages.props):
 
-Current first-party runtime tool providers:
+- stable: `1.15.0`
+- preview: `1.15.0-preview.260722.1`
 
-- `ProjectStructureAgentRuntimeToolProvider` from Workbench.
-- `ImageGenerationAgentRuntimeToolProvider` from AgentFramework module.
+[`MafAgentRuntime`](../src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs) builds execution sessions and delegates capability composition to the runtime capability components. Current first-party `IAgentRuntimeToolProvider` implementations cover:
 
-There is no current concrete process runtime tool provider in `CanDoItAll.Modules.Processes`. Process operations currently flow through `/api/processes` and project-structure bridge tools. If direct process tools are reintroduced, they need an explicit provider, typed models, tool policy classification, approval behavior, and tests.
+- Memory
+- Project Structure
+- Image Generation
+- Workflow
+- Prompt Gallery
+- Prompts Curator
+- Workflow Curator
+- Capability Curator
+- HR
+- Scheduler
 
-## Provider Runtime
+Registration does not grant access. Attachment is filtered by execution purpose, capability assignment, agent permissions, scope, and tool invocation policy. See [Agent runtime tool surface](agent-runtime-tool-surface.md).
 
-Provider runtime services are registered by `AddMafProviderRuntimeServices`. Current provider execution uses:
+## Provider Runtime And Bootstrap
 
-- provider descriptor store/source
-- credential resolver
-- concrete driver registry for OpenAI, Azure OpenAI, Ollama, and ComfyUI
-- HTTP client pool
-- runtime handle factory and pool
-- dispatch lane gate and streaming gate
-- batch balancer
-- provider image-generation service
-- provider health/test-chat/image-chat/model-maintenance gateway
+The concrete AI provider drivers are OpenAI, Azure OpenAI, Ollama, and ComfyUI. Runtime handles are pooled by provider descriptor; profile revisions and dispatch lane gates constrain reuse and concurrency. Provider errors are normalized into quota/billing, rate-limit, and general provider failures with redacted diagnostics.
 
-Provider failures are classified into quota/billing, rate limit, or provider error with redacted details before they reach users and execution records.
+Database bootstrap normalizes the managed OpenAI chat profiles and seeds missing catalog profiles for OpenAI image generation (`gpt-image-1-mini`), local ComfyUI Flux (`flux1-dev.safetensors`), and local Ollama (`llama3.1`). Credentials remain environment- or secret-backed; bootstrap does not put raw credentials into tracked configuration.
 
-## Persistence And Control Plane
+See [Provider capability and pricing](provider-capability-and-pricing.md).
 
-CanDoItAll uses two persistence concepts:
+## Generic Memory
 
-- Active application database profile: module data, process runtime state, process projections, provider records, workspace records, and other EF-managed runtime state.
-- Control-plane and workspace files: profile metadata, DataProtection keys, file-backed AgentFramework workspace slices, artifacts, receipts, and selected local tool artifacts.
+[`MemoryRuntimeServiceCollectionExtensions.cs`](../src/App/CanDoItAll.Composition/Memory/MemoryRuntimeServiceCollectionExtensions.cs) registers the generic memory module and conditionally adds provider drivers:
 
-The selected database profile can change, but control-plane metadata and local workspace files remain machine-local.
+- deterministic mock
+- HTTP
+- native remote
+- MCP
 
-## API And MCP Boundaries
+All four drivers and memory background workers are disabled in the base configuration. Enabling a driver is an explicit deployment decision. The base host has no implicit Qdrant dependency.
 
-The current automation boundary is split deliberately:
+The old `/api/cognitive-memory` and `/api/cognitive-memory/v1` paths expose only retirement contracts; other requests return `410 Gone`. Current setup is documented in [Memory providers](cognitive-memory/README.md).
 
-- HTTP API: `/api/projects`, `/api/project-structure`, `/api/processes`, `/api/agents`, `/api/workflows`, `/api/cognitive-memory`, `/api/crm-hr`, `/api/plugins`, and `/api/access`.
-- Codex/operator API skills: `candoitall-api-project-structure`, `candoitall-api-processes`, `candoitall-api-agents`, `candoitall-api-workflows`, `candoitall-api-cognitive-memory`, and `candoitall-api-crmhr`.
-- Internal app capability templates: skills, tools, MCP servers, and access policies under `Templates/Capabilities`.
-- Selected MCP sidecars: development and diagnostics helpers from the sibling `CanDoItAll.Mcp` repo.
-- Suppressed MCPs: old Processes and ProjectStructure MCP servers are not current. Use the HTTP APIs plus Codex/operator API skills for external operation, and use template-backed app capabilities for internal agents.
+## External Boundaries
 
-The CRM-HR HTTP family is a Web transport adapter over module-owned application/query services. Its high-cardinality party, workforce, and recruiting collection paths are source-paged; it has no direct EF persistence and no scenario seed route. API-created demonstration data is reconciled by an external search-before-create operator flow.
+- HTTP route families: access, projects, Project Structure, agents, agent recruiting, Prompt Gallery, workflows, processes, retired Cognitive Memory compatibility, plugins, and CRM/HR.
+- MCP development sidecars: Code Analytics, Components, DotNetWatch, Mermaid, and SSH operations from the sibling `CanDoItAll.Mcp` repository.
+- Reusable repository standards and operator skills: sibling `CanDoItAll.SharedInfo`.
+- Shared Blazor component source: sibling `CanDoItAll.Components`.
 
-The CRM-HR Agents UI is a projection consumer, not an agent source of truth. Canonical card identity comes from the shared, invalidation-aware `IAgentReferenceDataProvider` snapshot; CRM-HR joins it through the persisted `AiResourceBinding.TechnicalAgentId` mapping to its owner, validation, lifecycle, and contact data. A short-lived scoped composite snapshot serves search, validation filtering, paging, and direct dialog lookup without repeated EF reads. AgentFramework mutations invalidate shared reference data before synchronization and again after a successful CRM-HR projection commit, preventing a request in the synchronization window from retaining a mixed snapshot. CRM-HR may display technical fields and route to AgentFramework, but it does not edit or reconstruct the AgentFramework model.
+The suppressed Processes and Project Structure MCP servers are not supported control-plane paths. Use their HTTP APIs. See [API control plane](api-control-plane.md).
 
-## Validation Guidance
+## Validation
 
 For documentation-only changes:
 
@@ -198,4 +181,4 @@ For documentation-only changes:
 git diff --check
 ```
 
-For process, MAF, or provider behavior changes, start with focused tests around the owning service or adapter before broad solution runs. The current implementation map lists the recommended next hardening gates.
+For source changes, run focused tests for the owning module and then the stable gate in [Testing](testing.md).

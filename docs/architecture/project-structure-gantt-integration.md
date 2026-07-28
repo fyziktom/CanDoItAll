@@ -1,6 +1,6 @@
 # Project-structure Gantt integration
 
-Status: Accepted for implementation, 2026-07-14
+Status: Implemented; original decision accepted 2026-07-14.
 
 ## Boundary
 
@@ -17,7 +17,7 @@ Process/workflow/person/agent decorations are projections:
 
 ## Mutation ownership
 
-`ProjectStructureScheduleMutationService` owns one atomic command path:
+`ProjectStructureGanttMutationService` owns one atomic command path:
 
 1. acquire the existing project mutation lease;
 2. reload the authoritative graph;
@@ -36,9 +36,9 @@ Gantt-only view state uses surface kind `gantt`. It must not reuse CanvasWorkben
 ```text
 ProjectStructurePage -> ProjectStructureGanttPanel
 ProjectStructureGanttPanel -> ProjectStructureGanttProjectionAdapter
-ProjectStructureGanttPanel -> ProjectStructureScheduleMutationService
+ProjectStructureGanttPanel -> ProjectStructureGanttMutationService
 ProjectStructureGanttProjectionAdapter -> ProjectStructureSurface + party assignment contracts
-ProjectStructureScheduleMutationService -> project-structure persistence boundary
+ProjectStructureGanttMutationService -> project-structure persistence boundary
 ```
 
 The adapter and command validator are independently testable without rendering the page. A component smoke test proves the panel emits and applies typed requests. Integration tests prove the transaction rolls back on a cycle or stale dependency and that the surface is reloaded after success.
@@ -53,7 +53,7 @@ The adapter and command validator are independently testable without rendering t
 
 ## Task creation and row ordering extension
 
-Status: Accepted for implementation, 2026-07-15
+Status: Implemented; extension accepted 2026-07-15.
 
 The Gantt package exposes two additional interaction intents and still owns no product mutation logic:
 

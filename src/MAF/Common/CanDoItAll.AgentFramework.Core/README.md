@@ -14,25 +14,9 @@ Provider-neutral AgentFramework application services, execution contracts, works
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../../../Memory/CanDoItAll.Memory.SourceGateway.Abstractions/CanDoItAll.Memory.SourceGateway.Abstractions.csproj`
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../../WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj`
-- `../../Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj`
-- `../../../Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj`
-- `../../../Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.Extensions.Logging.Abstractions (10.0.0)`
-- `OpenTelemetry.Api (1.15.3)`
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Core.csproj](CanDoItAll.AgentFramework.Core.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
@@ -80,7 +64,7 @@ The `candoitall-api-*` skills are Codex/operator skills for controlling the runn
 
 | Role | Required capabilities | Process access | Runtime rule |
 | --- | --- | --- | --- |
-| Process author | Operator path: `candoitall-api-processes`; internal-agent path: project-structure process definition link/start tools when authoring through project structure | Read/write for allowed definitions only when a current API or UI path exists | Definition mutation must use a current process API/UI path, not direct database or file edits. Direct `processes_*` runtime tools are not current. |
+| Process author | Current surface: Processes module definition-authoring UI; no current operator skill, runtime-control tool, or Project Structure tool authors definitions | Read/write through the interactive UI | Definition mutation must use the current UI and persisted services. Project Structure tools may link or start definitions but do not author them. |
 | Process manager | Operator path: `candoitall-api-processes`; internal-agent path: current process context plus approved project-structure bridge or external-action tools | Read/write for managed runs through the API when operating externally | Managers inspect run detail/history before dispatch, cancellation, or rework. |
 | Step executor | Workspace tools required by the work brief; validation tools named by the step; project-structure subprocess launch tool only when the process operation contract allows it | Usually read-only process access unless the step explicitly allows external action or subprocess launch | Executors do not invent process state transitions when the current API/tool path is unavailable. |
 | Reviewer or QA | Workspace read tools; validation/browser tools named by the step; current process readback routes | Read access unless an explicit current mutation route is authorized | Review decisions must cite current-run evidence and required receipts. |

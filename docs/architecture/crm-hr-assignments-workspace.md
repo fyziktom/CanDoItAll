@@ -54,7 +54,7 @@ The module currently contains these major owners in one Razor assembly:
 - CRM/HR pages: presentation plus substantial asynchronous state orchestration;
 - persistence configuration, search, audit, memory, and automation adapters.
 
-`CrmHrServices.cs` is a 5,699-line hotspot containing five primary services. The largest pages also retain hundreds of lines of orchestration. Several services are split through partial classes for search integration; those splits are source organization, not enforceable boundaries. The assignment service's former one-method validation partial was removed in this slice and replaced by a focused invariant policy shared by both mutation paths.
+`CrmHrServices.cs` remains a large responsibility hotspot containing five primary services. The largest pages also retain substantial orchestration. Several services are split through partial classes for search integration; those splits are source organization, not enforceable boundaries. The assignment service's former one-method validation partial was removed in this slice and replaced by a focused invariant policy shared by both mutation paths.
 
 ## Pattern selection record
 

@@ -16,26 +16,15 @@ This project owns concrete provider drivers, provider capability contracts, prov
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../CanDoItAll.AgentFramework.ProviderPipelines/CanDoItAll.AgentFramework.ProviderPipelines.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Providers.csproj](CanDoItAll.AgentFramework.Providers.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Runtime Responsibilities
 
 - `IAgentProviderDriver` and capability-specific driver interfaces define provider operations with typed request and result models.
 - Concrete driver registration wires OpenAI, Azure OpenAI, Ollama, and ComfyUI drivers into `AgentProviderDriverRegistry`.
-- `ProviderRuntimeDescriptorStore`, `ProviderRuntimePool`, and `ProviderRuntimeHandle` maintain provider-scoped runtime handles and replace stale handles when descriptors change.
+- `IProviderRuntimeDescriptorStore`, `ProviderProfileRuntimeDescriptorStore`, `ProviderRuntimePool`, and `ProviderRuntimeHandle` maintain provider-scoped runtime descriptors and handles and replace stale handles when descriptors change.
 - `ProviderDispatchLaneGate` enforces provider/model/operation concurrency from `ProviderDispatchLimits`.
 - `ProviderBatchJobBalancer` plans and executes provider-backed batch work while respecting provider selection, dispatch limits, retries, and checkpointed recovery.
 

@@ -14,19 +14,9 @@ Shared AgentFramework model types for catalogs, provider profiles, executions, a
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- None
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Models.csproj](CanDoItAll.AgentFramework.Models.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

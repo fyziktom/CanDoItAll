@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Local development manager that supervises dotnet watch, readiness checks, browser sessions, capsules, and tuning endpoints.
+Local development manager that supervises `dotnet watch`, runtime readiness probes,
+Tailwind rebuilds, capsule indexing, workspace-process cleanup, and tuning endpoints.
 
 ## Project Type
 
@@ -14,21 +15,9 @@ Local development manager that supervises dotnet watch, readiness checks, browse
 dotnet build tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../../src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../../src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.OpenApi (10.0.4)`
-- `System.Management (10.0.0)`
+The authoritative project and package dependency list is in [CanDoItAll.Manager.csproj](CanDoItAll.Manager.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

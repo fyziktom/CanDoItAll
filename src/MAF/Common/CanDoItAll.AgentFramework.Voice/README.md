@@ -14,20 +14,9 @@ Provider-backed voice services for agent workflows: browser audio transcription,
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.Extensions.DependencyInjection.Abstractions (10.0.0)`
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Voice.csproj](CanDoItAll.AgentFramework.Voice.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

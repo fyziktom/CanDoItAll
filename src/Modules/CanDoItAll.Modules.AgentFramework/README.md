@@ -14,37 +14,13 @@ Product module that exposes AgentFramework catalog, provider, execution, and tec
 dotnet build src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj
 ```
 
-## References
+## Dependencies
 
-Architecture-relevant project references (the project file is the complete graph):
-
-- `../../MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj`
-- `../../MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../../MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj`
-- `../../MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
-- `../../MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../../MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj`
-- `../../MAF/Tools/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj`
-- `../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../../Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`
-- `../CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
-- `../CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.5)`
-- `CanDoItAll.Components.BaseLib (0.1.4)`
-- `CanDoItAll.Components.Charts (0.1.4)`
-- `CanDoItAll.Components.OverlayLib (0.1.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Modules.AgentFramework.csproj](CanDoItAll.Modules.AgentFramework.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
+This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
 The module adapts the generic activity/preparation contracts to the current database
 profile:

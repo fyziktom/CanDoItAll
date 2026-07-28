@@ -1,6 +1,8 @@
 # CanDoItAll Codex Architecture Review
 
-This repo now ships a repeatable Codex review workflow for **canonical model integrity** and **architecture stabilization** in a project-operating-system style codebase.
+This directory documents the architecture-review assets retained in the checked-in compatibility mirror. Canonical CanDoItAll skills are maintained in `CanDoItAll.SharedInfo`; see [Codex skills](../README.md) for ownership and installation. Do not edit or install this mirror as a second source of truth.
+
+The review workflow covers **canonical model integrity** and **architecture stabilization** in a project-operating-system style codebase.
 
 ## What is included
 
@@ -30,7 +32,7 @@ This repo now ships a repeatable Codex review workflow for **canonical model int
 
 ## Repo layout
 
-The canonical repo paths are:
+The retained mirror paths are:
 
 - `codex/skills/architecture-reviews/...`
 - `.codex/agents/...`
@@ -38,19 +40,19 @@ The canonical repo paths are:
 
 If these assets were imported from a one-off package folder, that package copy is source material only after the merge and should not be treated as a second active tooling location.
 
-Install or refresh the repo-managed skills into your local Codex home with:
+Install or refresh the canonical SharedInfo skills into your local Codex home with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
 ```
 
-If you only want the repo-managed skills without refreshing public sibling skills, use:
+If you only want the canonical CanDoItAll skills without refreshing public sibling skills, use:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -SkipPublicSkills
 ```
 
-If Codex does not notice the new skills or repo-level custom agents immediately, restart Codex.
+The installer requires the sibling `CanDoItAll.SharedInfo` repository unless `-SharedInfoRepoRoot` points elsewhere. If Codex does not notice refreshed skills or repo-level custom agents immediately, restart Codex.
 
 ## Suggested usage
 
@@ -106,12 +108,16 @@ The helper script can create a timestamped review folder such as:
 
 This is optional but recommended so recurring reviews become comparable over time.
 
-## Files you may want to customize
+## Historical Customization Reference
+
+The paths below show where the retained package kept customization inputs:
 
 - `codex/architecture-review/AGENTS.review-snippet.md`
 - `codex/architecture-review/config.review-snippet.toml`
-- `codex/skills/architecture-reviews/*/agents/openai.yaml` if you want to add or rename specific MCP tool dependencies
+- `codex/skills/architecture-reviews/*/agents/openai.yaml`
 - report templates inside each skill's `assets/`
+
+Do not customize this compatibility mirror. Make maintained skill or agent changes in the canonical `CanDoItAll.SharedInfo` source and refresh the local installation through the repository installer.
 
 ## Notes
 

@@ -16,19 +16,9 @@ This project owns the reusable batching contracts and local dispatcher used by p
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.ProviderPipelines/CanDoItAll.AgentFramework.ProviderPipelines.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.ProviderPipelines.csproj](CanDoItAll.AgentFramework.ProviderPipelines.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Runtime Responsibilities
 

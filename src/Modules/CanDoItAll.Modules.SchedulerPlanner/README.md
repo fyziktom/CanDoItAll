@@ -14,26 +14,9 @@ Product module for scheduling process definitions and workflow versions through 
 dotnet build src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.5)`
+The authoritative project and package dependency list is in [CanDoItAll.Modules.SchedulerPlanner.csproj](CanDoItAll.Modules.SchedulerPlanner.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

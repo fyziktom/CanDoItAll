@@ -14,26 +14,13 @@ Product module for test-lab concepts, validation artifacts, and testing workflow
 dotnet build src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Modules.TestLab.csproj](CanDoItAll.Modules.TestLab.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
+This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
 ## Related Docs
 

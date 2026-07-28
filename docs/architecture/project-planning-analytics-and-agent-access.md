@@ -1,6 +1,6 @@
 # Project planning analytics and agent access
 
-Status: Accepted for implementation, 2026-07-16
+Status: Implemented; original decision accepted 2026-07-16.
 
 ## Context
 

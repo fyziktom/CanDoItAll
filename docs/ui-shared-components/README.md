@@ -1,56 +1,57 @@
-# UI Shared Components
+# Shared UI Component Boundary
 
-CanDoItAll shared UI is split across two repositories. Reusable component libraries live in `C:\repositories\CanDoItAll.Components` and are consumed here as private NuGet packages from `ExternalPackages`. The main repo still owns the app-shell facade and WebGL process sandbox because they depend on main solution projects.
+Reusable UI libraries are owned by the sibling
+[CanDoItAll.Components repository](https://github.com/fyziktom/CanDoItAll.Components).
+This repository consumes released packages from `ExternalPackages` and owns only
+application-specific composition and styling.
 
-| Project | Role |
-| --- | --- |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common` | Shared primitives with no Blazor rendering dependency. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib` | Main reusable Razor component library, theme tokens, layout primitives, forms, buttons, cards, lists, feedback, and generated CSS. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib` | Canvas and graph/workbench components built on BaseLib and Common. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Charts` | Typed CanDoItAll chart wrapper over Blazor ApexCharts. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid` | Typed Mermaid diagram component and vendored Mermaid assets. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib` | Floating overlay/window components used by workbench surfaces. |
-| `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib` | WebGL workbench concept runtime and typed scene contracts. |
-| `C:\repositories\CanDoItAll\src\UI\CanDoItAll.AppComponents` | Compatibility/facade package for app shell, tab strip, tuning boundary, and package references to core component libraries. |
-| `C:\repositories\CanDoItAll.Components\samples\CanDoItAll.Components.Sandbox` | Preview and regression host for shared components. |
-| `C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox` | WebGL process workbench sandbox. |
+## Ownership
 
-The web host registers BaseLib through `AddCanDoItAllBaseLib()` and loads module/component assemblies through `CanDoItAll.Composition.ModuleAssemblies`.
+The component repository owns:
 
-## Key Conclusions
+- BaseLib, CanvasLib, Common, Gantt, Charts, Mermaid, OverlayLib, QRCode,
+  WebGlLib, and WebGlRunLib;
+- shared Tailwind tokens and the CSS shipped by BaseLib;
+- component sandbox and WebGL sandbox sample applications;
+- reusable component behavior, examples, and catalog documentation.
 
-- BaseLib is the primary shared UI library for product modules.
-- CanvasLib, OverlayLib, and WebGlLib are specialized libraries, not general-purpose replacements for BaseLib.
-- `CanDoItAll.AppComponents` is a facade/compatibility layer and app-shell surface. Do not put every new shared component there by default.
-- Shared Tailwind output is owned by the components repo and emitted to `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css`.
-- Main app-specific Tailwind output is owned by this repo and emitted to `src/App/CanDoItAll.Web/wwwroot/css/output.css`.
-- Component packages are versioned together at `0.1.0` and restored from `ExternalPackages` through `NuGet.config`.
-- Modules should prefer existing shared components before introducing raw markup-heavy local patterns.
+This repository owns:
 
-## Documentation Map
+- `src/UI/CanDoItAll.AppComponents`, the app-shell/facade Razor library;
+- `src/App/CanDoItAll.Web/wwwroot/css/output.css` and other product-specific styling;
+- module-specific UI that does not yet have a real cross-module consumer;
+- composition of the packaged libraries in the web host.
 
-- [Architecture: stack and architecture](architecture/stack-and-architecture.md)
-- [Reference: helpers, enums, and models](reference/helpers-enums-and-models.md)
-- [Components: layout and typography](components/layout-and-typography.md)
-- [Components: forms and inputs](components/forms-and-inputs.md)
-- [Components: navigation and workflow](components/navigation-and-workflow.md)
-- [Components: data and feedback](components/data-and-feedback.md)
-- [Guidelines: Codex usage guide](guidelines/codex-usage-guide.md)
-- [Recommendations: missing components](recommendations/missing-components.md)
-- [Transfer checklist](component-transfer-checklist.md)
+`CanDoItAll.AppComponents` currently consumes BaseLib, CanvasLib, and Common `0.1.4`,
+`Microsoft.AspNetCore.Components.Web` `10.0.5`, and the FileTools component contracts.
+Its adjacent
+[project file](../../src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj)
+is the authoritative dependency list.
 
-## Fast Bootstrap Checklist
+## Change Rules
 
-1. Reference the smallest component package that owns the component you need.
-2. Import the relevant namespace, usually `CanDoItAll.Components.BaseLib` or `CanDoItAll.Components.CanvasLib`.
-3. Register BaseLib services with `services.AddCanDoItAllBaseLib()`.
-4. Load `_content/CanDoItAll.Components.BaseLib/css/output.css`, then the app-specific `css/output.css` when running the main web app.
-5. Use sandbox projects for previews, demos, and regression proof.
+1. Use an existing typed component before introducing markup-heavy local substitutes.
+2. Keep UI local until it has a real reusable boundary.
+3. Change shared behavior, shared CSS, examples, and package versions in the component
+   repository; do not copy their implementation into this consumer.
+4. Keep application-only orchestration in `CanDoItAll.AppComponents` or the owning
+   module.
+5. Validate reusable changes in the component repository's sandbox and tests, then
+   update the package files under `ExternalPackages` and the consuming project version
+   together.
 
-## Fast Rules For Codex
+Specialized libraries are not substitutes for BaseLib: use CanvasLib for graph/canvas
+workflows, Gantt for schedules, OverlayLib for floating surfaces, and WebGlLib/WebGlRunLib
+for typed WebGL behavior.
 
-- Use BaseLib for ordinary layout, buttons, forms, cards, lists, feedback, tabs, and page scaffolding.
-- Use CanvasLib only for canvas/graph/workbench behaviors.
-- Use OverlayLib for floating windows or overlay primitives instead of local ad hoc overlays.
-- Do not assume a component supports richer behavior than its implementation shows. Check the component file before promising sorting, filtering, validation, virtualization, or JS interop behavior.
-- Keep app-specific styling in the app or module. Shared libraries should not depend on consumer-global CSS.
+## Styling
+
+The web host loads the packaged BaseLib stylesheet before this repository's generated
+application stylesheet. Build only the application-specific output here:
+
+```powershell
+npm install --prefix .\Tailwind
+npm run tailwind:build
+```
+
+See [Tailwind](../../Tailwind/README.md) for the input and output paths.

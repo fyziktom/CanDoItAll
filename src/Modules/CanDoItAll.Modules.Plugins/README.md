@@ -14,27 +14,9 @@ Product module for plugin catalog, installation state, capability grants, OAuth 
 dotnet build src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
-- `../CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.4)`
-- `Microsoft.EntityFrameworkCore (10.0.4)`
-- `Microsoft.Extensions.Hosting.Abstractions (10.0.7)`
-- `Microsoft.Extensions.Http (10.0.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Modules.Plugins.csproj](CanDoItAll.Modules.Plugins.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

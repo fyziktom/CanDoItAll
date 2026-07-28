@@ -84,7 +84,7 @@ Workspace provider UI defaults are resolved through `WorkspaceProviderCapability
 
 ## Typed output API evaluation
 
-The current MAF runtime path does not use `RunAsync<TOutput>` typed-output overloads. A repository search for `RunAsync<` under `src`, `tests`, and `docs` is empty. CanDoItAll still needs execution-time contracts because process automation selects contracts dynamically, persists those contracts through approval checkpoints, and routes finalizer policy through `AgentRuntimeExecutionOptions`. The active implementation therefore keeps `ChatResponseFormatJson` plus post-run validators/finalizers as the source of truth. Revisit typed `RunAsync<TOutput>` only when a concrete process path can carry a compile-time DTO end to end without losing dynamic contract persistence, repair, finalizer, and approval-continuation behavior.
+The current MAF execution path does not call the typed `AIAgent.RunAsync<TOutput>` overload. CanDoItAll still needs execution-time contracts because process automation selects contracts dynamically, persists those contracts through approval checkpoints, and routes finalizer policy through `AgentRuntimeExecutionOptions`. The active implementation therefore keeps `ChatResponseFormatJson` plus post-run validators and finalizers as the source of truth. Revisit typed `AIAgent.RunAsync<TOutput>` only when a concrete process path can carry a compile-time DTO end to end without losing dynamic contract persistence, repair, finalizer, and approval-continuation behavior.
 
 ## Workflow checkpoint bridge
 
@@ -109,4 +109,7 @@ Generic process automation delegates domain-specific retry guidance to recovery 
 
 ## Validation commands
 
-Primary proof for the post-audit hardening work is recorded in `docs/agent-runtime-hardening-verification.md`.
+Use the repository's [stable test gate](testing.md) and the focused MAF projects for
+current validation. Package-train and compatibility decisions are recorded in
+[MAF 1.15 compatibility](maf-1.15-compatibility.md); dated execution transcripts remain
+historical bundle evidence rather than maintained guidance.

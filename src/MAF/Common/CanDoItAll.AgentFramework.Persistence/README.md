@@ -14,20 +14,9 @@ Persistence contracts and file-backed storage support for AgentFramework catalog
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Persistence.csproj](CanDoItAll.AgentFramework.Persistence.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

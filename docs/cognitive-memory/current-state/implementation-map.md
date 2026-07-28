@@ -1,104 +1,66 @@
-# Implementation Map
+# Generic Memory Implementation Map
 
-## Project Shape
-
-The post-extraction implementation is split across generic memory projects, the generic memory UI module, MAF integration files, an optional native service repository, and retained legacy-native code.
-
-| Area | Location | Responsibility |
-| --- | --- | --- |
-| Generic protocol | `src/Memory/CanDoItAll.Memory.Abstractions` | Provider profiles, capability ids, request/response envelopes, context packs, ledgers, feedback, events, source ids, and typed selection results. |
-| Generic runtime | `src/Memory/CanDoItAll.Memory.Application` | Provider registry, shared operation handler, runtime dispatch, Source Gateway, async operation worker, feedback worker, event inbox/outbox workers, retention services, and driver contracts. |
-| Generic persistence | `src/Memory/CanDoItAll.Memory.Persistence` | EF-backed stores for provider profiles, operations, feedback, events, source requests, retention, and worker hosting. It contains no provider driver. |
-| HTTP/native drivers | `src/Memory/CanDoItAll.Memory.Http` | Generic HTTP driver and native-remote driver adapter. |
-| MCP driver | `src/Memory/CanDoItAll.Memory.Mcp` | MCP descriptor/tool mapping, MCP memory driver, and manifest factory. |
-| Deterministic test driver | `src/Memory/CanDoItAll.Memory.Mock` | Explicit development/test-only mock driver, isolated from persistence. |
-| Generic UI | `src/Modules/CanDoItAll.Modules.Memory` | `/memory` provider management, query, feedback, event, operations, manual ingestion, and provider-specific surface host. |
-| Agent memory integration | `src/MAF/Memory/CanDoItAll.AgentFramework.Memory` | Typed agent settings, aliases, directive parsing, bounded multi-provider orchestration, tool/status exposure, context contribution, and workflow adaptation. |
-| Source contract | `src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions` | Provider-neutral source snapshot contracts independent of Agent Framework Core. |
-| Source adapters | Workbench, Processes, Resources, CRM/HR, AgentFramework modules | Module-owned Source Gateway adapters that return provider-neutral source snapshots. |
-| Optional native service | `C:\repositories\CanDoItAll.CognitiveMemory` | External Cognitive Memory domain, DB, engine, protocol API, access policy, workers, and UI package. |
-| Retained legacy module | `src/Modules/CanDoItAll.Modules.CognitiveMemory` | Legacy/native regression code retained until native-suite migration deletes or moves it. Not part of base startup. |
-
-## Runtime Registration
+## Runtime Shape
 
 ```mermaid
 flowchart LR
-    Program["CanDoItAll.Web Program.cs"] --> Infrastructure["AddCanDoItAllInfrastructure"]
-    Program --> Composition["AddCanDoItAllRuntimeModules"]
-    Composition --> MemoryComposition["AddCanDoItAllMemory"]
-    MemoryComposition --> GenericMemory["AddGenericMemoryModule"]
-    MemoryComposition --> ProviderDrivers["Configured HTTP/native/MCP/mock drivers"]
-    MemoryComposition --> MemoryUi["AddMemoryUiModule"]
-    Composition --> MAF["AddAgentFrameworkModule"]
-    MAF --> MemoryTools["Generic memory tools/executor/context contributor"]
-    GenericMemory --> SourceGateway["Source Gateway adapters"]
-    ProviderDrivers --> Profiles["Explicit provider profiles"]
-    Profiles --> Runtime["Shared operation handler and ledgers"]
-    Runtime --> OptionalNative["Native remote provider service"]
+    Host["CanDoItAll.Web"] --> Composition["AddCanDoItAllMemory"]
+    Composition --> Core["Generic Memory runtime"]
+    Composition --> Ui["/memory UI"]
+    Composition --> Drivers["Explicitly enabled drivers"]
+    Profiles["Enabled provider profiles"] --> Core
+    Drivers --> Core
+    Core --> Ledgers["EF-backed ledgers"]
+    Core --> Gateway["Source Gateway adapters"]
+    Core --> Maf["Agent and workflow integration"]
 ```
 
-Memory registration is owned by `src/App/CanDoItAll.Composition/Memory/MemoryRuntimeServiceCollectionExtensions.cs`; the general host extension delegates to that owner with one call. The base composition root does not register the old native Cognitive Memory module, Qdrant RAG driver, or SemanticCompletion driver as memory dependencies.
+`src/App/CanDoItAll.Composition/Memory/MemoryRuntimeServiceCollectionExtensions.cs` always registers the generic runtime and UI. It conditionally registers a driver only when the corresponding `Memory:Providers:*:Enabled` value is `true`.
 
-## Provider Driver Registration
+## Project Ownership
 
-| Driver kind | Base app registration | Provider profile extensions |
+| Area | Location | Responsibility |
 | --- | --- | --- |
-| `Mock` | Explicit `Memory:Providers:DeterministicMock:Enabled=true` only. | Test/development profiles only. |
-| `Http` | Explicit `Memory:Providers:Http:Enabled=true`. | `host.candoitall.memory.http.*` keys. |
-| `NativeRemote` | Explicit `Memory:Providers:NativeRemote:Enabled=true`. | `native.cognitiveMemory.remote.*` keys. |
-| `Mcp` | Explicit `Memory:Providers:Mcp:Enabled=true`. | `host.candoitall.memory.mcp.*` keys. |
+| Protocol | `src/Memory/CanDoItAll.Memory.Abstractions` | Provider identity, profiles, manifests, capabilities, envelopes, context packs, and typed results. |
+| Application | `src/Memory/CanDoItAll.Memory.Application` | Registry, selection, dispatch, operation handling, Source Gateway, worker contracts, and ledgers. |
+| Persistence | `src/Memory/CanDoItAll.Memory.Persistence` | EF-backed profile, operation, feedback, event, source-request, retention, and lease stores. |
+| HTTP | `src/Memory/CanDoItAll.Memory.Http` | Generic HTTP and native-remote adapters. |
+| MCP | `src/Memory/CanDoItAll.Memory.Mcp` | Remote HTTP MCP descriptor and tool mapping. |
+| Mock | `src/Memory/CanDoItAll.Memory.Mock` | Explicit test/development driver. |
+| UI | `src/Modules/CanDoItAll.Modules.Memory` | Provider management and operational evidence at `/memory`. |
+| MAF integration | `src/MAF/Memory/CanDoItAll.AgentFramework.Memory` | Agent bindings, directives, context contribution, runtime tools, and workflow integration. |
+| Source contracts | `src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions` | Provider-neutral source snapshots. |
 
-See [provider setup](../operations/provider-setup.md).
+Workbench, Processes, Resources, CRM-HR, and AgentFramework own their Source Gateway adapters. Providers receive snapshots, not module EF entities or `AppDbContext`.
 
-## Core Runtime Services
+## Driver Registration
 
-| Service | Role |
+| Driver kind | Registration switch | Intended use |
+| --- | --- | --- |
+| `Mock` | `Memory:Providers:DeterministicMock:Enabled` | Deterministic tests and explicit development scenarios. |
+| `Http` | `Memory:Providers:Http:Enabled` | Generic synchronous HTTP query and health transport. |
+| `NativeRemote` | `Memory:Providers:NativeRemote:Enabled` | Adapter for a separately hosted native Cognitive Memory service. |
+| `Mcp` | `Memory:Providers:Mcp:Enabled` | Remote HTTP MCP query and optional operation-status transport. |
+
+Driver registration and provider profiles are independent gates: enabling one does not create or authorize the other. See [provider setup](../operations/provider-setup.md).
+
+## Invariants
+
+- The base host starts with zero providers and workers disabled.
+- Selection uses explicit enabled profiles and agent bindings; it never chooses the first available provider.
+- Provider-specific code stays behind a driver or remote service boundary.
+- Dispatch, failures, and asynchronous status are observable through typed results and durable ledgers.
+- Background workers use database-backed leases when enabled.
+- The retained `CanDoItAll.Modules.CognitiveMemory` project is not proof of an active host dependency.
+
+These boundaries are guarded by `tests/Memory/CanDoItAll.Memory.Tests/HostCompositionDependencyRemovalTests.cs`.
+
+## Validation Surfaces
+
+| Concern | Test project |
 | --- | --- |
-| `IMemoryRuntimeService` | Provider-selected context query dispatch. |
-| `IMemoryOperationHandler` | Shared operation path for tools, workflow executors, context contributors, UI/API-like callers, feedback handles, and source ingestion. |
-| `IMemorySourceGateway` | Policy-gated source snapshot capture. |
-| `ManualMemorySourceIngestionService` | Manual text/file/link source capture and ingestion operation enqueue. |
-| `IMemoryAsyncOperationWorker` | Polls accepted async operations and updates operation ledgers. |
-| `IMemoryFeedbackWorker` | Delivers delayed feedback and updates feedback ledgers. |
-| `IMemoryProviderEventWorker` | Polls provider events, dedupes inbox rows, and delivers outbox acknowledgements. |
-| `IMemoryProviderHealthDriver` implementations | Return provider health without dispatching unrelated work. |
-
-## Generic UI
-
-The generic provider UI is `/memory`. It supports:
-
-- zero-provider empty state;
-- provider profile list/detail;
-- context query and context-pack display;
-- feedback, source-request, and event ledgers as read-only operational evidence;
-- mutation controls only when the selected provider and registered transport both implement the required delivery path;
-- operations/status ledger;
-- provider event inbox when an installed provider implements events;
-- provider-specific RCL/iframe/external surface projection with safe fallback.
-
-## Native Service
-
-The native service is validated in `C:\repositories\CanDoItAll.CognitiveMemory`:
-
-- `CanDoItAll.CognitiveMemory.Domain`
-- `CanDoItAll.CognitiveMemory.Application`
-- `CanDoItAll.CognitiveMemory.Persistence`
-- `CanDoItAll.CognitiveMemory.Projection.Rag`
-- `CanDoItAll.CognitiveMemory.Service`
-- `CanDoItAll.CognitiveMemory.Workers`
-- `CanDoItAll.CognitiveMemory.UI`
-
-The main app talks to it only through generic provider protocol/driver contracts.
-
-## Test Surface
-
-| Test area | Project/filter |
-| --- | --- |
-| Generic memory | `tests/Memory/CanDoItAll.Memory.Tests` |
-| MAF memory | `tests/MAF/CanDoItAll.AgentFramework.Memory.Tests`, plus focused compatibility coverage in `tests/Unit/CanDoItAll.Tests.Unit` |
-| Generic UI components | Component tests filtered by `MemoryProvider` and `MemoryUiRefactoringCheckpoint` |
-| Generic browser UI | Playwright tests filtered by `MemoryProviderManagementPlaywrightTests` |
-| Database runtime switching | Integration tests filtered by `DatabaseSwitchIntegrationTests` |
-| Native service | `C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests` |
-
-Legacy `CognitiveMemory*` tests remain retained native coverage until the follow-up native-suite migration.
+| Generic runtime and composition | `tests/Memory/CanDoItAll.Memory.Tests` |
+| MAF memory integration | `tests/MAF/CanDoItAll.AgentFramework.Memory.Tests` and focused unit tests |
+| Component UI | `tests/Components/CanDoItAll.Tests.Components` |
+| Browser UI | `tests/Playwright/CanDoItAll.Tests.Playwright` |
+| Database switching | `tests/Integration/CanDoItAll.Tests.Integration` |

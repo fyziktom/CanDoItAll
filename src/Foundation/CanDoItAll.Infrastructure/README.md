@@ -14,26 +14,9 @@ Infrastructure layer for EF Core context access, control-plane database profiles
 dotnet build src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.DataProtection (10.0.7)`
-- `Microsoft.EntityFrameworkCore (10.0.4)`
-- `Microsoft.EntityFrameworkCore.Design (10.0.4)`
-- `Microsoft.EntityFrameworkCore.InMemory (10.0.4)`
-- `Microsoft.Extensions.Diagnostics.HealthChecks (10.0.0)`
-- `Microsoft.Extensions.Options.ConfigurationExtensions (10.0.0)`
-- `Microsoft.Extensions.Options.DataAnnotations (10.0.0)`
-- `Npgsql.EntityFrameworkCore.PostgreSQL (10.0.0)`
+The authoritative project and package dependency list is in [CanDoItAll.Infrastructure.csproj](CanDoItAll.Infrastructure.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

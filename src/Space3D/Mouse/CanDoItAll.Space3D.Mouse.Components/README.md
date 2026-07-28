@@ -14,21 +14,9 @@ Razor components for the Space3D mouse integration surface.
 dotnet build src/Space3D/Mouse/CanDoItAll.Space3D.Mouse.Components/CanDoItAll.Space3D.Mouse.Components.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj`
-- `../../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../../CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.Space3D.Mouse.Components.csproj](CanDoItAll.Space3D.Mouse.Components.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

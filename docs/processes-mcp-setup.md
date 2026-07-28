@@ -1,44 +1,34 @@
-# Processes MCP Transition Note
+# Processes MCP Transition
 
-## Current Status
+Last source review: 2026-07-28.
 
-`CanDoItAll.Mcp.Processes` is not an active MCP server in the current repository shape. The process MCP was suppressed after process definition, runtime, launch-plan, escalation, assignment, artifact, and analytics work moved behind the web-hosted HTTP API.
+`CanDoItAll.Mcp.Processes` is not an active server. Do not install or call `candoitall_processes`.
 
-Do not reinstall or call `candoitall_processes` in current sessions. It may return later if there is a real capability gap, but current docs and skills should treat the HTTP API as the supported path.
+Process launch, dispatch, operator actions, live projections, durable run records, graphs, and analytics are exposed by the web-hosted `/api/processes` control plane.
 
-## Current Replacement
+## Supported Replacement
 
-Use the web API and the repo-managed process API skill:
+1. Start the web host:
 
-- API overview: [API control plane](api-control-plane.md)
-- Skill guidance: [codex/skills/candoitall-api-processes/SKILL.md](../codex/skills/candoitall-api-processes/SKILL.md)
-- Source routes: [ProcessesApi.cs](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
-- Current implementation map: [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md)
+   ```powershell
+   dotnet run --project src/App/CanDoItAll.Web/CanDoItAll.Web.csproj
+   ```
 
-Current source-grounded routes:
+2. Confirm `GET /api/access/status`.
+3. Read `GET /api/processes/contract`.
+4. Use OpenAPI for the exact query, request, and response schema.
+5. Make the smallest focused call and read the run back through detail, summary, graph, history, or live projections.
 
-- `GET /api/processes/contract`
-- `POST /api/processes/launch/check`
-- `POST /api/processes/launch`
-- `POST /api/processes/runs/{runId}/dispatch`
-- `POST /api/processes/runs/{runId}/cancel`
-- `POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework`
-- `GET /api/processes/live`
-- `GET /api/processes/runs/{runId}`
-- `GET /api/processes/runs/{runId}/history`
+Current references:
 
-The broader definition/template/artifact/assignment/escalation/approval/analytics route families described by older docs are not active in `ProcessesApi.cs`. Treat them as roadmap candidates, not current API.
+- [API control plane](api-control-plane.md)
+- [Process operator runbook](process-agent-operator-runbook.md)
+- [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
+- [`ProcessRunRecordsApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessRunRecordsApi.cs)
+- [Canonical Processes API skill](https://github.com/fyziktom/CanDoItAll.SharedInfo/blob/main/codex/skills/candoitall-api-processes/SKILL.md)
 
-Use `POST /api/processes/launch/check` for launch readiness checks that must not create a run. `POST /api/processes/launch` is the durable launch command.
+## Local Configuration Cleanup
 
-## Migration Guidance
+[`tools/Reinstall-CanDoItAllMcps.ps1`](../tools/Reinstall-CanDoItAllMcps.ps1) removes stale `mcp_servers.candoitall_processes` sections while reinstalling the supported development sidecars.
 
-1. Start `src/App/CanDoItAll.Web`.
-2. Check API status with `GET /api/access/status`.
-3. If API authorization is enabled, use a Settings-generated bearer token or an already-authorized token.
-4. Use the focused route for the smallest operation instead of fetching full process run detail by default.
-5. Read back the run through `GET /api/processes/runs/{runId}`, `GET /api/processes/runs/{runId}/history`, or `GET /api/processes/live`.
-
-## Removed Setup Commands
-
-Old setup commands such as `Install-CanDoItAllProcessesMcp.ps1` and `candoitall_processes` should not be used for current work. The full MCP reinstall script now removes stale `candoitall_processes` config sections from local Codex config.
+Old `Install-CanDoItAllProcessesMcp.ps1` instructions and `candoitall_processes` configuration are obsolete.

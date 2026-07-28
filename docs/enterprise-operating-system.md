@@ -38,10 +38,11 @@ Technical managers need to know where responsibility lives. In the current archi
 - Product behavior lives in modules and application services.
 - Project, process, and agent automation uses the web-hosted HTTP API control plane.
 - AgentFramework runs technical agents and records execution runs, tool receipts, approvals, artifacts, checkpoints, logs, and metrics.
-- Selected MCP sidecars remain useful for development operations such as dotnet watch, code analytics, component discovery, Mermaid, SSH, and local runtime helpers.
+- Selected MCP sidecars remain useful for development operations: DotNetWatch,
+  CodeAnalytics, Components, Mermaid, and SshOps.
 - Removed Processes and ProjectStructure MCP servers are not the current operating path.
 
-This keeps rollout manageable. API access, provider configuration, database profile choice, process runtime settings, and validation gates can be reviewed independently without turning every automation concern into a new runtime implementation.
+This keeps rollout manageable. API access, provider configuration, PostgreSQL runtime configuration and readiness, process runtime settings, and validation gates can be reviewed independently without turning every automation concern into a new runtime implementation.
 
 ## Everyday Managers
 
@@ -91,7 +92,7 @@ This is the architecture principle to preserve: agents can help execute work, bu
 - Process templates for repeatable work such as onboarding, release governance, incident response, architecture decisions, or AI-assisted delivery.
 - Role definitions for humans, AI parties, approvers, managers, reviewers, and specialists.
 - Provider and agent policies that state which tools are allowed and which outputs require typed finalization.
-- Database profile decisions. Governed multi-agent process automation should use PostgreSQL when the runtime guard requires it.
+- PostgreSQL runtime configuration and operations. Governed multi-agent process automation requires PostgreSQL.
 - API access policy: bearer-token settings, token lifetime, and where tokens are issued.
 - Evidence rules: what proof is required before delivery can be called complete.
 

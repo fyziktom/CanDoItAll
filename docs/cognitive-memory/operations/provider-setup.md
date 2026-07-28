@@ -52,7 +52,7 @@ Profiles are stored in the generic memory provider profile store and surfaced th
 - `DefaultPolicy`: fallback behavior, defaulting to `DenyImplicitFallback`.
 - `Manifest`: protocol version, provider kind, supported capabilities, UI surfaces, limits, and extension data.
 
-The `/memory` page can create and edit common profile metadata and demo/mock profiles. Transport-specific extension keys for HTTP, MCP, and native-remote providers must currently be supplied by seeded/imported profile data or a small admin path that writes `MemoryProviderProfile` through `IMemoryProviderProfileStore`.
+The `/memory` provider editor supports HTTP and native-remote transport fields plus remote-HTTP MCP fields. Preserved vendor-specific extensions outside those managed fields still require seed, import, or admin tooling that writes `MemoryProviderProfile` through `IMemoryProviderProfileStore`.
 
 Supported capability ids are:
 
@@ -160,11 +160,9 @@ The shipped MCP adapter supports context query and, when configured, operation-s
 
 ## Native Remote Provider
 
-Native Cognitive Memory is an optional service-owned provider. Build and run it from:
-
-```powershell
-C:\repositories\CanDoItAll.CognitiveMemory
-```
+Native Cognitive Memory is an optional service-owned provider. Build, configure,
+and run it from the separately cloned
+[CanDoItAll.CognitiveMemory repository](https://github.com/fyziktom/CanDoItAll.CognitiveMemory).
 
 Enable the native remote driver in the base host:
 
@@ -196,7 +194,7 @@ Create an enabled profile with `DriverKind` set to `NativeRemote` and include:
 | `native.cognitiveMemory.remote.timeoutMilliseconds` | No | Positive integer override. |
 | `native.cognitiveMemory.remote.maxRetryAttempts` | No | Non-negative integer override. |
 
-The native remote driver adapts these keys into the generic synchronous HTTP driver. Native service startup, native DB migrations, projection, model execution, and advanced native UI remain owned by the external repository.
+The native remote driver adapts these keys into the generic synchronous HTTP driver. Native service startup, database migrations, projection, model execution, and advanced native UI remain owned by that external repository.
 
 ## UI Surface Setup
 

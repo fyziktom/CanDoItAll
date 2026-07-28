@@ -25,34 +25,9 @@ The command returns the seeded project's `/projects/{id}/structure` route.
 dotnet build tools/Seeding/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../../src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj`
-- `../../src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../../src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj`
-- `../../src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
-- `../../src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
-- `../../src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
-- `../../src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
-- `../../src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../../src/App/CanDoItAll.Web/CanDoItAll.Web.csproj`
-
-Framework references:
-
-- `Microsoft.AspNetCore.App`
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.ScenarioSeeder.csproj](CanDoItAll.ScenarioSeeder.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

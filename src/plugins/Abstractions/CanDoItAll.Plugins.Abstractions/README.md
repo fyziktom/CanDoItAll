@@ -14,20 +14,9 @@ Shared plugin contracts for descriptors, package manifests, identifiers, grants,
 dotnet build src/plugins/Abstractions/CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.Plugins.Abstractions.csproj](CanDoItAll.Plugins.Abstractions.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

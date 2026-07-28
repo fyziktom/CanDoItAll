@@ -1,108 +1,95 @@
 # Agent Runtime Tool Surface
 
-Last source review: 2026-07-27.
+Last source review: 2026-07-28.
 
-This page defines the boundary between internal MAF/runtime-provider tools and the HTTP control-plane APIs.
+This page defines the boundary between tools attached to an agent execution and operations exposed only through the HTTP control plane.
 
-The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered by MAF itself or by an `IAgentRuntimeToolProvider`, and classified by `AgentToolInvocationPolicy`.
+## What Makes A Tool Executable
 
-Capability templates in `Templates/Capabilities` seed catalog metadata and access policy inputs. They do not by themselves create executable direct tools; the runtime still needs a MAF built-in tool, a provider-native tool, a local/remote MCP descriptor, or an `IAgentRuntimeToolProvider` that returns a typed `AITool`.
+A capability template or API route does not create an agent tool. A direct runtime tool must come from one of:
 
-## Process Tools
+- a MAF built-in or workspace capability
+- a configured MCP or A2A descriptor
+- a provider-native tool
+- a registered [`IAgentRuntimeToolProvider`](../src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs)
 
-Source:
+[`RuntimeToolProviderComposer`](../src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/RuntimeToolProviderComposer.cs) evaluates provider descriptors and asks eligible providers to create typed `AITool` instances for the current invocation.
 
-- `src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
-- `src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
-- `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
-- `src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
-- `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`
+Registration is only the first gate. Actual attachment depends on:
 
-Current direct process runtime tools: 0.
+- execution purpose, such as interactive chat or governed process automation
+- agent status, permissions, and capability assignments
+- provider descriptor supported purposes
+- project, process, HR, scheduler, memory, or curator authorization scope
+- tool invocation policy and approval requirements
 
-The current source tree does not contain `src/Modules/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`, and `AddProcessesModule` does not register an `IAgentRuntimeToolProvider` for direct `processes_*` tools. Policy constants and some tests still mention legacy or planned `processes_*` names; treat that as a hardening gap, not as proof that those tools are currently available.
+## Current First-Party Providers
 
-Current process control paths are:
+| Provider | Source | Responsibility |
+| --- | --- | --- |
+| Memory | [`MemoryAgentRuntimeToolProvider.cs`](../src/MAF/Memory/CanDoItAll.AgentFramework.Memory/Tools/MemoryAgentRuntimeToolProvider.cs) | Generic provider-backed context query and operation status. |
+| Project Structure | [`ProjectStructureAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs) | Projects, hierarchy, tasks, nodes, assets, links, leases, analytics, and process/workflow bridges. |
+| Image Generation | [`ImageGenerationAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs) | Provider-backed image generation or editing to a managed workspace path. |
+| Workflow | [`WorkflowAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/WorkflowAgentRuntimeToolProvider.cs) | Workflow discovery, launch, status, cancellation, and external-response operations. |
+| Prompt Gallery | [`PromptGalleryAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/PromptGalleryAgentRuntimeToolProvider.cs) | Compatible final Prompt Gallery discovery and retrieval. |
+| Prompts Curator | [`PromptsCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/PromptCurator/PromptsCuratorAgentRuntimeToolProvider.cs) | Authorized Prompt Gallery curation. |
+| Workflow Curator | [`WorkflowCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/WorkflowCurator/WorkflowCuratorAgentRuntimeToolProvider.cs) | Authorized workflow definition and component curation. |
+| Capability Curator | [`CapabilityCuratorAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/CapabilityCurator/CapabilityCuratorAgentRuntimeToolProvider.cs) | Authorized capability catalog curation and validation. |
+| HR | [`HrAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/Hr/HrAgentRuntimeToolProvider.cs) | Identity-bound agent governance, usage analysis, process review, avatar generation, and privacy-safe CRM/HR queries. |
+| Scheduler | [`SchedulerAgentRuntimeToolProvider.cs`](../src/Modules/CanDoItAll.Modules.SchedulerPlanner/AgentTools/SchedulerAgentRuntimeToolProvider.cs) | Identity-bound workflow target/schedule discovery and workflow schedule creation. |
 
-- HTTP routes in `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`: contract discovery, launch preflight, launch, dispatch, cancel, step rework, live, detail, and history.
-- Governed process execution through `AgentFrameworkProcessExecutionAdapter`, which attaches workspace, skill, MCP, provider-native, and registered runtime-provider tools according to the process step operation contract.
-- Project-structure runtime tools in Workbench that can link or start process definitions from project nodes.
-- Blazor process workspace UI backed by process projection services.
+Do not publish a copied count or complete tool-name inventory here. Provider code and runtime metadata are the source of truth, and attachment varies by invocation.
 
-If direct process tools are reintroduced, they must be implemented as a concrete `IAgentRuntimeToolProvider` owned by `CanDoItAll.Modules.Processes`, with typed models, explicit process access metadata, `AgentToolInvocationPolicy` classification, approval behavior, and tests. Until then, document process operations as HTTP API or project-structure bridge operations only.
+## Process Boundary
 
-## Project Structure Tools
+There is no general first-party `ProcessAgentRuntimeToolProvider`. Current process operations use:
 
-Source:
+- the `/api/processes` HTTP family
+- governed execution through `AgentFrameworkProcessExecutionAdapter`
+- Project Structure bridge tools for definition linking, process start, and governed subprocess launch
+- the Blazor process workspace
 
-- `src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`
-- `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureInvocationSnapshotReadDispatcher.cs`
-- `src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureAgentContracts.cs`
-- `src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs`
-- `src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
-- `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`
+Process run-record search, analytics, summary, graph, detail, and history are HTTP operations. Do not represent them to an agent as direct tools unless a concrete provider is implemented, registered, policy-classified, and tested.
 
-Current direct runtime tools: 54.
+## Project Structure Read Sources
 
-| Capability | Direct tools |
-| --- | --- |
-| Project hierarchy | `project_structure_projects_list`, `project_structure_project_create`, `project_structure_project_update`, `project_structure_hierarchy_get`, `project_structure_subproject_link`, `project_structure_nodes_to_new_subproject` |
-| Structure read/write | `project_structure_read`, `project_structure_node_catalog`, `project_structure_node_create`, `project_structure_node_update`, `project_structure_node_type_update`, `project_structure_node_metadata_update`, `project_structure_nodes_status_update`, `project_structure_node_status_update`, `project_structure_nodes_progress_update`, `project_structure_node_progress_update`, `project_structure_nodes_marker_update`, `project_structure_node_marker_update`, `project_structure_nodes_priority_update`, `project_structure_node_priority_update`, `project_structure_node_move`, `project_structure_node_recompose`, `project_structure_node_reparent`, `project_structure_node_descendants_to_project_move`, `project_structure_node_delete` |
-| Node operations | `project_structure_node_command_execute`, `project_structure_node_process_definition_link`, `project_structure_node_process_start`, `project_structure_node_workflow_add_options`, `project_structure_node_workflow_definition_create`, `project_structure_node_workflow_start`, `project_structure_node_workflow_status_get` |
-| Planning and links | `project_structure_checklist`, `project_structure_dependencies_query`, `project_structure_dependency_link`, `project_structure_dependency_unlink`, `project_structure_link_create`, `project_structure_link_unlink`, `project_structure_approval_request`, `project_structure_knowledge_query`, `project_structure_analytics_query`, `project_plan_summary_get` |
-| Task-specific mutations | `project_task_create`, `project_task_update` |
-| Assets and imports | `project_structure_asset_create`, `project_structure_asset_get`, `project_structure_asset_content_get`, `project_structure_asset_create_revision`, `project_structure_import` |
-| Leases | `project_structure_project_lease_acquire`, `project_structure_repo_branch_lease_acquire`, `project_structure_lease_get`, `project_structure_lease_renew`, `project_structure_lease_release` |
+`project_structure_read` uses the typed `ProjectStructureReadSource` contract:
 
-`project_plan_summary_get` is a bounded plan/economic projection, not a generic graph read. It attaches only when the active non-template agent can use tools, has read access to the requested project, and has exact assigned catalog mappings for both `project-plan-summary-get` and `project-plan-analysis-inline-skill`. Expected-cost totals remain separated by currency; resource binding share is distinct from overlapping task coverage; completeness counters and warnings are part of the result contract. Callers can request zero task previews for aggregate-only dashboards; blocker ids are sampled separately from their full counts.
+- `ContextDefault` selects an invocation snapshot only for an eligible interactive Project Structure invocation; otherwise it selects canonical current state.
+- `InvocationSnapshot` requires the exact bounded snapshot attached to the invocation and fails closed when scope, profile generation, freshness, fingerprint, or requested coverage does not match.
+- `CanonicalCurrent` reads through the canonical Project Structure application service.
 
-### Project Structure Read Source
+There is no silent snapshot-to-database fallback. Writes always go through canonical services and authorization gates. The HTTP Project Structure read endpoint has no in-process invocation attachment, so `ContextDefault` is normalized to canonical state and `InvocationSnapshot` is rejected.
 
-`project_structure_read` accepts `ProjectStructureReadRequest.source` and returns
-the effective `ProjectStructureReadSource` in `ProjectStructureReadToolData.source`.
-The values are:
+See [Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md) for the snapshot contract.
 
-- `ContextDefault`: selects `InvocationSnapshot` only for non-governed,
-  interactive chat whose runtime source is the active Project Structure surface;
-  every other purpose selects `CanonicalCurrent`.
-- `InvocationSnapshot`: reads the exact immutable surface snapshot attached to that
-  invocation. It performs no canonical structure read when eligible and covered.
-  It is rejected for governed-process automation and non-Project Structure context.
-- `CanonicalCurrent`: calls the canonical Project Structure service explicitly.
+## HTTP And Runtime Authorization Are Different
 
-The invocation snapshot is bounded to 512 nodes and 1,024 links with a five-minute
-freshness lifetime. It covers hierarchy, classification, status, progress, priority,
-schedule, project relationships, links, and selection. It intentionally omits notes,
-metadata, assets, layout, routes, action capabilities, storage references, and file
-contents.
+Bearer authorization to an HTTP endpoint is not an agent capability grant. Conversely, an agent capability assignment is not a bearer token or permission to call an external API route.
 
-Snapshot reads fail with typed `409` errors rather than silently falling back when the
-attachment is missing, ambiguous, wrong-typed, wrong-scope, for a different project or
-database-profile generation, expired, fingerprint-mismatched, or too incomplete for
-the requested fields/nodes/links. The agent must then make its need explicit with
-`source=CanonicalCurrent`.
+Integrations that require agent-level controls must use a governed runtime execution. External automation must use the API authorization and route policy. Never infer one authority model from the other.
 
-This snapshot is context only. All writes continue through the canonical service and
-the existing project/tool authorization gates.
+## Adding A Provider Or Tool
 
-Project-structure write authority has two independent narrow modes. `CanWriteTasks` authorizes only registered task-specific mutation tools for projects in scope. `CanWriteNonTaskStructure` authorizes generic structure mutations, but the runtime rejects task creation, direct task mutation or reclassification, task links, and operations over subtrees containing tasks. It may create or move a non-task node beneath a task because the task record itself is not changed. Broad `CanWrite` remains the unrestricted superset for existing agents. `project_task_update` uses optimistic current values and accepts `currentProgressPercent: -1` for an untracked persisted task; proposed progress remains restricted to 0-100.
+Adding a direct tool is a runtime and security change. The minimum implementation is:
 
-The authenticated project-structure HTTP API remains a control-plane boundary. Bearer/API authorization is not an internal-agent capability assignment, so HTTP callers do not inherit the runtime provider's skill/tool and task-write gates. Integrations that need agent-level enforcement must invoke the governed runtime surface.
+1. A typed application/domain operation in the owning module.
+2. A provider registration or existing provider extension.
+3. Strongly typed request and result models.
+4. Accurate descriptor metadata and supported purposes.
+5. Explicit scope and authorization checks.
+6. `IAgentToolInvocationPolicy` evaluation, `AgentToolInvocationPolicyMetadata` classification, and approval review for side effects.
+7. Tests proving conditional availability, denial, invocation, and receipts.
+8. OpenAPI or operator documentation only when an HTTP transport also exists.
 
-New project-structure HTTP operations must remain HTTP-only until they have explicit tool registration, policy classification, approval behavior, and tests.
+Without that set, keep the operation on its existing UI or HTTP boundary.
 
-## Adding A Direct Tool
+## Validation
 
-Adding a direct tool is a runtime/security change, not documentation cleanup. The minimum implementation set is:
+Runtime-tool changes should include the owning provider tests and:
 
-- Tool descriptor registration in the relevant MAF tool builder or owning `IAgentRuntimeToolProvider`.
-- Strongly typed request/response shape or reuse of an existing strongly typed model.
-- Service-layer call through the owning module boundary.
-- `AgentToolInvocationPolicy` constant and classification.
-- Approval requirement review for mutation, destructive, launch, process, workflow, filesystem, or external side-effect operations.
-- Unit or integration coverage that proves descriptor availability, policy behavior, and the intended service call.
+```powershell
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
+```
 
-If that set is not implemented, document the operation as HTTP-only and direct agents to the relevant API skill.
-
-Related architecture:
-[Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md).
+Then run the stable gate in [Testing](testing.md).

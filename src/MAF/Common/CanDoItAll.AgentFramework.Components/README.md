@@ -14,24 +14,9 @@ Razor components for AgentFramework administration, catalog, execution, and runt
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Markdig (1.1.2)`
-- `Microsoft.AspNetCore.Components.Web (10.0.5)`
-- `CanDoItAll.Components.BaseLib (0.1.4)`
-- `CanDoItAll.Components.CanvasLib (0.1.4)`
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Components.csproj](CanDoItAll.AgentFramework.Components.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
