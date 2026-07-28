@@ -11,7 +11,7 @@ The active host uses the provider-neutral Memory runtime. The old native Cogniti
 - A zero-provider deployment is supported. Missing capabilities fail with typed diagnostics; the runtime does not silently fall back to another provider.
 - Qdrant, SemanticCompletion, OpenAI, and the retained legacy module are not base-host memory dependencies.
 
-The former native implementation is retained under `src/Modules/CanDoItAll.Modules.CognitiveMemory` only for legacy compatibility and regression coverage. It is excluded from `CanDoItAll.slnx`, `CanDoItAll.Space3D.slnx`, and active module discovery. New work must target the generic Memory projects or the separately owned native service.
+The former native implementation is retained under `src/Modules/CanDoItAll.Modules.CognitiveMemory` only for legacy compatibility and regression coverage. It is excluded from `CanDoItAll.slnx` and active module discovery. New work must target the generic Memory projects or the separately owned native service.
 
 ## Maintained Guidance
 

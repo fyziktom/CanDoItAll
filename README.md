@@ -46,7 +46,7 @@ flowchart LR
     DotNetWatch -. supervises .-> Web
 ```
 
-`CanDoItAll.slnx` is the primary solution. Space3D is intentionally separate in `CanDoItAll.Space3D.slnx`.
+`CanDoItAll.slnx` is the primary solution.
 
 The runtime registers first-party tool providers for Memory, Project Structure, image generation, workflows, Prompt Gallery, prompt curation, workflow curation, capability curation, HR, and Scheduler. A provider still applies its own purpose and authorization policy before attaching tools.
 

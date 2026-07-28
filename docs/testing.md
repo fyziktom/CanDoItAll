@@ -91,16 +91,6 @@ dotnet test ..\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\
 
 The DotNetWatch assembly uses this repository for workspace settings and runtime state. Its live and long-running tests remain outside the routine gate.
 
-## Space3D
-
-Space3D is intentionally excluded from the primary solution:
-
-```powershell
-dotnet restore .\CanDoItAll.Space3D.slnx
-dotnet build .\CanDoItAll.Space3D.slnx --configuration Release --no-restore
-dotnet test .\CanDoItAll.Space3D.slnx --configuration Release --no-build
-```
-
 ## Unfiltered Suite
 
 ```powershell

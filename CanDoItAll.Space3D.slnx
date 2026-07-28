@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/Space3D/Mouse/">
-    <Project Path="src/Space3D/Mouse/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj" />
-    <Project Path="src/Space3D/Mouse/CanDoItAll.Space3D.Mouse.Components/CanDoItAll.Space3D.Mouse.Components.csproj" />
-  </Folder>
-  <Folder Name="/tests/Space3D/">
-    <Project Path="tests/Space3D/CanDoItAll.Space3D.Tests/CanDoItAll.Space3D.Tests.csproj" />
-  </Folder>
-</Solution>

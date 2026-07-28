@@ -26,7 +26,7 @@ dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Categ
 & .\tools\Validation\Test-Documentation.ps1
 ```
 
-Run the relevant extended browser, live-process, MCP, or Space3D gate when the change affects that boundary. Do not report the unfiltered suite as green unless the exact unfiltered command passes.
+Run the relevant extended browser, live-process, or MCP gate when the change affects that boundary. Do not report the unfiltered suite as green unless the exact unfiltered command passes.
 
 ## Architecture Rules
 

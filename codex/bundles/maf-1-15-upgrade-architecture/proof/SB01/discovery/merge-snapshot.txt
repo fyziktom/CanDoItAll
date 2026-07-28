@@ -8146,9 +8146,6 @@ tests\Components\CanDoItAll.Tests.Components\HrAgentCompositionTests.cs:73:.Orde
 tests\Components\CanDoItAll.Tests.Components\HrAgentCompositionTests.cs:89:HrAgentCapabilityKeys.ToolNameToCapabilityKey.Keys.OrderBy(name => name, StringComparer.Ordinal),
 tests\Components\CanDoItAll.Tests.Components\HrAgentCompositionTests.cs:90:runtimeTools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal));
 tests\Components\CanDoItAll.Tests.Components\CrmHrSecondaryPageFreshnessTests.cs:744:.OrderBy(item => item.Agent.Name)
-src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Driver\Protocol\Space3DMouseButtons.cs:93:.OrderBy(definition => definition.ButtonNumber)
-src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Driver\Protocol\Space3DMouseButtons.cs:96:.OrderBy(definition => definition.Millivolts)
-src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Driver\Protocol\Space3DMouseButtons.cs:191:.OrderBy(definition => Math.Abs(definition.Millivolts - millivolts))
 src\plugins\Abstractions\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:437:.OrderBy(value => value, StringComparer.OrdinalIgnoreCase);
 src\plugins\Implementations\CanDoItAll.Plugin.Docker\DockerHostToolService.cs:244:environmentVariableNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray());
 src\Processes\CanDoItAll.Processes.Builder\ProcessPlanPersistence.cs:31:foreach (var planId in planIds.Distinct().OrderBy(planId => planId.Value))

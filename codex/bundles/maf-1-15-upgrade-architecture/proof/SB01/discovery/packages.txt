@@ -224,10 +224,6 @@ tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:17:<PackageReferen
 tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:67:<PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
 tests\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:15:<PackageReference Include="Npgsql" Version="10.0.3" />
 tests\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:20:<PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
-tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:11:<PackageReference Include="coverlet.collector" Version="6.0.4" />
-tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:12:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:13:<PackageReference Include="xunit" Version="2.9.3" />
-tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:14:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
 tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:11:<PackageReference Include="coverlet.collector" Version="6.0.4" />
 tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:12:<PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
 tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:13:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
@@ -270,8 +266,6 @@ src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:19:<PackageRefer
 src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:20:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
 src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
 src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:11:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
-src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:12:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
-src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:13:<PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
 src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
 src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:11:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
 src\plugins\Implementations\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
