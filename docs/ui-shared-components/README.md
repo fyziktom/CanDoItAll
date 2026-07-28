@@ -2,7 +2,7 @@
 
 Reusable UI libraries are owned by the sibling
 [CanDoItAll.Components repository](https://github.com/fyziktom/CanDoItAll.Components).
-This repository consumes released packages from `ExternalPackages` and owns only
+This repository consumes released packages from NuGet.org and owns only
 application-specific composition and styling.
 
 ## Ownership
@@ -22,11 +22,15 @@ This repository owns:
 - module-specific UI that does not yet have a real cross-module consumer;
 - composition of the packaged libraries in the web host.
 
-`CanDoItAll.AppComponents` currently consumes BaseLib, CanvasLib, and Common `0.1.4`,
-`Microsoft.AspNetCore.Components.Web` `10.0.5`, and the FileTools component contracts.
+`CanDoItAll.AppComponents` currently consumes BaseLib, CanvasLib, and Common `0.1.15`,
+`Microsoft.AspNetCore.Components.Web` `10.0.10`, and the FileTools component contracts.
 Its adjacent
 [project file](../../src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj)
 is the authoritative dependency list.
+
+`CanDoItAll.Components.Sandbox` `0.1.4` is the sole local-package exception because the
+component preview tests render its sample components and the owner intentionally does
+not publish that sample application.
 
 ## Change Rules
 
@@ -36,9 +40,8 @@ is the authoritative dependency list.
    repository; do not copy their implementation into this consumer.
 4. Keep application-only orchestration in `CanDoItAll.AppComponents` or the owning
    module.
-5. Validate reusable changes in the component repository's sandbox and tests, then
-   update the package files under `ExternalPackages` and the consuming project version
-   together.
+5. Validate reusable changes in the component repository's sandbox and tests, publish
+   the released packages, then update the consuming package version.
 
 Specialized libraries are not substitutes for BaseLib: use CanvasLib for graph/canvas
 workflows, Gantt for schedules, OverlayLib for floating surfaces, and WebGlLib/WebGlRunLib

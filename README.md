@@ -58,7 +58,7 @@ The runtime registers first-party tool providers for Memory, Project Structure, 
 - Windows PowerShell for the local installer and MCP setup scripts
 - Node.js and npm only when rebuilding application Tailwind output
 
-The filtered full-solution test gate also needs the `CanDoItAll.AgentFramework.Rag` and `CanDoItAll.AgentFramework.SemanticCompletion` repositories beside this repository. The MCP reinstall workflow needs sibling `CanDoItAll.Mcp` and `CanDoItAll.CodeAnalysis` repositories; it also needs `CanDoItAll.SharedInfo` unless skill synchronization is explicitly skipped.
+The filtered full-solution test gate restores the RAG and Semantic Completion driver packages from NuGet.org. The MCP reinstall workflow needs sibling `CanDoItAll.Mcp` and `CanDoItAll.CodeAnalysis` repositories; it also needs `CanDoItAll.SharedInfo` unless skill synchronization is explicitly skipped.
 
 ## Quick Start
 
@@ -173,7 +173,7 @@ The output is `src/App/CanDoItAll.Web/wwwroot/css/output.css`. See [Tailwind](Ta
 
 ## Packaging
 
-`ExternalPackages` contains repository build inputs. It is not a public package feed. The root `package.json` is private and exists only to provide repository-level Tailwind commands.
+Published CanDoItAll dependencies restore from NuGet.org. `ExternalPackages` contains only the unpublished `CanDoItAll.Components.Sandbox` package used by component preview tests; package source mapping prevents other dependencies from restoring there. The root `package.json` is private and exists only to provide repository-level Tailwind commands.
 
 The Windows-local web installer is:
 

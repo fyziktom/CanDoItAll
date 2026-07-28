@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />
-    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
@@ -64,10 +64,10 @@
     <ProjectReference Include="..\..\..\src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj" />
     <ProjectReference Include="..\..\..\src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
-    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
-    <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
-    <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />
+    <PackageReference Include="CanDoItAll.AgentFramework.Rag.Driver" Version="$(CanDoItAllAgentFrameworkExtensionPackageVersion)" />
+    <PackageReference Include="CanDoItAll.AgentFramework.SemanticCompletion.Driver" Version="$(CanDoItAllAgentFrameworkExtensionPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />

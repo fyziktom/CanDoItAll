@@ -9,7 +9,7 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj" />
