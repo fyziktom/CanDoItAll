@@ -25,16 +25,12 @@ function Test-MaintainedMarkdownPath {
 
     $normalized = $RelativePath.Replace("\", "/")
     if ($normalized -eq "Templates/README.md" -or
-        $normalized -eq "Templates/Processes/README.md" -or
-        $normalized -eq "codex/architecture-review/README.md" -or
-        $normalized -eq "codex/csharp-architecture/README.md" -or
-        $normalized -eq "codex/csharp-architecture/INSTALL.md") {
+        $normalized -eq "Templates/Processes/README.md") {
         return $true
     }
 
     if ($normalized.StartsWith(".codex/", [System.StringComparison]::OrdinalIgnoreCase) -or
         $normalized.StartsWith("codex/bundles/", [System.StringComparison]::OrdinalIgnoreCase) -or
-        $normalized.StartsWith("codex/skills/", [System.StringComparison]::OrdinalIgnoreCase) -or
         $normalized.StartsWith("Templates/", [System.StringComparison]::OrdinalIgnoreCase)) {
         return $false
     }

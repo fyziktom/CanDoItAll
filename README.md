@@ -158,7 +158,7 @@ Install the canonical Codex skills from the sibling SharedInfo repository:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
 ```
 
-The checked-in `codex/skills` tree is a historical mirror, not the source of truth. See [Codex skills](codex/README.md).
+This repository does not vendor SharedInfo-owned development skills or Codex plugins. See [Codex integration](codex/README.md). App-internal agent, capability, process, and workflow seeds remain repository-owned under [Templates](Templates/README.md).
 
 ## Styling
 

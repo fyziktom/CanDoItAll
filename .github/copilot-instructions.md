@@ -57,7 +57,7 @@ Prefer the managed DotNetWatch MCP loop for interactive application work:
 
 Use the stable commands in `docs/testing.md` for release validation. If the managed MCP is unavailable, report that explicitly before using an appropriate local validation command.
 
-Canonical Codex skills live in the sibling `CanDoItAll.SharedInfo` repository. The local `codex/skills` tree is a historical mirror, not the source of truth. Refresh the local toolset with:
+Canonical Codex development skills and plugins live in the sibling `CanDoItAll.SharedInfo` repository; this product repository does not carry a source mirror. Refresh the local toolset with:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
@@ -69,4 +69,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAll
 - Use Playwright for shipped UI behavior and capture evidence at the supported large-desktop viewport.
 - Never describe quarantined, skipped, unavailable, or unfiltered failing tests as green.
 - Update maintained docs when public behavior, configuration, architecture, or validation changes.
-- Do not treat closed `codex/bundles`, `.codex/bundles`, or the historical skill mirror as current documentation.
+- Do not treat closed `codex/bundles` or `.codex/bundles` as current documentation.

@@ -34,7 +34,7 @@ The `/processes` and `/projects/{projectId}/processes` Blazor workspaces expose 
 
 Live-run profiles are loaded internally by `ProcessTemplatePackLoader` and used by launch preparation. There is no public `/api/processes/templates/live-run-profiles` route and no first-party `processes_template_live_run_profiles_list` runtime tool provider.
 
-When public Processes behavior changes, update the maintained API documentation here and the canonical Processes API skill in `CanDoItAll.SharedInfo`. The checked-in `codex/skills` tree is not the maintained skill source.
+When public Processes behavior changes, update the maintained API documentation here and the canonical Processes API skill in `CanDoItAll.SharedInfo`. Do not add a product-repository copy of the Codex development skill.
 
 ## Validation
 

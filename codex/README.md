@@ -1,8 +1,8 @@
-# Codex Skills And Evidence
+# Codex Integration And Evidence
 
-The canonical CanDoItAll Codex skills live in the sibling [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo) repository under `codex/skills`.
+The canonical CanDoItAll Codex development skills, architecture support assets, and plugins live in the sibling [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo) repository under `codex`.
 
-This repository owns an installer entry point, product-specific bundle evidence, and integration configuration. Its checked-in `codex/skills` tree is a historical mirror retained during repository migration. Do not edit, publish, or install that mirror as the current skill pack.
+This repository owns its installer adapter, product-specific bundle evidence, and integration configuration. It does not vendor SharedInfo-owned Codex sources.
 
 ## Install Or Refresh
 
@@ -40,11 +40,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAll
 
 MCP server source is owned by the sibling `CanDoItAll.Mcp` repository. Place `CanDoItAll.CodeAnalysis` beside that repository because the reinstall script requires its CodeAnalytics application project. The active sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, and SshOps.
 
-## What Is Historical
+## Ownership Boundary
 
-- `codex/skills` is a noncanonical migration mirror.
-- `codex/architecture-review` and `codex/csharp-architecture` are compatibility package notes, not install sources.
 - `codex/bundles` and `.codex/bundles` are execution evidence snapshots.
+- `Templates` contains app-owned seed inputs for internal agents, capabilities, processes, and workflows. Those runtime templates are not Codex development skills and must remain in this repository.
+- SharedInfo owns reusable Codex skills, including bundle workflow skills used by developers and operators; managed app agents use the app's processes and workflows instead.
 - test counts, warnings, paths, package versions, and architecture claims inside completed bundles describe the recorded execution, not necessarily the current branch.
 
 Maintained contributor guidance starts at the [repository README](../README.md) and [documentation index](../docs/README.md). When current behavior changes, update maintained docs and the canonical SharedInfo skill in its owning repository; do not rewrite closed evidence to look current.

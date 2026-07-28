@@ -1,4 +1,0 @@
-interface:
-  display_name: "CanDoItAll Bundle Execution"
-  short_description: "Execute bundle phases with proof, tests, and QA updates"
-  default_prompt: "Use $candoitall-bundle-execution to execute the selected work unit, verify prerequisites, make scoped changes, and capture its declared proof tier."

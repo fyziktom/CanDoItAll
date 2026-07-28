@@ -2,7 +2,7 @@
 
 This index covers maintained contributor, architecture, runtime, and product documentation. Source code, project files, runtime composition, configuration, and endpoint mapping remain authoritative when a prose statement conflicts with implementation.
 
-Historical execution bundles under `codex/bundles`, `.codex/bundles`, and the checked-in `codex/skills` mirror are retained for traceability. They are evidence snapshots, not current product or contributor guidance.
+Historical execution bundles under `codex/bundles` and `.codex/bundles` are retained for traceability. They are evidence snapshots, not current product or contributor guidance.
 
 ## Start Here
 

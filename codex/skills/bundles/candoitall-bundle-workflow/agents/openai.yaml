@@ -1,4 +1,0 @@
-interface:
-  display_name: "CanDoItAll Bundle Workflow"
-  short_description: "Coordinate adaptive bundles from intake to closure"
-  default_prompt: "Use $candoitall-bundle-workflow to deliver this outcome through a compatible bundle shape, dependency gates, and risk-proportionate proof."

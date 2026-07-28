@@ -101,7 +101,7 @@ Attachment remains subject to execution purpose, agent permissions, assigned cap
 
 ## Operator Skills
 
-Reusable `candoitall-api-*` skills are maintained in the canonical [CanDoItAll.SharedInfo skill source](https://github.com/fyziktom/CanDoItAll.SharedInfo/tree/main/codex/skills). The local `codex/skills` tree is not the maintained source.
+Reusable `candoitall-api-*` skills are maintained in the canonical [CanDoItAll.SharedInfo skill source](https://github.com/fyziktom/CanDoItAll.SharedInfo/tree/main/codex/skills). No product-repository source copy is maintained.
 
 For every mutation:
 
