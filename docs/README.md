@@ -17,6 +17,7 @@ Historical execution bundles under `codex/bundles` and `.codex/bundles` are reta
 ## Architecture And Runtime Boundaries
 
 - [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md)
+- [Memory provider API and Cognitive Memory ownership](architecture/memory-provider-api-ownership.md)
 - [Agent runtime tool surface](agent-runtime-tool-surface.md)
 - [Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md)
 - [Reusable floating agent chats](architecture/reusable-floating-agent-chats.md)
@@ -47,18 +48,20 @@ Historical execution bundles under `codex/bundles` and `.codex/bundles` are reta
 - [Workflow MAF hardening](workflow-maf-hardening.md)
 - [Agent output contracts](agent-output-contracts.md)
 
-## Memory
+## Memory Providers
 
-The active implementation is the provider-neutral Memory subsystem. Native Cognitive Memory is an external service owned by its standalone repository; the legacy API path is a retired compatibility shim.
+The provider-neutral Memory subsystem and provider integrations are experimental.
+Native Cognitive Memory is an unpublished work-in-progress service owned by its
+standalone repository. The main host has no native Cognitive Memory API.
 
-- [Memory overview and migration boundary](cognitive-memory/README.md)
-- [Current implementation map](cognitive-memory/current-state/implementation-map.md)
-- [Provider setup](cognitive-memory/operations/provider-setup.md)
-- [Agent Memory](cognitive-memory/operations/agent-memory.md)
-- [Provider authoring](cognitive-memory/operations/provider-authoring.md)
-- [Legacy main-database retirement](cognitive-memory/operations/legacy-main-db-retirement.md)
-- [Memory test-suite ownership](cognitive-memory/operations/memory-test-suite-rebalance.md)
-- [Validation and testing](cognitive-memory/operations/validation-and-testing.md)
+- [Memory provider overview and migration boundary](memory-providers/README.md)
+- [Current implementation map](memory-providers/current-state/implementation-map.md)
+- [Provider setup](memory-providers/operations/provider-setup.md)
+- [Agent Memory](memory-providers/operations/agent-memory.md)
+- [Provider authoring](memory-providers/operations/provider-authoring.md)
+- [Legacy main-database retirement](memory-providers/operations/legacy-main-db-retirement.md)
+- [Memory test-suite ownership](memory-providers/operations/memory-test-suite-rebalance.md)
+- [Validation and testing](memory-providers/operations/validation-and-testing.md)
 
 ## Product And UI
 

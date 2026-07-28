@@ -22,6 +22,8 @@ The authoritative project and package dependency list is in [CanDoItAll.Composit
 
 Composition is the boundary where modules, infrastructure, provider configuration, and shared components are wired together. Keep registrations explicit and avoid moving domain behavior into startup code.
 
+The provider-neutral Memory subsystem and its provider integrations are experimental.
+
 ### Generic memory background workers
 
 Durable memory workers are disabled unless the host explicitly opts in:

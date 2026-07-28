@@ -66,8 +66,6 @@
     <ProjectReference Include="..\..\..\src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
     <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
-    <PackageReference Include="CanDoItAll.AgentFramework.Rag.Driver" Version="$(CanDoItAllAgentFrameworkExtensionPackageVersion)" />
-    <PackageReference Include="CanDoItAll.AgentFramework.SemanticCompletion.Driver" Version="$(CanDoItAllAgentFrameworkExtensionPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
@@ -78,7 +76,6 @@
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
-    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\..\..\src\Processes\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
     <ProjectReference Include="..\..\..\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />

@@ -138,7 +138,7 @@ public sealed class ApiTokenIssueRequest
 
     public int? LifetimeMinutes { get; set; }
 
-    public List<string> Scopes { get; set; } = ["api"];
+    public List<string> Scopes { get; set; } = [ApiAccessScopeNames.Api];
 }
 
 public sealed record ApiTokenIssueResult(
@@ -282,7 +282,7 @@ public sealed class ApiTokenService(
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return scopes.Count == 0 ? ["api"] : scopes;
+        return scopes.Count == 0 ? [ApiAccessScopeNames.Api] : scopes;
     }
 
     private static long ToUnixTimeSeconds(DateTimeOffset value)

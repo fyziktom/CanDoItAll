@@ -31,6 +31,7 @@ Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettin
 | --- | --- | --- |
 | `Api:Enabled` | `true` | Maps the main `/api` route families. |
 | `Api:OpenApiEnabled` | `true` | Maps the OpenAPI endpoints. |
+| `Api:SwaggerUiEnabled` | `true` | Serves the interactive `/swagger` page when OpenAPI is enabled. |
 | `Api:Authorization:Enabled` | `false` | Requires bearer authorization for the API groups when enabled. |
 | `Api:Authorization:Issuer` | `CanDoItAll.Api` | JWT issuer. |
 | `Api:Authorization:Audience` | `CanDoItAll.Api` | JWT audience. |
@@ -39,6 +40,11 @@ Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettin
 | `Api:Authorization:MaxTokenLifetimeMinutes` | `1440` | Maximum issued-token lifetime. |
 
 The Project Structure API is mapped separately from `Api:Enabled`, but it applies the same authorization switch. The development default of open access is not suitable for a remotely reachable deployment. Keep signing keys and bearer tokens out of tracked files and logs.
+
+When authorization is enabled, `/api/access/tokens` requires the privileged
+`api.tokens.issue` scope. Memory-provider routes accept the existing umbrella `api`
+scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`, and
+`api.memory-providers.query` scopes for their respective operations.
 
 ## Current Route Families
 
@@ -54,7 +60,7 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/prompt-gallery` | Prompt Gallery search, artifacts, versions, review, and application. | [`PromptGalleryApi.cs`](../src/App/CanDoItAll.Web/Api/PromptGalleryApi.cs) |
 | `/api/workflows` | Workflow settings, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
 | `/api/processes` | Process launch, dispatch, operator actions, live projections, durable run records, graphs, and analytics. | [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs) |
-| `/api/cognitive-memory` and `/api/cognitive-memory/v1` | Retired compatibility surfaces. | [`CognitiveMemoryApi.cs`](../src/App/CanDoItAll.Web/Api/CognitiveMemoryApi.cs) |
+| `/api/memory-providers` | Experimental provider profiles, context queries, and owned operation status. | [`MemoryProvidersApi.cs`](../src/App/CanDoItAll.Web/Api/MemoryProvidersApi.cs) |
 | `/api/plugins` | Plugin catalog, configuration, and runtime operations. | [`PluginsApi.cs`](../src/App/CanDoItAll.Web/Api/PluginsApi.cs) |
 | `/api/crm-hr` | CRM, workforce, recruiting, capacity, and relationship operations. | [`CrmHrApi.cs`](../src/App/CanDoItAll.Web/Api/CrmHrApi.cs) |
 
@@ -82,16 +88,21 @@ Use OpenAPI for exact methods and schemas. Do not copy a complete generated endp
 
 `launch/check` is non-mutating. `launch` persists the run when readiness permits; `execute: false` prevents immediate dispatch queueing but does not turn the launch into a dry run. See the [operator runbook](process-agent-operator-runbook.md) for triage and configuration.
 
-## Retired Cognitive Memory API
+## Experimental Memory Provider API
 
-The base host no longer registers the legacy in-process Cognitive Memory module or Qdrant/RAG integration.
+The provider API is a thin adapter over provider-neutral Memory application services.
+It does not expose provider-native administration or persistence.
 
-- `GET /api/cognitive-memory/contract` and `GET /api/cognitive-memory/v1/contract` return the `retired-v1` contract.
-- Every other request under either base path returns `410 Gone` with migration guidance.
-- Generic memory is configured through provider profiles and operated from the `/memory` UI and registered memory runtime tools.
-- Use the native remote memory provider only when a separate native Cognitive Memory service is deployed.
+- List, read, and save provider profiles through `/api/memory-providers`.
+- Dispatch context queries to one explicitly selected provider.
+- Read operation status only through the original API caller's ownership scope.
+- Use OpenAPI for the exact methods and request/response contracts.
 
-See [Memory providers](cognitive-memory/README.md) for the current boundary.
+The main host has no `/api/cognitive-memory` route family. Native Cognitive Memory
+remains unpublished work in progress in its standalone repository and can be used only
+through the explicitly configured native-remote provider adapter.
+
+See [Memory providers](memory-providers/README.md) for the current boundary.
 
 ## HTTP APIs Versus Runtime Tools
 

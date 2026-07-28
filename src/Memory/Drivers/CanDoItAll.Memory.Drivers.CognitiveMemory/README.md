@@ -1,6 +1,8 @@
 # Cognitive Memory Remote Driver
 
-This project is the client-side adapter from the generic CanDoItAll Memory runtime to the separately deployed Cognitive Memory service.
+This experimental project is the client-side adapter from the generic CanDoItAll
+Memory runtime to the standalone Cognitive Memory service. That service is work in
+progress and is not published yet.
 
 The boundary is intentionally process-based:
 

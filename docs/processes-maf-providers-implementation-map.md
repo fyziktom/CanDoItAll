@@ -13,7 +13,8 @@ This map identifies the current implementation owners. It is not a roadmap or ge
 - MAF runtime and provider drivers
 - HTTP and Blazor adapters in the web host
 
-The base host does not compose the legacy Cognitive Memory module or Qdrant/RAG services.
+The base host contains no native Cognitive Memory implementation and does not compose
+Qdrant/RAG services.
 
 ## Process Ownership
 
@@ -162,7 +163,7 @@ OpenAI credentials resolve from `OPENAI_API_KEY` or the runtime secret store. Lo
 - Run-record narratives are asynchronous and may be pending or failed while hard facts are available.
 - API authorization is disabled by default for local development and must be enabled before remote exposure.
 - Generic Memory provider drivers and workers are disabled by default.
-- The retired Cognitive Memory paths return only a retirement contract and `410 Gone`; there is no implicit Qdrant dependency.
+- Native Cognitive Memory APIs are not mapped by the main host; there is no implicit Qdrant dependency.
 
 ## Validation
 

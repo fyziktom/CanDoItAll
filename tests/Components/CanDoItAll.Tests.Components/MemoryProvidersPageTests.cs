@@ -305,6 +305,14 @@ public sealed class MemoryProvidersPageTests
             return Task.CompletedTask;
         }
 
+        public Task<MemoryProviderProfile?> GetAsync(
+            MemoryProviderInstanceId providerId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(
+                Profiles.FirstOrDefault(profile => profile.InstanceId == providerId));
+        }
+
         public Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<MemoryProviderProfile>>(

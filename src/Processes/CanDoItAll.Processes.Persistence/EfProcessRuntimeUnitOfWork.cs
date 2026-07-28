@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.Data;
-using System.Text.Json;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
@@ -559,32 +558,11 @@ public sealed class EfProcessRuntimeUnitOfWork(
             return RejectBlockedRecoveryChildLineage(request, expectedIssue);
         }
 
-        var parentRunSnippet = BuildLaunchVariableJsonSnippet(
-            ProcessRuntimeLaunchVariables.ParentProcessRunId,
-            expectedEvidence.ParentRunId.ToString());
-        var parentStepSnippet = BuildLaunchVariableJsonSnippet(
-            ProcessRuntimeLaunchVariables.ParentProcessStepId,
-            expectedEvidence.ParentStepInstanceId.ToString());
-        var matchingAssignments = dbContext.RuntimeStepAssignments
-            .AsNoTracking()
-            .Where(assignment =>
-                assignment.LaunchVariablesJson.Contains(parentRunSnippet) &&
-                assignment.LaunchVariablesJson.Contains(parentStepSnippet));
-        var linkedAssignmentRows = await matchingAssignments
-            .Select(assignment => assignment.RunId)
-            .Distinct()
-            .Select(runId => new LinkedChildAssignmentRow(
-                runId,
-                matchingAssignments
-                    .Where(assignment => assignment.RunId == runId)
-                    .Select(assignment => assignment.LaunchVariablesJson)
-                    .First(),
-                matchingAssignments
-                    .Where(assignment => assignment.RunId == runId)
-                    .Max(assignment => assignment.CreatedAtUtc)))
-            .OrderByDescending(child => child.CreatedAtUtc)
-            .ThenByDescending(child => child.RunId)
-            .Take(ProcessRuntimeChildLineageEvidenceRules.MaximumLinkedChildRunCount + 1)
+        var linkedAssignmentRows = await BlockedRecoveryChildLineageQuery
+            .Compose(
+                dbContext.RuntimeStepAssignments,
+                expectedEvidence.ParentRunId,
+                expectedEvidence.ParentStepInstanceId)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
         if (linkedAssignmentRows.Length >
@@ -668,11 +646,6 @@ public sealed class EfProcessRuntimeUnitOfWork(
             : RejectBlockedRecoveryChildLineage(
                 request,
                 "The linked-child membership, order, status, or version changed before commit.");
-    }
-
-    private static string BuildLaunchVariableJsonSnippet(string key, string value)
-    {
-        return $"{JsonSerializer.Serialize(key)}:{JsonSerializer.Serialize(value)}";
     }
 
     private static ProcessRuntimeCommitResult RejectBlockedRecoveryChildLineage(
@@ -921,11 +894,6 @@ public sealed class EfProcessRuntimeUnitOfWork(
             }
         }
     }
-
-    private readonly record struct LinkedChildAssignmentRow(
-        Guid RunId,
-        string LaunchVariablesJson,
-        DateTimeOffset CreatedAtUtc);
 
     private readonly record struct LinkedChildRun(
         ProcessRunId RunId,

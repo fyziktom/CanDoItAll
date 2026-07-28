@@ -57,7 +57,7 @@ public static class ApiEndpointRouteBuilderExtensions
             .AllowAnonymous()
             .WithName("GetApiAccessStatus");
 
-        group.MapPost("/access/tokens", (
+        var issueTokenEndpoint = group.MapPost("/access/tokens", (
                 ApiTokenIssueRequest request,
                 IApiTokenService tokenService) =>
             {
@@ -71,6 +71,10 @@ public static class ApiEndpointRouteBuilderExtensions
                 }
             })
             .WithName("IssueApiToken");
+        if (options.Authorization.Enabled)
+        {
+            issueTokenEndpoint.RequireAuthorization(ApiAuthorizationPolicies.IssueTokens);
+        }
 
         group.MapProjectsApi();
         group.MapAgentsApi();
@@ -83,7 +87,7 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapWorkflowRunEventsApi();
         group.MapProcessesApi();
         group.MapProcessRunEventsApi();
-        group.MapCognitiveMemoryApi();
+        group.MapMemoryProvidersApi();
         group.MapPluginsApi();
         group.MapCrmHrApi();
 
@@ -98,6 +102,22 @@ public static class ApiEndpointRouteBuilderExtensions
         if (options?.Authorization.Enabled == true)
         {
             builder.RequireAuthorization();
+        }
+
+        return builder;
+    }
+
+    public static IEndpointConventionBuilder ApplyApiAuthorization(
+        this IEndpointConventionBuilder builder,
+        IEndpointRouteBuilder endpoints,
+        string policyName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(policyName);
+
+        var options = endpoints.ServiceProvider.GetService<IOptions<ApiAccessOptions>>()?.Value;
+        if (options?.Authorization.Enabled == true)
+        {
+            builder.RequireAuthorization(policyName);
         }
 
         return builder;

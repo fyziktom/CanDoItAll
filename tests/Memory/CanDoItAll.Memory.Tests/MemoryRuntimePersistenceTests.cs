@@ -40,8 +40,10 @@ public sealed class MemoryRuntimePersistenceTests
         var profile = CreateMockProviderProfile();
 
         await store.UpsertAsync(profile, Now);
+        var byId = await store.GetAsync(profile.InstanceId);
         var profiles = await store.ListAsync();
 
+        Assert.Equal(profile.InstanceId, byId?.InstanceId);
         var persisted = Assert.Single(profiles);
         Assert.Equal(profile.InstanceId, persisted.InstanceId);
         Assert.Equal(MemoryProviderDriverKind.Mock, persisted.DriverKind);
