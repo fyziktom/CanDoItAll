@@ -21,7 +21,9 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -126,7 +128,6 @@ public sealed class AppDatabaseBootstrapper(
     private const int RuntimeBootstrapLocalOllamaTimeoutSeconds = 45;
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
-    private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
     private static readonly string[] BaselineSentinelTables =
     [
         "Projects_Projects",
@@ -187,7 +188,7 @@ public sealed class AppDatabaseBootstrapper(
         logger.LogInformation(
             "Applying EF migrations for profile {ProfileId}.",
             profile.Profile.Id);
-        await AdoptExistingPostgreSqlSchemaIfNeededAsync(profile, dbContext, cancellationToken);
+        await ReconcilePostgreSqlMigrationBaselineIfNeededAsync(profile, dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
@@ -210,11 +211,13 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
     }
 
-    private async Task AdoptExistingPostgreSqlSchemaIfNeededAsync(
+    private async Task ReconcilePostgreSqlMigrationBaselineIfNeededAsync(
         ResolvedDatabaseProfile profile,
         AppDbContext dbContext,
-        CancellationToken cancellationToken) {
-        if (profile.Profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
+        CancellationToken cancellationToken)
+    {
+        if (profile.Profile.ProviderKind != DatabaseProviderKind.PostgreSql)
+        {
             return;
         }
 
@@ -222,43 +225,105 @@ public sealed class AppDatabaseBootstrapper(
             .ToHashSet(StringComparer.Ordinal);
         var knownMigrationIds = dbContext.Database.GetMigrations().ToArray();
 
-        if (appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
+        if (!knownMigrationIds.Contains(PostgreSqlMigrationBaseline.CurrentMigrationId, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"The configured PostgreSQL migrations assembly does not contain baseline '{PostgreSqlMigrationBaseline.CurrentMigrationId}'.");
+        }
+
+        if (appliedMigrations.Contains(PostgreSqlMigrationBaseline.CurrentMigrationId))
+        {
             return;
         }
 
         var existingSentinelTables = new List<string>();
-        foreach (var tableName in BaselineSentinelTables) {
-            if (await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
+        foreach (var tableName in BaselineSentinelTables)
+        {
+            if (await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken))
+            {
                 existingSentinelTables.Add(tableName);
             }
         }
 
-        if (existingSentinelTables.Count == 0) {
+        if (existingSentinelTables.Count == 0 && appliedMigrations.Count == 0)
+        {
             return;
         }
 
-        if (existingSentinelTables.Count != BaselineSentinelTables.Length) {
+        if (existingSentinelTables.Count != BaselineSentinelTables.Length)
+        {
             throw new InvalidOperationException(
-                $"PostgreSQL profile '{profile.Profile.DisplayName}' has a partial CanDoItAll schema without the current EF baseline history. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to adopt the merged baseline automatically.");
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' does not have the complete CanDoItAll baseline schema. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to change EF migration history.");
         }
 
-        var missingRequirements = await FindMissingPostgreSqlMergedBaselineRequirementsAsync(dbContext, cancellationToken);
-        if (missingRequirements.Count > 0) {
+        var hasLegacyMigrationHistory = appliedMigrations.SetEquals(PostgreSqlMigrationBaseline.LegacyMigrationIds);
+        if (appliedMigrations.Count > 0 && !hasLegacyMigrationHistory)
+        {
+            var missingLegacyMigrations = PostgreSqlMigrationBaseline.LegacyMigrationIds
+                .Except(appliedMigrations, StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal);
+            var unexpectedMigrations = appliedMigrations
+                .Except(PostgreSqlMigrationBaseline.LegacyMigrationIds, StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal);
             throw new InvalidOperationException(
-                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the current PostgreSQL migration chain. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migrations {string.Join(", ", knownMigrationIds)} automatically.");
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' has migration history that cannot be reconciled with baseline '{PostgreSqlMigrationBaseline.CurrentMigrationId}'. Missing legacy migrations: {FormatValues(missingLegacyMigrations)}. Unexpected migrations: {FormatValues(unexpectedMigrations)}.");
+        }
+
+        var baselineModel = ResolvePostgreSqlBaselineModel(dbContext);
+        var missingRequirements = await FindMissingPostgreSqlBaselineRequirementsAsync(
+            dbContext,
+            baselineModel,
+            cancellationToken);
+        if (missingRequirements.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' does not match the squashed PostgreSQL baseline. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to change EF migration history.");
+        }
+
+        if (hasLegacyMigrationHistory)
+        {
+            logger.LogWarning(
+                "PostgreSQL profile {ProfileId} has the complete pre-squash migration chain. Replacing {LegacyMigrationCount} legacy history rows with baseline {BaselineMigrationId} before applying later migrations.",
+                profile.Profile.Id,
+                PostgreSqlMigrationBaseline.LegacyMigrationIds.Count,
+                PostgreSqlMigrationBaseline.CurrentMigrationId);
+            await ReplacePostgreSqlMigrationHistoryWithBaselineAsync(dbContext, cancellationToken);
+            return;
         }
 
         logger.LogWarning(
-            "PostgreSQL profile {ProfileId} has an existing current CanDoItAll schema but no recorded EF migration history. Recording current migration chain {MigrationIds} before applying pending migrations.",
+            "PostgreSQL profile {ProfileId} has the complete baseline schema without EF migration history. Recording baseline {BaselineMigrationId} before applying later migrations.",
             profile.Profile.Id,
-            string.Join(", ", knownMigrationIds));
-
+            PostgreSqlMigrationBaseline.CurrentMigrationId);
         await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
-        foreach (var migrationId in knownMigrationIds) {
-            if (!appliedMigrations.Contains(migrationId)) {
-                await MarkPostgreSqlMigrationAppliedAsync(dbContext, migrationId, cancellationToken);
-            }
+        await MarkPostgreSqlMigrationAppliedAsync(
+            dbContext,
+            PostgreSqlMigrationBaseline.CurrentMigrationId,
+            cancellationToken);
+    }
+
+    private static string FormatValues(IEnumerable<string> values)
+    {
+        var materializedValues = values.ToArray();
+        return materializedValues.Length == 0
+            ? "none"
+            : string.Join(", ", materializedValues);
+    }
+
+    private static IModel ResolvePostgreSqlBaselineModel(AppDbContext dbContext)
+    {
+        var migrationsAssembly = dbContext.GetService<IMigrationsAssembly>();
+        if (!migrationsAssembly.Migrations.TryGetValue(
+                PostgreSqlMigrationBaseline.CurrentMigrationId,
+                out var migrationType))
+        {
+            throw new InvalidOperationException(
+                $"Migration '{PostgreSqlMigrationBaseline.CurrentMigrationId}' was not found in the configured PostgreSQL migrations assembly.");
         }
+
+        var providerName = dbContext.Database.ProviderName
+            ?? throw new InvalidOperationException("The active EF Core database provider name is unavailable.");
+        return migrationsAssembly.CreateMigration(migrationType, providerName).TargetModel;
     }
 
     private static async Task<bool> PostgreSqlTableExistsAsync(
@@ -281,12 +346,14 @@ public sealed class AppDatabaseBootstrapper(
         return result is true;
     }
 
-    private static async Task<List<string>> FindMissingPostgreSqlMergedBaselineRequirementsAsync(
+    private static async Task<List<string>> FindMissingPostgreSqlBaselineRequirementsAsync(
         AppDbContext dbContext,
-        CancellationToken cancellationToken) {
+        IModel baselineModel,
+        CancellationToken cancellationToken)
+    {
         var missingRequirements = new List<string>();
 
-        var expectedSchema = BuildExpectedPostgreSqlSchema(dbContext);
+        var expectedSchema = BuildExpectedPostgreSqlSchema(baselineModel);
         var actualSchema = await ReadPostgreSqlSchemaAsync(dbContext, cancellationToken);
         foreach (var (tableName, expectedColumns) in expectedSchema) {
             if (!actualSchema.TryGetValue(tableName, out var actualColumns)) {
@@ -304,10 +371,11 @@ public sealed class AppDatabaseBootstrapper(
             missingRequirements.Add($"retired table {retiredTable}");
         }
 
-        var expectedIndexNames = dbContext.Model.GetEntityTypes()
+        var expectedIndexNames = baselineModel.GetEntityTypes()
             .SelectMany(entityType => entityType.GetIndexes())
             .Select(index => index.GetDatabaseName())
             .OfType<string>()
+            .Concat(PostgreSqlMigrationBaseline.CustomIndexNames)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(indexName => indexName, StringComparer.Ordinal);
         var actualIndexNames = await ReadPostgreSqlIndexNamesAsync(dbContext, cancellationToken);
@@ -344,10 +412,10 @@ public sealed class AppDatabaseBootstrapper(
         return result is true;
     }
 
-    private static Dictionary<string, HashSet<string>> BuildExpectedPostgreSqlSchema(AppDbContext dbContext)
+    private static Dictionary<string, HashSet<string>> BuildExpectedPostgreSqlSchema(IModel baselineModel)
     {
         var expectedSchema = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var entityType in dbContext.Model.GetEntityTypes())
+        foreach (var entityType in baselineModel.GetEntityTypes())
         {
             var tableName = entityType.GetTableName();
             if (string.IsNullOrWhiteSpace(tableName))
@@ -457,12 +525,30 @@ public sealed class AppDatabaseBootstrapper(
             ("@migrationId", migrationId),
             ("@productVersion", ResolveEfCoreProductVersion()));
 
-    private static string ResolveEfCoreProductVersion() {
+    private static async Task ReplacePostgreSqlMigrationHistoryWithBaselineAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             DELETE FROM "__EFMigrationsHistory";
+
+             INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+             VALUES ({PostgreSqlMigrationBaseline.CurrentMigrationId}, {ResolveEfCoreProductVersion()});
+             """,
+            cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static string ResolveEfCoreProductVersion()
+    {
         var informationalVersion = typeof(DbContext).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion;
 
-        if (!string.IsNullOrWhiteSpace(informationalVersion)) {
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
             return informationalVersion.Split('+', 2)[0];
         }
 

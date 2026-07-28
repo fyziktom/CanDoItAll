@@ -12,10 +12,9 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CanDoItAll.Migrations.PostgreSql.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260724224501_AddProcessRunRecords")]
-    partial class AddProcessRunRecords
+    [Migration("20260728161028_InitialPostgreSqlBaseline")]
+    partial class InitialPostgreSqlBaseline
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -746,6 +745,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExternalKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ExternalNamespace")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid>("VersionId")
                         .IsConcurrencyToken()
                         .HasColumnType("uuid");
@@ -754,6 +763,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasName("PK_AgentFramework_WorkflowDefinitionHeads");
 
                     b.HasIndex("VersionId");
+
+                    b.HasIndex("ExternalNamespace", "ExternalKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkflowDefinitionHeads_ExternalIdentity")
+                        .HasFilter("\"ExternalNamespace\" <> ''");
 
                     b.ToTable("AgentFramework_WorkflowDefinitionHeads", (string)null);
                 });
@@ -903,6 +917,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("CanonicalInputHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<Guid>("ClaimToken")
                         .HasColumnType("uuid");
 
@@ -921,6 +940,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<DateTimeOffset?>("LastReplayedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("LeaseExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -934,6 +956,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ReplayCount")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("RequestedVersionId")
                         .HasColumnType("uuid");
@@ -951,6 +976,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CallerKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowLaunchIdempotency_ApiKey")
+                        .HasFilter("\"OriginKind\" = 0");
 
                     b.HasIndex("ReservedRunId")
                         .IsUnique()
@@ -1572,6 +1602,71 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("CrmHr_CapacityBlocks", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RelatedPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedPartyId");
+
+                    b.HasIndex("AccountPartyId", "RelatedPartyId", "Role")
+                        .IsUnique();
+
+                    b.ToTable("CrmHr_AccountStakeholders", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountConnectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountConnectionId", "ProjectId")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "AccountConnectionId");
+
+                    b.ToTable("CrmHr_AccountConnectionProjects", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1615,46 +1710,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsUnique();
 
                     b.ToTable("CrmHr_AccountProfiles", (string)null);
-                });
-
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountStakeholderLink", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AccountPartyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("RelatedPartyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RelatedPartyId");
-
-                    b.HasIndex("AccountPartyId", "RelatedPartyId", "Role")
-                        .IsUnique();
-
-                    b.ToTable("CrmHr_AccountStakeholders", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmHrAuditEntry", b =>
@@ -4883,6 +4938,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ConfigSchemaVersion")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -5737,6 +5796,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BlockedRecoveryActionsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
                         .HasColumnType("uuid");
@@ -5967,6 +6030,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("IdempotencyKey")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("AppliedSequence")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("AppliedStepStatus")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -5993,7 +6059,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<string>("UserSafeSummary")
+                        .HasColumnType("text");
+
                     b.HasKey("RunId", "StepInstanceId", "StrategyId", "IdempotencyKey");
+
+                    b.HasIndex("RunId", "AppliedSequence")
+                        .IsUnique();
 
                     b.HasIndex("StepInstanceId", "StrategyId", "IdempotencyKey")
                         .IsUnique();
@@ -6020,6 +6092,21 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("VersionId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CrmHr.CrmAccountConnection", null)
+                        .WithMany()
+                        .HasForeignKey("AccountConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

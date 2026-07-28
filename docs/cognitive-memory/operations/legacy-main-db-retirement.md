@@ -39,7 +39,10 @@ Export ids must be single safe path segments. `.`/`..`, nested paths, and platfo
 
 ## Retention And Retirement
 
-The EF migration `RetireLegacyCognitiveMemoryMainDbModel` updates the main `AppDbContext` model snapshot so new code no longer carries native Cognitive Memory model registrations. Its `Up` and `Down` methods are intentionally no-op. Applying it must not drop, recreate, or mutate historical `CognitiveMemory_*` tables.
+The squashed PostgreSQL baseline omits native Cognitive Memory model registrations.
+Reconciliation of a complete pre-baseline development database changes only
+`__EFMigrationsHistory`; it does not drop, recreate, or mutate historical
+`CognitiveMemory_*` tables.
 
 The compatibility lifetime is bounded by this rule:
 
@@ -56,4 +59,4 @@ Export artifacts can contain source excerpts, recall context packs, feedback tex
 
 ## Validation
 
-Focused tests cover disabled compatibility, empty export, populated export with context/source/correlation id map, duplicate export blocking, partial export failure, unsafe export ids, and PostgreSQL table filtering. EF pending-model proof must report no pending model changes after the no-op retirement migration.
+Focused tests cover disabled compatibility, empty export, populated export with context/source/correlation id map, duplicate export blocking, partial export failure, unsafe export ids, and PostgreSQL table filtering. EF pending-model proof must report no changes after the squashed baseline.

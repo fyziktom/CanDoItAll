@@ -2,6 +2,8 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -75,7 +77,10 @@ public sealed class MigrationBootstrapIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using (var existingSchemaContext = await dbContextFactory.CreateDbContextAsync())
         {
-            await existingSchemaContext.Database.EnsureCreatedAsync();
+            var migrator = existingSchemaContext.Database.GetService<IMigrator>();
+            await migrator.MigrateAsync(PostgreSqlMigrationBaseline.CurrentMigrationId);
+            await existingSchemaContext.Database.ExecuteSqlRawAsync(
+                """DELETE FROM "__EFMigrationsHistory";""");
             Assert.Empty(await existingSchemaContext.Database.GetAppliedMigrationsAsync());
         }
 
@@ -85,6 +90,57 @@ public sealed class MigrationBootstrapIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await AssertCurrentMigrationChainAsync(dbContext);
         Assert.True(await dbContext.Database.CanConnectAsync());
+    }
+
+    [Fact]
+    public async Task Bootstrap_reconciles_the_complete_legacy_history_to_the_squashed_baseline()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-squashed-history");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-squashed-history");
+
+        var services = new ServiceCollection();
+        var environment = new TestHostEnvironment(activeProfile.EnvironmentRootPath, "CanDoItAll.Tests.Integration");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile);
+        TestApplicationBootstrap.ConfigureDefaultServices(services, configuration, environment);
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using (var legacyHistoryContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var migrator = legacyHistoryContext.Database.GetService<IMigrator>();
+            await migrator.MigrateAsync(PostgreSqlMigrationBaseline.CurrentMigrationId);
+            foreach (var legacyMigrationId in PostgreSqlMigrationBaseline.LegacyMigrationIds)
+            {
+                await legacyHistoryContext.Database.ExecuteSqlInterpolatedAsync(
+                    $"""
+                     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                     SELECT {legacyMigrationId}, "ProductVersion"
+                     FROM "__EFMigrationsHistory"
+                     WHERE "MigrationId" = {PostgreSqlMigrationBaseline.CurrentMigrationId};
+                     """);
+            }
+
+            await legacyHistoryContext.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                 DELETE FROM "__EFMigrationsHistory"
+                 WHERE "MigrationId" = {PostgreSqlMigrationBaseline.CurrentMigrationId};
+                 """);
+            Assert.Equal(
+                PostgreSqlMigrationBaseline.LegacyMigrationIds.Order(StringComparer.Ordinal),
+                (await legacyHistoryContext.Database.GetAppliedMigrationsAsync()).Order(StringComparer.Ordinal));
+        }
+
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await AssertCurrentMigrationChainAsync(dbContext);
     }
 
     [Fact]
@@ -127,8 +183,44 @@ public sealed class MigrationBootstrapIntegrationTests
 
     private static async Task AssertCurrentMigrationChainAsync(AppDbContext dbContext)
     {
-        var knownMigrations = dbContext.Database.GetMigrations();
-        var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
+        var knownMigrations = dbContext.Database.GetMigrations().ToArray();
+        var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToArray();
+        Assert.NotEmpty(knownMigrations);
+        Assert.Equal(PostgreSqlMigrationBaseline.CurrentMigrationId, knownMigrations[0]);
+        Assert.DoesNotContain(knownMigrations, PostgreSqlMigrationBaseline.LegacyMigrationIds.Contains);
         Assert.Equal(knownMigrations, appliedMigrations);
+        await AssertCustomBaselineIndexesAsync(dbContext);
+    }
+
+    private static async Task AssertCustomBaselineIndexesAsync(AppDbContext dbContext)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        var actualIndexNames = new HashSet<string>(StringComparer.Ordinal);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT indexname
+            FROM pg_indexes
+            WHERE schemaname = current_schema()
+              AND indexname IN (
+                  'IX_Workspace_ConnectorCommands_PendingClaimOrder',
+                  'IX_Prompts_PromptArtifacts_SearchText_Trgm',
+                  'IX_Prompts_PromptTags_NameKey_Trgm'
+              );
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            actualIndexNames.Add(reader.GetString(0));
+        }
+
+        Assert.Equal(
+            PostgreSqlMigrationBaseline.CustomIndexNames.Order(StringComparer.Ordinal),
+            actualIndexNames.Order(StringComparer.Ordinal));
     }
 }
