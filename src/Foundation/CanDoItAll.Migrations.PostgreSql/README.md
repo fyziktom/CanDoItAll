@@ -31,11 +31,14 @@ and are applied by the baseline migration.
 
 ### Existing development database
 
-Back up the database before the first startup after the squash. Startup recognizes only
-the complete 42-migration development chain that ended at
-`20260727232724_AddProviderProfileConcurrencyToken`. It validates the baseline schema,
-atomically replaces those history rows in `__EFMigrationsHistory` with the single
-squashed-baseline row, and then lets EF apply any migrations created after the baseline.
+Back up the database before the first startup after the squash. Startup recognizes the
+complete 42-migration PostgreSQL development chain that ended at
+`20260727232724_AddProviderProfileConcurrencyToken`, including installations that retain
+older predecessor rows from before the PostgreSQL baseline. It validates the baseline
+schema, idempotently restores missing baseline-owned custom indexes after all other
+schema requirements pass, atomically replaces all pre-squash history rows in
+`__EFMigrationsHistory` with the single squashed-baseline row, and then lets EF apply
+any migrations created after the baseline.
 
 Partial or unexpected migration histories are rejected with an actionable error. The
 bootstrapper does not silently mark an incomplete schema as current. No manual history

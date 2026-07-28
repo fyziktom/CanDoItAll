@@ -3,6 +3,7 @@ namespace CanDoItAll.Infrastructure.Persistence;
 public static class PostgreSqlMigrationBaseline
 {
     public const string CurrentMigrationId = "20260728161028_InitialPostgreSqlBaseline";
+    public const string FirstLegacyMigrationId = "20260528182412_InitialPostgreSqlBaseline";
 
     public static IReadOnlySet<string> LegacyMigrationIds { get; } = new HashSet<string>(
         [

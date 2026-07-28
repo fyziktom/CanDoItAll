@@ -93,10 +93,15 @@ public sealed class MigrationBootstrapIntegrationTests
     }
 
     [Fact]
-    public async Task Bootstrap_reconciles_the_complete_legacy_history_to_the_squashed_baseline()
+    public async Task Bootstrap_reconciles_the_complete_legacy_history_and_restores_owned_custom_indexes()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-squashed-history");
         var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-squashed-history");
+        string[] predecessorMigrationIds =
+        [
+            "20260401094848_InitialCreate",
+            "20260520190312_AddCognitiveMemoryStatementAggregateClaimMaps"
+        ];
 
         var services = new ServiceCollection();
         var environment = new TestHostEnvironment(activeProfile.EnvironmentRootPath, "CanDoItAll.Tests.Integration");
@@ -115,7 +120,7 @@ public sealed class MigrationBootstrapIntegrationTests
         {
             var migrator = legacyHistoryContext.Database.GetService<IMigrator>();
             await migrator.MigrateAsync(PostgreSqlMigrationBaseline.CurrentMigrationId);
-            foreach (var legacyMigrationId in PostgreSqlMigrationBaseline.LegacyMigrationIds)
+            foreach (var legacyMigrationId in PostgreSqlMigrationBaseline.LegacyMigrationIds.Concat(predecessorMigrationIds))
             {
                 await legacyHistoryContext.Database.ExecuteSqlInterpolatedAsync(
                     $"""
@@ -131,8 +136,12 @@ public sealed class MigrationBootstrapIntegrationTests
                  DELETE FROM "__EFMigrationsHistory"
                  WHERE "MigrationId" = {PostgreSqlMigrationBaseline.CurrentMigrationId};
                  """);
+            await legacyHistoryContext.Database.ExecuteSqlRawAsync(
+                """DROP INDEX "IX_Workspace_ConnectorCommands_PendingClaimOrder";""");
             Assert.Equal(
-                PostgreSqlMigrationBaseline.LegacyMigrationIds.Order(StringComparer.Ordinal),
+                PostgreSqlMigrationBaseline.LegacyMigrationIds
+                    .Concat(predecessorMigrationIds)
+                    .Order(StringComparer.Ordinal),
                 (await legacyHistoryContext.Database.GetAppliedMigrationsAsync()).Order(StringComparer.Ordinal));
         }
 

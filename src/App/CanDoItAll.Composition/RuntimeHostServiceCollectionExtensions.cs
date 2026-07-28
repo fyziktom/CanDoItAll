@@ -256,14 +256,19 @@ public sealed class AppDatabaseBootstrapper(
                 $"PostgreSQL profile '{profile.Profile.DisplayName}' does not have the complete CanDoItAll baseline schema. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to change EF migration history.");
         }
 
-        var hasLegacyMigrationHistory = appliedMigrations.SetEquals(PostgreSqlMigrationBaseline.LegacyMigrationIds);
+        var unexpectedMigrations = appliedMigrations
+            .Except(PostgreSqlMigrationBaseline.LegacyMigrationIds, StringComparer.Ordinal)
+            .Where(migrationId =>
+                string.CompareOrdinal(migrationId, PostgreSqlMigrationBaseline.FirstLegacyMigrationId) >= 0)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var hasLegacyMigrationHistory =
+            PostgreSqlMigrationBaseline.LegacyMigrationIds.IsSubsetOf(appliedMigrations) &&
+            unexpectedMigrations.Length == 0;
         if (appliedMigrations.Count > 0 && !hasLegacyMigrationHistory)
         {
             var missingLegacyMigrations = PostgreSqlMigrationBaseline.LegacyMigrationIds
                 .Except(appliedMigrations, StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal);
-            var unexpectedMigrations = appliedMigrations
-                .Except(PostgreSqlMigrationBaseline.LegacyMigrationIds, StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal);
             throw new InvalidOperationException(
                 $"PostgreSQL profile '{profile.Profile.DisplayName}' has migration history that cannot be reconciled with baseline '{PostgreSqlMigrationBaseline.CurrentMigrationId}'. Missing legacy migrations: {FormatValues(missingLegacyMigrations)}. Unexpected migrations: {FormatValues(unexpectedMigrations)}.");
@@ -274,6 +279,25 @@ public sealed class AppDatabaseBootstrapper(
             dbContext,
             baselineModel,
             cancellationToken);
+        var baselineOwnedIndexRequirements = PostgreSqlMigrationBaseline.CustomIndexNames
+            .Select(indexName => $"index {indexName}")
+            .ToHashSet(StringComparer.Ordinal);
+        if (missingRequirements.Count > 0 &&
+            missingRequirements.All(baselineOwnedIndexRequirements.Contains))
+        {
+            logger.LogWarning(
+                "PostgreSQL profile {ProfileId} is missing baseline-owned custom indexes {MissingCustomIndexes}. Restoring those indexes before migration-history reconciliation.",
+                profile.Profile.Id,
+                string.Join(", ", missingRequirements));
+            await dbContext.Database.ExecuteSqlRawAsync(
+                PostgreSqlMigrationBaseline.CreateCustomObjectsSql,
+                cancellationToken);
+            missingRequirements = await FindMissingPostgreSqlBaselineRequirementsAsync(
+                dbContext,
+                baselineModel,
+                cancellationToken);
+        }
+
         if (missingRequirements.Count > 0)
         {
             throw new InvalidOperationException(
@@ -283,9 +307,9 @@ public sealed class AppDatabaseBootstrapper(
         if (hasLegacyMigrationHistory)
         {
             logger.LogWarning(
-                "PostgreSQL profile {ProfileId} has the complete pre-squash migration chain. Replacing {LegacyMigrationCount} legacy history rows with baseline {BaselineMigrationId} before applying later migrations.",
+                "PostgreSQL profile {ProfileId} has the complete pre-squash migration chain. Replacing {MigrationHistoryRowCount} pre-squash history rows with baseline {BaselineMigrationId} before applying later migrations.",
                 profile.Profile.Id,
-                PostgreSqlMigrationBaseline.LegacyMigrationIds.Count,
+                appliedMigrations.Count,
                 PostgreSqlMigrationBaseline.CurrentMigrationId);
             await ReplacePostgreSqlMigrationHistoryWithBaselineAsync(dbContext, cancellationToken);
             return;
