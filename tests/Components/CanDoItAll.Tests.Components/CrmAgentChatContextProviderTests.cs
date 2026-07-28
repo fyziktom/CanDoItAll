@@ -12,7 +12,7 @@ public sealed class CrmAgentChatContextProviderTests
     [Fact]
     public void Provider_replaces_stale_module_context_and_transitions_between_workspace_and_selection()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
@@ -23,7 +23,7 @@ public sealed class CrmAgentChatContextProviderTests
                 new AgentChatContextSourceId(Guid.NewGuid().ToString("D"))),
             "Stale project structure"));
 
-        var cut = context.RenderComponent<CrmAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<CrmAgentChatContextProvider>(parameters => parameters
             .Add(component => component.Account, (CrmAgentChatAccountContext?)null));
 
         cut.WaitForAssertion(() =>
@@ -40,7 +40,7 @@ public sealed class CrmAgentChatContextProviderTests
 
         var account = CreateAccount();
         var opportunity = CreateOpportunity(account.AccountId, "Expansion", OpportunityStage.Qualified);
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, opportunity));
 
@@ -65,7 +65,7 @@ public sealed class CrmAgentChatContextProviderTests
             "Architecture review",
             InteractionType.Meeting,
             opportunity.OpportunityId);
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null)
             .Add(component => component.Interaction, interaction));
@@ -82,7 +82,7 @@ public sealed class CrmAgentChatContextProviderTests
                 fragment => Assert.Equal(CrmAgentChatContextBuilder.InteractionContributorId, fragment.ContributorId.Value));
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, (CrmAgentChatAccountContext?)null)
             .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null)
             .Add(component => component.Interaction, (CrmAgentChatInteractionContext?)null));
@@ -104,7 +104,7 @@ public sealed class CrmAgentChatContextProviderTests
     [Fact]
     public async Task Provider_tracks_selection_publishes_refresh_and_releases_its_scope()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var hub = new RecordingNotificationHub();
         var agent = CreateAgent();
@@ -114,7 +114,7 @@ public sealed class CrmAgentChatContextProviderTests
         var opportunity = CreateOpportunity(account.AccountId, "Expansion", OpportunityStage.Qualified);
         var refreshCount = 0;
 
-        var cut = context.RenderComponent<CrmAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<CrmAgentChatContextProvider>(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, opportunity)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -136,7 +136,7 @@ public sealed class CrmAgentChatContextProviderTests
         });
 
         var activeSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, opportunity)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -154,7 +154,7 @@ public sealed class CrmAgentChatContextProviderTests
 
         cut.WaitForAssertion(() => Assert.Equal(1, refreshCount));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, CreateOpportunity(account.AccountId, "Renewal", OpportunityStage.Negotiation))
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -170,7 +170,7 @@ public sealed class CrmAgentChatContextProviderTests
                 fact => fact.Name == "opportunity-stage" && fact.Value == "Negotiation");
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.Opportunity, (CrmAgentChatOpportunityContext?)null)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -188,14 +188,14 @@ public sealed class CrmAgentChatContextProviderTests
     [Fact]
     public void Provider_blocks_transition_context_and_recovers_without_replacing_the_selection_scope()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
         var account = CreateAccount();
 
-        var cut = context.RenderComponent<CrmAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<CrmAgentChatContextProvider>(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Loading));
 
@@ -208,7 +208,7 @@ public sealed class CrmAgentChatContextProviderTests
         });
         var loadingSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Account, account)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
 

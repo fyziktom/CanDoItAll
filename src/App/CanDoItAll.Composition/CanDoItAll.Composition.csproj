@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+    <ProjectReference Include="..\..\Memory\Drivers\CanDoItAll.Memory.Drivers.CognitiveMemory\CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />

@@ -46,7 +46,7 @@ public sealed class ProjectsCrmHrIntegrationTests
             Source = "component-tests"
         });
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>
         {

@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class CheckedBadgeFilterGroupTests : TestContext
+public sealed class CheckedBadgeFilterGroupTests : BunitContext
 {
     public CheckedBadgeFilterGroupTests()
     {
@@ -16,7 +16,7 @@ public sealed class CheckedBadgeFilterGroupTests : TestContext
     public void Toggle_returns_a_new_strongly_typed_set_and_exposes_pressed_state()
     {
         IReadOnlySet<FilterKind>? changedValue = null;
-        var cut = RenderComponent<CheckedBadgeFilterGroup<FilterKind>>(parameters => parameters
+        var cut = Render<CheckedBadgeFilterGroup<FilterKind>>(parameters => parameters
             .Add(component => component.Options, CreateOptions())
             .Add(component => component.Value, new HashSet<FilterKind>
             {
@@ -40,7 +40,7 @@ public sealed class CheckedBadgeFilterGroupTests : TestContext
     public void Non_empty_mode_disables_the_last_checked_filter()
     {
         var callbackCount = 0;
-        var cut = RenderComponent<CheckedBadgeFilterGroup<FilterKind>>(parameters => parameters
+        var cut = Render<CheckedBadgeFilterGroup<FilterKind>>(parameters => parameters
             .Add(component => component.Options, CreateOptions())
             .Add(component => component.Value, new HashSet<FilterKind>
             {

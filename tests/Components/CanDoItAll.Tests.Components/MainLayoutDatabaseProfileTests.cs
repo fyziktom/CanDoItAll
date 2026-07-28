@@ -14,7 +14,7 @@ public sealed class MainLayoutDatabaseProfileTests
     {
         await using var harness = await CreatePersistedActiveHarnessAsync();
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>
@@ -36,7 +36,7 @@ public sealed class MainLayoutDatabaseProfileTests
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
             .SetResult(true);
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>
@@ -53,7 +53,7 @@ public sealed class MainLayoutDatabaseProfileTests
     {
         await using var harness = await CreateRuntimeOverrideHarnessAsync();
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>
@@ -74,7 +74,7 @@ public sealed class MainLayoutDatabaseProfileTests
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
             .SetResult(true);
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>
@@ -108,7 +108,7 @@ public sealed class MainLayoutDatabaseProfileTests
             "Stage-01"));
         Assert.True(saveResult.IsSuccess);
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>
@@ -128,7 +128,7 @@ public sealed class MainLayoutDatabaseProfileTests
     {
         await using var harness = await CreateRuntimeOverrideHarnessAsync();
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForElement("[data-testid='database-startup-continue']");
@@ -146,7 +146,7 @@ public sealed class MainLayoutDatabaseProfileTests
     {
         await using var harness = await CreateRuntimeOverrideHarnessAsync();
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>
@@ -164,7 +164,7 @@ public sealed class MainLayoutDatabaseProfileTests
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
             .SetResult(true);
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div data-testid=\"layout-body\">Body</div>"))));
 
         cut.WaitForAssertion(() =>

@@ -52,4 +52,4 @@ A memory change is not ready unless tests show that:
 - worker leases prevent concurrent ownership when background workers are enabled;
 - `/api/cognitive-memory` remains a retirement shim unless an intentional API decision changes that contract.
 
-The separately owned native service has its own build, test, deployment, and provider validation. Do not treat its historical tests or the retained legacy module as part of the base-host release gate.
+The separately owned native service has its own build, test, deployment, and provider validation. Its native implementation tests are not part of the base-host release gate.

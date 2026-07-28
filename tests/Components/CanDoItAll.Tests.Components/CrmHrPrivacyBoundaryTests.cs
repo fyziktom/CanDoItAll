@@ -58,7 +58,7 @@ public sealed class CrmHrPrivacyBoundaryTests
         Assert.True(saveResult.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={saveResult.Value}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         cut.WaitForAssertion(() => Assert.Equal(
             "Rhea Sensitive",
             cut.Find("[data-testid='crmhr-party-display-name']").GetAttribute("value")));
@@ -103,7 +103,7 @@ public sealed class CrmHrPrivacyBoundaryTests
         });
         Assert.True(workforceSave.IsSuccess);
 
-        var homeCut = harness.Context.RenderComponent<CrmHrHomePage>();
+        var homeCut = harness.Context.Render<CrmHrHomePage>();
         homeCut.WaitForAssertion(() =>
         {
             Assert.Contains("Sensitive directory records", homeCut.Markup);
@@ -111,7 +111,7 @@ public sealed class CrmHrPrivacyBoundaryTests
         });
 
         navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId}");
-        var workforceCut = harness.Context.RenderComponent<CrmHrWorkforcePage>();
+        var workforceCut = harness.Context.Render<CrmHrWorkforcePage>();
         workforceCut.WaitForAssertion(() =>
         {
             Assert.Contains("Hidden from global search", workforceCut.Markup);

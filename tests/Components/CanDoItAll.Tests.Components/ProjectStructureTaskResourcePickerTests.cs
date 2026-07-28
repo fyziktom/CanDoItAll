@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class ProjectStructureTaskResourcePickerTests : TestContext
+public sealed class ProjectStructureTaskResourcePickerTests : BunitContext
 {
     private static readonly Guid PersonId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid AgentId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -99,7 +99,7 @@ public sealed class ProjectStructureTaskResourcePickerTests : TestContext
 
         Assert.Empty(cut.FindAll($"[data-testid='resource-option-agent-{AgentId:N}-favorite']"));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ShowFavoriteActions, true));
 
         var favoriteButton = cut.Find($"[data-testid='resource-option-agent-{AgentId:N}-favorite']");
@@ -121,7 +121,7 @@ public sealed class ProjectStructureTaskResourcePickerTests : TestContext
 
         Assert.Empty(cut.FindAll($"[data-testid='resource-option-agent-{AgentId:N}-favorite']"));
 
-        cut.SetParametersAndRender(parameters =>
+        cut.Render(parameters =>
             parameters.Add(component => component.ShowFavoriteActions, true));
 
         Assert.NotEmpty(cut.FindAll($"[data-testid='resource-option-agent-{AgentId:N}-favorite']"));
@@ -133,7 +133,7 @@ public sealed class ProjectStructureTaskResourcePickerTests : TestContext
         Action<ProjectStructureTaskResourceSelection>? favoriteToggled = null,
         bool showFavoriteActions = false)
     {
-        return RenderComponent<ProjectStructureTaskResourcePicker>(parameters =>
+        return Render<ProjectStructureTaskResourcePicker>(parameters =>
         {
             parameters
                 .Add(component => component.Options, CreateOptions())

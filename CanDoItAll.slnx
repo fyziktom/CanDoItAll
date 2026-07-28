@@ -23,6 +23,9 @@
     <Project Path="src/Memory/CanDoItAll.Memory.Persistence/CanDoItAll.Memory.Persistence.csproj" />
     <Project Path="src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions/CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
   </Folder>
+  <Folder Name="/src/Memory/Drivers/">
+    <Project Path="src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
+  </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
     <Project Path="src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />

@@ -28,7 +28,7 @@ public sealed class MemoryProviderOperationsPageTests
                 MemoryCapabilityIds.ContextQuerySync,
                 MemoryCapabilityIds.FeedbackImmediate));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
@@ -58,7 +58,7 @@ public sealed class MemoryProviderOperationsPageTests
                 MemoryCapabilityIds.OperationStatus),
             services => services.AddSingleton<IMemoryProviderDriver>(new AcceptingMemoryProviderDriver(Now)));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
@@ -92,7 +92,7 @@ public sealed class MemoryProviderOperationsPageTests
             services => services.AddSingleton<IMemoryProviderDriver>(
                 new FailingMemoryProviderDriver(MemoryProviderDriverResultKind.ProviderError, "provider route failed")));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
@@ -126,7 +126,7 @@ public sealed class MemoryProviderOperationsPageTests
         }
 
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-events']").Click();
@@ -156,7 +156,7 @@ public sealed class MemoryProviderOperationsPageTests
                 MemoryProviderHealthState.Healthy,
                 MemoryCapabilityIds.IngestionSnapshot));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-ingestion']").Click();
@@ -180,7 +180,7 @@ public sealed class MemoryProviderOperationsPageTests
         MemoryProviderProfile profile,
         Action<IServiceCollection>? configureServices = null)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddDbContextFactory<AppDbContext>(options =>
@@ -293,7 +293,7 @@ public sealed class MemoryProviderOperationsPageTests
         return MemoryLedgerRetentionPolicy.Expiring(Now.AddDays(7), Now.AddDays(30));
     }
 
-    private sealed record ComponentSetup(TestContext Context);
+    private sealed record ComponentSetup(BunitContext Context);
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {

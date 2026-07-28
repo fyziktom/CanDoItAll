@@ -14,7 +14,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
     public async Task Dialog_emits_default_pure_effort_and_normalized_expected_cost()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var resultTask = OpenDialog(context, []);
 
         host.WaitForElement("[data-testid='project-structure-task-create-estimate-preset-1d']");
@@ -40,7 +40,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
     public async Task Dialog_returns_direct_person_assignment_and_preserves_task_fields()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var joeId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var agentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var workflowId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
@@ -81,7 +81,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
     public async Task Mixed_assignment_edit_keeps_direct_assignee_read_only_while_task_fields_remain_editable()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var primaryPersonId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var replacementAgentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var primaryAssignee = new ProjectStructureTaskResourceSelection(
@@ -118,9 +118,9 @@ public sealed class ProjectStructureTaskCreateDialogTests
         Assert.Equal(primaryAssignee, result.Assignee);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
@@ -128,7 +128,7 @@ public sealed class ProjectStructureTaskCreateDialogTests
     }
 
     private static Task<object?> OpenDialog(
-        TestContext context,
+        BunitContext context,
         IReadOnlyList<ProjectStructureTaskResourceOption> assignees,
         bool isEditMode = false,
         ProjectStructureTaskResourceSelection? initialAssignee = null,

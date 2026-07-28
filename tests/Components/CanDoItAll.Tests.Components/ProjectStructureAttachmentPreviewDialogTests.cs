@@ -27,7 +27,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         string mediaType,
         string fileName)
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         var node = CreateNode(objectType, mediaType, fileName);
@@ -41,7 +41,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             session,
             new NoopSessionReleaser());
 
-        var cut = context.RenderComponent<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
             .Add(component => component.Node, node)
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Empty)
@@ -65,7 +65,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public async Task Dialog_shows_node_notes_and_keeps_open_and_reveal_as_separate_actions()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         var node = CreateNode(
@@ -90,7 +90,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         bool opened = false;
         bool revealed = false;
 
-        var cut = context.RenderComponent<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
             .Add(component => component.Node, node)
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Empty)
@@ -118,7 +118,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public void Managed_markdown_payload_is_not_repeated_as_node_notes()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         const string markdown = """
@@ -161,7 +161,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public void Managed_markdown_keeps_distinct_supplemental_notes()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
 
@@ -225,7 +225,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public async Task File_preview_can_maximize_and_restore_within_the_canvas()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         var cut = RenderReadOnly(context, "report.pdf", "application/pdf", "bounded pdf payload");
@@ -256,7 +256,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public async Task Editable_text_dialog_guards_close_and_awaits_revisioned_save()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         var node = CreateNode(ProjectObjectType.File, "text/markdown", "notes.md");
@@ -278,7 +278,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             session,
             new NoopSessionReleaser());
         bool closed = false;
-        var cut = context.RenderComponent<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
             .Add(component => component.Node, node)
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Factory.Create(this, () => closed = true))
@@ -315,7 +315,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public void Markdown_uses_advanced_markdig_with_inert_content_and_strict_mermaid_fences()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         string markdown = """
@@ -370,7 +370,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public void Oversized_text_is_rejected_at_the_host_limit_before_stream_read()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         var node = CreateNode(ProjectObjectType.File, "text/plain", "oversized.txt");
@@ -404,7 +404,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     [Fact]
     public void Unknown_file_uses_sandboxed_browser_fallback_with_bounded_content()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         RegisterComposition(context);
         var node = CreateNode(ProjectObjectType.File, "application/zip", "archive.zip");
@@ -426,7 +426,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         });
     }
 
-    private static void RegisterComposition(TestContext context)
+    private static void RegisterComposition(BunitContext context)
     {
         context.Services.AddLogging();
         context.Services.AddSingleton(new FileInteractionComponentBuilder()
@@ -439,7 +439,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     }
 
     private static IRenderedComponent<ProjectStructureAttachmentPreviewDialog> RenderReadOnly(
-        TestContext context,
+        BunitContext context,
         string fileName,
         string mediaType,
         string content,
@@ -460,10 +460,10 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
     }
 
     private static IRenderedComponent<ProjectStructureAttachmentPreviewDialog> Render(
-        TestContext context,
+        BunitContext context,
         ProjectStructureNode node,
         ProjectStructureKnownFileInteraction interaction)
-        => context.RenderComponent<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
+        => context.Render<ProjectStructureAttachmentPreviewDialog>(parameters => parameters
             .Add(component => component.Node, node)
             .Add(component => component.Interaction, interaction)
             .Add(component => component.Close, EventCallback.Empty)

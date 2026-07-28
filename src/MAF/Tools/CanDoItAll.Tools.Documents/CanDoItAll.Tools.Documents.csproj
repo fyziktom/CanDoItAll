@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.5.2" />
+    <PackageReference Include="AngleSharp" Version="1.6.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="ManagedCode.MarkItDown" Version="10.0.7" />
   </ItemGroup>

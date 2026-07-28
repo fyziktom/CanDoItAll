@@ -10,7 +10,7 @@ public sealed class PartyContactMethodsEditorTests {
     public async Task Wizard_keeps_an_isolated_draft_across_back_and_discards_it_on_cancel() {
         using var context = CreateContext();
         var contactPoints = new List<PartyContactPointEditorModel>();
-        var cut = context.RenderComponent<PartyContactMethodsEditor>(parameters => parameters
+        var cut = context.Render<PartyContactMethodsEditor>(parameters => parameters
             .Add(component => component.ContactPoints, contactPoints));
 
         cut.Find("[data-testid='crmhr-contact-add']").Click();
@@ -67,7 +67,7 @@ public sealed class PartyContactMethodsEditorTests {
     public async Task Invalid_finish_stays_open_and_valid_finish_adds_exactly_one_contact() {
         using var context = CreateContext();
         var contactPoints = new List<PartyContactPointEditorModel>();
-        var cut = context.RenderComponent<PartyContactMethodsEditor>(parameters => parameters
+        var cut = context.Render<PartyContactMethodsEditor>(parameters => parameters
             .Add(component => component.ContactPoints, contactPoints));
 
         cut.Find("[data-testid='crmhr-contact-add']").Click();
@@ -115,11 +115,11 @@ public sealed class PartyContactMethodsEditorTests {
             Value = "+15550101"
         };
         var contactPoints = new List<PartyContactPointEditorModel> { first, second };
-        var cut = context.RenderComponent<PartyContactMethodsEditor>(parameters => parameters
+        var cut = context.Render<PartyContactMethodsEditor>(parameters => parameters
             .Add(component => component.ContactPoints, contactPoints));
 
         contactPoints.Reverse();
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ContactPoints, contactPoints));
         cut.Find("[data-testid='crmhr-contact-remove-0']").Click();
 
@@ -135,7 +135,7 @@ public sealed class PartyContactMethodsEditorTests {
             Value = "only@example.test"
         };
         var contactPoints = new List<PartyContactPointEditorModel> { contactPoint };
-        var cut = context.RenderComponent<PartyContactMethodsEditor>(parameters => parameters
+        var cut = context.Render<PartyContactMethodsEditor>(parameters => parameters
             .Add(component => component.ContactPoints, contactPoints));
 
         cut.Find("[data-testid='crmhr-contact-remove-0']").Click();
@@ -143,8 +143,8 @@ public sealed class PartyContactMethodsEditorTests {
         Assert.Empty(contactPoints);
     }
 
-    private static TestContext CreateContext() {
-        var context = new TestContext();
+    private static BunitContext CreateContext() {
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
     }

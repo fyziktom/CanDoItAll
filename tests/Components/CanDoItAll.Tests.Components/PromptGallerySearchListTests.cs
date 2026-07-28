@@ -13,11 +13,11 @@ public sealed class PromptGallerySearchListTests
     public void Desktop_filters_share_one_rail_and_item_title_and_favorite_are_explicit()
     {
         var gallery = new TestPromptGallery();
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
 
-        var cut = context.RenderComponent<PromptGallerySearchList>(parameters => parameters
+        var cut = context.Render<PromptGallerySearchList>(parameters => parameters
             .Add(component => component.Compact, false)
             .Add(component => component.ShowSelectAction, false));
 

@@ -35,7 +35,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-shell']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
@@ -62,7 +62,7 @@ public sealed class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         navigation.NavigateTo("/processes");
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -99,7 +99,7 @@ public sealed class ProcessWorkspaceShellTests
         ConfigureReadyRefresh(client, () => Now);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         AgentChatContextSnapshot initial = null!;
         cut.WaitForAssertion(() =>
@@ -127,7 +127,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client, timeProvider: timeProvider);
         ConfigureReadyRefresh(client, timeProvider.GetUtcNow);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         AgentChatContextSnapshot initial = null!;
         AgentChatContextAttachmentEnvelope initialAttachment = null!;
@@ -160,7 +160,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client, timeProvider: timeProvider);
         ConfigureReadyRefresh(client, timeProvider.GetUtcNow);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
-        var cut = context.RenderComponent<LiveProcessesDashboard>();
+        var cut = context.Render<LiveProcessesDashboard>();
 
         AgentChatContextSnapshot initial = null!;
         AgentChatContextAttachmentEnvelope initialAttachment = null!;
@@ -195,7 +195,7 @@ public sealed class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         navigation.NavigateTo($"/processes/live?runId={selectedRunId:D}");
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.RunIdQuery, selectedRunId));
 
         cut.WaitForAssertion(() =>
@@ -232,7 +232,7 @@ public sealed class ProcessWorkspaceShellTests
         var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.RunIdQuery, missingRunId));
 
         cut.WaitForAssertion(() =>
@@ -259,9 +259,9 @@ public sealed class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
         var cut = useProcessId
-            ? context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            ? context.Render<LiveProcessesDashboard>(parameters => parameters
                 .Add(component => component.ProcessIdQuery, unresolvedId))
-            : context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+            : context.Render<LiveProcessesDashboard>(parameters => parameters
                 .Add(component => component.LaunchPlanIdQuery, unresolvedId));
 
         cut.WaitForAssertion(() =>
@@ -282,7 +282,7 @@ public sealed class ProcessWorkspaceShellTests
         var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.RunIdQuery, missingRunId));
 
         cut.WaitForAssertion(() =>
@@ -321,7 +321,7 @@ public sealed class ProcessWorkspaceShellTests
             };
         };
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.SelectedDefinitionKey, missingDefinitionKey));
 
         cut.WaitForAssertion(() =>
@@ -363,7 +363,7 @@ public sealed class ProcessWorkspaceShellTests
             };
         };
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.ProcessIdQuery, targetProcessId));
 
         cut.WaitForAssertion(() =>
@@ -381,7 +381,7 @@ public sealed class ProcessWorkspaceShellTests
         var missingProcessId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.ProcessIdQuery, missingProcessId));
 
         cut.WaitForAssertion(() =>
@@ -406,7 +406,7 @@ public sealed class ProcessWorkspaceShellTests
             new ProcessDefinitionCatalogItemKey("architecture-decision-governance")).Value;
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.ProcessIdQuery, conflictingProcessId)
             .Add(component => component.SelectedDefinitionKey, requestedDefinitionKey));
 
@@ -430,7 +430,7 @@ public sealed class ProcessWorkspaceShellTests
         var launchPlanId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.LaunchPlanIdQuery, launchPlanId));
 
         cut.WaitForAssertion(() =>
@@ -460,7 +460,7 @@ public sealed class ProcessWorkspaceShellTests
             new AgentChatWorkspacePosition("live", "Live processes", "/processes/live", "page"),
             AgentChatNavigationIdentity.CreateForLocation(navigation.BaseUri, navigation.Uri));
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.RunIdQuery, firstRunId));
         cut.WaitForAssertion(() =>
             Assert.Equal(
@@ -486,7 +486,7 @@ public sealed class ProcessWorkspaceShellTests
             async () => await registry.CaptureAsync());
         Assert.Equal(AgentChatContextPositionMismatchReason.NavigationChanged, mismatch.Reason);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.RunIdQuery, secondRunId));
 
         cut.WaitForAssertion(() =>
@@ -508,11 +508,11 @@ public sealed class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.RunIdQuery, firstRunId));
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.RunIdQuery, secondRunId));
         cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
         Assert.Equal(
@@ -554,7 +554,7 @@ public sealed class ProcessWorkspaceShellTests
             }
             : projection;
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.RunIdQuery, firstRunId));
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
         SetPrivateField<Guid?>(cut.Instance, "requiredRouteRunId", null);
@@ -566,7 +566,7 @@ public sealed class ProcessWorkspaceShellTests
             "The filtered follow-up projection request was not started.");
 
         SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.NeedsAttention);
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectId, nextProjectId)
             .Add(component => component.RunIdQuery, firstRunId));
         cut.WaitForAssertion(() => Assert.Equal(3, client.Requests.Count));
@@ -600,11 +600,11 @@ public sealed class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.SelectedDefinitionKey, "blazor-app-delivery"));
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.SelectedDefinitionKey, "architecture-decision-governance"));
         cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
         Assert.Equal(
@@ -627,7 +627,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(client.LastRequest));
         var request = client.LastRequest!;
@@ -657,7 +657,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Detail_tabs_request_heavy_projection_shapes_on_demand()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
         var rolesOptions = client.LastRequest?.DefinitionLoadOptions;
@@ -737,7 +737,7 @@ public sealed class ProcessWorkspaceShellTests
         var processId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProcessIdQuery, processId)
             .Add(component => component.RunIdQuery, runId));
@@ -753,7 +753,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Refresh_button_requests_forced_projection_refresh()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-refresh']")));
         cut.Find("[data-testid='processes-refresh']").Click();
@@ -770,7 +770,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Definition_search_passes_query_to_projection_client()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-search']")));
         cut.Find("[data-testid='processes-definition-search']").Input("architecture");
@@ -784,7 +784,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Definition_scope_filter_passes_scope_to_projection_client()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-tree']")));
         cut.Find("[data-testid='processes-definition-scope-project']").Click();
@@ -797,7 +797,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Feed_defaults_button_uses_application_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-feed-defaults']")));
         cut.Find("[data-testid='processes-feed-defaults']").Click();
@@ -844,7 +844,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
         var runId = Guid.Parse("44444444-4444-4444-4444-444444444444");
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.RunIdQuery, runId));
         var navigation = context.Services.GetRequiredService<NavigationManager>();
 
@@ -860,7 +860,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-editor']")));
         Assert.Contains("Identity", cut.Markup, StringComparison.Ordinal);
@@ -875,7 +875,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Definition_save_uses_typed_editor_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-save']")));
         cut.Find("[data-testid='processes-definition-editor-owner']").Input("Architecture owner");
@@ -895,7 +895,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferEditorCommands = true;
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-save']")));
         var commandTask = cut.Find("[data-testid='processes-definition-save']")
@@ -939,7 +939,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Definition_publish_shows_blocking_lint_errors()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-publish']")));
         cut.Find("[data-testid='processes-definition-editor-name']").Input(string.Empty);
@@ -955,7 +955,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-role-editor']")));
@@ -976,7 +976,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Role_save_uses_typed_role_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-solution-architect']")));
@@ -1002,7 +1002,7 @@ public sealed class ProcessWorkspaceShellTests
         var workflowId = Guid.Parse("62000000-0000-0000-0000-000000000001");
         var workflowVersionId = Guid.Parse("62000000-0000-0000-0000-000000000002");
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.Find("[data-testid='processes-role-solution-architect']").Click();
@@ -1036,7 +1036,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Workflow_role_binding_rejects_invalid_guid_before_save()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.Find("[data-testid='processes-role-solution-architect']").Click();
@@ -1056,7 +1056,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Role_apply_template_uses_selected_template_action()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-roles", "processes-detail-panel-roles");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-role-solution-architect']")));
@@ -1076,7 +1076,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
@@ -1118,7 +1118,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Canvas_toolbox_action_uses_typed_canvas_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-toolbox-process-step-implementation']")));
@@ -1135,7 +1135,7 @@ public sealed class ProcessWorkspaceShellTests
     public async Task Canvas_artifact_context_actions_clone_and_highlight_references()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
@@ -1174,7 +1174,7 @@ public sealed class ProcessWorkspaceShellTests
     public async Task Canvas_role_context_actions_clone_and_highlight_shared_representations()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
@@ -1212,7 +1212,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Canvas_recompose_uses_typed_canvas_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-canvas-recompose']")));
@@ -1228,7 +1228,7 @@ public sealed class ProcessWorkspaceShellTests
     public async Task Canvas_preserves_viewport_state_when_accepted_recompose_refreshes_projection()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForElement("button[title='Maximize canvas']").Click();
@@ -1260,7 +1260,7 @@ public sealed class ProcessWorkspaceShellTests
     public async Task Canvas_node_move_uses_typed_canvas_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-canvas']")));
@@ -1295,7 +1295,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-definition-step-editor']")));
@@ -1311,7 +1311,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Step_save_uses_typed_step_command_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-step-save']")));
@@ -1332,7 +1332,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Step_route_artifact_and_subprocess_commands_use_typed_boundary()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-steps", "processes-detail-panel-steps");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-step-add-branch-outcome']")));
@@ -1356,7 +1356,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Template_library_renders_search_categories_and_preview_tabs()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-exchange", "processes-detail-panel-exchange");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library']")));
@@ -1382,7 +1382,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Template_library_imports_role_and_artifact_components_with_target_step()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-exchange", "processes-detail-panel-exchange");
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-import-process']")));
@@ -1406,7 +1406,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Original_process_workspace_tabs_render_runs_graphs_analytics_and_manager_chat()
     {
         using var context = CreateContext(out var client);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-runs", "processes-detail-panel-runs");
         Assert.NotNull(cut.Find("[data-testid='processes-runs-tab-shell']"));
@@ -1458,7 +1458,7 @@ public sealed class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client, workspaceService);
         var firstRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.RunIdQuery, firstRunId));
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
@@ -1488,7 +1488,7 @@ public sealed class ProcessWorkspaceShellTests
         var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: true);
         using var context = CreateContext(out _, workspaceService);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
 
@@ -1514,7 +1514,7 @@ public sealed class ProcessWorkspaceShellTests
         var voiceService = new RecordingAgentVoiceService();
         using var context = CreateContext(out _, workspaceService, voiceService);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='chat-voice-mode-button']").HasAttribute("disabled")));
@@ -1551,7 +1551,7 @@ public sealed class ProcessWorkspaceShellTests
         ConfigureReadyRefresh(client, () => Now);
         var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>(parameters => parameters
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
             .Add(component => component.RunIdQuery, runId));
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
@@ -1617,7 +1617,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         var workspaceService = new RecordingManagerChatWorkspaceService();
         using var context = CreateContext(out _, workspaceService);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         const string userPrompt =
@@ -1639,7 +1639,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         var workspaceService = new RecordingManagerChatWorkspaceService();
         using var context = CreateContext(out _, workspaceService);
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() => Assert.NotNull(workspaceService.LastWorkspaceSessionId));
@@ -1667,7 +1667,7 @@ public sealed class ProcessWorkspaceShellTests
         var workspaceService = new RecordingManagerChatWorkspaceService(canUseVoiceMode: false);
         using var context = CreateContext(out _, workspaceService);
 
-        var cut = context.RenderComponent<ProcessWorkspaceShell>();
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
 
@@ -1702,7 +1702,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out var client);
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.LaunchStarted, true));
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
@@ -1775,7 +1775,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.MockScenarioQuery, "operations"));
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-mock-notification']")));
@@ -1798,10 +1798,10 @@ public sealed class ProcessWorkspaceShellTests
     public void Live_processes_active_card_prefers_working_agent_summary_over_stale_attention_event()
     {
         using var context = CreateContext(out _);
-        var tooltipHost = context.RenderComponent<Tooltip>();
+        var tooltipHost = context.Render<Tooltip>();
         var activeRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>(parameters => parameters
+        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
             .Add(component => component.RunIdQuery, activeRunId));
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
@@ -1828,7 +1828,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>();
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
         var subprocessCard = cut
@@ -1850,7 +1850,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>();
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-attention-card']")));
         var attentionCard = cut.Find("[data-testid='live-processes-attention-card']");
@@ -1864,7 +1864,7 @@ public sealed class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
 
-        var cut = context.RenderComponent<LiveProcessesDashboard>();
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
         var subprocessCard = cut
@@ -1896,14 +1896,14 @@ public sealed class ProcessWorkspaceShellTests
         });
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
         IAgentVoiceService? voiceService = null,
         TimeProvider? timeProvider = null)
     {
         var effectiveTimeProvider = timeProvider ?? TimeProvider.System;
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();

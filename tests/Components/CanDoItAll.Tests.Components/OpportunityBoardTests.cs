@@ -20,7 +20,7 @@ public sealed class OpportunityBoardTests
             CreatePipelineItem(accountId, ownerId, "EUR renewal", "EUR", 900m)
         };
 
-        var cut = harness.Context.RenderComponent<OpportunityBoard>(parameters => parameters
+        var cut = harness.Context.Render<OpportunityBoard>(parameters => parameters
             .Add(component => component.Opportunities, opportunities));
 
         Assert.Contains($"USD {1250m:N2}", cut.Markup);
@@ -37,7 +37,7 @@ public sealed class OpportunityBoardTests
             services => services.AddSingleton<IOpportunityPipelineQueryService>(queryService));
         var accountId = Guid.NewGuid();
 
-        var cut = harness.Context.RenderComponent<OpportunityPipeline>(parameters => parameters
+        var cut = harness.Context.Render<OpportunityPipeline>(parameters => parameters
             .Add(component => component.AccountPartyId, accountId)
             .Add(component => component.PageSize, 2));
 
@@ -81,7 +81,7 @@ public sealed class OpportunityBoardTests
         };
         var closeCount = 0;
 
-        var cut = harness.Context.RenderComponent<OpportunityCreateDialog>(parameters => parameters
+        var cut = harness.Context.Render<OpportunityCreateDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.InitialModel, initialModel)
             .Add(component => component.Close, () => closeCount++));
@@ -105,7 +105,7 @@ public sealed class OpportunityBoardTests
             Title = "Partner pursuit",
             OwnerPartyId = Guid.NewGuid()
         };
-        var cut = harness.Context.RenderComponent<OpportunityCreateDialog>(parameters => parameters
+        var cut = harness.Context.Render<OpportunityCreateDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.InitialModel, initialModel));
 
@@ -135,7 +135,7 @@ public sealed class OpportunityBoardTests
         };
         CrmOpportunityEditorModel? submittedModel = null;
 
-        var cut = harness.Context.RenderComponent<OpportunityCreateDialog>(parameters => parameters
+        var cut = harness.Context.Render<OpportunityCreateDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.InitialModel, initialModel)
             .Add(component => component.Save, model => submittedModel = model));
@@ -187,7 +187,7 @@ public sealed class OpportunityBoardTests
 
         Assert.True(saveResult.IsSuccess);
 
-        var cut = harness.Context.RenderComponent<CrmHrHomePage>();
+        var cut = harness.Context.Render<CrmHrHomePage>();
 
         cut.WaitForAssertion(() =>
         {

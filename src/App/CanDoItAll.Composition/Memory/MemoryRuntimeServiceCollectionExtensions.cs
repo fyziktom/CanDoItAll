@@ -2,6 +2,7 @@ using CanDoItAll.Memory.Http;
 using CanDoItAll.Memory.Mcp;
 using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Abstractions;
+using CanDoItAll.Memory.Drivers.CognitiveMemory;
 using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Memory.Persistence.Hosting;
 using CanDoItAll.Modules.Memory;

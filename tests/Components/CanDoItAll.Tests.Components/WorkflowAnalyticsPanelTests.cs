@@ -18,14 +18,14 @@ public sealed class WorkflowAnalyticsPanelTests
         using var context = CreateContext();
         var queryService = new RecordingWorkflowAnalyticsQueryService(CreateSnapshot());
         var workflows = CreateWorkflowOptions();
-        var cut = context.RenderComponent<WorkflowAnalyticsPanel>(parameters => parameters
+        var cut = context.Render<WorkflowAnalyticsPanel>(parameters => parameters
             .Add(component => component.QueryService, queryService)
             .Add(component => component.Workflows, workflows)
             .Add(component => component.IsActive, false));
 
         Assert.Empty(queryService.Queries);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.IsActive, true));
 
         cut.WaitForAssertion(() =>
@@ -56,7 +56,7 @@ public sealed class WorkflowAnalyticsPanelTests
     public void Panel_renders_typed_totals_beyond_recent_window_and_preserves_pricing_duration_and_model_semantics()
     {
         using var context = CreateContext();
-        var cut = context.RenderComponent<WorkflowAnalyticsPanel>(parameters => parameters
+        var cut = context.Render<WorkflowAnalyticsPanel>(parameters => parameters
             .Add(component => component.QueryService, new RecordingWorkflowAnalyticsQueryService(CreateSnapshot()))
             .Add(component => component.Workflows, CreateWorkflowOptions())
             .Add(component => component.IsActive, true));
@@ -142,7 +142,7 @@ public sealed class WorkflowAnalyticsPanelTests
     {
         var logger = new RecordingLogger<WorkflowAnalyticsPanel>();
         using var context = CreateContext(logger);
-        var cut = context.RenderComponent<WorkflowAnalyticsPanel>(parameters => parameters
+        var cut = context.Render<WorkflowAnalyticsPanel>(parameters => parameters
             .Add(component => component.QueryService, new FailingWorkflowAnalyticsQueryService())
             .Add(component => component.Workflows, CreateWorkflowOptions())
             .Add(component => component.IsActive, true));
@@ -167,14 +167,14 @@ public sealed class WorkflowAnalyticsPanelTests
     {
         using var context = CreateContext();
         var queryService = new ControllableWorkflowAnalyticsQueryService();
-        var cut = context.RenderComponent<WorkflowAnalyticsPanel>(parameters => parameters
+        var cut = context.Render<WorkflowAnalyticsPanel>(parameters => parameters
             .Add(component => component.QueryService, queryService)
             .Add(component => component.Workflows, CreateWorkflowOptions())
             .Add(component => component.IsActive, true)
             .Add(component => component.RefreshVersion, 1));
         cut.WaitForAssertion(() => Assert.Single(queryService.Requests));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.RefreshVersion, 2));
         cut.WaitForAssertion(() => Assert.Equal(2, queryService.Requests.Count));
 
@@ -191,9 +191,9 @@ public sealed class WorkflowAnalyticsPanelTests
             StringComparison.Ordinal));
     }
 
-    private static TestContext CreateContext(ILogger<WorkflowAnalyticsPanel>? logger = null)
+    private static BunitContext CreateContext(ILogger<WorkflowAnalyticsPanel>? logger = null)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         if (logger is not null)

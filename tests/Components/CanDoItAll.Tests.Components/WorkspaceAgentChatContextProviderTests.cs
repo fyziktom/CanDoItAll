@@ -17,7 +17,7 @@ public sealed class WorkspaceAgentChatContextProviderTests
     public async Task Provider_uses_path_only_route_and_never_serializes_sensitive_query_values()
     {
         const string sensitiveQuery = "sensitive-partner-search";
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton(new WorkbenchStateService(
@@ -27,7 +27,7 @@ public sealed class WorkspaceAgentChatContextProviderTests
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/processes?q={sensitiveQuery}&runId={Guid.NewGuid():D}");
 
-        using var cut = context.RenderComponent<WorkspaceAgentChatContextProvider>();
+        using var cut = context.Render<WorkspaceAgentChatContextProvider>();
         using var scopeLease = registry.ActivateScope(
             CreateSurface("/processes").ToScope(AgentChatContextScopeId.Create()));
 
@@ -44,7 +44,7 @@ public sealed class WorkspaceAgentChatContextProviderTests
     [Fact]
     public async Task Provider_does_not_copy_metadata_from_a_stale_active_tab()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var workbench = new WorkbenchStateService(
             new InMemoryWorkbenchStateStore(),
@@ -66,7 +66,7 @@ public sealed class WorkspaceAgentChatContextProviderTests
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/crm-hr/directory");
 
-        using var cut = context.RenderComponent<WorkspaceAgentChatContextProvider>();
+        using var cut = context.Render<WorkspaceAgentChatContextProvider>();
         using var scopeLease = registry.ActivateScope(
             CreateSurface("/crm-hr/directory").ToScope(AgentChatContextScopeId.Create()));
 

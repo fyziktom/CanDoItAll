@@ -45,7 +45,7 @@ public sealed class AgentProviderProfilesPanelPricingTests
             provider => provider.Name == "AAA Priced Provider");
         Assert.Contains(savedProvider.ModelPrices, price => price.Model == "priced-model");
 
-        var cut = harness.Context.RenderComponent<AgentProviderProfilesPanel>();
+        var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='provider-editor-tabs']");
         cut.WaitForElement("[data-testid='providers-tree-provider']");
         var providerNode = cut.FindAll("[data-testid='providers-tree-provider']")

@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -41,8 +42,8 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
                         WorkItemKind = ProjectWorkItemKind.Task
                     }
                 })));
-        var dialogHost = harness.Context.RenderComponent<DialogHost>();
-        var page = harness.Context.RenderComponent<ProjectStructurePage>(
+        var dialogHost = harness.Context.Render<DialogHost>();
+        var page = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(component => component.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(page);
 
@@ -96,8 +97,8 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
         var partyBridge = harness.Context.Services.GetRequiredService<IProjectPartyIntegrationBridge>();
         var projectId = await CreateProjectAsync(projectsService, entryPoint);
         var joeId = await CreateJoeDoeAsync(partyDirectoryService);
-        var dialogHost = harness.Context.RenderComponent<DialogHost>();
-        var page = harness.Context.RenderComponent<ProjectStructurePage>(
+        var dialogHost = harness.Context.Render<DialogHost>();
+        var page = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(component => component.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(page);
         var projectRoot = Assert.Single(
@@ -216,7 +217,7 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
         return result.Value;
     }
 
-    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedFragment page)
+    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedComponent<IComponent> page)
     {
         IRenderedComponent<CanvasWorkbench>? canvasWorkbench = null;
         page.WaitForAssertion(() => canvasWorkbench = page.FindComponent<CanvasWorkbench>());

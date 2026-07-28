@@ -5,7 +5,7 @@ using CanDoItAll.Modules.Workbench.Pages;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
+public sealed class ProjectStructureTaskResourceCostEstimatorTests : BunitContext
 {
     private static readonly Guid ProjectId = Guid.Parse("10000000-0000-0000-0000-000000000001");
     private static readonly ProjectStructureTaskResourceSelection Person = new(
@@ -28,7 +28,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             ProjectWorkItemEffortUnit.Hours,
             75m,
             "USD");
-        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+        var cut = Render<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
             .Add(component => component.ProjectId, ProjectId)
             .Add(component => component.SelectedResource, Person)
             .Add(component => component.Estimate, initialEstimate)
@@ -76,7 +76,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             275m,
             "USD");
         ProjectTaskEstimate? changedEstimate = null;
-        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+        var cut = Render<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
             .Add(component => component.ProjectId, ProjectId)
             .Add(component => component.SelectedResource, Person)
             .Add(component => component.Estimate, initialEstimate)
@@ -100,7 +100,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             275m,
             "USD");
         ProjectTaskEstimate? changedEstimate = null;
-        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+        var cut = Render<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
             .Add(component => component.ProjectId, ProjectId)
             .Add(component => component.SelectedResource, Person)
             .Add(component => component.Estimate, initialEstimate)
@@ -129,7 +129,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             275m,
             "USD");
         ProjectTaskEstimate? changedEstimate = null;
-        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+        var cut = Render<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
             .Add(component => component.ProjectId, ProjectId)
             .Add(component => component.SelectedResource, Person)
             .Add(component => component.Estimate, initialEstimate)
@@ -166,7 +166,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
         var quoteCompletion = new TaskCompletionSource<ProjectStructureTaskResourceCostQuote>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         ProjectTaskEstimate? changedEstimate = null;
-        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+        var cut = Render<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
             .Add(component => component.ProjectId, ProjectId)
             .Add(component => component.SelectedResource, Person)
             .Add(component => component.Estimate, initialEstimate)
@@ -174,7 +174,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             .Add(component => component.QuoteResolver, (_, _) => quoteCompletion.Task));
 
         var pendingQuote = cut.InvokeAsync(() => cut.Instance.EstimateSelectedAsync(Person, initialEstimate));
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Estimate, initialEstimate with { ExpectedEffortHours = 4m }));
         quoteCompletion.SetResult(new ProjectStructureTaskResourceCostQuote(
             ProjectStructureTaskResourceCostQuoteStatus.Available,
@@ -200,7 +200,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
         var quoteCompletion = new TaskCompletionSource<ProjectStructureTaskResourceCostQuote>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         ProjectTaskEstimate? changedEstimate = null;
-        var cut = RenderComponent<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
+        var cut = Render<ProjectStructureTaskResourceCostEstimator>(parameters => parameters
             .Add(component => component.ProjectId, ProjectId)
             .Add(component => component.SelectedResource, Person)
             .Add(component => component.Estimate, initialEstimate)
@@ -208,7 +208,7 @@ public sealed class ProjectStructureTaskResourceCostEstimatorTests : TestContext
             .Add(component => component.QuoteResolver, (_, _) => quoteCompletion.Task));
 
         var pendingQuote = cut.InvokeAsync(() => cut.Instance.EstimateSelectedAsync(Person, initialEstimate));
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Estimate, initialEstimate with
             {
                 ExpectedCostAmount = 999m,

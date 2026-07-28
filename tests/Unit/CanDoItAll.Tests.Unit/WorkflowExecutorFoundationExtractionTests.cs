@@ -151,18 +151,12 @@ public sealed class WorkflowExecutorFoundationExtractionTests
     }
 
     [Fact]
-    public void BuiltInAndCognitiveMemoryDescriptorsUseSharedFactoryOutput()
+    public void BuiltInDescriptorsUseSharedFactoryOutput()
     {
         var delay = BuiltInWorkflowExecutorDescriptors.Delay;
         Assert.Equal(WorkflowExecutorDescriptorFactory.SettingsSchemaVersion, delay.ConfigurationSchema.Version);
         Assert.Contains(delay.ConfigurationSchema.Fields, field => field.Key == "delayMilliseconds" && field.FieldType == ConfigurationFieldType.Number);
         Assert.Contains("\"delayMilliseconds\":1000", delay.DefaultSettingsJson, StringComparison.Ordinal);
-
-        var cognitiveRecall = CanDoItAll.Modules.CognitiveMemory.CognitiveMemoryWorkflowExecutorDescriptors.Recall;
-        Assert.Equal(WorkflowExecutorSourceKind.BuiltIn, cognitiveRecall.Source.Kind);
-        Assert.Equal(WorkflowExecutorDescriptorFactory.SettingsSchemaVersion, cognitiveRecall.ConfigurationSchema.Version);
-        Assert.Contains(cognitiveRecall.ConfigurationSchema.Fields, field => field.Key == "projectId" && field.FieldType == ConfigurationFieldType.Guid);
-        Assert.Contains("\"contextCharacterBudget\"", cognitiveRecall.DefaultSettingsJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -239,9 +233,6 @@ public sealed class WorkflowExecutorFoundationExtractionTests
     [Fact]
     public void FeatureModulesAndPluginsReferenceExecutorFoundationProjects()
     {
-        AssertProjectReferences(
-            "src/Modules/CanDoItAll.Modules.CognitiveMemory/CanDoItAll.Modules.CognitiveMemory.csproj",
-            "CanDoItAll.AgentFramework.WorkflowExecutors.Core");
         AssertProjectReferences(
             "src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj",
             "CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions");

@@ -10,7 +10,7 @@ public sealed class CrmFinancialsPanelTests
     [Fact]
     public void Renders_currency_safe_metrics_period_controls_and_unavailable_sources()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         var accountId = Guid.NewGuid();
@@ -37,7 +37,7 @@ public sealed class CrmFinancialsPanelTests
                     FinancialDataAvailability.Unavailable,
                     FinancialDataAvailability.Unavailable)));
 
-        var cut = context.RenderComponent<CrmFinancialsPanel>(
+        var cut = context.Render<CrmFinancialsPanel>(
             parameters => parameters.Add(component => component.AccountPartyId, accountId));
 
         cut.WaitForAssertion(() =>
@@ -59,13 +59,13 @@ public sealed class CrmFinancialsPanelTests
     [Fact]
     public void Failed_load_shows_retryable_generic_error_without_exception_details()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddSingleton<ICrmFinancialSnapshotQueryService>(
             new FailingFinancialSnapshotQueryService());
 
-        var cut = context.RenderComponent<CrmFinancialsPanel>(
+        var cut = context.Render<CrmFinancialsPanel>(
             parameters => parameters.Add(component => component.AccountPartyId, Guid.NewGuid()));
 
         cut.WaitForAssertion(() =>

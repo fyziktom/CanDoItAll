@@ -61,6 +61,8 @@ External transports are explicit host capabilities. Enable only the transports t
 
 Provider profiles are managed separately in the Memory UI. Profiles store endpoint and environment-variable references, never credential values. HTTP/native credential variables contain the secret token; the configured authorization scheme is applied by the driver. An MCP header-binding variable contains the complete header value, for example `Bearer <token>`.
 
+The generic HTTP transport and the Cognitive Memory adapter are separate assemblies. `CanDoItAll.Memory.Drivers.CognitiveMemory` owns the provider-specific profile keys and maps them onto the generic HTTP protocol client without referencing the standalone Cognitive Memory repository.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

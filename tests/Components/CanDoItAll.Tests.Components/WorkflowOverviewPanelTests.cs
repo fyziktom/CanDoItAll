@@ -19,14 +19,14 @@ public sealed class WorkflowOverviewPanelTests
         using var context = CreateContext();
         var workflows = CreateWorkflows();
         var queryService = new RecordingOverviewQueryService(CreateSnapshot(workflows));
-        var cut = context.RenderComponent<WorkflowOverviewPanel>(parameters => parameters
+        var cut = context.Render<WorkflowOverviewPanel>(parameters => parameters
             .Add(component => component.QueryService, queryService)
             .Add(component => component.IsActive, false));
 
         Assert.Empty(queryService.Queries);
         Assert.NotEmpty(cut.FindAll("[data-testid='workflow-overview-inactive']"));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.IsActive, true));
 
         cut.WaitForElement("[data-testid='workflow-overview-content']");
@@ -49,18 +49,18 @@ public sealed class WorkflowOverviewPanelTests
         using var context = CreateContext();
         var workflows = CreateWorkflows();
         var queryService = new RecordingOverviewQueryService(CreateSnapshot(workflows));
-        var cut = context.RenderComponent<WorkflowOverviewPanel>(parameters => parameters
+        var cut = context.Render<WorkflowOverviewPanel>(parameters => parameters
             .Add(component => component.QueryService, queryService)
             .Add(component => component.IsActive, true)
             .Add(component => component.RefreshVersion, 1));
         cut.WaitForAssertion(() => Assert.Single(queryService.Queries));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.IsActive, false)
             .Add(component => component.RefreshVersion, 2));
         Assert.Single(queryService.Queries);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.IsActive, true));
         cut.WaitForAssertion(() => Assert.Equal(2, queryService.Queries.Count));
     }
@@ -84,7 +84,7 @@ public sealed class WorkflowOverviewPanelTests
             }
         ];
         var queryService = new RecordingOverviewQueryService(CreateDefinitionSnapshot([initialDefinition]));
-        var cut = context.RenderComponent<WorkflowOverviewPanel>(parameters => parameters
+        var cut = context.Render<WorkflowOverviewPanel>(parameters => parameters
             .Add(component => component.QueryService, queryService)
             .Add(component => component.IsActive, true));
 
@@ -158,7 +158,7 @@ public sealed class WorkflowOverviewPanelTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/agents/workflows");
 
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflow-overview-content']", TimeSpan.FromSeconds(30));
         cut.WaitForAssertion(() =>
@@ -171,9 +171,9 @@ public sealed class WorkflowOverviewPanelTests
         });
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         return context;

@@ -15,7 +15,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         CanDoItAllTestEnvironment testEnvironment,
         bool ownsTestEnvironment,
         TestDatabaseProfile activeProfile,
-        TestContext context)
+        BunitContext context)
     {
         TestEnvironment = testEnvironment;
         _ownsTestEnvironment = ownsTestEnvironment;
@@ -30,7 +30,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
     public TestDatabaseProfile ActiveProfile { get; }
 
-    public TestContext Context { get; }
+    public BunitContext Context { get; }
 
     public static async Task<ComponentTestHarness> CreateAsync(
         Action<IServiceCollection>? configureServices = null,
@@ -45,7 +45,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         var testEnvironment = options?.TestEnvironment ?? CanDoItAllTestEnvironment.Create("candoitall-component-tests");
         var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
 
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
@@ -80,7 +80,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        Context.DisposeComponents();
+        await Context.DisposeComponentsAsync();
         await Context.Services.DisposeAsync();
         Context.Dispose();
 

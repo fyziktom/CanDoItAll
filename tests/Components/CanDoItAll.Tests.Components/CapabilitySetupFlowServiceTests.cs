@@ -167,7 +167,7 @@ public sealed class CapabilitySetupFlowServiceTests
             SelectedCapabilityIds = [capabilityId]
         });
 
-        var cut = harness.Context.RenderComponent<AgentCapabilitiesPanel>();
+        var cut = harness.Context.Render<AgentCapabilitiesPanel>();
 
         cut.WaitForElement("[data-testid='agents-capability-new-tool']");
         cut.WaitForElement("[data-testid='agents-capability-access-preview']");

@@ -13,7 +13,7 @@ public sealed class ProjectsAgentChatContextProviderTests
     [Fact]
     public async Task Provider_tracks_project_focus_refreshes_matching_source_and_releases_context()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var notificationHub = new RecordingNotificationHub();
         var cacheInvalidator = new RecordingReferenceDataCacheInvalidator();
@@ -31,7 +31,7 @@ public sealed class ProjectsAgentChatContextProviderTests
             new StubAgentReferenceDataProvider(agent));
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
 
-        var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, projects)
             .Add(component => component.ContextNavigationIdentity, navigationIdentity)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -47,7 +47,7 @@ public sealed class ProjectsAgentChatContextProviderTests
             Assert.Contains("SelectedProject: None", fragment.Content, StringComparison.Ordinal);
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectSummaries, projects)
             .Add(component => component.SelectedProjectId, root.Id)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -71,7 +71,7 @@ public sealed class ProjectsAgentChatContextProviderTests
         await notificationHub.PublishAsync(CreateCompletion(rootSnapshot, agent.Id));
         cut.WaitForAssertion(() => Assert.Equal(1, refreshCount));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectSummaries, projects)
             .Add(component => component.SelectedProjectId, child.Id)
             .Add(component => component.RefreshRequested, _ => refreshCount++));
@@ -103,7 +103,7 @@ public sealed class ProjectsAgentChatContextProviderTests
     [Fact]
     public void Provider_does_not_disclose_other_projects_to_an_agent_restricted_to_the_selection()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var notificationHub = new RecordingNotificationHub();
         var cacheInvalidator = new RecordingReferenceDataCacheInvalidator();
@@ -119,7 +119,7 @@ public sealed class ProjectsAgentChatContextProviderTests
             new StubAgentReferenceDataProvider(restrictedAgent));
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
 
-        using var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+        using var cut = context.Render<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { selected, hiddenParent, hiddenChild })
             .Add(component => component.ContextNavigationIdentity, navigationIdentity)
             .Add(component => component.SelectedProjectId, selected.Id));
@@ -142,7 +142,7 @@ public sealed class ProjectsAgentChatContextProviderTests
     [Fact]
     public void Provider_retries_agent_access_after_a_failed_load_when_project_focus_changes()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var project = CreateProject(Guid.NewGuid(), "Retry project");
         var agent = CreateAgent();
@@ -155,7 +155,7 @@ public sealed class ProjectsAgentChatContextProviderTests
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
             new RecordingReferenceDataCacheInvalidator());
 
-        var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { project })
             .Add(component => component.ContextNavigationIdentity, navigationIdentity));
 
@@ -166,7 +166,7 @@ public sealed class ProjectsAgentChatContextProviderTests
             Assert.Equal(1, referenceDataProvider.CallCount);
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { project })
             .Add(component => component.SelectedProjectId, project.Id));
 
@@ -182,7 +182,7 @@ public sealed class ProjectsAgentChatContextProviderTests
     [Fact]
     public void Provider_fences_query_transition_and_keeps_stale_selection_unavailable_until_published()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var notificationHub = new RecordingNotificationHub();
         var cacheInvalidator = new RecordingReferenceDataCacheInvalidator();
@@ -214,7 +214,7 @@ public sealed class ProjectsAgentChatContextProviderTests
                 "/projects",
                 "module"),
             firstIdentity);
-        using var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+        using var cut = context.Render<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { first, second })
             .Add(component => component.SelectedProjectId, first.Id)
             .Add(component => component.ContextNavigationIdentity, firstIdentity));
@@ -233,7 +233,7 @@ public sealed class ProjectsAgentChatContextProviderTests
                 "/projects",
                 "module"),
             secondIdentity);
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { first, second })
             .Add(component => component.SelectedProjectId, first.Id)
             .Add(component => component.ContextNavigationIdentity, secondIdentity)
@@ -246,7 +246,7 @@ public sealed class ProjectsAgentChatContextProviderTests
             Assert.Equal(first.Id.ToString("D"), snapshot.Scope.Source.Id.Value);
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { first, second })
             .Add(component => component.SelectedProjectId, second.Id)
             .Add(component => component.ContextNavigationIdentity, secondIdentity)
@@ -266,7 +266,7 @@ public sealed class ProjectsAgentChatContextProviderTests
     [Fact]
     public void Provider_prioritizes_failed_position_state_over_ready_agent_access()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var project = CreateProject(Guid.NewGuid(), "Failed position project");
         var navigationIdentity = AgentChatNavigationIdentity.Create();
@@ -278,7 +278,7 @@ public sealed class ProjectsAgentChatContextProviderTests
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
             new RecordingReferenceDataCacheInvalidator());
 
-        using var cut = context.RenderComponent<ProjectsAgentChatContextProvider>(parameters => parameters
+        using var cut = context.Render<ProjectsAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectSummaries, new[] { project })
             .Add(component => component.SelectedProjectId, project.Id)
             .Add(component => component.ContextNavigationIdentity, navigationIdentity)

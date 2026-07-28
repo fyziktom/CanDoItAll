@@ -15,7 +15,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public async Task Duration_and_end_fields_keep_one_consistent_schedule()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var resultTask = OpenDialog(context, []);
 
         host.WaitForElement("[data-testid='project-structure-gantt-task-duration']");
@@ -44,7 +44,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public async Task Preset_and_visual_resource_selection_return_typed_create_request()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var resourceId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var versionId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var resultTask = OpenDialog(
@@ -87,7 +87,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public void Browser_iso_end_values_recalculate_duration(string browserValue)
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         _ = OpenDialog(context, []);
 
         host.WaitForElement("[data-testid='project-structure-gantt-task-end']");
@@ -103,7 +103,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public async Task Edit_mode_returns_progress_effort_cost_and_direct_assignee_change()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var personId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var replacementPersonId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var assignee = new ProjectStructureTaskResourceSelection(
@@ -170,7 +170,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public void Started_task_keeps_historical_cost_and_currency_inputs_disabled()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var editModel = new ProjectStructureGanttTaskEditModel(
             new CanDoItAll.Components.Gantt.GanttTaskId("custom:started-task"),
             "Started delivery",
@@ -200,7 +200,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public async Task Edit_mode_exposes_definition_filters_and_stages_workflow_without_replacing_assignee()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var personId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var workflowId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var workflowVersionId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
@@ -264,7 +264,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public async Task Mixed_assignment_mode_keeps_direct_assignee_read_only_and_allows_workflow_attachment()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var primaryPersonId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var replacementAgentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var workflowId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
@@ -334,7 +334,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     public async Task Clearing_staged_workflow_restores_and_reprices_the_direct_assignee()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var personId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var workflowId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var workflowVersionId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
@@ -391,16 +391,16 @@ public sealed class ProjectStructureGanttTaskDialogTests
         Assert.Equal(100m, result.Estimate.ExpectedCostAmount);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         return context;
     }
 
     private static Task<object?> OpenDialog(
-        TestContext context,
+        BunitContext context,
         IReadOnlyList<ProjectStructureTaskResourceOption> resources,
         string? afterTaskNodeId = null)
     {
@@ -421,7 +421,7 @@ public sealed class ProjectStructureGanttTaskDialogTests
     }
 
     private static Task<object?> OpenEditDialog(
-        TestContext context,
+        BunitContext context,
         ProjectStructureGanttTaskEditModel editModel,
         IReadOnlyList<ProjectStructureTaskResourceOption> resources,
         Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? quoteResolver = null)

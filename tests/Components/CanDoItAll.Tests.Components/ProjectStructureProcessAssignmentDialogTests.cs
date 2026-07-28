@@ -27,7 +27,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             unassignedRole
         ]);
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state));
 
         Assert.NotNull(cut.Find("[data-testid='project-structure-process-assignment-dialog']"));
@@ -71,7 +71,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         var state = CreateDialogState([unresolvedRole]);
         Guid? requestedRoleId = null;
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state)
             .Add(
                 component => component.AssignProcessStartAgent,
@@ -119,7 +119,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         var state = CreateDialogState([role]);
         var dialogService = context.Services.GetRequiredService<DialogService>();
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state));
 
         cut.Find($"[data-testid='project-structure-process-assignment-role-row-{role.LaunchPlanRoleId:D}']").Click();
@@ -167,7 +167,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         var state = CreateDialogState([role]);
         ProjectStructureProcessStartCandidateSelection? selection = null;
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state)
             .Add(
                 component => component.SelectProcessStartCandidate,
@@ -219,7 +219,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         var state = CreateDialogState([role]);
         ProjectStructureProcessStartCandidateSelection? selection = null;
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state)
             .Add(
                 component => component.SelectProcessStartCandidate,
@@ -256,7 +256,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         var role = CreateRole("Feature implementation manager", isResolved: true, candidate);
         var state = CreateDialogState([role]);
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state));
 
         cut.Find($"[data-testid='project-structure-process-assignment-summary-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}-details-badge']").Click();
@@ -297,7 +297,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             localizedLowLabelCandidate);
         var state = CreateDialogState([role]);
 
-        var cut = context.RenderComponent<ProjectStructureProcessAssignmentDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureProcessAssignmentDialog>(parameters => parameters
             .Add(component => component.Dialog, state));
 
         cut.Find($"[data-testid='project-structure-process-assignment-role-row-{role.LaunchPlanRoleId:D}']").Click();
@@ -309,9 +309,9 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         Assert.Contains("Deployment Assistant", cards[2].TextContent);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         return context;
     }

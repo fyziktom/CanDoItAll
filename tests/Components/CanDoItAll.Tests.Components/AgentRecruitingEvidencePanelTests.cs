@@ -17,7 +17,7 @@ public sealed class AgentRecruitingEvidencePanelTests
         var evidenceService = new FakeRecruitingEvidenceService();
         using var context = CreateContext(evidenceService, out var workspaceProxy);
 
-        var cut = context.RenderComponent<AgentRecruitingEvidencePanel>();
+        var cut = context.Render<AgentRecruitingEvidencePanel>();
 
         Assert.Contains("No bound AgentFramework candidate", cut.Markup, StringComparison.Ordinal);
         Assert.Empty(workspaceProxy.Invocations);
@@ -37,7 +37,7 @@ public sealed class AgentRecruitingEvidencePanelTests
         using var context = CreateContext(evidenceService, out var workspaceProxy);
         workspaceProxy.Agents = [fixture.Candidate];
 
-        var cut = context.RenderComponent<AgentRecruitingEvidencePanel>(parameters => parameters
+        var cut = context.Render<AgentRecruitingEvidencePanel>(parameters => parameters
             .Add(component => component.CandidateAgentId, fixture.Candidate.Id)
             .Add(component => component.RecruitmentApplicationId, fixture.ApplicationId));
 
@@ -77,7 +77,7 @@ public sealed class AgentRecruitingEvidencePanelTests
         workspaceProxy.Agents = [fixture.Candidate];
         RecruitmentTrainingRequest? trainingRequest = null;
 
-        var cut = context.RenderComponent<AgentRecruitingEvidencePanel>(parameters => parameters
+        var cut = context.Render<AgentRecruitingEvidencePanel>(parameters => parameters
             .Add(component => component.CandidateAgentId, fixture.Candidate.Id)
             .Add(component => component.RecruitmentApplicationId, fixture.ApplicationId)
             .Add(component => component.RequestTraining, request => trainingRequest = request));
@@ -109,7 +109,7 @@ public sealed class AgentRecruitingEvidencePanelTests
         using var context = CreateContext(evidenceService, out var workspaceProxy);
         workspaceProxy.Agents = [fixture.Candidate];
 
-        var cut = context.RenderComponent<AgentRecruitingEvidencePanel>(parameters => parameters
+        var cut = context.Render<AgentRecruitingEvidencePanel>(parameters => parameters
             .Add(component => component.CandidateAgentId, fixture.Candidate.Id)
             .Add(component => component.RecruitmentApplicationId, fixture.ApplicationId));
 
@@ -121,11 +121,11 @@ public sealed class AgentRecruitingEvidencePanelTests
             StringComparison.Ordinal);
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         FakeRecruitingEvidenceService evidenceService,
         out RecordingWorkspaceServiceProxy workspaceProxy)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddLogging();

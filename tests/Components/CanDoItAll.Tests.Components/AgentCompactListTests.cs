@@ -11,12 +11,12 @@ public sealed class AgentCompactListTests
     [Fact]
     public void List_renders_dense_rows_with_icon_only_actions_and_selection_state()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         var selectedAgent = CreateAgent("Selected agent");
         var busyAgent = CreateAgent("Busy agent");
 
-        var cut = context.RenderComponent<AgentCompactList>(parameters => parameters
+        var cut = context.Render<AgentCompactList>(parameters => parameters
             .Add(component => component.Agents, [selectedAgent, busyAgent])
             .Add(component => component.SelectedAgentId, selectedAgent.Id)
             .Add(component => component.BusyAgentIds, new HashSet<Guid> { busyAgent.Id })
@@ -52,14 +52,14 @@ public sealed class AgentCompactListTests
     [Fact]
     public void List_routes_typed_agent_callbacks()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         var agent = CreateAgent("Callback agent");
         AgentDefinition? selected = null;
         AgentDefinition? opened = null;
         AgentDefinition? history = null;
 
-        var cut = context.RenderComponent<AgentCompactList>(parameters => parameters
+        var cut = context.Render<AgentCompactList>(parameters => parameters
             .Add(component => component.Agents, [agent])
             .Add(component => component.TestId, "callback-agent-list")
             .Add(component => component.AgentSelected, value => selected = value)

@@ -15,7 +15,7 @@ public sealed class WorkflowImageGenerationSettingsRendererTests
     [Fact]
     public void Trusted_image_renderer_edits_every_schema_field_and_filters_provider_capability()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddLogging();
         var imageProviderId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var chatProviderId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -44,7 +44,7 @@ public sealed class WorkflowImageGenerationSettingsRendererTests
         state.SetText(providerField.Key, disabledImageProviderId.ToString("D"));
         ConfigurationState? changedState = null;
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, descriptor.SetupRendererKey)
             .Add(component => component.RendererOwnerId, descriptor.Source.SourceId)
             .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.Application)
@@ -88,7 +88,7 @@ public sealed class WorkflowImageGenerationSettingsRendererTests
     [Fact]
     public void Image_renderer_keeps_saved_provider_neutral_until_capabilities_load()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddLogging();
         var providerId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         var providerCompletion = new TaskCompletionSource<IReadOnlyList<WorkflowProviderOption>>(
@@ -108,7 +108,7 @@ public sealed class WorkflowImageGenerationSettingsRendererTests
             field => field.FieldType == ConfigurationFieldType.Guid);
         state.SetText(providerField.Key, providerId.ToString("D"));
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, descriptor.SetupRendererKey)
             .Add(component => component.RendererOwnerId, descriptor.Source.SourceId)
             .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.Application)

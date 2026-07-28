@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blazor-ApexCharts" Version="6.1.0" />
-    <PackageReference Include="bunit.web" Version="1.40.0" />
+    <PackageReference Include="AngleSharp" Version="1.6.0" PrivateAssets="all" />
+    <PackageReference Include="bunit" Version="2.7.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -34,12 +34,9 @@
     <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
-    <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
-    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj" />

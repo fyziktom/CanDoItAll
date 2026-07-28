@@ -13,7 +13,7 @@ public sealed class MemoryProviderProfileEditorComponentTests
     public void Mcp_editor_offers_only_remote_http_runtime_fields()
     {
         using var context = CreateContext();
-        var cut = context.RenderComponent<MemoryProviderMcpTransportEditor>(parameters => parameters
+        var cut = context.Render<MemoryProviderMcpTransportEditor>(parameters => parameters
             .Add(component => component.Transport, new MemoryProviderMcpTransportEditorModel()));
 
         Assert.Contains("remote-http", cut.Markup);
@@ -34,7 +34,7 @@ public sealed class MemoryProviderProfileEditorComponentTests
             DriverKind = MemoryProviderDriverKind.Http,
             SupportsContextQuerySync = true
         };
-        var cut = context.RenderComponent<MemoryProviderCapabilityEditor>(parameters => parameters
+        var cut = context.Render<MemoryProviderCapabilityEditor>(parameters => parameters
             .Add(component => component.Editor, editor));
 
         Assert.False(cut.Find("[data-testid='memory-ui-editor-sync-query']").HasAttribute("disabled"));
@@ -51,7 +51,7 @@ public sealed class MemoryProviderProfileEditorComponentTests
         {
             LegacyRawCredentialKeys = ["host.candoitall.memory.http.apiKey"]
         };
-        var cut = context.RenderComponent<MemoryProviderProfileEditor>(parameters => parameters
+        var cut = context.Render<MemoryProviderProfileEditor>(parameters => parameters
             .Add(component => component.Editor, editor));
 
         Assert.Contains("legacy raw credential", cut.Markup, StringComparison.OrdinalIgnoreCase);
@@ -62,7 +62,7 @@ public sealed class MemoryProviderProfileEditorComponentTests
     public void Profile_editor_offers_only_executable_driver_kinds()
     {
         using var context = CreateContext();
-        var cut = context.RenderComponent<MemoryProviderProfileEditor>(parameters => parameters
+        var cut = context.Render<MemoryProviderProfileEditor>(parameters => parameters
             .Add(component => component.Editor, new MemoryProviderProfileEditorModel()));
 
         Assert.Contains("Http", cut.Markup, StringComparison.Ordinal);
@@ -73,9 +73,9 @@ public sealed class MemoryProviderProfileEditorComponentTests
         Assert.DoesNotContain("SingleWorkspace", cut.Markup, StringComparison.Ordinal);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         return context;

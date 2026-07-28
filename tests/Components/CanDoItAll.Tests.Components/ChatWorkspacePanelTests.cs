@@ -14,7 +14,7 @@ public sealed class ChatWorkspacePanelTests
     public void Running_execution_log_renders_compact_chat_stream_and_opens_details_dialog()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var agentId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
         var runId = Guid.NewGuid();
@@ -27,7 +27,7 @@ public sealed class ChatWorkspacePanelTests
             CreateEntry(agentId, sessionId, runId, startedAtUtc.AddSeconds(2), ExecutionState.Running, "Tool call", longDetail)
         };
 
-        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.Session, CreateSession(agentId, sessionId, runId, startedAtUtc))
             .Add(item => item.ActiveRun, run)
             .Add(item => item.ExecutionLog, entries)
@@ -51,7 +51,7 @@ public sealed class ChatWorkspacePanelTests
     public void Completed_execution_log_collapses_chat_stream_and_opens_history_dialog()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var agentId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
         var runId = Guid.NewGuid();
@@ -65,7 +65,7 @@ public sealed class ChatWorkspacePanelTests
             CreateEntry(agentId, sessionId, runId, completedAtUtc, ExecutionState.Completed, "Completed", "Stored the assistant response.")
         };
 
-        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.Session, CreateSession(agentId, sessionId, runId, startedAtUtc))
             .Add(item => item.ActiveRun, run)
             .Add(item => item.ExecutionLog, entries)
@@ -96,7 +96,7 @@ public sealed class ChatWorkspacePanelTests
         var createdAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
         string? updatedTitle = null;
 
-        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.Session, CreateSession(agentId, sessionId, runId, createdAtUtc))
             .Add(item => item.DraftPrompt, string.Empty)
             .Add(item => item.SessionTitleChanged, title => updatedTitle = title));
@@ -117,7 +117,7 @@ public sealed class ChatWorkspacePanelTests
         var runId = Guid.NewGuid();
         var createdAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
 
-        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.Session, CreateSession(agentId, sessionId, runId, createdAtUtc))
             .Add(item => item.DraftPrompt, string.Empty)
             .Add(item => item.CanUseVoiceMode, true)
@@ -136,12 +136,12 @@ public sealed class ChatWorkspacePanelTests
     public void Image_attachment_upload_control_renders_only_when_upload_handler_is_bound()
     {
         using var context = CreateContext();
-        var withoutUpload = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var withoutUpload = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.DraftPrompt, string.Empty));
 
         Assert.Empty(withoutUpload.FindAll("[data-testid='chat-image-attachment-button']"));
 
-        var withUpload = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var withUpload = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.DraftPrompt, string.Empty)
             .Add(
                 item => item.AttachmentFilesSelected,
@@ -163,7 +163,7 @@ public sealed class ChatWorkspacePanelTests
         var createdAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
         var changedPrompt = string.Empty;
 
-        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(item => item.Session, CreateSession(agentId, sessionId, runId, createdAtUtc))
             .Add(item => item.DraftPrompt, string.Empty)
             .Add(item => item.DraftPromptChanged, value => changedPrompt = value));
@@ -173,9 +173,9 @@ public sealed class ChatWorkspacePanelTests
         Assert.Equal("Analyze this screenshot.", changedPrompt);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         return context;
     }

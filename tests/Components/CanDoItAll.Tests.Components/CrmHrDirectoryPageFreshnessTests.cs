@@ -58,7 +58,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         Assert.True(saveResult.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={saveResult.Value:D}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(
@@ -124,7 +124,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         Assert.True(relationshipSave.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={sourcePartyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(
@@ -163,7 +163,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
             await CreatePartyAsync(partyDirectoryService, $"Paging slice party {index:D2}");
         }
 
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         cut.WaitForElement("[data-testid='crmhr-directory-search']")
             .Input("Paging slice");
 
@@ -214,7 +214,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         loadGate.Arm();
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={firstPartyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         await loadGate.WaitForDelayedCreationAsync();
         navigation.NavigateTo($"/crm-hr/directory?partyId={secondPartyId:D}");
 
@@ -241,7 +241,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         var existingPartyId = await CreatePartyAsync(partyDirectoryService, "Existing party");
         var missingPartyId = Guid.NewGuid();
         navigation.NavigateTo($"/crm-hr/directory?partyId={existingPartyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         AssertCurrentAgentChatSurface(cut, existingPartyId, "Existing party");
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={missingPartyId:D}");
@@ -268,7 +268,7 @@ public sealed class CrmHrDirectoryPageFreshnessTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var partyId = await CreatePartyAsync(partyDirectoryService, "Closing save dialog");
         navigation.NavigateTo($"/crm-hr/directory?partyId={partyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
         cut.WaitForElement("[data-testid='crmhr-directory-record-dialog']");
         cut.Find("[data-testid='crmhr-party-summary']").Change("Saved while closing");
         loadGate.Arm();

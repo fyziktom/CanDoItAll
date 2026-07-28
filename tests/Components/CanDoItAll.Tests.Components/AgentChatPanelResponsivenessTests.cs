@@ -232,11 +232,11 @@ public sealed class AgentChatPanelResponsivenessTests
         Assert.Equal(2, workspace.WorkspaceRequestCount);
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         IAgentFrameworkWorkspaceService workspaceService,
         IAgentChatExecutionOrchestrator orchestratorService)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
@@ -278,10 +278,10 @@ public sealed class AgentChatPanelResponsivenessTests
     }
 
     private static IRenderedComponent<AgentChatPanel> RenderFocusedChat(
-        TestContext context,
+        BunitContext context,
         AgentDefinition agent,
         ChatSessionRecord session)
-        => context.RenderComponent<AgentChatPanel>(parameters => parameters
+        => context.Render<AgentChatPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, agent.Id)
             .Add(component => component.PreferredAgent, agent)
             .Add(component => component.PreferredSessionId, session.Id)

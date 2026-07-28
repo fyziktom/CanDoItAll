@@ -13,7 +13,7 @@ public sealed class SettingsRendererTests
     [Fact]
     public void ConfigurationField_fallback_renderer_updates_canonical_state()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry(Array.Empty<ISettingsRendererSource>()));
         var schema = new ConfigurationSchema("1.0",
         [
@@ -30,7 +30,7 @@ public sealed class SettingsRendererTests
         ]);
         var state = new ConfigurationState();
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.Schema, schema)
             .Add(component => component.State, state)
             .Add(component => component.TestIdPrefix, "settings-renderer"));
@@ -48,7 +48,7 @@ public sealed class SettingsRendererTests
     [Fact]
     public void SettingsRendererHost_uses_registered_trusted_renderer()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var descriptor = new SettingsRendererDescriptor(
             "trusted.test",
             typeof(TrustedSettingsRenderer),
@@ -61,7 +61,7 @@ public sealed class SettingsRendererTests
         ]));
         var schema = ConfigurationSchema.Empty("1.0");
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, "trusted.test")
             .Add(component => component.RendererOwnerId, "test")
             .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.Application)
@@ -76,7 +76,7 @@ public sealed class SettingsRendererTests
     [Fact]
     public void SettingsRendererHost_shows_failure_when_plugin_requests_an_application_renderer()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var descriptor = new SettingsRendererDescriptor(
             "trusted.test",
             typeof(TrustedSettingsRenderer),
@@ -98,7 +98,7 @@ public sealed class SettingsRendererTests
                     "Name")
             ]);
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, "trusted.test")
             .Add(component => component.RendererOwnerId, "external.plugin")
             .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.BundledPlugin)
@@ -115,7 +115,7 @@ public sealed class SettingsRendererTests
     [Fact]
     public void SettingsRendererHost_shows_failure_for_unregistered_claimed_renderer()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry(Array.Empty<ISettingsRendererSource>()));
         var schema = new ConfigurationSchema(
             "1.0",
@@ -128,7 +128,7 @@ public sealed class SettingsRendererTests
                     "Name")
             ]);
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, "plugin.missing")
             .Add(component => component.RendererOwnerId, "external.plugin")
             .Add(component => component.RendererTrustLevel, SettingsRendererTrustLevel.BundledPlugin)
@@ -144,10 +144,10 @@ public sealed class SettingsRendererTests
     [Fact]
     public void SettingsRendererHost_shows_failure_for_incomplete_renderer_claim()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry(Array.Empty<ISettingsRendererSource>()));
 
-        var cut = context.RenderComponent<SettingsRendererHost>(parameters => parameters
+        var cut = context.Render<SettingsRendererHost>(parameters => parameters
             .Add(component => component.RendererKey, "plugin.incomplete")
             .Add(component => component.Schema, ConfigurationSchema.Empty("1.0"))
             .Add(component => component.State, new ConfigurationState()));

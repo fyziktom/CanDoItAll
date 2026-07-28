@@ -14,14 +14,14 @@ public sealed class PromptGalleryPageTests
     public void Curator_context_is_active_before_chat_opens_and_is_released_with_the_page()
     {
         var launcher = new RecordingCuratorLauncher();
-        using (var context = new TestContext())
+        using (var context = new BunitContext())
         {
             context.Services.AddCanDoItAllBaseLib();
             context.Services.AddSingleton(
                 DispatchProxy.Create<IPromptGalleryService, EmptyPromptGalleryServiceProxy>());
             context.Services.AddSingleton<IPromptGalleryCuratorLauncher>(launcher);
 
-            var cut = context.RenderComponent<PromptGalleryPage>();
+            var cut = context.Render<PromptGalleryPage>();
             var button = cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']");
 
             Assert.Equal($"Open {launcher.Presentation.Name}", button.GetAttribute("aria-label"));
@@ -68,13 +68,13 @@ public sealed class PromptGalleryPageTests
         {
             RemainingPresentationFailures = 1
         };
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(
             DispatchProxy.Create<IPromptGalleryService, EmptyPromptGalleryServiceProxy>());
         context.Services.AddSingleton<IPromptGalleryCuratorLauncher>(launcher);
 
-        var cut = context.RenderComponent<PromptGalleryPage>();
+        var cut = context.Render<PromptGalleryPage>();
 
         cut.WaitForAssertion(() => Assert.Equal(1, launcher.PresentationCount));
         var button = cut.Find("[data-testid='prompt-gallery-prompts-curator-open']");

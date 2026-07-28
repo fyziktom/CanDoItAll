@@ -10,7 +10,7 @@ public sealed class PartyRelationshipsEditorTests {
     public void Shows_save_prompt_until_the_party_exists() {
         using var context = CreateContext(new StubPartyRecordQueryService([]));
         var relationships = new List<PartyRelationshipEditorModel>();
-        var cut = context.RenderComponent<PartyRelationshipsEditor>(parameters => parameters
+        var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, (Guid?)null)
             .Add(component => component.Relationships, relationships));
 
@@ -36,7 +36,7 @@ public sealed class PartyRelationshipsEditorTests {
         ]);
         using var context = CreateContext(queryService);
         var relationships = new List<PartyRelationshipEditorModel>();
-        var cut = context.RenderComponent<PartyRelationshipsEditor>(parameters => parameters
+        var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, currentPartyId)
             .Add(component => component.Relationships, relationships));
 
@@ -72,12 +72,12 @@ public sealed class PartyRelationshipsEditorTests {
             IsOutgoing = true
         };
         var relationships = new List<PartyRelationshipEditorModel> { first, second };
-        var cut = context.RenderComponent<PartyRelationshipsEditor>(parameters => parameters
+        var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, Guid.NewGuid())
             .Add(component => component.Relationships, relationships));
 
         relationships.Reverse();
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.CurrentPartyId, Guid.NewGuid())
             .Add(component => component.Relationships, relationships));
         cut.Find("[data-testid='crmhr-relationship-direction-0']")
@@ -97,7 +97,7 @@ public sealed class PartyRelationshipsEditorTests {
     public void Cancelling_the_picker_discards_a_new_unsaved_relationship() {
         using var context = CreateContext(new StubPartyRecordQueryService([]));
         var relationships = new List<PartyRelationshipEditorModel>();
-        var cut = context.RenderComponent<PartyRelationshipsEditor>(parameters => parameters
+        var cut = context.Render<PartyRelationshipsEditor>(parameters => parameters
             .Add(component => component.CurrentPartyId, Guid.NewGuid())
             .Add(component => component.Relationships, relationships));
 
@@ -110,8 +110,8 @@ public sealed class PartyRelationshipsEditorTests {
         Assert.Empty(cut.FindAll("[data-testid='crmhr-relationship-picker']"));
     }
 
-    private static TestContext CreateContext(IPartyRecordQueryService queryService) {
-        var context = new TestContext();
+    private static BunitContext CreateContext(IPartyRecordQueryService queryService) {
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddSingleton(queryService);

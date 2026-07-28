@@ -165,7 +165,7 @@ public sealed class AgentExecutionActivityStatusTests
                 .TextContent
                 .Trim()));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.StreamId, secondStreamId));
 
         cut.WaitForAssertion(() =>
@@ -250,10 +250,10 @@ public sealed class AgentExecutionActivityStatusTests
         });
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         out ControlledActivityReader activityReader)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
         activityReader = new ControlledActivityReader();
@@ -262,10 +262,10 @@ public sealed class AgentExecutionActivityStatusTests
     }
 
     private static IRenderedComponent<AgentExecutionActivityStatus> RenderStatus(
-        TestContext context,
+        BunitContext context,
         AgentExecutionActivityStreamId streamId)
     {
-        return context.RenderComponent<AgentExecutionActivityStatus>(
+        return context.Render<AgentExecutionActivityStatus>(
             parameters => parameters
                 .Add(component => component.StreamId, streamId));
     }

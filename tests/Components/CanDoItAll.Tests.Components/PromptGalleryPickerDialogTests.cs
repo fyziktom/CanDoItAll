@@ -14,13 +14,13 @@ public sealed class PromptGalleryPickerDialogTests
     public async Task Edit_requested_override_closes_picker_before_invoking_callback()
     {
         var gallery = new TestPromptGallery();
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
 
         var dialogService = context.Services.GetRequiredService<DialogService>();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         Guid? receivedItemId = null;
         var dialogCountDuringCallback = -1;
         var pickerWasCompletedDuringCallback = false;

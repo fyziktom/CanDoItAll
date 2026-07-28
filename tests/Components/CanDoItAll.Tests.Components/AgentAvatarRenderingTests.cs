@@ -12,11 +12,11 @@ public sealed class AgentAvatarRenderingTests
     [Fact]
     public void Overview_usage_list_renders_shared_avatar_with_image_url()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         var avatarUrl = AgentAvatarImageCatalog.BundledAvatarUrls[0];
 
-        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+        var cut = context.Render<AgentOverviewUsageList>(parameters => parameters
             .Add(component => component.IsLoaded, true)
             .Add(component => component.TestId, "agent-avatar-test")
             .Add(component => component.Rows, [
@@ -31,10 +31,10 @@ public sealed class AgentAvatarRenderingTests
     [Fact]
     public void Overview_usage_list_keeps_accessible_fallback_when_image_url_is_missing()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
 
-        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+        var cut = context.Render<AgentOverviewUsageList>(parameters => parameters
             .Add(component => component.IsLoaded, true)
             .Add(component => component.TestId, "agent-avatar-test")
             .Add(component => component.Rows, [
@@ -48,10 +48,10 @@ public sealed class AgentAvatarRenderingTests
     [Fact]
     public void Overview_usage_list_renders_execution_count_as_success_even_with_failures()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
 
-        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+        var cut = context.Render<AgentOverviewUsageList>(parameters => parameters
             .Add(component => component.IsLoaded, true)
             .Add(component => component.Rows, [
                 CreateRow("Delivery Manager", null)
@@ -64,10 +64,10 @@ public sealed class AgentAvatarRenderingTests
     [Fact]
     public void Overview_usage_list_renders_total_runs_in_failure_rank()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
 
-        var cut = context.RenderComponent<AgentOverviewUsageList>(parameters => parameters
+        var cut = context.Render<AgentOverviewUsageList>(parameters => parameters
             .Add(component => component.IsLoaded, true)
             .Add(component => component.ShowFailureRank, true)
             .Add(component => component.Rows, [

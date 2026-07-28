@@ -18,7 +18,7 @@ public sealed class ProjectCalendarPageDatabaseSwitchTests
         var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var missingProjectId = Guid.NewGuid();
 
-        var cut = harness.Context.RenderComponent<ProjectCalendarPage>(
+        var cut = harness.Context.Render<ProjectCalendarPage>(
             parameters => parameters.Add(page => page.ProjectId, missingProjectId));
 
         cut.WaitForAssertion(() =>

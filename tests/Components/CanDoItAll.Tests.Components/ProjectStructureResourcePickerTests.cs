@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class ProjectStructureResourcePickerTests : TestContext
+public sealed class ProjectStructureResourcePickerTests : BunitContext
 {
     public ProjectStructureResourcePickerTests()
     {
@@ -34,7 +34,7 @@ public sealed class ProjectStructureResourcePickerTests : TestContext
             null,
             string.Empty);
 
-        var cut = RenderComponent<ProjectStructureCanvasDialogs>(parameters => parameters
+        var cut = Render<ProjectStructureCanvasDialogs>(parameters => parameters
             .Add(component => component.ProcessLinkDialog, dialog)
             .Add(component => component.ProcessLinkSelectionChanged, id => selectedDefinitionId = id)
             .Add(component => component.CanShowLocalOpen, _ => false)
@@ -64,7 +64,7 @@ public sealed class ProjectStructureResourcePickerTests : TestContext
             null,
             string.Empty);
 
-        var cut = RenderComponent<ProjectStructureCanvasDialogs>(parameters => parameters
+        var cut = Render<ProjectStructureCanvasDialogs>(parameters => parameters
             .Add(component => component.ProcessLinkDialog, dialog)
             .Add(component => component.CanShowLocalOpen, _ => false)
             .Add(component => component.CanOpenInPreferredApplication, _ => false)
@@ -107,7 +107,7 @@ public sealed class ProjectStructureResourcePickerTests : TestContext
             new ProjectStructureWorkflowInputPreview(string.Empty, "{}", []),
             string.Empty);
 
-        var cut = RenderComponent<ProjectStructureCanvasDialogs>(parameters => parameters
+        var cut = Render<ProjectStructureCanvasDialogs>(parameters => parameters
             .Add(component => component.WorkflowAddDialog, dialog)
             .Add(component => component.WorkflowAddSelectionChanged, id => selectedWorkflowId = id)
             .Add(component => component.CanShowLocalOpen, _ => false)

@@ -11,11 +11,11 @@ public sealed class ProviderModelSelectorTests
     [Fact]
     public void ProviderModelSelector_lists_provider_default_and_suggested_models()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var provider = CreateProvider("gpt-5-mini", ["gpt-5-mini", "gpt-5.4"]);
         string? selectedModel = "gpt-5.4";
 
-        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.Provider, provider)
             .Add(component => component.Value, selectedModel)
             .Add(component => component.ValueChanged, EventCallback.Factory.Create<string?>(this, value => selectedModel = value))
@@ -40,11 +40,11 @@ public sealed class ProviderModelSelectorTests
     [Fact]
     public void ProviderModelSelector_keeps_custom_model_behind_override()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var provider = CreateProvider("gpt-5-mini", ["gpt-5.4"]);
         string? selectedModel = string.Empty;
 
-        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.Provider, provider)
             .Add(component => component.Value, selectedModel)
             .Add(component => component.ValueChanged, EventCallback.Factory.Create<string?>(this, value => selectedModel = value))
@@ -63,11 +63,11 @@ public sealed class ProviderModelSelectorTests
     [Fact]
     public void ProviderModelSelector_unchecking_override_returns_to_provider_default()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var provider = CreateProvider("gpt-5-mini", ["gpt-5.4"]);
         string? selectedModel = "custom-model";
 
-        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.Provider, provider)
             .Add(component => component.Value, selectedModel)
             .Add(component => component.ValueChanged, EventCallback.Factory.Create<string?>(this, value => selectedModel = value))
@@ -86,10 +86,10 @@ public sealed class ProviderModelSelectorTests
     [Fact]
     public void ProviderModelSelector_starts_in_override_for_unknown_existing_model()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var provider = CreateProvider("gpt-5-mini", ["gpt-5.4"]);
 
-        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.Provider, provider)
             .Add(component => component.Value, "claude-3-5-sonnet")
             .Add(component => component.ChoiceTestId, "model-choice")
@@ -102,10 +102,10 @@ public sealed class ProviderModelSelectorTests
     [Fact]
     public void ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var provider = CreateProvider("gpt-5-mini", ["gpt-5.4"]);
 
-        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.Provider, provider)
             .Add(component => component.Value, "gpt-5-mini")
             .Add(component => component.ChoiceTestId, "model-choice")
@@ -118,10 +118,10 @@ public sealed class ProviderModelSelectorTests
     [Fact]
     public void ProviderModelSelector_supports_scalar_provider_metadata_for_workflow_surfaces()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         string? selectedModel = "llama3.1";
 
-        var cut = context.RenderComponent<ProviderModelSelector>(parameters => parameters
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.ProviderName, "Local Ollama")
             .Add(component => component.ProviderDefaultModel, "llama3.1")
             .Add(component => component.ModelOptions, ["llama3.1", "llama3.2"])

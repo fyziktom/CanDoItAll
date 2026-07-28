@@ -5,7 +5,7 @@ using CanDoItAll.Modules.Workspace.Pages.Components;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class ProviderModelPricingEditorTests : TestContext
+public sealed class ProviderModelPricingEditorTests : BunitContext
 {
     [Fact]
     public void Renders_existing_model_prices_as_editable_rows()
@@ -25,7 +25,7 @@ public sealed class ProviderModelPricingEditorTests : TestContext
             ]
         };
 
-        var cut = RenderComponent<ProviderModelPricingEditor>(parameters => parameters
+        var cut = Render<ProviderModelPricingEditor>(parameters => parameters
             .Add(component => component.Model, model)
             .Add(component => component.PricingKind, ProviderKind.OpenAi)
             .Add(component => component.DefaultModel, "api-model"));
@@ -54,7 +54,7 @@ public sealed class ProviderModelPricingEditorTests : TestContext
             ]
         };
 
-        var cut = RenderComponent<ProviderModelPricingEditor>(parameters => parameters
+        var cut = Render<ProviderModelPricingEditor>(parameters => parameters
             .Add(component => component.Model, model)
             .Add(component => component.PricingKind, ProviderKind.OpenAi)
             .Add(component => component.DefaultModel, "existing-model"));

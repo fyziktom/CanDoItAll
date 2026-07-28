@@ -34,7 +34,7 @@ public sealed class MainLayoutCollaborationTests
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed")
             .SetResult(true);
 
-        var cut = harness.Context.RenderComponent<WebMainLayout>(parameters => parameters
+        var cut = harness.Context.Render<WebMainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
 
         cut.WaitForAssertion(() =>

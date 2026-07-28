@@ -62,8 +62,6 @@ ScaffoldingReadMe.txt
 
 # NuGet Packages
 *.nupkg
-!ExternalPackages/
-!ExternalPackages/CanDoItAll.Components.Sandbox.0.1.4.nupkg
 # NuGet Symbol Packages
 *.snupkg
 

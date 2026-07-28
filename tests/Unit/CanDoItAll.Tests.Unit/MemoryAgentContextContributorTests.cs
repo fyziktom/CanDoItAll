@@ -3,7 +3,6 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.CognitiveMemory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -199,7 +198,7 @@ public sealed class MemoryAgentContextContributorTests
     }
 
     [Fact]
-    public void AgentFrameworkModule_registers_generic_contributor_and_native_module_does_not_register_maf_memory_surfaces()
+    public void AgentFrameworkModule_registers_generic_contributor()
     {
         var services = new ServiceCollection();
         services.AddAgentFrameworkModule(new ConfigurationBuilder().Build());
@@ -209,26 +208,6 @@ public sealed class MemoryAgentContextContributorTests
             descriptor => descriptor.ServiceType == typeof(IAgentContextContributor) &&
                           descriptor.ImplementationType == typeof(MemoryAgentContextContributor) &&
                           descriptor.Lifetime == ServiceLifetime.Scoped);
-
-        var nativeServices = new ServiceCollection();
-        nativeServices.AddCognitiveMemoryModule();
-
-        Assert.DoesNotContain(
-            nativeServices,
-            descriptor => descriptor.ServiceType == typeof(IAgentContextContributor) &&
-                          descriptor.ImplementationType == typeof(CognitiveMemoryAgentContextContributor));
-        Assert.DoesNotContain(
-            nativeServices,
-            descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor) &&
-                          descriptor.ImplementationType == typeof(CognitiveMemoryRecallWorkflowExecutor));
-        Assert.DoesNotContain(
-            nativeServices,
-            descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor) &&
-                          descriptor.ImplementationType == typeof(CognitiveMemoryProbeWorkflowExecutor));
-        Assert.DoesNotContain(
-            nativeServices,
-            descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor) &&
-                          descriptor.ImplementationType == typeof(CognitiveMemoryLearningProposalWorkflowExecutor));
     }
 
     [Fact]

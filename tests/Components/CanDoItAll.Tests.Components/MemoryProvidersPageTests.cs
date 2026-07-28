@@ -20,13 +20,13 @@ public sealed class MemoryProvidersPageTests
     [Fact]
     public void MemoryProvidersPage_RendersLoadingStateWhileProviderSnapshotIsPending()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(new MemoryProvidersPageController(
             new PendingSnapshotMemoryProviderManagementUiService()));
 
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -40,7 +40,7 @@ public sealed class MemoryProvidersPageTests
         var setup = CreateContext();
         using var context = setup.Context;
 
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-zero-provider']");
         Assert.Contains("No memory providers are configured", cut.Markup);
@@ -71,7 +71,7 @@ public sealed class MemoryProvidersPageTests
                 MemoryCapabilityIds.OperationStatus));
         using var context = setup.Context;
 
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         Assert.Contains("Business memory", cut.Markup);
@@ -93,7 +93,7 @@ public sealed class MemoryProvidersPageTests
     {
         var setup = CreateContext();
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-zero-provider']");
         Assert.Empty(setup.Store.Profiles);
@@ -129,7 +129,7 @@ public sealed class MemoryProvidersPageTests
             MemoryCapabilityIds.EventsProviderPush,
             MemoryCapabilityIds.OperationStatus));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-tab-ingestion']").Click();
         cut.WaitForAssertion(() =>
@@ -219,10 +219,10 @@ public sealed class MemoryProvidersPageTests
         Assert.DoesNotContain("JsonSerializer", facade, StringComparison.Ordinal);
     }
 
-    private static (TestContext Context, InMemoryMemoryProviderProfileStore Store) CreateContext(
+    private static (BunitContext Context, InMemoryMemoryProviderProfileStore Store) CreateContext(
         params MemoryProviderProfile[] profiles)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddDbContextFactory<AppDbContext>(options =>

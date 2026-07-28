@@ -22,7 +22,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var projectId = await CreateProjectAsync(projectsService, "Query-selected Gantt project");
         navigation.NavigateTo($"http://localhost/projects/{projectId:D}/structure?tab=gantt");
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(parameters => parameters
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(page => page.ProjectId, projectId));
 
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
@@ -42,7 +42,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var projectId = await CreateProjectAsync(projectsService, "Manual tab project");
         navigation.NavigateTo($"http://localhost/projects/{projectId:D}/structure?tab=gantt");
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(parameters => parameters
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(page => page.ProjectId, projectId));
 
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
@@ -50,7 +50,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             .Single(tab => tab.TextContent.Contains("Canvas", StringComparison.Ordinal))
             .Click());
 
-        cut.SetParametersAndRender(parameters => parameters.Add(page => page.ProjectId, projectId));
+        cut.Render(parameters => parameters.Add(page => page.ProjectId, projectId));
 
         AssertSelectedStructureTab(cut, "Canvas");
         Assert.Empty(cut.FindAll("[data-testid='project-structure-gantt-panel']"));
@@ -66,7 +66,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var firstProjectId = await CreateProjectAsync(projectsService, "First query identity project");
         var secondProjectId = await CreateProjectAsync(projectsService, "Second query identity project");
         navigation.NavigateTo($"http://localhost/projects/{firstProjectId:D}/structure?tab=gantt");
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(parameters => parameters
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(page => page.ProjectId, firstProjectId));
 
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
@@ -75,7 +75,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             .Click());
 
         navigation.NavigateTo($"http://localhost/projects/{secondProjectId:D}/structure?tab=gantt");
-        cut.SetParametersAndRender(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
+        cut.Render(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
 
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
         AssertSelectedStructureTab(cut, "Gantt");
@@ -89,7 +89,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var missingProjectId = Guid.NewGuid();
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, missingProjectId));
 
         cut.WaitForAssertion(() =>
@@ -122,7 +122,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var firstProjectId = await CreateProjectAsync(projectsService, "First lazy Gantt project");
         var secondProjectId = await CreateProjectAsync(projectsService, "Second lazy Gantt project");
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, firstProjectId));
 
         cut.WaitForElement(".cad-tabs__tab");
@@ -135,7 +135,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         });
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
 
-        cut.SetParametersAndRender(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
+        cut.Render(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
 
         cut.WaitForAssertion(() =>
         {
@@ -157,11 +157,11 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var firstProjectId = await CreateProjectAsync(projectsService, "First delayed project");
         var secondProjectId = await CreateProjectAsync(projectsService, "Second current project");
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, firstProjectId));
 
         await referenceDataProvider.WaitForFirstImageProviderRequestAsync();
-        cut.SetParametersAndRender(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
+        cut.Render(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
 
         try
         {
@@ -185,7 +185,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var projectId = await CreateProjectAsync(projectsService, "Route identity project");
         navigation.NavigateTo($"/Projects/{projectId:D}/Structure/");
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
 
         cut.WaitForAssertion(() =>

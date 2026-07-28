@@ -18,7 +18,7 @@ public sealed class ResourcesPageAgentChatContextTests
         var missingProjectId = Guid.NewGuid();
         navigation.NavigateTo(navigation.GetUriWithQueryParameter("projectId", missingProjectId));
 
-        var cut = harness.Context.RenderComponent<ResourcesPage>();
+        var cut = harness.Context.Render<ResourcesPage>();
 
         cut.WaitForAssertion(() =>
         {

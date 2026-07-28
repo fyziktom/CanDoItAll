@@ -1,6 +1,6 @@
-# Generic Memory And Retired Cognitive Memory
+# Generic Memory And External Cognitive Memory
 
-The active host uses the provider-neutral Memory runtime. The old native Cognitive Memory module is not registered by the base composition root and its HTTP surface is retired.
+The active host uses the provider-neutral Memory runtime. Native Cognitive Memory implementation and tests are owned by the standalone [CanDoItAll.CognitiveMemory repository](https://github.com/fyziktom/CanDoItAll.CognitiveMemory) and connect to this host only as an external service.
 
 ## Current Boundary
 
@@ -9,9 +9,9 @@ The active host uses the provider-neutral Memory runtime. The old native Cogniti
 - `GET /api/cognitive-memory/contract` and `GET /api/cognitive-memory/v1/contract` report the retirement contract. Every other request below either base path returns `410 Gone`.
 - Mock, HTTP, native-remote, and MCP drivers are opt-in. All drivers and memory background workers are disabled in the tracked default configuration.
 - A zero-provider deployment is supported. Missing capabilities fail with typed diagnostics; the runtime does not silently fall back to another provider.
-- Qdrant, SemanticCompletion, OpenAI, and the retained legacy module are not base-host memory dependencies.
+- Qdrant, SemanticCompletion, OpenAI, and the native service implementation are not base-host memory dependencies.
 
-The former native implementation is retained under `src/Modules/CanDoItAll.Modules.CognitiveMemory` only for legacy compatibility and regression coverage. It is excluded from `CanDoItAll.slnx` and active module discovery. New work must target the generic Memory projects or the separately owned native service.
+This repository does not reference native Cognitive Memory source or packages. Its isolated `src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory` project translates the generic provider protocol to the external service. Native domain, persistence, runtime, UI, and tests belong in the standalone repository.
 
 ## Maintained Guidance
 
@@ -31,7 +31,8 @@ Removed native API, Qdrant, roadmap, and beta-proof pages remain available in Gi
 | Provider contracts | `src/Memory/CanDoItAll.Memory.Abstractions` |
 | Runtime and dispatch | `src/Memory/CanDoItAll.Memory.Application` |
 | Persistence and workers | `src/Memory/CanDoItAll.Memory.Persistence` |
-| HTTP and native-remote drivers | `src/Memory/CanDoItAll.Memory.Http` |
+| Generic HTTP driver | `src/Memory/CanDoItAll.Memory.Http` |
+| Cognitive Memory external-service driver | `src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory` |
 | MCP driver | `src/Memory/CanDoItAll.Memory.Mcp` |
 | Explicit mock driver | `src/Memory/CanDoItAll.Memory.Mock` |
 | Source Gateway contracts | `src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions` |

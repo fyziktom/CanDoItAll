@@ -104,9 +104,9 @@ public sealed class AgentDetailsDialogCapabilityTests
         }
     }
 
-    private static TestContext CreateContext(out RecordingWorkspaceServiceProxy workspaceProxy)
+    private static BunitContext CreateContext(out RecordingWorkspaceServiceProxy workspaceProxy)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
 
@@ -121,11 +121,11 @@ public sealed class AgentDetailsDialogCapabilityTests
     }
 
     private static IRenderedComponent<TestAgentDetailsDialog> RenderCapabilitiesTab(
-        TestContext context,
+        BunitContext context,
         AgentEditorModel editor,
         IReadOnlyList<CapabilityCatalogItem> capabilities)
     {
-        return context.RenderComponent<TestAgentDetailsDialog>(parameters => parameters
+        return context.Render<TestAgentDetailsDialog>(parameters => parameters
             .Add(component => component.TestEditor, editor)
             .Add(component => component.TestCapabilities, capabilities));
     }

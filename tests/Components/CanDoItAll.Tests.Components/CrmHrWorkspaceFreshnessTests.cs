@@ -47,7 +47,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         Assert.True(opportunityResult.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/crm?opportunityId={opportunityResult.Value:D}");
-        var cut = harness.Context.RenderComponent<CrmHrCrmPage>();
+        var cut = harness.Context.Render<CrmHrCrmPage>();
 
         AssertCurrentCrmContext(
             cut,
@@ -74,7 +74,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/crm-hr/crm?opportunityId={Guid.NewGuid():D}");
 
-        var cut = harness.Context.RenderComponent<CrmHrCrmPage>();
+        var cut = harness.Context.Render<CrmHrCrmPage>();
 
         AssertFailedCrmContext(cut);
     }
@@ -106,7 +106,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         Assert.True(interactionResult.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/crm?interactionId={interactionResult.Value:D}");
-        var cut = harness.Context.RenderComponent<CrmHrCrmPage>();
+        var cut = harness.Context.Render<CrmHrCrmPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -149,7 +149,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         loadGate.Arm();
 
         navigation.NavigateTo($"/crm-hr/crm?accountId={firstAccountId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrCrmPage>();
+        var cut = harness.Context.Render<CrmHrCrmPage>();
         await loadGate.WaitForDelayedCreationAsync();
         navigation.NavigateTo($"/crm-hr/crm?accountId={secondAccountId:D}");
 
@@ -198,7 +198,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         loadGate.Arm();
 
         navigation.NavigateTo($"/crm-hr/workforce?partyId={firstPartyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrWorkforcePage>();
+        var cut = harness.Context.Render<CrmHrWorkforcePage>();
         await loadGate.WaitForDelayedCreationAsync();
         navigation.NavigateTo($"/crm-hr/workforce?partyId={secondPartyId:D}");
 
@@ -254,7 +254,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
         Assert.True(applicationResult.IsSuccess);
 
         navigation.NavigateTo("/crm-hr/recruiting");
-        var cut = harness.Context.RenderComponent<CrmHrRecruitingPage>();
+        var cut = harness.Context.Render<CrmHrRecruitingPage>();
         cut.WaitForAssertion(() =>
         {
             var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
@@ -321,7 +321,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
             PartyRoleKind.Employee);
 
         navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrWorkforcePage>();
+        var cut = harness.Context.Render<CrmHrWorkforcePage>();
 
         cut.WaitForAssertion(() =>
         {

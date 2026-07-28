@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class PartyAddressesEditorTests {
     [Fact]
     public void Remove_callback_targets_the_rendered_address_after_reorder() {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var first = new PartyAddressEditorModel {
             AddressType = "Billing",
             Line1 = "First address"
@@ -17,11 +17,11 @@ public sealed class PartyAddressesEditorTests {
             Line1 = "Second address"
         };
         var addresses = new List<PartyAddressEditorModel> { first, second };
-        var cut = context.RenderComponent<PartyAddressesEditor>(parameters => parameters
+        var cut = context.Render<PartyAddressesEditor>(parameters => parameters
             .Add(component => component.Addresses, addresses));
 
         addresses.Reverse();
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Addresses, addresses));
         cut.Find("[data-testid='crmhr-address-remove-0']").Click();
 

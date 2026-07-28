@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Memory.Drivers.CognitiveMemory;
 using CanDoItAll.Memory.Http;
 using CanDoItAll.Memory.Protocol.Http;
 

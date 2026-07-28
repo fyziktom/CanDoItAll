@@ -28,9 +28,9 @@ Its adjacent
 [project file](../../src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj)
 is the authoritative dependency list.
 
-`CanDoItAll.Components.Sandbox` `0.1.4` is the sole local-package exception because the
-component preview tests render its sample components and the owner intentionally does
-not publish that sample application.
+Reusable component preview routes and component-library tests remain in the sibling
+`CanDoItAll.Components` repository. This consumer repository keeps only application
+and module integration tests.
 
 ## Change Rules
 

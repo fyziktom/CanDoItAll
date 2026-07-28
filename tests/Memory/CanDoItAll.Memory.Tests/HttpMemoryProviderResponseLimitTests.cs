@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Memory.Drivers.CognitiveMemory;
 using CanDoItAll.Memory.Http;
 
 namespace CanDoItAll.Memory.Tests;

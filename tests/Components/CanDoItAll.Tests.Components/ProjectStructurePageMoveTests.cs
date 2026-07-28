@@ -147,7 +147,7 @@ public sealed class ProjectStructurePageMoveTests
                 }
             }.ToJson());
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
 
         cut.WaitForAssertion(() =>

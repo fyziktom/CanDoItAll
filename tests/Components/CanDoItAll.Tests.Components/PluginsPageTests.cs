@@ -23,7 +23,7 @@ public sealed class PluginsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
         cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();
@@ -45,7 +45,7 @@ public sealed class PluginsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-tree-tag-email']");
         var emailGroup = cut.Find("[data-testid='plugins-tree-tag-children-email']");
@@ -65,7 +65,7 @@ public sealed class PluginsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-ui-executor-empty']");
         cut.Find("[data-testid='plugins-list-item-ui-executor-empty']").Click();
@@ -87,7 +87,7 @@ public sealed class PluginsPageTests
         var settingsService = harness.Context.Services.GetRequiredService<PluginSettingsService>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
         cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();
@@ -147,7 +147,7 @@ public sealed class PluginsPageTests
         Assert.True(saveResult.IsSuccess);
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
         cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();
@@ -196,7 +196,7 @@ public sealed class PluginsPageTests
         var lifetime = harness.Context.Services.GetRequiredService<TestHostApplicationLifetime>();
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         Assert.DoesNotContain("plugin-package-upload", cut.Markup, StringComparison.Ordinal);
         cut.Find("[data-testid='plugin-packages-open']").Click();
@@ -246,7 +246,7 @@ public sealed class PluginsPageTests
             WorkflowExecutorId: Office365PluginConstants.DownloadByCategoryExecutorId));
 
         navigation.NavigateTo("/plugins");
-        var cut = harness.Context.RenderComponent<PluginsPage>();
+        var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
         cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();

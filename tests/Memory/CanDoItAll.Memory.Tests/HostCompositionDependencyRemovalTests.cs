@@ -1,6 +1,7 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Memory.Drivers.CognitiveMemory;
 using CanDoItAll.Memory.Http;
 using CanDoItAll.Memory.Mcp;
 using CanDoItAll.Memory.Mock;
@@ -70,7 +71,7 @@ public sealed class HostCompositionDependencyRemovalTests
     }
 
     [Fact]
-    public void CP004_Explicit_provider_driver_configuration_registers_only_generic_drivers()
+    public void CP004_Explicit_provider_driver_configuration_registers_only_requested_drivers()
     {
         var services = new ServiceCollection();
         services.AddCanDoItAllRuntimeModules(CreateConfiguration(new Dictionary<string, string?>
@@ -125,6 +126,36 @@ public sealed class HostCompositionDependencyRemovalTests
             "CanDoItAll.Composition",
             "Memory",
             "MemoryRuntimeServiceCollectionExtensions.cs")));
+    }
+
+    [Fact]
+    public void CP006_Cognitive_memory_remote_driver_is_an_outer_adapter()
+    {
+        Assert.Equal(
+            "CanDoItAll.Memory.Drivers.CognitiveMemory",
+            typeof(NativeRemoteMemoryProviderDriver).Assembly.GetName().Name);
+
+        var genericHttpProject = File.ReadAllText(Path.Combine(
+            RepoRoot,
+            "src",
+            "Memory",
+            "CanDoItAll.Memory.Http",
+            "CanDoItAll.Memory.Http.csproj"));
+        Assert.DoesNotContain(
+            "CanDoItAll.Memory.Drivers.CognitiveMemory",
+            genericHttpProject,
+            StringComparison.Ordinal);
+
+        var genericMemoryModuleProject = File.ReadAllText(Path.Combine(
+            RepoRoot,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Memory",
+            "CanDoItAll.Modules.Memory.csproj"));
+        Assert.DoesNotContain(
+            "CanDoItAll.Memory.Drivers.CognitiveMemory",
+            genericMemoryModuleProject,
+            StringComparison.Ordinal);
     }
 
     private static IConfiguration CreateConfiguration(IReadOnlyDictionary<string, string?> values)

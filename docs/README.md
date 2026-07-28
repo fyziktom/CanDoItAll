@@ -49,7 +49,7 @@ Historical execution bundles under `codex/bundles`, `.codex/bundles`, and the ch
 
 ## Memory
 
-The active implementation is the provider-neutral Memory subsystem. The legacy Cognitive Memory API is a retired compatibility shim.
+The active implementation is the provider-neutral Memory subsystem. Native Cognitive Memory is an external service owned by its standalone repository; the legacy API path is a retired compatibility shim.
 
 - [Memory overview and migration boundary](cognitive-memory/README.md)
 - [Current implementation map](cognitive-memory/current-state/implementation-map.md)

@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class MainLayoutTopBarTests : TestContext
+public sealed class MainLayoutTopBarTests : BunitContext
 {
     [Fact]
     public void Status_badges_render_only_in_the_hover_panel()
     {
-        var cut = RenderComponent<MainLayoutTopBar>(parameters => parameters
+        var cut = Render<MainLayoutTopBar>(parameters => parameters
             .Add(component => component.ActiveWorkspaceTitle, "Delivery Workspace")
             .Add(component => component.ActiveNavigationTitle, "Agents")
             .Add(component => component.ActiveProjectTitle, "Apollo")
@@ -38,7 +38,7 @@ public sealed class MainLayoutTopBarTests : TestContext
     [Fact]
     public void Status_trigger_can_be_pinned_and_dismissed_from_the_keyboard()
     {
-        var cut = RenderComponent<MainLayoutTopBar>();
+        var cut = Render<MainLayoutTopBar>();
         var trigger = cut.Find(".cda-shell-status-trigger");
 
         Assert.Equal("BUTTON", trigger.TagName);

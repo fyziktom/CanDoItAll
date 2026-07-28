@@ -163,6 +163,9 @@ The shipped MCP adapter supports context query and, when configured, operation-s
 Native Cognitive Memory is an optional service-owned provider. Build, configure,
 and run it from the separately cloned
 [CanDoItAll.CognitiveMemory repository](https://github.com/fyziktom/CanDoItAll.CognitiveMemory).
+The base-host adapter is isolated in
+`src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory`; it depends on the
+generic Memory contracts and HTTP transport, not on native implementation source.
 
 Enable the native remote driver in the base host:
 

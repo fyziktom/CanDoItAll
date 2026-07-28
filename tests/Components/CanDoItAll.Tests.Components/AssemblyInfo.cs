@@ -9,6 +9,6 @@ internal static class ComponentTestAssemblyConfiguration
     [ModuleInitializer]
     public static void Configure()
     {
-        TestContextBase.DefaultWaitTimeout = TimeSpan.FromSeconds(30);
+        BunitContext.DefaultWaitTimeout = TimeSpan.FromSeconds(30);
     }
 }

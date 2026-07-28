@@ -11,10 +11,10 @@ public sealed class QuickActionCardTests
     [Fact]
     public void Renders_native_compact_anchor_with_typed_layout_and_content()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
 
-        var cut = context.RenderComponent<QuickActionCard>(parameters => parameters
+        var cut = context.Render<QuickActionCard>(parameters => parameters
             .Add(component => component.Href, "/projects")
             .Add(component => component.Icon, "folder_open")
             .Add(component => component.Label, "Projects")

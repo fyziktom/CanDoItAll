@@ -23,7 +23,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         var selectedAgents = new List<AgentDefinition?>();
         var accessStates = new List<AgentChatContextAccessState>();
 
-        var cut = context.RenderComponent<AgentChatPanel>(parameters => parameters
+        var cut = context.Render<AgentChatPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, availableAgent.Id)
             .Add(component => component.SelectedAgentChanged,
                 EventCallback.Factory.Create<AgentDefinition?>(this, selectedAgents.Add))
@@ -36,7 +36,7 @@ public sealed class AgentPanelSelectionFailClosedTests
             Assert.Equal(AgentChatContextAccessState.Ready, accessStates.Last());
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.PreferredAgentId, missingAgentId));
 
         cut.WaitForAssertion(() =>
@@ -58,7 +58,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         var selectedAgents = new List<AgentDefinition?>();
         var accessStates = new List<AgentChatContextAccessState>();
 
-        var cut = context.RenderComponent<AgentCapabilitiesPanel>(parameters => parameters
+        var cut = context.Render<AgentCapabilitiesPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, missingAgentId)
             .Add(component => component.SelectedAgentChanged,
                 EventCallback.Factory.Create<AgentDefinition?>(this, selectedAgents.Add))
@@ -83,7 +83,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         var selectedAgents = new List<AgentDefinition?>();
         var accessStates = new List<AgentChatContextAccessState>();
 
-        var cut = context.RenderComponent<AgentCapabilitiesPanel>(parameters => parameters
+        var cut = context.Render<AgentCapabilitiesPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, availableAgent.Id)
             .Add(component => component.SelectedAgentChanged,
                 EventCallback.Factory.Create<AgentDefinition?>(this, selectedAgents.Add))
@@ -96,7 +96,7 @@ public sealed class AgentPanelSelectionFailClosedTests
             Assert.Equal(AgentChatContextAccessState.Ready, accessStates.Last());
         });
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.PreferredAgentId, missingAgentId));
 
         cut.WaitForAssertion(() =>
@@ -121,7 +121,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         var launcher = new RecordingAgentChatLauncher();
         using var context = CreateCapabilitiesTestContext(workspace, launcher);
 
-        var cut = context.RenderComponent<AgentCapabilitiesPanel>(parameters => parameters
+        var cut = context.Render<AgentCapabilitiesPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, availableAgent.Id));
 
         cut.WaitForAssertion(() =>
@@ -142,14 +142,14 @@ public sealed class AgentPanelSelectionFailClosedTests
         var workspace = CreateWorkspace([availableAgent, spoof]);
         using var context = CreateCapabilitiesTestContext(workspace);
 
-        var cut = context.RenderComponent<AgentCapabilitiesPanel>(parameters => parameters
+        var cut = context.Render<AgentCapabilitiesPanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, availableAgent.Id));
 
         cut.WaitForAssertion(() =>
             Assert.True(cut.Find("[data-testid='agents-capability-curator-open']").HasAttribute("disabled")));
     }
 
-    private static TestContext CreateChatTestContext(WorkspaceServiceProxy workspace)
+    private static BunitContext CreateChatTestContext(WorkspaceServiceProxy workspace)
     {
         var context = CreateBaseTestContext(workspace.Service);
         context.Services.AddSingleton(
@@ -163,7 +163,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         return context;
     }
 
-    private static TestContext CreateCapabilitiesTestContext(
+    private static BunitContext CreateCapabilitiesTestContext(
         WorkspaceServiceProxy workspace,
         IAgentChatLauncher? launcher = null)
     {
@@ -175,9 +175,9 @@ public sealed class AgentPanelSelectionFailClosedTests
         return context;
     }
 
-    private static TestContext CreateBaseTestContext(IAgentFrameworkWorkspaceService workspace)
+    private static BunitContext CreateBaseTestContext(IAgentFrameworkWorkspaceService workspace)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();

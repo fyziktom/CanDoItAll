@@ -13,7 +13,7 @@ public sealed class ProcessRunFilesDialogTests
     [Fact]
     public void Refresh_re_resolves_scope_and_re_enumerates_mutable_run_files()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         Guid runId = Guid.NewGuid();
         var files = new MutableFileSet(["before.txt"]);
@@ -21,7 +21,7 @@ public sealed class ProcessRunFilesDialogTests
         var sessionFactory = new MutableBrowseSessionFactory(files);
         RegisterServices(context, scopeProvider, sessionFactory);
 
-        var cut = context.RenderComponent<ProcessRunFilesDialog>(parameters => parameters
+        var cut = context.Render<ProcessRunFilesDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.RunId, runId));
 
@@ -47,12 +47,12 @@ public sealed class ProcessRunFilesDialogTests
     [Fact]
     public void Forbidden_scope_renders_explicit_error_and_retry_re_resolves()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         var scopeProvider = new ThrowingScopeProvider();
         RegisterServices(context, scopeProvider, new MutableBrowseSessionFactory(new MutableFileSet([])));
 
-        var cut = context.RenderComponent<ProcessRunFilesDialog>(parameters => parameters
+        var cut = context.Render<ProcessRunFilesDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.RunId, Guid.NewGuid()));
 
@@ -67,7 +67,7 @@ public sealed class ProcessRunFilesDialogTests
     }
 
     private static void RegisterServices(
-        TestContext context,
+        BunitContext context,
         IProcessRunFileScopeProvider scopeProvider,
         IFileToolsBrowseSessionFactory sessionFactory)
     {

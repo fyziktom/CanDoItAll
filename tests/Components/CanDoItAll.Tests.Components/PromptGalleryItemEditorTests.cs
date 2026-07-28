@@ -45,11 +45,11 @@ public sealed class PromptGalleryItemEditorTests
             now,
             now);
 
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(new TestPromptGallery(item));
 
-        var cut = context.RenderComponent<PromptGalleryItemEditor>(parameters => parameters
+        var cut = context.Render<PromptGalleryItemEditor>(parameters => parameters
             .Add(component => component.ItemId, itemId));
 
         cut.WaitForAssertion(() =>

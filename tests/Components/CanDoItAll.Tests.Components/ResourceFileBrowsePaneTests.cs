@@ -23,7 +23,7 @@ public sealed class ResourceFileBrowsePaneTests
         TestResourceFileBrowsePane.Gate = gate;
         context.Services.AddSingleton<IResourceFileSourceCatalog>(gate.SourceCatalog);
         var positions = new List<ResourceBrowseAgentChatPosition?>();
-        var cut = context.RenderComponent<TestResourceFileBrowsePane>(parameters => parameters
+        var cut = context.Render<TestResourceFileBrowsePane>(parameters => parameters
             .Add(
                 component => component.PositionChanged,
                 EventCallback.Factory.Create<ResourceBrowseAgentChatPosition?>(
@@ -74,7 +74,7 @@ public sealed class ResourceFileBrowsePaneTests
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
 
-        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowsePane>();
 
         cut.WaitForAssertion(() =>
         {
@@ -91,7 +91,7 @@ public sealed class ResourceFileBrowsePaneTests
     public async Task Invoked_file_opens_governed_promotion_dialog()
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
-        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowsePane>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
         var file = cut.WaitForElement(".ft-file-browser__item-main");
 
@@ -114,7 +114,7 @@ public sealed class ResourceFileBrowsePaneTests
             supportsLocalOpen: true,
             fileName: "manual.pdf",
             mediaType: "application/pdf");
-        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowsePane>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
@@ -135,7 +135,7 @@ public sealed class ResourceFileBrowsePaneTests
             supportsLocalOpen: true,
             fileName: "report.xlsx",
             mediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowsePane>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
@@ -154,7 +154,7 @@ public sealed class ResourceFileBrowsePaneTests
     public void Keyboard_invocation_preserves_promotion_when_local_launch_is_available()
     {
         using var context = CreateContext(out ResourceBrowseTestState state, supportsLocalOpen: true);
-        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowsePane>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
 
         cut.WaitForElement(".ft-file-browser__item-main").KeyUp("Enter");
@@ -170,7 +170,7 @@ public sealed class ResourceFileBrowsePaneTests
     public async Task Successful_promotion_refreshes_source_and_offers_authorized_reopen()
     {
         using var context = CreateContext(out ResourceBrowseTestState state);
-        var cut = context.RenderComponent<ResourceFileBrowsePane>();
+        var cut = context.Render<ResourceFileBrowsePane>();
         cut.WaitForElement($"[data-testid='resources-source-{state.Source.Key.Value}'] button").Click();
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
         cut.WaitForElement("[data-testid='resources-promotion-save']").Click();
@@ -186,13 +186,13 @@ public sealed class ResourceFileBrowsePaneTests
         });
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         out ResourceBrowseTestState state,
         bool supportsLocalOpen = false,
         string fileName = "report.md",
         string mediaType = "text/markdown")
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         state = new ResourceBrowseTestState(supportsLocalOpen, fileName, mediaType);

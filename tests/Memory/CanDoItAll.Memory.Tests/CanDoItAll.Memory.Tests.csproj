@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\..\src\App\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Memory\Drivers\CanDoItAll.Memory.Drivers.CognitiveMemory\CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />

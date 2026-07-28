@@ -8,9 +8,9 @@ public sealed class ProjectStructureToolbarActionsTests
     [Fact]
     public void Gantt_action_is_explicit_and_invokes_the_host_callback()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var invocationCount = 0;
-        var cut = context.RenderComponent<ProjectStructureToolbarActions>(parameters => parameters
+        var cut = context.Render<ProjectStructureToolbarActions>(parameters => parameters
             .Add(component => component.OpenGanttView, () => invocationCount++));
 
         var action = cut.Find("[data-testid='project-structure-gantt-toggle']");
@@ -26,8 +26,8 @@ public sealed class ProjectStructureToolbarActionsTests
     [Fact]
     public void Gantt_action_reflects_the_selected_view()
     {
-        using var context = new TestContext();
-        var cut = context.RenderComponent<ProjectStructureToolbarActions>(parameters => parameters
+        using var context = new BunitContext();
+        var cut = context.Render<ProjectStructureToolbarActions>(parameters => parameters
             .Add(component => component.GanttViewVisible, true));
 
         var action = cut.Find("[data-testid='project-structure-gantt-toggle']");

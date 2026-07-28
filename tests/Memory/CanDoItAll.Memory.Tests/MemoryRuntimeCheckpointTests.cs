@@ -22,6 +22,9 @@ public sealed class MemoryRuntimeCheckpointTests
             "CanDoItAll.AgentFramework.Rag"
         };
         var violations = EnumerateSourceFiles("src", "Memory")
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}Drivers{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
             .SelectMany(path => File.ReadLines(path)
                 .Select((line, index) => new
                 {

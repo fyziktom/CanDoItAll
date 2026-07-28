@@ -10,7 +10,7 @@ public sealed class PartyPickerTests
     [Fact]
     public void Treats_an_empty_identifier_as_no_selection()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         var queryService = new StubPartyRecordQueryService(
@@ -18,7 +18,7 @@ public sealed class PartyPickerTests
             CreatePartyRecordQueryItem(Guid.NewGuid(), "Replacement party"));
         context.Services.AddSingleton<IPartyRecordQueryService>(queryService);
 
-        var cut = context.RenderComponent<PartyPicker>(parameters => parameters
+        var cut = context.Render<PartyPicker>(parameters => parameters
             .Add(component => component.SelectedPartyId, Guid.Empty));
 
         Assert.Contains("No party selected", cut.Markup, StringComparison.Ordinal);
@@ -28,7 +28,7 @@ public sealed class PartyPickerTests
     [Fact]
     public void Selects_and_clears_through_the_server_paged_directory_dialog()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         var currentId = Guid.NewGuid();
@@ -55,7 +55,7 @@ public sealed class PartyPickerTests
         context.Services.AddSingleton<IPartyRecordQueryService>(queryService);
         Guid? selectedId = currentId;
 
-        var cut = context.RenderComponent<PartyPicker>(parameters => parameters
+        var cut = context.Render<PartyPicker>(parameters => parameters
             .Add(component => component.Label, "Assignment party")
             .Add(component => component.TestIdPrefix, "assignment-party")
             .Add(component => component.SelectedPartyId, currentId)

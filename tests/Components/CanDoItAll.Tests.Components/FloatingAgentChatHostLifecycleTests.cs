@@ -18,7 +18,7 @@ public sealed class FloatingAgentChatHostLifecycleTests
         var cacheInvalidator = new RecordingCacheInvalidator();
         using var context = CreateContext(coordinator, contextRegistry, cacheInvalidator);
 
-        var cut = context.RenderComponent<FloatingAgentChatHost>();
+        var cut = context.Render<FloatingAgentChatHost>();
 
         await coordinator.InitializationStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.NotNull(cut.Find("[data-testid='floating-agent-chat-host']"));
@@ -41,12 +41,12 @@ public sealed class FloatingAgentChatHostLifecycleTests
         Assert.Equal(0, cacheInvalidator.InvalidatedSubscriberCount);
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         PendingCoordinator coordinator,
         RecordingContextRegistry contextRegistry,
         RecordingCacheInvalidator cacheInvalidator)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();

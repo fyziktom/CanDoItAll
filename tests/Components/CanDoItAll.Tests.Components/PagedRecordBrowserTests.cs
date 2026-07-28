@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class PagedRecordBrowserTests : TestContext
+public sealed class PagedRecordBrowserTests : BunitContext
 {
     private static readonly Guid AlphaId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid BetaId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -213,7 +213,7 @@ public sealed class PagedRecordBrowserTests : TestContext
             builder.AddContent(4, $"{context.Option.Title}:{context.IsSelected}");
             builder.CloseElement();
         };
-        var cut = RenderComponent<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
+        var cut = Render<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
             .Add(component => component.Loader, LoaderWith(Option(AlphaId, "Alpha")))
             .Add(component => component.InitialFilter, RecordScope.All)
             .Add(component => component.ShowTagFilter, false)
@@ -380,7 +380,7 @@ public sealed class PagedRecordBrowserTests : TestContext
     {
         Guid? confirmedId = null;
         var closeCount = 0;
-        var cut = RenderComponent<PagedRecordPickerDialog<Guid, RecordScope>>(parameters => parameters
+        var cut = Render<PagedRecordPickerDialog<Guid, RecordScope>>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.Loader, LoaderWith(Option(AlphaId, "Alpha")))
             .Add(component => component.InitialFilter, RecordScope.All)
@@ -418,7 +418,7 @@ public sealed class PagedRecordBrowserTests : TestContext
         PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page,
         PagedRecordGridMode gridMode = PagedRecordGridMode.Fluid)
     {
-        return RenderComponent<PagedRecordBrowser<Guid, RecordScope>>(parameters =>
+        return Render<PagedRecordBrowser<Guid, RecordScope>>(parameters =>
         {
             parameters
                 .Add(component => component.Loader, loader)

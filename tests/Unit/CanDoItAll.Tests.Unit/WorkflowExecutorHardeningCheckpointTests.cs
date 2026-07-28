@@ -2,7 +2,6 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
-using CanDoItAll.Modules.CognitiveMemory;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +23,6 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
 
         Assert.Empty(duplicateIds);
         Assert.Contains(descriptors, descriptor => descriptor.Id == WorkflowExecutorIds.Delay);
-        Assert.Contains(descriptors, descriptor => descriptor.Id == CognitiveMemoryWorkflowExecutorIds.Recall);
         Assert.Contains(descriptors, descriptor => descriptor.Id == RuntimePackageExecutorId);
         Assert.Contains(descriptors, descriptor => descriptor.Source.Kind == WorkflowExecutorSourceKind.BundledPlugin && descriptor.Source.PluginId == BundledPluginId.Value);
         Assert.Contains(descriptors, descriptor => descriptor.Source.Kind == WorkflowExecutorSourceKind.LocalPackage && descriptor.Source.PackageId == RuntimePackageId.Value);
@@ -149,9 +147,6 @@ public sealed class WorkflowExecutorHardeningCheckpointTests
     {
         List<WorkflowExecutorDescriptor> descriptors = [];
         descriptors.AddRange(BuiltInWorkflowExecutorDescriptors.All);
-        descriptors.Add(CognitiveMemoryWorkflowExecutorDescriptors.Recall);
-        descriptors.Add(CognitiveMemoryWorkflowExecutorDescriptors.Probe);
-        descriptors.Add(CognitiveMemoryWorkflowExecutorDescriptors.LearningProposal);
 
         descriptors.Add(CreateRuntimePackageDescriptor("plugin.hardening.bundled") with
         {

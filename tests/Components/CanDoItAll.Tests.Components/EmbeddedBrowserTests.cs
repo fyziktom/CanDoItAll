@@ -7,10 +7,10 @@ public sealed class EmbeddedBrowserTests
     [Fact]
     public void Embeddable_source_renders_a_restricted_full_height_frame()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var source = new Uri("http://127.0.0.1:5032/_dev/runtime");
 
-        var cut = context.RenderComponent<EmbeddedBrowser>(parameters => parameters
+        var cut = context.Render<EmbeddedBrowser>(parameters => parameters
             .Add(component => component.Source, source)
             .Add(component => component.Title, "Runtime health")
             .Add(component => component.DataTestId, "runtime-browser"));
@@ -32,10 +32,10 @@ public sealed class EmbeddedBrowserTests
     [Fact]
     public void Blocked_source_renders_an_explicit_native_browser_link()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var source = new Uri("https://google.com/");
 
-        var cut = context.RenderComponent<EmbeddedBrowser>(parameters => parameters
+        var cut = context.Render<EmbeddedBrowser>(parameters => parameters
             .Add(component => component.Source, source)
             .Add(component => component.Title, "Google")
             .Add(component => component.CanEmbed, false)

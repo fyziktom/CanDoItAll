@@ -52,7 +52,7 @@ public sealed class ProjectStructureGanttPanelTests
             [predecessor, successor, note, nonTaskWorkItem, systemTask],
             [dependency]);
 
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
             .Add(component => component.MutationCommitted, () => { }));
@@ -86,7 +86,7 @@ public sealed class ProjectStructureGanttPanelTests
             ObjectSubtype = "note"
         };
 
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, note))
             .Add(component => component.MutationCommitted, () => { }));
@@ -101,7 +101,7 @@ public sealed class ProjectStructureGanttPanelTests
         using var context = CreateContext([]);
         var projectId = Guid.NewGuid();
         var surface = CreateSurface(projectId, CreateTask("task-a", "Task"));
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
             .Add(component => component.MutationCommitted, () => { }));
@@ -109,7 +109,7 @@ public sealed class ProjectStructureGanttPanelTests
         cut.Find("[data-testid='project-structure-gantt-export-mermaid']").Click();
         Assert.NotEmpty(cut.FindAll("[data-testid='project-structure-gantt-mermaid-dialog']"));
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectId, Guid.Empty)
             .Add(component => component.Surface, surface)
             .Add(component => component.MutationCommitted, () => { }));
@@ -125,7 +125,7 @@ public sealed class ProjectStructureGanttPanelTests
             [CreateAssignment(projectId, "task-a", "Grace Hopper")]);
         var surface = CreateSurface(projectId, CreateTask("task-a", "Projected task"));
 
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, surface)
             .Add(component => component.MutationCommitted, () => { }));
@@ -209,7 +209,7 @@ public sealed class ProjectStructureGanttPanelTests
         await SeedProjectTaskAsync(context, projectId, taskNode);
         var reloadStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseReload = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, taskNode))
             .Add(component => component.MutationCommitted, async () =>
@@ -272,7 +272,7 @@ public sealed class ProjectStructureGanttPanelTests
         };
         await SeedProjectTaskAsync(context, projectId, taskNode);
         var committedCount = 0;
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, taskNode))
             .Add(component => component.MutationCommitted, () => committedCount++));
@@ -313,7 +313,7 @@ public sealed class ProjectStructureGanttPanelTests
             DurationSeconds = 7200
         };
         await SeedProjectTaskAsync(context, projectId, taskNode);
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, taskNode))
             .Add(
@@ -348,7 +348,7 @@ public sealed class ProjectStructureGanttPanelTests
         using var context = CreateContext([], new InvalidOperationException("private connection detail"));
         var projectId = Guid.NewGuid();
 
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "Task")))
             .Add(component => component.MutationCommitted, () => { }));
@@ -364,7 +364,7 @@ public sealed class ProjectStructureGanttPanelTests
     {
         using var context = CreateContext([]);
         var projectId = Guid.NewGuid();
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "Task"))));
         var chart = cut.FindComponent<GanttChart>();
@@ -389,13 +389,13 @@ public sealed class ProjectStructureGanttPanelTests
             TaskCreationOptions.RunContinuationsAsynchronously);
         var bridge = new StubProjectPartyIntegrationBridge([], null, refreshAssignments);
         using var context = CreateContext(bridge);
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "Before refresh")))
             .Add(component => component.MutationCommitted, () => { }));
         var originalChart = cut.FindComponent<GanttChart>().Instance;
 
-        var refreshTask = cut.InvokeAsync(() => cut.SetParametersAndRender(parameters => parameters
+        var refreshTask = cut.InvokeAsync(() => cut.Render(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, CreateTask("task-a", "After refresh")))
             .Add(component => component.MutationCommitted, () => { })));
@@ -427,7 +427,7 @@ public sealed class ProjectStructureGanttPanelTests
         var projectId = Guid.NewGuid();
         var assignment = CreateAssignment(projectId, "task-a", "Joe Doe");
         using var context = CreateContext([assignment]);
-        var dialogHost = context.RenderComponent<DialogHost>();
+        var dialogHost = context.Render<DialogHost>();
         var metadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
         {
             WorkItem = new ProjectWorkItemMetadata
@@ -449,7 +449,7 @@ public sealed class ProjectStructureGanttPanelTests
             ProgressPercent = 40,
             MetadataJson = metadata
         };
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, task))
             .Add(component => component.MutationCommitted, () => { }));
@@ -486,9 +486,9 @@ public sealed class ProjectStructureGanttPanelTests
             ProjectPartyType.AiAgent,
             isPrimary: false);
         using var context = CreateContext([agent, primaryPerson]);
-        var dialogHost = context.RenderComponent<DialogHost>();
+        var dialogHost = context.Render<DialogHost>();
         var task = CreateTask("task-a", "Customer acceptance");
-        var cut = context.RenderComponent<ProjectStructureGanttPanel>(parameters => parameters
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(projectId, task))
             .Add(component => component.MutationCommitted, () => { }));
@@ -518,14 +518,14 @@ public sealed class ProjectStructureGanttPanelTests
         await openTask.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
-    private static TestContext CreateContext(
+    private static BunitContext CreateContext(
         IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
         Exception? assignmentFailure = null)
         => CreateContext(new StubProjectPartyIntegrationBridge(assignments, assignmentFailure));
 
-    private static TestContext CreateContext(IProjectPartyIntegrationBridge bridge)
+    private static BunitContext CreateContext(IProjectPartyIntegrationBridge bridge)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddLogging();
@@ -603,7 +603,7 @@ public sealed class ProjectStructureGanttPanelTests
     }
 
     private static async Task SeedProjectTaskAsync(
-        TestContext context,
+        BunitContext context,
         Guid projectId,
         ProjectStructureNode taskNode)
     {

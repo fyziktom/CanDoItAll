@@ -44,7 +44,7 @@ public sealed class ProjectStructurePartyPickerTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, participantNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
@@ -144,7 +144,7 @@ public sealed class ProjectStructurePartyPickerTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
@@ -176,7 +176,7 @@ public sealed class ProjectStructurePartyPickerTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, workItemNode.Id);
         cut.Dispose();
-        cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
@@ -263,7 +263,7 @@ public sealed class ProjectStructurePartyPickerTests
         })).IsSuccess);
         await SaveSelectedNodeStateAsync(workbenchService, projectId, participantNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {
@@ -287,7 +287,7 @@ public sealed class ProjectStructurePartyPickerTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, meetingNode.Id);
         cut.Dispose();
-        cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         cut.WaitForAssertion(() =>
         {

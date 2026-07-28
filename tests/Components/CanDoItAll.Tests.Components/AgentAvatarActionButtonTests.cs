@@ -13,11 +13,11 @@ public sealed class AgentAvatarActionButtonTests
     [Fact]
     public void Action_uses_avatar_accessible_label_and_bottom_service_tooltip_without_visible_text()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         var clickCount = 0;
-        var cut = context.RenderComponent<AgentAvatarActionButton>(parameters => parameters
+        var cut = context.Render<AgentAvatarActionButton>(parameters => parameters
             .Add(component => component.AgentName, "Workflow Curator Agent")
             .Add(component => component.AvatarImageUrl, "/avatars/workflow-curator.jpg")
             .Add(component => component.FallbackText, "WC")

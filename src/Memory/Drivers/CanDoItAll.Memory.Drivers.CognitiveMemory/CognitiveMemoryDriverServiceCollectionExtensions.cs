@@ -2,15 +2,15 @@ using CanDoItAll.Memory.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Memory.Http;
+namespace CanDoItAll.Memory.Drivers.CognitiveMemory;
 
-public static class HttpMemoryServiceCollectionExtensions
+public static class CognitiveMemoryDriverServiceCollectionExtensions
 {
-    public static IServiceCollection AddHttpMemoryProviderDriver(
+    public static IServiceCollection AddNativeRemoteMemoryProviderDriver(
         this IServiceCollection services,
-        Action<HttpMemoryProviderOptions>? configure = null)
+        Action<NativeRemoteMemoryProviderOptions>? configure = null)
     {
-        var options = new HttpMemoryProviderOptions();
+        var options = new NativeRemoteMemoryProviderOptions();
         configure?.Invoke(options);
         options.Validate();
 
@@ -19,13 +19,12 @@ public static class HttpMemoryServiceCollectionExtensions
         {
             client.Timeout = Timeout.InfiniteTimeSpan;
         });
-        services.TryAddSingleton<HttpMemoryProviderDriver>();
+        services.TryAddSingleton<NativeRemoteMemoryProviderDriver>();
         services.AddSingleton<IMemoryProviderDriver>(provider =>
-            provider.GetRequiredService<HttpMemoryProviderDriver>());
+            provider.GetRequiredService<NativeRemoteMemoryProviderDriver>());
         services.AddSingleton<IMemoryProviderHealthDriver>(provider =>
-            provider.GetRequiredService<HttpMemoryProviderDriver>());
+            provider.GetRequiredService<NativeRemoteMemoryProviderDriver>());
 
         return services;
     }
-
 }

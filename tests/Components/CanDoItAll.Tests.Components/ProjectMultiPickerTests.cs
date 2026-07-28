@@ -15,7 +15,7 @@ public sealed class ProjectMultiPickerTests
         var firstProjectId = Guid.NewGuid();
         var secondProjectId = Guid.NewGuid();
         const string longProjectName = "A deliberately long customer implementation project name";
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IProjectRecordQueryService>(
@@ -26,7 +26,7 @@ public sealed class ProjectMultiPickerTests
                 ]));
         IReadOnlyList<Guid>? selectedProjectIds = null;
 
-        var cut = context.RenderComponent<ProjectMultiPicker>(parameters => parameters
+        var cut = context.Render<ProjectMultiPicker>(parameters => parameters
             .Add(component => component.SelectedProjectIds, [firstProjectId, secondProjectId])
             .Add(
                 component => component.SelectedProjectIdsChanged,

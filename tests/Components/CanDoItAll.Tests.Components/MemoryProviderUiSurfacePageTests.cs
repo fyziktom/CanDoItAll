@@ -42,7 +42,7 @@ public sealed class MemoryProviderUiSurfacePageTests
                     "memory.test.rcl",
                     typeof(MockMemoryProviderRclSurface))));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-provider-ui']").Click();
@@ -75,7 +75,7 @@ public sealed class MemoryProviderUiSurfacePageTests
                 ],
                 extensions: StringExtension("provider.vendor.uiUrl", "https://memory.example.test/console")));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-provider-ui']").Click();
@@ -114,7 +114,7 @@ public sealed class MemoryProviderUiSurfacePageTests
                 ],
                 extensions: StringExtension("provider.vendor.uiUrl", "javascript:alert(1)")));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-provider-ui']").Click();
@@ -153,7 +153,7 @@ public sealed class MemoryProviderUiSurfacePageTests
                     "memory.test.rcl",
                     typeof(MockMemoryProviderRclSurface))));
         using var context = setup.Context;
-        var cut = context.RenderComponent<MemoryProvidersPage>();
+        var cut = context.Render<MemoryProvidersPage>();
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-provider-ui']").Click();
@@ -170,7 +170,7 @@ public sealed class MemoryProviderUiSurfacePageTests
         MemoryProviderProfile profile,
         Action<IServiceCollection>? configureServices = null)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddDbContextFactory<AppDbContext>(options =>
@@ -247,7 +247,7 @@ public sealed class MemoryProviderUiSurfacePageTests
         }
     }
 
-    private sealed record ComponentSetup(TestContext Context);
+    private sealed record ComponentSetup(BunitContext Context);
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {

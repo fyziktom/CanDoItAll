@@ -48,7 +48,7 @@ public sealed class ProjectCalendarPageTests
                     start.AddHours(1))
             ]);
 
-        var cut = harness.Context.RenderComponent<ProjectCalendarPage>(
+        var cut = harness.Context.Render<ProjectCalendarPage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
 
         cut.WaitForAssertion(() =>
@@ -98,7 +98,7 @@ public sealed class ProjectCalendarPageTests
         var secondEvent = calendarSurface.Events[1];
         navigation.NavigateTo($"/projects/{projectId:D}/calendar");
 
-        var cut = harness.Context.RenderComponent<ProjectCalendarPage>(
+        var cut = harness.Context.Render<ProjectCalendarPage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
 
         cut.WaitForAssertion(() =>

@@ -22,9 +22,9 @@ This repository does not own:
 - MCP server source, which lives in [CanDoItAll.Mcp](https://github.com/fyziktom/CanDoItAll.Mcp)
 - shared UI packages, which live in [CanDoItAll.Components](https://github.com/fyziktom/CanDoItAll.Components)
 - canonical standards and Codex skills, which live in [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo)
-- the optional native Cognitive Memory, RAG, and Semantic Completion implementations, which live in their respective sibling repositories
+- the optional native [Cognitive Memory](https://github.com/fyziktom/CanDoItAll.CognitiveMemory), RAG, and Semantic Completion implementations, which live in their respective sibling repositories
 
-The old in-repo Cognitive Memory module is retained as legacy compatibility code and is referenced by compatibility tests. It is excluded from both solution files and active host composition. Its HTTP surface is a retirement shim: `GET /api/cognitive-memory/contract` reports the retired contract and other Cognitive Memory routes return `410 Gone`.
+Native Cognitive Memory source and tests are owned entirely by its standalone repository. This repository keeps provider-neutral Memory contracts and orchestration, plus the isolated external-service driver under `src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory`. It also retains the migration-only legacy PostgreSQL export bridge and a retirement HTTP shim: `GET /api/cognitive-memory/contract` reports the retired contract and other Cognitive Memory routes return `410 Gone`.
 
 ## Runtime Shape
 
@@ -136,7 +136,7 @@ Project and package dependencies are authoritative in each `.csproj`; project RE
 
 The host exposes typed API groups for projects, project structure, agents, agent recruiting, Prompt Gallery, workflows, processes and run records, plugins, and CRM/HR. OpenAPI is enabled by default for local development. Start with [API control plane](docs/api-control-plane.md).
 
-The active Memory subsystem is the generic provider model under `src/Memory`, composed through `CanDoItAll.Modules.Memory` and `CanDoItAll.AgentFramework.Memory`. Provider setup is explicit and disabled by default. See [Memory](docs/cognitive-memory/README.md) for the current boundary and migration guidance.
+The active Memory subsystem is the generic provider model under `src/Memory`, composed through `CanDoItAll.Modules.Memory` and `CanDoItAll.AgentFramework.Memory`. Provider setup is explicit and disabled by default. Native Cognitive Memory connects only through the isolated external-service driver. See [Memory](docs/cognitive-memory/README.md) for the current boundary and migration guidance.
 
 MAF package versions are centralized in `src/MAF/MicrosoftAgentFramework.Packages.props`: stable packages use `1.15.0`, and preview-only packages use `1.15.0-preview.260722.1`. See [MAF 1.15 compatibility](docs/maf-1.15-compatibility.md).
 
@@ -173,7 +173,7 @@ The output is `src/App/CanDoItAll.Web/wwwroot/css/output.css`. See [Tailwind](Ta
 
 ## Packaging
 
-Published CanDoItAll dependencies restore from NuGet.org. `ExternalPackages` contains only the unpublished `CanDoItAll.Components.Sandbox` package used by component preview tests; package source mapping prevents other dependencies from restoring there. The root `package.json` is private and exists only to provide repository-level Tailwind commands.
+Published CanDoItAll dependencies restore from NuGet.org. Reusable component previews and their tests are owned by the sibling `CanDoItAll.Components` repository, so this repository no longer carries a local component package source. The root `package.json` is private and exists only to provide repository-level Tailwind commands.
 
 The Windows-local web installer is:
 

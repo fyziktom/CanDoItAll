@@ -13,6 +13,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -44,7 +45,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 240));
         await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -110,7 +111,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -150,7 +151,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectId = await CreateProjectAsync(projectsService, "Long quick note body");
         await SaveSelectedNodeStateAsync(workbenchService, projectId, $"project:{projectId}");
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -221,7 +222,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var uploadedFile = BuildUploadedFile("large-image.png", "image/png", imageBytes);
         Assert.True(uploadedFile.Base64Data.Length > 32 * 1024);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
         var createdNodeId = await InvokeCreateActionAsync(
@@ -269,7 +270,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var parentNodeId = $"project:{projectId}";
         await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -396,7 +397,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var parentNodeId = $"project:{projectId}";
         await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -458,7 +459,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var parentNodeId = $"project:{projectId}";
         await SaveSelectedNodeStateAsync(workbenchService, projectId, parentNodeId);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -533,7 +534,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, sourceNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
         createCounter.Reset();
@@ -592,7 +593,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, blockNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -665,7 +666,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -713,8 +714,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
 
         var projectId = await CreateProjectAsync(projectsService, "Artifact create sequence");
-        var dialogHost = harness.Context.RenderComponent<DialogHost>();
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var dialogHost = harness.Context.Render<DialogHost>();
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -950,7 +951,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1012,7 +1013,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, noteNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1088,7 +1089,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, dependentNote.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1180,7 +1181,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         await workbenchService.LinkObjectsAsync(projectId, centralNote.Id, prerequisiteTwo.Id, ProjectObjectLinkKind.DependsOn);
         await SaveSelectedNodeStateAsync(workbenchService, projectId, centralNote.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1231,7 +1232,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, firstNode.Id, secondNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1293,7 +1294,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, firstNode.Id, secondNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1360,7 +1361,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, firstWorkItemNode.Id, secondWorkItemNode.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1468,7 +1469,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, node.Id);
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1581,7 +1582,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 1540,
                 560));
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -1724,7 +1725,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 1480,
                 520));
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
         var surfaceId = canvasWorkbench.Instance.Surface.SurfaceId;
@@ -1817,7 +1818,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 }
             }.ToJson());
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
         var surfaceId = canvasWorkbench.Instance.Surface.SurfaceId;
@@ -1881,7 +1882,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 560,
                 220));
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
         cut.WaitForAssertion(() =>
@@ -2016,7 +2017,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     private static IElement FindButtonByLabel(
-        IRenderedFragment cut,
+        IRenderedComponent<IComponent> cut,
         string label,
         string selector = "button")
         => cut.FindAll(selector)
@@ -2054,7 +2055,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         return null;
     }
 
-    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedFragment cut)
+    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedComponent<IComponent> cut)
     {
         IRenderedComponent<CanvasWorkbench>? canvasWorkbench = null;
         cut.WaitForAssertion(() => canvasWorkbench = cut.FindComponent<CanvasWorkbench>());

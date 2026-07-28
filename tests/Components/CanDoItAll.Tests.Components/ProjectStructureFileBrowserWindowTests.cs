@@ -20,7 +20,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
     [Fact]
     public void Project_collection_window_uses_compact_browser_and_host_owned_subproject_control()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         Guid projectId = Guid.NewGuid();
         var scope = new FileToolsSemanticScope(
@@ -38,7 +38,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
             Height = 560
         };
 
-        var cut = context.RenderComponent<ProjectStructureFileBrowserWindow>(parameters => parameters
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
                 component => component.Request,
@@ -59,7 +59,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
     [Fact]
     public void Node_collection_window_does_not_offer_project_hierarchy_control()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         Guid projectId = Guid.NewGuid();
         var scope = new FileToolsSemanticScope(
@@ -79,7 +79,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
                 new string('c', 64)),
             new StaticNodeFileScopeProvider(scope));
 
-        var cut = context.RenderComponent<ProjectStructureFileBrowserWindow>(parameters => parameters
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
                 component => component.Request,
@@ -96,7 +96,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
     [Fact]
     public async Task Opening_file_replaces_resolving_status_with_explicit_read_only_state()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         Guid projectId = Guid.NewGuid();
         var scope = new FileToolsSemanticScope(
@@ -109,7 +109,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
             new ThrowingNodeFileScopeProvider(),
             new StaticBrowseItemActivator(),
             new StaticKnownFileSessionFactory());
-        var cut = context.RenderComponent<ProjectStructureFileBrowserWindow>(parameters => parameters
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
                 component => component.Request,
@@ -130,7 +130,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
     [Fact]
     public async Task Double_click_opens_supported_file_internally_when_desktop_launch_is_available()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         Guid projectId = Guid.NewGuid();
         var scope = new FileToolsSemanticScope(
@@ -145,7 +145,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
             new StaticBrowseItemActivator(),
             new StaticKnownFileSessionFactory(),
             itemActionService);
-        var cut = context.RenderComponent<ProjectStructureFileBrowserWindow>(parameters => parameters
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
                 component => component.Request,
@@ -162,7 +162,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
     }
 
     private static void RegisterServices(
-        TestContext context,
+        BunitContext context,
         ProjectFileScopeSet projectScopes,
         IProjectStructureNodeFileScopeProvider nodeScopes,
         IFileToolsBrowseItemActivator? itemActivator = null,

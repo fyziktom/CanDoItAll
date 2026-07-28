@@ -22,7 +22,7 @@ public sealed class AgentsHomePageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents?tab=scenarios");
-        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+        var cut = harness.Context.Render<AgentsHomePage>();
 
         cut.WaitForElement(
             "[data-testid='agents-overview-dashboard']",
@@ -48,10 +48,10 @@ public sealed class AgentsHomePageTests
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
-        var dialogHost = harness.Context.RenderComponent<DialogHost>();
+        var dialogHost = harness.Context.Render<DialogHost>();
 
         navigation.NavigateTo("/agents");
-        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+        var cut = harness.Context.Render<AgentsHomePage>();
         var tabsRow = cut.WaitForElement(
             "[data-testid='agents-shell-tabs']",
             TimeSpan.FromSeconds(10));
@@ -84,7 +84,7 @@ public sealed class AgentsHomePageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents");
-        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+        var cut = harness.Context.Render<AgentsHomePage>();
         var openButton = cut.WaitForElement(
             "[data-testid='agents-hr-agent-open-header']",
             TimeSpan.FromSeconds(10));
@@ -122,7 +122,7 @@ public sealed class AgentsHomePageTests
         Assert.Empty(cut.FindAll("[data-testid='agents-workflow-curator-open-top']"));
     }
 
-    private static IElement FindTab(IRenderedFragment cut, string label)
+    private static IElement FindTab(IRenderedComponent<IComponent> cut, string label)
         => cut.FindAll("[data-testid='agents-shell-tabs'] button")
             .Single(tab => tab.TextContent.Trim().StartsWith(label, StringComparison.Ordinal));
 

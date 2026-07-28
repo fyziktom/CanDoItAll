@@ -36,7 +36,7 @@ public sealed class ProjectStructurePageProcessLinkTests
                 DateTimeOffset.Parse("2026-07-25T20:00:00Z")),
             CreateAgent(projectId));
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
@@ -86,7 +86,7 @@ public sealed class ProjectStructurePageProcessLinkTests
                 260,
                 ObjectSubtype: "implementation"));
 
-        var cut = harness.Context.RenderComponent<ProjectStructurePage>(
+        var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 

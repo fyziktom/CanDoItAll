@@ -23,7 +23,7 @@ public sealed class ProjectStructureObjectIndexWindowTests
         };
         ProjectStructureSupportPanelContextActionRequest? actionRequest = null;
 
-        var cut = context.RenderComponent<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
+        var cut = context.Render<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
                 parameters,
                 nodes,
                 selectedNodeIds: ["node-a", "node-b"])
@@ -60,7 +60,7 @@ public sealed class ProjectStructureObjectIndexWindowTests
         var selectedNodeId = string.Empty;
         ProjectStructureSupportPanelContextActionRequest? actionRequest = null;
 
-        var cut = context.RenderComponent<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
+        var cut = context.Render<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
                 parameters,
                 nodes,
                 selectedNodeIds: ["node-b", "node-c"])
@@ -96,7 +96,7 @@ public sealed class ProjectStructureObjectIndexWindowTests
             CreateNode("node-b", "Implementation", "Blocked")
         };
 
-        var cut = context.RenderComponent<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(parameters, nodes)
+        var cut = context.Render<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(parameters, nodes)
             .Add(component => component.SearchText, searchText)
             .Add(
                 component => component.SearchTextChanged,
@@ -118,7 +118,7 @@ public sealed class ProjectStructureObjectIndexWindowTests
     {
         using var context = CreateContext();
 
-        var cut = context.RenderComponent<ProjectStructureObjectIndexWindow>(
+        var cut = context.Render<ProjectStructureObjectIndexWindow>(
             parameters => AddRequiredParameters(
                 parameters,
                 Enumerable.Range(0, 12)
@@ -133,7 +133,7 @@ public sealed class ProjectStructureObjectIndexWindowTests
     {
         using var context = CreateContext();
 
-        var cut = context.RenderComponent<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
+        var cut = context.Render<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
             parameters,
             [CreateNode("node-a", "Architecture")],
             isLoaded: false));
@@ -161,9 +161,9 @@ public sealed class ProjectStructureObjectIndexWindowTests
             .Add(component => component.SelectedNodeIds, selectedNodeIds ?? []);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         return context;

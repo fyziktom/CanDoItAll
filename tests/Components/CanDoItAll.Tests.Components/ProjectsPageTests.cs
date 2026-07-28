@@ -70,7 +70,7 @@ public sealed class ProjectsPageTests
             Path.Combine(projectFiles, "pilot-readme.md"),
             "# Project file pilot\n\nAuthorized content.");
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("File pilot project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("File pilot project", StringComparison.Ordinal));
@@ -110,7 +110,7 @@ public sealed class ProjectsPageTests
             await File.WriteAllTextAsync(Path.Combine(projectFiles, fileName), $"content {index}");
         }
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Bounded file project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("Bounded file project", StringComparison.Ordinal));
@@ -170,7 +170,7 @@ public sealed class ProjectsPageTests
             services.AddSingleton<IProjectFilesPilotCoordinator>(coordinator);
         });
         Guid projectId = Guid.NewGuid();
-        var cut = harness.Context.RenderComponent<ProjectFilesDialog>(parameters => parameters
+        var cut = harness.Context.Render<ProjectFilesDialog>(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Revoked project"));
@@ -180,7 +180,7 @@ public sealed class ProjectsPageTests
             Assert.Contains("Project access was revoked.", cut.Markup);
             Assert.Equal(1, coordinator.OpenCalls);
         });
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.IsOpen, true)
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Revoked project"));
@@ -310,7 +310,7 @@ public sealed class ProjectsPageTests
         await File.WriteAllTextAsync(
             Path.Combine(CreateProjectFilesDirectory(harness, childId), "child.txt"),
             "child");
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.Find("[data-testid='hierarchy-filter-project']").Change(rootId.ToString());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid='project-card']").Count));
@@ -363,7 +363,7 @@ public sealed class ProjectsPageTests
             [project],
             [],
             new ProjectFileFilter());
-        var cut = harness.Context.RenderComponent<ProjectFilesPortfolioPane>(parameters => parameters
+        var cut = harness.Context.Render<ProjectFilesPortfolioPane>(parameters => parameters
             .Add(component => component.Projection, projection));
 
         cut.WaitForAssertion(() =>
@@ -371,7 +371,7 @@ public sealed class ProjectsPageTests
             Assert.Contains("Portfolio access was revoked.", cut.Markup);
             Assert.Equal(1, coordinator.OpenCalls);
         });
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Projection, projection));
         Assert.Equal(1, coordinator.OpenCalls);
 
@@ -390,7 +390,7 @@ public sealed class ProjectsPageTests
         await File.WriteAllTextAsync(
             Path.Combine(projectDirectory, "portfolio-open.md"),
             "# Portfolio interaction\n\nAuthorized aggregate content.");
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Portfolio open project", cut.Markup));
         cut.FindAll("button[role='tab']")
             .Single(tab => tab.TextContent.Contains("Files", StringComparison.Ordinal))
@@ -415,7 +415,7 @@ public sealed class ProjectsPageTests
     public async Task Saves_project_from_wizard_first_flow()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.Find("[data-testid='projects-new-button']").Click();
         cut.Find("[data-testid='project-name-input']").Change("Wizard Project");
@@ -432,7 +432,7 @@ public sealed class ProjectsPageTests
     public async Task Shows_saved_project_as_card_with_dashboard_action()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.Find("[data-testid='projects-new-button']").Click();
         cut.WaitForElement("[data-testid='project-name-input']");
@@ -454,7 +454,7 @@ public sealed class ProjectsPageTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var projectId = await CreateProjectAsync(projectsService, "Explained Project");
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Explained Project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("Explained Project", StringComparison.Ordinal));
@@ -485,7 +485,7 @@ public sealed class ProjectsPageTests
         Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
         Assert.NotEqual(Guid.Empty, unrelatedProjectId);
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.Find("[data-testid='hierarchy-filter-project']").Change(parentProjectId.ToString());
         cut.Find("[data-testid='hierarchy-filter-mode']").Change(ProjectHierarchyFilterMode.Children.ToString());
@@ -511,7 +511,7 @@ public sealed class ProjectsPageTests
         Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
         Assert.NotEqual(Guid.Empty, unrelatedProjectId);
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -541,7 +541,7 @@ public sealed class ProjectsPageTests
         Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
         Assert.NotEqual(Guid.Empty, unrelatedProjectId);
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Scope Alpha", cut.Markup));
         cut.Find($"[data-testid='projects-tree-node-{parentProjectId:N}']").Click();
@@ -569,7 +569,7 @@ public sealed class ProjectsPageTests
 
         Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -603,7 +603,7 @@ public sealed class ProjectsPageTests
         Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
         Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Root project", cut.Markup));
 
         var parentCard = cut.FindAll("[data-testid='project-card']")
@@ -637,7 +637,7 @@ public sealed class ProjectsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var projectId = await CreateProjectAsync(projectsService, "Gantt tab project");
 
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
         cut.WaitForAssertion(() => Assert.Contains("Gantt tab project", cut.Markup));
         var projectCard = cut.FindAll("[data-testid='project-card']")
             .Single(card => card.TextContent.Contains("Gantt tab project", StringComparison.Ordinal));
@@ -660,7 +660,7 @@ public sealed class ProjectsPageTests
     public async Task Package_import_requires_a_package_path()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
-        var cut = harness.Context.RenderComponent<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
 
         Assert.Empty(cut.FindAll("[data-testid='projects-package-path-input']"));
         cut.Find("[data-testid='projects-package-dialog-button']").Click();

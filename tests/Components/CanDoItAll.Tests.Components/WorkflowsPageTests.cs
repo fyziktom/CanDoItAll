@@ -52,7 +52,7 @@ public sealed class WorkflowsPageTests
         await CreateHistoryDefinitionAsync(catalog);
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
         await catalog.WaitForInitialListRequestAsync();
 
         var openButton = cut.Find("[data-testid='workflows-curator-open']");
@@ -126,7 +126,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -157,7 +157,7 @@ public sealed class WorkflowsPageTests
         var runStore = harness.Context.Services.GetRequiredService<IWorkflowRunStore>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-create-starter']");
         cut.WaitForAssertion(() =>
@@ -213,15 +213,19 @@ public sealed class WorkflowsPageTests
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
-        cut.WaitForElement("[data-testid='workflows-create-starter']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='workflows-create-starter']").HasAttribute("disabled"));
+        });
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-create-starter']").Click());
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow created");
         });
 
-        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForElement("[data-testid='workflows-publish']").Click();
 
         cut.WaitForAssertion(() =>
@@ -243,7 +247,7 @@ public sealed class WorkflowsPageTests
         var counter = harness.Context.Services.GetRequiredService<WorkflowComponentLibraryCallCounter>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-create-starter']");
         cut.WaitForElement("[data-testid='workflows-tabs']");
@@ -291,7 +295,7 @@ public sealed class WorkflowsPageTests
         await CreateHistoryDefinitionAsync(catalogService);
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         cut.Find("[data-testid='workflows-tab-editor']").Click();
@@ -336,7 +340,7 @@ public sealed class WorkflowsPageTests
         var secondDefinition = await CreateHistoryDefinitionAsync(catalogService);
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
         racingCatalog.Delay(firstDefinition.Id, secondDefinition.Id);
 
         var firstSelection = cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
@@ -392,7 +396,7 @@ public sealed class WorkflowsPageTests
         var runtimeManager = new RacingWorkflowRuntimeManager(firstRun, secondRun, newestSecondRun);
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
         cut.Instance.RunStore = runStore;
         cut.Instance.RuntimeManager = runtimeManager;
         await cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
@@ -464,7 +468,7 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo(
             $"/agents/workflows?projectId={projectId:D}&workflowId={targetDefinition.Id.Value:D}&runId={requestedRun.RunId.Value:D}");
 
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -493,7 +497,7 @@ public sealed class WorkflowsPageTests
         var missingWorkflowId = WorkflowId.New();
         navigation.NavigateTo($"/agents/workflows?workflowId={missingWorkflowId.Value:D}");
 
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -522,7 +526,7 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo(
             $"/agents/workflows?workflowId={requestedDefinition.Id.Value:D}&runId={conflictingRun.RunId.Value:D}");
 
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -551,7 +555,7 @@ public sealed class WorkflowsPageTests
         navigation.NavigateTo(
             $"/agents/workflows?projectId={projectId:D}&workflowId={requestedDefinition.Id.Value:D}");
 
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -573,7 +577,7 @@ public sealed class WorkflowsPageTests
         racingCatalog.Delay(staleDefinition.Id, currentDefinition.Id);
         navigation.NavigateTo($"/agents/workflows?workflowId={staleDefinition.Id.Value:D}");
 
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
         await racingCatalog.WaitForRequestAsync(staleDefinition.Id);
 
         navigation.NavigateTo($"/agents/workflows?workflowId={currentDefinition.Id.Value:D}");
@@ -689,7 +693,7 @@ public sealed class WorkflowsPageTests
             RespondedAtUtc: null));
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tabs']");
 
@@ -723,7 +727,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-workflows']");
         Assert.Empty(cut.FindAll("[data-testid='workflows-tab-templates']"));
@@ -760,7 +764,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-workflows']");
         Assert.Empty(cut.FindAll("[data-testid='workflows-error']"));
@@ -789,7 +793,7 @@ public sealed class WorkflowsPageTests
         var initialDefinitionCount = (await catalogService.ListDefinitionsAsync()).Count;
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         OpenTemplatePreview(cut, "Local Folder Summary Markdown Report");
 
@@ -823,7 +827,7 @@ public sealed class WorkflowsPageTests
         await SaveTemplateDraftAsync(catalogService, componentLibrary, templatePack, template, $"01 {template.Name}");
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         OpenTemplatePreview(cut, template.Name);
         cut.WaitForElement("[data-testid='workflows-template-add-draft']").Click();
@@ -847,7 +851,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         ClickTabButton(cut, "Editor");
@@ -895,7 +899,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         ClickTabButton(cut, "Editor");
@@ -929,7 +933,7 @@ public sealed class WorkflowsPageTests
             "Return a concise workflow canvas test summary.");
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         cut.Find("[data-testid='workflows-tab-editor']").Click();
@@ -987,7 +991,7 @@ public sealed class WorkflowsPageTests
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow saved");
         });
 
-        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForAssertion(() =>
         {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
@@ -1050,7 +1054,7 @@ public sealed class WorkflowsPageTests
                 ExposeAzureFunctionsMcpTool: false)));
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-workflows']").Click();
         cut.WaitForAssertion(() => Assert.Contains(
@@ -1135,7 +1139,7 @@ public sealed class WorkflowsPageTests
         });
         var definition = CreateProjectStructurePreviewDefinition();
 
-        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1182,7 +1186,7 @@ public sealed class WorkflowsPageTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var definition = CreatePreviewProgressDefinition();
 
-        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1203,7 +1207,7 @@ public sealed class WorkflowsPageTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var definition = CreatePreviewProgressDefinition();
 
-        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1225,7 +1229,7 @@ public sealed class WorkflowsPageTests
         var definition = CreatePreviewProgressDefinition();
         WorkflowAgentChatNodeSelection? selected = null;
 
-        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, [])
@@ -1262,7 +1266,7 @@ public sealed class WorkflowsPageTests
         var usedComponent = CreateWorkflowComponent("Used summary call");
         var definition = CreateWorkflowUsageStatsDefinition(usedComponent.Id);
 
-        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
             .Add(component => component.Definition, definition)
             .Add(component => component.Components,
             [
@@ -1299,7 +1303,7 @@ public sealed class WorkflowsPageTests
         });
         var definition = CreatePreviewProgressDefinition();
 
-        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(parameters => parameters
             .Add(component => component.Definition, definition)
             .Add(component => component.Components, [])
             .Add(component => component.ProviderOptions, []));
@@ -1330,7 +1334,7 @@ public sealed class WorkflowsPageTests
             "Keep the workflow route linear.");
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         cut.Find("[data-testid='workflows-tab-editor']").Click();
@@ -1424,7 +1428,7 @@ public sealed class WorkflowsPageTests
             "Route high-value invoices with a typed predicate.");
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         cut.Find("[data-testid='workflows-tab-editor']").Click();
@@ -1469,7 +1473,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         cut.Find("[data-testid='workflows-tab-editor']").Click();
@@ -1726,7 +1730,7 @@ public sealed class WorkflowsPageTests
         }
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-history']");
         cut.Find("[data-testid='workflows-tab-history']").Click();
@@ -1818,7 +1822,7 @@ public sealed class WorkflowsPageTests
             now));
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-history']");
         cut.Find("[data-testid='workflows-tab-history']").Click();
@@ -1846,7 +1850,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents/workflows");
-        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+        var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
         cut.Find("[data-testid='workflows-tab-editor']").Click();
@@ -1876,7 +1880,7 @@ public sealed class WorkflowsPageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
         navigation.NavigateTo("/agents");
-        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+        var cut = harness.Context.Render<AgentsHomePage>();
 
         cut.WaitForElement("[data-testid='agents-shell-open-workflows']");
         cut.WaitForAssertion(() =>
@@ -1970,12 +1974,12 @@ public sealed class WorkflowsPageTests
         Assert.True(
             versionResult.IsSuccess,
             string.Join(" ", versionResult.Errors.Select(error => $"{error.Code}: {error.Message}")));
-        return harness.Context.RenderComponent<DialogHost>();
+        return harness.Context.Render<DialogHost>();
     }
 
     private static void SelectWorkflowPromptFromGallery(
-        IRenderedFragment workflow,
-        IRenderedFragment dialogHost,
+        IRenderedComponent<IComponent> workflow,
+        IRenderedComponent<IComponent> dialogHost,
         string promptTitle)
     {
         workflow.WaitForElement(
@@ -1990,7 +1994,7 @@ public sealed class WorkflowsPageTests
         dialogHost.Find("[data-testid='prompt-gallery-select']").Click();
     }
 
-    private static void OpenTemplatePreview(IRenderedFragment cut, string templateName)
+    private static void OpenTemplatePreview(IRenderedComponent<IComponent> cut, string templateName)
     {
         cut.WaitForElement("[data-testid='workflows-tab-workflows']");
         cut.Find("[data-testid='workflows-tab-workflows']").Click();
@@ -2040,7 +2044,7 @@ public sealed class WorkflowsPageTests
         });
     }
 
-    private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
+    private static IElement FindButtonByTitle(IRenderedComponent<IComponent> cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
 
@@ -2139,7 +2143,7 @@ public sealed class WorkflowsPageTests
             createdAtUtc,
             createdAtUtc);
 
-    private static void ClickWorkflowCanvasTab(IRenderedFragment cut, string testId)
+    private static void ClickWorkflowCanvasTab(IRenderedComponent<IComponent> cut, string testId)
     {
         var tab = cut.Find($"[data-testid='{testId}']");
         if (string.Equals(tab.TagName, "button", StringComparison.OrdinalIgnoreCase))
@@ -2154,14 +2158,14 @@ public sealed class WorkflowsPageTests
         button.Click();
     }
 
-    private static void ClickTabButton(IRenderedFragment cut, string text)
+    private static void ClickTabButton(IRenderedComponent<IComponent> cut, string text)
     {
         var button = cut.FindAll("button")
             .First(button => button.TextContent.Contains(text, StringComparison.OrdinalIgnoreCase));
         button.Click();
     }
 
-    private static IElement EnsureWorkflowToolboxVisible(IRenderedFragment cut)
+    private static IElement EnsureWorkflowToolboxVisible(IRenderedComponent<IComponent> cut)
     {
         const string searchSelector = "input[placeholder='Search nodes, executors, files, HTTP, spreadsheets']";
         var inputs = cut.FindAll(searchSelector);
@@ -2174,7 +2178,7 @@ public sealed class WorkflowsPageTests
         return cut.WaitForElement(searchSelector);
     }
 
-    private static void AssertNoWorkflowPageError(IRenderedFragment cut)
+    private static void AssertNoWorkflowPageError(IRenderedComponent<IComponent> cut)
     {
         var errors = cut.FindAll("[data-testid='workflows-error']");
         Assert.True(errors.Count == 0, string.Join(" | ", errors.Select(error => error.TextContent.Trim())));

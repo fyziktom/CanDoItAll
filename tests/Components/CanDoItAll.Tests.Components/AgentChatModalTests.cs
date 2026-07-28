@@ -13,7 +13,7 @@ public sealed class AgentChatModalTests
     public async Task Agent_switch_dialog_returns_clicked_agent_and_keeps_cards_compact()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var first = CreateAgent("Primary Agent", "Implementation specialist");
         var second = CreateAgent("Review Agent", "QA review lead");
         var dialogService = context.Services.GetRequiredService<DialogService>();
@@ -48,7 +48,7 @@ public sealed class AgentChatModalTests
         var review = CreateAgent("Zulu Review Lead", ".NET QA specialist", "quality", AgentSpecialTags.Favorite);
         var diagnostics = CreateAgent("Diagnostics Operator", "Runtime analyst", "diagnostics");
 
-        var cut = context.RenderComponent<AgentSwitchDialog>(parameters => parameters
+        var cut = context.Render<AgentSwitchDialog>(parameters => parameters
             .Add(component => component.Agents, new[] { implementation, diagnostics, review })
             .Add(component => component.SelectedAgentId, implementation.Id)
             .Add(component => component.FavoriteToggled, agent =>
@@ -86,7 +86,7 @@ public sealed class AgentChatModalTests
         var implementation = CreateAgent("Alpha Developer", ".NET implementation specialist", "implementation");
         var review = CreateAgent("Zulu Review Lead", ".NET QA specialist", AgentSpecialTags.Favorite);
 
-        var cut = context.RenderComponent<AgentSwitchDialog>(parameters => parameters
+        var cut = context.Render<AgentSwitchDialog>(parameters => parameters
             .Add(component => component.Agents, new[] { implementation, review })
             .Add(component => component.FavoriteToggled, agent =>
             {
@@ -117,7 +117,7 @@ public sealed class AgentChatModalTests
         var runId = Guid.NewGuid();
         var startedAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
 
-        var cut = context.RenderComponent<AgentRuntimeDetailsDialog>(parameters => parameters
+        var cut = context.Render<AgentRuntimeDetailsDialog>(parameters => parameters
             .Add(component => component.Run, CreateRun(agentId, sessionId, runId, startedAtUtc))
             .Add(component => component.ExecutionLog, new[]
             {
@@ -149,7 +149,7 @@ public sealed class AgentChatModalTests
             .Reverse()
             .ToList();
 
-        var cut = context.RenderComponent<AgentThreadHistoryDialog>(parameters => parameters
+        var cut = context.Render<AgentThreadHistoryDialog>(parameters => parameters
             .Add(component => component.Agent, agent)
             .Add(component => component.Sessions, sessions));
 
@@ -165,7 +165,7 @@ public sealed class AgentChatModalTests
     public async Task Agent_thread_history_dialog_returns_double_clicked_thread()
     {
         using var context = CreateContext();
-        var host = context.RenderComponent<DialogHost>();
+        var host = context.Render<DialogHost>();
         var agent = CreateAgent("History Agent", "Thread archivist");
         var first = CreateSession(agent.Id, "Older thread", DateTimeOffset.UtcNow.AddHours(-2));
         var second = CreateSession(agent.Id, "Current thread", DateTimeOffset.UtcNow);
@@ -216,7 +216,7 @@ public sealed class AgentChatModalTests
             ]
         };
 
-        var cut = context.RenderComponent<ChatWorkspacePanel>(parameters => parameters
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
             .Add(component => component.Agent, agent)
             .Add(component => component.Session, session)
             .Add(component => component.ExecutionLog, Array.Empty<ExecutionLogEntry>())
@@ -230,9 +230,9 @@ public sealed class AgentChatModalTests
         Assert.Contains("Runtime usage telemetry", hiddenContext.TextContent, StringComparison.Ordinal);
     }
 
-    private static TestContext CreateContext()
+    private static BunitContext CreateContext()
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         return context;
     }

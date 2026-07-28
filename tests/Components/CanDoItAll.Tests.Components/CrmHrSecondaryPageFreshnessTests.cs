@@ -18,7 +18,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         var workspaces = Enumerable.Range(0, 20)
             .Select(index => CreateAgentWorkspace(Guid.NewGuid(), $"Agent {index:D2}"))
             .ToDictionary(workspace => workspace.PartyId);
-        var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
             .Add(page => page.TestItems, workspaces.Values.Select(workspace => CreateAgentItem(workspace)).ToArray())
             .Add(page => page.TestWorkspaces, workspaces));
 
@@ -61,7 +61,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         var workspace = CreateAgentWorkspace(partyId, "Projected agent");
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
-        var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
             .Add(page => page.TestItems, [CreateAgentItem(workspace)])
             .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
             {
@@ -87,7 +87,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             [secondPartyId] = CreateAgentWorkspace(secondPartyId, "Second agent")
         };
         var items = workspaces.Values.Select(workspace => CreateAgentItem(workspace)).ToArray();
-        var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
             .Add(page => page.TestItems, items)
             .Add(page => page.TestWorkspaces, workspaces));
         cut.WaitForAssertion(() =>
@@ -141,7 +141,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         var workspace = CreateAgentWorkspace(existingPartyId, "Existing agent");
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/crm-hr/agents?partyId={missingPartyId:D}");
-        var cut = harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
             .Add(page => page.TestItems, [CreateAgentItem(workspace)])
             .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
             {
@@ -177,7 +177,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => harness.Context.RenderComponent<RacingCrmHrAgentsPage>(parameters => parameters
+            () => harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
                 .Add(page => page.TestItems, [directoryItem])
                 .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
                 {
@@ -197,7 +197,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         var secondProject = CreateProject("Second project");
         var firstAssignment = CreateAssignment(firstProject.Id, "First assignment");
         var secondAssignment = CreateAssignment(secondProject.Id, "Second assignment");
-        var cut = harness.Context.RenderComponent<RacingCrmHrAssignmentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAssignmentsPage>(parameters => parameters
             .Add(page => page.TestProjects, [firstProject, secondProject])
             .Add(page => page.TestAssignments, new Dictionary<Guid, IReadOnlyList<ProjectPartyAssignmentDetail>>
             {
@@ -256,7 +256,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         var missingProjectId = Guid.NewGuid();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/crm-hr/assignments?projectId={missingProjectId:D}");
-        var cut = harness.Context.RenderComponent<RacingCrmHrAssignmentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAssignmentsPage>(parameters => parameters
             .Add(page => page.TestProjects, [existingProject]));
 
         cut.WaitForAssertion(() =>
@@ -279,7 +279,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             TaskCreationOptions.RunContinuationsAsynchronously);
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/crm-hr/assignments?projectId={project.Id:D}");
-        var cut = harness.Context.RenderComponent<RacingCrmHrAssignmentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAssignmentsPage>(parameters => parameters
             .Add(page => page.TestProjects, [project])
             .Add(page => page.DashboardCompletion, dashboardCompletion));
         await cut.Instance.DashboardStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -317,7 +317,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             [ToQueryItem(firstProject), ToQueryItem(secondProject)]);
         await using var harness = await ComponentTestHarness.CreateAsync(
             services => services.AddSingleton<IProjectRecordQueryService>(queryService));
-        var cut = harness.Context.RenderComponent<RacingCrmHrAssignmentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAssignmentsPage>(parameters => parameters
             .Add(page => page.TestProjects, [firstProject, secondProject]));
         cut.WaitForAssertion(() => AssertAssignmentSurface(cut, firstProject));
 
@@ -345,7 +345,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var project = CreateProject("Tabbed project");
-        var cut = harness.Context.RenderComponent<RacingCrmHrAssignmentsPage>(parameters => parameters
+        var cut = harness.Context.Render<RacingCrmHrAssignmentsPage>(parameters => parameters
             .Add(page => page.TestProjects, [project]));
 
         cut.WaitForAssertion(() =>

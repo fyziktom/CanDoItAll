@@ -23,7 +23,7 @@ public sealed class CrmHrCatalogDialogTests
             PartyRoleKind.Employee);
 
         navigation.NavigateTo($"/crm-hr/directory?partyId={partyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrDirectoryPage>();
+        var cut = harness.Context.Render<CrmHrDirectoryPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -71,7 +71,7 @@ public sealed class CrmHrCatalogDialogTests
         Assert.True(profileResult.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrWorkforcePage>();
+        var cut = harness.Context.Render<CrmHrWorkforcePage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -116,7 +116,7 @@ public sealed class CrmHrCatalogDialogTests
         Assert.True(profileResult.IsSuccess);
 
         navigation.NavigateTo($"/crm-hr/crm?accountId={accountId:D}");
-        var cut = harness.Context.RenderComponent<CrmHrCrmPage>();
+        var cut = harness.Context.Render<CrmHrCrmPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -164,7 +164,7 @@ public sealed class CrmHrCatalogDialogTests
 
         navigation.NavigateTo(
             $"/crm-hr/recruiting?applicationId={applicationResult.Value:D}");
-        var cut = harness.Context.RenderComponent<CrmHrRecruitingPage>();
+        var cut = harness.Context.Render<CrmHrRecruitingPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -258,7 +258,7 @@ public sealed class CrmHrCatalogDialogTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/crm-hr/recruiting");
-        var cut = harness.Context.RenderComponent<CrmHrRecruitingPage>();
+        var cut = harness.Context.Render<CrmHrRecruitingPage>();
 
         cut.WaitForElement("[data-testid='crmhr-recruiting-new-button']").Click();
         cut.WaitForAssertion(() =>

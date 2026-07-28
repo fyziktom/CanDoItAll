@@ -1,6 +1,6 @@
 # Memory Test Suite Rebalance
 
-The provider extraction splits test ownership between the active generic Memory runtime and the retained legacy native Cognitive Memory module. Generic provider tests must not make native-module startup, Qdrant, or Semantic Completion dependencies part of the base-host contract.
+The provider extraction separates the active generic Memory runtime from the standalone native Cognitive Memory service. Generic provider and external-driver tests must not make native-service startup, Qdrant, or Semantic Completion dependencies part of the base-host contract.
 
 ## Generic Memory Suite
 
@@ -13,7 +13,7 @@ The generic provider suite lives in `tests/Memory/CanDoItAll.Memory.Tests`.
 | Source gateway | `MemorySourceGatewayTests.cs`, `MemorySourceGatewayHardeningCheckpointTests.cs`, `ManualMemorySourceIngestionTests.cs` |
 | MAF integration | `MemoryAgentContextContributorTests.cs`, `MemoryOperationHandlerTests.cs` |
 | Host composition guards | `HostCompositionDependencyRemovalTests.cs` |
-| Native remote driver contract | `NativeRemoteMemoryProviderDriverTests.cs` |
+| Cognitive Memory external-driver contract | `NativeRemoteMemoryProviderDriverTests.cs` |
 
 `GenericMockMemoryProviderFixture` is the test-only provider for generic Memory scenarios. It implements the real generic driver interfaces for context, accepted-operation polling, feedback, events, outbox delivery, health, and UI metadata. Tests register it explicitly; zero-provider tests must not enable a deterministic or fixture-backed provider.
 
@@ -26,21 +26,20 @@ Generic Memory UI behavior is covered outside the Memory test project:
 - `tests/Components/CanDoItAll.Tests.Components/MemoryProviderUiSurfacePageTests.cs`
 - `tests/Playwright/CanDoItAll.Tests.Playwright/MemoryProviderManagementPlaywrightTests.cs`
 
-These tests own provider-list rendering, query and operation flows, feedback and event UI, and provider-surface projection. They use generic Memory services and must not import `CanDoItAll.Modules.CognitiveMemory`.
+These tests own provider-list rendering, query and operation flows, feedback and event UI, and provider-surface projection. They use generic Memory services and must not import native Cognitive Memory implementation namespaces.
 
-## Retained Legacy Native Suite
+## Standalone Native Suite
 
-Native-engine tests remain in legacy test projects until the native service extraction is complete. They are retained compatibility regressions, not generic Memory startup requirements.
+Native domain, persistence, runtime, UI, and integration tests belong in the
+[CanDoItAll.CognitiveMemory repository](https://github.com/fyziktom/CanDoItAll.CognitiveMemory).
+This repository keeps only:
 
-| Legacy area | Retained examples | Eventual owner |
-| --- | --- | --- |
-| Native engine unit tests | `tests/Unit/CanDoItAll.Tests.Unit/*CognitiveMemory*.cs` | Native service test suite |
-| Native module registration | `tests/Unit/CanDoItAll.Tests.Unit/CognitiveMemoryModuleRegistrationTests.cs` | Native service registration tests |
-| Native persistence model | `tests/Integration/CanDoItAll.Tests.Integration/*CognitiveMemory*.cs` | Legacy Cognitive Memory entities exercised through the shared `AppDbContext` |
-| Native review UI | `tests/Components/CanDoItAll.Tests.Components/CognitiveMemoryPageTests.cs`, `tests/Playwright/CanDoItAll.Tests.Playwright/CognitiveMemoryReviewUiPlaywrightTests.cs` | Native provider UI-surface tests |
-| Native fakes | `tests/Support/CanDoItAll.Tests.Support/CognitiveMemory/CognitiveMemoryFakes.cs` | Native service fakes |
+- generic provider runtime and UI tests;
+- conformance tests for `src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory`;
+- negative boundary tests that prevent native implementation coupling;
+- migration-only tests for the legacy PostgreSQL export bridge and retired HTTP shim.
 
-`CognitiveMemoryModuleRegistrationTests.cs` does not prove base-host startup coupling. `HostCompositionDependencyRemovalTests` guards the current boundary: base composition must not register the legacy module, Qdrant, or an implicit provider.
+`HostCompositionDependencyRemovalTests` guards the base-host boundary: composition must not register native implementation services, Qdrant, or an implicit provider.
 
 ## Validation
 
@@ -52,4 +51,4 @@ dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
 dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
 ```
 
-Use the Playwright and legacy Cognitive Memory filters only when changing their retained compatibility surfaces. See [Testing](../../testing.md) for category-specific commands and prerequisites.
+Run the standalone repository's validation when changing the native service contract. See [Testing](../../testing.md) for category-specific commands and prerequisites.

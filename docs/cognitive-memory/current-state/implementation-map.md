@@ -24,7 +24,8 @@ flowchart LR
 | Protocol | `src/Memory/CanDoItAll.Memory.Abstractions` | Provider identity, profiles, manifests, capabilities, envelopes, context packs, and typed results. |
 | Application | `src/Memory/CanDoItAll.Memory.Application` | Registry, selection, dispatch, operation handling, Source Gateway, worker contracts, and ledgers. |
 | Persistence | `src/Memory/CanDoItAll.Memory.Persistence` | EF-backed profile, operation, feedback, event, source-request, retention, and lease stores. |
-| HTTP | `src/Memory/CanDoItAll.Memory.Http` | Generic HTTP and native-remote adapters. |
+| HTTP | `src/Memory/CanDoItAll.Memory.Http` | Generic HTTP adapter. |
+| Cognitive Memory driver | `src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory` | Isolated adapter for the standalone native service. |
 | MCP | `src/Memory/CanDoItAll.Memory.Mcp` | Remote HTTP MCP descriptor and tool mapping. |
 | Mock | `src/Memory/CanDoItAll.Memory.Mock` | Explicit test/development driver. |
 | UI | `src/Modules/CanDoItAll.Modules.Memory` | Provider management and operational evidence at `/memory`. |
@@ -51,7 +52,7 @@ Driver registration and provider profiles are independent gates: enabling one do
 - Provider-specific code stays behind a driver or remote service boundary.
 - Dispatch, failures, and asynchronous status are observable through typed results and durable ledgers.
 - Background workers use database-backed leases when enabled.
-- The retained `CanDoItAll.Modules.CognitiveMemory` project is not proof of an active host dependency.
+- Native Cognitive Memory implementation projects are not referenced by this repository.
 
 These boundaries are guarded by `tests/Memory/CanDoItAll.Memory.Tests/HostCompositionDependencyRemovalTests.cs`.
 

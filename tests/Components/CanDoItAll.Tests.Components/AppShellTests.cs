@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class AppShellTests : TestContext
+public sealed class AppShellTests : BunitContext
 {
     public AppShellTests()
     {
@@ -18,7 +18,7 @@ public sealed class AppShellTests : TestContext
     [Fact]
     public void Renders_current_navigation_without_removed_module_items()
     {
-        var cut = RenderComponent<AppShell>(parameters => parameters
+        var cut = Render<AppShell>(parameters => parameters
             .Add(component => component.NavigationItems, ShellNavigation.Items)
             .Add(component => component.CurrentRoute, "scheduler")
             .Add(component => component.TopBar, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Shell status</div>"))));
@@ -45,7 +45,7 @@ public sealed class AppShellTests : TestContext
             new WorkbenchTabState("project-1", "EBilling - SAP - Structure", "/projects/one/structure", TabKind: "project-structure")
         };
 
-        var cut = RenderComponent<AppShell>(parameters => parameters
+        var cut = Render<AppShell>(parameters => parameters
             .Add(component => component.DefaultNavigationMode, AppShellNavigationMode.Expanded)
             .Add(component => component.NavigationItems, ShellNavigation.Items)
             .Add(component => component.Workspaces, workspaces)
@@ -67,7 +67,7 @@ public sealed class AppShellTests : TestContext
     [Fact]
     public void Standard_navigation_tooltips_use_delayed_menu_timing()
     {
-        var cut = RenderComponent<AppShell>(parameters => parameters
+        var cut = Render<AppShell>(parameters => parameters
             .Add(component => component.NavigationItems, ShellNavigation.Items)
             .Add(component => component.CurrentRoute, "agents"));
 
@@ -81,10 +81,10 @@ public sealed class AppShellTests : TestContext
     [Fact]
     public void Brand_icon_uses_default_for_missing_values_and_allows_an_override()
     {
-        var defaultCut = RenderComponent<AppShell>();
-        var blankCut = RenderComponent<AppShell>(parameters => parameters
+        var defaultCut = Render<AppShell>();
+        var blankCut = Render<AppShell>(parameters => parameters
             .Add(component => component.BrandIconName, " "));
-        var customCut = RenderComponent<AppShell>(parameters => parameters
+        var customCut = Render<AppShell>(parameters => parameters
             .Add(component => component.BrandIconName, "rocket_launch"));
 
         Assert.Equal("apps", defaultCut.Find(".cda-shell-brand-mark").TextContent.Trim());

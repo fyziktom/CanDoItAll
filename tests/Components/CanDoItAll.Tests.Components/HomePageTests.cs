@@ -407,7 +407,7 @@ public sealed class HomePageTests
             TimeSpan refreshInterval,
             Func<int, Task<DashboardSnapshotData>> loadAsync)
         {
-            Context = new TestContext();
+            Context = new BunitContext();
             Context.JSInterop.Mode = JSRuntimeMode.Loose;
             Context.Services.AddLogging();
             Context.Services.AddCanDoItAllBaseLib();
@@ -426,13 +426,13 @@ public sealed class HomePageTests
             Context.Services.AddSingleton(new DashboardSnapshotService(cache));
         }
 
-        public TestContext Context { get; }
+        public BunitContext Context { get; }
 
         public RecordingDashboardSnapshotLoadRunner Runner { get; }
 
         public IRenderedComponent<DashboardHome> RenderHome()
         {
-            var component = Context.RenderComponent<DashboardHome>();
+            var component = Context.Render<DashboardHome>();
             renderedHomes.Add(component);
             return component;
         }
@@ -453,7 +453,7 @@ public sealed class HomePageTests
             }
 
             renderedHomes.Clear();
-            Context.DisposeComponents();
+            await Context.DisposeComponentsAsync();
             await Context.Services.DisposeAsync();
             Context.Dispose();
         }

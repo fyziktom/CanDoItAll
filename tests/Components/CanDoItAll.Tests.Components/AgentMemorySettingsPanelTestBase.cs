@@ -11,11 +11,11 @@ namespace CanDoItAll.Tests.Components;
 
 public abstract class AgentMemorySettingsPanelTestBase
 {
-    protected static TestContext CreateContext(
+    protected static BunitContext CreateContext(
         IMemoryProviderProfileStore store,
         RecordingLogger<AgentMemorySettingsPanel>? logger = null)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(store);
@@ -26,9 +26,9 @@ public abstract class AgentMemorySettingsPanelTestBase
     }
 
     protected static IRenderedComponent<AgentMemorySettingsPanel> Render(
-        TestContext context,
+        BunitContext context,
         AgentMemoryAccessSettings settings) =>
-        context.RenderComponent<AgentMemorySettingsPanel>(parameters => parameters
+        context.Render<AgentMemorySettingsPanel>(parameters => parameters
             .Add(component => component.Value, settings));
 
     protected static AgentMemoryAccessSettings CreateSettingsWithBinding(

@@ -26,7 +26,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<IAgentChatLauncher>(launcher);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
         cut.WaitForElement("[data-testid='scheduler-agent-open']");
         cut.WaitForAssertion(() => Assert.False(
             cut.Find("[data-testid='scheduler-agent-open']").HasAttribute("disabled")));
@@ -57,7 +57,7 @@ public sealed class SchedulerPlannerPageTests
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -103,7 +103,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(new StubSchedulerPlannerService(workspace, defaultEditor));
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         await cut.InvokeAsync(() =>
@@ -179,7 +179,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(new StubSchedulerPlannerService(workspace, defaultEditor));
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         cut.FindAll("button[role='tab']")
@@ -237,7 +237,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerWorkflowInputOptionService>(optionService);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         cut.FindAll("button[role='tab']")
@@ -320,7 +320,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerWorkflowInputOptionService>(new StubSchedulerWorkflowInputOptionService(Guid.NewGuid()));
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         cut.FindAll("button[role='tab']")
@@ -369,7 +369,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerWorkflowInputOptionService>(new StubSchedulerWorkflowInputOptionService(projectId));
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         cut.FindAll("button[role='tab']")
@@ -837,7 +837,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         cut.FindAll("button[role='tab']")
@@ -925,7 +925,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         await cut.InvokeAsync(() =>
@@ -994,7 +994,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-calendar']");
         var calendarEvent = workspace.CalendarSurface.Events.Single();
@@ -1037,7 +1037,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-calendar']");
         cut.Find("[data-testid='scheduler-calendar']").TriggerEvent("ondblclick", new MouseEventArgs());
@@ -1080,7 +1080,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
 
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
 
         cut.WaitForElement("[data-testid='scheduler-calendar']");
         var calendarEvent = workspace.CalendarSurface.Events.Single();
@@ -1221,7 +1221,7 @@ public sealed class SchedulerPlannerPageTests
             services.RemoveAll<ISchedulerPlannerService>();
             services.AddSingleton<ISchedulerPlannerService>(schedulerService);
         });
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
         cut.WaitForElement("[data-testid='scheduler-tabs']");
 
         var firstSelection = cut.InvokeAsync(() => InvokeOpenEditScheduleDialogAsync(cut.Instance, firstPlan));
@@ -1278,7 +1278,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerWorkflowInputSchemaService>(schemaService);
             services.AddSingleton<ISchedulerWorkflowInputOptionService>(optionService);
         });
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
         cut.WaitForElement("[data-testid='scheduler-tabs']");
 
         var firstSelection = cut.InvokeAsync(() => InvokeSelectTargetAsync(cut.Instance, firstTarget));
@@ -1344,7 +1344,7 @@ public sealed class SchedulerPlannerPageTests
             services.AddSingleton<ISchedulerWorkflowInputSchemaService>(new StubSchedulerWorkflowInputSchemaService(schema));
             services.AddSingleton<ISchedulerWorkflowInputOptionService>(optionService);
         });
-        var cut = harness.Context.RenderComponent<SchedulerPlannerPage>();
+        var cut = harness.Context.Render<SchedulerPlannerPage>();
         cut.WaitForElement("[data-testid='scheduler-tabs']");
         cut.WaitForAssertion(() => Assert.Equal(
             AgentChatContextAccessState.Ready,

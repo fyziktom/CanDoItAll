@@ -9,7 +9,7 @@ public sealed class ProjectStructureWebPreviewDialogTests
     [Fact]
     public void Embeddable_link_shows_notes_in_a_restricted_iframe()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var state = new ProjectStructureWebPreviewDialogState(
             "node-1",
             "Architecture guide",
@@ -19,7 +19,7 @@ public sealed class ProjectStructureWebPreviewDialogTests
             CanEmbed: true,
             EmbedUnavailableReason: string.Empty);
 
-        var cut = context.RenderComponent<ProjectStructureWebPreviewDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureWebPreviewDialog>(parameters => parameters
             .Add(component => component.State, state)
             .Add(component => component.Close, EventCallback.Empty));
 
@@ -46,7 +46,7 @@ public sealed class ProjectStructureWebPreviewDialogTests
     [Fact]
     public void Known_non_embeddable_link_uses_the_explicit_browser_fallback()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var state = new ProjectStructureWebPreviewDialogState(
             "node-1",
             "Repository",
@@ -56,7 +56,7 @@ public sealed class ProjectStructureWebPreviewDialogTests
             CanEmbed: false,
             EmbedUnavailableReason: "GitHub does not allow repository pages to be embedded.");
 
-        var cut = context.RenderComponent<ProjectStructureWebPreviewDialog>(parameters => parameters
+        var cut = context.Render<ProjectStructureWebPreviewDialog>(parameters => parameters
             .Add(component => component.State, state)
             .Add(component => component.Close, EventCallback.Empty));
 

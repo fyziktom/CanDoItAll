@@ -18,7 +18,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_recaptures_held_module_state_at_the_attachment_deadline()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var clock = new ManualTimerTimeProvider(InitialUtc);
         var registry = new AgentChatContextRegistry(clock);
         var agent = CreateAgent();
@@ -39,7 +39,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
         context.Services.AddSingleton<TimeProvider>(clock);
 
-        var cut = context.RenderComponent<
+        var cut = context.Render<
             ProjectStructureAgentChatContextProvider>(parameters => parameters
                 .Add(component => component.ProjectId, projectId)
                 .Add(component => component.ProjectName, "Delivery project")
@@ -86,7 +86,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public async Task Provider_does_not_publish_parent_ready_while_agent_access_reload_is_loading_or_failed()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var referenceDataProvider = new ControllableAgentReferenceDataProvider(agent);
@@ -102,7 +102,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         var projectId = Guid.NewGuid();
         var surface = CreateSurface(projectId, "Delivery project");
 
-        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
             .Add(component => component.Surface, surface)
@@ -158,7 +158,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_blocks_parent_transition_context_and_recovers_on_the_same_project_scope()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         context.Services.AddLogging();
@@ -174,7 +174,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         var projectId = Guid.NewGuid();
         var surface = CreateSurface(projectId, "Delivery project");
 
-        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
             .Add(component => component.Surface, surface)
@@ -190,7 +190,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         });
         var loadingSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
             .Add(component => component.Surface, surface)
@@ -209,7 +209,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_replaces_canvas_and_gantt_fragments_without_leaking_context()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var notificationHub = new RecordingNotificationHub();
         var cacheInvalidator = new RecordingReferenceDataCacheInvalidator();
@@ -234,7 +234,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
         context.Services.AddSingleton(TimeProvider.System);
 
-        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
             .Add(component => component.Surface, surface)
@@ -262,7 +262,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         var scopeId = canvasSnapshot.Scope.Id;
         var source = canvasSnapshot.Scope.Source;
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
             .Add(component => component.Surface, surface)
@@ -302,7 +302,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
 
         var ganttSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
             .Add(component => component.Surface, surface)
@@ -351,7 +351,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_publishes_bounded_typed_selection_details_and_refreshes_when_node_data_changes()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
@@ -386,7 +386,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
         context.Services.AddSingleton(TimeProvider.System);
 
-        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Architecture project")
             .Add(component => component.Surface, surface)
@@ -457,7 +457,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             "Architecture project",
             [projectRoot, updatedNode]);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Architecture project")
             .Add(component => component.Surface, updatedSurface)
@@ -490,7 +490,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_without_a_held_structure_surface_publishes_no_usable_snapshot()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         context.Services.AddLogging();
@@ -505,7 +505,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
         context.Services.AddSingleton(TimeProvider.System);
 
-        context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+        context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, Guid.NewGuid())
             .Add(component => component.ProjectName, "Loading project")
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
@@ -520,7 +520,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_replaces_scope_fragments_and_snapshot_as_one_atomic_publication()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
@@ -547,7 +547,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
         context.Services.AddSingleton(TimeProvider.System);
 
-        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Old project")
             .Add(component => component.Surface, CreateSurface(
@@ -560,7 +560,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         registry.Changed += HandleChanged;
         try
         {
-            cut.SetParametersAndRender(parameters => parameters
+            cut.Render(parameters => parameters
                 .Add(component => component.ProjectId, projectId)
                 .Add(component => component.ProjectName, "New project")
                 .Add(component => component.Surface, CreateSurface(

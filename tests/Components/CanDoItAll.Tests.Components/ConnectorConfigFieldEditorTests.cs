@@ -10,7 +10,7 @@ public sealed class ConnectorConfigFieldEditorTests
     [Fact]
     public void ConnectorConfigFieldEditor_updates_text_state_from_canonical_field_descriptor()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var state = new ConnectorConfigState();
         var field = new ConfigurationFieldDescriptor(
             "endpointUrl",
@@ -19,7 +19,7 @@ public sealed class ConnectorConfigFieldEditorTests
             IsRequired: true,
             "Endpoint URL");
 
-        var cut = context.RenderComponent<ConnectorConfigFieldEditor>(parameters => parameters
+        var cut = context.Render<ConnectorConfigFieldEditor>(parameters => parameters
             .Add(component => component.Field, field)
             .Add(component => component.State, state)
             .Add(component => component.TestId, "connector-config-endpoint"));
@@ -32,7 +32,7 @@ public sealed class ConnectorConfigFieldEditorTests
     [Fact]
     public void ConnectorConfigFieldEditor_updates_boolean_state_from_canonical_field_descriptor()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var state = new ConnectorConfigState();
         var field = new ConfigurationFieldDescriptor(
             "enabled",
@@ -41,7 +41,7 @@ public sealed class ConnectorConfigFieldEditorTests
             IsRequired: false,
             "Enable connector");
 
-        var cut = context.RenderComponent<ConnectorConfigFieldEditor>(parameters => parameters
+        var cut = context.Render<ConnectorConfigFieldEditor>(parameters => parameters
             .Add(component => component.Field, field)
             .Add(component => component.State, state)
             .Add(component => component.TestId, "connector-config-enabled"));
@@ -54,7 +54,7 @@ public sealed class ConnectorConfigFieldEditorTests
     [Fact]
     public void ConnectorConfigFieldEditor_preserves_int64_numeric_state()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var state = new ConnectorConfigState();
         var field = new ConfigurationFieldDescriptor(
             "maxBytes",
@@ -66,7 +66,7 @@ public sealed class ConnectorConfigFieldEditorTests
             NumberKind = ConfigurationNumberKind.Int64
         };
 
-        var cut = context.RenderComponent<ConnectorConfigFieldEditor>(parameters => parameters
+        var cut = context.Render<ConnectorConfigFieldEditor>(parameters => parameters
             .Add(component => component.Field, field)
             .Add(component => component.State, state)
             .Add(component => component.TestId, "connector-config-max-bytes"));

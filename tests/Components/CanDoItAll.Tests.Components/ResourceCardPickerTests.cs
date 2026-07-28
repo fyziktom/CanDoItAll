@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class ResourceCardPickerTests : TestContext
+public sealed class ResourceCardPickerTests : BunitContext
 {
     private static readonly Guid AlphaId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid BetaId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -123,7 +123,7 @@ public sealed class ResourceCardPickerTests : TestContext
         Action<Guid>? favoriteToggled = null,
         bool useBoundedResultsViewport = true)
     {
-        return RenderComponent<ResourceCardPicker<Guid>>(parameters =>
+        return Render<ResourceCardPicker<Guid>>(parameters =>
         {
             parameters
                 .Add(component => component.Options, options)

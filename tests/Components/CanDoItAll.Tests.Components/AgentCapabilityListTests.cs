@@ -11,13 +11,13 @@ public sealed class AgentCapabilityListTests
     [Fact]
     public void List_renders_attached_and_unattached_tools_skills_and_mcp_entries()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         var tool = CreateCapability(CapabilityKind.Tool, "Repository tool", "repo.exe", CapabilityProofStatus.NotRun);
         var skill = CreateCapability(CapabilityKind.Skill, "Review skill", "inline://review", CapabilityProofStatus.Verified);
         var mcp = CreateCapability(CapabilityKind.McpServer, "Browser MCP", "npx", CapabilityProofStatus.PendingReview);
 
-        var cut = context.RenderComponent<AgentCapabilityList>(parameters => parameters
+        var cut = context.Render<AgentCapabilityList>(parameters => parameters
             .Add(component => component.Items, [tool, skill, mcp])
             .Add(component => component.AttachedCapabilityIds, new[] { skill.Id })
             .Add(component => component.AssignmentRequested, _ => { })
@@ -51,14 +51,14 @@ public sealed class AgentCapabilityListTests
     [Fact]
     public void List_routes_typed_callbacks_and_honors_verification_availability()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         var capability = CreateCapability(CapabilityKind.Tool, "Attached tool", "tool.exe", CapabilityProofStatus.NotRun);
         Guid? assignedId = null;
         Guid? verifiedId = null;
         Guid? detailsId = null;
 
-        var cut = context.RenderComponent<AgentCapabilityList>(parameters => parameters
+        var cut = context.Render<AgentCapabilityList>(parameters => parameters
             .Add(component => component.Items, [capability])
             .Add(component => component.AttachedCapabilityIds, new[] { capability.Id })
             .Add(component => component.AssignmentRequested, id => assignedId = id)
@@ -74,7 +74,7 @@ public sealed class AgentCapabilityListTests
         Assert.Equal(capability.Id, verifiedId);
         Assert.Equal(capability.Id, detailsId);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.CanVerify, false));
 
         Assert.True(cut.Find("[data-testid='callback-capability-verify']").HasAttribute("disabled"));

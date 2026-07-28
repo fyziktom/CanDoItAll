@@ -35,7 +35,7 @@ Use an existing driver when possible:
 | --- | --- |
 | Plain HTTP context query and health | `Http` |
 | MCP remote-HTTP context query and optional operation status | `Mcp` |
-| Native Cognitive Memory remote service | `NativeRemote` |
+| Native Cognitive Memory remote service | `NativeRemote` through `src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory` |
 | Deterministic tests and demos | `Mock` |
 
 Add a new driver only when the transport cannot be represented by the existing HTTP or MCP drivers. A new driver must implement the narrow driver interfaces it actually supports and must be registered explicitly.

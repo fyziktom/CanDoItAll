@@ -34,7 +34,7 @@ public sealed class SettingsPageDataSourcesTests
         harness.Context.Services.GetRequiredService<NavigationManager>()
             .NavigateTo("http://localhost/settings?tab=data-sources");
 
-        var cut = harness.Context.RenderComponent<SettingsPage>();
+        var cut = harness.Context.Render<SettingsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -71,7 +71,7 @@ public sealed class SettingsPageDataSourcesTests
         harness.Context.Services.GetRequiredService<NavigationManager>()
             .NavigateTo("http://localhost/settings?tab=data-sources");
 
-        var cut = harness.Context.RenderComponent<SettingsPage>();
+        var cut = harness.Context.Render<SettingsPage>();
 
         cut.WaitForAssertion(() =>
         {
@@ -89,7 +89,7 @@ public sealed class SettingsPageDataSourcesTests
         harness.Context.Services.GetRequiredService<NavigationManager>()
             .NavigateTo("http://localhost/settings?tab=data-sources");
 
-        var cut = harness.Context.RenderComponent<SettingsPage>();
+        var cut = harness.Context.Render<SettingsPage>();
 
         cut.WaitForAssertion(() =>
         {

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Tests.Components;
 
-public sealed class AppTabStripTests : TestContext
+public sealed class AppTabStripTests : BunitContext
 {
     [Fact]
     public void Renders_state_indicators_and_invokes_actions()
@@ -14,7 +14,7 @@ public sealed class AppTabStripTests : TestContext
         var movedRight = string.Empty;
         var toggledSleep = string.Empty;
 
-        var cut = RenderComponent<AppTabStrip>(parameters => parameters
+        var cut = Render<AppTabStrip>(parameters => parameters
             .Add(component => component.Items,
             [
                 new WorkbenchTabState("projects", "Projects", "/projects", IsPinned: true, IsSleeping: true),
@@ -53,7 +53,7 @@ public sealed class AppTabStripTests : TestContext
             .Select(index => new WorkbenchTabState($"tab-{index}", $"Tab {index}", $"/tab-{index}"))
             .ToArray();
 
-        var cut = RenderComponent<AppTabStrip>(parameters => parameters
+        var cut = Render<AppTabStrip>(parameters => parameters
             .Add(component => component.Items, tabs)
             .Add(component => component.ActiveTabId, "tab-1"));
 
@@ -75,7 +75,7 @@ public sealed class AppTabStripTests : TestContext
             new WorkbenchTabState("settings", "Settings", "/settings")
         };
 
-        var cut = RenderComponent<AppTabStrip>(parameters => parameters
+        var cut = Render<AppTabStrip>(parameters => parameters
             .Add(component => component.Items, [new WorkbenchTabState("dashboard", "Dashboard", "/")])
             .Add(component => component.RecentTabs, recentTabs)
             .Add(component => component.ClearRecent, EventCallback.Factory.Create(this, () => cleared = true)));

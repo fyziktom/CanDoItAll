@@ -234,7 +234,8 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
 
         Assert.Contains("tests/Memory/CanDoItAll.Memory.Tests", doc, StringComparison.Ordinal);
         Assert.Contains(nameof(GenericMockMemoryProviderFixture), doc, StringComparison.Ordinal);
-        Assert.Contains("CognitiveMemoryModuleRegistrationTests.cs", doc, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.CognitiveMemory repository", doc, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Memory.Drivers.CognitiveMemory", doc, StringComparison.Ordinal);
         Assert.Contains(nameof(HostCompositionDependencyRemovalTests), doc, StringComparison.Ordinal);
     }
 

@@ -17,7 +17,7 @@ public sealed class AgentCatalogPanelTests
     [Fact]
     public void Agent_selection_card_renders_actions_outside_the_selection_button()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         RenderFragment actions = builder =>
         {
@@ -27,7 +27,7 @@ public sealed class AgentCatalogPanelTests
             builder.CloseElement();
         };
 
-        var cut = context.RenderComponent<AgentSelectionCard>(parameters => parameters
+        var cut = context.Render<AgentSelectionCard>(parameters => parameters
             .Add(component => component.Agent, CreateAgent(Guid.NewGuid(), "Agent", string.Empty))
             .Add(component => component.Actions, actions));
 
@@ -40,7 +40,7 @@ public sealed class AgentCatalogPanelTests
     {
         const string longName = "A deliberately long enterprise agent name for truncation";
         const string longTag = "governance-classification-that-needs-truncation";
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         var agent = CreateAgent(Guid.NewGuid(), longName, string.Empty) with
         {
@@ -48,7 +48,7 @@ public sealed class AgentCatalogPanelTests
             Summary = "A complete summary that remains available through the shared tooltip service."
         };
 
-        var cut = context.RenderComponent<AgentSelectionCard>(parameters => parameters
+        var cut = context.Render<AgentSelectionCard>(parameters => parameters
             .Add(component => component.Agent, agent)
             .Add(component => component.CenterContent, true)
             .Add(component => component.EnterpriseLayout, true)
@@ -86,7 +86,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(hrAgent);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedAgent, hrAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -119,7 +119,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(curator);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -151,7 +151,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(curator);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -182,7 +182,7 @@ public sealed class AgentCatalogPanelTests
         var launcher = new RecordingAgentChatLauncher(schedulerAgent);
         using var context = CreateCatalogTestContext(launcher);
 
-        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { spoofedAgent, schedulerAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -206,7 +206,7 @@ public sealed class AgentCatalogPanelTests
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
         using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(hrAgent));
 
-        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { hrAgent })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -240,7 +240,7 @@ public sealed class AgentCatalogPanelTests
         AgentDefinition? selected = null;
         using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(first));
 
-        var cut = context.RenderComponent<AgentCatalogPanel>(parameters => parameters
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
             .Add(component => component.InitialAgents, new[] { first, second })
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
@@ -255,9 +255,9 @@ public sealed class AgentCatalogPanelTests
         cut.WaitForAssertion(() => Assert.Same(second, selected));
     }
 
-    private static TestContext CreateCatalogTestContext(IAgentChatLauncher launcher)
+    private static BunitContext CreateCatalogTestContext(IAgentChatLauncher launcher)
     {
-        var context = new TestContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(

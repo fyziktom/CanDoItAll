@@ -12,13 +12,13 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public void Provider_updates_one_scope_replaces_sources_and_releases_all_leases()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         var initialSurface = CreateSurface("projects", "portfolio", "cards", "/projects");
         var initialFragment = CreateFragment("projects.filters", "Search: none");
 
-        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+        var cut = context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
             .Add(component => component.Surface, initialSurface)
             .Add(component => component.Fragments, [initialFragment]));
 
@@ -26,7 +26,7 @@ public sealed class AgentChatContextSurfaceProviderTests
         Assert.Equal("cards", initial.Scope.SurfacePosition?.View);
         Assert.Equal("Search: none", Assert.Single(initial.Fragments).Content);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "projects",
                 "portfolio",
@@ -37,7 +37,7 @@ public sealed class AgentChatContextSurfaceProviderTests
 
         Assert.Equal(initial.Version, registry.Capture()?.Version);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "projects",
                 "portfolio",
@@ -52,7 +52,7 @@ public sealed class AgentChatContextSurfaceProviderTests
         Assert.Equal("files", updated.Scope.SurfacePosition?.View);
         Assert.Equal("Search: machine", Assert.Single(updated.Fragments).Content);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "resources",
                 "resources",
@@ -74,7 +74,7 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public void Provider_rejects_duplicate_contributor_ids()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddSingleton<IAgentChatContextRegistry>(
             new AgentChatContextRegistry(TimeProvider.System));
         var fragments = new[]
@@ -84,7 +84,7 @@ public sealed class AgentChatContextSurfaceProviderTests
         };
 
         Assert.Throws<InvalidOperationException>(() =>
-            context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+            context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
                 .Add(component => component.Surface, CreateSurface(
                     "scheduler",
                     "scheduler",
@@ -96,12 +96,12 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public void Provider_publishes_and_updates_atomic_contributor_publications()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         var initialAttachment = new SurfaceContextAttachment("initial");
 
-        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+        var cut = context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "processes",
                 "processes",
@@ -125,7 +125,7 @@ public sealed class AgentChatContextSurfaceProviderTests
         Assert.Same(initialAttachment, capturedInitialAttachment);
 
         var updatedAttachment = new SurfaceContextAttachment("updated");
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "processes",
                 "processes",
@@ -159,12 +159,12 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public void Provider_rejects_mixed_atomic_publications_and_legacy_fragments()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         context.Services.AddSingleton<IAgentChatContextRegistry>(
             new AgentChatContextRegistry(TimeProvider.System));
 
         Assert.Throws<InvalidOperationException>(() =>
-            context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+            context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
                 .Add(component => component.Surface, CreateSurface(
                     "processes",
                     "processes",
@@ -185,11 +185,11 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public void Provider_transitions_between_legacy_and_atomic_publication_ownership()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
 
-        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+        var cut = context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "processes",
                 "processes",
@@ -202,7 +202,7 @@ public sealed class AgentChatContextSurfaceProviderTests
         var legacy = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
         Assert.True(legacy.Attachments.IsEmpty);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "processes",
                 "processes",
@@ -224,7 +224,7 @@ public sealed class AgentChatContextSurfaceProviderTests
         Assert.Equal("Atomic", Assert.Single(atomic.Fragments).Content);
         Assert.Single(atomic.Attachments);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, CreateSurface(
                 "processes",
                 "processes",
@@ -253,7 +253,7 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public void Provider_uses_attachment_fingerprints_and_stamps_as_atomic_equivalence_contract()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         var surface = CreateSurface(
@@ -263,7 +263,7 @@ public sealed class AgentChatContextSurfaceProviderTests
             "/processes");
         var initialAttachment = new SurfaceContextAttachment("initial");
 
-        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+        var cut = context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
             .Add(component => component.Surface, surface)
             .Add(
                 component => component.ContributorPublications,
@@ -275,7 +275,7 @@ public sealed class AgentChatContextSurfaceProviderTests
 
         var initial = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
         var equivalentPayload = new SurfaceContextAttachment("different-instance");
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, surface)
             .Add(
                 component => component.ContributorPublications,
@@ -302,7 +302,7 @@ public sealed class AgentChatContextSurfaceProviderTests
             0,
             1,
             TimeSpan.Zero);
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, surface)
             .Add(
                 component => component.ContributorPublications,
@@ -323,7 +323,7 @@ public sealed class AgentChatContextSurfaceProviderTests
     [Fact]
     public async Task Access_state_override_blocks_capture_during_transition_and_recovers_same_scope()
     {
-        using var context = new TestContext();
+        using var context = new BunitContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         var surface = CreateSurface("resources", "resources", "registry", "/resources");
@@ -339,7 +339,7 @@ public sealed class AgentChatContextSurfaceProviderTests
                 navigation.BaseUri,
                 navigation.Uri));
 
-        var cut = context.RenderComponent<AgentChatContextSurfaceProvider>(parameters => parameters
+        var cut = context.Render<AgentChatContextSurfaceProvider>(parameters => parameters
             .Add(component => component.Surface, surface)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Loading));
 
@@ -349,7 +349,7 @@ public sealed class AgentChatContextSurfaceProviderTests
             async () => await registry.CaptureAsync());
         Assert.Equal(AgentChatContextAccessState.Loading, unavailable.AccessState);
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(component => component.Surface, surface)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
 

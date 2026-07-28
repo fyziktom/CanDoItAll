@@ -37,7 +37,7 @@ public sealed class ProjectStructurePageWebPreviewTests
                     }
                 })));
 
-        var page = harness.Context.RenderComponent<ProjectStructurePage>(parameters => parameters
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(page);
 
@@ -80,7 +80,7 @@ public sealed class ProjectStructurePageWebPreviewTests
                     }
                 })));
 
-        var page = harness.Context.RenderComponent<ProjectStructurePage>(parameters => parameters
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(page);
         await page.InvokeAsync(() => canvasWorkbench.Instance.NodeOpened.InvokeAsync(linkNode.Id));
@@ -118,7 +118,7 @@ public sealed class ProjectStructurePageWebPreviewTests
         return result.Value;
     }
 
-    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedFragment page)
+    private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(IRenderedComponent<IComponent> page)
     {
         IRenderedComponent<CanvasWorkbench>? canvasWorkbench = null;
         page.WaitForAssertion(() => canvasWorkbench = page.FindComponent<CanvasWorkbench>());
