@@ -54,12 +54,12 @@ Owned by SB03.
 Goals:
 
 - prove default approval binding is active on every provider path;
-- add request-specific approval decisions;
 - remove random approval ID fallback;
-- version compatibility state;
-- implement preferred legacy reissue path;
-- implement a temporary bridge only if required;
-- prove exact-once and attack resistance;
+- require stable persisted request and call IDs;
+- atomically persist the exact 1.15 MAF session and complete application pending
+  snapshot;
+- drain or reissue pre-1.15/incompatible approvals;
+- prove native binding, at-most-once consumption, and attack resistance;
 - prove scrubbed session persistence retains binding state.
 
 A2 is a hard security gate.

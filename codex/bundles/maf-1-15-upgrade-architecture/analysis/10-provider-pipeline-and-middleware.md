@@ -81,7 +81,10 @@ Inspect every `ChatClientAgentRunOptions.ChatClientFactory` or equivalent transf
 
 ## Session Invariant
 
-The session used to record the approval request must be the session restored for the approval response. An equivalent transcript is insufficient for native binding unless the original request is intentionally replayed through the trusted legacy bridge.
+The session used to record the approval request must be the session restored for
+the approval response. An equivalent transcript is insufficient for native
+binding. If exact native 1.15 serialized session state is unavailable, reject the
+continuation and drain or reissue the approval.
 
 ## AIAgent Builder Interaction
 

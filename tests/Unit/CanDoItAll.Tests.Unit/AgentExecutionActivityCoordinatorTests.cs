@@ -190,6 +190,35 @@ public sealed class AgentExecutionActivityCoordinatorTests
     }
 
     [Fact]
+    public async Task Report_allows_native_approval_wait_after_session_persistence()
+    {
+        var context = CreateContext();
+
+        using var operation = Admit(context);
+        operation.Report(
+            AgentExecutionActivityPhase.PersistingResult,
+            "Persisting native approval binding state.");
+        operation.Report(
+            AgentExecutionActivityPhase.AwaitingApproval,
+            "Approval required.");
+        operation.Suspend("Operation suspended for approval.");
+
+        var events = await ReadEventsAsync(context);
+        Assert.Equal(
+            new[]
+            {
+                AgentExecutionActivityPhase.Accepted,
+                AgentExecutionActivityPhase.PersistingResult,
+                AgentExecutionActivityPhase.AwaitingApproval,
+                AgentExecutionActivityPhase.AwaitingApproval
+            },
+            events.Select(item => item.Event.Phase));
+        Assert.Equal(
+            AgentExecutionActivityTerminalOutcome.Suspended,
+            events[^1].Event.TerminalOutcome);
+    }
+
+    [Fact]
     public async Task Report_rejects_backward_transition_without_appending_it()
     {
         var context = CreateContext();

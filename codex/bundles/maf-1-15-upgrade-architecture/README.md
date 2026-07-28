@@ -16,7 +16,11 @@ This bundle is an execution-ready coordination package for upgrading CanDoItAll 
 - Inspected head: `59f558bc866d39d438b53f5f743dd5e87c2a6253`
 - Bundle preparation date: `2026-07-27`
 - Preparation status: `Prepared`
-- Implementation status: `Not started`
+- Implementation status: `Implemented and validated for the requested development scope`
+
+Production canary/rollback execution and adoption of a new inbound A2A endpoint
+remain outside this local compatibility upgrade. See
+`reviews/01-execution-report.md` for the exact gate status and proof.
 
 The repository evidence in this bundle is pinned to the inspected head. Codex must compare the actual working-tree head to this SHA before editing and record any drift.
 
@@ -56,8 +60,8 @@ The migration is complete only when all of the following are true:
 
 1. The application creates `ChatClientAgentOptions` without opting out of default middleware. MAF 1.15 therefore introduces approval-response binding by default unless a provider factory replaces or bypasses that pipeline.
 2. MAF 1.13 made bypassing approval requests for non-approval-required tools opt-in. MAF 1.15 enables that behavior by default and exposes only a disable switch. This is a behavior change even when the code still compiles.
-3. CanDoItAll reconstructs pending approval requests from its own persisted record and sends only approval responses on continuation. A legacy 1.13 serialized session does not contain the new MAF binding state, so a direct continuation can be ignored.
-4. `HandoffDepthGuardAgent.RunCoreAsync` rebuilds a non-streaming response from streaming updates via `ToAgentResponse()`. That bypasses MAF 1.15's non-streaming terminal-workflow-output projection.
+3. In the pre-upgrade implementation, CanDoItAll reconstructs pending approval requests from its own persisted record and sends only approval responses on continuation. This behavior is characterization evidence, not the target design. A legacy 1.13 serialized session does not contain the new MAF binding state, so it must be drained or reissued rather than continued through reconstructed state.
+4. `HandoffDepthGuardAgent.RunCoreAsync` now delegates to the inner 1.15 non-streaming path so the complete response remains intact. Production depth enforcement and terminal projection are owned by the streaming runtime; direct depth observation is post-run characterization only.
 5. The primary runtime also consumes streaming updates and merges them independently. The terminal-output fix must therefore be validated on the real CanDoItAll streaming path, not assumed to apply automatically.
 6. CanDoItAll file tools are custom workspace services and separate CanDoItAll.FileTools packages. The Harness `FileAccessStore` opt-in change has no confirmed direct impact, but a full branch grep remains mandatory.
 7. A2A is registered in the common hosting composition and uses preview MAF packages. The exact matching 1.15 preview build must be used.
@@ -96,17 +100,17 @@ Do not skip progression gates. A later subbundle cannot compensate for missing 1
 Run the platform-appropriate discovery script from the repository root before editing:
 
 ```powershell
-./.codex/bundles/maf-1-15-upgrade-architecture/machine/grep-discovery.ps1
+./codex/bundles/maf-1-15-upgrade-architecture/machine/grep-discovery.ps1
 ```
 
 or:
 
 ```bash
-bash ./.codex/bundles/maf-1-15-upgrade-architecture/machine/grep-discovery.sh
+bash ./codex/bundles/maf-1-15-upgrade-architecture/machine/grep-discovery.sh
 ```
 
 When using this ZIP outside the repository, copy its root folder to:
 
 ```text
-.codex/bundles/maf-1-15-upgrade-architecture
+codex/bundles/maf-1-15-upgrade-architecture
 ```

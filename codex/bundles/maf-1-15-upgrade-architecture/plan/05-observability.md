@@ -34,7 +34,7 @@ approval.compatibility_path
 approval.request_count
 approval.decision_count
 approval.replay_rejected
-approval.fingerprint_result
+approval.pending_snapshot_result
 tool.policy_result
 tool.requires_approval
 workspace.scope_kind
@@ -71,10 +71,11 @@ a2a.operation
 - response rebound;
 - unknown/replay/cross-session rejected;
 - legacy reissue;
-- compatibility bridge used;
+- incompatible native state rejected;
 - exact tool invocation completed/failed.
 
-Never log unrestricted arguments. Log a fingerprint and approved display summary.
+Never log unrestricted arguments or serialized session state. Log stable request/call
+IDs only under existing identifier-redaction policy and an approved display summary.
 
 ### Workflow/handoff
 
@@ -108,7 +109,7 @@ Never log unrestricted arguments. Log a fingerprint and approved display summary
 
 Alert on:
 
-- any bound approval executing a different fingerprint;
+- any bound approval executing a tool call other than the restored native request;
 - unknown approval execution count > 0;
 - duplicate mutation execution;
 - cross-session approval match;
@@ -117,7 +118,7 @@ Alert on:
 - response/history semantic mismatch;
 - workspace escape attempt succeeding;
 - mixed 1.13/1.15 MAF assemblies;
-- legacy bridge usage after migration deadline.
+- any attempt to reconstruct legacy approval state.
 
 Track trends:
 
@@ -134,7 +135,7 @@ Track trends:
 Store redacted logs under:
 
 ```text
-.codex/bundles/maf-1-15-upgrade-architecture/proof/<subbundle>/telemetry/
+codex/bundles/maf-1-15-upgrade-architecture/proof/<subbundle>/telemetry/
 ```
 
 Include field names and representative values, but no secrets or raw sensitive tool arguments.

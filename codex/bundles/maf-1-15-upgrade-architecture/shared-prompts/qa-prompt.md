@@ -22,15 +22,19 @@ Review dimensions:
 3. Approval security
 - binding is active on every provider path;
 - custom chat-client stacks do not bypass binding;
-- decisions target explicit approval IDs;
+- decisions are admitted only for the exact complete current server-held pending
+  snapshot;
+- stable persisted request and call IDs are preserved;
 - server-held request is authoritative;
 - missing/random IDs fail closed;
 - substituted tool/arguments are rebound or rejected;
 - unknown, replayed, duplicate, stale, and cross-session approvals execute nothing;
-- legacy 1.13 state is reissued or handled by a controlled expiring bridge;
+- legacy 1.13/incompatible state is drained or reissued, never reconstructed;
+- no private-JSON classifier, per-ID migration state, approval fingerprint
+  layer, or compatibility bridge was introduced;
 - scrubbed serialized state retains binding data;
 - function and MCP shapes are tested;
-- one boolean cannot silently approve newly arrived or unrelated requests.
+- a changed or partial pending snapshot cannot receive an old decision.
 
 4. Mixed-tool behavior
 - parity phase explicitly disables new default bypass;

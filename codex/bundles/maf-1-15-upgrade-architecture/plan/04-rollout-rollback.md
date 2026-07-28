@@ -17,7 +17,6 @@ Recommended flags:
 
 ```text
 Maf115ApprovalNotRequiredBypassing
-Maf115LegacyApprovalBridge
 Maf115WorkflowTerminalProjection
 Maf115SessionCompatibilityDiagnostics
 ```
@@ -26,7 +25,7 @@ Defaults for first deployment:
 
 - approval response binding: always enabled, not a flag;
 - approval-not-required bypass: disabled for parity;
-- legacy bridge: disabled unless operationally required;
+- legacy approvals: drain/reissue only; no reconstruction bridge;
 - terminal projection: enabled only after SB04 proof, otherwise deployment blocked;
 - diagnostics: enabled.
 
@@ -106,7 +105,7 @@ Track:
 
 - approvals reissued;
 - approvals expired;
-- approvals bridged;
+- incompatible native approval continuations rejected;
 - approvals executed;
 - duplicate/replay attempts rejected;
 - sessions restored natively;
@@ -122,7 +121,7 @@ Every mutation must be traceable to one run, one approval request where required
 The rollout is complete only after:
 
 - legacy pending approval count is zero;
-- temporary bridge is disabled and scheduled for removal;
+- no legacy approval reconstruction bridge exists;
 - canary and full cohort metrics are stable;
 - rollback rehearsal evidence is attached;
 - state backup retention policy is recorded;

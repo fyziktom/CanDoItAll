@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\..\MicrosoftAgentFramework.Packages.props" />
+
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
@@ -23,10 +25,10 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
-    <PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
-    <PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.13.0-preview.260703.1" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
-    <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="$(MicrosoftAgentsAIStableVersion)" />
+    <PackageReference Include="Microsoft.Agents.AI.A2A" Version="$(MicrosoftAgentsAIPreviewVersion)" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="$(MicrosoftAgentsAIStableVersion)" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="$(MicrosoftAgentsAIStableVersion)" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.0" />
     <PackageReference Include="ModelContextProtocol" Version="1.1.0" />

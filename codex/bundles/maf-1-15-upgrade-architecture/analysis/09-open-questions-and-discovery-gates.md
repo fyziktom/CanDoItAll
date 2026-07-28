@@ -9,8 +9,8 @@ Every question below must be resolved in SB01 or explicitly assigned to a later 
 | Q03 | Is `MafAgentResponseSnapshotter` sorting, grouping, cloning, or assigning IDs? | Could undo MessageMerger fixes | Locate class and characterize each transform |
 | Q04 | Does the provider streaming runner invoke `AIAgent.RunStreamingAsync` with the same restored session? | Binding depends on active `AgentRunContext.Session` | Inspect runner and add middleware-presence test |
 | Q05 | Does the attachment scrubber preserve arbitrary state-bag entries? | New approval binding state must survive | Serialize/scrub/deserialize fixture |
-| Q06 | Are pending approval records integrity-protected and transactionally consumed? | Legacy bridge and replay security | Inspect persistence model/store and concurrent continuation |
-| Q07 | Can more than one pending approval exist despite `AllowMultipleToolCalls = false`? | Current boolean applies to all | Provider/MCP/mixed response tests |
+| Q06 | Are the exact serialized MAF session and application pending snapshot persisted atomically and consumed at most once? | Native binding and replay security | Inspect persistence model/store and concurrent continuation |
+| Q07 | Can more than one pending approval exist despite `AllowMultipleToolCalls = false`? | The current decision must be bound to the complete unchanged snapshot | Provider/MCP/mixed response tests |
 | Q08 | Are all approval request IDs stable and non-null for function and MCP calls? | Random fallback must be removed | Capture real/fake provider fixtures |
 | Q09 | What exact workflow output event identifies a terminal handoff result through public APIs? | Needed for streaming authoritative projection | Inspect MAF 1.15 APIs and raw events in fixture |
 | Q10 | Can handoff depth be enforced at the transition/tool boundary without rebuilding responses? | Preferred wrapper simplification | Inspect handoff builder/tool middleware extension points |

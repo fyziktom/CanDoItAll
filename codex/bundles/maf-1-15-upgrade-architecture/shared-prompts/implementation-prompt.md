@@ -31,8 +31,12 @@ Non-negotiable architecture constraints:
 - Do not disable ApprovalResponseBindingChatClient.
 - Do not trust client-supplied tool name or arguments during approval.
 - Do not generate random IDs for missing approval request IDs.
-- Do not apply one batch boolean to approvals that are not explicitly identified.
+- Do not admit a decision unless it is atomically bound to the complete current
+  server-held pending snapshot.
 - Do not mutate opaque MAF session JSON as the normal migration mechanism.
+- Do not inspect private MAF JSON to build a compatibility classifier.
+- Do not add a per-ID migration DTO/state path, approval fingerprint layer, or
+  reconstructed compatibility bridge for this upgrade.
 - Do not run workflows twice to obtain streaming plus final output.
 - Do not sort streamed updates by timestamp.
 - Do not remove finalizer governance or application tool policy without specific failing-first proof.
@@ -50,9 +54,12 @@ Package target:
 Approval migration:
 - Keep binding enabled.
 - Preserve 1.13 mixed-tool behavior initially by setting DisableApprovalNotRequiredFunctionBypassing = true.
-- Add per-request approval decisions, stable IDs, exact-once consumption, versioned compatibility metadata, and fingerprints.
-- Prefer reissuing 1.13 pending approvals under 1.15.
-- Add a temporary trusted bridge only if required, feature-flagged, fingerprinted, one-time, audited, and expiring.
+- Preserve stable persisted request and call IDs and bind decisions atomically to
+  the complete current server-held pending snapshot.
+- Persist the exact serialized 1.15 MAF session and application pending snapshot
+  as one consistency boundary, then prove at-most-once native consumption.
+- Drain or reissue 1.13/incompatible pending approvals under 1.15; never
+  reconstruct them into executable binding state.
 - Prove function and MCP approval behavior across restart and attack cases.
 
 Workflow migration:

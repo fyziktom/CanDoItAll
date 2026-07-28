@@ -35,7 +35,70 @@ public sealed class MafAgentRuntimeHandoffTests
 
         Assert.Equal(1, entryAgent.InvocationCount);
         Assert.Equal(1, qaAgent.InvocationCount);
-        Assert.Contains("QA", response.Text, StringComparison.Ordinal);
+        Assert.Equal(5, response.Messages.Count);
+        Assert.IsType<FunctionCallContent>(Assert.Single(response.Messages[2].Contents));
+        Assert.IsType<FunctionResultContent>(Assert.Single(response.Messages[3].Contents));
+        Assert.Equal(
+            "QA processed: Implementer processed: Deliver the feature with QA artifacts.",
+            response.Messages[^1].Text);
+    }
+
+    [Fact]
+    public async Task Handoff_streaming_keeps_activity_but_projects_the_last_terminal_assistant_update()
+    {
+        var entryAgentId = Guid.NewGuid();
+        var qaAgentId = Guid.NewGuid();
+        var entryAgent = new ScriptedHandoffAgent(entryAgentId, "Implementer", handoffWhenAvailable: true);
+        var qaAgent = new ScriptedHandoffAgent(qaAgentId, "QA", handoffWhenAvailable: false);
+        var settings = CreateSettings(entryAgentId, qaAgentId, returnToPrevious: false);
+        var build = MafHandoffWorkflowFactory.Build(
+            settings,
+            new Dictionary<Guid, AIAgent>
+            {
+                [entryAgentId] = entryAgent,
+                [qaAgentId] = qaAgent
+            },
+            entryAgentId,
+            "handoff-streaming-test",
+            InProcessExecution.Lockstep);
+        var session = await build.Agent.CreateSessionAsync();
+        var updates = new List<AgentResponseUpdate>();
+
+        await foreach (var update in build.Agent.RunStreamingAsync(
+                           "Deliver the feature with QA artifacts.",
+                           session))
+        {
+            updates.Add(update);
+        }
+
+        var terminalUpdates = updates
+            .Where(build.IsTerminalResponseUpdate)
+            .ToList();
+        var terminalUpdate = terminalUpdates[^1];
+        var activityResponse = updates
+            .Select(MafAgentResponseSnapshotter.SnapshotUpdate)
+            .ToAgentResponse();
+        var projectedResponse = MafRuntimeResponseAssembler.ProjectTerminalResponse(
+            activityResponse,
+            MafAgentResponseSnapshotter.SnapshotUpdate(terminalUpdate));
+
+        Assert.Contains(
+            updates,
+            update => update.Text.StartsWith("Implementer processed:", StringComparison.Ordinal));
+        Assert.True(terminalUpdates.Count > 1);
+        var terminalOutput = Assert.IsType<WorkflowOutputEvent>(terminalUpdate.RawRepresentation);
+        Assert.IsAssignableFrom<IReadOnlyList<ChatMessage>>(terminalOutput.Data);
+        Assert.False(terminalOutput.IsIntermediate());
+        Assert.All(
+            updates.Where(update =>
+                update.RawRepresentation is AgentResponseUpdateEvent or AgentResponseEvent),
+            update => Assert.False(build.IsTerminalResponseUpdate(update)));
+        Assert.Equal(
+            "QA processed: Implementer processed: Deliver the feature with QA artifacts.",
+            projectedResponse.Text);
+        Assert.Contains("Implementer processed:", activityResponse.Text, StringComparison.Ordinal);
+        Assert.Equal(1, entryAgent.InvocationCount);
+        Assert.Equal(1, qaAgent.InvocationCount);
     }
 
     [Fact]
@@ -80,6 +143,35 @@ public sealed class MafAgentRuntimeHandoffTests
             () => guardedAgent.RunAsync("Trigger repeated handoffs.", session));
         Assert.Contains("maxHandoffDepth 1", exception.Message, StringComparison.Ordinal);
         Assert.Contains("handoff-depth-test", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Handoff_depth_guard_rejects_a_handoff_without_a_stable_call_id()
+    {
+        var guardedAgent = new HandoffDepthGuardAgent(
+            new ToolCallBurstAgent(string.Empty),
+            maxHandoffDepth: 1,
+            correlationId: "handoff-missing-id-test");
+        var session = await guardedAgent.CreateSessionAsync();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => guardedAgent.RunAsync("Trigger an invalid handoff.", session));
+
+        Assert.Contains("without a stable call identifier", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Handoff_depth_guard_counts_a_repeated_call_id_once()
+    {
+        var guardedAgent = new HandoffDepthGuardAgent(
+            new ToolCallBurstAgent("handoff-repeat", "handoff-repeat"),
+            maxHandoffDepth: 1,
+            correlationId: "handoff-repeat-test");
+        var session = await guardedAgent.CreateSessionAsync();
+
+        var response = await guardedAgent.RunAsync("Trigger a fragmented handoff.", session);
+
+        Assert.Equal(2, response.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>().Count());
     }
 
     private static AgentHandoffSettings CreateSettings(
@@ -224,6 +316,55 @@ public sealed class MafAgentRuntimeHandoffTests
             await Task.Yield();
             yield return new AgentResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("handoff-1", "handoff_to_1")]);
             yield return new AgentResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("handoff-2", "handoff_to_2")]);
+        }
+    }
+
+    private sealed class ToolCallBurstAgent(params string[] callIds) : AIAgent
+    {
+        protected override ValueTask<AgentSession> CreateSessionCoreAsync(CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult<AgentSession>(new ScriptedAgentSession());
+        }
+
+        protected override ValueTask<JsonElement> SerializeSessionCoreAsync(
+            AgentSession session,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(JsonSerializer.SerializeToElement(new { ok = true }, jsonSerializerOptions));
+        }
+
+        protected override ValueTask<AgentSession> DeserializeSessionCoreAsync(
+            JsonElement serializedState,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult<AgentSession>(new ScriptedAgentSession());
+        }
+
+        protected override Task<AgentResponse> RunCoreAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return RunCoreStreamingAsync(messages, session, options, cancellationToken)
+                .ToAgentResponseAsync(cancellationToken);
+        }
+
+        protected override async IAsyncEnumerable<AgentResponseUpdate> RunCoreStreamingAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.Yield();
+            foreach (var callId in callIds)
+            {
+                yield return new AgentResponseUpdate(
+                    ChatRole.Assistant,
+                    [new FunctionCallContent(callId, "handoff_to_target")]);
+            }
         }
     }
 

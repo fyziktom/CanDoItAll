@@ -6,7 +6,8 @@ The current branch repeats MAF versions in at least three project files. Stable 
 
 ## Decision
 
-Add two properties to `Directory.Build.props`:
+Add one MAF-owned props file at `src/MAF/MicrosoftAgentFramework.Packages.props` and
+explicitly import it from the three projects that own direct MAF references:
 
 ```xml
 <PropertyGroup>
@@ -16,6 +17,10 @@ Add two properties to `Directory.Build.props`:
 ```
 
 Use them only for direct MAF package references.
+
+This keeps component dependency versions out of repository-wide
+`Directory.Build.props`, in accordance with the CanDoItAll shared .NET ownership
+standard.
 
 ## Why Not Enable Central Package Management Now
 

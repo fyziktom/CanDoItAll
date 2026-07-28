@@ -183,16 +183,13 @@ internal sealed class MafRuntimeAgentFactory
             chatOptions.Tools = [.. capabilityState.Tools];
         }
 
-        var options = new ChatClientAgentOptions
-        {
-            Id = agent.Id.ToString("D"),
-            Name = agent.Name,
-            Description = agent.Summary,
-            ChatOptions = chatOptions,
-            AIContextProviders = capabilityState.ContextProviders,
-            ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null,
-            RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence
-        };
+        var options = MafChatClientAgentOptionsFactory.Create(chatOptions);
+        options.Id = agent.Id.ToString("D");
+        options.Name = agent.Name;
+        options.Description = agent.Summary;
+        options.AIContextProviders = capabilityState.ContextProviders;
+        options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null;
+        options.RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence;
 
         var runtimeAgent = CreateInstrumentedAgent(
             providerAgentFactory.CreateFrameworkAgent(effectiveProvider, model, options, frameworkManagedHistory, services),
@@ -307,7 +304,8 @@ internal sealed class MafRuntimeAgentFactory
                     .ToList(),
                 snapshotContextContributionTraces: () => participantBuilds
                     .SelectMany(item => item.SnapshotContextContributionTraces())
-                    .ToList());
+                    .ToList(),
+                isTerminalResponseUpdate: buildResult.IsTerminalResponseUpdate);
         }
         catch
         {

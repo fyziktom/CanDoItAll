@@ -7,8 +7,8 @@
 | R03 | Centralize stable and preview MAF version values without enabling repository-wide Central Package Management as an incidental migration. | Shared MSBuild properties are used by every direct MAF reference. |
 | R04 | Preserve live runtime isolation and the immutable preparation/preload architecture. | Concurrency tests prove no cross-run agent, session, tool, provider, MCP, context, or approval leakage. |
 | R05 | Keep MAF approval-response binding enabled and prove protection against forged, substituted, replayed, cross-session, and stale approvals. | Security tests pass before closure. |
-| R06 | Handle 1.13 sessions with pending approvals explicitly; do not silently continue them as if native 1.15 binding state existed. | State classifier and migration/reissue behavior are tested. |
-| R07 | Replace all-or-nothing approval continuation with decisions bound to explicit approval IDs, or prove only one approval can exist at every boundary. | API/model and tests demonstrate exact request selection. |
+| R06 | Handle 1.13 sessions with pending approvals explicitly; require native 1.15 serialized binding state and drain or reissue incompatible approvals without private-JSON classification or reconstruction. | Native-state rejection and drain/reissue behavior are tested. |
+| R07 | Admit an approval decision only for the complete current server-held pending snapshot, preserving stable request and call IDs and atomic persistence. | Existing model and tests demonstrate snapshot binding, changed-snapshot rejection, and at-most-once consumption. |
 | R08 | Remove random fallback generation of approval IDs for persisted/surfaced approval requests. | Missing request IDs fail closed with typed diagnostics. |
 | R09 | Preserve 1.13 mixed-tool approval semantics during the initial parity phase, then evaluate 1.15's enabled-by-default bypass in a separate controlled phase. | Explicit option and two-mode test matrix exist. |
 | R10 | Return the correct terminal handoff/workflow output on both direct and full runtime paths while retaining useful streaming activity. | Streaming/non-streaming comparison fixtures pass. |

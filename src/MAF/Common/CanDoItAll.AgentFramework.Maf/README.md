@@ -33,15 +33,20 @@ Framework references:
 Direct package references:
 
 - `Azure.AI.OpenAI (2.9.0-beta.1)`
-- `ExcelDataReader (3.8.0)`
-- `Microsoft.Agents.AI (1.8.0)`
-- `Microsoft.Agents.AI.A2A (1.8.0-preview.260528.1)`
-- `Microsoft.Agents.AI.OpenAI (1.8.0)`
-- `Microsoft.Agents.AI.Workflows (1.8.0)`
+- `Microsoft.Agents.AI ($(MicrosoftAgentsAIStableVersion))`
+- `Microsoft.Agents.AI.A2A ($(MicrosoftAgentsAIPreviewVersion))`
+- `Microsoft.Agents.AI.OpenAI ($(MicrosoftAgentsAIStableVersion))`
+- `Microsoft.Agents.AI.Workflows ($(MicrosoftAgentsAIStableVersion))`
+- `Microsoft.Extensions.AI (10.8.0)`
+- `Microsoft.Extensions.AI.OpenAI (10.8.0)`
 - `ModelContextProtocol (1.1.0)`
 - `OllamaSharp (5.4.25)`
+- `OpenAI (2.12.0)`
 - `OpenTelemetry.Api (1.15.3)`
-- `PdfPig (0.1.14)`
+
+The MAF release-train properties are owned by
+`src/MAF/MicrosoftAgentFramework.Packages.props`; stable packages are currently
+`1.15.0` and preview packages are `1.15.0-preview.260722.1`.
 
 ## Runtime Proof Slices
 
@@ -56,7 +61,7 @@ MAF runtime regression proof is tracked by named slices so process automation an
 | Approvals | `Runtime/MafRuntimeAgentFactory.cs` and capability policy code | Approval-required function wrapping, unusable approval-tool filtering, and policy-block static tests. |
 | MCP | `Runtime/Capabilities/McpCapabilityBuilder.cs` | Browser MCP result bounding tests that remove image payloads and cap snapshot text. |
 | A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Disabled endpoint, missing bearer secret, and invalid endpoint tests. |
-| Workflow mapping | `Runtime/Workflows/MafWorkflowCompiler.cs` and `Runtime/MafHandoffWorkflowFactory.cs` | MAF 1.8 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
+| Workflow mapping | `Runtime/Workflows/MafWorkflowCompiler.cs` and `Runtime/MafHandoffWorkflowFactory.cs` | MAF 1.15 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
 | Trace correlation | `Runtime/Workflows/MafWorkflowCompiler.cs` and execution response models | Tool invocation traces, finalizer invocation traces, workflow audit scope, and OpenTelemetry package presence source assertions. |
 
 ## Architecture Notes
@@ -69,7 +74,7 @@ Keep AgentFramework model contracts, provider-neutral orchestration, and provide
 - A concrete direct `ProcessAgentRuntimeToolProvider` is not present in the current source tree. Direct `processes_*` tools should not be documented as available until that provider is reintroduced with typed models, policy classifications, approval behavior, and tests.
 - Project-structure tools live in Workbench as `ProjectStructureAgentRuntimeToolProvider`; image-generation tools live in the AgentFramework module as `ImageGenerationAgentRuntimeToolProvider`. Do not reintroduce hard-coded first-party product tool attachment methods into MAF.
 - MAF process agents should use explicit process context, structured output/finalizer contracts, and approved project-structure/process API paths for run state. They should not infer process state from prompt text, template files, or database rows.
-- Adopted MAF 1.8 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
+- Adopted MAF 1.15 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
 - Deferred or guarded surfaces must fail predictably. A2A endpoints require valid configuration and bearer secrets, browser MCP payloads are bounded, incompatible approval continuations are rejected, and workflow handoff depth is guarded.
 - Process automation that records final delivery must produce current-run evidence and let Processes validate the artifact and transition. MAF finalizers should not mark process steps complete by prose-only conclusion text.
 

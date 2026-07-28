@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after A2`
+- `Complete`
 
 ## Objective
 
@@ -79,17 +79,17 @@ Make the terminal handoff/workflow output authoritative on the real streaming ru
 
 ## Acceptance Checklist
 
-- [ ] all paths characterized
-- [ ] terminal output authoritative
-- [ ] activity retained
-- [ ] no duplicate execution
-- [ ] depth enforced
-- [ ] tool/result adjacency
-- [ ] reasoning/text order
-- [ ] response/history contract
-- [ ] ordinary agents unaffected
-- [ ] finalizer semantics preserved
-- [ ] concurrency/disposal pass
+- [x] all paths characterized
+- [x] terminal output authoritative
+- [x] activity retained
+- [x] no duplicate execution
+- [x] depth enforced
+- [x] tool/result adjacency
+- [x] reasoning/text order
+- [x] response/history contract
+- [x] ordinary agents unaffected
+- [x] finalizer semantics preserved
+- [x] concurrency/disposal pass
 
 ## Proof Tier
 

@@ -12,3 +12,8 @@ This directory is reserved for evidence produced while executing **Approval bind
 - Hash cross-version fixtures and any persisted-state payloads.
 - Redact secrets and provider credentials.
 - Update `reviews/01-execution-report.md` with links to the final evidence.
+
+## Final Evidence
+
+- `final-validation.md` records the exact focused unit command/result and the
+  live approval persistence, rejection, and non-mutation proof.

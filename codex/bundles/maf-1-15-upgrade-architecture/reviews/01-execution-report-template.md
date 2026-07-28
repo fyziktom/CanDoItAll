@@ -110,8 +110,8 @@ Attach path or summary.
 | Duplicate | once | | | |
 | Replay | reject | | | |
 | Denial | no invoke | | | |
-| Legacy direct response-only | classify/reissue | | | |
-| Legacy bridge tamper | reject | | | |
+| Legacy direct response-only | reject native continuation; drain/reissue | | | |
+| Legacy reconstruction attempt | reject | | | |
 | MCP | exact original call | | | |
 | Scrubbed restart | exact original call | | | |
 
@@ -169,7 +169,7 @@ Attach path or summary.
 | Staging state copy | | | | |
 | No-pending canary | | | | |
 | Legacy reissue | | | | |
-| Optional bridge | | | | |
+| No reconstruction bridge | | | | |
 | Rollback | | | | |
 
 ## Commands Executed
@@ -192,7 +192,7 @@ Record exact commands and exit codes.
 
 - A4: `Pending`
 - Production mutation traffic safe: `Not evaluated`
-- Legacy bridge enabled: `Unknown`
+- Legacy reconstruction bridge absent: `Not evaluated`
 - Legacy approval backlog: `Unknown`
 - Rollback proven: `No`
 - Reviewer:

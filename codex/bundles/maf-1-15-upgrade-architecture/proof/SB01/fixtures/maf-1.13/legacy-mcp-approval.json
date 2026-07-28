@@ -1,0 +1,32 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "legacy-app-owned-mcp-approval",
+  "sessionId": "99999999-9999-4999-8999-999999999999",
+  "compatibility": {
+    "runtimeSessionKey": "conversation-002",
+    "serializedSessionStateJson": null,
+    "pendingApprovals": [
+      {
+        "approvalId": "approval-mcp-001",
+        "callId": "call-mcp-001",
+        "toolName": "fixture_read_document",
+        "toolKind": "mcp",
+        "details": "fixture-mcp-server",
+        "argumentsJson": "{\"path\":\"docs/input.md\"}"
+      }
+    ],
+    "autoApprovePendingToolCalls": false
+  },
+  "classification": {
+    "nativeFrameworkBindingStatePresent": false,
+    "legacyRecordAuthority": "display-and-audit-only",
+    "directResponseOnlyContinuationAllowedAfterUpgrade": false
+  },
+  "expectedTargetBehavior": {
+    "outcome": "approval-reissue",
+    "preserveServerName": true,
+    "preserveAuditRecord": true,
+    "executeLegacyRecordDirectly": false
+  }
+}

@@ -20,11 +20,12 @@ Must be true before handoff/session cleanup:
 
 - 1.15 binding is proven active for every provider path;
 - parity mixed-call behavior is explicit;
-- per-ID decisions implemented or strict one-request invariant proven;
+- decision admission is bound to the complete current server-held pending snapshot;
+- stable request/call IDs and atomic session/snapshot persistence are proven;
 - random ID fallback removed;
 - native 1.15 restart continuation works;
 - forged/substituted/replayed/cross-session tests pass;
-- legacy 1.13 state has a tested reissue/bridge outcome;
+- legacy 1.13/incompatible state has a tested drain/reissue outcome;
 - attachment scrub preserves binding state.
 
 Failure action: stop mutation-capable rollout.
@@ -55,6 +56,6 @@ Must be true:
 - warning suppressions narrowed and justified;
 - full build/test and real provider validation pass;
 - canary and rollback rehearsal pass;
-- legacy bridge disabled or has a dated removal plan and zero/known backlog;
+- legacy approval backlog is drained or reissued and no reconstruction bridge exists;
 - execution report maps every requirement to proof;
 - no hidden architecture exception remains.

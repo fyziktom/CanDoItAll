@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete`
 
 ## Objective
 
@@ -84,17 +84,17 @@ Establish a reproducible 1.13 baseline and capture every cross-version artifact 
 
 ## Acceptance Checklist
 
-- [ ] branch drift classified
-- [ ] discovery report complete
-- [ ] provider pipeline proven
-- [ ] package graph captured
-- [ ] warning baseline captured
-- [ ] 1.13 fixtures captured and sanitized
-- [ ] handoff path comparison captured
-- [ ] file-tool inventory captured
-- [ ] A2A baseline captured
-- [ ] rollback snapshot documented
-- [ ] A1 GO
+- [x] branch drift classified
+- [x] discovery report complete
+- [x] provider pipeline proven
+- [x] package graph captured
+- [x] warning baseline captured
+- [x] 1.13 fixtures captured and sanitized
+- [x] handoff path comparison captured
+- [x] file-tool inventory captured
+- [x] A2A baseline captured
+- [x] rollback snapshot documented
+- [x] A1 GO
 
 ## Proof Tier
 

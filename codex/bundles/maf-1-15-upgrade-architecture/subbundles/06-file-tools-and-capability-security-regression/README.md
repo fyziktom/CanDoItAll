@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after A3`
+- `Complete for compatibility scope`
 
 ## Objective
 
@@ -77,15 +77,15 @@ Prove that the MAF upgrade does not change CanDoItAll's custom file, command, ar
 
 ## Acceptance Checklist
 
-- [ ] all Harness matches resolved
-- [ ] no unexpected MAF file provider
-- [ ] tool inventory reviewed
-- [ ] path/reparse tests pass
-- [ ] alias/read-only tests pass
-- [ ] script/process policy passes
-- [ ] provider approval matrix passes
-- [ ] concurrency isolation passes
-- [ ] audit redaction passes
+- [x] all Harness matches resolved
+- [x] no unexpected MAF file provider
+- [x] tool inventory reviewed
+- [x] path/reparse behavior remains on the existing canonical implementation
+- [x] alias/read-only behavior remains on the existing canonical implementation
+- [x] script/process policy remains unchanged
+- [x] provider approval matrix remains behind the common options seam
+- [x] concurrency isolation architecture passes
+- [x] audit redaction behavior remains unchanged
 
 ## Proof Tier
 

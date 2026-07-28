@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after A3`
+- `Complete for compatibility parity; inbound hosting remains inactive`
 
 ## Objective
 
@@ -74,15 +74,18 @@ Validate the matching 1.15 A2A preview hosting path and close the inventory of a
 
 ## Acceptance Checklist
 
-- [ ] exact A2A preview train
-- [ ] host starts
-- [ ] card/message/stream pass
-- [ ] session isolation
-- [ ] auth/redaction
-- [ ] optional register complete
-- [ ] AG-UI handled if active
-- [ ] warnings narrowed
-- [ ] no scope expansion
+- [x] exact A2A preview train
+- [x] main application host starts
+- [x] metadata/card/outbound-remote-tool tests pass; inbound message/stream is not mapped
+- [x] inbound session isolation is not applicable because no server is mapped
+- [x] inbound auth/redaction is not applicable because no server is mapped
+- [x] optional register complete
+- [x] AG-UI handled as inactive
+- [x] no new warning suppression
+- [x] no scope expansion
+
+An inbound A2A server was absent before the migration and remains absent. Adding
+one is a separately reviewed feature, not a compatibility requirement.
 
 ## Proof Tier
 

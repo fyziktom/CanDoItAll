@@ -5,9 +5,9 @@ W03,Snapshot sorting/grouping/ID transforms,Audit/remove only duplicate,SB01/SB0
 W04,Required finalizer,Keep,SB04/SB08,Typed output and sequence tests
 W05,Finalizer repair,Keep until isolated proof,SB04/SB08,Failure taxonomy
 W06,Process-local approval cache,Optimization only,SB03,Restart/multi-instance
-W07,Approval request rehydration,Rewrite for binding,SB03,Native/legacy/function/MCP
+W07,Approval request rehydration,Require restored native binding; drain/reissue legacy,SB03,Native/function/MCP and legacy rejection
 W08,Random approval ID fallback,Remove,SB03,Missing ID fail closed
-W09,One bool for all approvals,Replace/constrain,SB03,Per-ID/mixed tests
+W09,One bool for a stale or partial snapshot,Constrain to exact current snapshot,SB03,Atomic snapshot and changed-snapshot tests
 W10,Always-false approval replay hook,Remove or implement,SB05,Behavior/static proof
 W11,conversationId JSON sniff,Keep parity; refactor later,SB05,Cross-version matrix
 W12,5s serialization timeout,Keep,SB05,Timeout/cancel telemetry

@@ -23,11 +23,12 @@
       "required": [
         "Approval response binding proven active on every provider path",
         "Initial mixed-approval parity behavior explicit",
-        "Per-ID decisions or strict one-request invariant proven",
+        "Decision admission is bound to the complete current server-held pending snapshot",
+        "Stable request and call IDs plus atomic session/snapshot persistence proven",
         "Random request-ID fallback removed",
         "Native 1.15 restart continuation passes",
         "Forged, substituted, replayed, and cross-session approvals fail closed",
-        "Legacy 1.13 pending approvals have a tested migration outcome",
+        "Legacy 1.13 pending approvals have a tested drain or reissue outcome without reconstruction",
         "Attachment scrub preserves approval binding state"
       ],
       "failure_action": "Stop mutation-capable rollout"
@@ -60,7 +61,7 @@
         "Warning suppressions are narrowed and justified",
         "Full build, tests, and real-provider validation pass",
         "Canary and rollback rehearsal pass",
-        "Legacy approval bridge is disabled or has a dated removal plan",
+        "No legacy approval reconstruction bridge exists and the backlog is drained or reissued",
         "Execution report maps every requirement to proof"
       ],
       "failure_action": "Do not complete the migration"

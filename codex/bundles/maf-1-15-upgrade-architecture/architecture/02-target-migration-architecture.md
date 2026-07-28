@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TB
-    VersionProps[Shared MAF stable and preview version properties]
+    VersionProps[MAF-scoped stable and preview version properties]
     Projects[MAF adapter, workflow adapter, hosting projects]
     VersionProps --> Projects
 
@@ -18,16 +18,10 @@ flowchart TB
     FICC --> AppPolicy[CanDoItAll invocation policy and audit]
     AppPolicy --> Tools[Per-run custom tools]
 
-    Build --> SessionCompatibility[Versioned application compatibility metadata]
-    SessionCompatibility --> Classifier[State classifier]
-    Classifier --> Native115[Native 1.15 continuation]
-    Classifier --> Legacy113[Legacy 1.13 reissue or temporary bridge]
-    Classifier --> ProviderManaged[Provider-managed continuation]
-    Classifier --> WorkflowCheckpoint[Native workflow checkpoint path]
-
-    Native115 --> Session[Restored MAF AgentSession]
-    Legacy113 --> Reissue[Reissue approval under 1.15]
-    Legacy113 -. controlled, expiring .-> Bridge[Trusted request plus response bridge]
+    Build --> Session[Opaque serialized 1.15 AgentSession]
+    Session --> BindingState[Framework-owned approval binding state]
+    BindingState --> AtomicDecision[Existing session-scoped approval decision]
+    AtomicDecision --> ExactCall[Original bound tool call]
 
     Build --> Workflow[Workflow-hosted handoff agent]
     Workflow --> ActivityProjection[Intermediate activity projection]
@@ -46,7 +40,9 @@ flowchart TB
 
 ### Package alignment
 
-Use two shared properties, not five repeated literals:
+Use two MAF-owned properties, not five repeated literals. They live in
+`src/MAF/MicrosoftAgentFramework.Packages.props` and are imported only by the three
+package-owning projects:
 
 ```text
 MicrosoftAgentsAIStableVersion = 1.15.0
@@ -57,8 +53,10 @@ MicrosoftAgentsAIPreviewVersion = 1.15.0-preview.260722.1
 
 - binding remains enabled;
 - old mixed-call behavior is preserved during parity through an explicit disable flag;
-- pending approvals become request-addressed;
-- legacy state is classified and cannot execute silently;
+- the existing atomic decision applies only to the current server-held pending snapshot;
+- stable request and call IDs are mandatory and never synthesized;
+- a 1.13 approval without native 1.15 binding state is drained or reissued, never
+  reconstructed from private JSON;
 - MAF binding and CanDoItAll policy form defense-in-depth.
 
 ### Workflow output
@@ -76,7 +74,10 @@ MicrosoftAgentsAIPreviewVersion = 1.15.0-preview.260722.1
 
 ### State and rollback
 
-- application compatibility metadata versions opaque MAF state;
 - no in-place mutation of framework JSON;
+- serialized native state remains opaque and is scrubbed only for request-scoped
+  `DataContent`;
+- rollback restores the quiesced pre-upgrade state snapshot; it does not deserialize
+  1.15 approval state under 1.13;
 - canary writes are measurable;
 - rollback has a tested state-store strategy.

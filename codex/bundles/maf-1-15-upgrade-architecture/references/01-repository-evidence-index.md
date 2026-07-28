@@ -10,7 +10,7 @@ Confidence labels:
 
 | Area | Repository path / symbol | Evidence | Finding | Confidence |
 |---|---|---|---|---|
-| Shared build | `Directory.Build.props` | current 19-line file | Shared properties can be added without repository-wide CPM | Confirmed |
+| MAF package train | `src/MAF/MicrosoftAgentFramework.Packages.props` | component-owned stable and preview properties | Three direct MAF package owners import one release train without repository-wide CPM | Confirmed |
 | Main packages | `src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`, package references | stable 1.13; A2A preview; MEAI 10.8 | Mixed stable/preview package train repeated as literals | Confirmed |
 | Workflow packages | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj` | stable core/workflows 1.13 | Must align through shared stable property | Confirmed |
 | Hosting packages | `src/MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj` | Hosting.A2A 1.13 preview | Must align to matching 1.15 preview | Confirmed |
@@ -22,8 +22,8 @@ Confidence labels:
 | Handoff wrapper | `HandoffDepthGuardAgent.RunCoreAsync` | streaming collection + `ToAgentResponse()` | bypasses inner non-streaming terminal projection | Confirmed |
 | Main output merge | `MafAgentRuntime` and `MafRuntimeResponseAssembler` | streaming updates merged by MEAI | full runtime requires separate terminal-output validation | Confirmed |
 | Pending approval cache | `MafApprovalContinuationDriver.pendingApprovals` | process-local concurrent dictionary | cache is not restart authority | Confirmed |
-| Approval rehydration | `MafApprovalContinuationDriver.RehydratePendingApprovals` | reconstructs function/MCP request | must integrate with 1.15 binding state | Confirmed |
-| Approval decisions | `CreateApprovalInputMessages(..., bool approved)` | same bool used for each request | request-specific API required or invariant proof | Confirmed |
+| Approval rehydration | `MafApprovalContinuationDriver.RehydratePendingApprovals` | reconstructs function/MCP request in the pre-upgrade path | native 1.15 serialized binding state must be authoritative; legacy reconstruction must be rejected | Confirmed |
+| Approval decisions | `CreateApprovalInputMessages(..., bool approved)` | same bool used for the complete pending set | bind atomically to the exact current server-held snapshot and reject snapshot changes | Confirmed |
 | Approval ID fallback | pending record mapping | request/call ID fallback to GUID | unsafe under exact binding; remove | Confirmed |
 | Session restore | `MafRuntimeSessionBuilder.BuildSessionAsync` | deserialize opaque MAF state; governed isolation | cross-version fixture required | Confirmed |
 | History mode | `MafRuntimeSessionBuilder` | provider/framework history selection and conversation ID detection | application policy remains | Confirmed |

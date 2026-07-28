@@ -39,15 +39,13 @@ Never set `DisableApprovalResponseBinding = true` as a compatibility shortcut.
 Preferred handling order:
 
 1. drain, cancel, expire, or reissue legacy pending approvals before deployment;
-2. if operationally impossible, create a short-lived compatibility bridge that:
-   - accepts only server-loaded persisted approval records;
-   - verifies session/run/approval fingerprint and state version;
-   - reconstructs both the trusted request and the response in correct order;
-   - binds the decision to one explicit approval ID;
-   - consumes the bridge record once;
-   - emits high-severity audit telemetry;
-   - is feature-flagged and removed after migration;
-3. reject all unversioned or integrity-ambiguous records.
+2. require the exact serialized native 1.15 session state before accepting an
+   approval continuation;
+3. reject all pre-1.15, missing, or incompatible native session state with a
+   typed drain/reissue outcome.
+
+Do not inspect or mutate private MAF JSON to classify compatibility. Do not
+reconstruct a legacy application record into executable 1.15 binding state.
 
 ## 2. Mixed Tool Calls Changed Default
 
@@ -95,8 +93,8 @@ After SB03 security proof, evaluate enabling the new default. Benefits:
 
 Required application changes:
 
-- decisions addressed by approval ID, not one boolean for all;
-- exact pending-count and mixed-call tests;
+- decisions admitted only for the exact complete current server-held pending snapshot;
+- exact pending-count, snapshot-change, and mixed-call tests;
 - state-bag persistence across restart;
 - no duplicate execution;
 - no hidden auto-approval of application-classified mutations.

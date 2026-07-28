@@ -17,7 +17,7 @@
       "paths": [
         "src/MAF/**",
         "tests/**",
-        ".codex/bundles/maf-1-15-upgrade-architecture/proof/SB01"
+        "codex/bundles/maf-1-15-upgrade-architecture/proof/SB01"
       ],
       "acceptance": [
         "No package edits before fixtures",
@@ -35,7 +35,7 @@
         "MAF115-001"
       ],
       "paths": [
-        "Directory.Build.props",
+        "src/MAF/MicrosoftAgentFramework.Packages.props",
         "src/MAF/**/*.csproj"
       ],
       "acceptance": [
@@ -82,7 +82,7 @@
     },
     {
       "id": "MAF115-005",
-      "title": "Implement request-specific approval decisions and exact-once state",
+      "title": "Preserve bound atomic approval continuation and exact-once state",
       "priority": "P0",
       "subbundle": "SB03",
       "depends_on": [
@@ -90,13 +90,14 @@
       ],
       "paths": [
         "MafApprovalContinuationDriver.cs",
-        "pending approval models/store/API/UI"
+        "MafRuntimeSessionPersistenceDriver.cs",
+        "existing pending approval snapshot"
       ],
       "acceptance": [
-        "Per-ID decisions",
+        "Stable request and call IDs",
         "No random fallback",
-        "Fingerprint/ownership validation",
-        "Transactional one-time consumption"
+        "Original call rebound from restored native state",
+        "Bound state consumed once"
       ]
     },
     {
@@ -108,13 +109,13 @@
         "MAF115-005"
       ],
       "paths": [
-        "session compatibility",
         "approval persistence",
-        "migration flags"
+        "deployment drain/reissue procedure",
+        "rollback consistency boundary"
       ],
       "acceptance": [
-        "Preferred reissue path",
-        "Bridge only if controlled",
+        "Drain or reissue pre-upgrade approvals",
+        "No private-state bridge",
         "No disabled binding",
         "Attack/restart tests pass",
         "A2 GO"

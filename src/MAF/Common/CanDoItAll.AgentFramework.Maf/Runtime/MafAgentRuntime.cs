@@ -341,7 +341,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces,
             runtimeBuild.SnapshotContextContributionTraces,
-            contextManifest);
+            contextManifest,
+            runtimeBuild.IsTerminalResponseUpdate);
 
         return AttachPreparedInputUsageObservations(response, preparedInput.UsageObservations);
     }
@@ -489,7 +490,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
             runtimeBuild.SnapshotFinalizerInvocations,
             runtimeBuild.SnapshotToolInvocationTraces,
             runtimeBuild.SnapshotContextContributionTraces,
-            contextManifest);
+            contextManifest,
+            runtimeBuild.IsTerminalResponseUpdate);
     }
 
     private async Task<AgentRuntimeResponse> ExecuteRunAsync(
@@ -513,9 +515,11 @@ public sealed class MafAgentRuntime : IAgentRuntime
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces,
         Func<IReadOnlyList<AgentContextContributionTrace>> snapshotContextContributionTraces,
-        AgentRuntimeContextAssemblyManifest contextManifest)
+        AgentRuntimeContextAssemblyManifest contextManifest,
+        Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate)
     {
         var updates = new List<AgentResponseUpdate>();
+        AgentResponseUpdate? lastTerminalResponseUpdate = null;
         var announcedStreaming = false;
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -550,6 +554,10 @@ public sealed class MafAgentRuntime : IAgentRuntime
         {
             var snapshot = MafAgentResponseSnapshotter.SnapshotUpdate(update);
             updates.Add(snapshot);
+            if (isTerminalResponseUpdate?.Invoke(update) == true)
+            {
+                lastTerminalResponseUpdate = snapshot;
+            }
 
             if (!announcedStreaming && !string.IsNullOrWhiteSpace(snapshot.Text))
             {
@@ -957,11 +965,16 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 }
             }
 
-            var response = updates.ToAgentResponse();
-            var approvalRequests = response.Messages
+            var activityResponse = updates.ToAgentResponse();
+            var approvalRequests = activityResponse.Messages
                 .SelectMany(message => message.Contents)
                 .OfType<ToolApprovalRequestContent>()
                 .ToList();
+            var response = approvalRequests.Count > 0
+                ? activityResponse
+                : MafRuntimeResponseAssembler.ProjectTerminalResponse(
+                    activityResponse,
+                    lastTerminalResponseUpdate);
 
             if (approvalRequests.Count > 0)
             {
@@ -1000,7 +1013,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     ResponseText: approvalContinuationDriver.ResolveResponseText(response, pendingApprovals),
                     InputTokens: MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.InputTokenCount),
                     OutputTokens: MafRuntimeResponseAssembler.ClampTokenCount(response.Usage?.OutputTokenCount),
-                    ToolCalls: MafRuntimeResponseAssembler.CountToolCalls(response),
+                    ToolCalls: MafRuntimeResponseAssembler.CountToolCalls(activityResponse),
                     RuntimeSessionKey: MafRuntimeResponseAssembler.ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey),
                     SerializedSessionStateJson: serializedSessionJson,
                     PendingApprovals: pendingApprovals)
@@ -1050,16 +1063,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
             agent.ConfigurationJson);
         MafFinalizerDriver.ConfigureRequiredFinalizerRepairChatOptions(chatOptions, policy, finalizerTool);
 
-        var repairOptions = new ChatClientAgentOptions
-        {
-            Id = agent.Id.ToString("D"),
-            Name = agent.Name,
-            Description = agent.Summary,
-            ChatOptions = chatOptions,
-            AIContextProviders = [],
-            ChatHistoryProvider = null,
-            RequirePerServiceCallChatHistoryPersistence = false
-        };
+        var repairOptions = MafChatClientAgentOptionsFactory.Create(chatOptions);
+        repairOptions.Id = agent.Id.ToString("D");
+        repairOptions.Name = agent.Name;
+        repairOptions.Description = agent.Summary;
+        repairOptions.AIContextProviders = [];
+        repairOptions.ChatHistoryProvider = null;
+        repairOptions.RequirePerServiceCallChatHistoryPersistence = false;
         var repairCapabilityState = new RuntimeCapabilityState();
         repairCapabilityState.Tools.Add(finalizerTool);
         return runtimeAgentFactory.CreateInstrumentedAgent(
@@ -1101,16 +1111,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 string.IsNullOrWhiteSpace(policy.OutputContract.SchemaDescription) ? null : policy.OutputContract.SchemaDescription);
         }
 
-        var repairOptions = new ChatClientAgentOptions
-        {
-            Id = agent.Id.ToString("D"),
-            Name = agent.Name,
-            Description = agent.Summary,
-            ChatOptions = chatOptions,
-            AIContextProviders = [],
-            ChatHistoryProvider = null,
-            RequirePerServiceCallChatHistoryPersistence = false
-        };
+        var repairOptions = MafChatClientAgentOptionsFactory.Create(chatOptions);
+        repairOptions.Id = agent.Id.ToString("D");
+        repairOptions.Name = agent.Name;
+        repairOptions.Description = agent.Summary;
+        repairOptions.AIContextProviders = [];
+        repairOptions.ChatHistoryProvider = null;
+        repairOptions.RequirePerServiceCallChatHistoryPersistence = false;
         return providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services);
     }
 
@@ -1178,6 +1185,11 @@ public sealed class MafAgentRuntime : IAgentRuntime
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
     {
+        if (finalizerMode != AgentFinalizerMode.Required)
+        {
+            return null;
+        }
+
         var finalizerInvocations = snapshotFinalizerInvocations();
         var toolInvocationTraces = snapshotToolInvocationTraces();
         var serializedResponse = MafRuntimeResponseAssembler.TryBuildRequiredFinalizerRuntimeResponse(

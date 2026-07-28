@@ -1531,14 +1531,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         string message,
         CancellationToken cancellationToken)
     {
-        var activityPhase = state switch
-        {
-            ExecutionState.Preparing => AgentExecutionActivityPhase.PreparingRuntime,
-            ExecutionState.Running => AgentExecutionActivityPhase.Streaming,
-            ExecutionState.WaitingOnTool => AgentExecutionActivityPhase.UsingTool,
-            ExecutionState.Persisting => AgentExecutionActivityPhase.PersistingResult,
-            _ => (AgentExecutionActivityPhase?)null
-        };
+        var activityPhase =
+            AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(
+                state,
+                phase);
         if (activityPhase.HasValue)
         {
             activityOperation.Report(

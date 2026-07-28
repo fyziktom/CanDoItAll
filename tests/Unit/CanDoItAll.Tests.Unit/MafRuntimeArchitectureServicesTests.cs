@@ -410,13 +410,13 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public void MafApprovalContinuationDriver_rehydrates_legacy_pending_approval_records()
+    public void MafApprovalContinuationDriver_rehydrates_persisted_response_envelope()
     {
         var driver = new MafApprovalContinuationDriver();
         var session = CreateSession(
             new ChatSessionRuntimeCompatibilityRecord(
                 runtimeSessionKey: "conversation-001",
-                serializedSessionStateJson: null,
+                serializedSessionStateJson: "{}",
                 pendingApprovals:
                 [
                     new PendingToolApprovalRecord(
@@ -436,6 +436,115 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public void MafApprovalContinuationDriver_rejects_approval_without_stable_call_id()
+    {
+        var driver = new MafApprovalContinuationDriver();
+        var request = new ToolApprovalRequestContent(
+            "approval-001",
+            new FunctionCallContent(
+                string.Empty,
+                "workspace_write_file",
+                new Dictionary<string, object?>()));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            driver.MapPendingApproval(request));
+
+        Assert.Contains("stable correlation identifier", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafAgentResponseSnapshotter_rejects_tool_call_without_stable_call_id()
+    {
+        var update = new AgentResponseUpdate(
+            ChatRole.Assistant,
+            [
+                new FunctionCallContent(
+                    string.Empty,
+                    "workspace_write_file",
+                    new Dictionary<string, object?>())
+            ]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            MafAgentResponseSnapshotter.SnapshotUpdate(update));
+
+        Assert.Contains("stable call identifier", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafChatClientAgentOptionsFactory_applies_the_production_115_compatibility_policy()
+    {
+        var chatOptions = new ChatOptions();
+
+        var options = MafChatClientAgentOptionsFactory.Create(chatOptions);
+
+        Assert.Same(chatOptions, options.ChatOptions);
+        Assert.False(options.UseProvidedChatClientAsIs);
+        Assert.True(options.DisableApprovalNotRequiredFunctionBypassing);
+        Assert.False(options.DisableApprovalResponseBinding);
+
+        var root = FindRepoRoot();
+        var mafRoot = Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Maf");
+        var constructionSites = Directory
+            .EnumerateFiles(mafRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains(
+                "new ChatClientAgentOptions",
+                StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        Assert.Equal([nameof(MafChatClientAgentOptionsFactory) + ".cs"], constructionSites);
+    }
+
+    [Fact]
+    public void Maf_approval_content_rejects_missing_stable_request_id_at_construction()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new ToolApprovalRequestContent(
+                string.Empty,
+                new FunctionCallContent(
+                    "call-001",
+                    "workspace_write_file",
+                    new Dictionary<string, object?>())));
+
+        Assert.Equal("requestId", exception.ParamName);
+    }
+
+    [Fact]
+    public void MafRuntimeResponseAssembler_preserves_activity_metadata_on_terminal_projection()
+    {
+        var continuationTokenBytes = new ReadOnlyMemory<byte>([1, 2, 3, 4]);
+#pragma warning disable MEAI001
+        var continuationToken = ResponseContinuationToken.FromBytes(continuationTokenBytes);
+#pragma warning restore MEAI001
+#pragma warning disable MEAI001
+        var activityResponse = new AgentResponse(
+            new ChatMessage(ChatRole.Assistant, "participant activity"))
+        {
+            ContinuationToken = continuationToken,
+            ResponseId = "response-001"
+        };
+#pragma warning restore MEAI001
+        var terminalUpdate = new AgentResponseUpdate(
+            ChatRole.Assistant,
+            [new TextContent("terminal answer")]);
+
+        var projected = MafRuntimeResponseAssembler.ProjectTerminalResponse(
+            activityResponse,
+            terminalUpdate);
+
+        Assert.Equal("terminal answer", projected.Text);
+        Assert.Equal("response-001", projected.ResponseId);
+#pragma warning disable MEAI001
+        Assert.Equal(
+            continuationToken.ToBytes().ToArray(),
+            projected.ContinuationToken?.ToBytes().ToArray());
+#pragma warning restore MEAI001
+        Assert.Same(
+            activityResponse,
+            MafRuntimeResponseAssembler.ProjectTerminalResponse(activityResponse, null));
+    }
+
+    [Fact]
     public void MafRuntimeSessionPersistenceDriver_skips_governed_process_steps_without_pending_approvals()
     {
         var driver = new MafRuntimeSessionPersistenceDriver();
@@ -449,6 +558,112 @@ public sealed class MafRuntimeArchitectureServicesTests
             "governed process step",
             driver.ResolveRuntimeSessionSerializationSkipMessage(options),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafRuntimeSessionPersistenceDriver_fails_closed_when_approval_state_cannot_be_serialized()
+    {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var agent = new ThrowingSerializationAgent();
+        var session = await agent.CreateSessionAsync();
+        var pendingApprovals = new[]
+        {
+            new PendingToolApprovalRecord(
+                "approval-001",
+                "call-001",
+                "workspace_write_file",
+                "function",
+                string.Empty,
+                """{"path":"artifacts/result.md"}""")
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.TrySerializePersistableRuntimeSessionAsync(
+                agent,
+                session,
+                CreateExecutionOptions(),
+                pendingApprovals,
+                static (_, _, _) => Task.CompletedTask,
+                CancellationToken.None));
+
+        Assert.Contains("actionable tool approvals", exception.Message, StringComparison.Ordinal);
+        Assert.IsType<NotSupportedException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task MafRuntimeSessionPersistenceDriver_allows_missing_state_when_no_approval_is_actionable()
+    {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var agent = new ThrowingSerializationAgent();
+        var session = await agent.CreateSessionAsync();
+        var progress = new List<string>();
+
+        var serialized = await driver.TrySerializePersistableRuntimeSessionAsync(
+            agent,
+            session,
+            CreateExecutionOptions(),
+            [],
+            (_, _, message) =>
+            {
+                progress.Add(message);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.Null(serialized);
+        Assert.Contains(
+            progress,
+            message => message.Contains(nameof(NotSupportedException), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MafRuntimeSessionPersistenceDriver_propagates_caller_cancellation_to_serialization()
+    {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var agent = new BlockingSerializationAgent();
+        var session = await agent.CreateSessionAsync();
+        using var cancellation = new CancellationTokenSource();
+
+        var serialization = driver.TrySerializePersistableRuntimeSessionAsync(
+            agent,
+            session,
+            CreateExecutionOptions(),
+            [],
+            static (_, _, _) => Task.CompletedTask,
+            cancellation.Token);
+        await agent.SerializationStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => serialization);
+        await agent.SerializationCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task MafRuntimeSessionPersistenceDriver_cancels_serialization_when_the_bound_expires()
+    {
+        var driver = new MafRuntimeSessionPersistenceDriver();
+        var agent = new BlockingSerializationAgent();
+        var session = await agent.CreateSessionAsync();
+        var progress = new List<string>();
+
+        var serialized = await driver.TrySerializePersistableRuntimeSessionAsync(
+            agent,
+            session,
+            CreateExecutionOptions(),
+            [],
+            (_, _, message) =>
+            {
+                progress.Add(message);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.Null(serialized);
+        await agent.SerializationCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Contains(
+            progress,
+            message => message.Contains("bounded timeout", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -964,6 +1179,119 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     private sealed class DelayedStreamingAgentSession : AgentSession;
+
+    private sealed class ThrowingSerializationAgent : AIAgent
+    {
+        protected override ValueTask<AgentSession> CreateSessionCoreAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<AgentSession>(new ThrowingSerializationAgentSession());
+        }
+
+        protected override ValueTask<JsonElement> SerializeSessionCoreAsync(
+            AgentSession session,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException("Deterministic serialization failure.");
+        }
+
+        protected override ValueTask<AgentSession> DeserializeSessionCoreAsync(
+            JsonElement serializedState,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override Task<AgentResponse> RunCoreAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override IAsyncEnumerable<AgentResponseUpdate> RunCoreStreamingAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class ThrowingSerializationAgentSession : AgentSession;
+
+    private sealed class BlockingSerializationAgent : AIAgent
+    {
+        public TaskCompletionSource SerializationStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource SerializationCancellationObserved { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        protected override ValueTask<AgentSession> CreateSessionCoreAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<AgentSession>(new BlockingSerializationAgentSession());
+        }
+
+        protected override ValueTask<JsonElement> SerializeSessionCoreAsync(
+            AgentSession session,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            SerializationStarted.TrySetResult();
+            return new ValueTask<JsonElement>(WaitForCancellationAsync(cancellationToken));
+        }
+
+        protected override ValueTask<AgentSession> DeserializeSessionCoreAsync(
+            JsonElement serializedState,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override Task<AgentResponse> RunCoreAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override IAsyncEnumerable<AgentResponseUpdate> RunCoreStreamingAsync(
+            IEnumerable<ChatMessage> messages,
+            AgentSession? session = null,
+            AgentRunOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        private async Task<JsonElement> WaitForCancellationAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                throw new InvalidOperationException("Serialization completed without cancellation.");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                SerializationCancellationObserved.TrySetResult();
+                throw;
+            }
+        }
+    }
+
+    private sealed class BlockingSerializationAgentSession : AgentSession;
 
     private sealed class NoOpAsyncDisposable : IAsyncDisposable
     {

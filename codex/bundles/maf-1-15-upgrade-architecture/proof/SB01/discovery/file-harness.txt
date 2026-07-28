@@ -1,0 +1,74 @@
+===== PATTERN: HarnessAgent =====
+tests\Unit\CanDoItAll.Tests.Unit\ScenarioHarnessAgentRuntimeTests.cs:9:public sealed class ScenarioHarnessAgentRuntimeTests
+tests\Unit\CanDoItAll.Tests.Unit\ScenarioHarnessAgentRuntimeTests.cs:17:nameof(ScenarioHarnessAgentRuntimeTests),
+tests\Unit\CanDoItAll.Tests.Unit\ScenarioHarnessAgentRuntimeTests.cs:26:var runtime = new ScenarioHarnessAgentRuntime(
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:49:- Harness file access is opt-in through `HarnessAgentOptions.FileAccessStore`.
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:52:- `HarnessAgent` and `FileMemoryProvider` were stabilized, while some advanced options remain experimental.
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:53:Codex musí pouze prokázat, že se nikde ve větvi nevytváří `HarnessAgent` nebo nepoužívá staré `DisableFileAccess`.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:19:Therefore the MAF 1.14/1.15 change that makes `HarnessAgentOptions.FileAccessStore` opt-in does not directly remove these tools.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:44:HarnessAgent
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:45:HarnessAgentOptions
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:123:A future isolated coding-harness feature may deliberately use MAF `HarnessAgent` with:
+codex\bundles\maf-1-15-upgrade-architecture\analysis\08-opportunities-not-in-first-pass.md:60:## HarnessAgent
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:166:Only `HarnessAgent` behavior changed. A `HarnessAgent` has no file-access tools unless `FileAccessStore` is supplied.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:149:This is not MAF Harness file access. Harness APIs are only relevant if a separate branch path creates `HarnessAgent`.
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:16:| HarnessAgent stabilization | https://github.com/microsoft/agent-framework/pull/7119 | Optional future; no conversion now | SB07 |
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:34:- `dotnet/src/Microsoft.Agents.AI.Harness/HarnessAgentOptions.cs` at `dotnet-1.15.0`
+src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\AgentFrameworkWorkspaceFactory.cs:126:var scenarioRuntime = new ScenarioHarnessAgentRuntime(
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:8:internal sealed partial class ScenarioHarnessAgentRuntime(
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.Content.cs:3:internal sealed partial class ScenarioHarnessAgentRuntime
+
+===== PATTERN: HarnessAgentOptions =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:49:- Harness file access is opt-in through `HarnessAgentOptions.FileAccessStore`.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:19:Therefore the MAF 1.14/1.15 change that makes `HarnessAgentOptions.FileAccessStore` opt-in does not directly remove these tools.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:45:HarnessAgentOptions
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:34:- `dotnet/src/Microsoft.Agents.AI.Harness/HarnessAgentOptions.cs` at `dotnet-1.15.0`
+
+===== PATTERN: Microsoft.Agents.AI.Harness =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:46:Microsoft.Agents.AI.Harness
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:34:- `dotnet/src/Microsoft.Agents.AI.Harness/HarnessAgentOptions.cs` at `dotnet-1.15.0`
+
+===== PATTERN: FileAccessStore =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:49:- Harness file access is opt-in through `HarnessAgentOptions.FileAccessStore`.
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:51:Harness změna `FileAccessStore` opt-in se na potvrzenou cestu CanDoItAll přímo nevztahuje. Vlastní file tools, workspace scope, external aliases, read-only pravidla, approval wrappery a script policy musí zůstat.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:19:Therefore the MAF 1.14/1.15 change that makes `HarnessAgentOptions.FileAccessStore` opt-in does not directly remove these tools.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:47:FileAccessStore
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:125:- an explicitly rooted `FileAccessStore`;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:166:Only `HarnessAgent` behavior changed. A `HarnessAgent` has no file-access tools unless `FileAccessStore` is supplied.
+codex\bundles\maf-1-15-upgrade-architecture\README.md:62:6. CanDoItAll file tools are custom workspace services and separate CanDoItAll.FileTools packages. The Harness `FileAccessStore` opt-in change has no confirmed direct impact, but a full branch grep remains mandatory.
+
+===== PATTERN: FileAccessProvider =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:51:- `FileAccessProviderOptions` configures the provider when a store is supplied.
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:10:- CanDoItAll používá vlastní workspace file, command a artifact služby. Nejde o Harness `FileAccessProvider`.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:48:FileAccessProvider
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:49:FileAccessProviderOptions
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:126:- explicit `FileAccessProviderOptions`;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:174:- checking `FileAccessProviderOptions`;
+
+===== PATTERN: FileAccessProviderOptions =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:51:- `FileAccessProviderOptions` configures the provider when a store is supplied.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:49:FileAccessProviderOptions
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:126:- explicit `FileAccessProviderOptions`;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:174:- checking `FileAccessProviderOptions`;
+
+===== PATTERN: DisableFileAccess =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:50:- `DisableFileAccess` was removed.
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:53:Codex musí pouze prokázat, že se nikde ve větvi nevytváří `HarnessAgent` nebo nepoužívá staré `DisableFileAccess`.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:50:DisableFileAccess
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:172:- replacing removed `DisableFileAccess`;
+
+===== PATTERN: FileMemoryProvider =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:52:- `HarnessAgent` and `FileMemoryProvider` were stabilized, while some advanced options remain experimental.
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:68:- evaluate after parity: approval-not-required bypass, stable ToolApprovalAgent, message injection, FileMemoryProvider;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:51:FileMemoryProvider
+codex\bundles\maf-1-15-upgrade-architecture\analysis\08-opportunities-not-in-first-pass.md:50:## FileMemoryProvider
+
+===== PATTERN: FileSystemAgentFileStore =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:52:FileSystemAgentFileStore
+
+===== PATTERN: LocalCodeAct =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\09-open-questions-and-discovery-gates.md:18:| Q12 | Are AG-UI, declarative workflows, Harness, compaction, FileMemory, ToolApprovalAgent, LocalCodeAct, or Cosmos history active? | Hidden compile/behavior impact | Full branch grep and package graph |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\08-opportunities-not-in-first-pass.md:102:## LocalCodeAct and Shell Fixes
+codex\bundles\maf-1-15-upgrade-architecture\analysis\02-impact-matrix.md:30:| LocalCodeAct hardening | No confirmed use | Security if present | Grep and test aliases/import restrictions | P2 | Discovery |
+codex\bundles\maf-1-15-upgrade-architecture\reviews\00-bundle-self-review.md:52:- Harness, FileMemory, ToolApprovalAgent, message injection, AG-UI, declarative workflows, compaction, LocalCodeAct, Cosmos, and OpenAI Responses hosting are inventory/future items.
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:18:| LocalCodeAct AST hardening | https://github.com/microsoft/agent-framework/pull/7138 | Only if active | SB07 |

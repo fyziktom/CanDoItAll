@@ -1,0 +1,52 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "request-scoped-attachment-scrub",
+  "syntheticInputState": {
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "Inspect the synthetic screenshot."
+              },
+              {
+                "$type": "data",
+                "uri": "data:image/png;base64,SANITIZED_FIXTURE_BYTES"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "expectedPersistedState": {
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "Inspect the synthetic screenshot."
+              },
+              {
+                "$type": "text",
+                "text": "Request-scoped attachment omitted from persisted session state."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "expectedTargetBehavior": {
+    "outcome": "native-restore",
+    "containsDataContentAfterScrub": false,
+    "containsDataUriAfterScrub": false
+  }
+}

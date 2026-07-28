@@ -1,4 +1,17 @@
-# Session and Approval State Migration
+# Session and Approval State Migration — Superseded Proposal
+
+> Status after A1 and 1.15 characterization: the compatibility-metadata classifier,
+> C1-C6 private-state classification, fingerprint layer, per-ID API migration, and
+> trusted replay bridge below were not adopted. The repository already persists the
+> complete server-held pending snapshot with the opaque MAF session. MAF 1.15 serializes
+> its approval-binding state in that session and consumes it on continuation. The
+> implemented design keeps the existing atomic session-scoped decision, requires stable
+> request and call IDs, fails closed when approval state cannot be serialized, and
+> drains or reissues pre-upgrade approvals. Canonical decisions are recorded in
+> `architecture/05-csharp-governor-review.md` and `reviews/01-execution-report.md`.
+
+The remainder of this document is retained as the architect's pre-characterization
+proposal and is not an implementation requirement.
 
 ## State Layers
 

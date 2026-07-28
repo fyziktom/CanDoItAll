@@ -22,17 +22,50 @@ $allowedExtensions = @(
     ".cs", ".csproj", ".props", ".targets", ".json", ".yaml", ".yml", ".md"
 )
 
-$files = Get-ChildItem -Path $root -Recurse -File | Where-Object {
-    $path = $_.FullName
-    $isExcluded = $false
-    foreach ($segment in $excludedSegments) {
-        if ($path.IndexOf($segment, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-            $isExcluded = $true
-            break
+$ripgrep = Get-Command rg -ErrorAction SilentlyContinue
+if ($null -ne $ripgrep) {
+    Push-Location $root
+    try {
+        $relativeFiles = & $ripgrep.Source --files --hidden `
+            --glob "*.cs" `
+            --glob "*.csproj" `
+            --glob "*.props" `
+            --glob "*.targets" `
+            --glob "*.json" `
+            --glob "*.yaml" `
+            --glob "*.yml" `
+            --glob "*.md" `
+            --glob "!**/.git/**" `
+            --glob "!**/bin/**" `
+            --glob "!**/obj/**" `
+            --glob "!**/.artifacts/**" `
+            --glob "!**/ExternalPackages/**" `
+            --glob "!**/node_modules/**"
+        if ($LASTEXITCODE -ne 0) {
+            throw "rg file discovery failed with exit code $LASTEXITCODE."
         }
-    }
 
-    -not $isExcluded -and $allowedExtensions.Contains($_.Extension)
+        $files = @($relativeFiles | ForEach-Object {
+            [IO.FileInfo]::new((Join-Path $root $_))
+        })
+    }
+    finally {
+        Pop-Location
+    }
+}
+else {
+    $files = Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
+        $path = $_.FullName
+        $isExcluded = $false
+        foreach ($segment in $excludedSegments) {
+            if ($path.IndexOf($segment, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                $isExcluded = $true
+                break
+            }
+        }
+
+        -not $isExcluded -and $allowedExtensions.Contains($_.Extension)
+    }
 }
 
 $groups = [ordered]@{
@@ -160,16 +193,22 @@ $groups = [ordered]@{
 foreach ($entry in $groups.GetEnumerator()) {
     $target = Join-Path $outputRoot ($entry.Key + ".txt")
     $lines = New-Object System.Collections.Generic.List[string]
+    $combinedPattern = ($entry.Value | ForEach-Object {
+        [Regex]::Escape($_)
+    }) -join "|"
+    $groupMatches = @($files | Select-String -Pattern $combinedPattern)
 
     foreach ($pattern in $entry.Value) {
         $lines.Add("===== PATTERN: $pattern =====")
-        $matches = $files | Select-String -SimpleMatch -Pattern $pattern
-        foreach ($match in $matches) {
+        $patternMatches = @($groupMatches | Where-Object {
+            $_.Line.IndexOf($pattern, [StringComparison]::OrdinalIgnoreCase) -ge 0
+        })
+        foreach ($match in $patternMatches) {
             $relative = [IO.Path]::GetRelativePath($root, $match.Path)
             $lines.Add(("{0}:{1}:{2}" -f $relative, $match.LineNumber, $match.Line.Trim()))
         }
 
-        if (-not $matches) {
+        if ($patternMatches.Count -eq 0) {
             $lines.Add("<no matches>")
         }
 
@@ -195,8 +234,8 @@ try {
 
     dotnet --info | Set-Content -Path (Join-Path $outputRoot "dotnet-info.txt") -Encoding utf8
 
-    $projectFiles = Get-ChildItem -Path $root -Recurse -File -Filter *.csproj | Where-Object {
-        $_.FullName.IndexOf([IO.Path]::DirectorySeparatorChar + "ExternalPackages" + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -lt 0
+    $projectFiles = $files | Where-Object {
+        $_.Extension -eq ".csproj"
     }
 
     $packageLines = New-Object System.Collections.Generic.List[string]

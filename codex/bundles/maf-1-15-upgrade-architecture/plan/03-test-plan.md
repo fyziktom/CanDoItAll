@@ -47,8 +47,9 @@ Record under 1.13:
 - duplicate response executes once;
 - replay after restart executes nothing;
 - denial executes nothing;
-- mixed approve/deny decisions apply by ID;
-- omitted approval remains pending or follows explicit product policy;
+- the decision applies only to the exact complete current server-held pending
+  snapshot;
+- a changed or partial snapshot is rejected before any invocation;
 - process-local cache cleared before continuation still succeeds from persistence;
 - malformed persistent record fails closed;
 - missing request ID fails closed;
@@ -60,11 +61,9 @@ Record under 1.13:
 - direct response-only continuation is detected as incompatible;
 - preferred reissue produces a new native 1.15 request;
 - old decision cannot approve the new request accidentally;
-- optional bridge accepts only trusted fingerprinted record;
-- modified bridge record fails;
-- expired bridge fails;
-- concurrent bridge attempts execute once;
-- bridge metrics and audit event emitted;
+- no application reconstruction turns a 1.13 record into executable 1.15 state;
+- absence of native serialized binding state produces a typed drain/reissue
+  outcome without private-JSON inspection;
 - disabling binding is not used.
 
 ### Mixed behavior modes

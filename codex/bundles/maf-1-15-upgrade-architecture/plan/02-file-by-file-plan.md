@@ -4,14 +4,15 @@ Paths are based on the pinned branch. SB01 must adjust this list for repository 
 
 ## Shared package versioning
 
-### `Directory.Build.props`
+### `src/MAF/MicrosoftAgentFramework.Packages.props`
 
 Planned:
 
-- add `MicrosoftAgentsAIStableVersion`;
-- add `MicrosoftAgentsAIPreviewVersion`;
+- own `MicrosoftAgentsAIStableVersion`;
+- own `MicrosoftAgentsAIPreviewVersion`;
+- import the file only from the three direct MAF package owners;
 - do not enable Central Package Management;
-- leave unrelated compiler/default-item settings unchanged.
+- leave repository-wide compiler/default-item settings unchanged.
 
 ### `src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
 
@@ -66,14 +67,15 @@ Planned:
 
 Planned:
 
-- replace batch boolean semantics with per-ID decisions;
 - remove random approval ID fallback;
-- make persistent record authority and cache optimization explicit;
-- validate exact request/call/tool/arguments/fingerprint;
+- require stable request and call IDs for every pending request;
+- require the complete current server-held pending snapshot before admitting a
+  decision;
+- make the exact serialized MAF session plus application pending snapshot the
+  atomic persistent authority and the cache an optimization;
 - support native 1.15 continuation;
-- support preferred legacy reissue;
-- add temporary trusted bridge only if approved by SB03;
-- consume decisions exactly once;
+- reject continuation without native 1.15 binding state and drain or reissue it;
+- consume the restored native binding state at most once;
 - preserve function and MCP shapes;
 - add structured diagnostics.
 
@@ -81,20 +83,21 @@ Planned:
 
 Planned:
 
-- add schema/framework version;
-- add fingerprint/nonce/expiry as required;
-- ensure transactional consumption;
+- persist the exact serialized MAF session and pending snapshot atomically;
+- preserve stable request and call IDs;
+- ensure at-most-once consumption;
 - preserve redaction;
-- add migration classification.
+- represent incompatible/pre-1.15 state as a typed drain/reissue outcome without
+  inspecting private MAF JSON.
 
 ### UI/API approval endpoints discovered in SB01
 
 Planned:
 
-- decisions include explicit approval IDs;
 - display exact server-held tool call and arguments;
-- distinguish expired/reissued/legacy/incompatible;
-- no newly arrived approval receives an old batch decision.
+- submit against the complete current server-held pending snapshot;
+- distinguish reissued/legacy/incompatible outcomes;
+- reject a decision if the server-held snapshot has changed.
 
 ## Session creation and persistence
 
@@ -104,7 +107,8 @@ Planned:
 
 - preserve governed-step isolation;
 - preserve provider/framework history rules;
-- make legacy approval classification explicit before continuation;
+- reject approval continuation when no native 1.15 serialized session state is
+  available;
 - remove or implement dead `ShouldReplayTranscriptAfterApproval`;
 - add fixture-driven handling for 1.13 serialized state;
 - consider replacing raw JSON sniff only after parity.
@@ -117,7 +121,8 @@ Planned:
 - return/emit typed failure classification instead of silent catch-all;
 - preserve request-scoped attachment scrubber;
 - prove `_pendingApprovalRequests` and other state-bag values survive scrubbing;
-- record serialized source/target framework metadata outside opaque JSON.
+- persist the session and application pending snapshot within one consistency
+  boundary.
 
 ### Request-scoped session scrubber source discovered in SB01
 

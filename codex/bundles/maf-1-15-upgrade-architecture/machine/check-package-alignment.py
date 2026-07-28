@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -51,15 +52,40 @@ def load_maf_libraries(assets_path: Path) -> dict[str, str]:
     return result
 
 
+def find_assets_files(root: Path) -> list[Path]:
+    excluded_directories = {
+        ".artifacts",
+        ".codex",
+        ".git",
+        ".mcp-state",
+        "artifacts",
+        "codex",
+        "externalpackages",
+        "node_modules",
+        "bin",
+        "obj",
+    }
+    assets_files: set[Path] = set()
+
+    for directory, child_directories, files in os.walk(root):
+        child_directories[:] = [
+            child
+            for child in child_directories
+            if child.casefold() not in excluded_directories
+        ]
+        project_directory = Path(directory)
+        if any(file.casefold().endswith(".csproj") for file in files):
+            assets_path = project_directory / "obj" / "project.assets.json"
+            if assets_path.is_file():
+                assets_files.add(assets_path)
+
+    return sorted(assets_files)
+
+
 def main() -> int:
     args = parse_args()
     root = Path(args.repository_root).resolve()
-    assets_files = [
-        path
-        for path in root.rglob("project.assets.json")
-        if "ExternalPackages" not in path.parts
-        and ".artifacts" not in path.parts
-    ]
+    assets_files = find_assets_files(root)
 
     if not assets_files:
         print("No project.assets.json files found. Run dotnet restore first.", file=sys.stderr)

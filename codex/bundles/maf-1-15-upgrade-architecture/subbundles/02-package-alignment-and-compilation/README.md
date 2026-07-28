@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after A1`
+- `Complete`
 
 ## Objective
 
@@ -31,7 +31,7 @@ Move all direct MAF references to the exact 1.15 release train with the smallest
 
 ## Exact Source References
 
-- `Directory.Build.props`
+- `src/MAF/MicrosoftAgentFramework.Packages.props`
 - main MAF adapter project
 - workflow MAF adapter project
 - MAF hosting project
@@ -76,16 +76,16 @@ Move all direct MAF references to the exact 1.15 release train with the smallest
 
 ## Acceptance Checklist
 
-- [ ] shared stable property
-- [ ] shared preview property
-- [ ] exact target versions resolved
-- [ ] no old MAF package
-- [ ] no downgrade warning
-- [ ] parity mixed-approval option explicit
-- [ ] approval binding not disabled
-- [ ] target projects build
-- [ ] warning delta classified
-- [ ] execution report updated
+- [x] shared stable property
+- [x] shared preview property
+- [x] exact target versions resolved
+- [x] no old MAF package
+- [x] no downgrade warning
+- [x] parity mixed-approval option explicit
+- [x] approval binding not disabled
+- [x] target projects build
+- [x] warning delta classified
+- [x] execution report updated
 
 ## Proof Tier
 

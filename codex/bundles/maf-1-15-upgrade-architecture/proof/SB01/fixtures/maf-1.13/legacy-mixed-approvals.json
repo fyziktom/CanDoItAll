@@ -1,0 +1,47 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "legacy-app-owned-mixed-and-multiple-approvals",
+  "sessionId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  "ordinaryCallBaseline": {
+    "callId": "call-read-001",
+    "toolName": "workspace_read_file",
+    "argumentsJson": "{\"path\":\"README.md\"}",
+    "approvalRequired": false
+  },
+  "compatibility": {
+    "runtimeSessionKey": "conversation-004",
+    "serializedSessionStateJson": null,
+    "pendingApprovals": [
+      {
+        "approvalId": "approval-write-001",
+        "callId": "call-write-001",
+        "toolName": "workspace_write_file",
+        "toolKind": "function",
+        "details": "",
+        "argumentsJson": "{\"path\":\"artifacts/mixed-result.md\"}"
+      },
+      {
+        "approvalId": "approval-mcp-002",
+        "callId": "call-mcp-002",
+        "toolName": "fixture_publish_document",
+        "toolKind": "mcp",
+        "details": "fixture-mcp-server",
+        "argumentsJson": "{\"documentId\":\"fixture-document-001\"}"
+      }
+    ],
+    "autoApprovePendingToolCalls": false
+  },
+  "classification": {
+    "nativeFrameworkBindingStatePresent": false,
+    "legacyRecordAuthority": "display-and-audit-only",
+    "ordinaryCallMayBypassApproval": true,
+    "pendingApprovalsMustRemainIndividuallyAddressable": true
+  },
+  "expectedTargetBehavior": {
+    "outcome": "approval-reissue",
+    "legacyApprovalCount": 2,
+    "executeLegacyRecordsDirectly": false,
+    "ordinaryCallDoesNotAuthorizeEitherMutation": true
+  }
+}

@@ -4,11 +4,11 @@
 |---|---|---|---|---|
 | R01 | Capture 1.13 baseline and fixtures | SB01 | proof/SB01/fixtures; package/build baseline | A1 |
 | R02 | Exact stable/preview package train | SB02, SB07 | package graph; A2A smoke | A4 |
-| R03 | Centralize two MAF version values | SB02 | Directory.Build.props; alignment test | SB02 |
+| R03 | Centralize two MAF version values | SB02 | `src/MAF/MicrosoftAgentFramework.Packages.props`; alignment test | SB02 |
 | R04 | Preserve runtime isolation/preload architecture | SB01, SB04, SB06, SB08 | lifecycle map; concurrency tests | A4 |
 | R05 | Keep binding and prove approval security | SB03, SB06 | attack matrix; tool policy regression | A2 |
-| R06 | Handle 1.13 pending approval state | SB03, SB05, SB08 | classifier; reissue/bridge; rollout | A2/A4 |
-| R07 | Per-request approval decisions | SB03 | API/model/tests | A2 |
+| R06 | Handle 1.13 pending approval state | SB03, SB05, SB08 | native-session rejection; drain/reissue; rollout | A2/A4 |
+| R07 | Bind a decision to the complete current pending snapshot | SB03 | atomic persistence and changed-snapshot tests | A2 |
 | R08 | No random approval IDs | SB03 | fail-closed tests | A2 |
 | R09 | Stage mixed-tool behavior change | SB02, SB03, SB08 | parity option; optional feature gate | A2/A4 |
 | R10 | Correct terminal handoff output | SB04 | six-path fixture | A3 |

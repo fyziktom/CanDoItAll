@@ -71,16 +71,28 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
         }
 
         await progressCallback(ExecutionState.Persisting, "Session", "Serializing the Microsoft Agent Framework session.");
-        var serializedSessionJson = await TrySerializeRuntimeSessionAsync(
-            runtimeAgent,
-            runtimeSession,
-            cancellationToken);
-        if (serializedSessionJson is null)
+        string serializedSessionJson;
+        try
         {
+            serializedSessionJson = await SerializeRuntimeSessionAsync(
+                runtimeAgent,
+                runtimeSession,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            var failure = exception is TimeoutException
+                ? "did not complete within the bounded timeout"
+                : $"failed with {exception.GetType().Name}";
             await progressCallback(
                 ExecutionState.Persisting,
                 "Session",
-                "Microsoft Agent Framework session serialization did not complete within the bounded timeout. Continuing without serialized session state.");
+                $"Microsoft Agent Framework session serialization {failure}.");
+            ThrowIfApprovalStateUnavailable(pendingApprovals, exception);
             return null;
         }
 
@@ -96,6 +108,9 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
                 ExecutionState.Persisting,
                 "Session",
                 "Dropped serialized Microsoft Agent Framework session state because request-scoped attachment payload scrubbing failed.");
+            ThrowIfApprovalStateUnavailable(
+                pendingApprovals,
+                new InvalidOperationException("Request-scoped session content scrubbing failed."));
             return null;
         }
 
@@ -110,33 +125,40 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
         return scrubbedSessionJson;
     }
 
-    private static async Task<string?> TrySerializeRuntimeSessionAsync(
+    private static async Task<string> SerializeRuntimeSessionAsync(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         CancellationToken cancellationToken)
     {
+        using var serializationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var serializationTask = runtimeAgent.SerializeSessionAsync(
+            runtimeSession,
+            cancellationToken: serializationCancellation.Token).AsTask();
         try
         {
-            var serializedSession = await Task.Run(
-                async () => await runtimeAgent.SerializeSessionAsync(
-                    runtimeSession,
-                    cancellationToken: cancellationToken),
-                cancellationToken).WaitAsync(
+            var serializedSession = await serializationTask.WaitAsync(
                 SessionSerializationTimeout,
                 cancellationToken);
             return JsonSerializer.Serialize(serializedSession, SerializerOptions);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
         catch (TimeoutException)
         {
-            return null;
+            await serializationCancellation.CancelAsync();
+            throw;
         }
-        catch
+    }
+
+    private static void ThrowIfApprovalStateUnavailable(
+        IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
+        Exception serializationException)
+    {
+        if (pendingApprovals.Count == 0)
         {
-            return null;
+            return;
         }
+
+        throw new InvalidOperationException(
+            "Cannot return actionable tool approvals because the Microsoft Agent Framework session and its approval-binding state could not be persisted.",
+            serializationException);
     }
 }

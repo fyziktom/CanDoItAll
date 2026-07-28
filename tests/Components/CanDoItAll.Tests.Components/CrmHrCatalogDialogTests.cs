@@ -1,4 +1,6 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AppComponents;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
@@ -137,7 +139,7 @@ public sealed class CrmHrCatalogDialogTests
     }
 
     [Fact]
-    public async Task Recruiting_deep_link_opens_a_tabbed_dialog_over_the_bounded_catalog()
+    public async Task Recruiting_deep_link_close_retains_the_selected_context_and_can_reopen_the_dialog()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
@@ -177,6 +179,10 @@ public sealed class CrmHrCatalogDialogTests
         var browser = cut
             .FindComponent<PagedRecordBrowser<Guid, RecruitmentApplicationScope>>()
             .Instance;
+        var expectedRoute = $"/crm-hr/recruiting?applicationId={applicationResult.Value:D}";
+        var applicationCardTestId = $"crmhr-recruiting-application-{applicationResult.Value:N}";
+
+        cut.Find("[data-testid='crmhr-recruiting-role']").Change("Unsaved role change");
 
         cut.Find("[data-testid='crmhr-recruiting-tab-interviews']").Click();
         cut.WaitForElement("[data-testid='crmhr-recruiting-interview-type']");
@@ -202,8 +208,44 @@ public sealed class CrmHrCatalogDialogTests
         cut.WaitForAssertion(() =>
         {
             Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']"));
-            Assert.EndsWith("/crm-hr/recruiting", navigation.Uri, StringComparison.Ordinal);
+            Assert.EndsWith(expectedRoute, navigation.Uri, StringComparison.Ordinal);
             Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-catalog']"));
+            Assert.Same(
+                browser,
+                cut.FindComponent<PagedRecordBrowser<Guid, RecruitmentApplicationScope>>().Instance);
+            Assert.Equal(applicationResult.Value, browser.Selection?.Key);
+
+            var applicationCard = cut.Find($"[data-testid='{applicationCardTestId}']");
+            Assert.Equal("true", applicationCard.GetAttribute("aria-pressed"));
+            Assert.Contains(
+                "paged-record-browser__card--selected",
+                cut.Find($"[data-testid='{applicationCardTestId}-shell']").ClassList);
+
+            var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
+            Assert.Equal(
+                AgentChatContextAccessState.Ready,
+                contextProvider.Instance.ContextAccessState);
+
+            var applicationSelection = Assert.IsType<AgentChatContextEntityReference>(
+                contextProvider.Instance.Surface.Position.PrimarySelection);
+            Assert.Equal("recruitment-application", applicationSelection.Kind);
+            Assert.Equal(applicationResult.Value.ToString("D"), applicationSelection.Id);
+
+            var candidateSelection = Assert.Single(
+                contextProvider.Instance.Surface.Position.SelectedEntities);
+            Assert.Equal("candidate-party", candidateSelection.Kind);
+            Assert.Equal(candidateId.ToString("D"), candidateSelection.Id);
+            Assert.Equal("Recruiting dialog proof", candidateSelection.DisplayName);
+        });
+
+        cut.Find($"[data-testid='{applicationCardTestId}']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-record-dialog']"));
+            Assert.Equal(
+                "Platform engineer",
+                cut.Find("[data-testid='crmhr-recruiting-role']").GetAttribute("value"));
+            Assert.EndsWith(expectedRoute, navigation.Uri, StringComparison.Ordinal);
             Assert.Same(
                 browser,
                 cut.FindComponent<PagedRecordBrowser<Guid, RecruitmentApplicationScope>>().Instance);

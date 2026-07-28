@@ -1,0 +1,39 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "deterministic-scripted-handoff",
+  "participants": [
+    {
+      "agentId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "name": "Implementer",
+      "handoffWhenAvailable": true
+    },
+    {
+      "agentId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "name": "QA",
+      "handoffWhenAvailable": false
+    }
+  ],
+  "settings": {
+    "enabled": true,
+    "entryAgentId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "returnToPrevious": false,
+    "maxHandoffDepth": 4,
+    "emitAgentResponseUpdateEvents": true,
+    "routes": [
+      {
+        "sourceAgentId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "targetAgentId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "reason": "QA validates implementation outputs and required artifacts."
+      }
+    ]
+  },
+  "input": "Deliver the feature with QA artifacts.",
+  "expectedTargetBehavior": {
+    "outcome": "native-restore",
+    "entryInvocationCount": 1,
+    "targetInvocationCount": 1,
+    "responseTextContains": "QA",
+    "maxDepthOneRejectsTwoHandoffCalls": true
+  }
+}

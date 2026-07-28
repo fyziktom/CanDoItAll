@@ -608,14 +608,13 @@
             return Task.CompletedTask;
         }
 
-        var wasUnsavedApplication = currentWorkspace is { HasSelectedApplication: false };
         InvalidateRecruitmentActions();
         openNewApplicationAfterRouteReset = false;
         isRecruitmentDialogOpen = false;
         selectedRecruitingTab = RecruitingRecordTab.Application;
-        if (wasUnsavedApplication && currentWorkspace is { } unsavedWorkspace)
+        if (currentWorkspace is { } workspace)
         {
-            ApplyWorkspace(unsavedWorkspace);
+            ApplyWorkspace(workspace);
             agentChatContextAccessState = AgentChatContextAccessState.Ready;
             return Task.CompletedTask;
         }

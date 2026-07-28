@@ -8,12 +8,16 @@ The current MAF version is repeated in multiple project files:
 - workflow adapter: stable core/workflows;
 - hosting: Hosting.A2A preview.
 
-`Directory.Build.props` exists but currently contains only shared compiler/default-item settings. A minimal migration can add two shared properties there:
+`Directory.Build.props` exists but contains only repository-wide compiler/default-item
+settings. The implemented migration keeps two component-owned properties in
+`src/MAF/MicrosoftAgentFramework.Packages.props`:
 
 - one stable MAF version;
 - one preview A2A MAF version.
 
-This avoids repository-wide Central Package Management churn while eliminating release-train skew.
+Only the three direct package owners import that file. This avoids repository-wide
+Central Package Management churn and global component-version leakage while eliminating
+release-train skew.
 
 ## Runtime Lifetime
 

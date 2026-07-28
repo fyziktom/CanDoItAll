@@ -51,6 +51,8 @@ public sealed class TestDatabaseProfile
 
     public string EvidenceRootPath => Path.Combine(WorkspaceRootPath, "evidence");
 
+    public string SecretVaultRootPath => Path.Combine(ProfileRootPath, "secrets");
+
     public IReadOnlyDictionary<string, string?> CreateConfigurationValues(IReadOnlyDictionary<string, string?>? overrides = null)
     {
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -67,6 +69,8 @@ public sealed class TestDatabaseProfile
             ["Storage:ExportsFolder"] = "exports",
             ["Storage:EvidenceFolder"] = "evidence",
             ["Storage:ManagerArtifactsFolder"] = ManagerArtifactsRootPath,
+            ["SecretVault:Provider"] = "DataProtectionFile",
+            ["SecretVault:VaultPath"] = SecretVaultRootPath,
             ["Workbench:MaxWarmTabs"] = "3",
             ["Workbench:SleepAfterMinutes"] = "15",
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",

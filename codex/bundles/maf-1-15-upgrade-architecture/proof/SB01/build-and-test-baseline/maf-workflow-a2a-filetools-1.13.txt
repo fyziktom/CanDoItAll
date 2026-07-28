@@ -1,0 +1,69 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:01.29]     CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCreatesDistinctParallelRuns [FAIL]
+[xUnit.net 00:00:01.31]     CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCompletesInProcessWorkflow [FAIL]
+[xUnit.net 00:00:01.33]     CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManager_keeps_lifecycle_events_safe_and_persists_payload_artifacts [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCreatesDistinctParallelRuns [68 ms]
+  Chybová zpráva:
+   Assert.All() Failure: 2 out of 2 items in the collection did not pass.
+[0]: Item:  WorkflowRunSnapshot { RunId = e30b392e-6658-40ef-867b-b67eeb812538, WorkflowId = d245cb91-ef4b-482c-b792-b2ce4f09715a, VersionId = ae8e3750-ac33-4464-b730-b232a1adbed2, State = Failed, Backend = InProcess, BackendRunId = e30b392e-6658-40ef-867b-b67eeb812538, Summary = LLM workflow node 'llm' must contain an immutable instruction snapshot., CreatedAtUtc = 28.07.2026 4:48:11 +00:00, UpdatedAtUtc = 28.07.2026 4:48:11 +00:00, TerminalAtUtc = 28.07.2026 4:48:11 +00:00, Origin =  }
+     Error: Assert.Equal() Failure: Values differ
+            Expected: Completed
+            Actual:   Failed
+[1]: Item:  WorkflowRunSnapshot { RunId = f8e96b09-d735-4c87-b19e-dae6a978e962, WorkflowId = d245cb91-ef4b-482c-b792-b2ce4f09715a, VersionId = ae8e3750-ac33-4464-b730-b232a1adbed2, State = Failed, Backend = InProcess, BackendRunId = f8e96b09-d735-4c87-b19e-dae6a978e962, Summary = LLM workflow node 'llm' must contain an immutable instruction snapshot., CreatedAtUtc = 28.07.2026 4:48:11 +00:00, UpdatedAtUtc = 28.07.2026 4:48:11 +00:00, TerminalAtUtc = 28.07.2026 4:48:11 +00:00, Origin =  }
+     Error: Assert.Equal() Failure: Values differ
+            Expected: Completed
+            Actual:   Failed
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCreatesDistinctParallelRuns() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:line 810
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCompletesInProcessWorkflow [1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Completed
+Actual:   Failed
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCompletesInProcessWorkflow() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:line 308
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManager_keeps_lifecycle_events_safe_and_persists_payload_artifacts [8 ms]
+  Chybová zpráva:
+   Assert.Single() Failure: The collection did not contain any matching items
+Expected:   (predicate expression)
+Collection: [WorkflowEventRecord { Id = 859d1f7d-a246-4998-89c2-ffc1dd4b8046, RunId = 06235bd3-802a-4582-8756-23fa64fc7d4b, Kind = Started, NodeId = , Message = Workflow 'Sample workflow' started., PayloadJson = {"source":0,"eventType":"WorkflowStarted","nodeId":null,"executorId":null,"requestId":null,"requestKind":null,"inlineJson":"","inlineCharacters":null,"inlineTruncated":false,"reference":""}, CreatedAtUtc = 28.07.2026 4:48:11 +00:00 }, WorkflowEventRecord { Id = 6679541b-d129-4be0-b1dc-c5ba0f8b4675, RunId = 06235bd3-802a-4582-8756-23fa64fc7d4b, Kind = Error, NodeId = , Message = LLM workflow node 'llm' must contain an immutable instruction snapshot., PayloadJson = {"source":0,"eventType":"WorkflowCompilationFailed","nodeId":null,"executorId":null,"requestId":null,"requestKind":null,"inlineJson":"{\u0022kind\u0022:0,\u0022retryability\u0022:3,\u0022message\u0022:\u0022LLM workflow node \\u0027llm\\u0027 must contain an immutable instruction snapshot.\u0022,\u0022repairHint\u0022:\u0022Select an existing LLM component for the node.\u0022,\u0022redactedTechnicalDetail\u0022:\u0022LLM workflow node \\u0027llm\\u0027 must contain an immutable instruction snapshot.\u0022,\u0022correlationId\u0022:\u0022maf-workflow-adapter-5fdbdf1e1cbf488bab3dbc0b70e8e325\u0022,\u0022workflowId\u0022:\u0022cf10eaa2-7f97-43bc-8f1b-85b55668cd21\u0022,\u0022workflowVersionId\u0022:\u0022cdfe7f88-7f4a-4e65-9588-0375a19bd8fd\u0022,\u0022runId\u0022:\u002206235bd3-802a-4582-8756-23fa64fc7d4b\u0022,\u0022nodeId\u0022:\u0022llm\u0022,\u0022executorId\u0022:null,\u0022source\u0022:{\u0022kind\u0022:0,\u0022sourceId\u0022:\u0022\u0022,\u0022sourceName\u0022:\u0022\u0022,\u0022pluginId\u0022:\u0022\u0022,\u0022packageId\u0022:\u0022\u0022,\u0022executorType\u0022:\u0022\u0022,\u0022toolName\u0022:\u0022\u0022,\u0022operation\u0022:\u0022\u0022,\u0022templateKey\u0022:\u0022\u0022,\u0022templateFile\u0022:\u0022\u0022,\u0022backendKind\u0022:0},\u0022occurredAtUtc\u0022:\u00222026-07-28T04:48:11.7523639\\u002B00:00\u0022,\u0022hasNodeContext\u0022:true,\u0022hasExecutorContext\u0022:false}","inlineCharacters":834,"inlineTruncated":false,"reference":""}, CreatedAtUtc = 28.07.2026 4:48:11 +00:00 }]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManager_keeps_lifecycle_events_safe_and_persists_payload_artifacts() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:line 449
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:01.42]     CanDoItAll.Tests.Unit.WorkflowFoundationTests.MafCompilerBuildsWorkflowWithoutLeakingMafTypesThroughCoreContracts [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.WorkflowFoundationTests.MafCompilerBuildsWorkflowWithoutLeakingMafTypesThroughCoreContracts [1 ms]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.WorkflowFoundationTests.MafCompilerBuildsWorkflowWithoutLeakingMafTypesThroughCoreContracts() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:line 72
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:01.45]     CanDoItAll.Tests.Unit.WorkflowFoundationTests.ValidatorAcceptsBasicLlmWorkflow [FAIL]
+[xUnit.net 00:00:01.45]     CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCapturesCompletedCheckpointMetadata [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.WorkflowFoundationTests.ValidatorAcceptsBasicLlmWorkflow [< 1 ms]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.WorkflowFoundationTests.ValidatorAcceptsBasicLlmWorkflow() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:line 53
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Neúspěšné CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCapturesCompletedCheckpointMetadata [2 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Completed
+Actual:   Failed
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.WorkflowFoundationTests.RuntimeManagerCapturesCompletedCheckpointMetadata() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:line 388
+--- End of stack trace from previous location ---
+Aktivní testovací běh se přerušil. Důvod: Proces testovacího hostitele se chybově ukončil.
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\maf-1-15-upgrade-architecture\proof\SB01\build-and-test-baseline\maf-workflow-a2a-filetools-1.13.trx
+
+Neúspěšné!  - Neúspěšné:     6, Úspěšné:   302, Přeskočeno:     0, Celkem:   308, Doba trvání: 1 m 26 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Testovací běh se přerušil.

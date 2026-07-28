@@ -10,7 +10,8 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed record MafHandoffWorkflowBuildResult(
     AIAgent Agent,
     Guid EntryAgentId,
-    IReadOnlyList<AgentHandoffRouteSettings> Routes);
+    IReadOnlyList<AgentHandoffRouteSettings> Routes,
+    Func<AgentResponseUpdate, bool> IsTerminalResponseUpdate);
 
 internal static class MafHandoffWorkflowFactory
 {
@@ -94,8 +95,25 @@ internal static class MafHandoffWorkflowFactory
                 normalized.MaxHandoffDepth,
                 string.IsNullOrWhiteSpace(correlationId) ? entryAgentId.ToString("D") : correlationId),
             entryAgentId,
-            normalized.Routes);
+            normalized.Routes,
+            HandoffResponseProjection.IsTerminalResponseUpdate);
     }
+}
+
+internal static class HandoffResponseProjection
+{
+    public static bool IsTerminalResponseUpdate(AgentResponseUpdate update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        return update.Role == ChatRole.Assistant &&
+               update.Contents.Count > 0 &&
+               update.RawRepresentation is WorkflowOutputEvent output &&
+               output.GetType() == typeof(WorkflowOutputEvent) &&
+               output.Data is IReadOnlyList<ChatMessage> &&
+               !output.IsIntermediate();
+    }
+
 }
 
 internal sealed class HandoffDepthGuardAgent(
@@ -111,13 +129,18 @@ internal sealed class HandoffDepthGuardAgent(
         AgentRunOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var updates = new List<AgentResponseUpdate>();
-        await foreach (var update in RunCoreStreamingAsync(messages, session, options, cancellationToken))
+        var response = await InnerAgent.RunAsync(
+            messages,
+            session,
+            options,
+            cancellationToken);
+        var guard = new HandoffDepthGuard(maxHandoffDepth, correlationId);
+        foreach (var message in response.Messages)
         {
-            updates.Add(update);
+            guard.Observe(new AgentResponseUpdate(message.Role, message.Contents));
         }
 
-        return updates.ToAgentResponse();
+        return response;
     }
 
     protected override async IAsyncEnumerable<AgentResponseUpdate> RunCoreStreamingAsync(
@@ -149,9 +172,7 @@ internal sealed class HandoffDepthGuardAgent(
                     continue;
                 }
 
-                var callId = string.IsNullOrWhiteSpace(functionCall.CallId)
-                    ? $"{functionCall.Name}|{handoffCount + 1}"
-                    : functionCall.CallId;
+                var callId = RequireStableCallId(functionCall);
                 if (!observedHandoffCallIds.Add(callId))
                 {
                     continue;
@@ -164,6 +185,17 @@ internal sealed class HandoffDepthGuardAgent(
                         $"Handoff workflow exceeded maxHandoffDepth {maxDepth}. CorrelationId={correlationId}.");
                 }
             }
+        }
+
+        private static string RequireStableCallId(FunctionCallContent functionCall)
+        {
+            if (string.IsNullOrWhiteSpace(functionCall.CallId))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot enforce handoff depth for tool '{functionCall.Name}' without a stable call identifier.");
+            }
+
+            return functionCall.CallId;
         }
     }
 }

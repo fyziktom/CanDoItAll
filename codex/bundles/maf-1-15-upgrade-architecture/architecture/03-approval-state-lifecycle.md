@@ -5,26 +5,21 @@ stateDiagram-v2
     [*] --> Running
     Running --> ApprovalSurfaced: model returns approval-required tool call
     ApprovalSurfaced --> MafStateStored: 1.15 binding snapshots request in AgentSession.StateBag
-    MafStateStored --> AppRecordStored: application stores display/audit record and fingerprint
+    MafStateStored --> AppRecordStored: application stores display/audit record with stable request and call IDs
     AppRecordStored --> SessionSerialized: serialize exact AgentSession
     SessionSerialized --> Waiting
 
     Waiting --> NativeRestore: state version is 1.15+
-    NativeRestore --> DecisionValidated: restore session and match application record
-    DecisionValidated --> BoundResponse: decision references exact approval ID
+    NativeRestore --> DecisionValidated: restore exact session and current pending snapshot
+    DecisionValidated --> BoundResponse: atomic decision is bound by MAF to the original request
     BoundResponse --> ExecutedOnce: MAF rebinds original tool call
     ExecutedOnce --> Completed
 
-    Waiting --> LegacyDetected: state is 1.13 or binding state absent
-    LegacyDetected --> Reissue: preferred
+    Waiting --> LegacyDetected: pre-upgrade request lacks native 1.15 binding state
+    LegacyDetected --> Reissue: drain or re-run to surface a native 1.15 request
     Reissue --> ApprovalSurfaced
 
-    LegacyDetected --> TrustedBridge: temporary feature flag only
-    TrustedBridge --> FingerprintValidated
-    FingerprintValidated --> RequestAndResponseReplay
-    RequestAndResponseReplay --> ExecutedOnce
-
-    Waiting --> Rejected: missing session, bad fingerprint, unknown ID, stale state
+    Waiting --> Rejected: missing session, unstable ID, unknown ID, stale state
     Rejected --> [*]
     Completed --> [*]
 ```
@@ -33,9 +28,11 @@ stateDiagram-v2
 
 - A user decision never carries authoritative tool name or arguments.
 - The server-held model-originated request is the authority.
-- One approval ID maps to one exact tool call and one session/run.
-- A decision is consumed once.
+- Every pending record retains the stable MAF request ID and call ID.
+- A decision applies atomically to the current server-held pending snapshot and is
+  consumed once by the restored MAF binding state.
 - Unknown, duplicate, stale, cross-session, or modified approvals do not execute.
 - Process-local cache loss cannot remove the persistent security boundary.
-- The compatibility bridge cannot accept arbitrary client-supplied request objects.
+- No compatibility bridge reconstructs a request from client data or private framework
+  JSON.
 - Session scrubbing cannot remove approval binding state.

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready after A2; closes with SB04`
+- `Complete`
 
 ## Objective
 
@@ -81,17 +81,17 @@ Prove and harden cross-version chat-session, provider-conversation, governed-ste
 
 ## Acceptance Checklist
 
-- [ ] 1.13 fixture outcomes explicit
-- [ ] native 1.15 round-trip
-- [ ] provider ID preserved
-- [ ] no duplicate replay
-- [ ] governed isolation preserved
-- [ ] scrub removes payload and retains state
-- [ ] typed persistence diagnostics
-- [ ] checkpoint result
-- [ ] rollback result
-- [ ] dead hook resolved
-- [ ] A3 GO with SB04
+- [x] 1.13 fixture outcomes explicit
+- [x] native 1.15 round-trip
+- [x] provider ID preserved
+- [x] no duplicate replay
+- [x] governed isolation preserved
+- [x] scrub removes payload and retains state
+- [x] typed persistence diagnostics
+- [x] checkpoint result
+- [x] rollback result
+- [x] dead hook resolved
+- [x] A3 GO with SB04
 
 ## Proof Tier
 

@@ -1,0 +1,7 @@
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:15:<PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:16:<PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:15:<PackageReference Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.13.0-preview.260703.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:26:<PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:27:<PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.13.0-preview.260703.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:28:<PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:29:<PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />

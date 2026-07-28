@@ -9,6 +9,40 @@ public sealed class AgentExecutionActivityRuntimeProgressPolicyTests
     [InlineData(
         ExecutionState.Preparing,
         "Framework",
+        AgentExecutionActivityPhase.PreparingRuntime)]
+    [InlineData(
+        ExecutionState.Running,
+        "Streaming",
+        AgentExecutionActivityPhase.Streaming)]
+    [InlineData(
+        ExecutionState.WaitingOnTool,
+        "Tool",
+        AgentExecutionActivityPhase.UsingTool)]
+    [InlineData(
+        ExecutionState.WaitingOnTool,
+        "Approval",
+        AgentExecutionActivityPhase.AwaitingApproval)]
+    [InlineData(
+        ExecutionState.Persisting,
+        "Session",
+        AgentExecutionActivityPhase.PersistingResult)]
+    public void Runtime_progress_maps_tool_use_and_approval_to_distinct_activity_phases(
+        ExecutionState state,
+        string phase,
+        AgentExecutionActivityPhase expectedPhase)
+    {
+        var activityPhase =
+            AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(
+                state,
+                phase);
+
+        Assert.Equal(expectedPhase, activityPhase);
+    }
+
+    [Theory]
+    [InlineData(
+        ExecutionState.Preparing,
+        "Framework",
         "Composing the agent runtime.")]
     [InlineData(
         ExecutionState.Preparing,

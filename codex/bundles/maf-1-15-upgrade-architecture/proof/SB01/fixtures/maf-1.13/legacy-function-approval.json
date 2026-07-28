@@ -1,0 +1,31 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "legacy-app-owned-function-approval",
+  "sessionId": "88888888-8888-4888-8888-888888888888",
+  "compatibility": {
+    "runtimeSessionKey": "conversation-001",
+    "serializedSessionStateJson": null,
+    "pendingApprovals": [
+      {
+        "approvalId": "approval-001",
+        "callId": "call-001",
+        "toolName": "workspace_write_file",
+        "toolKind": "function",
+        "details": "",
+        "argumentsJson": "{\"path\":\"artifacts/result.md\"}"
+      }
+    ],
+    "autoApprovePendingToolCalls": false
+  },
+  "classification": {
+    "nativeFrameworkBindingStatePresent": false,
+    "legacyRecordAuthority": "display-and-audit-only",
+    "directResponseOnlyContinuationAllowedAfterUpgrade": false
+  },
+  "expectedTargetBehavior": {
+    "outcome": "approval-reissue",
+    "preserveAuditRecord": true,
+    "executeLegacyRecordDirectly": false
+  }
+}
