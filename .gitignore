@@ -16,7 +16,6 @@ evidence
 !codex/bundles/**/01-execution-report.md
 codex/bundle-exports/**
 codex/**/*.zip
-!codex/skills/**
 .codex/live-targets/**
 .codex/live-runner/**
 .codex/runlogs/**

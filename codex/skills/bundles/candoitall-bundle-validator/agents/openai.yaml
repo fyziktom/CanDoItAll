@@ -1,4 +1,0 @@
-interface:
-  display_name: "CanDoItAll Bundle Validator"
-  short_description: "Validate bundle readiness and final closure"
-  default_prompt: "Use $candoitall-bundle-validator to audit this bundle's semantic coverage, dependencies, proof tiers, and closure state."

@@ -40,8 +40,8 @@ The checked-in local configuration deliberately leaves bearer authorization disa
 - `/recruiting/conversions`: canonical candidate-to-workforce conversion.
 
 Exact verbs, DTO fields, enum values, and limits live in the running OpenAPI document.
-The canonical skill is maintained in `CanDoItAll.SharedInfo`; the checked-in
-`codex/skills` tree is not a current contract.
+The canonical skill is maintained in `CanDoItAll.SharedInfo`; this product repository
+does not maintain a duplicate skill source.
 
 ## Privacy And Safety
 
