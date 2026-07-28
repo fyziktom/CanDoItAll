@@ -1,3 +1,0 @@
-Command: Historical SB10 proof transcript: source-audit-runtime-line-counts.txt
-No generic memory source files exceed 220 lines.
-ExitCode: 0

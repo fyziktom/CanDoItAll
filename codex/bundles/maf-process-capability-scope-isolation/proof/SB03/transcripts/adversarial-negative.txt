@@ -1,5 +1,0 @@
-Command: rg -n "CapabilityScopeJson\s*=\s*null|CapabilityScope\s*=\s*null" src\Processes tests\Unit\CanDoItAll.Tests.Unit\ProcessPersistenceStoreTests.cs tests\Unit\CanDoItAll.Tests.Unit\ProcessCapabilityScopeContractTests.cs
-Test: Capability scope null-placeholder negative scan
-Invariant: MAF-SB03-PROCESS-CONTRACT
-Output: no null placeholder assignment found for capability scope persistence or tests
-ExitCode: 1

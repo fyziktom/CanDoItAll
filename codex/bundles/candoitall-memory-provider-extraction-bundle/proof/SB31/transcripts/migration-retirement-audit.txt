@@ -1,5 +1,0 @@
-Migration retirement audit
-Migration: .\src\Foundation\CanDoItAll.Migrations.PostgreSql\Migrations\20260706015654_RetireLegacyCognitiveMemoryMainDbModel.cs
-No destructive migrationBuilder operations found in retirement migration.
-AppDbContextModelSnapshot contains no CognitiveMemory_ table mappings.
-Retirement migration documents read-only retention.

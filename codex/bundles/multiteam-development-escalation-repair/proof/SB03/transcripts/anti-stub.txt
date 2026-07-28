@@ -1,4 +1,0 @@
-Command: audit SB03 guardrails for silent fallback behavior
-Exit code: 0
-Invariant: MTE-SB03-READINESS
-Result: no silent fallback path was added; retry classification is explicit and keeps true rights/tool blockers as blockers.

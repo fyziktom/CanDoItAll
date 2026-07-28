@@ -1,0 +1,617 @@
+{
+  "version": 1,
+  "parameters": "--include-transitive",
+  "projects": [
+    {
+      "path": "C:/repositories/CanDoItAll/src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj",
+      "frameworks": [
+        {
+          "framework": "net10.0",
+          "topLevelPackages": [
+            {
+              "id": "Azure.AI.OpenAI",
+              "requestedVersion": "2.9.0-beta.1",
+              "resolvedVersion": "2.9.0-beta.1"
+            },
+            {
+              "id": "Microsoft.Agents.AI",
+              "requestedVersion": "1.13.0",
+              "resolvedVersion": "1.13.0"
+            },
+            {
+              "id": "Microsoft.Agents.AI.A2A",
+              "requestedVersion": "1.13.0-preview.260703.1",
+              "resolvedVersion": "1.13.0-preview.260703.1"
+            },
+            {
+              "id": "Microsoft.Agents.AI.OpenAI",
+              "requestedVersion": "1.13.0",
+              "resolvedVersion": "1.13.0"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "requestedVersion": "1.13.0",
+              "resolvedVersion": "1.13.0"
+            },
+            {
+              "id": "Microsoft.Extensions.AI",
+              "requestedVersion": "10.8.0",
+              "resolvedVersion": "10.8.0"
+            },
+            {
+              "id": "Microsoft.Extensions.AI.OpenAI",
+              "requestedVersion": "10.8.0",
+              "resolvedVersion": "10.8.0"
+            },
+            {
+              "id": "ModelContextProtocol",
+              "requestedVersion": "1.1.0",
+              "resolvedVersion": "1.1.0"
+            },
+            {
+              "id": "OllamaSharp",
+              "requestedVersion": "5.4.25",
+              "resolvedVersion": "5.4.25"
+            },
+            {
+              "id": "OpenAI",
+              "requestedVersion": "2.12.0",
+              "resolvedVersion": "2.12.0"
+            },
+            {
+              "id": "OpenTelemetry.Api",
+              "requestedVersion": "1.15.3",
+              "resolvedVersion": "1.15.3"
+            }
+          ],
+          "transitivePackages": [
+            {
+              "id": "A2A",
+              "resolvedVersion": "1.0.0-preview2"
+            },
+            {
+              "id": "AngleSharp",
+              "resolvedVersion": "1.5.2"
+            },
+            {
+              "id": "AWSSDK.Core",
+              "resolvedVersion": "4.0.3.12"
+            },
+            {
+              "id": "AWSSDK.Rekognition",
+              "resolvedVersion": "4.0.3.13"
+            },
+            {
+              "id": "AWSSDK.S3",
+              "resolvedVersion": "4.0.18.6"
+            },
+            {
+              "id": "AWSSDK.Textract",
+              "resolvedVersion": "4.0.3.13"
+            },
+            {
+              "id": "AWSSDK.TranscribeService",
+              "resolvedVersion": "4.0.5.3"
+            },
+            {
+              "id": "Azure.AI.FormRecognizer",
+              "resolvedVersion": "4.1.0"
+            },
+            {
+              "id": "Azure.AI.Vision.ImageAnalysis",
+              "resolvedVersion": "1.0.0"
+            },
+            {
+              "id": "Azure.Core",
+              "resolvedVersion": "1.51.1"
+            },
+            {
+              "id": "Azure.Identity",
+              "resolvedVersion": "1.17.1"
+            },
+            {
+              "id": "Azure.Storage.Blobs",
+              "resolvedVersion": "12.27.0"
+            },
+            {
+              "id": "Azure.Storage.Common",
+              "resolvedVersion": "12.26.0"
+            },
+            {
+              "id": "bblanchon.PDFium.Linux",
+              "resolvedVersion": "139.0.7215"
+            },
+            {
+              "id": "bblanchon.PDFium.macOS",
+              "resolvedVersion": "139.0.7215"
+            },
+            {
+              "id": "bblanchon.PDFium.Win32",
+              "resolvedVersion": "139.0.7215"
+            },
+            {
+              "id": "BouncyCastle.Cryptography",
+              "resolvedVersion": "2.6.2"
+            },
+            {
+              "id": "CanDoItAll.Components.BaseLib",
+              "resolvedVersion": "0.1.4"
+            },
+            {
+              "id": "CanDoItAll.Components.CanvasLib",
+              "resolvedVersion": "0.1.4"
+            },
+            {
+              "id": "CanDoItAll.Components.Common",
+              "resolvedVersion": "0.1.4"
+            },
+            {
+              "id": "CanDoItAll.Components.OverlayLib",
+              "resolvedVersion": "0.1.4"
+            },
+            {
+              "id": "CanDoItAll.FileTools.Abstractions",
+              "resolvedVersion": "0.1.0"
+            },
+            {
+              "id": "CanDoItAll.FileTools.FileBrowser.Components",
+              "resolvedVersion": "0.2.0"
+            },
+            {
+              "id": "CanDoItAll.FileTools.FileBrowser.Core",
+              "resolvedVersion": "0.1.0"
+            },
+            {
+              "id": "CanDoItAll.FileTools.FileInteraction.Components",
+              "resolvedVersion": "0.2.1"
+            },
+            {
+              "id": "CanDoItAll.FileTools.FileInteraction.Core",
+              "resolvedVersion": "0.1.0"
+            },
+            {
+              "id": "ClosedXML",
+              "resolvedVersion": "0.105.0"
+            },
+            {
+              "id": "ClosedXML.Parser",
+              "resolvedVersion": "2.0.0"
+            },
+            {
+              "id": "csFastFloat",
+              "resolvedVersion": "4.1.5"
+            },
+            {
+              "id": "DocumentFormat.OpenXml",
+              "resolvedVersion": "3.4.1"
+            },
+            {
+              "id": "DocumentFormat.OpenXml.Framework",
+              "resolvedVersion": "3.4.1"
+            },
+            {
+              "id": "ExcelDataReader",
+              "resolvedVersion": "3.8.0"
+            },
+            {
+              "id": "ExcelNumberFormat",
+              "resolvedVersion": "1.1.0"
+            },
+            {
+              "id": "Google.Api.CommonProtos",
+              "resolvedVersion": "2.17.0"
+            },
+            {
+              "id": "Google.Api.Gax",
+              "resolvedVersion": "4.13.0"
+            },
+            {
+              "id": "Google.Api.Gax.Grpc",
+              "resolvedVersion": "4.12.1"
+            },
+            {
+              "id": "Google.Api.Gax.Rest",
+              "resolvedVersion": "4.13.0"
+            },
+            {
+              "id": "Google.Apis",
+              "resolvedVersion": "1.73.0"
+            },
+            {
+              "id": "Google.Apis.Auth",
+              "resolvedVersion": "1.73.0"
+            },
+            {
+              "id": "Google.Apis.Core",
+              "resolvedVersion": "1.73.0"
+            },
+            {
+              "id": "Google.Apis.Storage.v1",
+              "resolvedVersion": "1.73.0.3974"
+            },
+            {
+              "id": "Google.Cloud.DocumentAI.V1",
+              "resolvedVersion": "3.23.0"
+            },
+            {
+              "id": "Google.Cloud.Location",
+              "resolvedVersion": "2.4.0"
+            },
+            {
+              "id": "Google.Cloud.Speech.V1",
+              "resolvedVersion": "3.9.0"
+            },
+            {
+              "id": "Google.Cloud.Storage.V1",
+              "resolvedVersion": "4.13.0"
+            },
+            {
+              "id": "Google.Cloud.Vision.V1",
+              "resolvedVersion": "3.8.0"
+            },
+            {
+              "id": "Google.LongRunning",
+              "resolvedVersion": "3.5.0"
+            },
+            {
+              "id": "Google.Protobuf",
+              "resolvedVersion": "3.31.1"
+            },
+            {
+              "id": "Grpc.Auth",
+              "resolvedVersion": "2.71.0"
+            },
+            {
+              "id": "Grpc.Core.Api",
+              "resolvedVersion": "2.71.0"
+            },
+            {
+              "id": "Grpc.Net.Client",
+              "resolvedVersion": "2.71.0"
+            },
+            {
+              "id": "Grpc.Net.Common",
+              "resolvedVersion": "2.71.0"
+            },
+            {
+              "id": "Humanizer.Core",
+              "resolvedVersion": "3.0.1"
+            },
+            {
+              "id": "ManagedCode.Communication",
+              "resolvedVersion": "10.0.0"
+            },
+            {
+              "id": "ManagedCode.MarkItDown",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "ManagedCode.MimeTypes",
+              "resolvedVersion": "10.0.1"
+            },
+            {
+              "id": "ManagedCode.Storage.Aws",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "ManagedCode.Storage.Azure",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "ManagedCode.Storage.Core",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "ManagedCode.Storage.FileSystem",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "ManagedCode.Storage.Gcp",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Abstractions",
+              "resolvedVersion": "1.13.0"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Authorization",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Components",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Components.Analyzers",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Components.Forms",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Components.Web",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Cryptography.Internal",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.AspNetCore.DataProtection",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.AspNetCore.DataProtection.Abstractions",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.AspNetCore.Metadata",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Bcl.AsyncInterfaces",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "Microsoft.EntityFrameworkCore",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.EntityFrameworkCore.Abstractions",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.EntityFrameworkCore.Analyzers",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.EntityFrameworkCore.InMemory",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.EntityFrameworkCore.Relational",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.Extensions.AI.Abstractions",
+              "resolvedVersion": "10.8.0"
+            },
+            {
+              "id": "Microsoft.Extensions.AI.Evaluation",
+              "resolvedVersion": "10.6.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Caching.Abstractions",
+              "resolvedVersion": "10.0.10"
+            },
+            {
+              "id": "Microsoft.Extensions.Caching.Memory",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.Extensions.Compliance.Abstractions",
+              "resolvedVersion": "10.5.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration.Abstractions",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration.Binder",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "resolvedVersion": "10.0.10"
+            },
+            {
+              "id": "Microsoft.Extensions.Diagnostics",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Extensions.Diagnostics.Abstractions",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.Extensions.Diagnostics.HealthChecks",
+              "resolvedVersion": "10.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions",
+              "resolvedVersion": "10.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.FileProviders.Abstractions",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.Extensions.FileSystemGlobbing",
+              "resolvedVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.Extensions.Http",
+              "resolvedVersion": "10.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging",
+              "resolvedVersion": "10.0.4"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "resolvedVersion": "10.0.10"
+            },
+            {
+              "id": "Microsoft.Extensions.ObjectPool",
+              "resolvedVersion": "10.0.6"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "Microsoft.Extensions.Options.ConfigurationExtensions",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Extensions.Options.DataAnnotations",
+              "resolvedVersion": "10.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Primitives",
+              "resolvedVersion": "10.0.10"
+            },
+            {
+              "id": "Microsoft.Extensions.Validation",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.Extensions.VectorData.Abstractions",
+              "resolvedVersion": "9.7.0"
+            },
+            {
+              "id": "Microsoft.Identity.Client",
+              "resolvedVersion": "4.78.0"
+            },
+            {
+              "id": "Microsoft.Identity.Client.Extensions.Msal",
+              "resolvedVersion": "4.78.0"
+            },
+            {
+              "id": "Microsoft.IdentityModel.Abstractions",
+              "resolvedVersion": "8.14.0"
+            },
+            {
+              "id": "Microsoft.JSInterop",
+              "resolvedVersion": "10.0.5"
+            },
+            {
+              "id": "Microsoft.ML.Tokenizers",
+              "resolvedVersion": "2.0.0"
+            },
+            {
+              "id": "MimeKit",
+              "resolvedVersion": "4.15.1"
+            },
+            {
+              "id": "ModelContextProtocol.Core",
+              "resolvedVersion": "1.1.0"
+            },
+            {
+              "id": "Newtonsoft.Json",
+              "resolvedVersion": "13.0.4"
+            },
+            {
+              "id": "Npgsql",
+              "resolvedVersion": "10.0.3"
+            },
+            {
+              "id": "Npgsql.EntityFrameworkCore.PostgreSQL",
+              "resolvedVersion": "10.0.2"
+            },
+            {
+              "id": "PdfPig",
+              "resolvedVersion": "0.1.13"
+            },
+            {
+              "id": "PDFtoImage",
+              "resolvedVersion": "5.2.0"
+            },
+            {
+              "id": "RBush.Signed",
+              "resolvedVersion": "4.0.0"
+            },
+            {
+              "id": "Sep",
+              "resolvedVersion": "0.12.2"
+            },
+            {
+              "id": "SixLabors.Fonts",
+              "resolvedVersion": "1.0.0"
+            },
+            {
+              "id": "SkiaSharp",
+              "resolvedVersion": "3.119.2"
+            },
+            {
+              "id": "SkiaSharp.NativeAssets.Linux.NoDependencies",
+              "resolvedVersion": "3.119.1"
+            },
+            {
+              "id": "SkiaSharp.NativeAssets.macOS",
+              "resolvedVersion": "3.119.2"
+            },
+            {
+              "id": "SkiaSharp.NativeAssets.WebAssembly",
+              "resolvedVersion": "3.119.1"
+            },
+            {
+              "id": "SkiaSharp.NativeAssets.Win32",
+              "resolvedVersion": "3.119.2"
+            },
+            {
+              "id": "Sungaila.PDFium.BlazorWebAssembly",
+              "resolvedVersion": "134.0.6982"
+            },
+            {
+              "id": "System.ClientModel",
+              "resolvedVersion": "1.14.0"
+            },
+            {
+              "id": "System.CodeDom",
+              "resolvedVersion": "7.0.0"
+            },
+            {
+              "id": "System.IO.Hashing",
+              "resolvedVersion": "10.0.1"
+            },
+            {
+              "id": "System.IO.Packaging",
+              "resolvedVersion": "8.0.1"
+            },
+            {
+              "id": "System.Management",
+              "resolvedVersion": "7.0.2"
+            },
+            {
+              "id": "System.Memory.Data",
+              "resolvedVersion": "10.0.3"
+            },
+            {
+              "id": "System.Numerics.Tensors",
+              "resolvedVersion": "10.0.10"
+            },
+            {
+              "id": "System.Security.Cryptography.Pkcs",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "System.Security.Cryptography.ProtectedData",
+              "resolvedVersion": "10.0.0"
+            },
+            {
+              "id": "System.Security.Cryptography.Xml",
+              "resolvedVersion": "10.0.7"
+            },
+            {
+              "id": "YoutubeExplode",
+              "resolvedVersion": "6.5.7"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,0 @@
-Command: inspect repaired proof run 170c9b2b-47da-4a21-a7bc-f57e90aff59c and live software-delivery launch readiness
-Exit code: 0
-Invariant: MTE-SB01-DIAGNOSIS
-Observed pass: root proof run completed and live launch/check returned process.launch.readiness_ok with no missing executable-step agent binding.

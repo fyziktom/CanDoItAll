@@ -1,7 +1,0 @@
-Command: rg -n NotImplementedException|TODO|HACK|throw new NotSupportedException|return default|return null;|stub|placeholder over SB07 source and tests
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB07 anti-stub audit
-ExitCode: 0
-Summary: SB07 HTTP driver source and tests contain no placeholder, TODO, NotImplementedException, default-return, or null-return stubs.
-Output:
-

@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Product module for project structure, canonical project nodes, party assignments, and project-facing services.
+Product module for project portfolio records, phases and options, project-to-project
+hierarchy, party integration, file portfolios, and project-facing pages and services.
 
 ## Project Type
 
@@ -14,25 +15,17 @@ Product module for project structure, canonical project nodes, party assignments
 dotnet build src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Modules.Projects.csproj](CanDoItAll.Modules.Projects.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
+This module owns project portfolio records and their product semantics. Keep that
+behavior here and expose it through typed services, Razor components, and module
+contracts. The Workbench module owns canonical Project Structure nodes, workbench state,
+and node mutations; this module consumes those capabilities through typed bridge
+contracts instead of duplicating them.
 
 ## Related Docs
 

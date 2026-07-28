@@ -93,6 +93,72 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_delivers_exact_invocation_attachment()
+    {
+        var runtimeProvider = new TestRuntimeToolProvider(
+            10,
+            "runtime_attachment_probe");
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            services.BuildServiceProvider());
+        var attachment = new RuntimeToolTestAttachment("exact");
+        var envelope = CreateRuntimeToolAttachmentEnvelope(attachment);
+
+        _ = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            AgentRuntimeContextIntent.Empty,
+            contextAttachments: [envelope]);
+
+        var context = Assert.Single(runtimeProvider.Contexts);
+        var capturedEnvelope = Assert.Single(
+            context.GetAttachments<RuntimeToolTestAttachment>());
+        Assert.True(capturedEnvelope.TryGetAttachment<RuntimeToolTestAttachment>(
+            out var capturedAttachment));
+        Assert.Same(attachment, capturedAttachment);
+    }
+
+    [Fact]
+    public void MafAgentRuntimeHandoff_keeps_invocation_attachments_entry_agent_only()
+    {
+        var entryAgentId = Guid.NewGuid();
+        var attachment = new RuntimeToolTestAttachment("entry-only");
+        var transientContext = new AgentRuntimeTransientContext(
+            "Entry context",
+            WorkspaceScopeDescriptor.Sandbox,
+            [CreateRuntimeToolAttachmentEnvelope(attachment)]);
+        var runtimeOptions = new AgentRuntimeExecutionOptions(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: false,
+            MaxStructuredOutputRepairAttempts: 0)
+        {
+            TransientContext = transientContext
+        };
+
+        var entryOptions =
+            MafRuntimeAgentFactory.ResolveHandoffParticipantExecutionOptions(
+                runtimeOptions,
+                entryAgentId,
+                entryAgentId);
+        var otherOptions =
+            MafRuntimeAgentFactory.ResolveHandoffParticipantExecutionOptions(
+                runtimeOptions,
+                Guid.NewGuid(),
+                entryAgentId);
+
+        Assert.Same(transientContext, entryOptions.TransientContext);
+        Assert.Single(
+            entryOptions.TransientContext!
+                .GetAttachments<RuntimeToolTestAttachment>());
+        Assert.Null(otherOptions.TransientContext);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_skips_registered_providers_when_context_disables_them()
     {
         var provider = new TestRuntimeToolProvider(10, "runtime_tool_should_not_attach");
@@ -1220,7 +1286,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         AgentRuntimeContextIntent contextIntent,
         List<string>? progressMessages = null,
         bool suppressApprovalRequirements = true,
-        string runtimeSessionKey = "")
+        string runtimeSessionKey = "",
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
     {
         return await composer.CreateCapabilityStateCoreAsync(
             agent,
@@ -1237,7 +1304,31 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             suppressApprovalRequirements,
             WorkspaceScopeDescriptor.Sandbox,
             contextIntent,
-            runtimeSessionKey);
+            runtimeSessionKey,
+            contextAttachments);
+    }
+
+    private static AgentChatContextAttachmentEnvelope
+        CreateRuntimeToolAttachmentEnvelope(
+            IAgentChatContextAttachment attachment)
+    {
+        return new AgentChatContextAttachmentDraft(
+            new AgentChatContextAttachmentKind("tests.runtime-tool"),
+            new SnapshotContentFingerprint("content-1"),
+            new SnapshotCoverageFingerprint("coverage-1"),
+            new DatabaseProfileGeneration(1),
+            new SnapshotFreshnessFingerprint("freshness-1"),
+            new DateTimeOffset(2026, 7, 27, 12, 0, 0, TimeSpan.Zero),
+            freshUntilUtc: null,
+            attachment: attachment)
+            .CreateEnvelope(
+                AgentChatContextScopeId.Create(),
+                new AgentChatContextSource(
+                    new AgentChatContextSourceKind("tests"),
+                    new AgentChatContextSourceId("runtime-tool")),
+                WorkspaceScopeDescriptor.Sandbox,
+                new AgentChatContextContributorId("runtime-tool"),
+                new ModulePublicationRevision(1));
     }
 
     private static object InvokeCreateRuntimeCapabilityAccessPlan(
@@ -1458,6 +1549,9 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             AgentRuntimeToolProviderContext context)
             => metadata;
     }
+
+    private sealed record RuntimeToolTestAttachment(string Value) :
+        IAgentChatContextAttachment;
 
     private sealed class ThrowingRuntimeToolProvider : IAgentRuntimeToolProvider
     {

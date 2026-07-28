@@ -28,9 +28,13 @@ public sealed class HrAgentCompositionTests
             ValidateOnBuild = true,
             ValidateScopes = true
         });
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            serviceProvider,
+            TestSchemaBootstrapModules.None);
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var workspace = workspaceFactory.GetOrganizationWorkspaceService();
+        var canonicalProviderSource = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSource>();
         var agents = await workspace.ListAgentsAsync(includeTemplates: true);
         var providers = await workspace.ListProvidersAsync();
         var capabilities = await workspace.ListCapabilitiesAsync();
@@ -127,6 +131,7 @@ public sealed class HrAgentCompositionTests
             new byte[AgentAvatarImagePolicy.MaxAvatarBytes + 1]);
         var oversizedAvatarService = new HrAgentAvatarGenerationService(
             workspace,
+            canonicalProviderSource,
             oversizedGenerator,
             NullLogger<HrAgentAvatarGenerationService>.Instance);
         await Assert.ThrowsAsync<InvalidOperationException>(() => oversizedAvatarService.GenerateAsync(
@@ -143,6 +148,7 @@ public sealed class HrAgentCompositionTests
 
         var corruptAvatarService = new HrAgentAvatarGenerationService(
             workspace,
+            canonicalProviderSource,
             new StubImageGenerationService([0xff, 0xd8, 0xff, 0xd9]),
             NullLogger<HrAgentAvatarGenerationService>.Instance);
         await Assert.ThrowsAsync<InvalidOperationException>(() => corruptAvatarService.GenerateAsync(
@@ -156,6 +162,7 @@ public sealed class HrAgentCompositionTests
         var validSquareJpeg = Convert.FromBase64String(ValidSquareJpegBase64);
         var mimeMismatchAvatarService = new HrAgentAvatarGenerationService(
             workspace,
+            canonicalProviderSource,
             new StubImageGenerationService(validSquareJpeg, "image/png"),
             NullLogger<HrAgentAvatarGenerationService>.Instance);
         await Assert.ThrowsAsync<InvalidOperationException>(() => mimeMismatchAvatarService.GenerateAsync(
@@ -168,6 +175,7 @@ public sealed class HrAgentCompositionTests
 
         var nonSquareAvatarService = new HrAgentAvatarGenerationService(
             workspace,
+            canonicalProviderSource,
             new StubImageGenerationService(
                 Convert.FromBase64String(NonSquareJpegBase64)),
             NullLogger<HrAgentAvatarGenerationService>.Instance);
@@ -182,6 +190,7 @@ public sealed class HrAgentCompositionTests
         var validGenerator = new StubImageGenerationService(validSquareJpeg);
         var avatarService = new HrAgentAvatarGenerationService(
             workspace,
+            canonicalProviderSource,
             validGenerator,
             NullLogger<HrAgentAvatarGenerationService>.Instance);
         var avatarResult = await avatarService.GenerateAsync(

@@ -1,10 +1,15 @@
 # Reusable floating agent chats
 
-Status: Accepted for phased implementation, 2026-07-16
+Status: Implemented with the explicit follow-ups below; original decision accepted
+2026-07-16 and current preload/activity addendum documented 2026-07-27.
 
-## Context
+The current typed activity, preparation, provider-snapshot, and module-runtime-snapshot
+contract is maintained in
+[Agent execution activity and runtime snapshots](agent-execution-activity-and-runtime-snapshots.md).
 
-The Project Structure canvas has a useful contextual agent catalog and chat, but the implementation is mounted inside `CanvasWorkbench.OverlayContent`. It is consequently bounded by the Canvas tab and is destroyed when the user switches to Gantt or navigates to another module. The same component also combines catalog filtering, access resolution, window state, durable chat sessions, run execution, approvals, attachments, history export, voice, runtime diagnostics, and module-specific prompt construction in one 1,550-line Razor file.
+## Original Context
+
+Before this decision was implemented, the Project Structure canvas had a contextual agent catalog and chat mounted inside `CanvasWorkbench.OverlayContent`. It was consequently bounded by the Canvas tab and was destroyed when the user switched to Gantt or navigated to another module. The component also combined catalog filtering, access resolution, window state, durable chat sessions, run execution, approvals, attachments, history export, voice, runtime diagnostics, and module-specific prompt construction in one large Razor file.
 
 The required behavior has three independent axes:
 
@@ -12,7 +17,7 @@ The required behavior has three independent axes:
 - the same durable conversation must receive the context of the module that is active for each new turn;
 - hidden conversations may remain active for a bounded time without retaining unsafe runtime resources.
 
-The existing runtime already has a per-turn `IAgentContextContributor` seam. It does not have a UI-context registry, an active-chat lifecycle, or a retained agent pool. A durable `ChatSessionRecord` is only the transcript/session identity. Each send constructs and disposes a fresh MAF `RuntimeBuildResult` containing the agent, context providers, tool providers, approval wrappers, MCP/A2A clients, and other disposables.
+The original runtime already had a per-turn `IAgentContextContributor` seam but did not have a UI-context registry, active-chat lifecycle, typed startup-activity stream, or safe preparation snapshots. Those application seams now exist. A durable `ChatSessionRecord` is still only the transcript/session identity, and each send still constructs and disposes a fresh MAF `RuntimeBuildResult` containing the agent, context providers, tool providers, approval wrappers, MCP/A2A clients, and other disposables.
 
 The architecture mapping used CodeAnalytics snapshots `snap-20260716185835-0c0d9e98`, `snap-20260716185934-932fd70e`, `snap-20260716190015-48a36a28`, and `snap-20260716190043-94e27f4d`. The affected project graph has no direct project-reference cycle. `CanDoItAll.Modules.AgentFramework` already references Workbench and CRM-HR, so this integration must not add a feature-module reference back to that implementation module. The Processes module has a broader pre-existing Agent Framework module dependency; its context adapter uses only the shared Core/Components contracts and does not deepen that dependency.
 
@@ -35,7 +40,10 @@ Four identities remain explicit:
 | Durable conversation | `ChatSessionId` | Agent workspace persistence | Transcript, title, run references, approval state |
 | Active floating chat | `AgentChatHandleId` | Circuit-scoped coordinator | Agent/session IDs, visibility, activity time, lightweight UI state |
 | Execution | `ExecutionRunId` | Agent runtime/persistence | One run, logs, receipts, metrics, cancellation state |
-| Prepared catalog entry | `AgentId` | Circuit-scoped preparation cache | Bounded immutable agent-definition metadata only |
+| Activity operation | `AgentExecutionActivityStreamId` | Process-local typed activity coordinator | Bounded sequenced feedback for one operation |
+| Prepared catalog entry | `AgentId` | Circuit-scoped `AgentChatPreparationPool` | Bounded immutable agent-definition metadata only |
+| Execution preparation | Database profile + workspace + agent + version | Scoped `AgentExecutionPreparationCache` | Immutable agent/provider/capability/memory blueprint |
+| Provider projection | Database profile generation + provider revision | Singleton canonical provider snapshot | Immutable provider configuration; never resolved credentials |
 
 Keeping a chat active retains only the lightweight handle and durable session identity. It does not retain a `RuntimeBuildResult`, `AIAgent`, scoped service, credential, tool delegate, MCP client, attachment, voice buffer, or module component.
 
@@ -53,8 +61,10 @@ Stopping a floating chat removes its active handle and clears transient UI state
 | Project Structure context construction and access projection | `CanDoItAll.Modules.Workbench` |
 | CRM-HR, Processes, and future context construction | their owning modules |
 | Runtime authorization | existing server-side tool and capability policies |
-| Preparation metadata cache | `CanDoItAll.Modules.AgentFramework`, never live runtime objects |
-| Future prepared-resource pooling | MAF/provider runtime infrastructure, only after measurement and lease-safety proof |
+| Catalog preparation metadata | `CanDoItAll.Modules.AgentFramework`, never live runtime objects |
+| Versioned execution preparation | `CanDoItAll.AgentFramework.Core`, scoped and validated at use time |
+| Canonical provider runtime projection | `CanDoItAll.Modules.AgentFramework`, singleton but database-profile-generation fenced |
+| Full runtime construction | MAF runtime, fresh for every execution |
 
 ```text
 Workbench / CRM-HR / Processes
@@ -71,14 +81,20 @@ Workbench / CRM-HR / Processes
  global OverlayWindow     immutable context snapshot
           |                    |
           v                    v
- AgentChatPanel ------> per-turn execution orchestrator
-          |
-          +--> raw durable user prompt
-          |
-          +--> transient request-scoped context provider
-                       |
-                       v
-            fresh RuntimeBuildResult
+ AgentChatPanel ------> immediate operation handle + typed activity reader
+                                  |
+                                  v
+                        per-turn execution orchestrator
+                                  |
+                    +-------------+-------------+
+                    |                           |
+                    v                           v
+          immutable module snapshot    versioned preparation
+                    |                           |
+                    +-------------+-------------+
+                                  |
+                                  v
+                       fresh RuntimeBuildResult
 ```
 
 No new feature-module dependency on `CanDoItAll.Modules.AgentFramework` is introduced by floating-chat context integration. Web is the composition root and may reference both feature modules and the global host. The pre-existing Processes-to-AgentFramework dependency remains recorded technical debt outside this refactor.
@@ -102,7 +118,7 @@ Access resolution is explicit and fail-closed. Both scopes and reusable surface 
 
 Semantic deep-link parameters are requirements, not selection hints. When a route names a project, workflow, run, process definition, account, opportunity, interaction, application, party, resource, or other canonical entity, the owning application boundary must resolve that exact identity and validate all expressed ownership relationships before publishing `Ready`. An explicit missing, conflicting, unsupported, or filtered-out identity publishes `Failed`; it must never fall back to the first catalog row, a default editor, or a generic new-entity context. Routed pages keep a bounded failed/loading scope mounted even when their main surface is unavailable so prompt capture cannot silently degrade to context-free execution. A later explicit user selection may replace the routed selection through the page's normal typed state transition.
 
-The active scope is captured once at send initiation. Agent ID, session ID, scope version, ordered fragments, attachment paths, and refresh target form one immutable send command before any asynchronous runtime work begins. Navigation after capture cannot change the in-flight turn. The next turn captures the new active module, allowing one conversation to move safely from Project Structure to CRM-HR or Processes.
+The active scope is captured once at send initiation. Agent ID, session ID, scope version, ordered fragments, typed invocation attachments, attachment paths, and refresh target form one immutable send command before asynchronous runtime work proceeds. Navigation after capture cannot change the in-flight turn. The next turn captures the new active module, allowing one conversation to move safely from Project Structure to CRM-HR or Processes. Project Structure and Processes can attach bounded runtime snapshots copied from their already-ready UI/projection state; those snapshots carry profile generation, fingerprints, freshness, and coverage and never grant mutation authority.
 
 Scope and fragment registrations are disposable. Disposal removes their immutable values immediately. A page transition therefore cannot leave an old project or partner selected as an implicit fallback. With no active context, the chat remains usable but sends no module context.
 
@@ -114,7 +130,7 @@ Successful mutation-capable runs publish a typed completion notification contain
 
 ## Current user-position propagation extension
 
-Status: Accepted for implementation, 2026-07-17
+Status: Implemented; extension accepted 2026-07-17.
 
 The first implementation proves that a conversation can move between Project Structure, Projects, and CRM. It does not yet describe the user's position consistently across the shell and feature modules. The architectural scan in CodeAnalytics snapshot `snap-20260717142824-88cfa7be` found the context registry in Core with a high fan-in and confirmed that the requested feature modules can depend on Core without a reverse dependency from Core to a module. Source inspection found these distinct responsibilities:
 
@@ -229,30 +245,25 @@ Persist a dedicated typed floating-chat settings document under the versioned ke
 
 Normalization enforces bounded positive values. The UI explains that an active handle is lightweight and that prepared-resource capacity is a separate runtime optimization.
 
-`MaximumPreparedAgents` defaults to zero. In the current implementation, a nonzero value warms only bounded, invalidatable active-agent definition metadata. It must not cause the UI layer to retain live runtime builds.
+`MaximumPreparedAgents` defaults to zero. A nonzero value affects only the circuit-scoped `AgentChatPreparationPool`, which warms bounded, invalidatable active-agent definition metadata. It is separate from the scoped execution-preparation cache and the singleton canonical provider snapshot, and it must not cause the UI layer to retain live runtime builds.
 
 ## Prepared-agent stock decision
 
 Pooling the current `RuntimeBuildResult` or `AIAgent` is rejected. Those objects capture turn-specific context intent, runtime session key, tool and approval policy, attachments, credentials/configuration, scoped contributors, MCP/A2A clients, handoff participants, and async disposables. Reusing them can cross-contaminate Project Structure and CRM-HR context, preserve revoked authorization, race concurrent turns, or leak processes and credentials.
 
-The implemented `AgentChatPreparationPool` is therefore intentionally metadata-only. It caches a bounded set of immutable active `AgentDefinition` values, adapts ordering from usage counts when enabled, has idle eviction, serializes refresh, and invalidates on reference-data changes. It can reduce catalog/reference-data work but does not claim provider/model warm-start latency savings.
+The implemented `AgentChatPreparationPool` remains intentionally metadata-only. It caches a bounded set of immutable active `AgentDefinition` values, adapts ordering from usage counts when enabled, has idle eviction, serializes refresh, and invalidates on reference-data changes.
 
-Prepared capacity is a runtime-infrastructure phase with this order:
+Actual execution preparation is handled by the separate scoped `AgentExecutionPreparationCache`. It single-flights immutable blueprints keyed by database profile, workspace, and agent and versions them by catalog revision, database-profile generation, and provider-configuration fingerprint. The durable run-admission boundary validates the blueprint again before use. Stale or superseded entries fail or refresh explicitly; they do not silently fall back to a mismatched agent/provider.
 
-1. Measure runtime composition separately from provider/network latency using the existing MAF composition metrics.
-2. Reuse or pool only demonstrated context-free resources such as provider transports, validated immutable agent templates, and immutable capability metadata.
-3. Build context, tools, approval wrappers, attachments, session state, and scoped contributors for every turn.
-4. Use exclusive leases, bounded creation concurrency, bounded total capacity, idle eviction, cancellation, disposal, and creation-failure telemetry.
-5. Key and invalidate prepared entries by organization/workspace, agent revision, provider and credential revision, model, capability/tool-policy revision, and history mode.
-6. Grow adaptive targets from measured recent demand and shrink them on inactivity or memory pressure; never infer demand from open windows alone.
+`CanonicalProviderRuntimeProfileSnapshotService` is an immutable singleton projection initialized after database readiness. It carries database identity/generation and provider concurrency revisions, probes the canonical revision at use time, and fails closed if the revision cannot be verified. Resolved secret values are prepared separately for one execution dispatch and cleared with that scope.
 
-A full-runtime pool requires thread-safety proof and benchmark evidence before it can replace this decision.
+These mechanisms remove repeated safe local loading without pooling live agents. Context, tools, approval wrappers, attachments, session state, credential scope, provider call, and async runtime disposables remain per execution. A full-runtime pool still requires thread-safety proof and benchmark evidence before this decision can change.
 
 ## Concurrency and failure closure
 
 The coordinator serializes its own in-memory mutations and emits immutable snapshots after releasing its lock. It never invokes event subscribers while holding the lock.
 
-One active handle permits at most one send at a time. This UI/application gate is necessary but not sufficient: the split-store execution path currently checks for a blocking run and persists a new run in separate operations. A later runtime-hardening phase must add durable optimistic concurrency or idempotency so two circuits/processes cannot double-send the same session.
+One active handle permits at most one send at a time. The split file store now admits a chat-backed run through `BeginChatBackedRunAsync`, which checks the blocking run and creates the new session/run projection under one workspace admission lock. Typed pending commit journals recover chat-backed creation, generic creation, and existing-run updates after an interrupted multi-file commit. Cross-host coordination is still outside the process-local lock and must not be inferred from this guarantee.
 
 Context registration updates use a generation/version. A send captures a complete snapshot atomically. No send reads mutable page state after its first await.
 
@@ -262,7 +273,7 @@ Errors are explicit:
 - unavailable agents fail rather than selecting a different agent;
 - context registration misuse fails rather than attaching to an arbitrary scope;
 - settings validation reports the invalid bound;
-- prepared-resource creation failures are observable and fall back only to the normal fresh-build path when that behavior is explicitly configured and reported.
+- preparation capacity, invalidation, churn, stale-use, provider-snapshot-not-ready, and provider-snapshot-fault states fail explicitly; no silent stale-data fallback is permitted.
 
 Logs and traces include handle, agent, session, context source, and context version IDs. They exclude prompt text, secrets, attachment content, partner contact details, and credential material.
 
@@ -274,7 +285,8 @@ Selected patterns:
 - **Disposable registration/lease** for module context lifetime without retaining component references.
 - **Immutable snapshot** for per-turn context consistency across asynchronous navigation.
 - **Application host** in the Web composition root for cross-route rendering.
-- **Explicit lease pool** only for a later bounded runtime-resource optimization.
+- **Versioned immutable preparation cache** for safe reusable agent/provider/capability/memory data.
+- **Fresh per-turn runtime** for context-, policy-, credential-, and client-bearing objects.
 
 Rejected patterns:
 
@@ -352,24 +364,25 @@ Gate: Canvas to Gantt preserves the host and session; no feature module referenc
 
 Gate: backward-compatible settings deserialization, cross-module integration proof, and no domain entity retained by the coordinator.
 
-### Phase 4: runtime correctness — partially implemented
+### Phase 4: runtime correctness — activity/admission persistence implemented; interactive cancellation deferred
 
-Implemented now: exact transient-context retention across approval continuation, provider-native pending-session restoration for contextual approval resumes, fail-closed restart behavior, framework-managed history for new contextual turns, typed completion notifications, coordinator operation leases with per-handle send gating after remount, terminal-event transcript refresh for reopened panels, and the indexed summary history path.
+Implemented now: exact transient-context retention across approval continuation, provider-native pending-session restoration for contextual approval resumes, fail-closed restart behavior, framework-managed history for new contextual turns, typed completion notifications, coordinator operation leases with per-handle send gating after remount, immediate typed activity handles, profile-fenced activity readers, atomic process-local chat-run admission, pending commit-journal recovery, terminal-event transcript refresh for reopened panels, and the indexed summary history path.
 
 - Add interactive cancellation by execution/session identity.
-- Add durable optimistic concurrency/idempotency for chat sends.
+- Add a cross-host chat-session admission strategy if multiple app hosts are allowed to share one file workspace; the current lock is process-local.
 - Make runtime-build disposal failure-tolerant and session-serialization timeout ownership explicit.
-- Add a keyed execution-event path.
 
 Gate: double-send, cancel, disposal-failure, and approval-resume tests pass across persistence modes.
 
-### Phase 5: measured preparation — metadata cache implemented; live resource preparation deferred
+### Phase 5: measured preparation — immutable preparation implemented; live runtime pooling rejected
 
-- Capture composition histograms by agent/provider/configuration key.
-- Implement bounded context-free preparation leases only where measurements justify them.
-- Add adaptive demand, invalidation, failure, cancellation, concurrency, idle eviction, and memory-pressure tests.
+Implemented now: circuit-scoped catalog metadata preparation, scoped single-flight immutable execution blueprints, singleton provider configuration snapshots with revision/profile fences, one-dispatch credential scopes, activity timing for reused/refreshed preparation, and focused invalidation/concurrency tests.
 
-Gate: benchmark shows a meaningful local composition improvement, no stale-context/authorization reuse, bounded memory/process counts, and clean disposal. Otherwise `MaximumPreparedAgents` remains zero and fresh builds remain canonical.
+- Continue separating local preparation measurements from provider/network latency.
+- Pool an additional context-free provider transport only after its own bounded lifetime, invalidation, concurrency, and disposal proof.
+- Do not pool `RuntimeBuildResult`, `AIAgent`, credentials, turn context, attachments, or tool/client graphs.
+
+Gate: measured local improvement, no stale-context/authorization reuse, bounded memory/process counts, and clean disposal. `MaximumPreparedAgents` remains a metadata-pool setting, not permission to retain live runtime state.
 
 ### Final validation
 

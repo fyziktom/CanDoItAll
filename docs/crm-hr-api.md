@@ -18,7 +18,9 @@ There is no seed endpoint, direct SQL/EF path, or startup demo-data hook. Scenar
 1. Call `GET /api/access/status`.
 2. Inspect `/swagger/v1/swagger.json` for the running request/response schema.
 3. If `authorizationEnabled` is true, send an approved bearer token.
-4. Use the repo-managed [CRM-HR API skill](../codex/skills/candoitall-api-crmhr/SKILL.md) for dependency order, payload fields, and readback.
+4. Use the canonical
+   [CRM-HR API skill](https://github.com/fyziktom/CanDoItAll.SharedInfo/blob/main/codex/skills/candoitall-api-crmhr/SKILL.md)
+   for dependency order, payload fields, and readback.
 
 The checked-in local configuration deliberately leaves bearer authorization disabled for a trusted loopback host. Any remotely reachable deployment must enable it. JWT `scope` and `scopes` claims are currently issued as metadata but are not enforced as CRM-HR route policies.
 
@@ -37,7 +39,9 @@ The checked-in local configuration deliberately leaves bearer authorization disa
 - `/recruiting/support-assignments`: manager, buddy, and mentor assignment saves.
 - `/recruiting/conversions`: canonical candidate-to-workforce conversion.
 
-Exact verbs, DTO fields, enum values, and limits live in [the skill contract](../codex/skills/candoitall-api-crmhr/references/api-contract.md) and the running OpenAPI document.
+Exact verbs, DTO fields, enum values, and limits live in the running OpenAPI document.
+The canonical skill is maintained in `CanDoItAll.SharedInfo`; the checked-in
+`codex/skills` tree is not a current contract.
 
 ## Privacy And Safety
 

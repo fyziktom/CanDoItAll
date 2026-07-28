@@ -1,6 +1,0 @@
-Command: Get-NetTCPConnection -LocalPort 5032 -State Listen; Get-CimInstance Win32_Process -Filter "ProcessId = 48328"
-WorkingDirectory: repo://
-ExitCode: 0
-Invariant: SB05-FULL-RUNTIME-SMOKE
-Result: no stale unknown listener was used; port 5032 is owned by the rebuilt CanDoItAll.Web executable.
-

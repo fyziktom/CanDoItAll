@@ -10,26 +10,91 @@ public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceChatProjectionQueryStore,
     ISandboxWorkspaceChatSessionStore,
     ISandboxWorkspaceExecutionRunStore,
+    ISandboxWorkspaceChatRunStartStore,
     ISandboxWorkspaceExecutionRunMutationStore,
     ISandboxWorkspaceExecutionRunReservationStore,
     IAgentRecruitingEvidenceStore
 {
-    private static readonly TimeSpan CatalogReadNormalizationLockTimeout = TimeSpan.FromMilliseconds(100);
-
+    private const string ChatBackedRunCommitJournalVersion = "1.0";
+    private const string GenericNewRunCommitJournalVersion = "1.0";
+    private const string ExistingRunDetailCommitJournalVersion = "1.0";
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly FileSandboxWorkspaceStorageLayout layout;
     private readonly FileSandboxWorkspaceJsonStore jsonStore;
     private readonly FileSandboxWorkspaceExecutionSliceStore executionSliceStore;
     private readonly FileSandboxWorkspaceChatProjectionStore chatProjectionStore;
     private readonly FileSandboxWorkspaceCrossProcessLock crossProcessLock;
+    private readonly Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary;
+    private readonly Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary;
+    private readonly Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary;
 
     public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
+        : this(
+            workspaceRoot,
+            workspaceScope,
+            chatBackedRunCommitBoundary: null,
+            existingRunDetailCommitBoundary: null)
+    {
+    }
+
+    internal FileSandboxWorkspaceStore(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope,
+        Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary)
+        : this(
+            workspaceRoot,
+            workspaceScope,
+            chatBackedRunCommitBoundary,
+            existingRunDetailCommitBoundary: null)
+    {
+    }
+
+    internal FileSandboxWorkspaceStore(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope,
+        Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary,
+        Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary)
+        : this(
+            workspaceRoot,
+            workspaceScope,
+            chatBackedRunCommitBoundary,
+            existingRunDetailCommitBoundary,
+            jsonReadDiagnostics: null)
+    {
+    }
+
+    internal FileSandboxWorkspaceStore(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope,
+        Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary,
+        Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary,
+        FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics)
+        : this(
+            workspaceRoot,
+            workspaceScope,
+            chatBackedRunCommitBoundary,
+            existingRunDetailCommitBoundary,
+            genericNewRunCommitBoundary: null,
+            jsonReadDiagnostics)
+    {
+    }
+
+    internal FileSandboxWorkspaceStore(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope,
+        Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary,
+        Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary,
+        Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary,
+        FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics)
     {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
-        jsonStore = new FileSandboxWorkspaceJsonStore();
+        jsonStore = new FileSandboxWorkspaceJsonStore(jsonReadDiagnostics);
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
         crossProcessLock = new FileSandboxWorkspaceCrossProcessLock(layout.WorkspaceLockPath);
+        this.chatBackedRunCommitBoundary = chatBackedRunCommitBoundary;
+        this.genericNewRunCommitBoundary = genericNewRunCommitBoundary;
+        this.existingRunDetailCommitBoundary = existingRunDetailCommitBoundary;
     }
 
     public async Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
@@ -70,20 +135,29 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
     }
 
-    public async Task SaveCatalogAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken = default)
+    public async Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
+        CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
+        await gate.WaitAsync(cancellationToken);
+        try
         {
-            await SaveCatalogOnlyAsync(catalog, expectedRevision: null, cancellationToken);
-            return;
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureCatalogReadCoreAsync(cancellationToken);
+            var catalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
+            return new SandboxWorkspaceCatalogSnapshot(
+                catalog,
+                catalog.CatalogDataRevision);
         }
-
-        await UpdateWorkspaceAsync(
-            document => SandboxWorkspaceDocument.Combine(
-                SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog),
-                document.ToExecutionState()),
-            cancellationToken);
+        finally
+        {
+            gate.Release();
+        }
     }
+
+    public Task<SandboxWorkspaceCatalog> SaveCatalogAsync(
+        SandboxWorkspaceCatalog catalog,
+        CancellationToken cancellationToken = default)
+        => SaveCatalogOnlyAsync(catalog, expectedRevision: null, cancellationToken);
 
     public async Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
@@ -91,18 +165,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         ArgumentNullException.ThrowIfNull(update);
 
-        if (executionSliceStore.ExecutionStorageExists())
-        {
-            return await UpdateCatalogOnlyAsync(update, expectedRevision: null, cancellationToken);
-        }
-
-        var updatedDocument = await UpdateWorkspaceAsync(
-            document => SandboxWorkspaceDocument.Combine(
-                SandboxWorkspaceSeedFactory.NormalizeCatalog(update(document.ToCatalog())),
-                document.ToExecutionState()),
-            cancellationToken);
-
-        return updatedDocument.ToCatalog();
+        return await UpdateCatalogOnlyAsync(update, expectedRevision: null, cancellationToken);
     }
 
     public async Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
@@ -112,19 +175,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         ArgumentNullException.ThrowIfNull(update);
 
-        if (executionSliceStore.ExecutionStorageExists())
-        {
-            return await UpdateCatalogOnlyAsync(update, expectedRevision, cancellationToken);
-        }
-
-        var updatedDocument = await UpdateWorkspaceAsync(
-            document => SandboxWorkspaceDocument.Combine(
-                SandboxWorkspaceSeedFactory.NormalizeCatalog(update(document.ToCatalog())),
-                document.ToExecutionState()),
-            expectedRevision,
-            cancellationToken);
-
-        return updatedDocument.ToCatalog();
+        return await UpdateCatalogOnlyAsync(update, expectedRevision, cancellationToken);
     }
 
     private async Task<SandboxWorkspaceCatalog> SaveCatalogOnlyAsync(
@@ -154,21 +205,33 @@ public sealed partial class FileSandboxWorkspaceStore :
                 throw new SandboxWorkspaceConcurrencyException(expectedRevision.Value, workspaceIndex.Revision);
             }
 
-            var currentCatalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
-            var updatedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(update(currentCatalog));
+            var currentCatalog = await LoadCatalogCoreAsync(cancellationToken);
+            var currentForUpdate = SandboxWorkspaceSeedFactory.NormalizeCatalog(currentCatalog) with
+            {
+                CatalogDataRevision = currentCatalog.CatalogDataRevision.IsAssigned
+                    ? currentCatalog.CatalogDataRevision
+                    : CatalogDataRevision.Initial
+            };
+            var updatedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(update(currentForUpdate));
             SandboxWorkspaceDocumentInvariantValidator.Validate(
                 SandboxWorkspaceDocument.Combine(updatedCatalog, SandboxWorkspaceExecutionState.Empty));
 
-            var changed = await SaveCatalogCoreAsync(updatedCatalog, cancellationToken);
+            var catalogSave = await SaveCatalogCoreAsync(
+                currentCatalog,
+                File.Exists(layout.CatalogPath),
+                updatedCatalog,
+                cancellationToken);
             var nextWorkspaceIndex = new WorkspaceStorageIndex(
-                Revision: changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
-                UpdatedAtUtc: changed ? DateTimeOffset.UtcNow : workspaceIndex.UpdatedAtUtc);
-            if (changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+                Revision: catalogSave.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
+                UpdatedAtUtc: catalogSave.Changed ? DateTimeOffset.UtcNow : workspaceIndex.UpdatedAtUtc);
+            if (catalogSave.Changed ||
+                !File.Exists(layout.WorkspaceIndexPath) ||
+                jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
             {
                 await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
             }
 
-            return updatedCatalog;
+            return catalogSave.Catalog;
         }
         finally
         {
@@ -178,11 +241,6 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     public async Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionWithoutWorkspaceLock())
-        {
-            return await LoadExecutionCoreAsync(cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -198,11 +256,6 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     public async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionProjectionWithoutWorkspaceLock())
-        {
-            return await LoadExecutionSummaryCoreAsync(cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -218,11 +271,6 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     public async Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionProjectionWithoutWorkspaceLock())
-        {
-            return await LoadUsageProjectionCoreAsync(cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -281,11 +329,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionDetailsWithoutWorkspaceLock())
-        {
-            return await executionSliceStore.LoadRunDetailAsync(executionRunId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -302,11 +345,6 @@ public sealed partial class FileSandboxWorkspaceStore :
     public async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionDetailsWithoutWorkspaceLock())
-        {
-            return await executionSliceStore.ListRunsAsync(cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -324,11 +362,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        if (CanReadExecutionDetailsWithoutWorkspaceLock())
-        {
-            return await executionSliceStore.LoadRunAsync(executionRunId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -354,11 +387,143 @@ public sealed partial class FileSandboxWorkspaceStore :
             await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
             await EnsureSplitFilesCoreAsync(cancellationToken);
 
-            var catalog = await LoadCatalogCoreAsync(cancellationToken);
-            ValidateExecutionRunDetail(catalog, detail);
+            var previousDetail = await executionSliceStore
+                .LoadRunDetailAsync(detail.Run.Id, cancellationToken);
+            SandboxWorkspaceCatalog? validatedCatalog = null;
+            if (previousDetail is null)
+            {
+                validatedCatalog = await LoadCatalogCoreAsync(cancellationToken);
+                ValidateExecutionRunDetail(validatedCatalog, detail);
+            }
+            else
+            {
+                ValidateExecutionRunDetailConsistency(detail);
+            }
 
-            var previousDetail = await executionSliceStore.LoadRunDetailAsync(detail.Run.Id, cancellationToken);
-            return await SaveExecutionRunDetailCoreAsync(previousDetail, detail, cancellationToken);
+            return await SaveExecutionRunDetailCoreAsync(
+                previousDetail,
+                detail,
+                validatedCatalog,
+                cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<ChatBackedRunStartResult> BeginChatBackedRunAsync(
+        ChatBackedRunStartRequest request,
+        Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(create);
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var catalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
+            if (catalog.CatalogDataRevision != request.ExpectedCatalogRevision)
+            {
+                throw new SandboxWorkspaceCatalogConcurrencyException(
+                    request.ExpectedCatalogRevision,
+                    catalog.CatalogDataRevision);
+            }
+
+            var agent = catalog.Agents.FirstOrDefault(item => item.Id == request.AgentId)
+                ?? throw new InvalidOperationException(
+                    $"Agent '{request.AgentId:N}' was not found in the current catalog.");
+            if (agent.ProviderProfileId != request.ExpectedAgentProviderProfileId)
+            {
+                throw new InvalidOperationException(
+                    $"Agent '{request.AgentId:N}' no longer uses the expected provider profile '{request.ExpectedAgentProviderProfileId:N}'.");
+            }
+
+            var catalogSnapshot = new SandboxWorkspaceCatalogSnapshot(
+                catalog,
+                catalog.CatalogDataRevision);
+            var session = await LoadChatRunStartSessionCoreAsync(request, cancellationToken);
+            var existingMessages = session?.Messages.ToArray() ?? [];
+            var sessionSnapshot = session is null
+                ? null
+                : session with
+                {
+                    Messages = Array.AsReadOnly(existingMessages)
+                };
+            var blockingRun = sessionSnapshot is null
+                ? null
+                : await LoadBlockingSessionRunAsync(
+                    request.AgentId,
+                    sessionSnapshot,
+                    cancellationToken);
+            if (blockingRun is not null)
+            {
+                return new ChatBackedRunBlocked(
+                    catalogSnapshot,
+                    agent,
+                    sessionSnapshot!,
+                    blockingRun);
+            }
+
+            var context = new ChatBackedRunStartContext(
+                catalogSnapshot,
+                agent,
+                sessionSnapshot);
+            var mutation = create(context)
+                ?? throw new InvalidOperationException(
+                    "The chat-backed run start factory returned no mutation.");
+
+            ValidateChatBackedRunStartMutation(
+                request,
+                context,
+                existingMessages,
+                mutation);
+            ValidateExecutionRunDetail(catalog, mutation.Detail);
+            if (await executionSliceStore.LoadRunAsync(
+                    mutation.Detail.Run.Id,
+                    cancellationToken) is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Execution run '{mutation.Detail.Run.Id:N}' already exists.");
+            }
+
+            var persistencePlan = await executionSliceStore.PrepareNewRunAsync(
+                mutation.Detail,
+                sessionSnapshot,
+                cancellationToken);
+            var previousWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
+                cancellationToken);
+            var targetWorkspaceIndex = new WorkspaceStorageIndex(
+                previousWorkspaceIndex.Revision + 1L,
+                persistencePlan.TargetIndex.UpdatedAtUtc);
+            var journal = new ChatBackedRunCommitJournal(
+                ChatBackedRunCommitJournalVersion,
+                persistencePlan.Detail.Run.Id,
+                mutation.UserMessage.Id,
+                persistencePlan,
+                previousWorkspaceIndex,
+                targetWorkspaceIndex);
+            ValidateChatBackedRunCommitJournal(catalog, journal);
+
+            await jsonStore.WriteJsonAtomicallyAsync(
+                PendingChatBackedRunCommitJournalPath,
+                journal,
+                cancellationToken);
+            NotifyChatBackedRunCommitBoundary(
+                ChatBackedRunCommitStage.JournalPersisted);
+            var persistedDetail = await CommitChatBackedRunJournalAsync(
+                journal,
+                catalog,
+                CancellationToken.None);
+            return new ChatBackedRunStarted(
+                catalogSnapshot,
+                agent,
+                persistedDetail,
+                mutation.UserMessage);
         }
         finally
         {
@@ -413,10 +578,55 @@ public sealed partial class FileSandboxWorkspaceStore :
             var persisted = await SaveExecutionRunDetailCoreAsync(
                 previousDetail: null,
                 candidate,
+                catalog,
                 cancellationToken);
             return new ExecutionRunSourceReservationResult(
                 ExecutionRunSourceDisposition.Created,
                 persisted.Run);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
+        Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock =
+                await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+
+            var previousDetail = await executionSliceStore
+                .LoadRunDetailAsync(executionRunId, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    $"Execution run '{executionRunId:N}' was not found.");
+            var updatedDetail = update(previousDetail)
+                ?? throw new InvalidOperationException(
+                    "Execution run update cannot return null.");
+            if (updatedDetail.Run.Id != executionRunId)
+            {
+                throw new InvalidOperationException(
+                    "Execution run update cannot change the run identity.");
+            }
+
+            if (ReferenceEquals(previousDetail, updatedDetail))
+            {
+                return previousDetail;
+            }
+
+            ValidateExecutionRunDetailConsistency(updatedDetail);
+            return await SaveExecutionRunDetailCoreAsync(
+                previousDetail,
+                updatedDetail,
+                cancellationToken);
         }
         finally
         {
@@ -461,7 +671,9 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
     }
 
-    public async Task SaveAsync(SandboxWorkspaceDocument document, CancellationToken cancellationToken = default)
+    public async Task<SandboxWorkspaceDocument> SaveAsync(
+        SandboxWorkspaceDocument document,
+        CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken);
         try
@@ -471,8 +683,12 @@ public sealed partial class FileSandboxWorkspaceStore :
             var currentRevision = await ResolveCurrentRevisionAsync(cancellationToken);
             var previousDocument = currentRevision == 0L
                 ? SandboxWorkspaceDocument.Empty
-                : (await LoadSnapshotCoreAsync(cancellationToken)).Document;
-            await SaveCoreAsync(previousDocument, normalizedDocument, currentRevision, cancellationToken);
+                : (await LoadMutationSnapshotCoreAsync(cancellationToken)).Document;
+            return await SaveCoreAsync(
+                previousDocument,
+                normalizedDocument,
+                currentRevision,
+                cancellationToken);
         }
         finally
         {
@@ -495,11 +711,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid? agentId = null,
         CancellationToken cancellationToken = default)
     {
-        if (CanReadChatProjectionWithoutWorkspaceLock())
-        {
-            return await chatProjectionStore.ListChatSessionSummariesAsync(agentId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -517,11 +728,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid agentId,
         CancellationToken cancellationToken = default)
     {
-        if (CanReadChatProjectionWithoutWorkspaceLock())
-        {
-            return await chatProjectionStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -539,11 +745,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid chatSessionId,
         CancellationToken cancellationToken = default)
     {
-        if (executionSliceStore.ExecutionStorageExists())
-        {
-            return await chatProjectionStore.GetChatSessionAsync(chatSessionId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -562,11 +763,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (CanReadChatProjectionWithoutWorkspaceLock())
-        {
-            return await chatProjectionStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -585,11 +781,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (CanReadChatProjectionWithoutWorkspaceLock())
-        {
-            return await chatProjectionStore.LoadChatRuntimeSnapshotAsync(agentId, chatSessionId, cancellationToken);
-        }
-
         await gate.WaitAsync(cancellationToken);
         try
         {
@@ -674,15 +865,18 @@ public sealed partial class FileSandboxWorkspaceStore :
         {
             await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
             await EnsureSplitFilesCoreAsync(cancellationToken);
-            var current = await LoadSnapshotCoreAsync(cancellationToken);
+            var current = await LoadMutationSnapshotCoreAsync(cancellationToken);
             if (expectedRevision.HasValue && current.Revision != expectedRevision.Value)
             {
                 throw new SandboxWorkspaceConcurrencyException(expectedRevision.Value, current.Revision);
             }
 
             var updated = NormalizeAndValidateDocument(update(current.Document));
-            await SaveCoreAsync(current.Document, updated, current.Revision, cancellationToken);
-            return updated;
+            return await SaveCoreAsync(
+                current.Document,
+                updated,
+                current.Revision,
+                cancellationToken);
         }
         finally
         {
@@ -690,7 +884,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
     }
 
-    private async Task SaveCoreAsync(
+    private async Task<SandboxWorkspaceDocument> SaveCoreAsync(
         SandboxWorkspaceDocument previousDocument,
         SandboxWorkspaceDocument document,
         long currentRevision,
@@ -698,9 +892,9 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
 
-        var catalogChanged = await SaveCatalogCoreAsync(document.ToCatalog(), cancellationToken);
+        var catalogSave = await SaveCatalogCoreAsync(document.ToCatalog(), cancellationToken);
         var executionChanged = await SaveExecutionCoreAsync(previousDocument.ToExecutionState(), document.ToExecutionState(), cancellationToken);
-        var workspaceChanged = catalogChanged || executionChanged || !File.Exists(layout.WorkspaceIndexPath);
+        var workspaceChanged = catalogSave.Changed || executionChanged || !File.Exists(layout.WorkspaceIndexPath);
         if (workspaceChanged)
         {
             await SaveWorkspaceIndexCoreAsync(
@@ -709,6 +903,10 @@ public sealed partial class FileSandboxWorkspaceStore :
                     UpdatedAtUtc: DateTimeOffset.UtcNow),
                 cancellationToken);
         }
+
+        return SandboxWorkspaceDocument.Combine(
+            catalogSave.Catalog,
+            document.ToExecutionState());
     }
 
     private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(
@@ -716,22 +914,386 @@ public sealed partial class FileSandboxWorkspaceStore :
         ExecutionRunDetail detail,
         CancellationToken cancellationToken)
     {
-        var saveResult = await executionSliceStore.SaveRunDetailAsync(previousDetail, detail, cancellationToken);
-        var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
-        var nextWorkspaceIndex = new WorkspaceStorageIndex(
-            Revision: saveResult.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
-            UpdatedAtUtc: saveResult.Index.UpdatedAtUtc);
+        return await SaveExecutionRunDetailCoreAsync(
+            previousDetail,
+            detail,
+            validatedCatalog: null,
+            cancellationToken);
+    }
 
-        if (saveResult.Changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+    private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(
+        ExecutionRunDetail? previousDetail,
+        ExecutionRunDetail detail,
+        SandboxWorkspaceCatalog? validatedCatalog,
+        CancellationToken cancellationToken)
+    {
+        if (previousDetail is not null)
         {
-            await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
+            if (executionSliceStore.HasSameRunDetailPayload(
+                    previousDetail,
+                    detail))
+            {
+                return previousDetail;
+            }
+
+            var persistencePlan =
+                await executionSliceStore.PrepareExistingRunUpdateAsync(
+                    previousDetail,
+                    detail,
+                    cancellationToken);
+            var chatProjectionPlan =
+                await chatProjectionStore.PrepareExistingRunUpdateAsync(
+                    persistencePlan,
+                    cancellationToken);
+            var previousWorkspaceIndex =
+                await LoadWorkspaceIndexCoreAsync(cancellationToken);
+            var targetWorkspaceIndex = new WorkspaceStorageIndex(
+                previousWorkspaceIndex.Revision + 1L,
+                persistencePlan.TargetIndex.UpdatedAtUtc);
+            var journal = new ExistingRunDetailCommitJournal(
+                ExistingRunDetailCommitJournalVersion,
+                detail.Run.Id,
+                persistencePlan,
+                chatProjectionPlan,
+                previousWorkspaceIndex,
+                targetWorkspaceIndex);
+            ValidateExistingRunDetailCommitJournal(journal);
+
+            await jsonStore.WriteJsonAtomicallyAsync(
+                PendingExistingRunDetailCommitJournalPath,
+                journal,
+                cancellationToken);
+            NotifyExistingRunDetailCommitBoundary(
+                ExistingRunDetailCommitStage.JournalPersisted);
+            return await CommitExistingRunDetailJournalAsync(
+                journal,
+                CancellationToken.None);
         }
 
-        await chatProjectionStore.SaveRunDetailAsync(previousDetail, saveResult.Detail, saveResult.Index, cancellationToken);
-        return saveResult.Detail;
+        var genericPersistencePlan =
+            await executionSliceStore.PrepareGenericNewRunAsync(
+                detail,
+                cancellationToken);
+        var genericChatProjectionPlan =
+            await chatProjectionStore.PrepareGenericNewRunAsync(
+                genericPersistencePlan,
+                cancellationToken);
+        var genericPreviousWorkspaceIndex =
+            await LoadWorkspaceIndexCoreAsync(cancellationToken);
+        var genericTargetWorkspaceIndex = new WorkspaceStorageIndex(
+            genericPreviousWorkspaceIndex.Revision + 1L,
+            genericPersistencePlan.TargetIndex.UpdatedAtUtc);
+        var genericJournal = new GenericNewRunCommitJournal(
+            GenericNewRunCommitJournalVersion,
+            detail.Run.Id,
+            genericPersistencePlan,
+            genericChatProjectionPlan,
+            genericPreviousWorkspaceIndex,
+            genericTargetWorkspaceIndex);
+        var catalog = validatedCatalog ??
+                      await LoadCatalogCoreAsync(cancellationToken);
+        ValidateGenericNewRunCommitJournal(catalog, genericJournal);
+
+        await jsonStore.WriteJsonAtomicallyAsync(
+            PendingGenericNewRunCommitJournalPath,
+            genericJournal,
+            cancellationToken);
+        NotifyGenericNewRunCommitBoundary(
+            GenericNewRunCommitStage.JournalPersisted);
+        return await CommitGenericNewRunJournalAsync(
+            genericJournal,
+            validatedCatalog: catalog,
+            validatePersistedState: false,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private async Task<ExecutionRunDetail> CommitExistingRunDetailJournalAsync(
+        ExistingRunDetailCommitJournal journal,
+        CancellationToken cancellationToken)
+    {
+        ValidateExistingRunDetailCommitJournal(journal);
+
+        var currentWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
+            cancellationToken);
+        if (!HasSamePayload(
+                currentWorkspaceIndex,
+                journal.PreviousWorkspaceIndex) &&
+            !HasSamePayload(
+                currentWorkspaceIndex,
+                journal.TargetWorkspaceIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{journal.RunId:N}' found an unexpected workspace index.");
+        }
+
+        await executionSliceStore.PersistExistingRunSessionAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.SessionPersisted);
+
+        await executionSliceStore.PersistExistingRunRecordAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.RunPersisted);
+
+        await executionSliceStore.PersistExistingRunApprovalRecordsAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.ApprovalRecordsPersisted);
+
+        await executionSliceStore.PersistExistingRunRemainingRecordsAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.RemainingRecordsPersisted);
+
+        await executionSliceStore.PersistExistingRunExecutionIndexAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.ExecutionIndexPersisted);
+
+        await executionSliceStore.PersistExistingRunUsageIndexAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.UsageIndexPersisted);
+
+        await SaveWorkspaceIndexCoreAsync(
+            journal.TargetWorkspaceIndex,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.WorkspaceIndexPersisted);
+
+        await chatProjectionStore.PersistExistingRunUpdateAsync(
+            journal.PersistencePlan,
+            journal.ChatProjectionPlan,
+            cancellationToken);
+        NotifyExistingRunDetailCommitBoundary(
+            ExistingRunDetailCommitStage.ChatIndexPersisted);
+
+        File.Delete(PendingExistingRunDetailCommitJournalPath);
+        return journal.PersistencePlan.TargetDetail;
+    }
+
+    private async Task RecoverPendingExistingRunDetailCommitAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!HasPendingExistingRunDetailCommit)
+        {
+            return;
+        }
+
+        var journal = await jsonStore.ReadJsonAsync<ExistingRunDetailCommitJournal>(
+            PendingExistingRunDetailCommitJournalPath,
+            cancellationToken)
+            ?? throw new InvalidDataException(
+                $"Pending execution-run update journal '{PendingExistingRunDetailCommitJournalPath}' is empty.");
+        await CommitExistingRunDetailJournalAsync(
+            journal,
+            CancellationToken.None);
+    }
+
+    private async Task<ExecutionRunDetail> CommitGenericNewRunJournalAsync(
+        GenericNewRunCommitJournal journal,
+        SandboxWorkspaceCatalog? validatedCatalog,
+        bool validatePersistedState,
+        CancellationToken cancellationToken)
+    {
+        var catalog = validatedCatalog ??
+                      await LoadCatalogCoreAsync(cancellationToken);
+        ValidateGenericNewRunCommitJournal(catalog, journal);
+
+        if (validatePersistedState)
+        {
+            await executionSliceStore
+                .ValidateGenericNewRunPersistedStateAsync(
+                    journal.PersistencePlan,
+                    cancellationToken);
+            await chatProjectionStore.ValidateGenericNewRunPlanAsync(
+                journal.PersistencePlan,
+                journal.ChatProjectionPlan,
+                cancellationToken);
+
+            var currentWorkspaceIndex =
+                await LoadWorkspaceIndexCoreAsync(cancellationToken);
+            if (!HasSamePayload(
+                    currentWorkspaceIndex,
+                    journal.PreviousWorkspaceIndex) &&
+                !HasSamePayload(
+                    currentWorkspaceIndex,
+                    journal.TargetWorkspaceIndex))
+            {
+                throw new InvalidDataException(
+                    $"Pending generic execution-run creation '{journal.RunId:N}' found an unexpected workspace index.");
+            }
+        }
+
+        var persistedDetail =
+            await executionSliceStore.PersistGenericNewRunSlicesAsync(
+                journal.PersistencePlan,
+                validatePersistedState,
+                cancellationToken);
+        NotifyGenericNewRunCommitBoundary(
+            GenericNewRunCommitStage.ExecutionSlicesPersisted);
+
+        await executionSliceStore.PersistGenericNewRunExecutionIndexAsync(
+            journal.PersistencePlan,
+            validatePersistedState,
+            cancellationToken);
+        NotifyGenericNewRunCommitBoundary(
+            GenericNewRunCommitStage.ExecutionIndexPersisted);
+
+        await executionSliceStore.PersistGenericNewRunUsageIndexAsync(
+            journal.PersistencePlan,
+            validatePersistedState,
+            cancellationToken);
+        NotifyGenericNewRunCommitBoundary(
+            GenericNewRunCommitStage.UsageIndexPersisted);
+
+        await SaveWorkspaceIndexCoreAsync(
+            journal.TargetWorkspaceIndex,
+            cancellationToken);
+        NotifyGenericNewRunCommitBoundary(
+            GenericNewRunCommitStage.WorkspaceIndexPersisted);
+
+        await chatProjectionStore.PersistGenericNewRunAsync(
+            journal.PersistencePlan,
+            journal.ChatProjectionPlan,
+            validatePersistedState,
+            cancellationToken);
+        NotifyGenericNewRunCommitBoundary(
+            GenericNewRunCommitStage.ChatIndexPersisted);
+
+        File.Delete(PendingGenericNewRunCommitJournalPath);
+        return persistedDetail;
+    }
+
+    private async Task RecoverPendingGenericNewRunCommitAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!HasPendingGenericNewRunCommit)
+        {
+            return;
+        }
+
+        var journal =
+            await jsonStore.ReadJsonAsync<GenericNewRunCommitJournal>(
+                PendingGenericNewRunCommitJournalPath,
+                cancellationToken)
+            ?? throw new InvalidDataException(
+                $"Pending generic execution-run creation journal '{PendingGenericNewRunCommitJournalPath}' is empty.");
+        await CommitGenericNewRunJournalAsync(
+            journal,
+            validatedCatalog: null,
+            validatePersistedState: true,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private async Task<ExecutionRunDetail> CommitChatBackedRunJournalAsync(
+        ChatBackedRunCommitJournal journal,
+        SandboxWorkspaceCatalog? validatedCatalog,
+        CancellationToken cancellationToken)
+    {
+        var catalog = validatedCatalog ??
+                      await LoadCatalogCoreAsync(cancellationToken);
+        ValidateChatBackedRunCommitJournal(catalog, journal);
+
+        var currentWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
+            cancellationToken);
+        if (!HasSamePayload(
+                currentWorkspaceIndex,
+                journal.PreviousWorkspaceIndex) &&
+            !HasSamePayload(
+                currentWorkspaceIndex,
+                journal.TargetWorkspaceIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{journal.RunId:N}' found an unexpected workspace index.");
+        }
+
+        var persistedDetail = await executionSliceStore.PersistNewRunSlicesAsync(
+            journal.PersistencePlan,
+            validatePersistedState: validatedCatalog is null,
+            cancellationToken: cancellationToken);
+        NotifyChatBackedRunCommitBoundary(
+            ChatBackedRunCommitStage.ExecutionSlicesPersisted);
+
+        await executionSliceStore.PersistNewRunIndexesAsync(
+            journal.PersistencePlan,
+            cancellationToken);
+        NotifyChatBackedRunCommitBoundary(
+            ChatBackedRunCommitStage.ExecutionIndexesPersisted);
+
+        await SaveWorkspaceIndexCoreAsync(
+            journal.TargetWorkspaceIndex,
+            cancellationToken);
+        NotifyChatBackedRunCommitBoundary(
+            ChatBackedRunCommitStage.WorkspaceIndexPersisted);
+
+        await chatProjectionStore.SaveRunDetailAsync(
+            previousDetail: null,
+            persistedDetail,
+            journal.PersistencePlan.TargetIndex,
+            cancellationToken);
+        NotifyChatBackedRunCommitBoundary(
+            ChatBackedRunCommitStage.ChatProjectionPersisted);
+
+        File.Delete(PendingChatBackedRunCommitJournalPath);
+        return persistedDetail;
+    }
+
+    private async Task RecoverPendingChatBackedRunCommitAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!HasPendingChatBackedRunCommit)
+        {
+            return;
+        }
+
+        var journal = await jsonStore.ReadJsonAsync<ChatBackedRunCommitJournal>(
+            PendingChatBackedRunCommitJournalPath,
+            cancellationToken)
+            ?? throw new InvalidDataException(
+                $"Pending chat-run transaction journal '{PendingChatBackedRunCommitJournalPath}' is empty.");
+        await CommitChatBackedRunJournalAsync(
+            journal,
+            validatedCatalog: null,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private async Task RecoverPendingExecutionCommitAsync(
+        CancellationToken cancellationToken)
+    {
+        var pendingJournalCount =
+            (HasPendingChatBackedRunCommit ? 1 : 0) +
+            (HasPendingGenericNewRunCommit ? 1 : 0) +
+            (HasPendingExistingRunDetailCommit ? 1 : 0);
+        if (pendingJournalCount > 1)
+        {
+            throw new InvalidDataException(
+                "The workspace contains conflicting pending execution transaction journals.");
+        }
+
+        await RecoverPendingChatBackedRunCommitAsync(cancellationToken);
+        await RecoverPendingGenericNewRunCommitAsync(cancellationToken);
+        await RecoverPendingExistingRunDetailCommitAsync(cancellationToken);
     }
 
     private async Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotCoreAsync(CancellationToken cancellationToken)
+    {
+        var normalizedDocument = NormalizeAndValidateDocument(SandboxWorkspaceDocument.Combine(
+            await LoadNormalizedCatalogCoreAsync(cancellationToken),
+            await LoadExecutionCoreAsync(cancellationToken)));
+        var index = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+        return new SandboxWorkspaceDocumentSnapshot(normalizedDocument, index.Revision);
+    }
+
+    private async Task<SandboxWorkspaceDocumentSnapshot> LoadMutationSnapshotCoreAsync(
+        CancellationToken cancellationToken)
     {
         var normalizedDocument = NormalizeAndValidateDocument(SandboxWorkspaceDocument.Combine(
             await LoadCatalogCoreAsync(cancellationToken),
@@ -743,6 +1305,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task EnsureSplitFilesCoreAsync(CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        await RecoverPendingExecutionCommitAsync(cancellationToken);
 
         if (!File.Exists(layout.CatalogPath) &&
             !File.Exists(layout.LegacyExecutionPath) &&
@@ -801,6 +1364,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task EnsureCatalogReadCoreAsync(CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        await RecoverPendingExecutionCommitAsync(cancellationToken);
 
         if (executionSliceStore.ExecutionStorageExists())
         {
@@ -820,6 +1384,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task EnsureExecutionSummaryReadCoreAsync(CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        await RecoverPendingExecutionCommitAsync(cancellationToken);
 
         if (executionSliceStore.ExecutionStorageExists())
         {
@@ -845,51 +1410,50 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
         var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-        if (EqualityComparer<SandboxWorkspaceCatalog>.Default.Equals(catalog, normalizedCatalog))
+        if (catalog.CatalogDataRevision.IsAssigned &&
+            !CatalogPayloadRequiresSave(catalog, normalizedCatalog))
         {
             return normalizedCatalog;
         }
 
-        return await TryPersistNormalizedCatalogReadAsync(cancellationToken) ?? normalizedCatalog;
+        return await PersistNormalizedCatalogReadAsync(cancellationToken);
     }
 
     private async Task<SandboxWorkspaceCatalog> LoadNormalizedCatalogCoreAsync(CancellationToken cancellationToken)
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
         var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-        if (!EqualityComparer<SandboxWorkspaceCatalog>.Default.Equals(catalog, normalizedCatalog))
+        var catalogSave = await SaveCatalogCoreAsync(
+            catalog,
+            File.Exists(layout.CatalogPath),
+            normalizedCatalog,
+            cancellationToken);
+        if (catalogSave.Changed)
         {
-            await SaveCatalogCoreAsync(normalizedCatalog, cancellationToken);
+            var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+            await SaveWorkspaceIndexCoreAsync(
+                new WorkspaceStorageIndex(
+                    Revision: workspaceIndex.Revision + 1L,
+                    UpdatedAtUtc: DateTimeOffset.UtcNow),
+                cancellationToken);
         }
 
-        return normalizedCatalog;
+        return catalogSave.Catalog;
     }
 
-    private async Task<SandboxWorkspaceCatalog?> TryPersistNormalizedCatalogReadAsync(CancellationToken cancellationToken)
+    private async Task<SandboxWorkspaceCatalog> PersistNormalizedCatalogReadAsync(
+        CancellationToken cancellationToken)
     {
-        using var timeout = new CancellationTokenSource(CatalogReadNormalizationLockTimeout);
-        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-        var gateAcquired = false;
-
+        await gate.WaitAsync(cancellationToken);
         try
         {
-            await gate.WaitAsync(linkedCancellation.Token);
-            gateAcquired = true;
-
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(linkedCancellation.Token);
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
             await EnsureCatalogReadCoreAsync(cancellationToken);
             return await LoadNormalizedCatalogCoreAsync(cancellationToken);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
-        {
-            return null;
-        }
         finally
         {
-            if (gateAcquired)
-            {
-                gate.Release();
-            }
+            gate.Release();
         }
     }
 
@@ -909,8 +1473,64 @@ public sealed partial class FileSandboxWorkspaceStore :
             FailedRuns: executionIndex.FailedRunCount);
     }
 
-    private Task<bool> SaveCatalogCoreAsync(SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken)
-        => jsonStore.WriteJsonIfChangedAsync(layout.CatalogPath, catalog, cancellationToken);
+    private async Task<CatalogSaveResult> SaveCatalogCoreAsync(
+        SandboxWorkspaceCatalog catalog,
+        CancellationToken cancellationToken)
+    {
+        var catalogExists = File.Exists(layout.CatalogPath);
+        var currentCatalog = await LoadCatalogCoreAsync(cancellationToken);
+        return await SaveCatalogCoreAsync(
+            currentCatalog,
+            catalogExists,
+            catalog,
+            cancellationToken);
+    }
+
+    private async Task<CatalogSaveResult> SaveCatalogCoreAsync(
+        SandboxWorkspaceCatalog currentCatalog,
+        bool catalogExists,
+        SandboxWorkspaceCatalog catalog,
+        CancellationToken cancellationToken)
+    {
+        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var payloadChanged = !catalogExists ||
+                             CatalogPayloadRequiresSave(currentCatalog, normalizedCatalog);
+        var revision = currentCatalog.CatalogDataRevision.IsAssigned
+            ? payloadChanged
+                ? currentCatalog.CatalogDataRevision.Next()
+                : currentCatalog.CatalogDataRevision
+            : CatalogDataRevision.Initial;
+        var savedCatalog = normalizedCatalog with
+        {
+            CatalogDataRevision = revision
+        };
+        var changed = !catalogExists ||
+                      jsonStore.RequiresSave(currentCatalog, savedCatalog);
+        if (changed)
+        {
+            await jsonStore.WriteJsonAtomicallyAsync(
+                layout.CatalogPath,
+                savedCatalog,
+                cancellationToken);
+        }
+
+        return new CatalogSaveResult(savedCatalog, changed);
+    }
+
+    private bool CatalogPayloadRequiresSave(
+        SandboxWorkspaceCatalog currentCatalog,
+        SandboxWorkspaceCatalog candidateCatalog)
+    {
+        return jsonStore.RequiresSave(
+            currentCatalog with
+            {
+                CatalogDataRevision = CatalogDataRevision.Unassigned
+            },
+            candidateCatalog with
+            {
+                CatalogDataRevision = CatalogDataRevision.Unassigned
+            });
+    }
 
     private Task<bool> SaveExecutionCoreAsync(
         SandboxWorkspaceExecutionState previousExecutionState,
@@ -1016,27 +1636,226 @@ public sealed partial class FileSandboxWorkspaceStore :
                File.Exists(layout.WorkspaceIndexPath);
     }
 
-    private bool CanReadExecutionWithoutWorkspaceLock()
+    private string PendingChatBackedRunCommitJournalPath
+        => Path.Combine(
+            layout.ExecutionStorageRoot,
+            "pending-chat-run-start.json");
+
+    private bool HasPendingChatBackedRunCommit
+        => File.Exists(PendingChatBackedRunCommitJournalPath);
+
+    private string PendingGenericNewRunCommitJournalPath
+        => Path.Combine(
+            layout.ExecutionStorageRoot,
+            "pending-run-start.json");
+
+    private bool HasPendingGenericNewRunCommit
+        => File.Exists(PendingGenericNewRunCommitJournalPath);
+
+    private string PendingExistingRunDetailCommitJournalPath
+        => Path.Combine(
+            layout.ExecutionStorageRoot,
+            "pending-run-detail-update.json");
+
+    private bool HasPendingExistingRunDetailCommit
+        => File.Exists(PendingExistingRunDetailCommitJournalPath);
+
+    private bool HasSamePayload<T>(T left, T right)
     {
-        return CanReadCatalogWithoutWorkspaceLock() &&
-               executionSliceStore.ExecutionStorageExists();
+        return !jsonStore.RequiresSave(left, right);
     }
 
-    private bool CanReadExecutionProjectionWithoutWorkspaceLock()
+    private void NotifyChatBackedRunCommitBoundary(
+        ChatBackedRunCommitStage stage)
     {
-        return CanReadExecutionWithoutWorkspaceLock() &&
-               executionSliceStore.HasPersistedIndex();
+        chatBackedRunCommitBoundary?.Invoke(stage);
     }
 
-    private bool CanReadChatProjectionWithoutWorkspaceLock()
+    private void NotifyGenericNewRunCommitBoundary(
+        GenericNewRunCommitStage stage)
     {
-        return executionSliceStore.ExecutionStorageExists() &&
-               chatProjectionStore.HasPersistedChatIndex();
+        genericNewRunCommitBoundary?.Invoke(stage);
     }
 
-    private bool CanReadExecutionDetailsWithoutWorkspaceLock()
+    private void NotifyExistingRunDetailCommitBoundary(
+        ExistingRunDetailCommitStage stage)
     {
-        return executionSliceStore.ExecutionStorageExists();
+        existingRunDetailCommitBoundary?.Invoke(stage);
+    }
+
+    private void ValidateExistingRunDetailCommitJournal(
+        ExistingRunDetailCommitJournal journal)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        if (journal.PersistencePlan is null ||
+            journal.ChatProjectionPlan is null ||
+            journal.PreviousWorkspaceIndex is null ||
+            journal.TargetWorkspaceIndex is null)
+        {
+            throw new InvalidDataException(
+                "A pending execution-run update journal is incomplete.");
+        }
+
+        if (!string.Equals(
+                journal.Version,
+                ExistingRunDetailCommitJournalVersion,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{journal.RunId:N}' uses unsupported journal version '{journal.Version}'.");
+        }
+
+        executionSliceStore.ValidateExistingRunUpdatePlan(
+            journal.PersistencePlan);
+        if (journal.RunId == Guid.Empty ||
+            journal.RunId != journal.PersistencePlan.TargetDetail.Run.Id)
+        {
+            throw new InvalidDataException(
+                "A pending execution-run update has an invalid execution-run identity.");
+        }
+
+        ValidateExecutionRunDetailConsistency(
+            journal.PersistencePlan.PreviousDetail);
+        ValidateExecutionRunDetailConsistency(
+            journal.PersistencePlan.TargetDetail);
+
+        var expectedWorkspaceIndex = new WorkspaceStorageIndex(
+            journal.PreviousWorkspaceIndex.Revision + 1L,
+            journal.PersistencePlan.TargetIndex.UpdatedAtUtc);
+        if (!HasSamePayload(
+                expectedWorkspaceIndex,
+                journal.TargetWorkspaceIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{journal.RunId:N}' contains an invalid target workspace index.");
+        }
+
+        if (journal.ChatProjectionPlan.PreviousIndex.Revision !=
+                journal.PersistencePlan.PreviousIndex.Revision ||
+            journal.ChatProjectionPlan.TargetIndex.Revision !=
+                journal.PersistencePlan.TargetIndex.Revision ||
+            !string.Equals(
+                journal.ChatProjectionPlan.TargetIndex.Version,
+                journal.PersistencePlan.TargetIndex.Version,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending execution-run update '{journal.RunId:N}' contains invalid chat-index revisions.");
+        }
+    }
+
+    private void ValidateGenericNewRunCommitJournal(
+        SandboxWorkspaceCatalog catalog,
+        GenericNewRunCommitJournal journal)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        if (journal.PersistencePlan is null ||
+            journal.ChatProjectionPlan is null ||
+            journal.PreviousWorkspaceIndex is null ||
+            journal.TargetWorkspaceIndex is null)
+        {
+            throw new InvalidDataException(
+                "A pending generic execution-run creation journal is incomplete.");
+        }
+
+        if (!string.Equals(
+                journal.Version,
+                GenericNewRunCommitJournalVersion,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{journal.RunId:N}' uses unsupported journal version '{journal.Version}'.");
+        }
+
+        executionSliceStore.ValidateGenericNewRunPlan(
+            journal.PersistencePlan);
+        var detail = journal.PersistencePlan.Detail;
+        if (journal.RunId == Guid.Empty ||
+            journal.RunId != detail.Run.Id)
+        {
+            throw new InvalidDataException(
+                "A pending generic execution-run creation has an invalid execution-run identity.");
+        }
+
+        ValidateExecutionRunDetail(catalog, detail);
+        var expectedWorkspaceIndex = new WorkspaceStorageIndex(
+            journal.PreviousWorkspaceIndex.Revision + 1L,
+            journal.PersistencePlan.TargetIndex.UpdatedAtUtc);
+        if (!HasSamePayload(
+                expectedWorkspaceIndex,
+                journal.TargetWorkspaceIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{journal.RunId:N}' contains an invalid target workspace index.");
+        }
+
+        if (journal.ChatProjectionPlan.PreviousIndex.Revision !=
+                journal.PersistencePlan.PreviousIndex.Revision ||
+            journal.ChatProjectionPlan.TargetIndex.Revision !=
+                journal.PersistencePlan.TargetIndex.Revision ||
+            !string.Equals(
+                journal.ChatProjectionPlan.TargetIndex.Version,
+                journal.PersistencePlan.TargetIndex.Version,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending generic execution-run creation '{journal.RunId:N}' contains invalid chat-index revisions.");
+        }
+    }
+
+    private void ValidateChatBackedRunCommitJournal(
+        SandboxWorkspaceCatalog catalog,
+        ChatBackedRunCommitJournal journal)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        if (journal.PersistencePlan is null ||
+            journal.PreviousWorkspaceIndex is null ||
+            journal.TargetWorkspaceIndex is null)
+        {
+            throw new InvalidDataException(
+                "A pending chat-run transaction journal is incomplete.");
+        }
+
+        if (!string.Equals(
+                journal.Version,
+                ChatBackedRunCommitJournalVersion,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{journal.RunId:N}' uses unsupported journal version '{journal.Version}'.");
+        }
+
+        executionSliceStore.ValidateNewRunPlan(journal.PersistencePlan);
+        var detail = journal.PersistencePlan.Detail;
+        if (journal.RunId == Guid.Empty ||
+            journal.RunId != detail.Run.Id)
+        {
+            throw new InvalidDataException(
+                "A pending chat-run transaction has an invalid execution-run identity.");
+        }
+
+        ValidateExecutionRunDetail(catalog, detail);
+        var matchingUserMessages = detail.ChatSession!.Messages
+            .Where(message => message.Id == journal.UserMessageId)
+            .ToArray();
+        if (journal.UserMessageId == Guid.Empty ||
+            matchingUserMessages.Length != 1 ||
+            matchingUserMessages[0].Role != ChatMessageRole.User)
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{journal.RunId:N}' does not contain its declared user message.");
+        }
+
+        var expectedWorkspaceIndex = new WorkspaceStorageIndex(
+            journal.PreviousWorkspaceIndex.Revision + 1L,
+            journal.PersistencePlan.TargetIndex.UpdatedAtUtc);
+        if (!HasSamePayload(
+                expectedWorkspaceIndex,
+                journal.TargetWorkspaceIndex))
+        {
+            throw new InvalidDataException(
+                $"Pending chat-run transaction '{journal.RunId:N}' contains an invalid target workspace index.");
+        }
     }
 
     private static SandboxWorkspaceDocument NormalizeAndValidateDocument(SandboxWorkspaceDocument document)
@@ -1050,16 +1869,29 @@ public sealed partial class FileSandboxWorkspaceStore :
         SandboxWorkspaceCatalog catalog,
         ExecutionRunDetail detail)
     {
-        var knownAgentIds = catalog.Agents
-            .Select(item => item.Id)
-            .ToHashSet();
-
-        if (!knownAgentIds.Contains(detail.Run.AgentId))
+        if (!catalog.Agents.Any(item => item.Id == detail.Run.AgentId))
         {
             throw new InvalidOperationException(
                 $"Execution run '{detail.Run.Id:N}' references missing agent '{detail.Run.AgentId:N}'.");
         }
 
+        ValidateExecutionRunDetailConsistency(detail);
+    }
+
+    private static void ValidateExecutionRunDetailConsistency(
+        ExecutionRunDetail detail)
+    {
+        if (detail.Run.Id == Guid.Empty ||
+            detail.Run.AgentId == Guid.Empty)
+        {
+            throw new InvalidOperationException(
+                "Execution run and agent identities are required.");
+        }
+
+        var runAgentIds = new HashSet<Guid>
+        {
+            detail.Run.AgentId
+        };
         if (detail.Run.ChatSessionId.HasValue)
         {
             if (detail.ChatSession is null)
@@ -1088,21 +1920,31 @@ public sealed partial class FileSandboxWorkspaceStore :
 
         foreach (var sessionAgentId in detail.ChatSession is null ? [] : new[] { detail.ChatSession.AgentId })
         {
-            if (!knownAgentIds.Contains(sessionAgentId))
+            if (!runAgentIds.Contains(sessionAgentId))
             {
                 throw new InvalidOperationException(
-                    $"Chat session '{detail.ChatSession!.Id:N}' references missing agent '{sessionAgentId:N}'.");
+                    $"Chat session '{detail.ChatSession!.Id:N}' does not belong to execution run '{detail.Run.Id:N}'.");
             }
         }
 
-        ValidateAgentScoped(detail.ExecutionLog.Select(item => (item.Id, item.AgentId, item.ChatSessionId)), detail, knownAgentIds, "Execution log entry");
-        ValidateAgentScoped(detail.Metrics.Select(item => (item.Id, item.AgentId, item.ChatSessionId)), detail, knownAgentIds, "Execution metric");
+        ValidateAgentScoped(
+            detail.ExecutionLog.Select(item =>
+                (item.Id, item.AgentId, item.ChatSessionId)),
+            detail,
+            runAgentIds,
+            "Execution log entry");
+        ValidateAgentScoped(
+            detail.Metrics.Select(item =>
+                (item.Id, item.AgentId, item.ChatSessionId)),
+            detail,
+            runAgentIds,
+            "Execution metric");
         ValidateAgentScoped(
             detail.UsageObservations
                 .Where(item => item.AgentId.HasValue)
                 .Select(item => (item.Id, item.AgentId!.Value, item.ChatSessionId)),
             detail,
-            knownAgentIds,
+            runAgentIds,
             "Provider usage observation");
     }
 
@@ -1166,6 +2008,151 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
     }
 
+    private async Task<ChatSessionRecord?> LoadChatRunStartSessionCoreAsync(
+        ChatBackedRunStartRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!request.ChatSessionId.HasValue)
+        {
+            return null;
+        }
+
+        if (request.ChatSessionId.Value == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A selected chat session identifier cannot be empty.",
+                nameof(request));
+        }
+
+        var session = await chatProjectionStore.GetChatSessionAsync(
+            request.ChatSessionId.Value,
+            cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Chat session '{request.ChatSessionId.Value:N}' was not found.");
+        if (session.AgentId != request.AgentId)
+        {
+            throw new InvalidOperationException(
+                $"Chat session '{session.Id:N}' does not belong to agent '{request.AgentId:N}'.");
+        }
+
+        return session;
+    }
+
+    private async Task<ExecutionRunRecord?> LoadBlockingSessionRunAsync(
+        Guid agentId,
+        ChatSessionRecord session,
+        CancellationToken cancellationToken)
+    {
+        if (session.LatestExecutionRunId is { } latestExecutionRunId)
+        {
+            var latestRun = await executionSliceStore.LoadRunAsync(
+                latestExecutionRunId,
+                cancellationToken);
+            if (latestRun is not null &&
+                latestRun.AgentId == agentId &&
+                latestRun.ChatSessionId == session.Id &&
+                ExecutionRunSessionConcurrencyPolicy.BlocksSession(latestRun))
+            {
+                return latestRun;
+            }
+        }
+
+        var summaries = await chatProjectionStore.ListChatRunSummariesAsync(
+            agentId,
+            session.Id,
+            cancellationToken);
+        var blockingCandidates = summaries
+            .Where(summary =>
+                summary.ExecutionRunId !=
+                    session.LatestExecutionRunId &&
+                summary.ChatSessionId == session.Id &&
+                ExecutionRunSessionConcurrencyPolicy.BlocksSession(
+                    summary.State))
+            .OrderByDescending(summary => summary.UpdatedAtUtc)
+            .Select(summary => summary.ExecutionRunId)
+            .Distinct()
+            .Take(2)
+            .ToArray();
+        if (blockingCandidates.Length > 1)
+        {
+            throw new InvalidDataException(
+                $"Chat session '{session.Id:N}' has multiple blocking execution summaries. The chat projection must be rebuilt before another run can start.");
+        }
+
+        if (blockingCandidates.Length == 0)
+        {
+            return null;
+        }
+
+        var blockingRunId = blockingCandidates[0];
+        var candidate = await executionSliceStore.LoadRunAsync(
+            blockingRunId,
+            cancellationToken);
+        return candidate is not null &&
+               candidate.AgentId == agentId &&
+               candidate.ChatSessionId == session.Id &&
+               ExecutionRunSessionConcurrencyPolicy.BlocksSession(candidate)
+            ? candidate
+            : throw new InvalidDataException(
+                $"Chat session '{session.Id:N}' contains a stale blocking summary for execution run '{blockingRunId:N}'. The chat projection must be rebuilt before another run can start.");
+    }
+
+    private static void ValidateChatBackedRunStartMutation(
+        ChatBackedRunStartRequest request,
+        ChatBackedRunStartContext context,
+        IReadOnlyList<ChatMessageRecord> existingMessages,
+        ChatBackedRunStartMutation mutation)
+    {
+        ArgumentNullException.ThrowIfNull(mutation.Detail);
+        ArgumentNullException.ThrowIfNull(mutation.UserMessage);
+        if (mutation.UserMessage.Id == Guid.Empty ||
+            mutation.UserMessage.Role != ChatMessageRole.User)
+        {
+            throw new InvalidOperationException(
+                "A chat-backed run start requires a new identified user message.");
+        }
+
+        if (existingMessages.Any(message => message.Id == mutation.UserMessage.Id))
+        {
+            throw new InvalidOperationException(
+                $"Chat message '{mutation.UserMessage.Id:N}' already exists in the selected session.");
+        }
+
+        var session = mutation.Detail.ChatSession
+            ?? throw new InvalidOperationException(
+                "A chat-backed execution run requires a chat session.");
+        if (session.Id == Guid.Empty ||
+            session.AgentId != request.AgentId)
+        {
+            throw new InvalidOperationException(
+                "The chat-backed run mutation returned an invalid session identity.");
+        }
+
+        if (context.Session is not null &&
+            session.Id != context.Session.Id)
+        {
+            throw new InvalidOperationException(
+                $"Chat session '{context.Session.Id:N}' cannot be replaced by '{session.Id:N}' while starting a run.");
+        }
+
+        var expectedMessages = existingMessages
+            .Append(mutation.UserMessage)
+            .ToArray();
+        if (!session.Messages.SequenceEqual(expectedMessages))
+        {
+            throw new InvalidOperationException(
+                "The chat-backed run mutation must preserve the current message history and append exactly its new user message.");
+        }
+
+        if (mutation.Detail.Run.Id == Guid.Empty ||
+            mutation.Detail.Run.AgentId != request.AgentId ||
+            mutation.Detail.Run.ChatSessionId != session.Id)
+        {
+            throw new InvalidOperationException(
+                "The chat-backed run mutation returned an invalid execution run identity.");
+        }
+    }
+
     private async Task<SandboxWorkspaceDocument?> TryLoadLegacyWorkspaceDocumentAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(layout.CatalogPath))
@@ -1185,4 +2172,64 @@ public sealed partial class FileSandboxWorkspaceStore :
         stream.Position = 0;
         return await JsonSerializer.DeserializeAsync<SandboxWorkspaceDocument>(stream, jsonStore.SerializerOptions, cancellationToken);
     }
+
+    private sealed record CatalogSaveResult(
+        SandboxWorkspaceCatalog Catalog,
+        bool Changed);
 }
+
+internal enum ChatBackedRunCommitStage
+{
+    JournalPersisted,
+    ExecutionSlicesPersisted,
+    ExecutionIndexesPersisted,
+    WorkspaceIndexPersisted,
+    ChatProjectionPersisted
+}
+
+internal sealed record ChatBackedRunCommitJournal(
+    string Version,
+    Guid RunId,
+    Guid UserMessageId,
+    NewExecutionRunPersistencePlan PersistencePlan,
+    WorkspaceStorageIndex PreviousWorkspaceIndex,
+    WorkspaceStorageIndex TargetWorkspaceIndex);
+
+internal enum GenericNewRunCommitStage
+{
+    JournalPersisted,
+    ExecutionSlicesPersisted,
+    ExecutionIndexPersisted,
+    UsageIndexPersisted,
+    WorkspaceIndexPersisted,
+    ChatIndexPersisted
+}
+
+internal sealed record GenericNewRunCommitJournal(
+    string Version,
+    Guid RunId,
+    GenericNewExecutionRunPersistencePlan PersistencePlan,
+    GenericNewExecutionRunChatProjectionPlan ChatProjectionPlan,
+    WorkspaceStorageIndex PreviousWorkspaceIndex,
+    WorkspaceStorageIndex TargetWorkspaceIndex);
+
+internal enum ExistingRunDetailCommitStage
+{
+    JournalPersisted,
+    SessionPersisted,
+    RunPersisted,
+    ApprovalRecordsPersisted,
+    RemainingRecordsPersisted,
+    ExecutionIndexPersisted,
+    UsageIndexPersisted,
+    WorkspaceIndexPersisted,
+    ChatIndexPersisted
+}
+
+internal sealed record ExistingRunDetailCommitJournal(
+    string Version,
+    Guid RunId,
+    ExistingExecutionRunPersistencePlan PersistencePlan,
+    ExistingExecutionRunChatProjectionPlan ChatProjectionPlan,
+    WorkspaceStorageIndex PreviousWorkspaceIndex,
+    WorkspaceStorageIndex TargetWorkspaceIndex);

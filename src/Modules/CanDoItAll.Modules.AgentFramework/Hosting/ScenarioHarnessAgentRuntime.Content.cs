@@ -33,6 +33,15 @@ internal sealed partial class ScenarioHarnessAgentRuntime
         The home page was replaced with a compact work board that adds items, marks one item done, and displays live counts.
         """;
 
+    private const string GeneratedBlazorAppDirectoryBuildTargets =
+        """
+        <Project>
+          <PropertyGroup>
+            <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+          </PropertyGroup>
+        </Project>
+        """;
+
     private const string GeneratedBlazorAppHomeRazor =
         """
         @page "/"

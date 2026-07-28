@@ -1,0 +1,25 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "empty-local-session",
+  "session": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "agentId": "22222222-2222-4222-8222-222222222222",
+    "title": "Empty local session",
+    "createdAtUtc": "2026-07-28T05:05:01Z",
+    "updatedAtUtc": "2026-07-28T05:05:01Z",
+    "messages": [],
+    "latestExecutionRunId": null,
+    "compatibility": {
+      "runtimeSessionKey": "",
+      "serializedSessionStateJson": "{\"stateBag\":{\"InMemoryChatHistoryProvider\":{\"messages\":[]}}}",
+      "pendingApprovals": [],
+      "autoApprovePendingToolCalls": false
+    }
+  },
+  "expectedTargetBehavior": {
+    "outcome": "native-restore",
+    "messageCount": 0,
+    "pendingApprovalCount": 0
+  }
+}

@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,11 +32,31 @@ public sealed class HrAgentProcessReviewServiceTests
         });
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspaceStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+        var profileId = scope.ServiceProvider
+            .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+            .ResolveCurrentProfile()
+            .Profile
+            .Id;
         var workspace = new AgentFrameworkWorkspaceService(
             workspaceStore,
             new UnusedAgentPackageService(),
             runtime,
-            scope.ServiceProvider.GetRequiredService<ICapabilityProofService>());
+            scope.ServiceProvider.GetRequiredService<ICapabilityProofService>(),
+            logger: NullLogger<AgentFrameworkWorkspaceService>.Instance,
+            activityCoordinator: scope.ServiceProvider
+                .GetRequiredService<IAgentExecutionActivityCoordinator>(),
+            activityWorkspaceIdentity:
+                new AgentExecutionActivityWorkspaceIdentity(
+                    profileId,
+                    WorkspaceScopeDescriptor.Organization(
+                        profileId.ToString("N")),
+                    scope.ServiceProvider
+                        .GetRequiredService<IAgentExecutionProfileGenerationSource>()
+                        .GetGeneration()),
+            executionPreparationCache: scope.ServiceProvider
+                .GetRequiredService<IAgentExecutionPreparationCache>(),
+            executionProfileGenerationSource: scope.ServiceProvider
+                .GetRequiredService<IAgentExecutionProfileGenerationSource>());
         var provider = Assert.Single(
             await workspace.ListProvidersAsync(),
             item => item.IsEnabled &&

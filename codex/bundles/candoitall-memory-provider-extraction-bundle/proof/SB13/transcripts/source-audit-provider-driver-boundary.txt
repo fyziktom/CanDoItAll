@@ -1,5 +1,0 @@
-Command: rg -n "CrmHr|ResourceSource|ManualMemorySource|CanDoItAll.Modules.CrmHr|CanDoItAll.Modules.Resources|ProjectResource|Party|Opportunity|IManualSourceSnapshotProvider" src\Memory\CanDoItAll.Memory.Http src\Memory\CanDoItAll.Memory.Mcp -S
-Working directory: C:\repositories\CanDoItAll
-Start: 2026-07-05T13:41:40.2785152-04:00
-No forbidden CRM/resource/manual adapter references found in generic HTTP/MCP memory drivers.
-Exit code: 0

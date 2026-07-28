@@ -961,13 +961,20 @@ public sealed class AgentRecruitingEvidenceTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(catalog);
 
-        public Task SaveCatalogAsync(
+        public Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(
+                new SandboxWorkspaceCatalogSnapshot(
+                    catalog,
+                    catalog.CatalogDataRevision));
+
+        public Task<SandboxWorkspaceCatalog> SaveCatalogAsync(
             SandboxWorkspaceCatalog catalog,
             CancellationToken cancellationToken = default)
         {
             SaveCount++;
             this.catalog = catalog;
-            return Task.CompletedTask;
+            return Task.FromResult(catalog);
         }
 
         public Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(

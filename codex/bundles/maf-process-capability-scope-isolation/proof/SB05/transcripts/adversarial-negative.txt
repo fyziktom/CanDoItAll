@@ -1,5 +1,0 @@
-Command: rg -n "development-image-analysis-guidance-inline-skill" src\MAF\Common src\MAF\Capabilities Templates\Capabilities\tools.json
-Test: Development image skill common-layer negative scan
-Invariant: MAF-SB05-DEVELOPMENT-SKILL-SCOPE
-Output: development image capability key appears only in the development skill/process assets, not common MAF or common workspace tools
-ExitCode: 1

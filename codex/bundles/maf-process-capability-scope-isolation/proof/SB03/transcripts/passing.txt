@@ -1,6 +1,0 @@
-Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProcessCapabilityScopeContractTests|FullyQualifiedName~ProcessPersistenceStoreTests.Runtime_step_assignment_store_round_trips_launch_variables_for_execution_metadata" --artifacts-path artifacts\dotnet-test-isolated --no-restore
-Test: Process_template_json_deserializes_capability_scope_contract
-Test: Runtime_step_assignment_store_round_trips_launch_variables_for_execution_metadata
-Invariant: MAF-SB03-PROCESS-CONTRACT
-Output: focused process contract and persistence tests passed
-ExitCode: 0

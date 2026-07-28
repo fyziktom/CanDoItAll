@@ -1,6 +1,0 @@
-Command: rg -n "PendingModelChangesWarning|ConfigureWarnings|Ignore" src tests/Unit/CanDoItAll.Tests.Unit
-WorkingDirectory: repo://
-ExitCode: 1
-Invariant: SB04-EF-MODEL-ISOLATION
-Result: no global pending-model suppression was added to hide migration drift.
-

@@ -1,5 +1,0 @@
-Command: rg -n "DefaultEffect\s*=\s*CapabilityAccessEffect\.Allow" src\MAF\Capabilities src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities src\MAF\Common\CanDoItAll.AgentFramework.Models
-Test: Scoped override default-allow negative scan
-Invariant: MAF-SB02-SCOPED-CAPABILITY
-Output: no hard-coded scoped override default allow assignment found
-ExitCode: 1

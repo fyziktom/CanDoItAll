@@ -1,0 +1,66 @@
+MAF 1.13 SB01 repository baseline
+=================================
+
+Captured at UTC: 2026-07-28T05:05:01.8702721+00:00
+Repository: C:\repositories\CanDoItAll
+Branch: agents-loading-refactor
+Baseline HEAD: 797d7ce11205d630756ec9335b1b84295257a315
+Bundle pin: 59f558bc866d39d438b53f5f743dd5e87c2a6253
+.NET SDK: 10.0.204
+OS: Microsoft Windows 10.0.26200
+
+Commands and results
+--------------------
+
+git branch --show-current
+Exit code: 0
+Result: agents-loading-refactor
+
+git rev-parse HEAD
+Exit code: 0
+Result: 797d7ce11205d630756ec9335b1b84295257a315
+
+git merge-base --is-ancestor 59f558bc866d39d438b53f5f743dd5e87c2a6253 797d7ce11205d630756ec9335b1b84295257a315
+Exit code: 0
+Result: the bundle pin is an ancestor of the baseline HEAD.
+
+git log --oneline 59f558bc866d39d438b53f5f743dd5e87c2a6253..797d7ce11205d630756ec9335b1b84295257a315
+Exit code: 0
+Result:
+797d7ce11 added bundle
+04f7bdc59 cleanup bundles
+d4c2f9e23 cleanup bundles
+
+git diff --name-only 59f558bc866d39d438b53f5f743dd5e87c2a6253..797d7ce11205d630756ec9335b1b84295257a315
+Exit code: 0
+Result summary:
+- changed paths: 3,083
+- paths outside .codex/bundles or codex/bundles: 0
+- product/package source drift between the pin and baseline HEAD: none
+
+dotnet --version
+Exit code: 0
+Result: 10.0.204
+
+Working-tree classification
+---------------------------
+
+The initial SB01 package graphs, direct-reference discovery, unsuppressed builds, and test
+artifacts were captured from the immutable baseline HEAD while direct references resolved
+to stable 1.13.0 and A2A preview 1.13.0-preview.260703.1.
+
+At the timestamp above, the shared working tree contained 30 entries. They were classified
+as follows:
+
+- bundle repair/evidence: README, machine scripts, migration metadata, observability,
+  architecture review, UI plan, readiness review, and SB01 proof directories;
+- duplicate root discovery outputs: untracked agent-pipeline.txt, approvals.txt,
+  checkpointing.txt, custom-filetools.txt, direct-maf-package-references.txt,
+  dotnet-info.txt, file-harness.txt, hosting-protocols.txt, merge-snapshot.txt,
+  metadata.txt, optional.txt, packages.txt, sessions.txt, and workflows.txt;
+- concurrent target-version work owned by the primary implementation agent:
+  Directory.Build.props and the three direct MAF package-owner project files.
+
+The concurrent target-version edits are not used as SB01 baseline evidence. Replay or
+comparison must use the baseline commit plus the captured package graphs under
+proof/SB01/package-graph, not the later shared-working-tree contents.

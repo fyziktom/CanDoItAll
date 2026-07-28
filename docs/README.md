@@ -1,55 +1,82 @@
 # CanDoItAll Documentation
 
-This folder contains current operational and architecture documentation for the repository. Historical bundle folders remain in the repo for execution traceability, but current contributor guidance should start here.
+This index covers maintained contributor, architecture, runtime, and product documentation. Source code, project files, runtime composition, configuration, and endpoint mapping remain authoritative when a prose statement conflicts with implementation.
 
-## Architecture
+Historical execution bundles under `codex/bundles`, `.codex/bundles`, and the checked-in `codex/skills` mirror are retained for traceability. They are evidence snapshots, not current product or contributor guidance.
 
-- [Architecture beta](architecture-beta.md): current source-grounded architecture with GitHub-safe Mermaid flowcharts, C4, class, and sequence diagrams.
-- [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md): source-grounded process runtime, AgentFramework, provider, API, and tool-boundary map.
-- [Agent runtime tool surface](agent-runtime-tool-surface.md): current direct runtime tools versus HTTP-only API operations.
+## Start Here
 
-## Enterprise And Product Orientation
+- [Repository overview](../README.md): ownership, prerequisites, quick start, build, tooling, and publication status
+- [Development runtime](development-runtime.md): PostgreSQL, local data roots, Memory defaults, and readiness checks
+- [Testing](testing.md): stable Release gate, extended categories, and sibling prerequisites
+- [API control plane](api-control-plane.md): current HTTP API families and authorization behavior
+- [Architecture beta](architecture-beta.md): source-grounded system overview
+- [Contributing](../CONTRIBUTING.md): approved-partner workflow and validation expectations
+- [Security policy](../SECURITY.md): supported line and private vulnerability reporting
 
-These docs are for readers who need to understand what CanDoItAll does before they need source-level details.
+## Architecture And Runtime Boundaries
 
-- [Enterprise operating system](enterprise-operating-system.md): customer-facing explanation of CanDoItAll as an operating system for projects, with audience-specific infographics.
+- [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md)
+- [Agent runtime tool surface](agent-runtime-tool-surface.md)
+- [Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md)
+- [Reusable floating agent chats](architecture/reusable-floating-agent-chats.md)
+- [Process blocked-run recovery](architecture/process-blocked-run-recovery.md)
+- [Project planning analytics and agent access](architecture/project-planning-analytics-and-agent-access.md)
+- [Project Structure and Gantt integration](architecture/project-structure-gantt-integration.md)
+- [Prompt Gallery consolidation](architecture/prompt-gallery-consolidation.md)
+- [CRM/HR assignments workspace](architecture/crm-hr-assignments-workspace.md)
+- [CRM/HR recruiting assessments and execution summaries](architecture/crm-hr-recruiting-assessments-and-execution-summaries.md)
+- [HR agent governance](architecture/hr-agent-governance.md)
 
-## Runtime, API, And MCP
+## Operations, API, And Integration
 
-- [Root quick start](../README.md#quick-start-with-postgresql-and-qdrant): public entry point for PostgreSQL, Qdrant, build, test, and setup script commands.
-- [API control plane](api-control-plane.md): current HTTP API surface for projects, project structure, processes, agents, and API access.
-- [CRM-HR API](crm-hr-api.md): bounded party/workforce/recruiting HTTP operations, privacy and idempotency rules, and validation guidance.
-- [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md): source-grounded map of the current process runtime, MAF adapter, provider runtime, API/tool boundaries, known gaps, and hardening-refactor roadmap.
-- [Development runtime](development-runtime.md): default PostgreSQL/Qdrant setup for Visual Studio and local Development runs.
-- [PostgreSQL runtime canonicality](postgresql-runtime-canonicality.md): source-of-truth, lease finalization, and bounded parallelism rules.
-- [Cognitive Memory](cognitive-memory/README.md): current implementation stage, architecture, API, validation, and roadmap for the Cognitive Memory module.
-- [Processes MCP transition note](processes-mcp-setup.md): retired/suppressed MCP guidance and current replacement path.
-- [Project Structure MCP transition note](project-structure-mcp-setup.md): retired/suppressed MCP guidance and current replacement path.
-- [DotNetWatch persistent backend benefits](mcp-dotnetwatch-persistent-backend-benefits.md): development-sidecar runtime notes.
-- [Process agent operator runbook](process-agent-operator-runbook.md): operational triage for escalations, approvals, rework, and recovery.
-- [Agent output contracts](agent-output-contracts.md): typed structured-output and finalizer-tool contracts for machine-critical agent decisions.
-- [Workflow MAF hardening](workflow-maf-hardening.md): workflow authoring, MAF runtime boundary, executor approval policy, and deterministic validation guidance.
+- [PostgreSQL runtime canonicality](postgresql-runtime-canonicality.md)
+- [Process agent operator runbook](process-agent-operator-runbook.md)
+- [CRM/HR API](crm-hr-api.md)
+- [Secure configuration](secure-configuration.md)
+- [OAuth email plugins](oauth-email-plugins.md)
+- [Provider capability and pricing](provider-capability-and-pricing.md)
+- [Processes MCP transition](processes-mcp-setup.md)
+- [Project Structure MCP transition](project-structure-mcp-setup.md)
+- [DotNetWatch development integration](dotnetwatch-development-integration.md)
 
-## Setup Scripts
+## AgentFramework And MAF
 
-- `tools\Install-CanDoItAllWebApp.ps1`: publishes the web app as a local Windows install with launcher and desktop shortcut.
-- `tools\Reinstall-CanDoItAllMcps.ps1`: rebuilds MCP projects from the sibling `CanDoItAll.Mcp` repo, updates Codex/VS Code MCP config, prepares DotNetWatch tray support, syncs canonical skills from the sibling `CanDoItAll.SharedInfo` repo, and removes stale retired MCP/config migration sections.
-- `codex\scripts\install-candoitall-skills.ps1`: installs canonical CanDoItAll skills from the sibling `CanDoItAll.SharedInfo` repo plus required public sibling skills.
+- [MAF 1.15 compatibility](maf-1.15-compatibility.md)
+- [MAF runtime stabilization](maf-runtime-stabilization.md)
+- [Workflow MAF hardening](workflow-maf-hardening.md)
+- [Agent output contracts](agent-output-contracts.md)
 
-## Components And UI
+## Memory
 
-- [UI support scope](ui-support-scope.md): current large-desktop-only UI target and validation guidance.
-- [UI shared components](ui-shared-components/README.md): current shared Blazor component-library shape, usage rules, and component references.
-- [Shared components governance](shared-components-governance.md): ownership and change-request boundaries for shared UI libraries.
+The active implementation is the provider-neutral Memory subsystem. The legacy Cognitive Memory API is a retired compatibility shim.
 
-## Prompts And Skills
+- [Memory overview and migration boundary](cognitive-memory/README.md)
+- [Current implementation map](cognitive-memory/current-state/implementation-map.md)
+- [Provider setup](cognitive-memory/operations/provider-setup.md)
+- [Agent Memory](cognitive-memory/operations/agent-memory.md)
+- [Provider authoring](cognitive-memory/operations/provider-authoring.md)
+- [Legacy main-database retirement](cognitive-memory/operations/legacy-main-db-retirement.md)
+- [Memory test-suite ownership](cognitive-memory/operations/memory-test-suite-rebalance.md)
+- [Validation and testing](cognitive-memory/operations/validation-and-testing.md)
 
-- [Prompt library implementation prompts](prompt-library-implementation-prompts.md)
-- [Prompt library integration checklist](prompt-library-integration-checklist.md)
-- [Portable Codex skill pack](../codex/README.md)
-- [Template workspace](../Templates/README.md): app-owned internal-agent skill, tool, MCP, policy, process, and workflow template packs.
+## Product And UI
 
-## Templates
+- [Enterprise operating system](enterprise-operating-system.md)
+- [UI support scope](ui-support-scope.md)
+- [Shared UI consumption boundary](ui-shared-components/README.md)
+- [CRM/HR recruiting assessment user stories](crm-hr-recruiting-assessment-user-stories.md)
 
-- [Template workspace](../Templates/README.md)
-- [Process template pack](../Templates/Processes/README.md)
+## Repository Assets
+
+- [Portable Codex skill installer](../codex/README.md)
+- [Application templates](../Templates/README.md)
+- [Process templates](../Templates/Processes/README.md)
+- [Application Tailwind workspace](../Tailwind/README.md)
+- [Optional Ollama context probe](../tools/ollama/README.md)
+
+When removing or renaming a maintained document, update this index and run:
+
+```powershell
+& .\tools\Validation\Test-Documentation.ps1
+```

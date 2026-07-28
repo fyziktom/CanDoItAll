@@ -65,6 +65,7 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
             new ExecutionRunRequest(
                 AgentId: agent.Id,
                 Prompt: "Return the deterministic valid portable output.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: session.Id,
                 JsonSchemaOutput: contract));
 
@@ -97,6 +98,7 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
             new ExecutionRunRequest(
                 AgentId: agent.Id,
                 Prompt: "Return the deterministic schema-invalid portable output.",
+                InitialActivityOperationId: AgentExecutionOperationId.New(),
                 ChatSessionId: session.Id,
                 JsonSchemaOutput: contract));
 
@@ -294,6 +296,20 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
         services.AddScoped<IAgentExecutionGovernanceBridge>(serviceProvider => new DurableAgentExecutionGovernanceBridge(
             serviceProvider.GetRequiredService<IAgentExecutionCheckpointBridge>()));
         services.AddScoped<IAgentExecutionEventSink, NullAgentExecutionEventSink>();
+        services.AddScoped(serviceProvider =>
+        {
+            var profile = serviceProvider
+                .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+                .ResolveCurrentProfile()
+                .Profile;
+            return new AgentExecutionActivityWorkspaceIdentity(
+                profile.Id,
+                WorkspaceScopeDescriptor.Organization(
+                    profile.Id.ToString("N")),
+                serviceProvider
+                    .GetRequiredService<IAgentExecutionProfileGenerationSource>()
+                    .GetGeneration());
+        });
         services.AddScoped<IAgentFrameworkWorkspaceService, AgentFrameworkWorkspaceService>();
     }
 

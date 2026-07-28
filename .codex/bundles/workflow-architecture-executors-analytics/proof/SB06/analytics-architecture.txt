@@ -1,8 +1,0 @@
-SB06 analytics UI ownership snapshot
-
-- Workflows.Abstractions owns `WorkflowAnalyticsQuery` and `WorkflowAnalyticsSnapshot`; this slice changes no analytics contract.
-- `WorkflowAnalyticsPanel` owns analytics presentation, typed scope selection, lazy query lifecycle, safe failure state, cancellation, and stale-result gating.
-- `WorkflowsPage` owns only service composition, Analytics-tab activation, workflow options, and refresh-version invalidation after catalog/run changes.
-- The panel has no dependency on `IWorkflowRunStore`, `IWorkflowRuntimeManager`, workflow events, provider SDKs, persistence, or page History state.
-- Component tests instantiate the extracted panel directly with a fake typed query service; they do not instantiate the large `WorkflowsPage` class.
-- No new project, package, interface, CSS file, executor mapping, settings renderer, or plugin dependency was introduced.

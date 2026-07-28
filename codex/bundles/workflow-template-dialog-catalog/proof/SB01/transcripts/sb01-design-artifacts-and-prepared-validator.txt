@@ -1,6 +1,0 @@
-Command: Test-Path design proposals; python validate_bundle.py --stage prepared
-Working directory: C:\repositories\CanDoItAll
-Start: 2026-06-30T07:20:44.8555581-04:00
-Validator output:
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\workflow-template-dialog-catalog
-Exit code: 0

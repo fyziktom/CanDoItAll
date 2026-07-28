@@ -104,7 +104,7 @@ internal static class MafRuntimeSessionBuilder
             contents.Add(new TextContent(normalizedPrompt));
         }
 
-        contents.AddRange(attachments.Select(attachment => new DataContent(attachment.Bytes, attachment.ContentType)
+        contents.AddRange(attachments.Select(attachment => new DataContent(attachment.Bytes.AsMemory(), attachment.ContentType)
         {
             Name = string.IsNullOrWhiteSpace(attachment.Name) ? Path.GetFileName(attachment.SourcePath) : attachment.Name
         }));

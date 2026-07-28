@@ -22,7 +22,7 @@ Generic memory providers integrate through strongly typed profiles, manifests, o
 | `IMemoryProviderDriver` | `src/Memory/CanDoItAll.Memory.Application` | Context query dispatch boundary. |
 | `IMemoryProviderHealthDriver` | `src/Memory/CanDoItAll.Memory.Application` | Provider health boundary. |
 | `IMemoryProviderOperationStatusDriver` | `src/Memory/CanDoItAll.Memory.Application` | Async status polling boundary. |
-| `IMemoryProviderFeedbackDriver` | `src/Memory/CanDoItAll.Memory.Application` | Feedback delivery boundary. |
+| `IMemoryProviderFeedbackDeliveryDriver` | `src/Memory/CanDoItAll.Memory.Application` | Feedback delivery boundary. |
 | `IMemoryProviderEventPollDriver` | `src/Memory/CanDoItAll.Memory.Application` | Provider event polling boundary. |
 | `IMemoryProviderEventOutboxDriver` | `src/Memory/CanDoItAll.Memory.Application` | Event acknowledgement/outbox boundary. |
 | `IMemorySourceGatewayAdapter` | `src/Memory/CanDoItAll.Memory.Application` | Module-owned Source Gateway adapter boundary. |
@@ -103,7 +103,8 @@ For a new provider or driver, add focused proof at the narrowest layer:
 - worker tests when async status, feedback, events, or outbox acknowledgements are supported;
 - component or Playwright proof when profile setup or provider UI changes browser-visible behavior.
 
-For native service changes, also run the native repository build/tests in `C:\repositories\CanDoItAll.CognitiveMemory`.
+For native service changes, also run the build and tests in the separately cloned
+[CanDoItAll.CognitiveMemory repository](https://github.com/fyziktom/CanDoItAll.CognitiveMemory).
 
 ## Anti-Patterns
 

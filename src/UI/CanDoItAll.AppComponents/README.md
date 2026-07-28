@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Facade and app-shell component layer for shared shell assets, tab strip behavior, and tuning boundaries.
+Facade and application-owned component layer for shell and tab behavior, tuning
+boundaries, record browsers and pickers, cards and filters, and FileTools host-action
+adapters.
 
 ## Project Type
 
@@ -14,28 +16,20 @@ Facade and app-shell component layer for shared shell assets, tab strip behavior
 dotnet build src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.4)`
-- `CanDoItAll.Components.BaseLib (0.1.0)`
-- `CanDoItAll.Components.CanvasLib (0.1.0)`
-- `CanDoItAll.Components.Common (0.1.0)`
+The authoritative project and package dependency list is in [CanDoItAll.AppComponents.csproj](CanDoItAll.AppComponents.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
-Keep shared UI reusable and typed. Use BaseLib for ordinary product UI, CanvasLib for graph/canvas surfaces, OverlayLib for floating windows, WebGlLib for WebGL concepts, and sandbox projects only for demos or proof.
+Keep application-shell UI typed and focused. Reusable component behavior belongs in
+the sibling `CanDoItAll.Components` repository. This facade consumes its BaseLib,
+CanvasLib, and Common packages while owning app-specific pickers and cards plus adapters
+that connect FileTools actions to local launch and browser download behavior. Add another
+dependency only when an application-owned surface has a real need for it.
 
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture-beta.md`
+- Shared UI boundary: `docs/ui-shared-components/README.md`

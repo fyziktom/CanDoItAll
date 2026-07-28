@@ -1,4 +1,0 @@
-Command: Historical SB27 proof transcript: generic-memory-boundary-audit.txt
-PASS: generic memory source/test tree has no compile-time CanDoItAll.CognitiveMemory dependency.
-ExitCode: 0
-

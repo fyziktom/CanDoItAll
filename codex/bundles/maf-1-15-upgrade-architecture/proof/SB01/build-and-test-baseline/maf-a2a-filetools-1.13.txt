@@ -1,0 +1,17 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Aktivní testovací běh se přerušil. Důvod: Proces testovacího hostitele se chybově ukončil.
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\maf-1-15-upgrade-architecture\proof\SB01\build-and-test-baseline\maf-a2a-filetools-1.13.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   282, Přeskočeno:     0, Celkem:   282, Doba trvání: 1 m 10 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Testovací běh se přerušil.
+
+Aktivní testovací běh se přerušil, protože proces hostitele se neočekávaně ukončil. Prověřte prosím výše zásobník volání, pokud je k dispozici. Nabídne vám další informace o původu výjimky.
+Test, který běžel, když došlo k chybovému ukončení:
+CanDoItAll.Tests.Unit.WorkspaceExternalTargetAliasTests.WriteTextFile_writes_to_real_external_target_for_alias_path
+CanDoItAll.Tests.Unit.WorkspaceFileServiceTests.WriteTextFile_registers_showcase_deliverable_as_execution_artifact
+
+Tento test může a nemusí být příčinou chybového ukončení.
+
+Přílohy:
+  C:\repositories\CanDoItAll\codex\bundles\maf-1-15-upgrade-architecture\proof\SB01\build-and-test-baseline\cdf03d6f-31d8-40b3-a069-3d6a1af91c80\Sequence_3525a010cabb4d5cb5036aa9c8f2535b.xml

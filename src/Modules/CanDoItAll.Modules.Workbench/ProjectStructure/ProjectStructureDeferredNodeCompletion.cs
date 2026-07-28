@@ -198,7 +198,7 @@ public sealed class ProjectStructureDeferredNodeCompletionWorker(
 }
 
 public sealed class ProjectStructureDeferredNodeCompletionProcessor(
-    IProviderProfileRegistry providerRegistry,
+    IProviderRuntimeProfileSource providerSource,
     IAgentImageGenerationService imageGenerationService,
     ProjectWorkbenchService projectWorkbenchService,
     ILogger<ProjectStructureDeferredNodeCompletionProcessor> logger)
@@ -226,7 +226,7 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
 
         try
         {
-            provider = await providerRegistry.GetProviderAsync(imageRequest.ProviderProfileId, cancellationToken).ConfigureAwait(false)
+            provider = await providerSource.GetProviderAsync(imageRequest.ProviderProfileId, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Image-generation provider '{imageRequest.ProviderProfileId:D}' was not found.");
 
             await projectWorkbenchService.UpdateObjectMetadataAsync(

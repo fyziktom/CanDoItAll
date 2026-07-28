@@ -80,18 +80,40 @@ internal static class ProcessAgentChatContextBuilder
         ValidateEnum(context.RunView, nameof(context.RunView));
         ValidateEnum(context.AccessState, nameof(context.AccessState));
 
-        var selectedDefinition = context.Shell?.DefinitionCatalog.SelectedItem;
-        var effectiveRunId = context.FocusedEvent?.RunId.Value ??
-            context.FocusedRun?.RunId.Value ??
-            context.SelectedRunId;
-        var selectedRun = context.FocusedRun?.RunId.Value == effectiveRunId
-            ? context.FocusedRun
-            : ResolveRun(context.Shell, effectiveRunId);
+        var provenance = context.Shell?.Provenance;
+        var hasSelection = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.Selection);
+        var hasDefinition = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.DefinitionCatalog);
+        var hasRuns = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.LiveRuns);
+        var hasHistory = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.HistoryPage);
+        var selectedDefinition = hasDefinition
+            ? context.Shell?.DefinitionCatalog.SelectedItem
+            : null;
+        var focusedEvent = hasHistory ? context.FocusedEvent : null;
+        var focusedRun = hasRuns ? context.FocusedRun : null;
+        var effectiveRunId = hasSelection
+            ? focusedEvent?.RunId.Value ??
+              focusedRun?.RunId.Value ??
+              context.SelectedRunId
+            : null;
+        var selectedRun = focusedRun?.RunId.Value == effectiveRunId
+            ? focusedRun
+            : hasRuns
+                ? ResolveRun(context.Shell, effectiveRunId)
+                : null;
         var definitionReference = BuildDefinitionReference(selectedDefinition);
         var runReference = BuildRunReference(selectedRun, effectiveRunId);
-        var eventReference = BuildEventReference(context.FocusedEvent);
+        var eventReference = BuildEventReference(focusedEvent);
         var primarySelection = ResolveWorkspacePrimarySelection(
             context,
+            focusedRun is not null,
             definitionReference,
             runReference,
             eventReference);
@@ -99,11 +121,11 @@ internal static class ProcessAgentChatContextBuilder
             primarySelection,
             definitionReference,
             runReference);
-        var facts = BuildWorkspaceFacts(context, selectedDefinition, selectedRun);
-        var scopeRunId = context.FocusedEvent?.RunId.Value ??
-            context.FocusedRun?.RunId.Value ??
+        var facts = BuildWorkspaceFacts(context, selectedDefinition, selectedRun, provenance);
+        var scopeRunId = focusedEvent?.RunId.Value ??
+            focusedRun?.RunId.Value ??
             selectedRun?.RunId.Value ??
-            context.SelectedRunId;
+            (hasSelection ? context.SelectedRunId : null);
 
         return new AgentChatContextSurface(
             BuildSource(WorkspaceSourceKind, WorkspaceSurface, context.ProjectId),
@@ -138,22 +160,38 @@ internal static class ProcessAgentChatContextBuilder
             ValidateEnum(context.StatusFilter.Value, nameof(context.StatusFilter));
         }
 
-        var selectedRunId = context.FilesRunId ??
-            context.FocusedAgent?.RunId ??
-            context.FocusedRun?.RunId.Value ??
-            context.SelectedRunId;
-        var selectedRun = context.FocusedRun?.RunId.Value == selectedRunId
-            ? context.FocusedRun
-            : ResolveRun(context.Shell, selectedRunId);
+        var provenance = context.Shell?.Provenance;
+        var hasSelection = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.Selection);
+        var hasRuns = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.LiveRuns);
+        var hasActiveAgents = HasPresentComponent(
+            provenance,
+            ProcessWorkspaceProvenanceComponent.ActiveAgents);
+        var focusedRun = hasRuns ? context.FocusedRun : null;
+        var focusedAgent = hasActiveAgents ? context.FocusedAgent : null;
+        var selectedRunId = hasSelection
+            ? context.FilesRunId ??
+              focusedAgent?.RunId ??
+              focusedRun?.RunId.Value ??
+              context.SelectedRunId
+            : null;
+        var selectedRun = focusedRun?.RunId.Value == selectedRunId
+            ? focusedRun
+            : hasRuns
+                ? ResolveRun(context.Shell, selectedRunId)
+                : null;
         var runReference = BuildRunReference(selectedRun, selectedRunId);
-        var agentReference = BuildAgentReference(context.FocusedAgent);
-        var primarySelection = context.FilesRunId.HasValue
+        var agentReference = BuildAgentReference(focusedAgent);
+        var primarySelection = hasSelection && context.FilesRunId.HasValue
             ? runReference
             : agentReference ?? runReference;
         var selectedEntities = BuildSelectedEntities(
             primarySelection,
             runReference);
-        var facts = BuildLiveFacts(context, selectedRun);
+        var facts = BuildLiveFacts(context, selectedRun, provenance);
 
         return new AgentChatContextSurface(
             BuildSource(LiveSourceKind, LiveSurface, context.ProjectId),
@@ -266,6 +304,7 @@ internal static class ProcessAgentChatContextBuilder
 
     private static AgentChatContextEntityReference? ResolveWorkspacePrimarySelection(
         ProcessWorkspaceAgentChatContext context,
+        bool hasFocusedRun,
         AgentChatContextEntityReference? definitionReference,
         AgentChatContextEntityReference? runReference,
         AgentChatContextEntityReference? eventReference)
@@ -275,7 +314,7 @@ internal static class ProcessAgentChatContextBuilder
             return eventReference;
         }
 
-        if (context.FocusedRun is not null && runReference is not null)
+        if (hasFocusedRun && runReference is not null)
         {
             return runReference;
         }
@@ -323,24 +362,34 @@ internal static class ProcessAgentChatContextBuilder
     private static IReadOnlyList<AgentChatContextPositionFact> BuildWorkspaceFacts(
         ProcessWorkspaceAgentChatContext context,
         ProcessDefinitionCatalogItemProjection? selectedDefinition,
-        ProcessLiveProcessSnapshot? selectedRun)
+        ProcessLiveProcessSnapshot? selectedRun,
+        ProcessWorkspaceProvenanceVector? provenance)
     {
-        var facts = BuildBaseFacts(context.ProjectId, context.Shell, context.AccessState);
-        if (context.View == ProcessAgentChatWorkspaceView.Runs)
+        var facts = BuildBaseFacts(context.ProjectId, context.Shell, context.AccessState, provenance);
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.Selection) &&
+            context.View == ProcessAgentChatWorkspaceView.Runs)
         {
             AddFact(facts, "run-view", ResolveRunView(context.RunView));
         }
-        AddFact(facts, "runtime-history", context.Shell?.Runtime.HistoryWindow.ToString());
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.HistoryPage))
+        {
+            AddFact(facts, "runtime-history", context.Shell?.Runtime.HistoryWindow.ToString());
+        }
+
         AddDefinitionFacts(facts, selectedDefinition);
         AddRunFacts(facts, selectedRun);
 
-        if (context.FocusedEvent is not null)
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.HistoryPage) &&
+            context.FocusedEvent is not null)
         {
             AddFact(facts, "focused-dialog", "runtime-event");
             AddFact(facts, "event-type", context.FocusedEvent.EventType);
             AddFact(facts, "event-sensitivity", context.FocusedEvent.Sensitivity.ToString());
         }
-        else if (context.FocusedRun is not null)
+        else if (HasPresentComponent(
+                     provenance,
+                     ProcessWorkspaceProvenanceComponent.LiveRuns) &&
+                 context.FocusedRun is not null)
         {
             AddFact(facts, "focused-dialog", "run-detail");
         }
@@ -350,25 +399,39 @@ internal static class ProcessAgentChatContextBuilder
 
     private static IReadOnlyList<AgentChatContextPositionFact> BuildLiveFacts(
         LiveProcessesAgentChatContext context,
-        ProcessLiveProcessSnapshot? selectedRun)
+        ProcessLiveProcessSnapshot? selectedRun,
+        ProcessWorkspaceProvenanceVector? provenance)
     {
-        var facts = BuildBaseFacts(context.ProjectId, context.Shell, context.AccessState);
-        AddFact(facts, "runtime-history", context.HistoryWindow.ToString());
-        AddFact(facts, "status-filter", context.StatusFilter?.ToString() ?? "All");
+        var facts = BuildBaseFacts(context.ProjectId, context.Shell, context.AccessState, provenance);
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.HistoryPage))
+        {
+            AddFact(facts, "runtime-history", context.HistoryWindow.ToString());
+        }
+
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.Selection))
+        {
+            AddFact(facts, "status-filter", context.StatusFilter?.ToString() ?? "All");
+        }
+
         AddRunFacts(facts, selectedRun);
 
-        if (context.FilesRunId.HasValue)
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.Selection) &&
+            context.FilesRunId.HasValue)
         {
             AddFact(facts, "focused-dialog", "run-files");
         }
-        else if (context.FocusedAgent is not null)
+        else if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.ActiveAgents) &&
+                 context.FocusedAgent is not null)
         {
             AddFact(facts, "focused-dialog", "agent-detail");
             AddFact(facts, "agent-status", context.FocusedAgent.Status);
             AddFact(facts, "agent-step", context.FocusedAgent.StepKey);
             AddFact(facts, "agent-role", context.FocusedAgent.RoleKey);
         }
-        else if (context.FocusedRun is not null)
+        else if (HasPresentComponent(
+                     provenance,
+                     ProcessWorkspaceProvenanceComponent.LiveRuns) &&
+                 context.FocusedRun is not null)
         {
             AddFact(facts, "focused-dialog", "run-detail");
         }
@@ -379,24 +442,57 @@ internal static class ProcessAgentChatContextBuilder
     private static List<AgentChatContextPositionFact> BuildBaseFacts(
         Guid? projectId,
         ProcessWorkspaceShellProjection? shell,
-        AgentChatContextAccessState accessState)
+        AgentChatContextAccessState accessState,
+        ProcessWorkspaceProvenanceVector? provenance)
     {
         var facts = new List<AgentChatContextPositionFact>(20);
-        AddFact(facts, "scope", projectId.HasValue ? "project" : "global");
-        AddFact(facts, "project-id", projectId?.ToString("D"));
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.Selection))
+        {
+            AddFact(facts, "scope", projectId.HasValue ? "project" : "global");
+            AddFact(facts, "project-id", projectId?.ToString("D"));
+        }
+
         AddFact(facts, "context-state", accessState.ToString());
-        AddFact(facts, "projection-status", shell?.Refresh.Status.ToString());
-        AddFact(
-            facts,
-            "definition-count",
-            shell is null
-                ? null
-                : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount)
-                    .ToString(CultureInfo.InvariantCulture));
-        AddFact(facts, "loaded-run-count", shell?.Runtime.Runs.Count.ToString(CultureInfo.InvariantCulture));
-        AddFact(facts, "active-run-count", shell?.LiveRuns.ActiveRunCount.ToString(CultureInfo.InvariantCulture));
-        AddFact(facts, "attention-run-count", shell?.LiveRuns.AttentionRunCount.ToString(CultureInfo.InvariantCulture));
-        AddFact(facts, "failed-run-count", shell?.LiveRuns.FailedRunCount.ToString(CultureInfo.InvariantCulture));
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.ShellRefresh))
+        {
+            AddFact(facts, "projection-status", shell?.Refresh.Status.ToString());
+        }
+
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.DefinitionCatalog))
+        {
+            AddFact(
+                facts,
+                "definition-count",
+                shell is null
+                    ? null
+                    : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount)
+                        .ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.LiveRuns))
+        {
+            AddFact(
+                facts,
+                "loaded-run-count",
+                shell?.Runtime.Runs.Count.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (HasPresentComponent(provenance, ProcessWorkspaceProvenanceComponent.LiveRunSummary))
+        {
+            AddFact(
+                facts,
+                "active-run-count",
+                shell?.LiveRuns.ActiveRunCount.ToString(CultureInfo.InvariantCulture));
+            AddFact(
+                facts,
+                "attention-run-count",
+                shell?.LiveRuns.AttentionRunCount.ToString(CultureInfo.InvariantCulture));
+            AddFact(
+                facts,
+                "failed-run-count",
+                shell?.LiveRuns.FailedRunCount.ToString(CultureInfo.InvariantCulture));
+        }
+
         return facts;
     }
 
@@ -560,6 +656,11 @@ internal static class ProcessAgentChatContextBuilder
             throw new ArgumentException("A project-scoped Processes context requires a non-empty project id.", nameof(projectId));
         }
     }
+
+    private static bool HasPresentComponent(
+        ProcessWorkspaceProvenanceVector? vector,
+        ProcessWorkspaceProvenanceComponent component)
+        => vector?.GetComponent(component).State == ProcessProjectionComponentState.Present;
 
     private static void ValidateEnum<TEnum>(TEnum value, string parameterName)
         where TEnum : struct, Enum

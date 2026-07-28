@@ -1,0 +1,16 @@
+{
+  "fixtureId": "maf-1.13-legacy-mixed-approvals",
+  "sourceFrameworkVersion": "1.13.0",
+  "targetFrameworkVersion": "1.15.0",
+  "fixtureKind": "mixed-tools",
+  "historyMode": "not-applicable",
+  "hasPendingApprovals": true,
+  "pendingApprovalCount": 2,
+  "containsRequestScopedAttachments": false,
+  "sanitized": true,
+  "sha256": "eb03497bd9fb933331a6154c755ff475a3ab2973de822f040d4fa2ef3cb0cf75",
+  "createdAtUtc": "2026-07-28T05:05:01Z",
+  "sourceCommit": "797d7ce11205d630756ec9335b1b84295257a315",
+  "expectedTargetOutcome": "approval-reissue",
+  "notes": "Contract-derived deterministic coverage for one ordinary call plus two individually identified legacy approvals. It is not private 1.13 framework binding state and authorizes no direct mutation."
+}

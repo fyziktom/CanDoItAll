@@ -1,7 +1,0 @@
-Command: Select-String src\Memory for forbidden production dependencies
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB05 forbidden production dependency audit
-Invariant IDs: SB05_CP002
-ExitCode: 0
-Output:
-No native Cognitive Memory, Qdrant, OpenAI, RAG, AppDbContext, IDbContextFactory, or EF dependency references found in generic memory production paths. The audit is case-sensitive so the allowed native.cognitiveMemory extension namespace is not treated as an implementation dependency.

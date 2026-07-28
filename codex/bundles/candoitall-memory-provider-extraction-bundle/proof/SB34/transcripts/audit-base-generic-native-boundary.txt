@@ -1,9 +1,0 @@
-Command: PowerShell SB34 base/generic/native boundary audit
-PASS: no direct native Cognitive Memory, Qdrant package, or SemanticCompletion driver references in base composition, generic memory, generic memory UI, or generic MAF memory paths.
-Pattern: CanDoItAll\.Modules\.CognitiveMemory|AddCognitiveMemoryModule|CognitiveMemoryModuleAssemblyMarker|CanDoItAll\.AgentFramework\.Rag\.Qdrant|CanDoItAll\.AgentFramework\.SemanticCompletion\.Driver
-Paths:
-- .\src\App\CanDoItAll.Composition
-- .\src\Memory
-- .\src\Modules\CanDoItAll.Modules.Memory
-- .\src\Modules\CanDoItAll.Modules.AgentFramework
-ExitCode: 0

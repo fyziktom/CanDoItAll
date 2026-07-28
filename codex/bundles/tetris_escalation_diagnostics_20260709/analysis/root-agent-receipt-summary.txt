@@ -1,8 +1,0 @@
-Root run agent receipt summary
-
-- feature-intake / 3600a9ca-5e49-479e-acc4-d91f3836b459: 1 receipt, workspace_write_file.
-- peer-review / 93b294d8-3801-4c42-b0b1-92af76101173: 6 receipts, workspace_read_file, workspace_write_file.
-- qa-validation / 53e33ea0-6d24-436e-bff9-890cb0a858a3: 8 receipts, restore/build/test present, no browser/runtime proof; branch repair-required.
-- qa-validation / 815724a7-c93f-4c20-9a30-2ea57ae090ff: 8 receipts, no full runtime/browser chain; branch repair-required.
-- qa-validation / 32e89fa4-03d2-4c9d-8d21-62f16d00d30d: 21 receipts, includes browser/runtime proof according to API; branch quality-accepted. Adapter then rejected because product file content check still found scaffold content.
-- qa-validation / 5499ef7c-0a72-4b44-8355-97589d5eb06d: 6 receipts, no runtime/browser chain; branch repair-required. Adapter blocked on required runtime/browser receipts after retry budget exhaustion.

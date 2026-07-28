@@ -1,5 +1,0 @@
-Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -p:BuildProjectReferences=false --filter "FullyQualifiedName~MafAgentRuntimeAttachmentTests|FullyQualifiedName~AgentFinalizerPolicyTests|FullyQualifiedName~MafToolInvocationArgumentFormatterTests|FullyQualifiedName~StableContentHashTests" --logger "console;verbosity=minimal"
-ExitCode: 0
-Invariant IDs: SB03-I01
-Passing proof: 63 passed, 0 failed, 0 skipped.
-Anti-stub audit: no stubs; MafRuntimeSessionBuilder is called by runtime execution, approval continuation, agent factory, and provider health paths.

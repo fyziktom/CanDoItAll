@@ -4,12 +4,14 @@
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Infrastructure.Persistence
 @using CanDoItAll.Modules.Processes.AgentChat
 @using CanDoItAll.Processes.Abstractions
 @using CanDoItAll.Processes.Application
 @using CanDoItAll.Processes.Projections
 @using CanDoItAll.Processes.Runtime
 @using Microsoft.JSInterop
+@implements IDisposable
 @inject IProcessWorkspaceProjectionClient ProjectionClient
 @inject ProcessWorkspaceMockProjectionFactory MockProjectionFactory
 @inject ICurrencyFormatter CurrencyFormatter
@@ -17,10 +19,18 @@
 @inject NotificationService Notifications
 @inject TooltipService TooltipService
 @inject IJSRuntime JsRuntime
+@inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject TimeProvider TimeProvider
+@inject ILogger<LiveProcessesDashboard> Logger
 
 <PageTitle>@PageTitleText</PageTitle>
 
-<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+@{
+    var agentChatContextPublication = ResolveAgentChatPublication();
+}
+
+<AgentChatContextSurfaceProvider Surface="@agentChatContextPublication.Surface"
+                                 ContributorPublications="@agentChatContextPublication.ContributorPublications"
                                  ContextNavigationIdentity="@AgentChatNavigationFence" />
 
 <PageScaffold FillHeight="true"
@@ -418,22 +428,54 @@
     private readonly HashSet<Guid> mockResolvedOperatorActionStepIds = [];
     private readonly HashSet<Guid> hiddenRunGroupIds = [];
     private string? hiddenRunGroupsLoadedStorageKey;
-    private AgentChatContextSurface AgentChatSurface
-        => ProcessAgentChatContextBuilder.BuildLiveSurface(
-            new LiveProcessesAgentChatContext(
-                Navigation.Uri,
-                ProjectId,
-                AgentChatLiveView,
-                HasUnresolvedNonRunRouteSelection
-                    ? null
-                    : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
-                runtimeHistoryWindow,
-                statusFilter,
-                shell,
-                !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
-                HasUnresolvedRouteSelection ? null : filesRunId,
-                !HasUnresolvedRouteSelection && agentDetailDialogOpen ? agentDetailAgent : null,
-                AgentChatAccessState));
+    private ProcessAgentChatContextPublication? agentChatPublication;
+    private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
+    private bool isDisposed;
+
+    private ProcessAgentChatContextPublication ResolveAgentChatPublication()
+    {
+        var context = new LiveProcessesAgentChatContext(
+            Navigation.Uri,
+            ProjectId,
+            AgentChatLiveView,
+            HasUnresolvedNonRunRouteSelection
+                ? null
+                : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
+            runtimeHistoryWindow,
+            statusFilter,
+            shell,
+            !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
+            HasUnresolvedRouteSelection ? null : filesRunId,
+            !HasUnresolvedRouteSelection && agentDetailDialogOpen ? agentDetailAgent : null,
+            AgentChatAccessState);
+        agentChatPublication = ProcessInvocationSnapshotMapper.BuildLivePublication(
+            context,
+            new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
+            TimeProvider.GetUtcNow(),
+            agentChatPublication);
+        AgentChatFreshnessLease.Schedule(
+            agentChatPublication.SnapshotCapture?.AttachmentDraft);
+        return agentChatPublication;
+    }
+
+    private ProcessAgentChatFreshnessLease AgentChatFreshnessLease
+        => agentChatFreshnessLease ??= new ProcessAgentChatFreshnessLease(
+            TimeProvider,
+            ExpireAgentChatPublicationAsync,
+            exception => Logger.LogError(
+                exception,
+                "Failed to expire the live-processes agent context at its freshness deadline."));
+
+    private Task ExpireAgentChatPublicationAsync()
+        => InvokeAsync(() =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            StateHasChanged();
+        });
 
     private bool HasUnresolvedRouteRunSelection
         => requiredRouteRunId is { } requestedRunId &&
@@ -3095,4 +3137,16 @@
         => count == 1
             ? $"1 {singular}"
             : $"{count.ToString("N0", CultureInfo.CurrentCulture)} {plural}";
+
+    void IDisposable.Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        agentChatFreshnessLease?.Dispose();
+        agentChatFreshnessLease = null;
+    }
 }

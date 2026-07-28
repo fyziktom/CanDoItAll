@@ -1,8 +1,12 @@
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWorkspaceService
+public sealed partial class AgentFrameworkWorkspaceService :
+    IAgentFrameworkWorkspaceService,
+    IAgentFrameworkWorkspaceActivityExecutionService,
+    IDisposable
 {
     private readonly ISandboxWorkspaceStore store;
     private readonly AgentFrameworkWorkspaceCatalogService catalogService;
@@ -10,12 +14,22 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
     private readonly AgentPackageImportService packageImportService;
     private readonly AgentExternalProvisioningService externalProvisioningService;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
+    private readonly ILogger<AgentFrameworkWorkspaceService> logger;
+    private readonly IAgentExecutionActivityCoordinator activityCoordinator;
+    private readonly AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity;
+    private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher;
+    private bool disposed;
 
     public AgentFrameworkWorkspaceService(
         ISandboxWorkspaceStore store,
         IAgentPackageService packageService,
         IAgentRuntime runtime,
         ICapabilityProofService capabilityProofService,
+        ILogger<AgentFrameworkWorkspaceService> logger,
+        IAgentExecutionActivityCoordinator activityCoordinator,
+        AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity,
+        IAgentExecutionPreparationCache executionPreparationCache,
+        IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
         IProviderProfileService? providerProfileService = null,
         IProviderProfileRegistry? providerProfileRegistry = null,
         IAgentProviderCredentialResolver? providerCredentialResolver = null,
@@ -26,17 +40,36 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         IWorkspaceProcessHost? workspaceProcessHost = null,
         IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
         IAgentOutputRepairService? outputRepairService = null,
-        IWorkspacePathResolutionService? workspacePathResolutionService = null)
+        IWorkspacePathResolutionService? workspacePathResolutionService = null,
+        IProviderRuntimeProfileSource? providerRuntimeProfileSource = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
         ArgumentNullException.ThrowIfNull(runtime);
         ArgumentNullException.ThrowIfNull(capabilityProofService);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(activityCoordinator);
+        ArgumentNullException.ThrowIfNull(activityWorkspaceIdentity);
+        ArgumentNullException.ThrowIfNull(executionPreparationCache);
+        ArgumentNullException.ThrowIfNull(executionProfileGenerationSource);
 
         this.store = store;
+        this.logger = logger;
+        this.activityCoordinator = activityCoordinator;
+        this.activityWorkspaceIdentity = activityWorkspaceIdentity;
+        executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
         var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService);
+        var resolvedProviderRuntimeProfileSource = providerRuntimeProfileSource
+            ?? resolvedProviderProfileRegistry as IProviderRuntimeProfileSource
+            ?? throw new InvalidOperationException(
+                "The configured provider registry must also expose the canonical runtime provider source.");
+        var resolvedProviderRuntimeProfileSnapshotSource =
+            resolvedProviderRuntimeProfileSource
+                as IProviderRuntimeProfileSnapshotSource
+            ?? throw new InvalidOperationException(
+                "The configured runtime provider source must expose atomic provider snapshot leases.");
         var resolvedProviderCredentialResolver = providerCredentialResolver ?? new EnvironmentVariableAgentProviderCredentialResolver();
         var resolvedProviderDiagnosticsService = providerDiagnosticsService ?? new ProviderDiagnosticsService(runtime);
         var resolvedExecutionGovernanceBridge = executionGovernanceBridge ?? new NullAgentExecutionGovernanceBridge();
@@ -50,6 +83,13 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
         externalProvisioningService = new AgentExternalProvisioningService(
             store,
             resolvedProviderProfileService);
+        var executionPreparationService =
+            new AgentExecutionPreparationService(
+                store,
+                resolvedProviderRuntimeProfileSnapshotSource,
+                executionPreparationCache,
+                executionProfileGenerationSource,
+                activityWorkspaceIdentity);
 
         catalogService = new AgentFrameworkWorkspaceCatalogService(
             store,
@@ -57,7 +97,8 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
             capabilityProofService,
             resolvedProviderProfileService,
             resolvedProviderDiagnosticsService,
-            resolvedProviderProfileRegistry);
+            resolvedProviderProfileRegistry,
+            resolvedProviderRuntimeProfileSource);
 
         executionService = new AgentFrameworkWorkspaceExecutionService(
             store,
@@ -65,16 +106,78 @@ public sealed partial class AgentFrameworkWorkspaceService : IAgentFrameworkWork
             resolvedExecutionGovernanceBridge,
             resolvedExecutionEventSink,
             resolvedExecutionCheckpointBridge,
-            resolvedProviderProfileRegistry,
+            resolvedProviderRuntimeProfileSource,
             resolvedProviderCredentialResolver,
+            logger,
+            activityWorkspaceIdentity,
+            executionPreparationService,
             executionCancellationRegistry,
             outputRepairService,
             workspacePathResolutionService);
 
-        executionService.ExecutionUpdated += (_, entry) => ExecutionUpdated?.Invoke(this, entry);
+        executionService.ExecutionUpdated += HandleExecutionUpdated;
     }
 
-    public event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
+    public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
+    {
+        add
+        {
+            if (value is not null)
+            {
+                executionUpdatedDispatcher.Subscribe(value);
+            }
+        }
+        remove
+        {
+            if (value is not null)
+            {
+                executionUpdatedDispatcher.Unsubscribe(value);
+            }
+        }
+    }
+
+    private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry)
+    {
+        executionUpdatedDispatcher.Publish(this, entry);
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        executionService.ExecutionUpdated -= HandleExecutionUpdated;
+        executionUpdatedDispatcher.Dispose();
+        executionService.Dispose();
+    }
+
+    private static IsolatedCompatibilityEventDispatcher<ExecutionLogEntry>
+        CreateExecutionUpdatedDispatcher(ILogger logger)
+    {
+        return new(
+            failure => logger.LogWarning(
+                failure.Exception,
+                "ExecutionUpdated subscriber failed for execution run {ExecutionRunId}, agent {AgentId}, chat session {ChatSessionId}, event {ExecutionEventId}, phase {Phase}, and state {ExecutionState}.",
+                failure.Event.ExecutionRunId,
+                failure.Event.AgentId,
+                failure.Event.ChatSessionId,
+                failure.Event.Id,
+                failure.Event.Phase,
+                failure.Event.State),
+            overflow => logger.LogWarning(
+                "ExecutionUpdated subscriber mailbox overflow dropped {DroppedEventCount} update(s) at capacity {MailboxCapacity} while preserving canonical execution. Latest dropped identity: execution run {ExecutionRunId}, agent {AgentId}, chat session {ChatSessionId}, event {ExecutionEventId}, phase {Phase}, and state {ExecutionState}.",
+                overflow.DroppedEventCount,
+                overflow.MailboxCapacity,
+                overflow.LastDroppedEvent.ExecutionRunId,
+                overflow.LastDroppedEvent.AgentId,
+                overflow.LastDroppedEvent.ChatSessionId,
+                overflow.LastDroppedEvent.Id,
+                overflow.LastDroppedEvent.Phase,
+                overflow.LastDroppedEvent.State));
+    }
 
     public async Task<SandboxDashboardSnapshot> GetDashboardAsync(CancellationToken cancellationToken = default)
     {

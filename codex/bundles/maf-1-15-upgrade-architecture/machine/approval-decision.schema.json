@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aicandoitall.com/schemas/maf-approval-decision.schema.json",
+  "title": "Superseded Per-ID Approval Decision Proposal",
+  "description": "Historical only. Do not implement. The adopted design reuses the existing decision model and binds it atomically to the complete current server-held pending snapshot restored from native MAF 1.15 serialized session state.",
+  "not": {}
+}

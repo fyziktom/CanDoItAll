@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Hosting;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
@@ -36,6 +37,74 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             var inProcessBackend = backendCatalog.GetRequiredBackend(WorkflowRuntimeBackendKind.InProcess);
             Assert.True(inProcessBackend.IsRegistered);
             Assert.True(inProcessBackend.IsRunnable);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AddAgentFrameworkCore_registers_real_activity_pipeline_and_explicit_workspace_identity()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"candoitall-agent-framework-activity-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var workspaceScope = WorkspaceScopeDescriptor.Project("hosting-test");
+        var workspaceIdentity = new AgentExecutionActivityWorkspaceIdentity(
+            Guid.NewGuid(),
+            workspaceScope,
+            new DatabaseProfileGeneration(0));
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddAgentFrameworkCore(
+                workspaceRoot,
+                workspaceScope,
+                workspaceIdentity);
+
+            await using var provider = services.BuildServiceProvider(
+                new ServiceProviderOptions
+                {
+                    ValidateOnBuild = true,
+                    ValidateScopes = true
+                });
+            await using var firstScope = provider.CreateAsyncScope();
+            await using var secondScope = provider.CreateAsyncScope();
+
+            var firstStream = firstScope.ServiceProvider.GetRequiredService<
+                PartitionedSequencedStream<
+                    AgentExecutionActivityStreamId,
+                    AgentExecutionActivity>>();
+            var secondStream = secondScope.ServiceProvider.GetRequiredService<
+                PartitionedSequencedStream<
+                    AgentExecutionActivityStreamId,
+                    AgentExecutionActivity>>();
+            var coordinator = firstScope.ServiceProvider
+                .GetRequiredService<AgentExecutionActivityCoordinator>();
+            var coordinatorContract = firstScope.ServiceProvider
+                .GetRequiredService<IAgentExecutionActivityCoordinator>();
+            var reader = secondScope.ServiceProvider
+                .GetRequiredService<IAgentExecutionActivityReader>();
+            var resolvedIdentity = firstScope.ServiceProvider
+                .GetRequiredService<AgentExecutionActivityWorkspaceIdentity>();
+            var workspaceService = firstScope.ServiceProvider
+                .GetRequiredService<IAgentFrameworkWorkspaceService>();
+            var activityExecutionService = firstScope.ServiceProvider
+                .GetRequiredService<
+                    IAgentFrameworkWorkspaceActivityExecutionService>();
+
+            Assert.Same(firstStream, secondStream);
+            Assert.Same(coordinator, coordinatorContract);
+            Assert.Same(coordinator, reader);
+            Assert.Same(workspaceIdentity, resolvedIdentity);
+            Assert.IsType<AgentFrameworkWorkspaceService>(workspaceService);
+            Assert.Same(workspaceService, activityExecutionService);
         }
         finally
         {
@@ -93,14 +162,18 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             Assert.Equal(2, firstLoadCount);
             Assert.Equal(2, secondLoadCount);
 
-            Task<AgentReferenceDataSnapshot> LoadFirstAsync()
+            Task<AgentReferenceDataSnapshot> LoadFirstAsync(
+                CancellationToken cancellationToken)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 firstLoadCount++;
                 return Task.FromResult(CreateEmptyReferenceDataSnapshot());
             }
 
-            Task<AgentReferenceDataSnapshot> LoadSecondAsync()
+            Task<AgentReferenceDataSnapshot> LoadSecondAsync(
+                CancellationToken cancellationToken)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 secondLoadCount++;
                 return Task.FromResult(CreateEmptyReferenceDataSnapshot());
             }

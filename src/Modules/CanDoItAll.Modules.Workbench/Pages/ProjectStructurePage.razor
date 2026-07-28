@@ -46,6 +46,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
                                           ProjectName="@(surface?.ProjectName ?? "Requested project")"
+                                          Surface="@surface"
                                           ActiveView="@(IsGanttViewVisible ? ProjectStructureAgentChatView.Gantt : ProjectStructureAgentChatView.Canvas)"
                                           SelectedNodes="@(surface is not null && structureViewIndex == CanvasViewIndex ? selectedNodes : [])"
                                           ContextNavigationIdentity="@AgentChatNavigationFence"

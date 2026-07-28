@@ -370,7 +370,14 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var matrix = service.ResolveFeatureMatrix(imageProvider);
 
         Assert.Equal("https://api.openai.com/v1", imageProvider.BaseUrl);
-        Assert.Equal("OPENAI_API_KEY", imageProvider.ApiKeyEnvironmentVariable);
+        Assert.StartsWith(
+            "secret:",
+            imageProvider.ApiKeyEnvironmentVariable,
+            StringComparison.Ordinal);
+        Assert.True(
+            Guid.TryParse(
+                imageProvider.ApiKeyEnvironmentVariable["secret:".Length..],
+                out _));
         Assert.Equal("gpt-image-1-mini", imageProvider.DefaultModel);
         Assert.False(imageProvider.SupportsTools);
         Assert.Contains("gpt-image-1-mini", imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);

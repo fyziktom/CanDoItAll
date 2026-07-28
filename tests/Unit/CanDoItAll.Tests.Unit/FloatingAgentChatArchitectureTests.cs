@@ -1,8 +1,11 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
@@ -218,6 +221,209 @@ public sealed class AgentChatContextRegistryTests
     }
 
     [Fact]
+    public void Atomic_publication_round_trips_multiple_opaque_attachment_types()
+    {
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var scopeId = AgentChatContextScopeId.Create();
+        var first = new TestAttachment("first");
+        var second = new OtherTestAttachment(42);
+        using var lease = registry.PublishModuleContext(CreatePublication(
+            scopeId,
+            "old",
+            first,
+            second));
+
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+
+        Assert.Equal(2, snapshot.Attachments.Length);
+        var firstEnvelope = Assert.Single(
+            snapshot.Attachments,
+            envelope => envelope.AttachmentType == typeof(TestAttachment));
+        var secondEnvelope = Assert.Single(
+            snapshot.Attachments,
+            envelope => envelope.AttachmentType == typeof(OtherTestAttachment));
+        Assert.True(firstEnvelope.TryGetAttachment<TestAttachment>(out var capturedFirst));
+        Assert.True(secondEnvelope.TryGetAttachment<OtherTestAttachment>(out var capturedSecond));
+        Assert.Same(first, capturedFirst);
+        Assert.Same(second, capturedSecond);
+        Assert.Equal(scopeId, firstEnvelope.ScopeId);
+        Assert.Equal(
+            new AgentChatContextContributorId("selection"),
+            firstEnvelope.ContributorId);
+        Assert.Equal(
+            new ModulePublicationRevision(1),
+            firstEnvelope.PublicationRevision);
+    }
+
+    [Fact]
+    public void Contributor_publication_rejects_duplicate_exact_payload_types()
+    {
+        var fragment = CreateFragment("selection", 0, "Selected old");
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new AgentChatContextContributorPublication(
+                fragment,
+                [
+                    CreateAttachmentDraft(new TestAttachment("first")),
+                    CreateAttachmentDraft(new TestAttachment("second"))
+                ]));
+
+        Assert.Equal("attachmentDrafts", exception.ParamName);
+        Assert.Contains(nameof(TestAttachment), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Exact_attachment_lookup_does_not_return_base_or_derived_type_mismatches()
+    {
+        var derived = new DerivedTestAttachment("derived");
+        var envelope = CreateAttachmentDraft(derived).CreateEnvelope(
+            AgentChatContextScopeId.Create(),
+            new AgentChatContextSource(
+                new AgentChatContextSourceKind("test-surface"),
+                new AgentChatContextSourceId("surface-1")),
+            WorkspaceScopeDescriptor.Project("project-1"),
+            new AgentChatContextContributorId("selection"),
+            new ModulePublicationRevision(1));
+
+        Assert.True(envelope.TryGetAttachment<DerivedTestAttachment>(out var exact));
+        Assert.Same(derived, exact);
+        Assert.False(envelope.TryGetAttachment<BaseTestAttachment>(out _));
+    }
+
+    [Fact]
+    public void Publication_copies_nested_input_lists_before_capture()
+    {
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var scopeId = AgentChatContextScopeId.Create();
+        var drafts = new List<AgentChatContextAttachmentDraft>
+        {
+            CreateAttachmentDraft(new TestAttachment("retained"))
+        };
+        var contributor = new AgentChatContextContributorPublication(
+            CreateFragment("selection", 0, "Selected retained"),
+            drafts);
+        var contributors = new List<AgentChatContextContributorPublication>
+        {
+            contributor
+        };
+        var publication = new AgentChatContextPublication(
+            CreatePublishedScope(scopeId, "retained"),
+            contributors);
+
+        drafts.Clear();
+        contributors.Clear();
+        using var lease = registry.PublishModuleContext(publication);
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+
+        Assert.Single(snapshot.Fragments);
+        var envelope = Assert.Single(snapshot.Attachments);
+        Assert.True(envelope.TryGetAttachment<TestAttachment>(out var attachment));
+        Assert.Equal("retained", attachment.Value);
+    }
+
+    [Fact]
+    public async Task Concurrent_captures_observe_only_complete_old_or_new_publications()
+    {
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var scopeId = AgentChatContextScopeId.Create();
+        using var lease = registry.PublishModuleContext(CreatePublication(
+            scopeId,
+            "old",
+            new TestAttachment("old")));
+        var observations = new ConcurrentBag<(
+            string Position,
+            string Fragment,
+            string Attachment)>();
+        using var start = new ManualResetEventSlim();
+
+        var writer = Task.Run(() =>
+        {
+            start.Wait();
+            for (var index = 0; index < 2_000; index++)
+            {
+                var state = index % 2 == 0 ? "new" : "old";
+                lease.Update(CreatePublication(
+                    scopeId,
+                    state,
+                    new TestAttachment(state)));
+            }
+        });
+        var readers = Enumerable.Range(0, 4)
+            .Select(_ => Task.Run(() =>
+            {
+                start.Wait();
+                for (var index = 0; index < 2_000; index++)
+                {
+                    var snapshot = Assert.IsType<AgentChatContextSnapshot>(
+                        registry.Capture());
+                    var position = Assert.IsType<AgentChatContextEntityReference>(
+                        snapshot.Scope.SurfacePosition?.PrimarySelection);
+                    var fragment = Assert.Single(snapshot.Fragments);
+                    var envelope = Assert.Single(snapshot.Attachments);
+                    Assert.True(envelope.TryGetAttachment<TestAttachment>(
+                        out var attachment));
+                    observations.Add((
+                        position.Id,
+                        fragment.Content,
+                        attachment.Value));
+                }
+            }))
+            .ToArray();
+
+        start.Set();
+        await Task.WhenAll([writer, .. readers]);
+
+        Assert.NotEmpty(observations);
+        Assert.All(observations, observation =>
+        {
+            var state = observation.Position;
+            Assert.True(state is "old" or "new");
+            Assert.Equal($"Selected {state}", observation.Fragment);
+            Assert.Equal(state, observation.Attachment);
+        });
+    }
+
+    [Fact]
+    public void Invocation_keeps_the_exact_captured_attachment_after_registry_update()
+    {
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var scopeId = AgentChatContextScopeId.Create();
+        var original = new TestAttachment("old");
+        using var lease = registry.PublishModuleContext(CreatePublication(
+            scopeId,
+            "old",
+            original));
+        var captured = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var invocation = AgentChatContextInvocationFactory.Create(
+            captured,
+            Guid.NewGuid(),
+            chatSessionId: null,
+            "Use the selection",
+            AgentExecutionOperationId.New(),
+            new DatabaseProfileGeneration(1),
+            new DateTimeOffset(2026, 7, 27, 12, 1, 0, TimeSpan.Zero));
+
+        lease.Update(CreatePublication(
+            scopeId,
+            "new",
+            new TestAttachment("new")));
+
+        var transientContext = Assert.IsType<AgentRuntimeTransientContext>(
+            invocation.Options.TransientContext);
+        var envelope = Assert.Single(
+            transientContext.GetAttachments<TestAttachment>());
+        Assert.True(envelope.TryGetAttachment<TestAttachment>(out var attachment));
+        Assert.Same(original, attachment);
+        Assert.Equal("old", attachment.Value);
+        Assert.Equal(
+            new ModulePublicationRevision(1),
+            envelope.PublicationRevision);
+        Assert.Equal(
+            new ModulePublicationRevision(2),
+            registry.Capture()!.Attachments[0].PublicationRevision);
+    }
+
+    [Fact]
     public void Context_models_reject_default_identifiers()
     {
         var validSource = new AgentChatContextSource(
@@ -306,6 +512,63 @@ public sealed class AgentChatContextRegistryTests
             content);
     }
 
+    private static AgentChatContextPublication CreatePublication(
+        AgentChatContextScopeId scopeId,
+        string state,
+        params IAgentChatContextAttachment[] attachments)
+    {
+        return new AgentChatContextPublication(
+            CreatePublishedScope(scopeId, state),
+            [
+                new AgentChatContextContributorPublication(
+                    CreateFragment(
+                        "selection",
+                        0,
+                        $"Selected {state}"),
+                    attachments
+                        .Select(CreateAttachmentDraft)
+                        .ToArray())
+            ]);
+    }
+
+    private static AgentChatContextScope CreatePublishedScope(
+        AgentChatContextScopeId scopeId,
+        string state)
+    {
+        return new AgentChatContextScope(
+            scopeId,
+            new AgentChatContextSource(
+                new AgentChatContextSourceKind("test-surface"),
+                new AgentChatContextSourceId("surface-1")),
+            "Test surface",
+            WorkspaceScopeDescriptor.Project("project-1"),
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted,
+            surfacePosition: new AgentChatSurfacePosition(
+                "tests",
+                "surface",
+                "selection",
+                "/tests",
+                new AgentChatContextEntityReference(
+                    "selection",
+                    state,
+                    state)));
+    }
+
+    private static AgentChatContextAttachmentDraft CreateAttachmentDraft(
+        IAgentChatContextAttachment attachment)
+    {
+        var identity = attachment.GetType().Name;
+        return new AgentChatContextAttachmentDraft(
+            new AgentChatContextAttachmentKind("tests.snapshot"),
+            new SnapshotContentFingerprint($"content-{identity}"),
+            new SnapshotCoverageFingerprint($"coverage-{identity}"),
+            new DatabaseProfileGeneration(1),
+            new SnapshotFreshnessFingerprint($"freshness-{identity}"),
+            new DateTimeOffset(2026, 7, 27, 12, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 7, 27, 12, 5, 0, TimeSpan.Zero),
+            attachment);
+    }
+
     private static AgentChatContextScope CreateScope(
         string displayName,
         AgentChatContextScopeId? scopeId = null,
@@ -321,6 +584,18 @@ public sealed class AgentChatContextRegistryTests
             agentAccess: agentAccess,
             accessMode: accessMode);
     }
+
+    private sealed record TestAttachment(string Value) :
+        IAgentChatContextAttachment;
+
+    private sealed record OtherTestAttachment(int Value) :
+        IAgentChatContextAttachment;
+
+    private record BaseTestAttachment(string Value) :
+        IAgentChatContextAttachment;
+
+    private sealed record DerivedTestAttachment(string Value) :
+        BaseTestAttachment(Value);
 }
 
 public sealed class AgentChatContextContributionComposerTests
@@ -477,14 +752,19 @@ public sealed class AgentChatContextInvocationFactoryTests
             Version: 3,
             CapturedAtUtc: DateTimeOffset.UtcNow);
         var sessionId = Guid.NewGuid();
+        var operationId = AgentExecutionOperationId.New();
 
         var invocation = AgentChatContextInvocationFactory.Create(
             context,
             agentId,
             sessionId,
-            "Estimate it");
+            "Estimate it",
+            operationId,
+            new DatabaseProfileGeneration(0),
+            DateTimeOffset.UtcNow);
 
         Assert.Equal("Estimate it", invocation.Prompt);
+        Assert.Equal(operationId, invocation.Options.InitialActivityOperationId);
         var transientContext = Assert.IsType<AgentRuntimeTransientContext>(
             invocation.Options.TransientContext);
         Assert.Contains("Selected node: task-1", transientContext.Content);
@@ -503,7 +783,7 @@ public sealed class AgentChatContextInvocationFactoryTests
             ExecutionInvocationMetadata.TransientContextRequiredMetadataKey).GetBoolean());
         var digest = root.GetProperty(
             ExecutionInvocationMetadata.TransientContextDigestMetadataKey).GetString();
-        Assert.Equal(AgentChatContextDigest.Compute(transientContext.Content), digest);
+        Assert.Equal(AgentChatContextDigest.Compute(transientContext), digest);
         var invocationDigest = root.EnumerateObject().Single(property =>
             string.Equals(property.Name, "ContextDigest", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(digest, invocationDigest.Value.GetString());
@@ -523,12 +803,30 @@ public sealed class AgentChatContextInvocationFactoryTests
             "crm-partner",
             "partner-2",
             "Selected partner: Contoso");
+        var firstOperationId = AgentExecutionOperationId.New();
+        var secondOperationId = AgentExecutionOperationId.New();
 
-        var first = AgentChatContextInvocationFactory.Create(project, agentId, null, "Explain");
-        var second = AgentChatContextInvocationFactory.Create(crm, agentId, null, "Continue");
+        var first = AgentChatContextInvocationFactory.Create(
+            project,
+            agentId,
+            chatSessionId: null,
+            "Explain",
+            firstOperationId,
+            new DatabaseProfileGeneration(0),
+            DateTimeOffset.UtcNow);
+        var second = AgentChatContextInvocationFactory.Create(
+            crm,
+            agentId,
+            chatSessionId: null,
+            "Continue",
+            secondOperationId,
+            new DatabaseProfileGeneration(0),
+            DateTimeOffset.UtcNow);
 
         Assert.Equal("Explain", first.Prompt);
         Assert.Equal("Continue", second.Prompt);
+        Assert.Equal(firstOperationId, first.Options.InitialActivityOperationId);
+        Assert.Equal(secondOperationId, second.Options.InitialActivityOperationId);
         Assert.Contains("Selected project node: A", first.Options.TransientContext!.Content);
         Assert.DoesNotContain("Selected partner: Contoso", first.Options.TransientContext.Content);
         Assert.Contains("Selected partner: Contoso", second.Options.TransientContext!.Content);
@@ -685,7 +983,10 @@ public sealed class AgentChatContextInvocationFactoryTests
             context,
             agentId,
             sessionId,
-            "Update the selected record");
+            "Update the selected record",
+            AgentExecutionOperationId.New(),
+            new DatabaseProfileGeneration(0),
+            DateTimeOffset.UtcNow);
         var invocationContext = Assert.IsType<ExecutionInvocationContext>(
             invocation.Options.Context);
 
@@ -748,6 +1049,85 @@ public sealed class AgentChatContextInvocationFactoryTests
     }
 }
 
+public sealed class AgentChatContextDigestTests
+{
+    [Fact]
+    public void Digest_changes_for_each_attachment_identity_stamp_independently()
+    {
+        var baseline = CreateContext();
+        var contexts = new[]
+        {
+            baseline,
+            CreateContext(promptContent: "Prompt context changed"),
+            CreateContext(publicationRevision: 2),
+            CreateContext(contentFingerprint: "content-2"),
+            CreateContext(coverageFingerprint: "coverage-2"),
+            CreateContext(databaseProfileGeneration: 2),
+            CreateContext(freshnessFingerprint: "freshness-2")
+        };
+
+        var digests = contexts
+            .Select(AgentChatContextDigest.Compute)
+            .ToArray();
+
+        Assert.Equal(digests.Length, digests.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void Digest_excludes_payload_values_and_runtime_type_names()
+    {
+        var first = CreateContext(
+            attachment: new DigestTestAttachment("secret-one"));
+        var second = CreateContext(
+            attachment: new OtherDigestTestAttachment("secret-two"));
+
+        Assert.Equal(
+            AgentChatContextDigest.Compute(first),
+            AgentChatContextDigest.Compute(second));
+    }
+
+    private static AgentRuntimeTransientContext CreateContext(
+        string promptContent = "Prompt context",
+        long publicationRevision = 1,
+        string contentFingerprint = "content-1",
+        string coverageFingerprint = "coverage-1",
+        long databaseProfileGeneration = 1,
+        string freshnessFingerprint = "freshness-1",
+        IAgentChatContextAttachment? attachment = null)
+    {
+        var workspaceScope = WorkspaceScopeDescriptor.Project("project-1");
+        var envelope = new AgentChatContextAttachmentDraft(
+            new AgentChatContextAttachmentKind("tests.digest"),
+            new SnapshotContentFingerprint(contentFingerprint),
+            new SnapshotCoverageFingerprint(coverageFingerprint),
+            new DatabaseProfileGeneration(databaseProfileGeneration),
+            new SnapshotFreshnessFingerprint(freshnessFingerprint),
+            new DateTimeOffset(2026, 7, 27, 12, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 7, 27, 12, 5, 0, TimeSpan.Zero),
+            attachment ?? new DigestTestAttachment("payload"))
+            .CreateEnvelope(
+                new AgentChatContextScopeId(
+                    Guid.Parse("59680919-0872-4a2b-9af7-ca98a46d036f")),
+                new AgentChatContextSource(
+                    new AgentChatContextSourceKind("tests"),
+                    new AgentChatContextSourceId("surface-1")),
+                workspaceScope,
+                new AgentChatContextContributorId("selection"),
+                new ModulePublicationRevision(publicationRevision));
+
+        return new AgentRuntimeTransientContext(
+            promptContent,
+            workspaceScope,
+            [envelope]);
+    }
+
+    private sealed record DigestTestAttachment(string Value) :
+        IAgentChatContextAttachment;
+
+    private sealed record OtherDigestTestAttachment(string Value) :
+        IAgentChatContextAttachment;
+}
+
 public sealed class AgentRunTransientContextRegistryTests
 {
     [Fact]
@@ -763,6 +1143,12 @@ public sealed class AgentRunTransientContextRegistryTests
 
         Assert.Equal(context, registry.Resolve(run));
         Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(
+                run,
+                new AgentRuntimeTransientContext(
+                    context.Content,
+                    context.WorkspaceScope)));
+        Assert.Throws<InvalidOperationException>(() =>
             registry.Register(run, new AgentRuntimeTransientContext("Selected account: 43")));
 
         registry.Remove(run.Id);
@@ -776,7 +1162,7 @@ public sealed class AgentRunTransientContextRegistryTests
         var now = DateTimeOffset.UtcNow;
         var metadata = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
             "{}",
-            AgentChatContextDigest.Compute(context.Content));
+            AgentChatContextDigest.Compute(context));
         return new ExecutionRunRecord(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -814,9 +1200,10 @@ public sealed class AgentChatExecutionOrchestratorTests
         var sessionId = Guid.NewGuid();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var (workspace, workspaceProxy) = CreateWorkspaceService();
+        workspaceProxy.SendResult = CreateRunResult(agentId, sessionId);
         var hub = new AgentChatExecutionNotificationHub(
             NullLogger<AgentChatExecutionNotificationHub>.Instance);
-        var orchestrator = new AgentChatExecutionOrchestrator(workspace, registry, hub);
+        var orchestrator = CreateOrchestrator(workspace, registry, hub);
 
         using (var scopeLease = registry.ActivateScope(CreateScope(
                    agentId,
@@ -911,7 +1298,7 @@ public sealed class AgentChatExecutionOrchestratorTests
                 published.Add(notification);
                 return Task.CompletedTask;
             });
-        var orchestrator = new AgentChatExecutionOrchestrator(workspace, registry, hub);
+        var orchestrator = CreateOrchestrator(workspace, registry, hub);
 
         var sendResult = await orchestrator.SendMessageAsync(
             agentId,
@@ -1008,14 +1395,48 @@ public sealed class AgentChatExecutionOrchestratorTests
         };
     }
 
-    private static (IAgentFrameworkWorkspaceService Service, WorkspaceServiceProxy Proxy)
+    private static AgentChatExecutionOrchestrator CreateOrchestrator(
+        IOrchestratorWorkspaceService workspace,
+        IAgentChatContextRegistry registry,
+        IAgentChatExecutionNotificationHub notificationHub)
+    {
+        var profileId = Guid.NewGuid();
+        var scope = WorkspaceScopeDescriptor.Organization(profileId.ToString("N"));
+        var coordinator = new AgentExecutionActivityCoordinator(
+            new PartitionedSequencedStream<
+                AgentExecutionActivityStreamId,
+                AgentExecutionActivity>(
+                PartitionedSequencedStreamPolicy.Default,
+                TimeProvider.System),
+            TimeProvider.System);
+        return new AgentChatExecutionOrchestrator(
+            workspace,
+            registry,
+            notificationHub,
+            coordinator,
+            new OrchestratorWorkspaceFactory(workspace, scope),
+            new OrchestratorDatabaseProfileRuntimeAccessor(profileId),
+            new FixedAgentExecutionProfileGenerationSource(
+                new DatabaseProfileGeneration(0)),
+            TimeProvider.System);
+    }
+
+    private static (IOrchestratorWorkspaceService Service, WorkspaceServiceProxy Proxy)
         CreateWorkspaceService()
     {
-        var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceServiceProxy>();
+        var service = DispatchProxy.Create<
+            IOrchestratorWorkspaceService,
+            WorkspaceServiceProxy>();
         var proxy = (WorkspaceServiceProxy)(object)service;
         proxy.SendResult = CreateRunResult(Guid.NewGuid(), Guid.NewGuid());
         proxy.ApprovalResult = CreateRunResult(Guid.NewGuid(), Guid.NewGuid());
         return (service, proxy);
+    }
+
+    private interface IOrchestratorWorkspaceService :
+        IAgentFrameworkWorkspaceService,
+        IAgentFrameworkWorkspaceActivityExecutionService
+    {
     }
 
     private sealed record SendCall(
@@ -1039,14 +1460,38 @@ public sealed class AgentChatExecutionOrchestratorTests
             ArgumentNullException.ThrowIfNull(targetMethod);
             ArgumentNullException.ThrowIfNull(args);
 
+            if (targetMethod.Name == nameof(
+                    IAgentFrameworkWorkspaceActivityExecutionService.SendMessageWithinOperationAsync))
+            {
+                var operation = Assert.IsAssignableFrom<
+                    IAgentExecutionActivityOperationLease>(args[0]);
+                SendCalls.Add(new SendCall(
+                    Assert.IsType<Guid>(args[1]),
+                    (Guid?)args[2],
+                    Assert.IsType<string>(args[3]),
+                    Assert.IsType<AgentChatRunOptions>(args[4])));
+                CompleteOperation(operation, SendResult);
+                return Task.FromResult(SendResult);
+            }
+
             if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SendMessageAsync))
             {
                 SendCalls.Add(new SendCall(
                     Assert.IsType<Guid>(args[0]),
                     (Guid?)args[1],
                     Assert.IsType<string>(args[2]),
-                    Assert.IsType<AgentChatRunOptions>(args[5])));
+                    Assert.IsType<AgentChatRunOptions>(args[3])));
                 return Task.FromResult(SendResult);
+            }
+
+            if (targetMethod.Name == nameof(
+                    IAgentFrameworkWorkspaceActivityExecutionService.RespondToPendingApprovalsWithinOperationAsync))
+            {
+                ApprovalCallCount++;
+                var operation = Assert.IsAssignableFrom<
+                    IAgentExecutionActivityOperationLease>(args[0]);
+                CompleteOperation(operation, ApprovalResult);
+                return Task.FromResult(ApprovalResult);
             }
 
             if (targetMethod.Name == nameof(
@@ -1058,6 +1503,81 @@ public sealed class AgentChatExecutionOrchestratorTests
 
             throw new InvalidOperationException(
                 $"Unexpected workspace service call '{targetMethod.Name}'.");
+        }
+
+        private static void CompleteOperation(
+            IAgentExecutionActivityOperationLease operation,
+            AgentChatRunResult result)
+        {
+            if (!operation.ChatSessionId.HasValue)
+            {
+                operation.BindChatSession(result.ChatSessionId);
+            }
+
+            operation.BindExecutionRun(
+                result.ExecutionRunId,
+                result.ChatSessionId);
+            operation.Report(
+                AgentExecutionActivityPhase.PersistingResult,
+                "Persisting test result.");
+            operation.Complete("Test operation completed.");
+        }
+    }
+
+    private sealed class OrchestratorWorkspaceFactory(
+        IAgentFrameworkWorkspaceService workspace,
+        WorkspaceScopeDescriptor organizationScope)
+        : ICanDoItAllAgentWorkspaceFactory
+    {
+        public IAgentFrameworkWorkspaceService GetOrganizationWorkspaceService()
+        {
+            return workspace;
+        }
+
+        public IAgentFrameworkWorkspaceService GetWorkspaceService(
+            WorkspaceScopeDescriptor scope)
+        {
+            return workspace;
+        }
+
+        public WorkspaceScopeDescriptor GetOrganizationScope()
+        {
+            return organizationScope;
+        }
+
+        public string GetWorkspaceRoot()
+        {
+            return "test-workspace";
+        }
+    }
+
+    private sealed class OrchestratorDatabaseProfileRuntimeAccessor(
+        Guid profileId) : IDatabaseProfileRuntimeAccessor
+    {
+        private readonly ResolvedDatabaseProfile profile = new(
+            new DatabaseProfileRecord
+            {
+                Id = profileId,
+                DisplayName = "Test profile",
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory
+            },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            "test");
+
+        public ResolvedDatabaseProfile ResolveCurrentProfile()
+        {
+            return profile;
+        }
+
+        public ResolvedDatabaseProfile ResolveProfile(Guid requestedProfileId)
+        {
+            if (requestedProfileId != profileId)
+            {
+                throw new KeyNotFoundException();
+            }
+
+            return profile;
         }
     }
 }
@@ -2188,6 +2708,26 @@ public sealed class AgentChatPreparationPoolTests
 
         Assert.Equal("Updated", acquired?.Name);
         Assert.Equal(2, referenceData.RequestCount);
+    }
+
+    [Fact]
+    public async Task Concurrent_acquires_for_the_same_agent_share_one_reference_data_refresh()
+    {
+        var clock = new ManualTimeProvider();
+        var agent = CreateAgent("Agent A", clock.GetUtcNow());
+        var referenceData = new BlockingFirstAgentReferenceDataProvider(clock, agent);
+        using var pool = new AgentChatPreparationPool(referenceData, clock);
+        pool.Configure(FloatingAgentChatSettings.Default with { MaximumPreparedAgents = 1 });
+
+        var firstAcquire = pool.AcquireAsync(agent.Id);
+        await referenceData.FirstRequestStarted;
+        var secondAcquire = pool.AcquireAsync(agent.Id);
+        referenceData.ReleaseFirstRequest();
+
+        var acquiredAgents = await Task.WhenAll(firstAcquire, secondAcquire);
+
+        Assert.Equal(1, referenceData.RequestCount);
+        Assert.All(acquiredAgents, acquired => Assert.Equal(agent, acquired));
     }
 
     private static AgentDefinition CreateAgent(string name, DateTimeOffset timestamp)

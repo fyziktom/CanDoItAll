@@ -1,7 +1,0 @@
-Command: Select-String -Path src\Memory\CanDoItAll.Memory.Application\*.cs -Pattern CanDoItAll.Modules.CognitiveMemory|CognitiveMemory|Qdrant|OpenAI|OpenAi|CanDoItAll.AgentFramework.Rag|AppDbContext|Microsoft.EntityFrameworkCore|IDbContextFactory -CaseSensitive
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB04 generic source gateway dependency audit
-Invariant IDs: SB04_SG001, SB04_SG002, SB04_SG003, SB04_SG004, SB04_SG005, SB04_SG006
-ExitCode: 0
-Output:
-No native Cognitive Memory, Qdrant, OpenAI, RAG, AppDbContext, IDbContextFactory, or EF dependency references found in SB04 generic source gateway paths. The audit is case-sensitive so the allowed native.cognitiveMemory extension namespace from SB01 is not treated as an implementation dependency.

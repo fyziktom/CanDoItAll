@@ -1,6 +1,0 @@
-Command: dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~ProjectStructureRuntimeLauncherTests|FullyQualifiedName~WorkspaceRuntimeProcessToolsTests.BuildWatchArgumentList_omits_no_restore_when_a_referenced_project_assets_file_is_stale"
-WorkingDirectory: repo://
-ExitCode: 1
-Invariant: SB02-RUNTIME-LAUNCH-WATCH
-Result: failing-first state captured in bundle://proof/SB02/failing-runtime-launch-watch-tests.txt.
-

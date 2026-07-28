@@ -12,6 +12,28 @@ internal static class MafRuntimeResponseAssembler
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
+    public static AgentResponse ProjectTerminalResponse(
+        AgentResponse activityResponse,
+        AgentResponseUpdate? terminalResponseUpdate)
+    {
+        ArgumentNullException.ThrowIfNull(activityResponse);
+
+        if (terminalResponseUpdate is null)
+        {
+            return activityResponse;
+        }
+
+        var response = new[] { terminalResponseUpdate }.ToAgentResponse();
+        response.AdditionalProperties ??= activityResponse.AdditionalProperties;
+        response.AgentId ??= activityResponse.AgentId;
+        response.ContinuationToken ??= activityResponse.ContinuationToken;
+        response.CreatedAt ??= activityResponse.CreatedAt;
+        response.FinishReason ??= activityResponse.FinishReason;
+        response.ResponseId ??= activityResponse.ResponseId;
+        response.Usage ??= activityResponse.Usage;
+        return response;
+    }
+
     public static AgentRuntimeResponse? TryBuildRequiredFinalizerRuntimeResponse(
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,

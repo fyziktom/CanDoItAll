@@ -1,4 +1,663 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+
 namespace CanDoItAll.Processes.Projections;
+
+public enum ProcessProjectionComponentState
+{
+    NotRequested,
+    Absent,
+    Present
+}
+
+public enum ProcessProjectionComponentSource
+{
+    None,
+    RuntimeProjectionStore,
+    ReusedRuntimeProjection,
+    RunRecordStore,
+    RuntimeState,
+    UsageTelemetry,
+    DefinitionCatalog,
+    Request,
+    ShellProjection
+}
+
+public enum ProcessProjectionComponentAbsenceReason
+{
+    None,
+    LoadOptionDisabled,
+    NoSelection,
+    NoData,
+    SourceUnavailable,
+    NotApplicable,
+    SupersededByDurableRecord,
+    OutsideQueryScope
+}
+
+public enum ProcessWorkspaceProvenanceComponent
+{
+    Selection,
+    ShellRefresh,
+    DefinitionCatalog,
+    LiveRunSummary,
+    LiveRuns,
+    SelectedRunDetail,
+    SelectedRunRecord,
+    HistoryPage,
+    MetricHistory,
+    ActiveAgents,
+    UsageTelemetry,
+    DerivedProjection
+}
+
+public readonly record struct ProcessProjectionContentFingerprint
+{
+    private const string Prefix = "sha256:";
+    private const int Sha256HexLength = 64;
+
+    public ProcessProjectionContentFingerprint(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        var normalized = value.Trim();
+        if (!normalized.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) ||
+            normalized.Length != Prefix.Length + Sha256HexLength ||
+            normalized.AsSpan(Prefix.Length).ContainsAnyExcept(
+                "0123456789abcdefABCDEF".AsSpan()))
+        {
+            throw new ArgumentException(
+                "Process projection content fingerprint must be a SHA-256 value prefixed with 'sha256:'.",
+                nameof(value));
+        }
+
+        Value = normalized.ToLowerInvariant();
+    }
+
+    public string Value { get; }
+
+    public override string ToString() => Value;
+}
+
+public sealed record ProcessRunRecordProjectionRevision
+{
+    public ProcessRunRecordProjectionRevision(
+        long sourceGlobalSequence,
+        long sourceRootSequence,
+        DateTimeOffset updatedAtUtc)
+    {
+        if (sourceGlobalSequence < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(sourceGlobalSequence),
+                sourceGlobalSequence,
+                "Process run record source global sequence cannot be negative.");
+        }
+
+        if (sourceRootSequence < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(sourceRootSequence),
+                sourceRootSequence,
+                "Process run record source root sequence cannot be negative.");
+        }
+
+        if (updatedAtUtc == default || updatedAtUtc.Offset != TimeSpan.Zero)
+        {
+            throw new ArgumentException(
+                "Process run record revision timestamp must be a non-default UTC value.",
+                nameof(updatedAtUtc));
+        }
+
+        SourceGlobalSequence = sourceGlobalSequence;
+        SourceRootSequence = sourceRootSequence;
+        UpdatedAtUtc = updatedAtUtc;
+    }
+
+    public long SourceGlobalSequence { get; }
+
+    public long SourceRootSequence { get; }
+
+    public DateTimeOffset UpdatedAtUtc { get; }
+}
+
+public sealed record ProcessProjectionComponentProvenance
+{
+    private ProcessProjectionComponentProvenance(
+        ProcessProjectionComponentState state,
+        ProcessProjectionComponentSource source,
+        ProcessProjectionComponentAbsenceReason absenceReason,
+        ProcessProjectionContentFingerprint? contentFingerprint,
+        ProcessProjectionFreshness? freshness,
+        ProcessRunRecordProjectionRevision? runRecordRevision)
+    {
+        State = state;
+        Source = source;
+        AbsenceReason = absenceReason;
+        ContentFingerprint = contentFingerprint;
+        Freshness = freshness;
+        RunRecordRevision = runRecordRevision;
+    }
+
+    public ProcessProjectionComponentState State { get; }
+
+    public ProcessProjectionComponentSource Source { get; }
+
+    public ProcessProjectionComponentAbsenceReason AbsenceReason { get; }
+
+    public ProcessProjectionContentFingerprint? ContentFingerprint { get; }
+
+    public ProcessProjectionFreshness? Freshness { get; }
+
+    public ProcessRunRecordProjectionRevision? RunRecordRevision { get; }
+
+    public static ProcessProjectionComponentProvenance Present(
+        ProcessProjectionComponentSource source,
+        ProcessProjectionContentFingerprint contentFingerprint,
+        ProcessProjectionFreshness? freshness = null,
+        ProcessRunRecordProjectionRevision? runRecordRevision = null)
+    {
+        if (!Enum.IsDefined(source) || source == ProcessProjectionComponentSource.None)
+        {
+            throw new ArgumentOutOfRangeException(nameof(source), source, "Present projection provenance requires a source.");
+        }
+
+        if (string.IsNullOrWhiteSpace(contentFingerprint.Value))
+        {
+            throw new ArgumentException("Present projection provenance requires a content fingerprint.", nameof(contentFingerprint));
+        }
+
+        if (source == ProcessProjectionComponentSource.RunRecordStore && runRecordRevision is null)
+        {
+            throw new ArgumentException(
+                "Run-record projection provenance requires a durable record revision.",
+                nameof(runRecordRevision));
+        }
+
+        if (source != ProcessProjectionComponentSource.RunRecordStore && runRecordRevision is not null)
+        {
+            throw new ArgumentException(
+                "Only run-record projection provenance can carry a durable record revision.",
+                nameof(runRecordRevision));
+        }
+
+        if (freshness is not null && runRecordRevision is not null)
+        {
+            throw new ArgumentException(
+                "Projection freshness and durable record revision are mutually exclusive.",
+                nameof(freshness));
+        }
+
+        return new ProcessProjectionComponentProvenance(
+            ProcessProjectionComponentState.Present,
+            source,
+            ProcessProjectionComponentAbsenceReason.None,
+            contentFingerprint,
+            freshness,
+            runRecordRevision);
+    }
+
+    public static ProcessProjectionComponentProvenance Absent(
+        ProcessProjectionComponentSource source,
+        ProcessProjectionComponentAbsenceReason reason,
+        ProcessProjectionContentFingerprint? contentFingerprint = null)
+    {
+        if (!Enum.IsDefined(source) || source == ProcessProjectionComponentSource.None)
+        {
+            throw new ArgumentOutOfRangeException(nameof(source), source, "Absent projection provenance requires a source.");
+        }
+
+        if (reason is not (
+            ProcessProjectionComponentAbsenceReason.NoSelection or
+            ProcessProjectionComponentAbsenceReason.NoData or
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable))
+        {
+            throw new ArgumentOutOfRangeException(nameof(reason), reason, "Absent projection provenance requires an absence reason.");
+        }
+
+        if (contentFingerprint is { } fingerprint &&
+            string.IsNullOrWhiteSpace(fingerprint.Value))
+        {
+            throw new ArgumentException(
+                "Absent projection provenance carries an invalid content fingerprint.",
+                nameof(contentFingerprint));
+        }
+
+        if (contentFingerprint is not null &&
+            reason != ProcessProjectionComponentAbsenceReason.NoData)
+        {
+            throw new ArgumentException(
+                "Only a no-data result can carry an empty-content fingerprint.",
+                nameof(contentFingerprint));
+        }
+
+        return new ProcessProjectionComponentProvenance(
+            ProcessProjectionComponentState.Absent,
+            source,
+            reason,
+            contentFingerprint,
+            freshness: null,
+            runRecordRevision: null);
+    }
+
+    public static ProcessProjectionComponentProvenance NotRequested(
+        ProcessProjectionComponentAbsenceReason reason)
+    {
+        if (reason is not (
+            ProcessProjectionComponentAbsenceReason.LoadOptionDisabled or
+            ProcessProjectionComponentAbsenceReason.NotApplicable or
+            ProcessProjectionComponentAbsenceReason.SupersededByDurableRecord or
+            ProcessProjectionComponentAbsenceReason.OutsideQueryScope))
+        {
+            throw new ArgumentOutOfRangeException(nameof(reason), reason, "Not-requested projection provenance requires a request reason.");
+        }
+
+        return new ProcessProjectionComponentProvenance(
+            ProcessProjectionComponentState.NotRequested,
+            ProcessProjectionComponentSource.None,
+            reason,
+            contentFingerprint: null,
+            freshness: null,
+            runRecordRevision: null);
+    }
+}
+
+public sealed record ProcessWorkspaceProvenanceVector
+{
+    private static readonly ProcessProjectionComponentProvenance OutsideQueryScope =
+        ProcessProjectionComponentProvenance.NotRequested(
+            ProcessProjectionComponentAbsenceReason.OutsideQueryScope);
+    private ProcessProjectionComponentProvenance selection = null!;
+    private ProcessProjectionComponentProvenance shellRefresh = null!;
+    private ProcessProjectionComponentProvenance definitionCatalog = null!;
+    private ProcessProjectionComponentProvenance liveRunSummary = null!;
+    private ProcessProjectionComponentProvenance liveRuns = null!;
+    private ProcessProjectionComponentProvenance selectedRunDetail = null!;
+    private ProcessProjectionComponentProvenance selectedRunRecord = null!;
+    private ProcessProjectionComponentProvenance historyPage = null!;
+    private ProcessProjectionComponentProvenance metricHistory = null!;
+    private ProcessProjectionComponentProvenance activeAgents = null!;
+    private ProcessProjectionComponentProvenance usageTelemetry = null!;
+    private ProcessProjectionComponentProvenance derivedProjection = null!;
+
+    public ProcessWorkspaceProvenanceVector(
+        ProcessProjectionComponentProvenance selection,
+        ProcessProjectionComponentProvenance shellRefresh,
+        ProcessProjectionComponentProvenance definitionCatalog,
+        ProcessProjectionComponentProvenance liveRunSummary,
+        ProcessProjectionComponentProvenance liveRuns,
+        ProcessProjectionComponentProvenance selectedRunDetail,
+        ProcessProjectionComponentProvenance selectedRunRecord,
+        ProcessProjectionComponentProvenance historyPage,
+        ProcessProjectionComponentProvenance metricHistory,
+        ProcessProjectionComponentProvenance activeAgents,
+        ProcessProjectionComponentProvenance usageTelemetry,
+        ProcessProjectionComponentProvenance derivedProjection)
+    {
+        Selection = selection;
+        ShellRefresh = shellRefresh;
+        DefinitionCatalog = definitionCatalog;
+        LiveRunSummary = liveRunSummary;
+        LiveRuns = liveRuns;
+        SelectedRunDetail = selectedRunDetail;
+        SelectedRunRecord = selectedRunRecord;
+        HistoryPage = historyPage;
+        MetricHistory = metricHistory;
+        ActiveAgents = activeAgents;
+        UsageTelemetry = usageTelemetry;
+        DerivedProjection = derivedProjection;
+    }
+
+    public ProcessProjectionComponentProvenance Selection
+    {
+        get => selection;
+        init => selection = value ?? throw new ArgumentNullException(nameof(Selection));
+    }
+
+    public ProcessProjectionComponentProvenance ShellRefresh
+    {
+        get => shellRefresh;
+        init => shellRefresh = value ?? throw new ArgumentNullException(nameof(ShellRefresh));
+    }
+
+    public ProcessProjectionComponentProvenance DefinitionCatalog
+    {
+        get => definitionCatalog;
+        init => definitionCatalog = value ?? throw new ArgumentNullException(nameof(DefinitionCatalog));
+    }
+
+    public ProcessProjectionComponentProvenance LiveRunSummary
+    {
+        get => liveRunSummary;
+        init => liveRunSummary = value ?? throw new ArgumentNullException(nameof(LiveRunSummary));
+    }
+
+    public ProcessProjectionComponentProvenance LiveRuns
+    {
+        get => liveRuns;
+        init => liveRuns = value ?? throw new ArgumentNullException(nameof(LiveRuns));
+    }
+
+    public ProcessProjectionComponentProvenance SelectedRunDetail
+    {
+        get => selectedRunDetail;
+        init => selectedRunDetail = value ?? throw new ArgumentNullException(nameof(SelectedRunDetail));
+    }
+
+    public ProcessProjectionComponentProvenance SelectedRunRecord
+    {
+        get => selectedRunRecord;
+        init => selectedRunRecord = value ?? throw new ArgumentNullException(nameof(SelectedRunRecord));
+    }
+
+    public ProcessProjectionComponentProvenance HistoryPage
+    {
+        get => historyPage;
+        init => historyPage = value ?? throw new ArgumentNullException(nameof(HistoryPage));
+    }
+
+    public ProcessProjectionComponentProvenance MetricHistory
+    {
+        get => metricHistory;
+        init => metricHistory = value ?? throw new ArgumentNullException(nameof(MetricHistory));
+    }
+
+    public ProcessProjectionComponentProvenance ActiveAgents
+    {
+        get => activeAgents;
+        init => activeAgents = value ?? throw new ArgumentNullException(nameof(ActiveAgents));
+    }
+
+    public ProcessProjectionComponentProvenance UsageTelemetry
+    {
+        get => usageTelemetry;
+        init => usageTelemetry = value ?? throw new ArgumentNullException(nameof(UsageTelemetry));
+    }
+
+    public ProcessProjectionComponentProvenance DerivedProjection
+    {
+        get => derivedProjection;
+        init => derivedProjection = value ?? throw new ArgumentNullException(nameof(DerivedProjection));
+    }
+
+    public static ProcessWorkspaceProvenanceVector Empty { get; } = new(
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope,
+        OutsideQueryScope);
+
+    public static ProcessWorkspaceProvenanceVector RuntimeUnavailable { get; } = Empty with
+    {
+        LiveRuns = ProcessProjectionComponentProvenance.Absent(
+            ProcessProjectionComponentSource.RuntimeProjectionStore,
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable),
+        SelectedRunDetail = ProcessProjectionComponentProvenance.Absent(
+            ProcessProjectionComponentSource.RuntimeProjectionStore,
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable),
+        SelectedRunRecord = ProcessProjectionComponentProvenance.Absent(
+            ProcessProjectionComponentSource.RunRecordStore,
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable),
+        HistoryPage = ProcessProjectionComponentProvenance.Absent(
+            ProcessProjectionComponentSource.RuntimeProjectionStore,
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable),
+        MetricHistory = ProcessProjectionComponentProvenance.Absent(
+            ProcessProjectionComponentSource.RuntimeProjectionStore,
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable),
+        ActiveAgents = ProcessProjectionComponentProvenance.Absent(
+            ProcessProjectionComponentSource.RuntimeState,
+            ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+    };
+
+    public ProcessProjectionComponentProvenance GetComponent(
+        ProcessWorkspaceProvenanceComponent component)
+        => component switch
+        {
+            ProcessWorkspaceProvenanceComponent.Selection => Selection,
+            ProcessWorkspaceProvenanceComponent.ShellRefresh => ShellRefresh,
+            ProcessWorkspaceProvenanceComponent.DefinitionCatalog => DefinitionCatalog,
+            ProcessWorkspaceProvenanceComponent.LiveRunSummary => LiveRunSummary,
+            ProcessWorkspaceProvenanceComponent.LiveRuns => LiveRuns,
+            ProcessWorkspaceProvenanceComponent.SelectedRunDetail => SelectedRunDetail,
+            ProcessWorkspaceProvenanceComponent.SelectedRunRecord => SelectedRunRecord,
+            ProcessWorkspaceProvenanceComponent.HistoryPage => HistoryPage,
+            ProcessWorkspaceProvenanceComponent.MetricHistory => MetricHistory,
+            ProcessWorkspaceProvenanceComponent.ActiveAgents => ActiveAgents,
+            ProcessWorkspaceProvenanceComponent.UsageTelemetry => UsageTelemetry,
+            ProcessWorkspaceProvenanceComponent.DerivedProjection => DerivedProjection,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(component),
+                component,
+                "The process provenance component is undefined.")
+        };
+}
+
+public static class ProcessProjectionContentFingerprintFactory
+{
+    private const string ComponentPropertyName = "component";
+    private const string ContentPropertyName = "content";
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
+    public static ProcessProjectionContentFingerprint Create<T>(
+        ProcessWorkspaceProvenanceComponent component,
+        T content)
+    {
+        if (!Enum.IsDefined(component))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(component),
+                component,
+                "The process provenance component is undefined.");
+        }
+
+        ArgumentNullException.ThrowIfNull(content);
+        using var document = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(content, SerializerOptions));
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            writer.WriteNumber(ComponentPropertyName, (int)component);
+            writer.WritePropertyName(ContentPropertyName);
+            WriteCanonical(writer, document.RootElement);
+            writer.WriteEndObject();
+        }
+
+        return new ProcessProjectionContentFingerprint(
+            "sha256:" + Convert.ToHexString(SHA256.HashData(stream.ToArray())).ToLowerInvariant());
+    }
+
+    private static void WriteCanonical(Utf8JsonWriter writer, JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                writer.WriteStartObject();
+                foreach (var property in element
+                             .EnumerateObject()
+                             .OrderBy(property => property.Name, StringComparer.Ordinal))
+                {
+                    writer.WritePropertyName(property.Name);
+                    WriteCanonical(writer, property.Value);
+                }
+
+                writer.WriteEndObject();
+                return;
+            case JsonValueKind.Array:
+                writer.WriteStartArray();
+                foreach (var item in element.EnumerateArray())
+                {
+                    WriteCanonical(writer, item);
+                }
+
+                writer.WriteEndArray();
+                return;
+            default:
+                element.WriteTo(writer);
+                return;
+        }
+    }
+}
+
+public enum ProcessWorkspaceContextField
+{
+    SurfaceSource,
+    SurfaceView,
+    SurfaceRoute,
+    SurfaceScope,
+    SurfaceProjectId,
+    ContextAccessState,
+    WorkspaceRunView,
+    RuntimeHistoryWindow,
+    RuntimeStatusFilter,
+    FocusedRuntimeEventDialog,
+    FocusedRunDetailDialog,
+    FocusedRunFilesDialog,
+    FocusedAgentDialog,
+    ProjectionStatus,
+    DefinitionCount,
+    LoadedRunCount,
+    ActiveRunCount,
+    AttentionRunCount,
+    FailedRunCount,
+    DefinitionIdentity,
+    DefinitionName,
+    DefinitionStatus,
+    DefinitionScope,
+    DefinitionCriticality,
+    DefinitionOperatingMode,
+    DefinitionCompatibilityIssues,
+    RunIdentity,
+    RunDisplayName,
+    RunStatus,
+    RunProjectId,
+    RunProjectName,
+    RunProcessName,
+    RunIsSubprocess,
+    RunProgress,
+    CurrentStep,
+    CurrentStepStatus,
+    CurrentStepRole,
+    EventIdentity,
+    EventType,
+    EventSensitivity,
+    AgentIdentity,
+    AgentDisplayName,
+    AgentStatus,
+    AgentStep,
+    AgentRole,
+    ManagerScope,
+    ManagerSelectedRun,
+    ManagerSelectedRunStatus,
+    ManagerAttentionSummary,
+    ManagerHistoryWindow,
+    ManagerLoadedRuns,
+    ManagerLoadedRunLatestEvent,
+    ManagerUsageScope,
+    ManagerUsageCost,
+    ManagerUsageInputTokens,
+    ManagerUsageCachedInputTokens,
+    ManagerUsageOutputTokens,
+    ManagerUsageTotalTokens
+}
+
+public static class ProcessWorkspaceContextFieldProvenance
+{
+    public static ProcessWorkspaceProvenanceComponent GetComponent(ProcessWorkspaceContextField field)
+        => field switch
+        {
+            ProcessWorkspaceContextField.SurfaceSource or
+            ProcessWorkspaceContextField.SurfaceView or
+            ProcessWorkspaceContextField.SurfaceRoute or
+            ProcessWorkspaceContextField.SurfaceScope or
+            ProcessWorkspaceContextField.SurfaceProjectId or
+            ProcessWorkspaceContextField.ContextAccessState or
+            ProcessWorkspaceContextField.WorkspaceRunView or
+            ProcessWorkspaceContextField.RuntimeStatusFilter or
+            ProcessWorkspaceContextField.FocusedRunFilesDialog or
+            ProcessWorkspaceContextField.ManagerScope or
+            ProcessWorkspaceContextField.ManagerSelectedRun =>
+                ProcessWorkspaceProvenanceComponent.Selection,
+
+            ProcessWorkspaceContextField.ProjectionStatus =>
+                ProcessWorkspaceProvenanceComponent.ShellRefresh,
+
+            ProcessWorkspaceContextField.DefinitionCount or
+            ProcessWorkspaceContextField.DefinitionIdentity or
+            ProcessWorkspaceContextField.DefinitionName or
+            ProcessWorkspaceContextField.DefinitionStatus or
+            ProcessWorkspaceContextField.DefinitionScope or
+            ProcessWorkspaceContextField.DefinitionCriticality or
+            ProcessWorkspaceContextField.DefinitionOperatingMode or
+            ProcessWorkspaceContextField.DefinitionCompatibilityIssues =>
+                ProcessWorkspaceProvenanceComponent.DefinitionCatalog,
+
+            ProcessWorkspaceContextField.ActiveRunCount or
+            ProcessWorkspaceContextField.AttentionRunCount or
+            ProcessWorkspaceContextField.FailedRunCount =>
+                ProcessWorkspaceProvenanceComponent.LiveRunSummary,
+
+            ProcessWorkspaceContextField.LoadedRunCount or
+            ProcessWorkspaceContextField.RunIdentity or
+            ProcessWorkspaceContextField.RunDisplayName or
+            ProcessWorkspaceContextField.RunStatus or
+            ProcessWorkspaceContextField.RunProjectId or
+            ProcessWorkspaceContextField.RunProjectName or
+            ProcessWorkspaceContextField.RunProcessName or
+            ProcessWorkspaceContextField.RunIsSubprocess or
+            ProcessWorkspaceContextField.RunProgress or
+            ProcessWorkspaceContextField.CurrentStep or
+            ProcessWorkspaceContextField.CurrentStepStatus or
+            ProcessWorkspaceContextField.CurrentStepRole or
+            ProcessWorkspaceContextField.ManagerLoadedRuns or
+            ProcessWorkspaceContextField.ManagerLoadedRunLatestEvent =>
+                ProcessWorkspaceProvenanceComponent.LiveRuns,
+
+            ProcessWorkspaceContextField.FocusedRunDetailDialog or
+            ProcessWorkspaceContextField.ManagerSelectedRunStatus =>
+                ProcessWorkspaceProvenanceComponent.SelectedRunDetail,
+
+            ProcessWorkspaceContextField.RuntimeHistoryWindow or
+            ProcessWorkspaceContextField.FocusedRuntimeEventDialog or
+            ProcessWorkspaceContextField.EventIdentity or
+            ProcessWorkspaceContextField.EventType or
+            ProcessWorkspaceContextField.EventSensitivity or
+            ProcessWorkspaceContextField.ManagerHistoryWindow =>
+                ProcessWorkspaceProvenanceComponent.HistoryPage,
+
+            ProcessWorkspaceContextField.FocusedAgentDialog or
+            ProcessWorkspaceContextField.AgentIdentity or
+            ProcessWorkspaceContextField.AgentDisplayName or
+            ProcessWorkspaceContextField.AgentStatus or
+            ProcessWorkspaceContextField.AgentStep or
+            ProcessWorkspaceContextField.AgentRole =>
+                ProcessWorkspaceProvenanceComponent.ActiveAgents,
+
+            ProcessWorkspaceContextField.ManagerAttentionSummary or
+            ProcessWorkspaceContextField.ManagerUsageScope or
+            ProcessWorkspaceContextField.ManagerUsageCost or
+            ProcessWorkspaceContextField.ManagerUsageInputTokens or
+            ProcessWorkspaceContextField.ManagerUsageCachedInputTokens or
+            ProcessWorkspaceContextField.ManagerUsageOutputTokens or
+            ProcessWorkspaceContextField.ManagerUsageTotalTokens =>
+                ProcessWorkspaceProvenanceComponent.DerivedProjection,
+
+            _ => throw new ArgumentOutOfRangeException(nameof(field), field, "The process context field is undefined.")
+        };
+
+    public static ProcessProjectionComponentProvenance GetProvenance(
+        ProcessWorkspaceProvenanceVector vector,
+        ProcessWorkspaceContextField field)
+    {
+        ArgumentNullException.ThrowIfNull(vector);
+        return vector.GetComponent(GetComponent(field));
+    }
+}
 
 public enum ProcessWorkspaceScopeKind
 {
@@ -610,6 +1269,9 @@ public sealed record ProcessRuntimeWorkspaceProjection(
 
     public IReadOnlyList<ProcessLiveProcessSnapshot>? ReusableRuns { get; init; }
 
+    public ProcessWorkspaceProvenanceVector Provenance { get; init; } =
+        ProcessWorkspaceProvenanceVector.Empty;
+
     public static ProcessRuntimeWorkspaceProjection Empty { get; } = new(
         ProcessRuntimeHistoryWindow.OneDay,
         EventPage: 0,
@@ -651,4 +1313,7 @@ public sealed record ProcessWorkspaceShellProjection(
     ProcessWorkspaceAgentEntryProjection AgentEntry)
 {
     public ProcessRuntimeWorkspaceProjection Runtime { get; init; } = ProcessRuntimeWorkspaceProjection.Empty;
+
+    public ProcessWorkspaceProvenanceVector Provenance { get; init; } =
+        ProcessWorkspaceProvenanceVector.Empty;
 }

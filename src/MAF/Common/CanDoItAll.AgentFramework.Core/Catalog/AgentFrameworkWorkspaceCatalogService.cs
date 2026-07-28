@@ -8,7 +8,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService(
     ICapabilityProofService capabilityProofService,
     IProviderProfileService providerProfileService,
     IProviderDiagnosticsService providerDiagnosticsService,
-    IProviderProfileRegistry providerRegistry)
+    IProviderProfileRegistry providerRegistry,
+    IProviderRuntimeProfileSource providerSource)
 {
     private readonly LegacyAgentMemoryCatalog legacyMemoryCatalog = new(store, TimeProvider.System);
 

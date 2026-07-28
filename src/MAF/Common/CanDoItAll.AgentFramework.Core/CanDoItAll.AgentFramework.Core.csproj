@@ -6,9 +6,11 @@
     <ProjectReference Include="..\..\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
     <ProjectReference Include="..\..\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
   </ItemGroup>
 

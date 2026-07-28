@@ -9,6 +9,123 @@ using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 namespace CanDoItAll.Tests.Unit;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
+public sealed class DatabaseRuntimeStateTests
+{
+    [Fact]
+    public async Task MarkCurrentProfile_is_concurrently_idempotent_only_for_the_same_identity()
+    {
+        var first = CreateResolvedProfile("first");
+        var second = CreateResolvedProfile("second");
+        var runtimeState = new DatabaseRuntimeState(
+            new DatabaseSwitchNotificationService());
+        runtimeState.MarkCurrentProfile(first);
+
+        const int updateCount = 20_000;
+        const int readerCount = 4;
+        var writer = Task.Run(() =>
+        {
+            for (var index = 0; index < updateCount; index++)
+            {
+                runtimeState.MarkCurrentProfile(first);
+            }
+        });
+        var readers = Enumerable.Range(0, readerCount)
+            .Select(_ => Task.Run(() =>
+            {
+                for (var index = 0; index < updateCount; index++)
+                {
+                    var observed = runtimeState.GetSnapshot();
+                    Assert.Equal(first.Profile.Id, observed.ActiveProfileId);
+                    Assert.Equal(
+                        first.Profile.Runtime.Fingerprint,
+                        observed.ActiveFingerprint);
+                    Assert.Equal(0, observed.Generation);
+                }
+            }))
+            .ToArray();
+
+        await Task.WhenAll(readers.Append(writer));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            runtimeState.MarkCurrentProfile(second));
+        Assert.Contains(
+            "already initialized",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(first.Profile.Id, runtimeState.GetSnapshot().ActiveProfileId);
+    }
+
+    [Fact]
+    public void PublishRestartObserved_isolates_subscribers_after_advancing_runtime_generation()
+    {
+        var first = CreateResolvedProfile("first");
+        var second = CreateResolvedProfile("second");
+        var notifications = new DatabaseSwitchNotificationService();
+        var runtimeState = new DatabaseRuntimeState(notifications);
+        runtimeState.MarkCurrentProfile(first);
+        var previous = runtimeState.GetSnapshot();
+        var throwingSubscriberCalls = 0;
+        var laterSubscriberCalls = 0;
+        DatabaseProfileChangedNotification? observedNotification = null;
+
+        notifications.Changed += (_, _) =>
+        {
+            throwingSubscriberCalls++;
+            throw new InvalidOperationException("Expected subscriber failure.");
+        };
+        notifications.Changed += (_, notification) =>
+        {
+            laterSubscriberCalls++;
+            observedNotification = notification;
+        };
+
+        var exception = Assert.Throws<AggregateException>(() =>
+            runtimeState.PublishRestartObserved(previous, second));
+
+        Assert.Single(exception.InnerExceptions);
+        Assert.IsType<InvalidOperationException>(exception.InnerExceptions[0]);
+        Assert.Equal(1, throwingSubscriberCalls);
+        Assert.Equal(1, laterSubscriberCalls);
+
+        var current = runtimeState.GetSnapshot();
+        Assert.Equal(second.Profile.Id, current.ActiveProfileId);
+        Assert.Equal(second.Profile.Runtime.Fingerprint, current.ActiveFingerprint);
+        Assert.Equal(previous.Generation + 1, current.Generation);
+        Assert.NotNull(observedNotification);
+        Assert.Equal(current.Generation, observedNotification.Generation);
+        Assert.Equal(second.Profile.Id, observedNotification.CurrentProfileId);
+        Assert.Throws<InvalidOperationException>(() =>
+            runtimeState.MarkCurrentProfile(first));
+    }
+
+    private static ResolvedDatabaseProfile CreateResolvedProfile(string name)
+    {
+        return new ResolvedDatabaseProfile(
+            new DatabaseProfileRecord
+            {
+                Id = Guid.NewGuid(),
+                DisplayName = name,
+                ProviderKind = DatabaseProviderKind.InMemory,
+                SourceKind = DatabaseProfileSourceKind.InMemory,
+                InMemory = new InMemoryDatabaseProfileConnection
+                {
+                    DatabaseName = name
+                },
+                Storage = new DatabaseProfileStorageDescriptor
+                {
+                    Mode = DatabaseProfileStorageMode.Ephemeral
+                },
+                Runtime = new DatabaseProfileRuntimeMetadata
+                {
+                    Fingerprint = $"fingerprint-{name}"
+                }
+            },
+            DatabaseProfileResolutionSource.ExplicitOverride,
+            $"in-memory:{name}");
+    }
+}
+
+[Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class DatabaseSwitchCoordinatorTests
 {
     [Fact]

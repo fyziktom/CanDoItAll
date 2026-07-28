@@ -1,5 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CapabilityModels.cs src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Access\CapabilityAccessPolicyEvaluator.cs src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.Access.Policies.cs src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeToolProviderComposer.cs
-Test: SB02 anti-stub audit
-Invariant: MAF-SB02-SCOPED-CAPABILITY
-Output: no TODO, NotImplemented, or placeholder exception matches
-ExitCode: 1

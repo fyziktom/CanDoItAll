@@ -20,7 +20,8 @@ internal sealed class RuntimeBuildResult(
     Func<IReadOnlyList<AgentFinalizerInvocation>>? snapshotFinalizerInvocations = null,
     Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null,
     Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null,
-    RuntimeCapabilityState? runtimeCapabilityState = null) : IAsyncDisposable
+    RuntimeCapabilityState? runtimeCapabilityState = null,
+    Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate = null) : IAsyncDisposable
 {
     public AIAgent Agent { get; } = agent;
 
@@ -33,6 +34,8 @@ internal sealed class RuntimeBuildResult(
     public bool IsTemperatureOmitted { get; } = isTemperatureOmitted;
 
     public RuntimeCapabilityState? CapabilityState { get; } = runtimeCapabilityState;
+
+    public Func<AgentResponseUpdate, bool>? IsTerminalResponseUpdate { get; } = isTerminalResponseUpdate;
 
     public IReadOnlyList<AITool> FinalizerTools { get; } = finalizerCapture?.Tools ?? [];
 

@@ -14,21 +14,9 @@ Host integration helpers for registering AgentFramework services outside the pro
 dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj`
-- `../CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.Extensions.DependencyInjection.Abstractions (10.0.6)`
+The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Hosting.csproj](CanDoItAll.AgentFramework.Hosting.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

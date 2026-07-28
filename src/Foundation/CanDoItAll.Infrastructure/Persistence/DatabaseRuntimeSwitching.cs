@@ -34,36 +34,76 @@ public sealed class DatabaseSwitchNotificationService : IDatabaseSwitchNotificat
 
     public void Publish(DatabaseProfileChangedNotification notification)
     {
-        Changed?.Invoke(this, notification);
+        ArgumentNullException.ThrowIfNull(notification);
+
+        var subscribers = Changed;
+        if (subscribers is null)
+        {
+            return;
+        }
+
+        List<Exception>? failures = null;
+        foreach (EventHandler<DatabaseProfileChangedNotification> subscriber in subscribers.GetInvocationList())
+        {
+            try
+            {
+                subscriber(this, notification);
+            }
+            catch (Exception exception)
+            {
+                failures ??= [];
+                failures.Add(exception);
+            }
+        }
+
+        if (failures is not null)
+        {
+            throw new AggregateException(
+                "One or more database profile change subscribers failed.",
+                failures);
+        }
     }
 }
 
 public sealed class DatabaseRuntimeState(IDatabaseSwitchNotificationService notificationService) : IDatabaseRuntimeState
 {
-    private readonly object _sync = new();
-    private Guid? _activeProfileId;
-    private string? _activeFingerprint;
-    private long _generation;
+    private readonly object updateGate = new();
+    private DatabaseRuntimeSnapshot snapshot = new(
+        ActiveProfileId: null,
+        ActiveFingerprint: null,
+        Generation: 0);
 
     public DatabaseRuntimeSnapshot GetSnapshot()
-    {
-        lock (_sync)
-        {
-            return new DatabaseRuntimeSnapshot(
-                _activeProfileId,
-                _activeFingerprint,
-                _generation);
-        }
-    }
+        => Volatile.Read(ref snapshot);
 
     public void MarkCurrentProfile(ResolvedDatabaseProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        lock (_sync)
+        lock (updateGate)
         {
-            _activeProfileId = profile.Profile.Id;
-            _activeFingerprint = profile.Profile.Runtime.Fingerprint;
+            var current = Volatile.Read(ref snapshot);
+            if (current.ActiveProfileId.HasValue)
+            {
+                if (current.ActiveProfileId == profile.Profile.Id &&
+                    string.Equals(
+                        current.ActiveFingerprint,
+                        profile.Profile.Runtime.Fingerprint,
+                        StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                throw new InvalidOperationException(
+                    "The current database runtime identity is already initialized. Runtime changes must use the generation-bumping restart publication path.");
+            }
+
+            Volatile.Write(
+                ref snapshot,
+                new DatabaseRuntimeSnapshot(
+                    profile.Profile.Id,
+                    profile.Profile.Runtime.Fingerprint,
+                    current.Generation));
         }
     }
 
@@ -74,18 +114,21 @@ public sealed class DatabaseRuntimeState(IDatabaseSwitchNotificationService noti
         ArgumentNullException.ThrowIfNull(profile);
 
         DatabaseProfileChangedNotification notification;
-        lock (_sync)
+        lock (updateGate)
         {
-            _activeProfileId = profile.Profile.Id;
-            _activeFingerprint = profile.Profile.Runtime.Fingerprint;
-            _generation++;
+            var current = Volatile.Read(ref snapshot);
+            var next = new DatabaseRuntimeSnapshot(
+                profile.Profile.Id,
+                profile.Profile.Runtime.Fingerprint,
+                checked(current.Generation + 1));
+            Volatile.Write(ref snapshot, next);
 
             notification = new DatabaseProfileChangedNotification(
                 previousSnapshot.ActiveProfileId,
                 previousSnapshot.ActiveFingerprint,
-                profile.Profile.Id,
-                profile.Profile.Runtime.Fingerprint,
-                _generation);
+                next.ActiveProfileId!.Value,
+                next.ActiveFingerprint!,
+                next.Generation);
         }
 
         notificationService.Publish(notification);

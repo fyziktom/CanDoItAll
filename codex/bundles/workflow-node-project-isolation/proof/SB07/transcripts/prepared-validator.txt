@@ -1,6 +1,0 @@
-CWD: C:\repositories\CanDoItAll
-START: 2026-06-29T15:21:02.0879717-04:00
-COMMAND: & 'C:\Users\lucys\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' 'C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py' 'codex\bundles\workflow-node-project-isolation' --profile initiative --stage prepared --repo-root 'C:\repositories\CanDoItAll'
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation
-END: 2026-06-29T15:21:02.3234118-04:00
-EXIT_CODE: 0

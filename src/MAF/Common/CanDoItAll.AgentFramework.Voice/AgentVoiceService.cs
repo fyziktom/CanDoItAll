@@ -7,7 +7,7 @@ namespace CanDoItAll.AgentFramework.Voice;
 
 public sealed class AgentVoiceService(
     IWorkflowSettingsService workflowSettingsService,
-    IProviderProfileRegistry providerRegistry,
+    IProviderRuntimeProfileSource providerSource,
     IAgentVoiceDriverFactory driverFactory,
     IAgentVoiceSpeechTextPreprocessor speechTextPreprocessor) : IAgentVoiceService
 {
@@ -187,7 +187,7 @@ public sealed class AgentVoiceService(
             throw new InvalidOperationException($"A provider profile must be selected for {capabilityName}.");
         }
 
-        var provider = await providerRegistry.GetProviderAsync(providerProfileId.Value, cancellationToken)
+        var provider = await providerSource.GetProviderAsync(providerProfileId.Value, cancellationToken)
             ?? throw new InvalidOperationException($"Provider profile '{providerProfileId.Value:D}' configured for {capabilityName} was not found.");
         if (!provider.IsEnabled)
         {

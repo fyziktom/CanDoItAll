@@ -1,0 +1,344 @@
+===== PATTERN: SerializeSessionAsync =====
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:31:| Session persistence | `MafRuntimeSessionPersistenceDriver.TrySerializeSessionAsync` | five-second bound; catch-all null | retain bound, improve diagnostics | Confirmed |
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:121:async () => await runtimeAgent.SerializeSessionAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:30:return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
+
+===== PATTERN: DeserializeSessionAsync =====
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:30:return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
+
+===== PATTERN: AgentSessionStateBag =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\06-session-approval-migration.md:9:3. MAF `AgentSession` / `AgentSessionStateBag`;
+
+===== PATTERN: ChatClientAgentSession =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:44:- `ChatClientAgentSession` constructor parameters are optional for stricter `System.Text.Json` settings.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:150:The 1.15 `ChatClientAgentSession` JSON constructor accepts omitted `conversationId` and state-bag arguments. This improves strict serializer compatibility, but it does not replace:
+codex\bundles\maf-1-15-upgrade-architecture\analysis\02-impact-matrix.md:21:| `ChatClientAgentSession` strict JSON fix | Opaque session serialization/deserialization | Recovery | Cross-version fixture; no custom workaround removal without proof | P1 | Confirmed |
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:14:| ChatClientAgentSession constructor | https://github.com/microsoft/agent-framework/pull/7142 | Strict JSON/cross-version session tests | SB05 |
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:31:- `dotnet/src/Microsoft.Agents.AI/ChatClient/ChatClientAgentSession.cs` at `dotnet-1.13.0` and `dotnet-1.15.0`
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:274:if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:289:if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
+
+===== PATTERN: SerializedSessionStateJson =====
+.codex-runtime\tetris-rerun-slice-architecture-executions.json:25:"serializedSessionStateJson": null,
+.codex-runtime\tetris-rerun-slice-architecture-executions.json:61:"serializedSessionStateJson": null,
+.codex-runtime\tetris-rerun-slice-architecture-attempt1-detail.json:25:"serializedSessionStateJson": null,
+.codex-runtime\slice-architecture-agent-executions.json:25:"serializedSessionStateJson": null,
+.codex-runtime\slice-architecture-agent-executions.json:61:"serializedSessionStateJson": null,
+.codex-runtime\slice-architecture-agent-executions.json:97:"serializedSessionStateJson": null,
+.codex-runtime\leaf-1ad8362f-detail.json:25:"serializedSessionStateJson": null,
+.codex-runtime\execution-ed1dbacb-eb0c-4912-9921-5d53f4385bb7.json:24:"serializedSessionStateJson": null,
+.codex-runtime\execution-e62f7448-b7c2-4e06-a100-9c96b8c90dbd.json:25:"serializedSessionStateJson": null,
+.codex-runtime\execution-e62f7448-b7c2-4e06-a100-9c96b8c90dbd.json:61:"serializedSessionStateJson": null,
+.codex-runtime\execution-e62f7448-b7c2-4e06-a100-9c96b8c90dbd.json:97:"serializedSessionStateJson": null,
+.codex-runtime\execution-e62f7448-b7c2-4e06-a100-9c96b8c90dbd.json:133:"serializedSessionStateJson": null,
+.codex-runtime\execution-e62f7448-b7c2-4e06-a100-9c96b8c90dbd.json:169:"serializedSessionStateJson": null,
+.codex-runtime\execution-e62f7448-b7c2-4e06-a100-9c96b8c90dbd.json:205:"serializedSessionStateJson": null,
+.codex-runtime\execution-0674af41.json:1:{"run":{"id":"0674af41-07e1-425c-985b-555d840e2cd3","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"title":"Process step execution brief\r\n\r\nProcess: .NET...","sourceKind":"process-step","sourceId":"slice-intake","correlationId":"a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9","causationId":"08c54d50-2237-4641-a38e-b813e0ac33c1","requestedBy":"process-runtime","requestedByKind":"system","metadataJson":"{\"agentProcessBrowserToolsAllowed\":false,\"agentProcessStepAllowedOperations\":[\"ReadProcessContext\",\"ReadProjectStructure\",\"ReadUpstreamArtifacts\",\"WriteManagedProcessArtifacts\"],\"agentProcessStepTargetScope\":\"ExternalProductTargetReadOnly\",\"agentProcessStepAllowsProductMutation\":false,\"agentProcessStepRequiresProductMutationBeforeManagedOutput\":false,\"agentAllowedManagedArtifactReadRefs\":[\"artifacts/process-runs/1edfc9a1-2022-4673-865a-ce335af19509/steps/architecture-review.md\",\"artifacts/process-runs/1edfc9a1-2022-4673-865a-ce335af19509/steps/feature-intake.md\"],\"agentReadOnlyExternalTargetAliases\":[\"external-target/C/programovani/dotnet/output\"],\"agentContextWorkspaceScope\":{\"kind\":\"Project\",\"key\":\"3324868f-66e2-478a-bb8f-14f32a5db1e9\"},\"agentProjectStructureLaunchAgent\":{\"agentId\":\"codex-observer-manager\",\"agentName\":\"Codex observer-manager\",\"machineName\":\"LUCYSPOWER\",\"repositoryRoot\":\"\",\"branchName\":\"\",\"sessionId\":\"0HNMVM2N1GHV0:00000001\"},\"agentProjectStructureProcessNodeContext\":{\"currentProcessRunNodeId\":\"process-run:a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9\",\"processRunNodeId\":\"process-run:1edfc9a1-2022-4673-865a-ce335af19509\",\"parentProcessRunNodeId\":\"process-run:1edfc9a1-2022-4673-865a-ce335af19509\",\"targetProcessRunNodeId\":\"process-run:1edfc9a1-2022-4673-865a-ce335af19509\"},\"agentFinalizerMode\":\"required\",\"agentMaxStructuredOutputRepairAttempts\":1,\"agentRequireStructuredOutputValidation\":true,\"agentAllowRequiredFinalizerStructuredOutputRecovery\":true}","inputSummary":"Process step execution brief  Process: .NET implementation slice with atomic validation Step key: slice-intake Step title: Capture implementation slice bound...","resultSummary":"","providerName":"OpenAI chat completions","model":"gpt-5.4-mini","state":3,"outcome":null,"createdAtUtc":"2026-07-12T01:04:25.1477459+00:00","updatedAtUtc":"2026-07-12T01:04:34.4790669+00:00","startedAtUtc":"2026-07-12T01:04:25.1477459+00:00","completedAtUtc":null,"runtimeSessionKey":"","serializedSessionStateJson":null,"pendingApprovals":[],"autoApprovePendingToolCalls":true,"processRunId":"a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9","processStepId":"08c54d50-2237-4641-a38e-b813e0ac33c1","schedulerRunId":"","messageId":"","revision":1,"structuredOutputContractKey":"process_step_outcome_result","structuredOutputTypeName":"CanDoItAll.AgentFramework.Models.ProcessStepOutcomeResult, CanDoItAll.AgentFramework.Models, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null","structuredOutputSchemaName":"process_step_outcome_result","structuredOutputSchemaDescription":"Validated machine contract for process step completion, branch selection, acceptance-criterion proof, next actions, and display-only markdown summary."},"chatSession":null,"executionLog":[{"id":"71201778-dd63-41e3-bd75-50ae71018912","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:34.4790669+00:00","state":3,"phase":"Tool","message":"Invoking tool 'workspace_write_file' with path=\"artifacts/process-runs/a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9/steps/slice-intake.md\", content=\"Status: Completed  # Slice Scope Packet  ## Step metadata - Process: .NET implementation slice with atomic validation - ...#90242d6ab666\".","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"1e0f2af6-7310-4234-8170-5a4f22275a3c","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:26.9744711+00:00","state":3,"phase":"Tool","message":"Invoking tool 'workspace_execution_boundary'.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"fab7e96f-b39d-4997-b7a3-fd93d9f0a072","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.9401767+00:00","state":2,"phase":"Run","message":"Executing the run through Microsoft Agent Framework streaming.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"6478fd83-d6e4-4340-9139-a5fa594a4201","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.8456798+00:00","state":1,"phase":"Session","message":"Creating an isolated Microsoft Agent Framework session for this governed process step.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"7c24e376-b9ad-4bee-ab7a-d823d59854ce","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.7547238+00:00","state":1,"phase":"Model parameters","message":"The runtime will omit temperature for model 'gpt-5.4-mini' and use the provider default.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"a292b2a0-d488-4292-8d69-0cd0c4896fce","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.6867244+00:00","state":1,"phase":"Finalizer policy","message":"Attached Required finalizer tool 'submit_process_step_outcome' for structured output contract 'process_step_outcome_result'.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"a36bd553-4b14-46ae-b382-0acfc05b8612","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.6211627+00:00","state":1,"phase":"Compaction","message":"Skipped Microsoft Agent Framework compaction for governed process automation even though the agent requested compaction. Process-step prompts carry required artifact paths and tool-evidence rules, so they must not be summarized before the run starts.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"381e13fc-d160-4a78-824c-927ef4960e95","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.5542817+00:00","state":1,"phase":"Runtime tool providers","message":"Attached 13 tool(s) from 3 registered runtime tool provider(s). Providers: project-structure.runtime-tools (Project structure runtime tools, 13 tool(s), 40 pruned); memory.runtime-tools (Memory runtime tools, 0 tool(s)); image-generation.runtime-tools (Image generation runtime tools, 0 tool(s)).","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"58ff6c41-6978-479a-a635-cb5058fd2378","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.4845047+00:00","state":1,"phase":"Workspace tools","message":"Attached configured workspace file and storage tools from the current agent settings.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"4f2a62a9-aef6-4e4f-9e5d-5aa6a4e8d203","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.4156399+00:00","state":1,"phase":"Context contributors","message":"Attached 1 registered agent context contributor(s) in deterministic order.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"535dd4b1-e4e1-49c5-ba09-bc772196f363","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.3464318+00:00","state":1,"phase":"Approval policy","message":"Auto-approve is active for this run, so future tool approval gates will be suppressed.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"a4aa5447-224a-4028-837f-98cb8596b5d8","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.2809436+00:00","state":1,"phase":"Framework","message":"Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"},{"id":"547c62f6-0e92-4548-a85c-3dea1d717221","agentId":"b0c2a317-a417-385f-9f59-0f4a2c5b7ff2","chatSessionId":null,"createdAtUtc":"2026-07-12T01:04:25.2128378+00:00","state":1,"phase":"Planning","message":"Preparing provider OpenAI chat completions.","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3"}],"metrics":[],"approvals":[],"artifacts":[],"checkpoints":[],"toolReceipts":[{"id":"f047dc0b-89bf-aa54-9aeb-fb3512a70212","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3","toolFamily":"workspace-file","toolName":"workspace_write_file","riskClass":"MutatingWorkspace","approvalMode":"NotRequired","isolationGuarantee":"Workspace file service with support for mapped external-target/<drive>/... aliases. No host process execution.","requestSummary":"artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9/steps/slice-intake.md","workingDirectory":".","exitSummary":"Succeeded: Created 'artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9/steps/slice-intake.md' with 5229 characters.","startedAtUtc":"2026-07-12T01:04:34.571893+00:00","completedAtUtc":"2026-07-12T01:04:34.5728566+00:00","runtimeToolProviderKey":"","runtimeToolProviderName":"","declaredSideEffectMode":0},{"id":"67a9a635-b693-6f50-b043-42ac1251777e","executionRunId":"0674af41-07e1-425c-985b-555d840e2cd3","toolFamily":"workspace-process","toolName":"workspace_execution_boundary","riskClass":"ReadOnly","approvalMode":"NotRequired","isolationGuarantee":"PolicyOnlyLocal via Local best-effort process host (host-enforced: false)","requestSummary":"execution boundary","workingDirectory":".","exitSummary":"Succeeded","startedAtUtc":"2026-07-12T01:04:27.0735609+00:00","completedAtUtc":"2026-07-12T01:04:27.0735609+00:00","runtimeToolProviderKey":"","runtimeToolProviderName":"","declaredSideEffectMode":0}],"usageObservations":[]}
+.codex-runtime\agent-runs-latest.json:25:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:61:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:97:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:133:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:169:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:205:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:241:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:277:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:313:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:349:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:385:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:421:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:457:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:493:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:529:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:565:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:601:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:637:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:673:"serializedSessionStateJson": null,
+.codex-runtime\agent-runs-latest.json:709:"serializedSessionStateJson": null,
+.codex-runtime\agent-f29054c6-live.json:25:"serializedSessionStateJson": null,
+.codex-runtime\agent-667738a2-latest.json:25:"serializedSessionStateJson": null,
+tests\Unit\CanDoItAll.Tests.Unit\WorkspaceFileServiceTests.cs:373:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:1349:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowUsageAnalyticsRedGateTests.cs:778:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2269:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2395:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\SpreadsheetPreviewTests.cs:305:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:1151:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:1244:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationAdapterTests.cs:9471:SerializedSessionStateJson = "{}"
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeDispatchQueueTests.cs:2118:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeArchitectureBaselineTests.cs:498:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRunNarrativeGeneratorTests.cs:573:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRunNarrativeGeneratorTests.cs:712:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRunNarrativeGeneratorTests.cs:797:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\ManagedSeedExecutionCredentialBoundaryTests.cs:248:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:419:serializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\FloatingAgentChatArchitectureTests.cs:1016:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\FileSandboxWorkspaceChatProjectionStoreTests.cs:325:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkWorkspaceActivityAdmissionTests.cs:276:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkRuntimeToolReceiptTests.cs:20:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkRuntimeToolReceiptTests.cs:106:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkProcessRuntimeCancellationObserverTests.cs:38:Assert.Null(saved.Run.SerializedSessionStateJson);
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkProcessRuntimeCancellationObserverTests.cs:71:SerializedSessionStateJson: """{"kind":"partial"}""",
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1138:SerializedSessionStateJson: """{"conversationId":"provider-conversation"}""",
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1649:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\AgentExecutionOperationIdentityTests.cs:146:SerializedSessionStateJson: null,
+tests\Unit\CanDoItAll.Tests.Unit\AgentExecutionCancellationRegistryTests.cs:66:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\AgentJsonSchemaOutputExecutionIntegrationTests.cs:377:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:285:SerializedSessionStateJson: BuildSerializedSessionState(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:407:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:503:SerializedSessionStateJson: string.Empty,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2099:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2182:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2319:SerializedSessionStateJson: """{"state":"pending"}""",
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2358:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRecoveryIntegrationTests.cs:77:SerializedSessionStateJson: """{"kind":"partial"}""",
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRecoveryIntegrationTests.cs:123:Assert.Null(repairedDetail.Run.SerializedSessionStateJson);
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRecoveryIntegrationTests.cs:200:SerializedSessionStateJson: """{"kind":"partial"}""",
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:392:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.cs:394:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.cs:450:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceUsageProjectionIntegrationTests.cs:261:SerializedSessionStateJson: string.Empty,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceStoreLockIntegrationTests.cs:205:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceStoreLockIntegrationTests.cs:256:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceStoreLockIntegrationTests.cs:438:SerializedSessionStateJson: null,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.cs:294:SerializedSessionStateJson: string.Empty,
+tests\Integration\CanDoItAll.Tests.Integration\WorkspaceAgentRecruitingTargetResolverTests.cs:267:SerializedSessionStateJson: null,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:186:SerializedSessionStateJson = JsonSerializer.Serialize(new
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:207:SerializedSessionStateJson = JsonSerializer.Serialize(new
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:254:serializedSessionStateJson: JsonSerializer.Serialize(new
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:377:SerializedSessionStateJson: "{}",
+tests\Components\CanDoItAll.Tests.Components\HrAgentProcessReviewServiceTests.cs:145:Assert.Null(detail.Run.SerializedSessionStateJson);
+tests\Components\CanDoItAll.Tests.Components\HrAgentProcessReviewServiceTests.cs:330:SerializedSessionStateJson: null,
+tests\Components\CanDoItAll.Tests.Components\HrAgentCompositionTests.cs:336:SerializedSessionStateJson: null,
+tests\Components\CanDoItAll.Tests.Components\ChatWorkspacePanelTests.cs:230:SerializedSessionStateJson: null,
+tests\Components\CanDoItAll.Tests.Components\AgentChatPanelResponsivenessTests.cs:408:SerializedSessionStateJson: null,
+tests\Components\CanDoItAll.Tests.Components\AgentChatPanelResponsivenessTests.cs:447:SerializedSessionStateJson: null,
+tests\Components\CanDoItAll.Tests.Components\AgentChatModalTests.cs:295:SerializedSessionStateJson: null,
+src\Modules\CanDoItAll.Modules.AgentFramework\Services\Hr\HrAgentProcessReviewService.cs:269:SerializedSessionStateJson = null,
+src\Modules\CanDoItAll.Modules.AgentFramework\Execution\AgentFrameworkExecutionRecoveryService.cs:54:SerializedSessionStateJson = null,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:134:SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "guided" }, JsonOptions),
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:155:SerializedSessionStateJson: JsonSerializer.Serialize(state, JsonOptions),
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:202:var state = ParseState(session.Compatibility?.SerializedSessionStateJson)
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:230:SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "rejected" }, JsonOptions),
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:276:SerializedSessionStateJson: JsonSerializer.Serialize(state with { Status = "completed" }, JsonOptions),
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs:180:SerializedSessionStateJson: BuildSerializedSessionState(roleKey, state, outcome, inspectedArtifactPaths, requiredToolNames),
+src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\ProcessAgentExecutionRecoveryPolicy.cs:222:!string.IsNullOrWhiteSpace(detail.Run.SerializedSessionStateJson) ||
+src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\ProcessAgentExecutionRecoveryPolicy.cs:353:$"executionRunId={executionRunId:D}; persistedRunId={detail.Run.Id:D}; state={detail.Run.State}; outcome={detail.Run.Outcome}; immediateMetricToolCalls={immediateMetric?.ToolCalls.ToString(CultureInfo.InvariantCulture) ?? "none"}; metrics={detail.Metrics.Count}; metricToolCalls={metricToolCalls.ToString(CultureInfo.InvariantCulture)}; usageObservations={detail.UsageObservations.Count}; usageToolCalls={usageToolCalls.ToString(CultureInfo.InvariantCulture)}; toolReceipts={detail.ToolReceipts.Count}; artifacts={detail.Artifacts.Count}; checkpoints={detail.Checkpoints.Count}; approvals={detail.Approvals.Count}; pendingApprovals={pendingApprovals}; runPendingApprovals={detail.Run.PendingApprovals.Count}; waitingOnToolLogEntries={waitingOnToolLogEntries}; structuredOutputRawOutput={(string.IsNullOrWhiteSpace(detail.Run.StructuredOutputRawOutput) ? "blank" : "present")}; serializedSessionState={(string.IsNullOrWhiteSpace(detail.Run.SerializedSessionStateJson) ? "blank" : "present")}; runtimeSessionKey={(string.IsNullOrWhiteSpace(detail.Run.RuntimeSessionKey) ? "blank" : "present")}";
+src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\ProcessAgentExecutionRecoveryPolicy.cs:381:AppendCanonicalFact(canonical, "run.serializedSessionStateJson", detail.Run.SerializedSessionStateJson);
+src\Modules\CanDoItAll.Modules.Processes\Services\RuntimeIntegration\AgentFrameworkProcessRuntimeCancellationObserver.cs:117:SerializedSessionStateJson = null,
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowLlmComponentInvoker.cs:39:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:30:string? serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:35:SerializedSessionStateJson = string.IsNullOrWhiteSpace(serializedSessionStateJson)
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:37:: serializedSessionStateJson;
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:44:public string? SerializedSessionStateJson { get; init; }
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:52:|| !string.IsNullOrWhiteSpace(SerializedSessionStateJson)
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:58:string? serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:64:serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:110:string? SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:127:SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:155:[JsonPropertyName(nameof(ChatSessionRuntimeCompatibilityRecord.SerializedSessionStateJson))]
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:156:public string? LegacySerializedSessionStateJson
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:158:init => Compatibility = MergeCompatibility(serializedSessionStateJson: value);
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:175:string? serializedSessionStateJson = null,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:181:serializedSessionStateJson ?? Compatibility?.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:458:string? SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:1110:session.Compatibility?.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:1171:SerializedSessionStateJson: compatibility.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Packages\ZipAgentPackageService.cs:513:SerializedSessionStateJson = isManagerReview || hasSensitiveHrApproval
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Packages\ZipAgentPackageService.cs:515:: run.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Packages\ZipAgentPackageService.cs:538:hasSensitiveHrApproval ? null : compatibility.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:71:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:91:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:379:currentResponse.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:43:!string.Equals(expectedRun.SerializedSessionStateJson, currentRun.SerializedSessionStateJson, StringComparison.Ordinal) ||
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:10:public static string? SerializedSessionStateJson(ChatSessionRecord session)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:11:=> session.Compatibility?.SerializedSessionStateJson;
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:24:string? serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:30:serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:41:run.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:100:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:146:SerializedSessionStateJson: compatibility.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:24:var successfulCalls = ResolveSuccessfulSessionToolCalls(detail.Run.SerializedSessionStateJson);
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:282:string? serializedSessionStateJson)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:284:if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:291:using var document = JsonDocument.Parse(serializedSessionStateJson);
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:431:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:529:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:690:SerializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:1849:SerializedSessionStateJson = response.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:280:string? SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1005:SerializedSessionStateJson: serializedSessionJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1187:serializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1208:var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1217:SerializedSessionStateJson = serializedSessionStateJson
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1286:var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1303:SerializedSessionStateJson: serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1394:serializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1415:var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1424:SerializedSessionStateJson = serializedSessionStateJson
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1463:serializedSessionStateJson: null,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1484:var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1493:SerializedSessionStateJson = serializedSessionStateJson
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:29:using var document = JsonDocument.Parse(session.Compatibility!.SerializedSessionStateJson!);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:221:if (!string.IsNullOrWhiteSpace(session.Compatibility?.SerializedSessionStateJson))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:261:if (compatibility is null || string.IsNullOrWhiteSpace(compatibility.SerializedSessionStateJson))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:271:var containsProviderConversationId = SerializedSessionContainsProviderConversationId(compatibility.SerializedSessionStateJson);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:296:private static bool SerializedSessionContainsProviderConversationId(string serializedSessionStateJson)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:300:using var document = JsonDocument.Parse(serializedSessionStateJson);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:19:string? serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:52:SerializedSessionStateJson: serializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:49:SerializedSessionStateJson: run.SerializedSessionStateJson,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:286:&& string.Equals(payload.SerializedSessionStateJson, run.SerializedSessionStateJson, StringComparison.Ordinal)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:311:string? SerializedSessionStateJson,
+
+===== PATTERN: conversationId =====
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1138:SerializedSessionStateJson: """{"conversationId":"provider-conversation"}""",
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1174:runtimeAgent.SerializedState.GetProperty("conversationId").GetString());
+tests\Integration\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:533:conversationId = "conversation-1",
+src\plugins\Implementations\CanDoItAll.Plugin.Office365\Office365GraphClient.cs:246:var select = "id,subject,from,sender,receivedDateTime,bodyPreview,body,categories,webLink,conversationId,internetMessageId";
+src\plugins\Implementations\CanDoItAll.Plugin.Office365\Office365GraphClient.cs:343:message.ConversationId ?? message.InternetMessageId ?? string.Empty,
+src\plugins\Implementations\CanDoItAll.Plugin.Office365\Office365GraphClient.cs:472:string? ConversationId,
+codex\bundles\maf-1-15-upgrade-architecture\analysis\04-workaround-decision-register.md:17:| W11 | Opaque JSON `conversationId` sniff | **Keep in compatibility pass; consider typed metadata later** | It selects provider/framework history before deserialize and is application policy | Cross-version session matrix |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:150:The 1.15 `ChatClientAgentSession` JSON constructor accepts omitted `conversationId` and state-bag arguments. This improves strict serializer compatibility, but it does not replace:
+codex\bundles\maf-1-15-upgrade-architecture\analysis\06-session-approval-migration.md:33:ContainsProviderConversationId
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:112:Opaque MAF session state is stored as JSON. Custom logic detects `conversationId` before deciding whether restoration is compatible. Serialization is bounded to five seconds and all non-cancellation failures currently collapse to `null`.
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:11:private const string LocalHistoryConversationId = "_agent_local_chat_history";
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:271:var containsProviderConversationId = SerializedSessionContainsProviderConversationId(compatibility.SerializedSessionStateJson);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:275:return !containsProviderConversationId;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:280:return !containsProviderConversationId || SupportsServiceManagedConversations(provider);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:288:return !containsProviderConversationId;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:296:private static bool SerializedSessionContainsProviderConversationId(string serializedSessionStateJson)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:301:return document.RootElement.TryGetProperty("conversationId", out var conversationIdProperty)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:302:&& !string.IsNullOrWhiteSpace(conversationIdProperty.GetString())
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:303:&& !string.Equals(conversationIdProperty.GetString(), LocalHistoryConversationId, StringComparison.Ordinal);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:274:if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:276:return chatSession.ConversationId;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:289:if (runtimeSession is ChatClientAgentSession chatSession && !string.IsNullOrWhiteSpace(chatSession.ConversationId))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:291:return chatSession.ConversationId;
+
+===== PATTERN: RequestScopedSessionContentScrubber =====
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:204:typeof(RequestScopedSessionContentScrubber),
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:72:var scrubbed = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSession);
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:32:| Attachment scrub | `RequestScopedSessionContentScrubber` call | scrub after serialize | must preserve new state-bag binding data | Confirmed call; implementation discovery required |
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Input\RequestScopedSessionContentScrubber.cs:6:internal static class RequestScopedSessionContentScrubber
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:92:var scrubbedSessionJson = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSessionJson);
+
+===== PATTERN: ShouldReplayTranscriptAfterApproval =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\04-workaround-decision-register.md:16:| W10 | `ShouldReplayTranscriptAfterApproval()` always returns `false` | **Remove or implement intentionally** | Dead compatibility hook obscures behavior | Static and behavioral proof |
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:30:| Approval replay hook | `ShouldReplayTranscriptAfterApproval` | always false | dead hook candidate | Confirmed |
+codex\bundles\maf-1-15-upgrade-architecture\plan\02-file-by-file-plan.md:108:- remove or implement dead `ShouldReplayTranscriptAfterApproval`;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:216:if (ShouldReplayTranscriptAfterApproval(session))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:266:if (!isApprovalContinuation && ShouldReplayTranscriptAfterApproval(session))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:291:private static bool ShouldReplayTranscriptAfterApproval(ChatSessionRecord session)
+
+===== PATTERN: RequirePerServiceCallChatHistoryPersistence =====
+tools\Diagnostics\CanDoItAll.OpenAiContextProbe\Program.cs:196:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ZipAgentPackageServiceTests.cs:163:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowCuratorAgentRuntimeToolProviderTests.cs:737:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:440:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\SchedulerAgentRuntimeToolProviderTests.cs:225:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ScenarioHarnessAgentRuntimeTests.cs:94:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\PromptsCuratorAgentRuntimeToolProviderTests.cs:345:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\PromptGalleryAgentRuntimeToolProviderTests.cs:119:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProjectStructureAgentProjectCreationCoordinatorTests.cs:172:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProjectStructureAgentAuthorizationServiceTests.cs:326:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProjectPlanAgentAuthorizationPolicyTests.cs:121:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeToolPreflightServiceTests.cs:536:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationAdapterTests.cs:9755:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRunNarrativeGeneratorTests.cs:370:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ProcessLaunchExecutorResolverTests.cs:1766:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\MemoryAgentRuntimeToolProviderTests.cs:431:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\MemoryAgentContextContributorTests.cs:334:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ManagedSeedProviderFallbacksTests.cs:337:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ManagedSeedExecutionCredentialBoundaryTests.cs:174:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:738:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\MafContextMessageTransformationTests.cs:122:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:1375:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:342:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:180:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\HrAgentRuntimeToolProviderTests.cs:281:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\FloatingAgentChatArchitectureTests.cs:2052:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\FloatingAgentChatArchitectureTests.cs:2747:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\ContextualAgentWorkspaceContextBuilderTests.cs:198:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\CapabilityCuratorAgentRuntimeToolProviderTests.cs:821:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentReferenceDataProviderTests.cs:625:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentProjectStructureReadinessTests.cs:172:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentPackageImportServiceTests.cs:136:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkWorkspaceActivityAdmissionTests.cs:210:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkAiTechnicalAgentBridgePrivacyTests.cs:147:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1670:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:512:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Unit\CanDoItAll.Tests.Unit\AgentA2AHostCardFactoryTests.cs:70:RequirePerServiceCallChatHistoryPersistence: false,
+Templates\Agents\teams\visual-automation-templates\members\screenshot-review-storage-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\visual-automation-templates\members\layout-image-generation-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\visual-automation-templates\members\app-screenshot-capture-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\javascript-delivery\members\javascript-solution-architect\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\javascript-delivery\members\javascript-qa-review-lead\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\javascript-delivery\members\javascript-application-developer\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+tests\Memory\CanDoItAll.Memory.Tests\AgentMemoryProviderEndToEndTests.cs:162:RequirePerServiceCallChatHistoryPersistence: false,
+tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\MemoryAgentContextFanOutTests.cs:60:RequirePerServiceCallChatHistoryPersistence: false,
+tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\AgentMemoryInvocationTests.cs:243:RequirePerServiceCallChatHistoryPersistence: false,
+Templates\Agents\teams\dotnet-delivery\members\runtime-failure-analyst\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\dotnet-delivery\members\blazor-application-developer\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\dotnet-delivery\members\dotnet-solution-architect\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\dotnet-delivery\members\dotnet-qa-review-lead\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\dotnet-delivery\members\dotnet-application-developer\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+tests\Integration\CanDoItAll.Tests.Integration\AgentPackageImportApiIntegrationTests.cs:168:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:84:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:162:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:413:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Integration\CanDoItAll.Tests.Integration\ProjectStructureAgentRuntimeToolRoundTripIntegrationTests.cs:303:RequirePerServiceCallChatHistoryPersistence: false,
+Templates\Agents\teams\delivery-platform\members\workflow-curator-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\ui-review-lead\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\security-reviewer\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\hr-staffing-manager\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+tests\Components\CanDoItAll.Tests.Components\ProjectStructureAgentTaskResourceCostStrategyTests.cs:120:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\ProjectStructureAgentChatContextProviderTests.cs:661:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\ProjectsAgentChatContextProviderTests.cs:355:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\HrAgentUsageAnalyticsServiceTests.cs:297:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:396:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\CrmHrSecondaryPageFreshnessTests.cs:596:RequirePerServiceCallChatHistoryPersistence: true,
+tests\Components\CanDoItAll.Tests.Components\CrmAgentChatContextProviderTests.cs:263:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\ContextualAgentAccessResolverTests.cs:292:RequirePerServiceCallChatHistoryPersistence: false,
+tests\Components\CanDoItAll.Tests.Components\AgentPanelSelectionFailClosedTests.cs:211:RequirePerServiceCallChatHistoryPersistence: true,
+tests\Components\CanDoItAll.Tests.Components\AgentCompactListTests.cs:92:RequirePerServiceCallChatHistoryPersistence: true,
+tests\Components\CanDoItAll.Tests.Components\AgentChatPanelResponsivenessTests.cs:305:RequirePerServiceCallChatHistoryPersistence: true,
+tests\Components\CanDoItAll.Tests.Components\AgentChatModalTests.cs:254:RequirePerServiceCallChatHistoryPersistence: true,
+tests\Components\CanDoItAll.Tests.Components\AgentCatalogPanelTests.cs:284:RequirePerServiceCallChatHistoryPersistence: true,
+Templates\Agents\teams\delivery-platform\members\scheduler-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\hr-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\release-readiness-manager\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\delivery-qa-observer\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\prompts-curator-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\delivery-manager\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\programming-workspace-analyst\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\code-review-lead\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\portfolio-architect\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\delivery-platform\members\capability-curator-agent\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\business-and-research\members\spreadsheet-analyst\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\business-and-research\members\research-deep-dive-analyst\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\business-and-research\members\financial-strategist\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\business-and-research\members\marketing-specialist\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\business-and-research\members\mail-triage-analyst\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+Templates\Agents\teams\business-and-research\members\business-strategist\settings.json:13:"requirePerServiceCallChatHistoryPersistence": false,
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:58:- `RequirePerServiceCallChatHistoryPersistence`.
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessSupport.cs:243:agentEditor.RequirePerServiceCallChatHistoryPersistence = false;
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentCatalogService.cs:131:editor.RequirePerServiceCallChatHistoryPersistence = false;
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentCatalogService.cs:258:!agent.RequirePerServiceCallChatHistoryPersistence &&
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowLlmComponentInvoker.cs:228:RequirePerServiceCallChatHistoryPersistence: false,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Editors\EditorModels.cs:18:public bool RequirePerServiceCallChatHistoryPersistence { get; set; }
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Editors\EditorModels.cs:51:RequirePerServiceCallChatHistoryPersistence = definition.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:240:RequirePerServiceCallChatHistoryPersistence = match.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:436:RequirePerServiceCallChatHistoryPersistence = preserveProviderAssignment
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:437:? existingAgent.RequirePerServiceCallChatHistoryPersistence
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:438:: seededAgent.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedBuilder.cs:309:settings.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\AgentTemplatePackLoader.cs:235:public bool RequirePerServiceCallChatHistoryPersistence { get; set; }
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentExternalProvisioningService.cs:329:RequirePerServiceCallChatHistoryPersistence =
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentExternalProvisioningService.cs:330:source.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:66:RequirePerServiceCallChatHistoryPersistence: model.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentConfigurationVersion.cs:28:agent.RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\AgentModels.cs:60:bool RequirePerServiceCallChatHistoryPersistence,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1061:RequirePerServiceCallChatHistoryPersistence = false
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:1112:RequirePerServiceCallChatHistoryPersistence = false
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:194:RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence

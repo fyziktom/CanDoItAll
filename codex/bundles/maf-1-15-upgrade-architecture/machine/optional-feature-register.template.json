@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "features": [
+    {
+      "id": "approval-not-required-bypass",
+      "status": "defer-until-post-A2",
+      "owner": "SB03/SB08",
+      "decision": ""
+    },
+    {
+      "id": "tool-approval-agent",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "message-injection",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "harness-agent",
+      "status": "inventory-no-conversion",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "file-memory-provider",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "compaction",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "ag-ui-split",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "declarative-autosend",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "openai-responses-hosting",
+      "status": "defer-redesign",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "local-code-act",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    },
+    {
+      "id": "cosmos-history",
+      "status": "inventory",
+      "owner": "SB07",
+      "decision": ""
+    }
+  ]
+}

@@ -1,5 +1,0 @@
-Command: validator metadata synthesis for SB04 proof closure
-Exit code: 0
-SB04-FINAL-001: Completed-stage proof metadata is present for final bundle validation.
-No stubs: final proof metadata declares no implementation stubs; detailed anti-stub scans remain in subbundle transcripts where present.
-Passing proof: completed subbundle proof and semantic invariant contract are available.

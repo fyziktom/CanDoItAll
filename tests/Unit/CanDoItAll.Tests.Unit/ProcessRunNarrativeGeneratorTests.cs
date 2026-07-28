@@ -5,6 +5,8 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.SharedKernel.Streaming;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -262,12 +264,28 @@ public sealed class ProcessRunNarrativeGeneratorTests
         try
         {
             var lookupBarrier = new TwoWorkerLookupBarrier();
+            using var firstPreparationCache =
+                new AgentExecutionPreparationCache(
+                    AgentExecutionPreparationCachePolicy.Default);
+            using var firstProductionService =
+                CreateProductionWorkspaceService(
+                    firstStore,
+                    runtime,
+                    firstPreparationCache);
             var firstService = CreateAdversarialWorkspaceService(
-                CreateProductionWorkspaceService(firstStore, runtime),
+                firstProductionService,
                 lookupBarrier);
             var secondStore = new FileSandboxWorkspaceStore(workspace.Path);
+            using var secondPreparationCache =
+                new AgentExecutionPreparationCache(
+                    AgentExecutionPreparationCachePolicy.Default);
+            using var secondProductionService =
+                CreateProductionWorkspaceService(
+                    secondStore,
+                    runtime,
+                    secondPreparationCache);
             var secondService = CreateAdversarialWorkspaceService(
-                CreateProductionWorkspaceService(secondStore, runtime),
+                secondProductionService,
                 lookupBarrier);
             var referenceDataProvider = new FixedAgentReferenceDataProvider(now, [manager]);
             var firstGenerator = CreateGenerator(firstService, referenceDataProvider, now);
@@ -582,13 +600,26 @@ public sealed class ProcessRunNarrativeGeneratorTests
 
     private static AgentFrameworkWorkspaceService CreateProductionWorkspaceService(
         ISandboxWorkspaceStore store,
-        IAgentRuntime runtime)
+        IAgentRuntime runtime,
+        IAgentExecutionPreparationCache preparationCache)
     {
         return new AgentFrameworkWorkspaceService(
             store,
             new UnusedAgentPackageService(),
             runtime,
-            new UnusedCapabilityProofService());
+            new UnusedCapabilityProofService(),
+            NullLogger<AgentFrameworkWorkspaceService>.Instance,
+            new AgentExecutionActivityCoordinator(
+                new PartitionedSequencedStream<
+                    AgentExecutionActivityStreamId,
+                    AgentExecutionActivity>(
+                    PartitionedSequencedStreamPolicy.Default,
+                    TimeProvider.System),
+                TimeProvider.System),
+            AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
+                WorkspaceScopeDescriptor.Sandbox),
+            preparationCache,
+            new FixedAgentExecutionProfileGenerationSource(default));
     }
 
     private static IAgentFrameworkWorkspaceService CreateAdversarialWorkspaceService(

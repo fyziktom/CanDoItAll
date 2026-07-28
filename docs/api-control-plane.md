@@ -1,158 +1,121 @@
 # API Control Plane
 
-The current project, process, workflow, cognitive-memory, CRM-HR, and agent automation path is the CanDoItAll web-hosted HTTP API. The old Processes and ProjectStructure MCP servers are suppressed; use the API and the repo-managed `candoitall-api-*` skills for those surfaces.
+Last source review: 2026-07-28.
 
-## Host And Discovery
+The web-hosted HTTP API is the supported external automation boundary for CanDoItAll. Request and response schemas come from the running OpenAPI document; this page records the durable route families and operating rules.
 
-Start the web host:
+## Start And Discover
+
+From the repository root:
 
 ```powershell
-dotnet run --project src/App/CanDoItAll.Web
+dotnet run --project src/App/CanDoItAll.Web/CanDoItAll.Web.csproj
 ```
 
-Development readiness is exposed at `/_dev/runtime`. API status is exposed at `GET /api/access/status` when the API is enabled.
+The default development profile listens on `http://localhost:5032`.
 
-OpenAPI JSON is mapped by the web host through `MapOpenApi()` and the Swagger-compatible JSON route `/swagger/{documentName}/swagger.json` when `Api:OpenApiEnabled` is true.
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /_dev/runtime` | Local runtime readiness and diagnostics. |
+| `GET /api/access/status` | API enablement and authorization status. This endpoint is anonymous. |
+| `GET /openapi/v1.json` | OpenAPI document when `Api:OpenApiEnabled` is enabled. |
+| `GET /swagger/v1/swagger.json` | Swagger-compatible alias for the same document. |
 
-## Access Settings
+OpenAPI endpoints require authorization when API authorization is enabled.
 
-API settings live under the `Api` configuration section:
+## Access Configuration
 
-| Setting | Default | Purpose |
+Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettings.json).
+
+| Setting | Default | Meaning |
 | --- | --- | --- |
-| `Api:Enabled` | `true` | Enables the `/api` route group. |
-| `Api:OpenApiEnabled` | `true` | Enables OpenAPI JSON endpoints. |
-| `Api:Authorization:Enabled` | `false` | Requires bearer authorization for API route groups when true. |
+| `Api:Enabled` | `true` | Maps the main `/api` route families. |
+| `Api:OpenApiEnabled` | `true` | Maps the OpenAPI endpoints. |
+| `Api:Authorization:Enabled` | `false` | Requires bearer authorization for the API groups when enabled. |
 | `Api:Authorization:Issuer` | `CanDoItAll.Api` | JWT issuer. |
 | `Api:Authorization:Audience` | `CanDoItAll.Api` | JWT audience. |
-| `Api:Authorization:SigningKey` | empty | HS256 signing key; must be at least 32 UTF-8 bytes when authorization is enabled. |
-| `Api:Authorization:DefaultTokenLifetimeMinutes` | `480` | Default issued token lifetime. |
-| `Api:Authorization:MaxTokenLifetimeMinutes` | `1440` | Maximum issued token lifetime. |
+| `Api:Authorization:SigningKey` | empty | HS256 key; at least 32 UTF-8 bytes when authorization is enabled. |
+| `Api:Authorization:DefaultTokenLifetimeMinutes` | `480` | Default issued-token lifetime. |
+| `Api:Authorization:MaxTokenLifetimeMinutes` | `1440` | Maximum issued-token lifetime. |
 
-`GET /api/access/status` is anonymous. If bearer authorization is enabled, create tokens through the Settings UI or an already-authorized administrative path. Do not put signing keys or bearer tokens in tracked files.
+The Project Structure API is mapped separately from `Api:Enabled`, but it applies the same authorization switch. The development default of open access is not suitable for a remotely reachable deployment. Keep signing keys and bearer tokens out of tracked files and logs.
 
-## Route Families
+## Current Route Families
 
-All routes below are source-grounded in `src/App/CanDoItAll.Web/Api` and `src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs`.
+The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs); Project Structure is registered from [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs).
 
-### Projects
+| Base path | Responsibility | Source |
+| --- | --- | --- |
+| `/api/access` | API status and token issue. | [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs) |
+| `/api/projects` | Project records, access items, hierarchy, and subproject relationships. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
+| `/api/project-structure` | Structure reads and mutations, tasks, process/workflow node operations, assets, imports, leases, knowledge, and analytics. | [`ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs) |
+| `/api/agents` | Agent, provider, capability, memory, chat, execution, approval, artifact, receipt, checkpoint, log, metric, and runtime-snapshot operations. | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
+| `/api/agent-recruiting` | Candidate interviews, attempts, human reviews, interview history, and readiness. | [`AgentRecruitingApi.cs`](../src/App/CanDoItAll.Web/Api/AgentRecruitingApi.cs) |
+| `/api/prompt-gallery` | Prompt Gallery search, artifacts, versions, review, and application. | [`PromptGalleryApi.cs`](../src/App/CanDoItAll.Web/Api/PromptGalleryApi.cs) |
+| `/api/workflows` | Workflow settings, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
+| `/api/processes` | Process launch, dispatch, operator actions, live projections, durable run records, graphs, and analytics. | [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs) |
+| `/api/cognitive-memory` and `/api/cognitive-memory/v1` | Retired compatibility surfaces. | [`CognitiveMemoryApi.cs`](../src/App/CanDoItAll.Web/Api/CognitiveMemoryApi.cs) |
+| `/api/plugins` | Plugin catalog, configuration, and runtime operations. | [`PluginsApi.cs`](../src/App/CanDoItAll.Web/Api/PluginsApi.cs) |
+| `/api/crm-hr` | CRM, workforce, recruiting, capacity, and relationship operations. | [`CrmHrApi.cs`](../src/App/CanDoItAll.Web/Api/CrmHrApi.cs) |
 
-Use `/api/projects` for project records and hierarchy:
+Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
 
-- list, create, read, update, and delete project records
-- list access items and hierarchy links
-- read project hierarchy
-- attach, detach, and reconnect subprojects
+## Process Contract
 
-### Project Structure
+`GET /api/processes/contract` returns the current process route contract. The source-backed routes are:
 
-Use `/api/project-structure` for agent-oriented structure operations:
+| Method | Route | Use |
+| --- | --- | --- |
+| `GET` | `/api/processes/contract` | Discover the route contract. |
+| `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
+| `POST` | `/api/processes/launch` | Create and optionally queue a durable run. |
+| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work. |
+| `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
+| `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
+| `GET` | `/api/processes/live` | Read live run projections. |
+| `GET` | `/api/processes/runs` | Search durable run records. |
+| `GET` | `/api/processes/runs/analytics` | Aggregate durable run records. |
+| `GET` | `/api/processes/runs/{runId}` | Read the live/detail projection. |
+| `GET` | `/api/processes/runs/{runId}/summary` | Read durable facts and the bounded narrative summary. |
+| `GET` | `/api/processes/runs/{runId}/graph` | Read a paged run graph. |
+| `GET` | `/api/processes/runs/{runId}/history` | Read timeline history. |
 
-- node catalog and project list
-- structure read
-- node create, update, type, metadata, status, progress, markers, priority, move, recompose, reparent, command, and delete
-- process-definition and process-start operations from nodes
-- approvals, checklists, dependencies, links, assets, revisions, imports, knowledge queries, leases, and analytics
+`launch/check` is non-mutating. `launch` persists the run when readiness permits; `execute: false` prevents immediate dispatch queueing but does not turn the launch into a dry run. See the [operator runbook](process-agent-operator-runbook.md) for triage and configuration.
 
-Acquire a lease before mutating shared project structure. Prefer focused reads after mutations.
+## Retired Cognitive Memory API
 
-### Processes
+The base host no longer registers the legacy in-process Cognitive Memory module or Qdrant/RAG integration.
 
-Use `/api/processes` for the current process runtime control plane. The source-grounded route set is intentionally smaller than older process-rewrite docs:
+- `GET /api/cognitive-memory/contract` and `GET /api/cognitive-memory/v1/contract` return the `retired-v1` contract.
+- Every other request under either base path returns `410 Gone` with migration guidance.
+- Generic memory is configured through provider profiles and operated from the `/memory` UI and registered memory runtime tools.
+- Use the native remote memory provider only when a separate native Cognitive Memory service is deployed.
 
-- `GET /api/processes/contract`
-- `POST /api/processes/launch/check`
-- `POST /api/processes/launch`
-- `POST /api/processes/runs/{runId}/dispatch`
-- `POST /api/processes/runs/{runId}/cancel`
-- `POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework`
-- `GET /api/processes/live`
-- `GET /api/processes/runs/{runId}`
-- `GET /api/processes/runs/{runId}/history`
+See [Memory providers](cognitive-memory/README.md) for the current boundary.
 
-Definition authoring, template import/export, artifact/assignment detail, escalations, direct messages, approvals, manager directives, and analytics are not currently exposed by `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`. Do not document or call those as current HTTP routes until they are reintroduced with typed handlers and tests.
+## HTTP APIs Versus Runtime Tools
 
-Use `POST /api/processes/launch/check` for non-mutating launch preflight. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only prevents immediate dispatch queueing.
+An HTTP route is not automatically available as an in-agent tool. Runtime tools are attached through MAF built-ins, capability descriptors, MCP/A2A integrations, provider-native tools, or one of the registered `IAgentRuntimeToolProvider` implementations. The current first-party providers cover Memory, Project Structure, Image Generation, Workflow, Prompt Gallery, Prompts Curator, Workflow Curator, Capability Curator, HR, and Scheduler.
 
-For source-level details, use [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md).
+Attachment remains subject to execution purpose, agent permissions, assigned capabilities, project/process scope, and invocation policy. See [Agent runtime tool surface](agent-runtime-tool-surface.md).
 
-### Agents
+## Operator Skills
 
-Use `/api/agents` for AgentFramework catalog, provider, capability, chat, and execution operations:
+Reusable `candoitall-api-*` skills are maintained in the canonical [CanDoItAll.SharedInfo skill source](https://github.com/fyziktom/CanDoItAll.SharedInfo/tree/main/codex/skills). The local `codex/skills` tree is not the maintained source.
 
-- agents: list, bootstrap, editor read, save, delete, clone, convert to template, export, import
-- providers: list, editor read, save, delete, test, test-chat, Ollama modelfile
-- capabilities: list, editor read, save, delete, tool setup tests, MCP setup tests, and access previews
-- memory
-- chat sessions and chat workspace
-- execution runs, pending approvals, artifacts, checkpoints, tool receipts, logs, metrics, approvals, runtime snapshots
+For every mutation:
 
-Validate execution by reading run detail, artifacts, tool receipts, checkpoints, and metrics. A single status field is not enough for process-critical work.
-
-Use capability setup tests for external tool and MCP descriptors before enabling them for agents or process roles. MCP setup tests start the descriptor, list tools, compare allowed tools, and clean up the runtime client; failures should be repaired from typed diagnostic fields rather than interpreted as generic setup errors.
-
-Provider behavior is part of this surface. Current provider profiles include private-provider flags, per-model token prices, tags, native hosted tool support, local MCP support, image generation support, structured output support, and reasoning-effort policy for OpenAI-like Responses models. See [Provider capability and pricing](provider-capability-and-pricing.md).
-
-### Workflows
-
-Use `/api/workflows` for workflow settings, executor catalog, definitions, versions, components, test runs, runtime runs, external requests, artifacts, checkpoints, events, analytics, and contract discovery.
-
-Start workflow clients with `GET /api/workflows/contract` for the route list and boundary summary, then use OpenAPI for request and response schemas.
-
-Runtime runs can be started through `/api/workflows/runs/start` or from a definition version. `WorkflowRunStartApiRequest` supports `workflowId`, `versionId`, `inputJson`, `requestedBackend`, `sourceProcessRunId`, and `sourceProcessAssignmentId`. The source-process fields are important when workflow activity is part of a process run.
-
-### Cognitive Memory
-
-Use `/api/cognitive-memory` for project-scoped source ingestion, consolidation, review, recall, probing, self-regulation, learning proposals, cross-project promotion, and distributed memory jobs. Start with [Cognitive Memory API](cognitive-memory/operations/api.md) for the current route list and [Cognitive Memory stage assessment](cognitive-memory/current-state/stage-assessment.md) before treating a behavior as beta-ready.
-
-Important operating rule: Qdrant/RAG is a rebuildable projection. Durable memory facts, source evidence, claims, review decisions, traces, and proposals live in the active `AppDbContext` profile.
-
-New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitive-memory` routes remain available for compatibility.
-
-### CRM-HR
-
-Use `/api/crm-hr` for the seedable CRM-HR control-plane slice:
-
-- source-paged party and workforce discovery
-- safe party creation and explicit relationship management
-- workforce profiles, skill definitions, party skills, and capacity blocks
-- source-paged recruitment applications, aggregate recruitment workspaces, interviews, lifecycle tasks, support assignments, and candidate conversion
-
-The Web handlers are transport adapters over CRM-HR application services. They do not expose a seed endpoint and do not write the database directly. Demonstration scenarios must use normal resource commands with search-before-create identity reconciliation.
-
-Sensitive party collection rows keep their existing redaction behavior. Detail/workspace responses are explicit-id operations and can include HR data; remotely reachable deployments must enable API bearer authorization before exposing this family. JWT `scope`/`scopes` claims are currently token metadata, not route policies, so do not describe them as CRM-HR authorization enforcement.
-
-See [CRM-HR API](crm-hr-api.md) and the [CRM-HR API skill](../codex/skills/candoitall-api-crmhr/SKILL.md).
-
-### Plugins And Projects
-
-`/api/projects` record commands are covered by the Project Structure API skill because project records and structure operations are normally used together. `/api/plugins` does not currently have a dedicated repo-managed API skill; use OpenAPI plus `src/App/CanDoItAll.Web/Api/PluginsApi.cs` until a dedicated skill is justified.
-
-### Internal Agent Tools
-
-The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Current registered first-party runtime tool providers include project-structure tools from Workbench and image-generation tools from the AgentFramework module. A concrete direct process runtime tool provider is not present in the current source tree; process control currently goes through `/api/processes`, governed process execution adapters, and project-structure bridge tools that can link and start processes. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for current direct tools and HTTP-only operations.
-
-## Development Workflow
-
-1. Start the web app and confirm `/_dev/runtime`.
-2. Check `GET /api/access/status`.
-3. Inspect OpenAPI JSON for exact request and response shapes.
-4. Use the relevant repo-managed skill:
-   - [Project Structure API skill](../codex/skills/candoitall-api-project-structure/SKILL.md)
-   - [Processes API skill](../codex/skills/candoitall-api-processes/SKILL.md)
-   - [Agents API skill](../codex/skills/candoitall-api-agents/SKILL.md)
-   - [Workflows API skill](../codex/skills/candoitall-api-workflows/SKILL.md)
-   - [Cognitive Memory API skill](../codex/skills/candoitall-api-cognitive-memory/SKILL.md)
-   - [CRM-HR API skill](../codex/skills/candoitall-api-crmhr/SKILL.md)
-5. Make the smallest focused API call.
-6. Read back the changed resource or run evidence route.
+1. Inspect OpenAPI for the exact request type.
+2. Make the smallest focused call.
+3. Read back the affected resource, run record, artifact, or receipt.
+4. Treat a transport success without durable readback as incomplete evidence.
 
 ## Validation
 
-For API behavior changes, add focused tests around the owning service and the API route family. For documentation-only changes, run:
+For documentation-only changes:
 
 ```powershell
 git diff --check
 ```
 
-Use the stable test gate from [testing.md](testing.md) when source code changes affect runtime behavior.
+For API behavior changes, add focused route and application-service tests, then use the stable repository gate in [Testing](testing.md).

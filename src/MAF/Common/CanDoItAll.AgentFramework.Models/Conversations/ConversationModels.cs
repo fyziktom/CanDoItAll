@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -356,7 +357,7 @@ public sealed record ExecutionInvocationPolicy(
 public sealed record AgentRuntimeInputAttachment(
     string Name,
     string ContentType,
-    byte[] Bytes,
+    ImmutableArray<byte> Bytes,
     string SourcePath);
 
 public sealed record AgentRuntimeExecutionOptions(
@@ -374,6 +375,9 @@ public sealed record AgentRuntimeExecutionOptions(
     IReadOnlyList<AgentRuntimeInputAttachment>? InputAttachments = null)
 {
     [JsonIgnore]
+    public AgentExecutionOperationId? ActivityOperationId { get; init; }
+
+    [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
 }
 
@@ -381,7 +385,8 @@ public sealed record AgentRuntimeTransientContext
 {
     public AgentRuntimeTransientContext(
         string content,
-        WorkspaceScopeDescriptor? workspaceScope = null)
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? attachments = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
         var normalizedContent = content.Trim();
@@ -394,11 +399,25 @@ public sealed record AgentRuntimeTransientContext
 
         Content = normalizedContent;
         WorkspaceScope = workspaceScope;
+        Attachments = attachments?.ToImmutableArray() ?? [];
     }
 
     public string Content { get; }
 
     public WorkspaceScopeDescriptor? WorkspaceScope { get; }
+
+    [JsonIgnore]
+    public ImmutableArray<AgentChatContextAttachmentEnvelope> Attachments { get; }
+
+    public ImmutableArray<AgentChatContextAttachmentEnvelope>
+        GetAttachments<TAttachment>()
+        where TAttachment : class, IAgentChatContextAttachment
+    {
+        return Attachments
+            .Where(static attachment =>
+                attachment.AttachmentType == typeof(TAttachment))
+            .ToImmutableArray();
+    }
 }
 
 public sealed record AgentRuntimeHandoffExecutionOptions(
@@ -455,7 +474,11 @@ public sealed record ExecutionRunRecord(
     bool StructuredOutputSchemaStrict = false,
     string StructuredOutputRawOutput = "",
     string StructuredOutputValidationStatus = "",
-    string StructuredOutputValidationErrorsJson = "[]");
+    string StructuredOutputValidationErrorsJson = "[]")
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentExecutionOperationId? InitialActivityOperationId { get; init; }
+}
 
 public sealed record ExecutionApprovalRecord(
     string ApprovalId,
@@ -473,6 +496,7 @@ public sealed record ExecutionApprovalRecord(
     string DecisionNotes);
 
 public sealed record AgentChatRunOptions(
+    AgentExecutionOperationId InitialActivityOperationId,
     bool RuntimeToolProvidersEnabled = true,
     bool WorkspaceToolsEnabled = true)
 {
@@ -487,6 +511,7 @@ public sealed record AgentChatRunOptions(
 public sealed record ExecutionRunRequest(
     Guid AgentId,
     string Prompt,
+    AgentExecutionOperationId InitialActivityOperationId,
     Guid? ChatSessionId = null,
     ExecutionInvocationContext? Context = null,
     bool AutoApprovePendingToolCalls = false,

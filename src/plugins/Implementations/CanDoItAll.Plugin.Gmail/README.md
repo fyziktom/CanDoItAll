@@ -14,25 +14,9 @@ Bundled Gmail plugin for workflow executors that download messages by label and 
 dotnet build src/plugins/Implementations/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../../CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj`
-- `../../CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj`
-- `../../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../CanDoItAll.Plugin.Email/CanDoItAll.Plugin.Email.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.Extensions.DependencyInjection.Abstractions (10.0.7)`
-- `Microsoft.Extensions.Http (10.0.7)`
+The authoritative project and package dependency list is in [CanDoItAll.Plugin.Gmail.csproj](CanDoItAll.Plugin.Gmail.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

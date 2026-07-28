@@ -14,29 +14,13 @@ Product module for parties, CRM accounts, recruiting, workforce/staffing, AI-age
 dotnet build src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
-- `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
-- `../CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.AspNetCore.Components.Web (10.0.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Modules.CrmHr.csproj](CanDoItAll.Modules.CrmHr.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
+This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
 Directory, Workforce, CRM, and Recruiting use the shared typed `PagedRecordBrowser`; party-backed routes compose it through the module-owned `PartyRecordBrowser` adapter. Queries perform source paging with deterministic ordering, the route catalogue owns an opt-in bounded card-results scroll, and complete record workspaces open in controlled full-size dialogs without displacing or recreating the catalogue. Recruiting separates application, interview, lifecycle, and conversion work into server-rendered dialog tabs. Picker-dialog consumers keep the browser's default non-bounded scroll behavior.
 

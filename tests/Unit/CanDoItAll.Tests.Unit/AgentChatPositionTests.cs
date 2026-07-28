@@ -51,14 +51,19 @@ public sealed class AgentChatPositionTests
         Assert.Equal(projectId.ToString("D"), snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
 
         var agentId = Guid.NewGuid();
+        var operationId = AgentExecutionOperationId.New();
         var invocation = AgentChatContextInvocationFactory.Create(
             snapshot,
             agentId,
             chatSessionId: null,
-            "Summarize my current selection.");
+            "Summarize my current selection.",
+            operationId,
+            new DatabaseProfileGeneration(0),
+            DateTimeOffset.UtcNow);
 
         var transientContext = Assert.IsType<AgentRuntimeTransientContext>(
             invocation.Options.TransientContext);
+        Assert.Equal(operationId, invocation.Options.InitialActivityOperationId);
         Assert.Contains("route:projects", transientContext.Content, StringComparison.Ordinal);
         Assert.Contains(projectId.ToString("D"), transientContext.Content, StringComparison.Ordinal);
         Assert.Contains("Delivery", transientContext.Content, StringComparison.Ordinal);

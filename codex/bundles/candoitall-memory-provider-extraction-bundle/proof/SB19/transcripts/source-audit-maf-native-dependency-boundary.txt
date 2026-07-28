@@ -1,3 +1,0 @@
-Command: rg "CanDoItAll\.Modules\.CognitiveMemory|CanDoItAll\.CognitiveMemory|CognitiveMemory[A-Za-z]|ICognitiveMemory|Qdrant" src\MAF src\Modules\CanDoItAll.Modules.AgentFramework -g"*.cs" -g"*.csproj" -n
-rg exit code: 1
-Result: PASS - no native Cognitive Memory or Qdrant references in MAF/generic AgentFramework memory integration sources.

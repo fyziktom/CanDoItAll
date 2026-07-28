@@ -14,24 +14,13 @@ Product module for app security surfaces and security-related runtime services.
 dotnet build src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.Modules.Security.csproj](CanDoItAll.Modules.Security.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 
-This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. MCP projects should call into these services instead of duplicating module logic.
+This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
 ## Related Docs
 

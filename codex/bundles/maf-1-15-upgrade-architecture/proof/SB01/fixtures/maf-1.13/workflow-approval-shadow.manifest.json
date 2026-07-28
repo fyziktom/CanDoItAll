@@ -1,0 +1,16 @@
+{
+  "fixtureId": "maf-1.13-workflow-approval-shadow",
+  "sourceFrameworkVersion": "1.13.0",
+  "targetFrameworkVersion": "1.15.0",
+  "fixtureKind": "workflow-checkpoint",
+  "historyMode": "workflow",
+  "hasPendingApprovals": true,
+  "pendingApprovalCount": 1,
+  "containsRequestScopedAttachments": false,
+  "sanitized": true,
+  "sha256": "21f8851445db640646a6484b19cad1aa6e9a537e06c70d5fc6538dbeb13631d1",
+  "createdAtUtc": "2026-07-28T05:05:01Z",
+  "sourceCommit": "797d7ce11205d630756ec9335b1b84295257a315",
+  "expectedTargetOutcome": "approval-reissue",
+  "notes": "App-owned StoredExecutionCheckpointPayload shadow only. Native 1.13 workflow checkpoint resume is inactive, so direct native resume is not asserted."
+}

@@ -1,0 +1,18 @@
+Evidence: SB02-INV-03, SB02-INV-04, SB02-INV-06
+Run label: SB02 affected Web host build
+Working directory: C:\repositories\CanDoItAll
+Command:
+dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore -nologo -v:minimal -m:1 -p:UseSharedCompilation=false
+
+Exit code: 0
+Process wall time: 20.62 seconds
+
+Result:
+- Build succeeded.
+- Warnings: 125
+- Errors: 0
+
+Warning boundary:
+The 125 warnings are existing NU1903 advisories for
+`System.Security.Cryptography.Xml` `10.0.7`. SB02 does not suppress them and does not
+claim to have resolved them.

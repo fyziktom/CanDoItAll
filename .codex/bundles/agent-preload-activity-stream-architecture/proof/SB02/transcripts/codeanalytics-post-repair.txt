@@ -1,0 +1,69 @@
+Run label: SB02 post-repair scoped architecture snapshot
+Solution: C:\repositories\CanDoItAll\CanDoItAll.slnx
+Snapshot: snap-20260727180924-829a813d
+Created UTC: 2026-07-27T18:09:24.390025+00:00
+Snapshot-build correlation: code-analytics_7ddf04edcc164d169e46758e3fb6f64b
+Command: read-only CodeAnalytics MCP snapshot and query batch documented below
+ExitCode: 0 — MCP batch completion metadata; this was not an OS process
+
+Options:
+- force refresh: true
+- dependency injection: enabled
+- persistence: disabled
+- risks: enabled
+- XML documentation: disabled
+- Mermaid exports: disabled
+
+Scope:
+- CanDoItAll.SharedKernel
+- CanDoItAll.AgentFramework.Models
+- CanDoItAll.AgentFramework.Core
+- CanDoItAll.AgentFramework.Hosting
+- CanDoItAll.Modules.AgentFramework
+- CanDoItAll.Web
+
+Result:
+- ok: true
+- blocking errors: false
+- projects: 6
+- source documents: 390
+- types: 1537
+- members: 13513
+- service registrations: 41
+- findings: 531
+- open questions: 10
+- diagnostics: 183
+
+Dependency result:
+- project-reference cycles: 0
+- module cycles: 1
+- type cycles: 1
+- the module/type cycle node ids are unchanged from the earlier scoped snapshot
+
+Service query:
+- correlation: code-analytics_798647a11b314f5a881e1eb9571679f6
+- `IAgentExecutionActivityReader` resolves as Scoped to
+  `CurrentProfileAgentExecutionActivityReader`
+- source: AgentFrameworkModuleServiceCollectionExtensions.cs:137
+- factory registrations remain partially interpreted (`DI0001`), so executable DI
+  tests remain the authoritative singleton-alias evidence
+
+Exact symbol queries:
+- CurrentProfileAgentFrameworkWorkspaceService:
+  code-analytics_abec0d0655e2443ea697af783d12c725
+- IsolatedCompatibilityEventDispatcher:
+  code-analytics_052a97c4efc14fb6b39979190b39ea0d
+- AgentExecutionActivityCoordinator:
+  code-analytics_472951332c0a48e59a9ae22ba4e83813
+- CurrentProfileAgentExecutionActivityReader:
+  code-analytics_ed07f3e1216440bb92d2c6ca7fc490c0
+- CanDoItAllAgentWorkspaceFactory:
+  code-analytics_30bdbf9c674c4afd8eb814a6540e5d4c
+
+All exact symbol queries returned `ok: true` and resolved the expected project and
+source path.
+
+Diagnostics are warnings. The leading diagnostics are duplicate generated embedded
+type names plus workspace-load NU1903 advisories for
+System.Security.Cryptography.Xml 10.0.7. No new blocking architecture diagnostic was
+reported.

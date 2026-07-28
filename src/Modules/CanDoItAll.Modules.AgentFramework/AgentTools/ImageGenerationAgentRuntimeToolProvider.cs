@@ -21,12 +21,12 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
     private readonly ImageGenerationToolBuilder toolBuilder;
 
     public ImageGenerationAgentRuntimeToolProvider(
-        IProviderProfileRegistry providerRegistry,
+        IProviderRuntimeProfileSource providerSource,
         IWorkspacePathResolver workspacePathResolver,
         IAgentImageGenerationService imageGenerationService,
         IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(providerRegistry);
+        ArgumentNullException.ThrowIfNull(providerSource);
         ArgumentNullException.ThrowIfNull(workspacePathResolver);
         ArgumentNullException.ThrowIfNull(imageGenerationService);
         ArgumentNullException.ThrowIfNull(services);
@@ -36,7 +36,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
         toolBuilder = new ImageGenerationToolBuilder(
             this,
-            providerRegistry,
+            providerSource,
             services.GetService<ProjectStructureAgentService>());
     }
 
@@ -65,11 +65,12 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
     private sealed class ImageGenerationToolBuilder(
         ImageGenerationAgentRuntimeToolProvider owner,
-        IProviderProfileRegistry providerRegistry,
+        IProviderRuntimeProfileSource providerSource,
         ProjectStructureAgentService? projectStructureAgentService)
     {
         private readonly ImageGenerationAgentRuntimeToolProvider owner = owner;
-        private readonly IProviderProfileRegistry providerRegistry = providerRegistry;
+        private readonly IProviderRuntimeProfileSource providerSource =
+            providerSource;
         private readonly ProjectStructureAgentService? projectStructureAgentService = projectStructureAgentService;
 
         public IReadOnlyList<AITool> CreateTools(AgentDefinition agent, ProviderProfile runtimeProvider)
@@ -83,11 +84,6 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             if (!agent.Permissions.CanUseTools)
             {
                 return [];
-            }
-
-            if (providerRegistry is null)
-            {
-                throw new InvalidOperationException("Image generation requires a provider-profile registry.");
             }
 
             return
@@ -164,7 +160,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             ProviderProfile runtimeProvider,
             CancellationToken cancellationToken)
         {
-            var providers = (await providerRegistry!.ListProvidersAsync(cancellationToken))
+            var providers = (await providerSource.ListProvidersAsync(cancellationToken))
                 .Select(ProviderFeatureService.NormalizeImportedProfile)
                 .ToList();
             var providerId = requestedProviderId ?? access.PreferredProviderProfileId;

@@ -1,1 +1,0 @@
-No SB12 implementation stubs, TODOs, NotImplementedException paths, or placeholder markers found in the new process/workflow adapter implementation surface.

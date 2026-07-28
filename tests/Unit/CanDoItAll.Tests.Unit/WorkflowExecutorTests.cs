@@ -2306,7 +2306,10 @@ public sealed class WorkflowExecutorTests
             => throw new NotSupportedException();
     }
 
-    private sealed class TestProviderProfileRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
+    private sealed class TestProviderProfileRegistry(
+        IReadOnlyList<ProviderProfile> providers) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
         {

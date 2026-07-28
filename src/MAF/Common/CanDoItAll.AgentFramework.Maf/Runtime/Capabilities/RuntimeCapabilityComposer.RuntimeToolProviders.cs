@@ -17,7 +17,8 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
         AgentRuntimeContextPolicyKind policyKind,
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent,
-        string runtimeSessionKey)
+        string runtimeSessionKey,
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments)
     {
         if (!contextIntent.RuntimeToolProvidersEnabled)
         {
@@ -45,7 +46,8 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             MapRuntimeToolProviderPurpose(policyKind),
             RuntimeSessionKey: runtimeSessionKey,
             effectiveContextIntent,
-            ResolveRuntimeToolProviderTags(contextWorkspaceScope));
+            ResolveRuntimeToolProviderTags(contextWorkspaceScope),
+            contextAttachments);
         var result = await runtimeToolProviderComposer.AttachAsync(
             new RuntimeToolProviderAttachmentRequest(
                 composition.State,

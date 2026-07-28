@@ -1,7 +1,0 @@
-Command: audit src\Memory for duplicate MemorySourceSnapshot contract family
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB05 source snapshot compatibility audit
-Invariant IDs: SB05_CP003
-ExitCode: 0
-Output:
-No second MemorySourceSnapshot record/class/provider family exists under src\Memory; generic memory continues to use CanDoItAll.AgentFramework.Core.MemorySourceSnapshot through the SB04 compatibility gateway.

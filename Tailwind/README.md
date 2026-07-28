@@ -1,35 +1,36 @@
-# CanDoItAll Main Tailwind
+# CanDoItAll Application Tailwind
 
-This workspace builds only main CanDoItAll app styles. Shared component styles are built in `C:\repositories\CanDoItAll.Components\Tailwind` and are delivered through the `CanDoItAll.Components.BaseLib` NuGet package.
+This workspace builds application-specific CanDoItAll styles. Shared component styles are owned by the sibling [CanDoItAll.Components](https://github.com/fyziktom/CanDoItAll.Components) repository and arrive through the `CanDoItAll.Components.BaseLib` package.
 
-Install dependencies:
+From the repository root, install this workspace's dependencies:
 
 ```powershell
-npm install
+npm install --prefix .\Tailwind
 ```
 
 Build once:
 
 ```powershell
-npm run build
+npm run tailwind:build
 ```
 
-Watch mode:
+Watch for changes:
 
 ```powershell
-npm run watch
+npm run tailwind:watch
 ```
 
-This workspace compiles to `src/App/CanDoItAll.Web/wwwroot/css/output.css`.
+The root commands delegate to the scripts in `Tailwind/package.json`. From this directory, the equivalent commands are `npm run build` and `npm run watch`.
 
-The web app loads styles in this order:
+The generated application stylesheet is:
+
+```text
+src/App/CanDoItAll.Web/wwwroot/css/output.css
+```
+
+The web host loads shared component CSS before this application stylesheet:
 
 1. `_content/CanDoItAll.Components.BaseLib/css/output.css`
 2. `css/output.css`
 
-From the repo root you can also run:
-
-```powershell
-npm run tailwind:build
-npm run tailwind:watch
-```
+Keep reusable component structure and styling in the owning Components package. Keep only application-specific composition and overrides here.

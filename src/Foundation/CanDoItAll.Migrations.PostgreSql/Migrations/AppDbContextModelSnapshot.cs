@@ -4936,6 +4936,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ConfigSchemaVersion")
                         .IsRequired()
                         .HasMaxLength(40)

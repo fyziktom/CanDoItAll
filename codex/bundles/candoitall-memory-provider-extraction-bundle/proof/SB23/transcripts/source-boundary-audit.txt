@@ -1,8 +1,0 @@
-Command: Historical SB23 proof transcript: source-boundary-audit.txt
-SB23 source boundary audit
-Scope: generic memory UI module, Memory.Application, Memory.Persistence, Memory.Abstractions production sources.
-Patterns: CanDoItAll.Modules.CognitiveMemory|CognitiveMemory|Qdrant|CanDoItAll.AgentFramework.Rag|OpenAI
-
-PASS: no native Cognitive Memory, Qdrant, OpenAI, or RAG references found in the scoped generic memory code.
-ExitCode: 0
-

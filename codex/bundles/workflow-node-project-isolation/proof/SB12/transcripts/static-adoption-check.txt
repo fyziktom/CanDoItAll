@@ -1,6 +1,0 @@
-SB12 static adoption check
-Timestamp: 2026-06-29T19:28:13.7265437-04:00
-
-PASS: No forbidden MAF workflow internals or removed built-in executor alias references in SB12 API/UI/Workbench source list.
-PASS: Workbench workflow-node browser proof is large-screen only; mobile/small viewport segment removed per instruction.
-PASS: Workflow UI/Workbench diagnostic display paths use WorkflowFailureDisplayFormatter.

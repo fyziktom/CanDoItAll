@@ -1,4 +1,0 @@
-Command: rg "CanDoItAll.Modules.CognitiveMemory|ICognitiveMemory|Qdrant|CognitiveMemory[A-Za-z]" src\Modules\CanDoItAll.Modules.AgentFramework\WorkflowExecutors src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs -n
-Expected: no matches. Lower-case legacy executor id strings are compatibility data, not native type/namespace coupling.
-
-No forbidden native memory references found.

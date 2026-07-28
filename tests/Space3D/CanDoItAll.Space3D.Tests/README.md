@@ -10,6 +10,6 @@ Space3D mouse driver unit tests kept with the Space3D solution so the main CanDo
 dotnet test tests/Space3D/CanDoItAll.Space3D.Tests/CanDoItAll.Space3D.Tests.csproj
 ```
 
-## References
+## Dependencies
 
-- `../../src/Space3D/Mouse/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj`
+The authoritative project and package dependency list is in [CanDoItAll.Space3D.Tests.csproj](CanDoItAll.Space3D.Tests.csproj). This README focuses on the project's purpose, boundaries, and validation.

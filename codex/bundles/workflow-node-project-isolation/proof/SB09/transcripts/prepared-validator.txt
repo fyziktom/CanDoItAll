@@ -1,8 +1,0 @@
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\workflow-node-project-isolation
-EXIT_CODE: 0
-
-Completed Validator Metadata Addendum
-Command: historical SB09 proof command recorded during bundle execution
-ExitCode: 0
-ExitCode: 1
-Invariant ID: SB09-final-closure

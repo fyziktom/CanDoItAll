@@ -1,103 +1,55 @@
-# Validation And Testing
+# Generic Memory Validation
 
-Run these commands from `C:\repositories\CanDoItAll` unless the command explicitly changes repository.
+Run commands from the repository root. Restore and build the solution first by following the [repository test gate](../../testing.md).
 
-## Release Gate
+## Focused Tests
 
-Generic memory runtime:
-
-```powershell
-dotnet test .\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --no-restore --logger "console;verbosity=normal"
-```
-
-MAF memory integration:
+Generic runtime and composition:
 
 ```powershell
-dotnet test .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~MemoryAgentRuntimeToolProviderTests|FullyQualifiedName~MemoryWorkflowExecutorTests|FullyQualifiedName~MemoryAgentContextContributorTests|FullyQualifiedName~MemoryMafIntegrationCheckpointTests" --logger "console;verbosity=normal"
+dotnet test .\tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj --configuration Release --no-build
 ```
 
-Generic memory component UI:
+MAF integration:
 
 ```powershell
-dotnet test .\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore --filter "FullyQualifiedName~MemoryProvider|FullyQualifiedName~MemoryUiRefactoringCheckpoint" --logger "console;verbosity=normal"
+dotnet test .\tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\CanDoItAll.AgentFramework.Memory.Tests.csproj --configuration Release --no-build
 ```
 
-Generic memory browser UI:
+Agent runtime compatibility:
 
 ```powershell
-dotnet test .\tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-restore --filter "FullyQualifiedName~MemoryProviderManagementPlaywrightTests" --logger "console;verbosity=normal"
+dotnet test .\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --no-build --filter "FullyQualifiedName~MemoryAgentRuntimeToolProviderTests|FullyQualifiedName~MemoryWorkflowExecutorTests|FullyQualifiedName~MemoryAgentContextContributorTests|FullyQualifiedName~MemoryMafIntegrationCheckpointTests"
 ```
 
-Database runtime switching:
+Component UI:
 
 ```powershell
-dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~DatabaseSwitchIntegrationTests" --logger "console;verbosity=normal"
+dotnet test .\tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --configuration Release --no-build --filter "FullyQualifiedName~MemoryProvider|FullyQualifiedName~MemoryUiRefactoringCheckpoint"
 ```
 
-Native Cognitive Memory service:
+Database switching:
 
 ```powershell
-dotnet build C:\repositories\CanDoItAll.CognitiveMemory\CanDoItAll.CognitiveMemory.slnx --no-restore --verbosity:minimal
-dotnet test C:\repositories\CanDoItAll.CognitiveMemory\tests\CanDoItAll.CognitiveMemory.Tests\CanDoItAll.CognitiveMemory.Tests.csproj --no-restore --logger "console;verbosity=normal"
+dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter "FullyQualifiedName~DatabaseSwitchIntegrationTests"
 ```
 
-Main solution:
+Run the Playwright project when a change affects `/memory`, provider-profile rendering, provider surfaces, or browser-visible error states:
 
 ```powershell
-dotnet build .\CanDoItAll.slnx --no-restore --verbosity:minimal
+dotnet test .\tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --configuration Release --no-build --filter "FullyQualifiedName~MemoryProviderManagementPlaywrightTests"
 ```
 
-Bundle validation:
+## Required Assertions
 
-```powershell
-python .\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed --repo-root . .\codex\bundles\candoitall-memory-provider-extraction-bundle
-```
+A memory change is not ready unless tests show that:
 
-## Source Audits
+- the base host starts without native Cognitive Memory, Qdrant, SemanticCompletion, or any enabled provider;
+- disabled or missing providers return typed diagnostics without fallback;
+- profile selection, agent binding order, and optional/required failure policy are deterministic;
+- provider data crosses Source Gateway and driver contracts rather than module persistence boundaries;
+- operation ownership prevents cross-agent, cross-session, workflow, or process status disclosure;
+- worker leases prevent concurrent ownership when background workers are enabled;
+- `/api/cognitive-memory` remains a retirement shim unless an intentional API decision changes that contract.
 
-Base host and generic memory paths must not depend on the retained native module, Qdrant RAG driver, or SemanticCompletion driver:
-
-```powershell
-rg -n "CanDoItAll.Modules.CognitiveMemory|AddCognitiveMemoryModule|CognitiveMemoryModuleAssemblyMarker|CanDoItAll.AgentFramework.Rag.Qdrant|CanDoItAll.AgentFramework.SemanticCompletion.Driver" .\src\App\CanDoItAll.Composition .\src\Memory .\src\Modules\CanDoItAll.Modules.Memory .\src\Modules\CanDoItAll.Modules.AgentFramework -g "*.cs" -g "*.csproj" -g "*.razor"
-```
-
-Retained native references must be classified as one of:
-
-- native service repository code;
-- retained legacy main-repo native module code;
-- retained legacy/native regression tests;
-- legacy main DB export/retirement artifacts;
-- historical documentation.
-
-Any direct reference from base composition, generic memory runtime, generic memory UI, or MAF memory integration to native Cognitive Memory implementation types is a release blocker.
-
-## Current Coverage Shape
-
-| Layer | Coverage |
-| --- | --- |
-| Generic memory | Provider profiles, registry selection, operation handler, runtime service, ledgers, workers, feedback, provider events, Source Gateway, manual ingestion, HTTP driver, MCP driver, native remote adapter, deterministic mock driver, retention, host-composition guards, end-to-end observability proof. |
-| MAF | Runtime tool provider, workflow executor, context contributor, source snapshot contracts, and process/workflow/source adapter paths. |
-| UI components | `/memory` provider list, profile editor, zero-provider state, query/feedback/ingestion/operations/event surfaces, provider UI surface projection. |
-| Playwright | Browser-visible `/memory` provider management, zero-provider state, query/context pack, feedback, manual ingestion, operations ledger, RCL/iframe fallback, and mobile checkpoints. |
-| Integration | Database runtime switching with generic memory persistence registered. |
-| Native service | Native repo solution build and native service tests. |
-| Legacy main DB | Export service and no-op retirement migration coverage. |
-
-## Browser Validation Policy
-
-Run Playwright when a change touches:
-
-- `/memory` UI or CSS;
-- provider profile rendering or selection UX;
-- provider UI surface projection;
-- browser-visible zero-provider, feedback, ingestion, operations, or event behavior.
-
-SB34 is documentation and release-gate work, so it does not require new screenshots unless a browser-visible source file changes. The final proof can reference the SB33 browser screenshots for full `/memory` behavior.
-
-## Historical Native Validation
-
-Older documents in this folder describe P0/P1 native Cognitive Memory validation, including Qdrant-backed recall and the legacy `/api/cognitive-memory` route family. Treat those as native-provider history. Current base-host release proof is the generic Memory Provider release gate above.
-
-## Failure Handling
-
-Do not continue the release gate after a failed command unless the failure is classified and fixed or explicitly deferred in the execution report with owner, risk, and follow-up bundle. Existing NuGet vulnerability/source warnings may be recorded as non-blocking only when the command exits successfully.
+The separately owned native service has its own build, test, deployment, and provider validation. Do not treat its historical tests or the retained legacy module as part of the base-host release gate.

@@ -1,3 +1,0 @@
-Command: rg "IMemoryProviderRegistry|IMemoryProviderDriver|MemoryProviderRegistry|MemoryProviderDriver" src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools src\Modules\CanDoItAll.Modules.AgentFramework\WorkflowExecutors src\Modules\CanDoItAll.Modules.AgentFramework\Context src\Modules\CanDoItAll.Modules.AgentFramework\MemoryIntegration -n
-rg exit code: 1
-Result: PASS - no direct provider registry or driver dispatch in MAF memory entry points or shared helpers.

@@ -1,0 +1,31 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "governed-process-step-isolated-session",
+  "contextIntent": {
+    "sourceKind": "process-step",
+    "sourceId": "add-test-project",
+    "processRunId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "processStepId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "targetScope": "ExternalProductTargetMutable",
+    "isGovernedProcessStep": true
+  },
+  "persistedChatTranscript": [
+    {
+      "role": "User",
+      "content": "Unrelated prior chat content that must not enter the governed step."
+    }
+  ],
+  "preparedPrompt": "Execute only the governed fixture step.",
+  "expectedInputMessages": [
+    {
+      "role": "user",
+      "text": "Execute only the governed fixture step."
+    }
+  ],
+  "expectedTargetBehavior": {
+    "outcome": "native-restore",
+    "usesPriorChatTranscript": false,
+    "serializesRuntimeSessionWithoutPendingApproval": false
+  }
+}

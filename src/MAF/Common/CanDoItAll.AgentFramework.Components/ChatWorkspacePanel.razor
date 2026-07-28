@@ -272,6 +272,12 @@
         }
     </div>
 
+    @if (ActivityStreamId is not null)
+    {
+        <AgentExecutionActivityStatus @key="ActivityStreamId"
+                                      StreamId="@ActivityStreamId" />
+    }
+
     <div class="chat-composer-panel">
         <FormField>
             <div class="chat-composer">
@@ -453,6 +459,9 @@
 
     [Parameter]
     public string PendingUserPrompt { get; set; } = string.Empty;
+
+    [Parameter]
+    public AgentExecutionActivityStreamId? ActivityStreamId { get; set; }
 
     [Parameter]
     public IReadOnlyList<string> DraftAttachmentPaths { get; set; } = [];

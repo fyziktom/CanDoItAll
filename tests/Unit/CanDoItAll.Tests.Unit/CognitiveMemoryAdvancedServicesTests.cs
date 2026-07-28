@@ -3495,19 +3495,19 @@ public sealed class CognitiveMemoryAdvancedServicesTests
         public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default)
             => NotSupported<ChatSessionRecord>();
 
-        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, AgentExecutionOperationId activityOperationId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
             => NotSupported<ExecutionRunResult>();
 
         public Task<AgentChatRunResult> SendMessageAsync(
             Guid agentId,
             Guid? chatSessionId,
             string prompt,
+            AgentChatRunOptions options,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<string>? attachmentPaths = null,
-            AgentChatRunOptions? options = null)
+            IReadOnlyList<string>? attachmentPaths = null)
             => NotSupported<AgentChatRunResult>();
 
-        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, AgentExecutionOperationId activityOperationId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
             => NotSupported<AgentChatRunResult>();
 
         public Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)

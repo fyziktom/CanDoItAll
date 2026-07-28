@@ -19,24 +19,60 @@ public static class AgentChatContextInvocationFactory
         AgentChatContextSnapshot? context,
         Guid agentId,
         Guid? chatSessionId,
-        string prompt)
+        string prompt,
+        AgentExecutionOperationId initialActivityOperationId,
+        DatabaseProfileGeneration currentDatabaseProfileGeneration,
+        DateTimeOffset nowUtc)
+    {
+        return Create(
+            context,
+            agentId,
+            chatSessionId,
+            prompt,
+            initialActivityOperationId,
+            currentDatabaseProfileGeneration,
+            nowUtc,
+            AgentChatExecutionBehavior.Default);
+    }
+
+    public static AgentChatContextInvocation Create(
+        AgentChatContextSnapshot? context,
+        Guid agentId,
+        Guid? chatSessionId,
+        string prompt,
+        AgentExecutionOperationId initialActivityOperationId,
+        DatabaseProfileGeneration currentDatabaseProfileGeneration,
+        DateTimeOffset nowUtc,
+        AgentChatExecutionBehavior behavior)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+        ArgumentNullException.ThrowIfNull(behavior);
+        if (initialActivityOperationId.Value == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "An initial activity operation id is required.",
+                nameof(initialActivityOperationId));
+        }
+
         var normalizedPrompt = prompt.Trim();
         var transientContext = AgentChatContextContributionComposer.Compose(
             context,
             agentId);
+        AgentChatContextAttachmentFreshnessPolicy.EnsureCurrent(
+            context,
+            currentDatabaseProfileGeneration,
+            nowUtc);
         if (context is null)
         {
             return new AgentChatContextInvocation(
                 normalizedPrompt,
-                new AgentChatRunOptions());
+                CreateRunOptions(initialActivityOperationId, behavior));
         }
 
         var access = context.FindAccess(agentId);
         var contextDigest = transientContext is null
             ? string.Empty
-            : AgentChatContextDigest.Compute(transientContext.Content);
+            : AgentChatContextDigest.Compute(transientContext);
         var metadataJson = JsonSerializer.Serialize(
             new InvocationMetadata(
                 MetadataSchema,
@@ -69,11 +105,24 @@ public static class AgentChatContextInvocationFactory
 
         return new AgentChatContextInvocation(
             normalizedPrompt,
-            new AgentChatRunOptions
+            CreateRunOptions(initialActivityOperationId, behavior) with
             {
                 Context = invocationContext,
                 TransientContext = transientContext
             });
+    }
+
+    private static AgentChatRunOptions CreateRunOptions(
+        AgentExecutionOperationId initialActivityOperationId,
+        AgentChatExecutionBehavior behavior)
+    {
+        return new AgentChatRunOptions(
+            initialActivityOperationId,
+            behavior.RuntimeToolProvidersEnabled,
+            behavior.WorkspaceToolsEnabled)
+        {
+            ToolCapabilitiesEnabled = behavior.ToolCapabilitiesEnabled
+        };
     }
 
     public static AgentChatExecutionCompleted? CreateCompletionNotification(

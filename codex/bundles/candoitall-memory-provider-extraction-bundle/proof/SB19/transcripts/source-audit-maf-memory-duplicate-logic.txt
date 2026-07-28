@@ -1,3 +1,0 @@
-Command: rg "private sealed record MemoryProviderPolicyResolution|private static MemoryContextQueryToolResult MapQueryResult|private static MemoryIngestTextToolResult MapIngestionResult|private static MemoryFeedbackSubmitToolResult MapFeedbackResult" src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\MemoryAgentRuntimeToolProvider.cs src\Modules\CanDoItAll.Modules.AgentFramework\WorkflowExecutors\MemoryWorkflowExecutor.cs src\Modules\CanDoItAll.Modules.AgentFramework\Context\MemoryAgentContextContributor.cs -n
-rg exit code: 1
-Result: PASS - duplicate local policy/result shaper blocks are absent from MAF memory entry points.

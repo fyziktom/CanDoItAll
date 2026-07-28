@@ -14,30 +14,9 @@ Composition root for runtime modules, shared services, infrastructure, provider 
 dotnet build src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj`
-- `../CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
-- `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
-- `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
-- `../CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
-- `../CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj`
-- `../CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
-- `../CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj`
-- `../CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
-- `../CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj`
-- `../CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.Composition.csproj](CanDoItAll.Composition.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

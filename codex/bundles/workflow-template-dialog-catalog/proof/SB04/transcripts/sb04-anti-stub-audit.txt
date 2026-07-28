@@ -1,8 +1,0 @@
-Command: SB04 anti-stub audit
-No production stubs, TODO placeholders, mock catalogue fixtures, or fake canvas renderers were introduced.
-Preview uses CanvasWorkbench and the real workflow template pack; add-to-drafts uses the existing persistence services.
-Invariant ID: SB04-INV-001
-Invariant ID: SB04-INV-002
-Invariant ID: SB04-INV-003
-Invariant ID: SB04-INV-004
-ExitCode: 0

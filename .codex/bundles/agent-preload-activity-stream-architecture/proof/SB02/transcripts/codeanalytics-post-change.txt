@@ -1,0 +1,93 @@
+Evidence: SB02-INV-03, SB02-INV-04
+Run label: SB02 scoped post-change CodeAnalytics review
+Working directory: C:\repositories\CanDoItAll
+Snapshot ID: snap-20260727170126-829a813d
+Snapshot created UTC: 2026-07-27T17:01:26.2372566Z
+Command: read-only CodeAnalytics MCP request batch documented inline below
+ExitCode: 0 — MCP batch completion metadata; this was not an OS process
+
+Tool request:
+code_analytics_dashboard_get({
+  snapshotId: "snap-20260727170126-829a813d",
+  recentTake: 3
+})
+
+Tool result:
+- ok: true
+- correlation: code-analytics_0fd521ea77b349d89401a87266df3291
+- requested projects loaded: 6
+- source documents loaded: 390
+- include DI: true
+- include persistence: false
+- include risks: true
+- project references:
+  - Core -> Models, SharedKernel
+  - Hosting -> Core
+  - Models -> SharedKernel
+  - Modules.AgentFramework -> Core, Hosting, Models, SharedKernel
+  - SharedKernel -> none
+  - Web -> Modules.AgentFramework, SharedKernel
+- top diagnostics are warnings, including duplicate generated embedded-type display
+  names and workspace-load NU1903 advisories.
+
+Tool request:
+code_analytics_dependencies_get({
+  snapshotId: "snap-20260727170126-829a813d"
+})
+
+Tool result:
+- ok: true
+- correlation: code-analytics_325070a821a242cab834519a65d18944
+- project-reference cycles: none reported
+- module cycle:
+  - mod-proj-candoitall-modules-agentframework-candoitall-m-efe376421f64
+  - mod-proj-candoitall-modules-agentframework-candoitall-m-f602d7c77eb2
+- type cycle:
+  - type-proj-candoitall-modules-agentframework-candoitall-m-5374bd3c4751
+  - type-proj-candoitall-modules-agentframework-candoitall-m-a9e2e15d6c60
+
+Interpretation:
+The module and type node ids match the pre-existing SB01 Agent Framework findings. The
+SB01 Workbench module cycle is outside this six-project scope and is not claimed fixed.
+
+Tool request:
+code_analytics_services_get({
+  snapshotId: "snap-20260727170126-829a813d",
+  searchText: "AgentExecutionActivity"
+})
+
+Tool result:
+- ok: true
+- correlation: code-analytics_de64f279773046a88b405532b9f7df09
+- scoped registration:
+  IAgentExecutionActivityReader ->
+  CurrentProfileAgentExecutionActivityReader
+  at repo://src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs:137
+- lifetime: Scoped
+- DI0001 diagnostics state that factory registrations are only partially interpreted.
+
+Tool request:
+code_analytics_symbols_search({
+  snapshotId: "snap-20260727170126-829a813d",
+  searchText: "AgentExecutionActivityCoordinator",
+  searchMode: "Contains",
+  includeTypes: true,
+  includeMembers: true,
+  take: 20
+})
+
+Tool result:
+- ok: true
+- correlation: code-analytics_82000fa1a08346f0ad76af82eda6aeb8
+- resolves `AgentExecutionActivityCoordinator` and
+  `IAgentExecutionActivityCoordinator` in the Core execution file;
+- resolves required coordinator/workspace identity constructor parameters on
+  `AgentFrameworkWorkspaceService`;
+- resolves required coordinator/factory/profile accessor parameters on
+  `AgentChatExecutionOrchestrator`;
+- resolves required coordinator on `CanDoItAllAgentWorkspaceFactory`;
+- resolves the concrete coordinator/profile-switch dependencies on
+  `CurrentProfileAgentExecutionActivityReader`.
+
+Tool outcome: all calls returned ok=true.
+Architecture decision: evidence present; A2 remains pending independent re-review.

@@ -14,19 +14,9 @@ Driver-side contracts and runtime support for Space3D mouse integration.
 dotnet build src/Space3D/Mouse/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- None
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- None
+The authoritative project and package dependency list is in [CanDoItAll.Space3D.Mouse.Driver.csproj](CanDoItAll.Space3D.Mouse.Driver.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

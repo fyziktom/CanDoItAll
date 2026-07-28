@@ -1,8 +1,0 @@
-Command:
-rg -n "TODO|throw new NotImplementedException|stub|placeholder" src/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandPlanBuilder.cs src/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandExecutionService.cs src/CanDoItAll.AgentFramework.Core/Workspace/Process/WorkspaceProcessContracts.cs src/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/MafAgentRuntime.WorkspaceRuntimePlugin.cs src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Tools.cs src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Tools.ConfiguredWorkspace.cs src/CanDoItAll.AgentFramework.Core/ToolPolicy/ToolContractCatalog.cs src/CanDoItAll.AgentFramework.Core/ToolPolicy/ToolCapabilityRegistry.cs src/CanDoItAll.AgentFramework.Models/Agents/Access/AgentWorkspaceToolAccessModels.cs tests/CanDoItAll.Tests.Unit/WorkspaceCommandExecutionServiceTests.cs tests/CanDoItAll.Tests.Unit/AgentWorkspaceToolAccessMetadataTests.cs tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs
-
-Result:
-No matches. Exit code 1 from ripgrep means the scan found no matching lines.
-
-Note:
-A broader exploratory scan that included `return null;` found legitimate nullable-return branches in existing optional-path parsing code. Those are not SB02 stubs and are not used as closure blockers.

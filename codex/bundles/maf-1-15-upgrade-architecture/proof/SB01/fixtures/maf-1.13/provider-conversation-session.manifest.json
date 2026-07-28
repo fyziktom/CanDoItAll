@@ -1,0 +1,17 @@
+{
+  "fixtureId": "maf-1.13-provider-conversation-session",
+  "sourceFrameworkVersion": "1.13.0",
+  "targetFrameworkVersion": "1.15.0",
+  "fixtureKind": "provider-conversation",
+  "historyMode": "provider-managed",
+  "hasPendingApprovals": false,
+  "pendingApprovalCount": 0,
+  "containsRequestScopedAttachments": false,
+  "sanitized": true,
+  "sha256": "a81d59252be6778c5bc4ba09e4fc309741b5ca2cbc9b29ec712920acf68eafd8",
+  "createdAtUtc": "2026-07-28T05:05:01Z",
+  "sourceCommit": "797d7ce11205d630756ec9335b1b84295257a315",
+  "generatorTest": "AgentFinalizerPolicyTests.Contextual_approval_continuation_restores_provider_managed_session",
+  "expectedTargetOutcome": "provider-continuation",
+  "notes": "Provider and runtime identifiers are deterministic placeholders. No provider credential, response body, or real conversation identifier is present."
+}

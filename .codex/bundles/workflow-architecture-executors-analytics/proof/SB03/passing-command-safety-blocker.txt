@@ -1,6 +1,0 @@
-Command:
-dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter FullyQualifiedName~WorkflowCommandExecutorSafetyTests --logger "console;verbosity=minimal"
-
-Result: 1 passed, 0 failed, 0 skipped.
-
-The command.process descriptor remains non-runnable and now reports the concrete missing safety controls: typed allow-listed recipes, cancellation propagation, approval, a credential-free child environment, and masked output/failures. No raw shell executor was exposed.

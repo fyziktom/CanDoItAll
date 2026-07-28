@@ -1,5 +1,0 @@
-Command: rg -n "CanDoItAll.AgentFramework.Maf" src\Processes src\Modules\CanDoItAll.Modules.Processes --glob "*.csproj" --glob "*.cs" --glob "!**/bin/**" --glob "!**/obj/**"
-Test: Process-to-MAF wrapper dependency negative scan
-Invariant: MAF-SB04-RUNTIME-HANDOFF
-Output: no process or process-module references to the MAF wrapper project
-ExitCode: 1

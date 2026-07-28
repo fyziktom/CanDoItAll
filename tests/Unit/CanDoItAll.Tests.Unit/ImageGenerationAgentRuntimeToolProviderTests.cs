@@ -239,7 +239,9 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         };
     }
 
-    private sealed class ThrowingProviderProfileRegistry : IProviderProfileRegistry
+    private sealed class ThrowingProviderProfileRegistry :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
         {
@@ -275,7 +277,10 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         }
     }
 
-    private sealed class InMemoryProviderProfileRegistry(IReadOnlyList<ProviderProfile> providers) : IProviderProfileRegistry
+    private sealed class InMemoryProviderProfileRegistry(
+        IReadOnlyList<ProviderProfile> providers) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
         {

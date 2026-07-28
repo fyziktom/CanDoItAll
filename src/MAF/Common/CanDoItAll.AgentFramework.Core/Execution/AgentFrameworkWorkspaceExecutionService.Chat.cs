@@ -154,108 +154,80 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return renamedSession ?? throw new InvalidOperationException("Chat session could not be renamed.");
     }
 
-    public async Task<AgentChatRunResult> SendMessageAsync(
+    public Task<AgentChatRunResult> SendMessageWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid? chatSessionId,
         string prompt,
+        AgentChatRunOptions options,
         CancellationToken cancellationToken = default,
-        IReadOnlyList<string>? attachmentPaths = null,
-        AgentChatRunOptions? options = null)
+        IReadOnlyList<string>? attachmentPaths = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ValidateActivityOperation(
+            operation,
+            agentId,
+            chatSessionId,
+            options.InitialActivityOperationId);
+        return ExecuteWithinActivityBoundaryAsync(
+            operation,
+            () => SendMessageCoreEntryAsync(
+                operation,
+                agentId,
+                chatSessionId,
+                prompt,
+                options,
+                cancellationToken,
+                attachmentPaths));
+    }
+
+    private async Task<AgentChatRunResult> SendMessageCoreEntryAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        Guid agentId,
+        Guid? chatSessionId,
+        string prompt,
+        AgentChatRunOptions options,
+        CancellationToken cancellationToken,
+        IReadOnlyList<string>? attachmentPaths)
     {
         if (string.IsNullOrWhiteSpace(prompt))
         {
             throw new InvalidOperationException("Prompt is required.");
         }
 
-        if (store is ISandboxWorkspaceExecutionRunStore &&
-            store is ISandboxWorkspaceChatQueryStore chatQueryStore)
-        {
-            var splitCatalog = await store.LoadCatalogAsync(cancellationToken);
-            var splitAgent = EnsureAgentExists(splitCatalog, agentId);
-            var splitProvider = await ResolveProviderForAgentAsync(splitAgent, splitCatalog, cancellationToken);
-            var splitSession = chatSessionId.HasValue
-                ? EnsureAgentOwnsSession(
-                    await chatQueryStore.GetChatSessionAsync(chatSessionId.Value, cancellationToken),
-                    agentId,
-                    chatSessionId.Value)
-                : null;
-
-            return await SendMessageCoreAsync(
-                splitAgent,
-                splitProvider,
-                splitCatalog,
-                SandboxWorkspaceExecutionState.Empty,
-                splitSession,
-                prompt,
-                attachmentPaths,
-                options,
-                cancellationToken);
-        }
-
-        var document = await store.LoadAsync(cancellationToken);
-        var fallbackCatalog = document.ToCatalog();
-        var fallbackExecutionState = document.ToExecutionState();
-        var fallbackAgent = EnsureAgentExists(fallbackCatalog, agentId);
-        var fallbackProvider = await ResolveProviderForAgentAsync(fallbackAgent, fallbackCatalog, cancellationToken);
-        var fallbackSession = chatSessionId.HasValue
-            ? EnsureAgentOwnsSession(fallbackExecutionState, agentId, chatSessionId.Value)
-            : null;
-
-        return await SendMessageCoreAsync(
-            fallbackAgent,
-            fallbackProvider,
-            fallbackCatalog,
-            fallbackExecutionState,
-            fallbackSession,
-            prompt,
-            attachmentPaths,
-            options,
-            cancellationToken);
-    }
-
-    private async Task<AgentChatRunResult> SendMessageCoreAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        SandboxWorkspaceCatalog catalog,
-        SandboxWorkspaceExecutionState executionState,
-        ChatSessionRecord? session,
-        string prompt,
-        IReadOnlyList<string>? attachmentPaths,
-        AgentChatRunOptions? options,
-        CancellationToken cancellationToken)
-    {
+        ArgumentNullException.ThrowIfNull(options);
+        EnsureRequiredActivityOperationId(
+            options.InitialActivityOperationId,
+            nameof(options));
         var defaultContext = new ExecutionInvocationContext(
             SourceKind: "chat-session",
-            SourceId: session?.Id.ToString("N") ?? string.Empty,
+            SourceId: chatSessionId?.ToString("N") ?? string.Empty,
             CorrelationId: string.Empty,
             CausationId: string.Empty,
             RequestedBy: "sandbox-chat",
             RequestedByKind: "interactive",
             MetadataJson: "{}");
-        var requestedContext = options?.Context ?? defaultContext;
+        var requestedContext = options.Context ?? defaultContext;
         var invocationContext = requestedContext with
         {
             MetadataJson = BuildChatMetadataJson(options, requestedContext.MetadataJson)
         };
         var request = new ExecutionRunRequest(
-            AgentId: agent.Id,
+            AgentId: agentId,
             Prompt: prompt.Trim(),
-            ChatSessionId: session?.Id,
+            InitialActivityOperationId: options.InitialActivityOperationId,
+            ChatSessionId: chatSessionId,
             Context: invocationContext,
             AutoApprovePendingToolCalls: false,
             InputAttachmentPaths: attachmentPaths)
         {
-            TransientContext = options?.TransientContext
+            TransientContext = options.TransientContext
         };
-        var result = await ExecuteRunCoreAsync(
-            agent,
-            provider,
-            catalog,
-            executionState,
-            session,
+        var result = await ExecuteRunEntryAsync(
+            activityOperation,
             request,
-            persistTranscript: true,
-            cancellationToken);
+            cancellationToken,
+            persistTranscript: true);
 
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? throw new InvalidOperationException("Chat-backed execution runs must return a chat session id."),
@@ -289,15 +261,48 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return metadataJson;
     }
 
-    public async Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+    public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+        IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
         bool approved,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ValidateActivityOperation(
+            operation,
+            agentId,
+            chatSessionId,
+            operation.StreamId.OperationId);
+        return ExecuteWithinActivityBoundaryAsync(
+            operation,
+            () => RespondToPendingApprovalsCoreAsync(
+                operation,
+                agentId,
+                chatSessionId,
+                operation.StreamId.OperationId,
+                approved,
+                autoApprovePendingToolCalls,
+                cancellationToken));
+    }
+
+    private async Task<AgentChatRunResult> RespondToPendingApprovalsCoreAsync(
+        IAgentExecutionActivityOperationLease activityOperation,
+        Guid agentId,
+        Guid chatSessionId,
+        AgentExecutionOperationId activityOperationId,
+        bool approved,
+        bool autoApprovePendingToolCalls,
+        CancellationToken cancellationToken)
+    {
         var executionRunId = await ResolveOrCreatePendingExecutionRunIdAsync(agentId, chatSessionId, cancellationToken);
-        var result = await ContinueExecutionRunAsync(executionRunId, approved, autoApprovePendingToolCalls, cancellationToken);
+        var result = await ContinueExecutionRunEntryAsync(
+            activityOperation,
+            executionRunId,
+            activityOperationId,
+            approved,
+            autoApprovePendingToolCalls,
+            cancellationToken);
 
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? chatSessionId,
@@ -335,6 +340,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private async Task<(ChatSessionRecord Session, AgentRuntimeResponse Response, int TotalInputTokens, int TotalCachedInputTokens, int TotalOutputTokens, int TotalToolCalls)> ContinueAutoApprovedRunAsync(
         ExecutionRunRecord run,
+        AgentExecutionOperationId activityOperationId,
         AgentDefinition agent,
         ProviderProfile provider,
         ChatSessionRecord session,
@@ -375,6 +381,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ChatSessionRuntimeCompatibilityAdapter.AutoApprovePendingToolCalls(currentSession))
             };
 
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Auto approval continuation",
+                "Preparing the automatically approved tool continuation.");
             currentResponse = await runtime.RespondToPendingApprovalsAsync(
                 agent,
                 provider,
@@ -391,6 +401,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 structuredOutput: structuredOutput,
                 executionOptions: CreateRuntimeExecutionOptionsCore(
                     run,
+                    activityOperationId,
                     structuredOutput,
                     handoffOptions,
                     inputAttachments: null,
@@ -407,6 +418,54 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private static bool ShouldAutoApprovePendingToolCalls(AgentDefinition agent, ChatSessionRecord session)
         => agent.Permissions.AutoApproveExternalCallsByDefault || ChatSessionRuntimeCompatibilityAdapter.AutoApprovePendingToolCalls(session);
+
+    private void ValidateActivityOperation(
+        IAgentExecutionActivityOperationLease operation,
+        Guid agentId,
+        Guid? chatSessionId,
+        AgentExecutionOperationId operationId)
+    {
+        ValidateActivityOperationScope(operation);
+        if (agentId == Guid.Empty ||
+            operation.AgentId != agentId)
+        {
+            throw new InvalidOperationException(
+                "The activity operation belongs to a different agent.");
+        }
+
+        if (operationId.Value == Guid.Empty ||
+            operation.StreamId.OperationId != operationId)
+        {
+            throw new InvalidOperationException(
+                "The activity operation id does not match the chat request.");
+        }
+
+        if (chatSessionId.HasValue &&
+            operation.ChatSessionId != chatSessionId)
+        {
+            throw new InvalidOperationException(
+                "The activity operation belongs to a different chat session.");
+        }
+    }
+
+    private void ValidateActivityOperationScope(
+        IAgentExecutionActivityOperationLease operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        if (operation.StreamId.DatabaseProfileId !=
+            activityWorkspaceIdentity.DatabaseProfileId)
+        {
+            throw new InvalidOperationException(
+                "The activity operation belongs to a different database profile.");
+        }
+
+        if (operation.StreamId.WorkspaceScope !=
+            activityWorkspaceIdentity.WorkspaceScope)
+        {
+            throw new InvalidOperationException(
+                "The activity operation belongs to a different workspace scope.");
+        }
+    }
 
     private static string ResolveApprovalPolicySource(AgentDefinition agent, ChatSessionRecord session)
     {

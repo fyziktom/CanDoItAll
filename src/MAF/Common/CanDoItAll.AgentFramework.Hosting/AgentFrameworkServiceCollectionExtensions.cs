@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,14 +15,26 @@ public static class AgentFrameworkServiceCollectionExtensions
     public static IServiceCollection AddAgentFrameworkCore(
         this IServiceCollection services,
         string workspaceRoot,
-        WorkspaceScopeDescriptor? workspaceScope = null)
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        AgentExecutionActivityWorkspaceIdentity? activityWorkspaceIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
 
         var normalizedWorkspaceRoot = Path.GetFullPath(workspaceRoot);
         var resolvedScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
+        var resolvedActivityWorkspaceIdentity =
+            activityWorkspaceIdentity
+            ?? AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
+                resolvedScope);
+        if (resolvedActivityWorkspaceIdentity.WorkspaceScope != resolvedScope)
+        {
+            throw new ArgumentException(
+                "The activity workspace identity must match the configured workspace scope.",
+                nameof(activityWorkspaceIdentity));
+        }
 
+        services.AddLogging();
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
@@ -52,9 +65,23 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentReferenceDataInvalidationHub>());
         services.TryAddScoped<AgentReferenceDataCache>();
         services.TryAddScoped<IAgentReferenceDataProvider, WorkspaceBackedAgentReferenceDataProvider>();
-        services.TryAddSingleton<IProviderProfileRegistry>(serviceProvider => new WorkspaceBackedProviderProfileRegistry(
+        services.TryAddSingleton(AgentExecutionPreparationCachePolicy.Default);
+        services.TryAddScoped<AgentExecutionPreparationCache>();
+        services.TryAddScoped<IAgentExecutionPreparationCache>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    AgentExecutionPreparationCache>());
+        services.TryAddSingleton<IAgentExecutionProfileGenerationSource>(
+            new FixedAgentExecutionProfileGenerationSource(default));
+        services.TryAddSingleton<WorkspaceBackedProviderProfileRegistry>(serviceProvider => new WorkspaceBackedProviderProfileRegistry(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),
             serviceProvider.GetRequiredService<IProviderProfileService>()));
+        services.TryAddSingleton<IProviderProfileRegistry>(serviceProvider =>
+            serviceProvider.GetRequiredService<WorkspaceBackedProviderProfileRegistry>());
+        services.TryAddSingleton<IProviderRuntimeProfileSource>(serviceProvider =>
+            serviceProvider.GetRequiredService<WorkspaceBackedProviderProfileRegistry>());
+        services.TryAddSingleton<IProviderRuntimeProfileSnapshotSource>(serviceProvider =>
+            serviceProvider.GetRequiredService<WorkspaceBackedProviderProfileRegistry>());
         services.TryAddSingleton<IAgentExecutionCheckpointBridge>(serviceProvider => new WorkflowBackedAgentExecutionCheckpointBridge(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),
             normalizedWorkspaceRoot,
@@ -64,6 +91,26 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<BufferedAgentExecutionEventSink>();
         services.TryAddSingleton<IAgentExecutionEventSink>(serviceProvider => serviceProvider.GetRequiredService<BufferedAgentExecutionEventSink>());
         services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
+        services.TryAddSingleton(resolvedActivityWorkspaceIdentity);
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<
+            PartitionedSequencedStream<
+                AgentExecutionActivityStreamId,
+                AgentExecutionActivity>>(
+            serviceProvider => new PartitionedSequencedStream<
+                AgentExecutionActivityStreamId,
+                AgentExecutionActivity>(
+                PartitionedSequencedStreamPolicy.Default,
+                serviceProvider.GetRequiredService<TimeProvider>()));
+        services.TryAddSingleton<AgentExecutionActivityCoordinator>();
+        services.TryAddSingleton<IAgentExecutionActivityCoordinator>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    AgentExecutionActivityCoordinator>());
+        services.TryAddSingleton<IAgentExecutionActivityReader>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    AgentExecutionActivityCoordinator>());
         services.AddAgentFrameworkA2AHosting();
         services.AddAgentFrameworkVoice();
         services.TryAddSingleton<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));
@@ -76,7 +123,15 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Singleton);
         services.AddInMemoryWorkflowCatalogServices();
         services.AddInMemoryWorkflowRuntimeStores(normalizedWorkspaceRoot, resolvedScope);
-        services.TryAddScoped<IAgentFrameworkWorkspaceService, AgentFrameworkWorkspaceService>();
+        services.TryAddScoped<AgentFrameworkWorkspaceService>();
+        services.TryAddScoped<IAgentFrameworkWorkspaceService>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    AgentFrameworkWorkspaceService>());
+        services.TryAddScoped<IAgentFrameworkWorkspaceActivityExecutionService>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    AgentFrameworkWorkspaceService>());
 
         return services;
     }
@@ -84,11 +139,15 @@ public static class AgentFrameworkServiceCollectionExtensions
     public static IServiceCollection AddAgentFrameworkIntegrated(
         this IServiceCollection services,
         string workspaceRoot,
-        WorkspaceScopeDescriptor? workspaceScope = null)
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        AgentExecutionActivityWorkspaceIdentity? activityWorkspaceIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
 
-        return services.AddAgentFrameworkCore(workspaceRoot, workspaceScope);
+        return services.AddAgentFrameworkCore(
+            workspaceRoot,
+            workspaceScope,
+            activityWorkspaceIdentity);
     }
 }

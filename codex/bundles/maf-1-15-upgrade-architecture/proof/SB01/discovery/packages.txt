@@ -1,0 +1,441 @@
+===== PATTERN: Microsoft.Agents.AI =====
+docs\maf-1.13-update-evidence.md:19:| `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI` | `1.8.0` | `1.13.0` | Stable MAF target. |
+docs\maf-1.13-update-evidence.md:20:| `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.OpenAI` | `1.8.0` | `1.13.0` | Stable MAF target. |
+docs\maf-1.13-update-evidence.md:21:| `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.Workflows` | `1.8.0` | `1.13.0` | Stable MAF target. |
+docs\maf-1.13-update-evidence.md:22:| `CanDoItAll.AgentFramework.Maf` | `Microsoft.Agents.AI.A2A` | `1.8.0-preview.260528.1` | `1.13.0-preview.260703.1` | Current NuGet CLI preview. |
+docs\maf-1.13-update-evidence.md:23:| `CanDoItAll.AgentFramework.Workflows.MafAdapter` | `Microsoft.Agents.AI` | `1.8.0` | `1.13.0` | Stable MAF target. |
+docs\maf-1.13-update-evidence.md:24:| `CanDoItAll.AgentFramework.Workflows.MafAdapter` | `Microsoft.Agents.AI.Workflows` | `1.8.0` | `1.13.0` | Stable MAF target. |
+docs\maf-1.13-update-evidence.md:27:| `CanDoItAll.AgentFramework.Hosting` | `Microsoft.Agents.AI.Hosting.A2A` | `1.8.0-preview.260528.1` | `1.13.0-preview.260703.1` | Current NuGet CLI preview. |
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:7:using Microsoft.Agents.AI.Workflows;
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowArchitectureBoundaryTests.cs:26:"Microsoft.Agents.AI.Workflows",
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:9:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAdoptionHardeningCheckpointTests.cs:30:"Microsoft.Agents.AI.Workflows"
+tests\Unit\CanDoItAll.Tests.Unit\ManagedSeedExecutionCredentialBoundaryTests.cs:7:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkflowEventNormalizerTests.cs:6:using Microsoft.Agents.AI.Workflows;
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeResponseAssemblerUsageTests.cs:3:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:10:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:3:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:4:using Microsoft.Agents.AI.Workflows;
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:39:assembly => assembly.Key.StartsWith("Microsoft.Agents.AI", StringComparison.Ordinal) &&
+tests\Unit\CanDoItAll.Tests.Unit\MafContextProviderStateTests.cs:3:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafContextMessageTransformationTests.cs:9:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:14:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\CapabilityMigrationCleanupGuardTests.cs:103:Assert.DoesNotContain("Microsoft.Agents.AI.Mem0", mafProject, StringComparison.Ordinal);
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:6:using Microsoft.Agents.AI;
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:6:using Microsoft.Agents.AI;
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:5:using Microsoft.Agents.AI;
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:6:using Microsoft.Agents.AI.Workflows;
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:8:"Microsoft.Agents.AI": "1.13.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:9:"Microsoft.Agents.AI.OpenAI": "1.13.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:10:"Microsoft.Agents.AI.Workflows": "1.13.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:11:"Microsoft.Agents.AI.A2A": "1.13.0-preview.260703.1",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:12:"Microsoft.Agents.AI.Hosting.A2A": "1.13.0-preview.260703.1",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:21:"Microsoft.Agents.AI": "1.15.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:22:"Microsoft.Agents.AI.OpenAI": "1.15.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:23:"Microsoft.Agents.AI.Workflows": "1.15.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:24:"Microsoft.Agents.AI.A2A": "1.15.0-preview.260722.1",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:25:"Microsoft.Agents.AI.Hosting.A2A": "1.15.0-preview.260722.1"
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:9:| `Microsoft.Agents.AI` | `1.15.0` |
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:10:| `Microsoft.Agents.AI.OpenAI` | `1.15.0` |
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:11:| `Microsoft.Agents.AI.Workflows` | `1.15.0` |
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:12:| `Microsoft.Agents.AI.A2A` | `1.15.0-preview.260722.1` |
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:13:| `Microsoft.Agents.AI.Hosting.A2A` | `1.15.0-preview.260722.1` |
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:32:- `Microsoft.Agents.AI` — `1.13.0`
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:33:- `Microsoft.Agents.AI.OpenAI` — `1.13.0`
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:34:- `Microsoft.Agents.AI.Workflows` — `1.13.0`
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:38:- `Microsoft.Agents.AI.A2A` — `1.13.0-preview.260703.1`
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:39:- `Microsoft.Agents.AI.Hosting.A2A` — `1.13.0-preview.260703.1`
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\implementation-prompt.md:44:- Microsoft.Agents.AI = 1.15.0
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\implementation-prompt.md:45:- Microsoft.Agents.AI.OpenAI = 1.15.0
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\implementation-prompt.md:46:- Microsoft.Agents.AI.Workflows = 1.15.0
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\implementation-prompt.md:47:- Microsoft.Agents.AI.A2A = 1.15.0-preview.260722.1
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\implementation-prompt.md:48:- Microsoft.Agents.AI.Hosting.A2A = 1.15.0-preview.260722.1
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:46:Microsoft.Agents.AI.Harness
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:27:- `dotnet/src/Microsoft.Agents.AI/ChatClient/ChatClientAgentOptions.cs` at `dotnet-1.13.0` and `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:28:- `dotnet/src/Microsoft.Agents.AI/ChatClient/ChatClientExtensions.cs` at `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:29:- `dotnet/src/Microsoft.Agents.AI/ChatClient/ChatClientBuilderExtensions.cs` at `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:30:- `dotnet/src/Microsoft.Agents.AI/ChatClient/ApprovalResponseBindingChatClient.cs` at `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:31:- `dotnet/src/Microsoft.Agents.AI/ChatClient/ChatClientAgentSession.cs` at `dotnet-1.13.0` and `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:32:- `dotnet/src/Microsoft.Agents.AI.Workflows/WorkflowHostAgent.cs` at `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:33:- `dotnet/src/Microsoft.Agents.AI.Workflows/MessageMerger.cs` at `dotnet-1.15.0`
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:34:- `dotnet/src/Microsoft.Agents.AI.Harness/HarnessAgentOptions.cs` at `dotnet-1.15.0`
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowEventNormalizer.cs:5:using Microsoft.Agents.AI.Workflows;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowCompiler.cs:4:using Microsoft.Agents.AI.Workflows;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafInProcessWorkflowExecutionBackend.cs:4:using Microsoft.Agents.AI.Workflows;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:3:using Microsoft.Agents.AI;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:4:using Microsoft.Agents.AI.Workflows;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:5:using Microsoft.Agents.AI.Workflows.Specialized;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:15:<PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:16:<PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:15:<PackageReference Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.13.0-preview.260703.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Hosting\AgentA2AHostCardFactory.cs:3:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:26:<PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:27:<PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.13.0-preview.260703.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:28:<PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:29:<PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\README.md:37:- `Microsoft.Agents.AI (1.8.0)`
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\README.md:38:- `Microsoft.Agents.AI.A2A (1.8.0-preview.260528.1)`
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\README.md:39:- `Microsoft.Agents.AI.OpenAI (1.8.0)`
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\README.md:40:- `Microsoft.Agents.AI.Workflows (1.8.0)`
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:4:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:6:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:5:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:5:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:3:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:4:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:6:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeExecutionContracts.cs:4:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeContracts.cs:5:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:7:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafFinalizerDriver.cs:6:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:4:using Microsoft.Agents.AI.Workflows;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:5:using Microsoft.Agents.AI.Workflows.Checkpointing;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\MafRuntimeExecutionGuards.cs:2:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ToolCapabilityBuilder.cs:3:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ToolCapabilityBuilder.ConfiguredWorkspace.cs:3:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\SkillCapabilityBuilder.cs:2:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeToolProviderComposer.cs:5:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:10:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:11:using Microsoft.Agents.AI.Compaction;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafRuntimeCapabilityConfiguration.cs:4:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentContextContributionProvider.cs:4:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ContextCapabilityBuilder.cs:3:using Microsoft.Agents.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:5:using Microsoft.Agents.AI;
+
+===== PATTERN: Microsoft.Extensions.AI =====
+docs\maf-1.13-update-evidence.md:25:| `CanDoItAll.AgentFramework.Workflows.MafAdapter` | `Microsoft.Extensions.AI.Abstractions` | `10.5.1` | `10.6.0` | Restore-proven MAF floor. |
+docs\maf-1.13-update-evidence.md:29:| `CanDoItAll.AgentFramework.Tooling` | `Microsoft.Extensions.AI.Abstractions` | `10.5.1` | `10.5.1` | No restore floor required in this project. |
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowCuratorAgentRuntimeToolProviderTests.cs:9:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:10:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\SchedulerAgentRuntimeToolProviderTests.cs:9:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\PromptsCuratorAgentRuntimeToolProviderTests.cs:9:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\PromptGalleryAgentRuntimeToolProviderTests.cs:8:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MemoryAgentRuntimeToolProviderTests.cs:7:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\ManagedSeedExecutionCredentialBoundaryTests.cs:8:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafToolInvocationArgumentFormatterTests.cs:3:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeResponseAssemblerUsageTests.cs:4:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:11:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:5:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafContextProviderStateTests.cs:4:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafContextMessageTransformationTests.cs:10:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafContextManifestBuilderTests.cs:2:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:15:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeProviderHealthTests.cs:4:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeAttachmentTests.cs:3:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:6:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\CapabilityCuratorAgentRuntimeToolProviderTests.cs:10:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:7:using Microsoft.Extensions.AI;
+tests\Unit\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:7:using Microsoft.Extensions.AI;
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:7:using Microsoft.Extensions.AI;
+tests\Integration\CanDoItAll.Tests.Integration\ProjectStructureAgentRuntimeToolRoundTripIntegrationTests.cs:10:using Microsoft.Extensions.AI;
+tests\Components\CanDoItAll.Tests.Components\HrAgentAuthorizationTests.cs:6:using Microsoft.Extensions.AI;
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:13:"Microsoft.Extensions.AI": "10.8.0",
+codex\bundles\maf-1-15-upgrade-architecture\machine\package-baseline.json:14:"Microsoft.Extensions.AI.OpenAI": "10.8.0",
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:43:- `Microsoft.Extensions.AI` — `10.8.0`
+codex\bundles\maf-1-15-upgrade-architecture\inputs\01-repository-snapshot.md:44:- `Microsoft.Extensions.AI.OpenAI` — `10.8.0`
+codex\bundles\maf-1-15-upgrade-architecture\architecture\04-package-versioning-decision.md:35:- `Microsoft.Extensions.AI 10.8.0`;
+codex\bundles\maf-1-15-upgrade-architecture\architecture\04-package-versioning-decision.md:36:- `Microsoft.Extensions.AI.OpenAI 10.8.0`;
+codex\bundles\maf-1-15-upgrade-architecture\README.md:48:- Do not downgrade `Microsoft.Extensions.AI`, OpenAI, Azure OpenAI, or MCP packages merely to match the upstream repository's development pins.
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\WorkflowCurator\WorkflowCuratorAgentRuntimeToolProvider.cs:6:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\WorkflowAgentRuntimeToolProvider.cs:6:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\PromptGalleryAgentRuntimeToolProvider.cs:7:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\PromptCurator\PromptsCuratorAgentRuntimeToolProvider.cs:6:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\ImageGenerationAgentRuntimeToolProvider.cs:7:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\Hr\HrAgentRuntimeToolProvider.cs:6:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\CapabilityCurator\CapabilityCuratorAgentRuntimeToolProvider.cs:6:using Microsoft.Extensions.AI;
+src\Modules\CanDoItAll.Modules.Workbench\AgentTools\ProjectStructureAgentRuntimeToolProvider.cs:10:using Microsoft.Extensions.AI;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:6:using Microsoft.Extensions.AI;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:17:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:15:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\AgentTools\SchedulerAgentRuntimeToolProvider.cs:5:using Microsoft.Extensions.AI;
+src\MAF\Memory\CanDoItAll.AgentFramework.Memory\CanDoItAll.AgentFramework.Memory.csproj:19:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\MAF\Memory\CanDoItAll.AgentFramework.Memory\Tools\MemoryAgentRuntimeToolProvider.cs:4:using Microsoft.Extensions.AI;
+src\MAF\Tools\CanDoItAll.AgentFramework.Tooling\IAgentRuntimeToolProvider.cs:1:using Microsoft.Extensions.AI;
+src\MAF\Tools\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj:14:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:30:<PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:31:<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:5:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:7:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\ProviderRuntimeDiagnostics.cs:2:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:6:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:6:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:380:IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:388:IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafToolInvocationArgumentFormatter.cs:4:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionBuilder.cs:5:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:7:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeExecutionContracts.cs:5:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeContracts.cs:6:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:8:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafModelParametersBuilder.cs:2:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafFinalizerDriver.cs:7:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafContextManifestBuilder.cs:3:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\MafRuntimeExecutionGuards.cs:3:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\MafFinalizerToolFactory.cs:3:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ToolCapabilityBuilder.cs:4:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ToolCapabilityBuilder.ConfiguredWorkspace.cs:4:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeToolProviderComposer.cs:6:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:12:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\McpCapabilityBuilder.cs:6:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafRuntimeCapabilityConfiguration.cs:5:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafChatMessageTextTransformer.cs:2:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentContextContributionProvider.cs:5:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ContextCapabilityBuilder.cs:4:using Microsoft.Extensions.AI;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:6:using Microsoft.Extensions.AI;
+
+===== PATTERN: PackageReference =====
+docs\ui-shared-components\architecture\stack-and-architecture.md:67:- Main projects reference component libraries through `PackageReference` entries at version `0.1.0`; do not reintroduce project references to the moved component repo.
+.codex\live-runner\LiveProcessRunStarter.csproj:10:<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+.codex\live-runner\LiveProcessRunStarter.csproj:11:<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.5" />
+.codex\live-runner\LiveProcessRunStarter.csproj:12:<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj:10:<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj:11:<PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
+tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj:12:<PackageReference Include="System.Management" Version="10.0.0" />
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowRuntimeExtractionTests.cs:38:.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationHardeningCheckpointTests.cs:64:var packageReferences = ReadReferences(project, "PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationHardeningCheckpointTests.cs:69:Assert.Equal(rule.AllowedPackageReferences.Order(StringComparer.Ordinal), packageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationHardeningCheckpointTests.cs:88:.Concat(ReadReferences(project, "PackageReference"))
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowFoundationHardeningCheckpointTests.cs:291:IReadOnlyList<string> AllowedPackageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorFoundationExtractionTests.cs:20:Assert.Empty(abstractionReferences.PackageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorFoundationExtractionTests.cs:33:coreReferences.PackageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorFoundationExtractionTests.cs:335:var packageReferences = project
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorFoundationExtractionTests.cs:336:.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorFoundationExtractionTests.cs:340:return new ProjectReferenceSnapshot(projectReferences, packageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorFoundationExtractionTests.cs:361:IReadOnlyList<string> PackageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorCategoryIsolationTests.cs:216:IReadOnlyList<string> expectedPackageReferences)
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorCategoryIsolationTests.cs:224:var packageReferences = document.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorCategoryIsolationTests.cs:231:Assert.Equal(expectedPackageReferences.Order(StringComparer.Ordinal), packageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowCoreExtractionTests.cs:43:.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowArchitectureBoundaryTests.cs:19:var packageReferences = project
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowArchitectureBoundaryTests.cs:20:.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowArchitectureBoundaryTests.cs:27:packageReferences,
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAbstractionsBuilderTests.cs:184:.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\PluginWorkflowExecutorBoundaryTests.cs:29:references.PackageReferences.Order(StringComparer.Ordinal));
+tests\Unit\CanDoItAll.Tests.Unit\PluginWorkflowExecutorBoundaryTests.cs:320:var packageReferences = project
+tests\Unit\CanDoItAll.Tests.Unit\PluginWorkflowExecutorBoundaryTests.cs:321:.Descendants("PackageReference")
+tests\Unit\CanDoItAll.Tests.Unit\PluginWorkflowExecutorBoundaryTests.cs:326:return new ProjectReferenceSnapshot(projectReferences, packageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\PluginWorkflowExecutorBoundaryTests.cs:440:IReadOnlyList<string> PackageReferences);
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:11:<PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:12:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:14:<PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:15:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:16:<PackageReference Include="xunit" Version="2.9.3" />
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:17:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:67:<PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
+tests\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:15:<PackageReference Include="Npgsql" Version="10.0.3" />
+tests\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:20:<PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
+tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:11:<PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:12:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:13:<PackageReference Include="xunit" Version="2.9.3" />
+tests\Space3D\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:14:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:11:<PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:12:<PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
+tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:13:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:14:<PackageReference Include="xunit" Version="2.9.3" />
+tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:15:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj:11:<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
+tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj:12:<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
+tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj:13:<PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj:14:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj:15:<PackageReference Include="xunit" Version="2.9.3" />
+tests\Memory\CanDoItAll.Memory.Tests\CanDoItAll.Memory.Tests.csproj:16:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\CanDoItAll.AgentFramework.Memory.Tests.csproj:11:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\CanDoItAll.AgentFramework.Memory.Tests.csproj:12:<PackageReference Include="xunit" Version="2.9.3" />
+tests\MAF\CanDoItAll.AgentFramework.Memory.Tests\CanDoItAll.AgentFramework.Memory.Tests.csproj:13:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+src\UI\CanDoItAll.Components.Git\CanDoItAll.Components.Git.csproj:12:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:11:<PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:12:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:13:<PackageReference Include="xunit" Version="2.9.3" />
+tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:14:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:11:<PackageReference Include="Blazor-ApexCharts" Version="6.1.0" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:12:<PackageReference Include="bunit.web" Version="1.40.0" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:13:<PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:14:<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:15:<PackageReference Include="xunit" Version="2.9.3" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:16:<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:32:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:33:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:34:<PackageReference Include="CanDoItAll.Components.Gantt" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:35:<PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:36:<PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:37:<PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:38:<PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:39:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
+tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:40:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:12:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:16:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:17:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:18:<PackageReference Include="CanDoItAll.Components.Common" Version="0.1.4" />
+src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:19:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
+src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj:20:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:11:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
+src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:12:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Space3D\Mouse\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:13:<PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
+src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:11:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
+src\plugins\Implementations\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\plugins\Implementations\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:11:<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+src\Processes\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj:17:<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\Processes\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj:18:<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:15:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:21:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:22:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
+src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:23:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
+src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:24:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:44:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:45:<PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:46:<PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:15:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:16:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:20:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Foundation\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:16:<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+src\Foundation\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:19:</PackageReference>
+src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj:14:<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj:15:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj:16:<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj:17:<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj:18:<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.7" />
+src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:23:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:24:<PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:25:<PackageReference Include="CanDoItAll.Components.Gantt" Version="0.1.4" />
+src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj:15:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj:16:<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj:14:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj:15:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
+src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj:13:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:12:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:13:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:14:<PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:15:<PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:16:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:17:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:18:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:19:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:20:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:21:<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:22:<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
+src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:23:<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj:18:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj:14:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:9:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:10:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:11:<PackageReference Include="CanDoItAll.Components.Gantt" Version="0.1.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:12:<PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:13:<PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:52:<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:55:</PackageReference>
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:56:<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:57:<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:58:<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+src\App\CanDoItAll.Web\CanDoItAll.Web.csproj:59:<PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
+src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:15:<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:16:<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
+src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:17:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.4" />
+src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:26:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:15:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:16:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:27:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:28:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:29:<PackageReference Include="CanDoItAll.Components.Gantt" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:30:<PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:31:<PackageReference Include="CanDoItAll.FileTools.Desktop" Version="0.1.2" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:32:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:33:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:34:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:35:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:36:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Markdown" Version="0.1.2" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj:13:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj:14:<PackageReference Include="YamlDotNet" Version="16.3.0" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:12:<PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.7" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:13:<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:14:<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:17:</PackageReference>
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:18:<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:19:<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:20:<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:21:<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:22:<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:23:<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+src\Modules\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj:4:<PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj:11:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj:18:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj:19:<PackageReference Include="CanDoItAll.Components.Common" Version="0.1.4" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:15:<PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:16:<PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:17:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj:18:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+src\Modules\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:15:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:19:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:15:<PackageReference Include="PdfPig" Version="0.1.14" />
+src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:23:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:24:<PackageReference Include="CanDoItAll.Components.Common" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:14:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:15:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:16:<PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:27:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:28:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:15:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:19:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:20:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
+src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:21:<PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
+src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:22:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:23:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj:12:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\Common\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:15:<PackageReference Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.13.0-preview.260703.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:16:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:15:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:23:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\MAF\Common\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj:10:<PackageReference Include="ExcelDataReader" Version="3.8.0" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj:11:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj:6:<PackageReference Include="CanDoItAll.FileTools.Abstractions" Version="0.1.0" />
+src\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj:7:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+src\MAF\Memory\CanDoItAll.AgentFramework.Memory\CanDoItAll.AgentFramework.Memory.csproj:19:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\MAF\Memory\CanDoItAll.AgentFramework.Memory\CanDoItAll.AgentFramework.Memory.csproj:20:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+src\MAF\Memory\CanDoItAll.AgentFramework.Memory\CanDoItAll.AgentFramework.Memory.csproj:21:<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj:11:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj:14:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj:12:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:15:<PackageReference Include="Markdig" Version="1.1.2" />
+src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:16:<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:23:<PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
+src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:24:<PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj:12:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj:11:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj:10:<PackageReference Include="CanDoItAll.FileTools.Abstractions" Version="0.1.0" />
+src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj:11:<PackageReference Include="CanDoItAll.FileTools.Desktop" Version="0.1.2" />
+src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj:12:<PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="0.1.0" />
+src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj:13:<PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />
+src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj:16:<PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj:11:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj:13:<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj:14:<PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj:10:<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj:4:<PackageReference Include="AngleSharp" Version="1.5.2" />
+src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj:5:<PackageReference Include="ClosedXML" Version="0.105.0" />
+src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj:6:<PackageReference Include="ManagedCode.MarkItDown" Version="10.0.7" />
+src\MAF\Tools\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj:14:<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.8.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:25:<PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:26:<PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:27:<PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.13.0-preview.260703.1" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:28:<PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:29:<PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:30:<PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:31:<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:32:<PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:33:<PackageReference Include="OllamaSharp" Version="5.4.25" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:34:<PackageReference Include="OpenAI" Version="2.12.0" />
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:35:<PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+
+===== PATTERN: PackageVersion =====
+codex\bundles\maf-1-15-upgrade-architecture\architecture\04-package-versioning-decision.md:22:The repository has a large project graph and many non-MAF package versions. Enabling `ManagePackageVersionsCentrally` during this security-sensitive runtime migration would:
+codex\bundles\maf-1-15-upgrade-architecture\analysis\06-session-approval-migration.md:22:FrameworkPackageVersion = "1.13.0" | "1.15.0"

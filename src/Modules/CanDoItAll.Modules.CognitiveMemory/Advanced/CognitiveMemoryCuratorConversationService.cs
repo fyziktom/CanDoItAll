@@ -322,6 +322,7 @@ public sealed class CognitiveMemoryCuratorConversationService(
             new ExecutionRunRequest(
                 agentId,
                 BuildCuratorAgentPrompt(session, contextPack, message, conversationDepth),
+                AgentExecutionOperationId.New(),
                 ChatSessionId: chatSession.Id,
                 AutoApprovePendingToolCalls: true),
             cancellationToken);

@@ -9,7 +9,11 @@ internal interface ICatalogShadowProviderProfileRegistry
 
 public sealed class WorkspaceBackedProviderProfileRegistry(
     ISandboxWorkspaceStore store,
-    IProviderProfileService providerProfileService) : IProviderProfileRegistry, ICatalogShadowProviderProfileRegistry
+    IProviderProfileService providerProfileService) :
+    IProviderProfileRegistry,
+    IProviderRuntimeProfileSource,
+    IProviderRuntimeProfileSnapshotSource,
+    ICatalogShadowProviderProfileRegistry
 {
     public async Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
     {
@@ -139,5 +143,19 @@ public sealed class WorkspaceBackedProviderProfileRegistry(
     {
         ArgumentNullException.ThrowIfNull(catalog);
         return catalog.Providers.FirstOrDefault(item => item.Id == providerId);
+    }
+
+    public ProviderRuntimeProfileSnapshotLease? CaptureProvider(
+        Guid providerId,
+        SandboxWorkspaceCatalogSnapshot catalogSnapshot)
+    {
+        ArgumentNullException.ThrowIfNull(catalogSnapshot);
+        var provider = catalogSnapshot.Catalog.Providers
+            .FirstOrDefault(item => item.Id == providerId);
+        return provider is null
+            ? null
+            : new ProviderRuntimeProfileSnapshotLease(
+                provider,
+                ProviderConfigurationFingerprintFactory.Create(provider));
     }
 }

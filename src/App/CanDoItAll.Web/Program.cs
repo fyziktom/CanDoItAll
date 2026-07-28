@@ -635,6 +635,7 @@ if (app.Environment.IsDevelopment())
                 new ExecutionRunRequest(
                     agent.Id,
                     prompt,
+                    AgentExecutionOperationId.New(),
                     probeChatSessionId,
                     Context: executionContext,
                     AutoApprovePendingToolCalls: true));

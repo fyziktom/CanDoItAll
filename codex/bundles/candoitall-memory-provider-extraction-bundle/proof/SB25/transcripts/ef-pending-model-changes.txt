@@ -1,7 +1,0 @@
-Command: dotnet ef migrations has-pending-model-changes --project .\src\CanDoItAll.CognitiveMemory.Persistence\CanDoItAll.CognitiveMemory.Persistence.csproj --startup-project .\src\CanDoItAll.CognitiveMemory.Persistence\CanDoItAll.CognitiveMemory.Persistence.csproj --no-build
-Working directory: C:\repositories\CanDoItAll.CognitiveMemory
-Start time UTC: 2026-07-05T23:31:51.2881719Z
-Output:
-The Entity Framework tools version '10.0.3' is older than that of the runtime '10.0.4'. Update the tools for the latest features and bug fixes. See https://aka.ms/AAc1fbw for more information.
-No changes have been made to the model since the last migration.
-Exit code: 0

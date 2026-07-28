@@ -14,21 +14,9 @@ PostgreSQL EF Core migrations for the CanDoItAll application model.
 dotnet build src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj
 ```
 
-## References
+## Dependencies
 
-Project references:
-
-- `../CanDoItAll.Composition/CanDoItAll.Composition.csproj`
-- `../CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
-- `../CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `Microsoft.EntityFrameworkCore.Design (10.0.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Migrations.PostgreSql.csproj](CanDoItAll.Migrations.PostgreSql.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

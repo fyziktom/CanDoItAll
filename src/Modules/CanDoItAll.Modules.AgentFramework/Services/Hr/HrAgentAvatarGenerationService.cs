@@ -6,6 +6,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class HrAgentAvatarGenerationService(
     IAgentFrameworkWorkspaceService workspaceService,
+    IProviderRuntimeProfileSource providerSource,
     IAgentImageGenerationService imageGenerationService,
     ILogger<HrAgentAvatarGenerationService> logger)
 {
@@ -81,8 +82,9 @@ public sealed class HrAgentAvatarGenerationService(
                 "The HR agent must explicitly configure an image-generation model.");
         }
 
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        var provider = providers.FirstOrDefault(item => item.Id == imageAccess.PreferredProviderProfileId.Value)
+        var provider = await providerSource.GetProviderAsync(
+                imageAccess.PreferredProviderProfileId.Value,
+                cancellationToken)
             ?? throw new InvalidOperationException(
                 $"Image-generation provider '{imageAccess.PreferredProviderProfileId.Value:D}' was not found.");
         if (!provider.IsEnabled)

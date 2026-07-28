@@ -391,6 +391,7 @@ internal static class AgentsApi
                 agentId,
                 request.ChatSessionId,
                 request.Prompt,
+                new AgentChatRunOptions(AgentExecutionOperationId.New()),
                 cancellationToken,
                 request.AttachmentPaths)))
             .WithName("SendAgentChatMessage");
@@ -402,6 +403,7 @@ internal static class AgentsApi
                 CancellationToken cancellationToken) =>
             Results.Ok(await workspaceService.ContinueExecutionRunAsync(
                 executionRunId,
+                AgentExecutionOperationId.New(),
                 request.Approved,
                 request.AutoApprovePendingToolCalls,
                 cancellationToken)))
@@ -418,6 +420,7 @@ internal static class AgentsApi
                 new ExecutionRunRequest(
                     AgentId: request.AgentId,
                     Prompt: request.Prompt,
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: request.ChatSessionId,
                     Context: request.Context,
                     AutoApprovePendingToolCalls: request.AutoApprovePendingToolCalls,
@@ -442,6 +445,7 @@ internal static class AgentsApi
                 new ExecutionRunRequest(
                     AgentId: agentId,
                     Prompt: request.Prompt,
+                    InitialActivityOperationId: AgentExecutionOperationId.New(),
                     ChatSessionId: request.ChatSessionId,
                     Context: request.Context,
                     AutoApprovePendingToolCalls: request.AutoApprovePendingToolCalls,

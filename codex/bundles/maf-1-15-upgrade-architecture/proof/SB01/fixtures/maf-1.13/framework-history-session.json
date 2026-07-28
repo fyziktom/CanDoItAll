@@ -1,0 +1,41 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "framework-managed-text-history",
+  "session": {
+    "id": "33333333-3333-4333-8333-333333333333",
+    "agentId": "22222222-2222-4222-8222-222222222222",
+    "title": "Framework history fixture",
+    "createdAtUtc": "2026-07-28T05:05:01Z",
+    "updatedAtUtc": "2026-07-28T05:06:01Z",
+    "messages": [
+      {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "role": "User",
+        "content": "Summarize the fixture workspace.",
+        "createdAtUtc": "2026-07-28T05:05:01Z",
+        "tokenEstimate": 5
+      },
+      {
+        "id": "55555555-5555-4555-8555-555555555555",
+        "role": "Assistant",
+        "content": "The fixture workspace contains deterministic synthetic evidence only.",
+        "createdAtUtc": "2026-07-28T05:06:01Z",
+        "tokenEstimate": 9
+      }
+    ],
+    "latestExecutionRunId": null,
+    "compatibility": {
+      "runtimeSessionKey": "",
+      "serializedSessionStateJson": "{\"stateBag\":{\"InMemoryChatHistoryProvider\":{\"messages\":[{\"role\":\"user\",\"contents\":[{\"$type\":\"text\",\"text\":\"Summarize the fixture workspace.\"}]},{\"role\":\"assistant\",\"contents\":[{\"$type\":\"text\",\"text\":\"The fixture workspace contains deterministic synthetic evidence only.\"}]}]}}}",
+      "pendingApprovals": [],
+      "autoApprovePendingToolCalls": false
+    }
+  },
+  "expectedTargetBehavior": {
+    "outcome": "native-restore",
+    "messageCount": 2,
+    "pendingApprovalCount": 0,
+    "mustNotReplayTranscriptTwice": true
+  }
+}

@@ -2,7 +2,20 @@
 
 ## Purpose
 
-Test project for the corresponding CanDoItAll runtime, module, component, MCP, or integration behavior.
+Browser regression suite for the CanDoItAll web application and its cross-module flows.
+
+## Prerequisites
+
+- Build the project in Release and install its Chromium binary once per machine.
+- Provide reachable PostgreSQL. The fixture checks
+  `CANDOITALL_TESTS_POSTGRES_CONNECTION`, then the repository's local development
+  connection, and can start the Compose `postgres` service when Docker Compose is
+  available.
+- By default, the fixture reserves a loopback URL and starts a local web host.
+  `CANDOITALL_PLAYWRIGHT_BASEURL` selects a specific URL; when a compatible host already
+  reports ready at `/_dev/runtime`, the fixture attaches without creating its own
+  database or storage lease. Use that external-host mode only for focused tests that do
+  not require fixture-owned database or storage details.
 
 ## Project Type
 
@@ -11,29 +24,17 @@ Test project for the corresponding CanDoItAll runtime, module, component, MCP, o
 - Validation command:
 
 ```powershell
-dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj
+dotnet build tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration Release
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/playwright.ps1 install chromium
+dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration Release --no-build --filter "Category!=Quarantined" /m:1
 ```
 
-## References
+The maintained browser gate excludes explicitly quarantined tests. Quarantine is not a
+passing result; run an unfiltered command only when validating those tests deliberately.
 
-Project references:
+## Dependencies
 
-- `../CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj`
-- `../../src/App/CanDoItAll.Web/CanDoItAll.Web.csproj`
-- `../../src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj`
-- `../../tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj`
-
-Framework references:
-
-- None
-
-Direct package references:
-
-- `coverlet.collector (6.0.4)`
-- `Microsoft.Playwright (1.55.0)`
-- `Microsoft.NET.Test.Sdk (17.14.1)`
-- `xunit (2.9.3)`
-- `xunit.runner.visualstudio (3.1.4)`
+The authoritative project and package dependency list is in [CanDoItAll.Tests.Playwright.csproj](CanDoItAll.Tests.Playwright.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
 

@@ -1,3 +1,0 @@
-Command: generated migration XML documentation audit
-ExitCode: 1
-PASS: SB29 migration files contain no XML documentation comments.

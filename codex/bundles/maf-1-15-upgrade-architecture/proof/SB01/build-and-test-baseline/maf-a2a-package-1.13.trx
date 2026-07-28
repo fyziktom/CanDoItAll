@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="4a568062-7b74-433a-b9df-27de1f47ed15" name="lucys@LUCYSPOWER 2026-07-28 00:58:14" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-07-28T00:58:14.1200947-04:00" queuing="2026-07-28T00:58:14.1200951-04:00" start="2026-07-28T00:58:12.9869286-04:00" finish="2026-07-28T00:58:14.1584357-04:00" />
+  <TestSettings name="default" id="7d7247be-4113-405c-9797-842ebd1814d9">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-07-28_00_58_14" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e4c0b4bb-7c41-49d8-aa76-3e0f4437d5ea" testId="9f704100-132a-2220-52bc-2d7e0e71abfb" testName="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.ValidateIgnoresDisabledIncompleteEndpoint" computerName="LUCYSPOWER" duration="00:00:00.0003777" startTime="2026-07-28T00:58:14.0880008-04:00" endTime="2026-07-28T00:58:14.0880526-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4c0b4bb-7c41-49d8-aa76-3e0f4437d5ea" />
+    <UnitTestResult executionId="ab7aca26-6294-4b25-b5fe-3fd05852e244" testId="9e1ba015-5d80-99b4-feaf-73e14c919e7a" testName="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.WriteAndReadRoundTripRemoteEndpoint" computerName="LUCYSPOWER" duration="00:00:00.0230558" startTime="2026-07-28T00:58:14.0439870-04:00" endTime="2026-07-28T00:58:14.0498026-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ab7aca26-6294-4b25-b5fe-3fd05852e244" />
+    <UnitTestResult executionId="abc6594c-7ed6-4e55-84bf-7e47546edb01" testId="f5459f06-6d5f-49f1-c39b-4542288dcf25" testName="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.ValidateRejectsEnabledInvalidUriRawSecretAndDuplicateIds" computerName="LUCYSPOWER" duration="00:00:00.0011205" startTime="2026-07-28T00:58:14.0501464-04:00" endTime="2026-07-28T00:58:14.0509842-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="abc6594c-7ed6-4e55-84bf-7e47546edb01" />
+    <UnitTestResult executionId="89a7f727-764d-460f-951b-04e213bfe4f5" testId="40627b44-91f9-dd11-26e9-8a7def0b7d85" testName="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests.CreateSkillToolsAsyncSkipsDisabledEndpoints" computerName="LUCYSPOWER" duration="00:00:00.0047606" startTime="2026-07-28T00:58:14.0443446-04:00" endTime="2026-07-28T00:58:14.0443840-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="89a7f727-764d-460f-951b-04e213bfe4f5" />
+    <UnitTestResult executionId="d92d41de-f68d-442a-8584-f06aa78c33aa" testId="abff7b6e-f084-0de1-d35c-95f1f25dfa6e" testName="CanDoItAll.Tests.Unit.AgentA2AHostCardFactoryTests.CreateAgentCardRequiresExplicitHosting" computerName="LUCYSPOWER" duration="00:00:00.0185190" startTime="2026-07-28T00:58:14.0023063-04:00" endTime="2026-07-28T00:58:14.0325161-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d92d41de-f68d-442a-8584-f06aa78c33aa" />
+    <UnitTestResult executionId="7132cbbb-6779-4b0c-be38-2604966e4e37" testId="c42f7d27-f09f-8ce0-23de-b688ddbe3bfb" testName="CanDoItAll.Tests.Unit.AgentA2AHostCardFactoryTests.CreateAgentCardMapsHostingSettingsToA2ACard" computerName="LUCYSPOWER" duration="00:00:00.0233886" startTime="2026-07-28T00:58:14.0440855-04:00" endTime="2026-07-28T00:58:14.0502456-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7132cbbb-6779-4b0c-be38-2604966e4e37" />
+    <UnitTestResult executionId="11ac9e59-01d7-4bda-a6ed-6862cbda2944" testId="4e947875-c35a-f87e-5bcb-03f5b079da7e" testName="CanDoItAll.Tests.Unit.MafPackageBaselineReflectionTests.Maf_symbols_are_classified_from_loaded_runtime_assemblies" computerName="LUCYSPOWER" duration="00:00:00.0376018" startTime="2026-07-28T00:58:14.0033117-04:00" endTime="2026-07-28T00:58:14.0467574-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="11ac9e59-01d7-4bda-a6ed-6862cbda2944" />
+    <UnitTestResult executionId="4495f3fe-a4e3-4bb4-a790-22b437480fd1" testId="03534936-0d57-0f4d-d3f4-022645737a70" testName="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests.CreateSkillToolsAsyncFailsBeforeNetworkForInvalidEnabledEndpoint" computerName="LUCYSPOWER" duration="00:00:00.0008999" startTime="2026-07-28T00:58:14.0444838-04:00" endTime="2026-07-28T00:58:14.0445206-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4495f3fe-a4e3-4bb4-a790-22b437480fd1" />
+    <UnitTestResult executionId="32462d7b-8500-403d-8a95-08678aa17a90" testId="75a6115c-ed99-5e32-6219-efa0b748bbca" testName="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.WriteRemovesDefaultA2AConfiguration" computerName="LUCYSPOWER" duration="00:00:00.0166555" startTime="2026-07-28T00:58:14.0022360-04:00" endTime="2026-07-28T00:58:14.0265734-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="32462d7b-8500-403d-8a95-08678aa17a90" />
+    <UnitTestResult executionId="4ac9f061-e436-4e37-94a1-b13d28201f05" testId="867fd875-2edd-2647-4d4e-2d5d0f7b297c" testName="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests.CreateSkillToolsAsyncFailsWhenBearerSecretIsMissing" computerName="LUCYSPOWER" duration="00:00:00.0235364" startTime="2026-07-28T00:58:14.0001097-04:00" endTime="2026-07-28T00:58:14.0441831-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4ac9f061-e436-4e37-94a1-b13d28201f05" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests.CreateSkillToolsAsyncFailsBeforeNetworkForInvalidEnabledEndpoint" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="03534936-0d57-0f4d-d3f4-022645737a70">
+      <Execution id="4495f3fe-a4e3-4bb4-a790-22b437480fd1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests" name="CreateSkillToolsAsyncFailsBeforeNetworkForInvalidEnabledEndpoint" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentA2AHostCardFactoryTests.CreateAgentCardRequiresExplicitHosting" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="abff7b6e-f084-0de1-d35c-95f1f25dfa6e">
+      <Execution id="d92d41de-f68d-442a-8584-f06aa78c33aa" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentA2AHostCardFactoryTests" name="CreateAgentCardRequiresExplicitHosting" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.WriteAndReadRoundTripRemoteEndpoint" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="9e1ba015-5d80-99b4-feaf-73e14c919e7a">
+      <Execution id="ab7aca26-6294-4b25-b5fe-3fd05852e244" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentA2AMetadataTests" name="WriteAndReadRoundTripRemoteEndpoint" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.MafPackageBaselineReflectionTests.Maf_symbols_are_classified_from_loaded_runtime_assemblies" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="4e947875-c35a-f87e-5bcb-03f5b079da7e">
+      <Execution id="11ac9e59-01d7-4bda-a6ed-6862cbda2944" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.MafPackageBaselineReflectionTests" name="Maf_symbols_are_classified_from_loaded_runtime_assemblies" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.ValidateIgnoresDisabledIncompleteEndpoint" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="9f704100-132a-2220-52bc-2d7e0e71abfb">
+      <Execution id="e4c0b4bb-7c41-49d8-aa76-3e0f4437d5ea" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentA2AMetadataTests" name="ValidateIgnoresDisabledIncompleteEndpoint" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.ValidateRejectsEnabledInvalidUriRawSecretAndDuplicateIds" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="f5459f06-6d5f-49f1-c39b-4542288dcf25">
+      <Execution id="abc6594c-7ed6-4e55-84bf-7e47546edb01" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentA2AMetadataTests" name="ValidateRejectsEnabledInvalidUriRawSecretAndDuplicateIds" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentA2AHostCardFactoryTests.CreateAgentCardMapsHostingSettingsToA2ACard" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="c42f7d27-f09f-8ce0-23de-b688ddbe3bfb">
+      <Execution id="7132cbbb-6779-4b0c-be38-2604966e4e37" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentA2AHostCardFactoryTests" name="CreateAgentCardMapsHostingSettingsToA2ACard" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentA2AMetadataTests.WriteRemovesDefaultA2AConfiguration" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="75a6115c-ed99-5e32-6219-efa0b748bbca">
+      <Execution id="32462d7b-8500-403d-8a95-08678aa17a90" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentA2AMetadataTests" name="WriteRemovesDefaultA2AConfiguration" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests.CreateSkillToolsAsyncSkipsDisabledEndpoints" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="40627b44-91f9-dd11-26e9-8a7def0b7d85">
+      <Execution id="89a7f727-764d-460f-951b-04e213bfe4f5" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests" name="CreateSkillToolsAsyncSkipsDisabledEndpoints" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests.CreateSkillToolsAsyncFailsWhenBearerSecretIsMissing" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="867fd875-2edd-2647-4d4e-2d5d0f7b297c">
+      <Execution id="4ac9f061-e436-4e37-94a1-b13d28201f05" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.A2ARemoteAgentToolFactoryTests" name="CreateSkillToolsAsyncFailsWhenBearerSecretIsMissing" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="9f704100-132a-2220-52bc-2d7e0e71abfb" executionId="e4c0b4bb-7c41-49d8-aa76-3e0f4437d5ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9e1ba015-5d80-99b4-feaf-73e14c919e7a" executionId="ab7aca26-6294-4b25-b5fe-3fd05852e244" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f5459f06-6d5f-49f1-c39b-4542288dcf25" executionId="abc6594c-7ed6-4e55-84bf-7e47546edb01" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="40627b44-91f9-dd11-26e9-8a7def0b7d85" executionId="89a7f727-764d-460f-951b-04e213bfe4f5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="abff7b6e-f084-0de1-d35c-95f1f25dfa6e" executionId="d92d41de-f68d-442a-8584-f06aa78c33aa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c42f7d27-f09f-8ce0-23de-b688ddbe3bfb" executionId="7132cbbb-6779-4b0c-be38-2604966e4e37" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4e947875-c35a-f87e-5bcb-03f5b079da7e" executionId="11ac9e59-01d7-4bda-a6ed-6862cbda2944" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03534936-0d57-0f4d-d3f4-022645737a70" executionId="4495f3fe-a4e3-4bb4-a790-22b437480fd1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="75a6115c-ed99-5e32-6219-efa0b748bbca" executionId="32462d7b-8500-403d-8a95-08678aa17a90" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="867fd875-2edd-2647-4d4e-2d5d0f7b297c" executionId="4ac9f061-e436-4e37-94a1-b13d28201f05" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="10" executed="10" passed="10" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.9)&#xD;
+[xUnit.net 00:00:00.22]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:00.53]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:00.56]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:00.68]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

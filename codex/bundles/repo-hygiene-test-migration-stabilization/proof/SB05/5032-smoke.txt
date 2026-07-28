@@ -1,5 +1,0 @@
-
-StatusCode        : 200
-StatusDescription : OK
-ContentLength     : 91214
-

@@ -136,7 +136,8 @@ internal sealed class MafRuntimeAgentFactory
             suppressApprovalRequirements,
             runtimeOptions.ContextWorkspaceScope ?? workspaceScope,
             runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty,
-            runtimeSessionKey);
+            runtimeSessionKey,
+            runtimeOptions.TransientContext?.Attachments);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,
@@ -182,16 +183,13 @@ internal sealed class MafRuntimeAgentFactory
             chatOptions.Tools = [.. capabilityState.Tools];
         }
 
-        var options = new ChatClientAgentOptions
-        {
-            Id = agent.Id.ToString("D"),
-            Name = agent.Name,
-            Description = agent.Summary,
-            ChatOptions = chatOptions,
-            AIContextProviders = capabilityState.ContextProviders,
-            ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null,
-            RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence
-        };
+        var options = MafChatClientAgentOptionsFactory.Create(chatOptions);
+        options.Id = agent.Id.ToString("D");
+        options.Name = agent.Name;
+        options.Description = agent.Summary;
+        options.AIContextProviders = capabilityState.ContextProviders;
+        options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null;
+        options.RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence;
 
         var runtimeAgent = CreateInstrumentedAgent(
             providerAgentFactory.CreateFrameworkAgent(effectiveProvider, model, options, frameworkManagedHistory, services),
@@ -250,19 +248,16 @@ internal sealed class MafRuntimeAgentFactory
             "Handoff",
             $"Composing a Microsoft Agent Framework handoff workflow with {participantIds.Count} local participant agent(s).");
 
-        var participantExecutionOptions = runtimeOptions with
-        {
-            Handoff = null
-        };
         var participantBuilds = new List<RuntimeBuildResult>();
         try
         {
             var participantAgents = new Dictionary<Guid, AIAgent>();
             foreach (var participant in handoffOptions.Participants.Where(item => participantIds.Contains(item.Agent.Id)))
             {
-                var effectiveParticipantOptions = participant.Agent.Id == handoffOptions.EntryAgentId
-                    ? participantExecutionOptions
-                    : participantExecutionOptions with { TransientContext = null };
+                var effectiveParticipantOptions = ResolveHandoffParticipantExecutionOptions(
+                    runtimeOptions,
+                    participant.Agent.Id,
+                    handoffOptions.EntryAgentId);
                 var participantBuild = await CreateRuntimeBuildAsync(
                     participant.Agent,
                     participant.Provider,
@@ -309,7 +304,8 @@ internal sealed class MafRuntimeAgentFactory
                     .ToList(),
                 snapshotContextContributionTraces: () => participantBuilds
                     .SelectMany(item => item.SnapshotContextContributionTraces())
-                    .ToList());
+                    .ToList(),
+                isTerminalResponseUpdate: buildResult.IsTerminalResponseUpdate);
         }
         catch
         {
@@ -320,6 +316,21 @@ internal sealed class MafRuntimeAgentFactory
 
             throw;
         }
+    }
+
+    internal static AgentRuntimeExecutionOptions ResolveHandoffParticipantExecutionOptions(
+        AgentRuntimeExecutionOptions runtimeOptions,
+        Guid participantAgentId,
+        Guid entryAgentId)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+        var participantOptions = runtimeOptions with
+        {
+            Handoff = null
+        };
+        return participantAgentId == entryAgentId
+            ? participantOptions
+            : participantOptions with { TransientContext = null };
     }
 
     public AIAgent CreateInstrumentedAgent(

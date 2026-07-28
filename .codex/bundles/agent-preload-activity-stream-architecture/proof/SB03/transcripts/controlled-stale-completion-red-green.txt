@@ -1,0 +1,35 @@
+SB03 controlled stale-completion red/green proof
+Date: 2026-07-28
+Invariant ID: SB03-PREP-001
+
+Shallow mutation:
+AgentExecutionPreparationCache.CompleteEntryAsync temporarily changed
+`blueprint is not null && isCurrent` to `blueprint is not null`. This allows a
+superseded load to complete its original waiter instead of returning the typed
+invalidation failure. The source condition was restored immediately after the red.
+
+Command:
+dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj --no-restore -m:1 -p:UseSharedCompilation=false -nodeReuse:false -nologo -v:minimal
+Copy the resulting Core DLL/PDB into the already-built unit-test output.
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName~AgentExecutionPreparationCacheTests.Invalidation_during_load_fences_stale_completion" -m:1 -p:UseSharedCompilation=false -nodeReuse:false -nologo -v:minimal
+
+ExitCode: 1
+
+Red output:
+CanDoItAll.Tests.Unit.AgentExecutionPreparationCacheTests.Invalidation_during_load_fences_stale_completion [FAIL]
+Assert.Throws() Failure: No exception was thrown
+Expected: typeof(CanDoItAll.AgentFramework.Core.AgentExecutionPreparationInvalidatedException)
+Failed: 1, Passed: 0, Skipped: 0, Total: 1
+
+Restoration:
+The production `&& isCurrent` fence was restored with apply_patch. Core was rebuilt
+and the restored DLL/PDB copied to the unit-test output before the green rerun.
+
+Command:
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --filter "FullyQualifiedName~AgentExecutionPreparationCacheTests.Invalidation_during_load_fences_stale_completion" -m:1 -p:UseSharedCompilation=false -nodeReuse:false -nologo -v:minimal
+
+ExitCode: 0
+
+Green output:
+Passed: 1, Failed: 0, Skipped: 0, Total: 1
+Duration: 37 ms

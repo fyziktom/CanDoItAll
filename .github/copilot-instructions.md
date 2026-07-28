@@ -1,125 +1,72 @@
 # Copilot Instructions — CanDoItAll
 
-## Role
+Act as a pragmatic senior C#/.NET and Blazor engineer. Prefer the smallest correct change and be direct about architectural or security problems.
 
-You are a senior peer for C#/.NET and Blazor development with a strong focus on Radzen components.
-Act like a pragmatic architecture-minded engineer: direct, critical, and precise.
-
-## Core Principles
+## Engineering Rules
 
 - Optimize for maintainability, readability, security, and long-term evolvability.
-- Prefer the smallest correct change over large refactors.
-- Strongly-typed code is mandatory. Avoid stringly-typed logic (except UI text, SQL, or truly unavoidable external protocols).
-- Less code is better than more code when behavior is identical.
+- Use strongly typed identifiers, commands, settings, and payloads. Avoid magic strings.
+- Prefer early returns, small functions, composition, and modern C# when they improve clarity.
+- Do not add silent fallbacks. Fail predictably and log actionable state without secrets.
+- Keep comments rare and in English. Do not add XML documentation unless requested.
+- Use fully cuddled Egyptian braces and one statement per line.
 
-## C# / .NET Style
+## Boundaries
 
-- Use modern C# features when they reduce code and improve clarity (pattern matching, switch expressions, tuples, local functions, target-typed new, nullable awareness).
-- Prefer early returns and small functions over deep nesting.
-- Prefer composition over inheritance.
-- Do NOT introduce "fallback mechanisms" that silently hide errors; handle errors explicitly.
-- Logs must include actionable state and must mask sensitive data.
-- Never rely on magic strings for identifiers, keys, or commands.
-- Use fully cuddled Egyptian braces for all code blocks.
-- Never place multiple statements on a single line.
+- `src/App/CanDoItAll.Web` renders and orchestrates the Blazor host.
+- `src/App/CanDoItAll.Composition` is the application composition root.
+- `src/Modules` owns product behavior and module UI.
+- `src/Processes` and `src/Memory` own their provider-neutral domain/runtime contracts.
+- `src/MAF` owns AgentFramework and Microsoft Agent Framework adapters, not product-module behavior.
+- `src/Foundation/CanDoItAll.Infrastructure` owns persistence and external infrastructure.
 
-## Architecture
+Keep UI, application, domain, and infrastructure responsibilities separate. Add an interface only for a real boundary, substitution point, or test seam.
 
-- Strict separation: UI (Blazor) → Application services → Domain → Infrastructure.
-- Favor explicit interfaces and clear boundaries, but keep abstractions minimal.
+PostgreSQL is the application database. InMemory is test-only, and SQLite is retired. Generic Memory providers and workers are disabled by default. Do not restore old Cognitive Memory, Qdrant, or SQLite assumptions as hidden compatibility paths.
 
-## Blazor & UI
+## Blazor And Components
 
-- Keep state changes explicit. Avoid hidden side effects in lifecycle hooks.
-- If not explicitly said, do NOT use Radzen components — use our custom components.
-- Use Tailwind because the project already uses Tailwind CSS for styling.
-- Follow UX best practices: information architecture, progressive disclosure, scannable forms, clear primary actions, consistent terminology.
+- Keep components focused on rendering and orchestration; move non-trivial behavior to the owning service.
+- Keep lifecycle side effects and state transitions explicit and testable.
+- Reuse `CanDoItAll.Components.*` contracts before adding raw structural markup or page-local layout abstractions.
+- For non-WebGL shared-component work, query the `candoitall_components` MCP: inspect libraries, request recommendations for the concrete use case, and inspect the selected component contract and examples.
+- Improve the sibling `CanDoItAll.Components` library when a reusable contract is missing. Do not copy its implementation into this repository.
+- WebGL libraries are outside the Components MCP workflow.
+- The repository does not use Radzen. Do not introduce it incidentally.
+- Tailwind is already present. Put reusable component styling in the owning shared package and application-specific styling in this repository.
 
-## CanDoItAll Components MCP (MANDATORY FOR ALL NON-WEBGL COMPONENT WORK)
+## Agent And Integration Boundaries
 
-- Whenever this repository or any sibling repository uses `CanDoItAll.Components.BaseLib`, `CanvasLib`, `Charts`, `Common`, `Mermaid`, `OverlayLib`, or `QRCode`, query the `candoitall_components` MCP before choosing components, adding package setup/assets, or writing custom UI structure. WebGL libraries are explicitly outside this MCP workflow.
-- Call `components_libraries_list` before adding a Components package, service registration, stylesheet, generated asset component, or direct JavaScript import.
-- Call `components_recommend` with the concrete use case before selecting components. Then call `component_get`, `component_usage_examples`, and `component_examples` for shortlisted components before implementation.
-- For a new or refactored app shell, layout, or primary menu, call `app_shell_guide_get` first. Follow its `ThemeHost` -> `Layout` -> `SideMenu` -> `Body` composition, one-scroll-owner rule, `PageScaffold` page boundary, overlay-host setup, route synchronization, measured overflow, and responsive proof guidance.
-- `SideMenu` is the primary-navigation component: give it a stable `MenuId`, handle `ItemSelected` or `SideMenuService` selections through typed IDs/payloads, do not wrap it in `Sidebar`, and do not build a duplicate mobile menu or custom More-capacity logic.
-- Prefer component parameters, shared assets, services, and semantic tokens before page-local structural CSS. If shared components cannot express the required UI, improve the relevant shared library and sandbox coverage rather than introducing a one-off structural wrapper.
+- Treat project files, central package props, runtime composition, and endpoint mapping as source of truth.
+- Keep provider-neutral agent orchestration separate from MAF, model-provider, MCP, plugin, and Memory-driver adapters.
+- First-party agent tools belong in registered `IAgentRuntimeToolProvider` implementations at the owning module boundary.
+- Preserve approval, capability-policy, workspace-sandbox, and process-governance checks. Never reconstruct incompatible approval state or bypass a missing tool with prompt-only behavior.
+- Processes and Project Structure use the HTTP API control plane; do not reintroduce retired MCP servers.
 
-## CanDoItAll MCP DotNetWatch Server (MANDATORY WORKFLOW)
+## MCP And Skills
 
-This workspace includes custom CanDoItAll MCP servers. MCP source lives in the sibling `CanDoItAll.Mcp` repo; this repo owns the settings, install artifacts, skill sync, and MCP config. The primary server is `candoitall_dotnetwatch`, which manages the `dotnet watch` lifecycle for the Blazor app. It also serves as the shared machine-level backend for sibling repos that should be started through an explicit `projectPath` instead of getting their own dotnetwatch MCP entry. Local MCP wiring lives in `.vscode/mcp.json`, and server settings live in `CanDoItAll.Mcp.DotNetWatch.settings.json` and `CanDoItAll.Mcp.SshOps.settings.json`.
+MCP server source lives in the sibling `CanDoItAll.Mcp` repository. This repository owns configuration and install entry points. The active sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, and SshOps.
 
-### What it does
+Prefer the managed DotNetWatch MCP loop for interactive application work:
 
-- Manages the full app lifecycle: start, stop, restart, health checks, build, test, log streaming.
-- Runs `dotnet watch run` under the hood so CSS/Razor hot-reload works in seconds without full rebuilds.
-- Provides health-check polling at `https://localhost:7271/_dev/runtime` so you know when changes are ready.
-- The dotnetwatch server runs through the wrapper in the sibling MCP repo: `..\CanDoItAll.Mcp\tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`. The wrapper rebuilds or reuses the current `Release` shadow artifact under `.artifacts\mcp-server-shadow\builds\...` so the MCP repo can be rebuilt without colliding with the running MCP host.
-- The other local CanDoItAll MCP executables are installed under `.artifacts\mcp-installs\...` and must not be launched from project `bin` folders.
-- For non-CanDoItAll repos on the same machine, reuse this shared MCP and call `candoitall_app_start` with the target repo's absolute `projectPath` and `workingDirectory`. Do not create `<repo>_dotnetwatch`.
+1. inspect workspace defaults
+2. start or reuse the managed app
+3. make focused edits
+4. wait for readiness
+5. validate with targeted tests and browser evidence
 
-### Default Workflow (always follow this order)
+Use the stable commands in `docs/testing.md` for release validation. If the managed MCP is unavailable, report that explicitly before using an appropriate local validation command.
 
-1. **Call `candoitall_workspace_info` first** to inherit managed defaults (URLs, project paths, health endpoints).
-2. **Start the app** via the MCP if not already running — `candoitall_app_start` or equivalent.
-3. **Make code edits** (Razor, CSS, C#).
-4. **Wait for ready** — call `candoitall_app_wait` (health check, log pattern, or quiet period) to confirm `dotnet watch` has applied changes. Do NOT assume changes are live.
-5. **Validate** — use Playwright MCP for screenshots/snapshots, or run tests via `candoitall_test_run`.
-6. **Iterate** — repeat steps 3-5. For CSS/Tailwind-only changes, the watch session stays running and propagates in seconds.
-
-### UI Iteration Workflow
-
-- **Phase A — Structure/Behavior/Data-flow**: Batch C# and structural Razor changes before restarting.
-- **Phase B — CSS/Styling Polish**: Keep the watch session running and iterate in small CSS/Tailwind passes. Changes propagate in 2-5 seconds via hot-reload.
-- After each UI pass, always `candoitall_app_wait` before validating in the browser.
-
-### Rules
-
-- Do NOT use raw `dotnet watch`, `dotnet run`, `dotnet build`, or `dotnet test` in the terminal unless explicitly asked or when repairing the MCP server itself.
-- Use the MCP server for all build, test, and lifecycle operations.
-- If the MCP server tool fails to start or times out, say so explicitly and continue with best-effort reasoning.
-- If the local MCP binaries were changed, rerun `tools\Reinstall-CanDoItAllMcps.ps1` from this repo before assuming the environment is broken.
-- If the machine-level setup is missing, stale, or another repo was given its own dotnetwatch MCP, use the `candoitall-dotnetwatch-setup` skill.
-
-### MCP Resetup
-
-The wrapper is the default launch path and will refresh the shadow host automatically when the MCP source changes. If you need to force a wrapper-side rebuild manually, run:
+Canonical Codex skills live in the sibling `CanDoItAll.SharedInfo` repository. The local `codex/skills` tree is a historical mirror, not the source of truth. Refresh the local toolset with:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ..\CanDoItAll.Mcp\tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1 -RepoRoot . -McpRepoRoot ..\CanDoItAll.Mcp -Configuration Release -SettingsPath .\CanDoItAll.Mcp.DotNetWatch.settings.json -ForceRebuild
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
 ```
 
-### Repo-managed Codex assets
+## Validation And Documentation
 
-- Repo-managed Codex skill packs live under `codex/skills/`.
-- `candoitall-bundle-workflow`, `candoitall-bundle-preparation`, and `candoitall-bundle-execution` define the bundle lifecycle.
-- `candoitall-bundle-validator` and `candoitall-subbundle-validator` are the required gates for bundle readiness, subbundle progression, and final closure.
-- `candoitall-dotnetwatch-setup` is the machine resetup and repo-onboarding skill for the shared backend.
-- `candoitall-watch-playwright-loop` is the fast UI iteration skill for the managed watch plus Playwright loop.
-- The supported machine resetup path is `tools\Reinstall-CanDoItAllMcps.ps1`.
-- That script builds MCP projects from the sibling `CanDoItAll.Mcp` repo, syncs this repo's skill pack into `%USERPROFILE%\.codex\skills`, refreshes the wrapper-backed MCP setup, and installs the tray operator app.
-
-To rebuild and reinstall the full local CanDoItAll MCP toolset after modifying it:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp
-```
-
-That script:
-
-- refreshes the `Release` dotnetwatch shadow host under `.artifacts\mcp-server-shadow`
-- publishes `CanDoItAll.Mcp.Components`, `CanDoItAll.Mcp.CodeAnalytics`, `CanDoItAll.Mcp.SshOps`, and `CanDoItAll.Mcp.DotNetWatch.Tray` from the sibling MCP repo into `.artifacts\mcp-installs`
-- publishes `CanDoItAll.Manager` from this repo into `.artifacts\mcp-installs`
-- syncs repo-managed skill packs into `%USERPROFILE%\.codex\skills`
-- updates local MCP config entries so they point to artifact-backed installs instead of project `bin` outputs
-- refreshes both the startup shortcut and the desktop shortcut for the tray operator app
-
-## Validation
-
-- Always build to validate no compilation errors.
-- Run unit and UI tests in Docker when possible.
-- For CanDoItAll .NET work, use `candoitall_dotnetwatch` MCP; console `dotnet` only when explicitly requested.
-
-## Formatting
-
-- No XML documentation comments unless explicitly requested.
-- Code comments rare and in English only.
+- Build after C# or project changes and run the narrowest relevant test before the stable gate.
+- Use Playwright for shipped UI behavior and capture evidence at the supported large-desktop viewport.
+- Never describe quarantined, skipped, unavailable, or unfiltered failing tests as green.
+- Update maintained docs when public behavior, configuration, architecture, or validation changes.
+- Do not treat closed `codex/bundles`, `.codex/bundles`, or the historical skill mirror as current documentation.

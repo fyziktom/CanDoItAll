@@ -1,0 +1,31 @@
+===== PATTERN: CompactionProvider =====
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:910:composition.State.ContextProviders.Add(CreateCompactionProvider(composition.AgentConfiguration));
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1039:private static CompactionProvider CreateCompactionProvider(AgentRuntimeConfiguration configuration)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1050:return new CompactionProvider(pipeline);
+
+===== PATTERN: CompactionStrategy =====
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1045:var pipeline = new PipelineCompactionStrategy(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1046:new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(toolMessageThreshold)),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1047:new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(slidingWindowTurns)),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1048:new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(truncationTokenLimit)));
+
+===== PATTERN: FileMemoryProvider =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:52:- `HarnessAgent` and `FileMemoryProvider` were stabilized, while some advanced options remain experimental.
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:68:- evaluate after parity: approval-not-required bypass, stable ToolApprovalAgent, message injection, FileMemoryProvider;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\05-file-tools-impact.md:51:FileMemoryProvider
+codex\bundles\maf-1-15-upgrade-architecture\analysis\08-opportunities-not-in-first-pass.md:50:## FileMemoryProvider
+
+===== PATTERN: MessageInjectingChatClient =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:13:-> optional MessageInjectingChatClient
+
+===== PATTERN: EnableMessageInjection =====
+<no matches>
+
+===== PATTERN: CosmosChatHistoryProvider =====
+<no matches>
+
+===== PATTERN: TodoProvider =====
+<no matches>
+
+===== PATTERN: AgentModeProvider =====
+<no matches>

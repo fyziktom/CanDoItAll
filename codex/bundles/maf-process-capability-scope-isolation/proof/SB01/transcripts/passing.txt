@@ -1,6 +1,0 @@
-Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkspaceImageAnalysisPromptNormalizerTests|FullyQualifiedName~MafAgentRuntimeAttachmentTests.Input_attachment_analysis_prompt_is_domain_neutral_by_default" --artifacts-path artifacts\dotnet-test-isolated --no-restore
-Test: NormalizeSingleImagePrompt_WhenPromptIsEmpty_UsesDomainNeutralVisibleEvidencePrompt
-Test: Input_attachment_analysis_prompt_is_domain_neutral_by_default
-Invariant: MAF-SB01-DOMAIN-NEUTRAL
-Output: focused prompt tests passed
-ExitCode: 0

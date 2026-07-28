@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
@@ -40,7 +41,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureTaskDetailsService taskDetailsService,
         ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
         ProjectManagementKnowledgeService knowledgeService,
-        IWorkspacePathResolutionService workspacePaths)
+        IWorkspacePathResolutionService workspacePaths,
+        IDatabaseRuntimeState databaseRuntimeState,
+        TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(leaseService);
@@ -52,6 +55,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ArgumentNullException.ThrowIfNull(taskResourceAttachmentService);
         ArgumentNullException.ThrowIfNull(knowledgeService);
         ArgumentNullException.ThrowIfNull(workspacePaths);
+        ArgumentNullException.ThrowIfNull(databaseRuntimeState);
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
         var workspaceCommandExecutionService = new WorkspaceCommandExecutionService(
@@ -73,7 +78,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             knowledgeService,
             workspaceCommandExecutionService,
             workspacePaths,
-            workspaceRoot);
+            workspaceRoot,
+            databaseRuntimeState,
+            timeProvider);
     }
 
     public int Order => ProviderOrder;
@@ -206,7 +213,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectManagementKnowledgeService knowledgeService,
         IWorkspaceCommandExecutionService workspaceCommandExecutionService,
         IWorkspacePathResolutionService workspacePaths,
-        string workspaceRoot)
+        string workspaceRoot,
+        IDatabaseRuntimeState databaseRuntimeState,
+        TimeProvider timeProvider)
     {
         private readonly ProjectStructureAgentService agentService = agentService;
         private readonly ProjectStructureLeaseService leaseService = leaseService;
@@ -222,6 +231,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private readonly IWorkspaceCommandExecutionService workspaceCommandExecutionService = workspaceCommandExecutionService;
         private readonly IWorkspacePathResolutionService workspacePaths = workspacePaths;
         private readonly string workspaceRoot = workspaceRoot;
+        private readonly IDatabaseRuntimeState databaseRuntimeState = databaseRuntimeState;
+        private readonly TimeProvider timeProvider = timeProvider;
         private string? currentBranchName;
 
         public IReadOnlyList<AITool> CreateTools(AgentRuntimeToolProviderContext context)
@@ -232,7 +243,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 accessSettings,
                 ResolveScopedProcessAccess(context),
                 context.ContextIntent,
-                context.Purpose);
+                context.Purpose,
+                ProjectStructureInvocationSnapshotReadContext.Capture(context));
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
                 !accessState.CanCreateProjects &&
@@ -258,7 +270,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure with compact node payloads by default. Inspect node.actionCapabilities for runtime run actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab)."),
+                    "Reads a filtered project structure. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe runtime run actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab)."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
                     "project_structure_node_catalog",
@@ -908,8 +920,17 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectReadAllowed(accessState, projectId);
-                    var effectiveRequest = ResolveGovernedProcessReadRequest(accessState, request, out var appliedDefaultScope);
-                    var response = await agentService.GetStructureAsync(projectId, effectiveRequest, cancellationToken);
+                    var appliedDefaultScope = false;
+                    var dispatch = await ProjectStructureInvocationSnapshotReadDispatcher.ReadAsync(
+                        accessState.InvocationSnapshotReadContext,
+                        new DatabaseProfileGeneration(
+                            databaseRuntimeState.GetSnapshot().Generation),
+                        timeProvider.GetUtcNow(),
+                        projectId,
+                        request ?? new ProjectStructureReadRequest(),
+                        ReadCanonicalAsync,
+                        cancellationToken);
+                    var response = dispatch.Response;
                     var nodes = appliedDefaultScope
                         ? response.Nodes
                             .Where(ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext)
@@ -927,7 +948,22 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         response.ProjectName,
                         nodes.Select(MapCompactNode).ToList(),
                         response.Links,
-                        warnings);
+                        warnings,
+                        dispatch.Source);
+
+                    async Task<ProjectStructureReadResponse> ReadCanonicalAsync(
+                        ProjectStructureReadRequest canonicalRequest,
+                        CancellationToken canonicalCancellationToken)
+                    {
+                        var effectiveRequest = ResolveGovernedProcessReadRequest(
+                            accessState,
+                            canonicalRequest,
+                            out appliedDefaultScope);
+                        return await agentService.GetStructureAsync(
+                            projectId,
+                            effectiveRequest,
+                            canonicalCancellationToken);
+                    }
                 },
                 cancellationToken);
         }
@@ -3062,9 +3098,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             AgentProjectStructureAccessSettings settings,
             ProjectStructureScopedProcessAccess? scopedProcessAccess,
             AgentRuntimeContextIntent contextIntent,
-            AgentRuntimeToolProviderPurpose purpose)
+            AgentRuntimeToolProviderPurpose purpose,
+            ProjectStructureInvocationSnapshotReadContext invocationSnapshotReadContext)
         {
             ArgumentNullException.ThrowIfNull(contextIntent);
+            ArgumentNullException.ThrowIfNull(invocationSnapshotReadContext);
 
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
             CanRead = normalized.CanRead || scopedProcessAccess?.CanRead == true;
@@ -3083,6 +3121,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             ScopedProcessAccess = scopedProcessAccess;
             ContextIntent = contextIntent;
             Purpose = purpose;
+            InvocationSnapshotReadContext = invocationSnapshotReadContext;
             if (scopedProcessAccess is not null)
             {
                 AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
@@ -3116,6 +3155,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         public AgentRuntimeContextIntent ContextIntent { get; }
 
         public AgentRuntimeToolProviderPurpose Purpose { get; }
+
+        public ProjectStructureInvocationSnapshotReadContext InvocationSnapshotReadContext { get; }
     }
 
     private sealed record ProjectStructureScopedProcessAccess(
@@ -3256,4 +3297,5 @@ public sealed record ProjectStructureReadToolData(
     string ProjectName,
     IReadOnlyList<ProjectStructureCompactNode> Nodes,
     IReadOnlyList<ProjectStructureLinkSummary> Links,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    ProjectStructureReadSource Source = ProjectStructureReadSource.CanonicalCurrent);

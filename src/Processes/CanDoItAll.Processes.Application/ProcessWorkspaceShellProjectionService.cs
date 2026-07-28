@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
@@ -95,20 +96,67 @@ public sealed class ProcessWorkspaceShellProjectionService(
             SelectedEditor = selectedEditor
         };
 
+        var liveRunSummary = CreateLiveRunSummary(runtimeWorkspace);
+        var refresh = CreateRefreshProjection(request.ForceRefresh, observedAtUtc, runtimeWorkspace.Freshness);
+        var tabs = CreateTabs(definitionCatalog, runtimeWorkspace);
+        var commands = CreateCommands(authorization);
+        var agentEntry = CreateAgentEntry(request.Scope, request.Selection, authorization);
+        var normalizedRuntimeQuery = NormalizeRuntimeQuery(request);
+        var provenance = runtimeWorkspace.Provenance with
+        {
+            Selection = ProcessProjectionComponentProvenance.Present(
+                ProcessProjectionComponentSource.Request,
+                ProcessProjectionContentFingerprintFactory.Create(
+                    ProcessWorkspaceProvenanceComponent.Selection,
+                    new ShellSelectionProvenanceContent(
+                        request.Scope,
+                        request.Selection,
+                        request.DefinitionCatalogQuery.SelectedDefinitionKey,
+                        definitionCatalog.SelectedDefinitionKey,
+                        normalizedRuntimeQuery.SelectedRunId,
+                        runtimeWorkspace.SelectedRunId,
+                        agentEntry))),
+            ShellRefresh = ProcessProjectionComponentProvenance.Present(
+                ProcessProjectionComponentSource.ShellProjection,
+                ProcessProjectionContentFingerprintFactory.Create(
+                    ProcessWorkspaceProvenanceComponent.ShellRefresh,
+                    refresh)),
+            DefinitionCatalog = ProcessProjectionComponentProvenance.Present(
+                ProcessProjectionComponentSource.DefinitionCatalog,
+                ProcessProjectionContentFingerprintFactory.Create(
+                    ProcessWorkspaceProvenanceComponent.DefinitionCatalog,
+                    CreateDefinitionCatalogProvenanceContent(definitionCatalog))),
+            LiveRunSummary = ProcessProjectionComponentProvenance.Present(
+                ProcessProjectionComponentSource.ShellProjection,
+                ProcessProjectionContentFingerprintFactory.Create(
+                    ProcessWorkspaceProvenanceComponent.LiveRunSummary,
+                    liveRunSummary)),
+            DerivedProjection = ProcessProjectionComponentProvenance.Present(
+                ProcessProjectionComponentSource.ShellProjection,
+                ProcessProjectionContentFingerprintFactory.Create(
+                    ProcessWorkspaceProvenanceComponent.DerivedProjection,
+                    CreateDerivedProvenanceContent(runtimeWorkspace)))
+        };
+        runtimeWorkspace = runtimeWorkspace with
+        {
+            Provenance = provenance
+        };
+
         return new ProcessWorkspaceShellProjection(
             request.Scope,
             request.Selection,
             ResolveTitle(request.Scope),
             ResolveSubtitle(request.Scope),
             definitionCatalog,
-            CreateLiveRunSummary(runtimeWorkspace),
-            CreateRefreshProjection(request.ForceRefresh, observedAtUtc, runtimeWorkspace.Freshness),
+            liveRunSummary,
+            refresh,
             authorization,
-            CreateTabs(definitionCatalog, runtimeWorkspace),
-            CreateCommands(authorization),
-            CreateAgentEntry(request.Scope, request.Selection, authorization))
+            tabs,
+            commands,
+            agentEntry)
         {
-            Runtime = runtimeWorkspace
+            Runtime = runtimeWorkspace,
+            Provenance = provenance
         };
     }
 
@@ -223,7 +271,12 @@ public sealed class ProcessWorkspaceShellProjectionService(
     {
         if (runtimeProjectionQueryService is null)
         {
-            return ProcessRuntimeWorkspaceProjection.Empty;
+            var loadOptions = NormalizeRuntimeQuery(request).LoadOptions ??
+                ProcessRuntimeWorkspaceLoadOptions.Full;
+            return ProcessRuntimeWorkspaceProjection.Empty with
+            {
+                Provenance = CreateRuntimeUnavailableProvenance(loadOptions)
+            };
         }
 
         if (request.ForceRefresh && projectionCatchupService is not null)
@@ -249,47 +302,157 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var usageObservations = await LoadRuntimeUsageObservationsAsync(
+        var usageLoad = await LoadRuntimeUsageObservationsAsync(
                 runtimeQuery,
                 result,
                 observedAtUtc,
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return CreateRuntimeWorkspace(runtimeQuery, result, usageObservations);
+        return CreateRuntimeWorkspace(runtimeQuery, result, usageLoad);
     }
 
-    private async Task<IReadOnlyList<ProcessRuntimeUsageObservation>> LoadRuntimeUsageObservationsAsync(
+    private static ProcessWorkspaceProvenanceVector CreateRuntimeUnavailableProvenance(
+        ProcessRuntimeWorkspaceLoadOptions loadOptions)
+        => ProcessWorkspaceProvenanceVector.RuntimeUnavailable with
+        {
+            SelectedRunDetail = loadOptions.IncludeSelectedRun
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+                : ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled),
+            SelectedRunRecord = loadOptions.IncludeRunRecord
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RunRecordStore,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+                : ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled),
+            HistoryPage = loadOptions.IncludeHistory
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+                : ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled),
+            MetricHistory = loadOptions.IncludeMetricHistory
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeProjectionStore,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+                : ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled),
+            ActiveAgents = loadOptions.IncludeActiveAgents
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.RuntimeState,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+                : ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled),
+            UsageTelemetry = loadOptions.IncludeUsageTelemetry
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.UsageTelemetry,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable)
+                : ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled)
+        };
+
+    private async Task<RuntimeUsageObservationLoad> LoadRuntimeUsageObservationsAsync(
         ProcessRuntimeWorkspaceQueryProjection runtimeQuery,
         ProcessRuntimeWorkspaceResult result,
         DateTimeOffset observedAtUtc,
         CancellationToken cancellationToken)
     {
         var loadOptions = runtimeQuery.LoadOptions ?? ProcessRuntimeWorkspaceLoadOptions.Full;
-        if (!loadOptions.IncludeUsageTelemetry ||
-            runtimeUsageTelemetryReader is null ||
-            result.Runs.Count == 0 ||
-            CanUseTerminalRecord(result))
+        if (!loadOptions.IncludeUsageTelemetry)
         {
-            return [];
+            return new RuntimeUsageObservationLoad(
+                [],
+                ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.LoadOptionDisabled));
+        }
+
+        if (CanUseTerminalRecord(result))
+        {
+            return new RuntimeUsageObservationLoad(
+                [],
+                ProcessProjectionComponentProvenance.NotRequested(
+                    ProcessProjectionComponentAbsenceReason.SupersededByDurableRecord));
+        }
+
+        if (runtimeUsageTelemetryReader is null)
+        {
+            return new RuntimeUsageObservationLoad(
+                [],
+                ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.UsageTelemetry,
+                    ProcessProjectionComponentAbsenceReason.SourceUnavailable));
+        }
+
+        if (result.Runs.Count == 0)
+        {
+            var empty = ImmutableArray<ProcessRuntimeUsageObservation>.Empty;
+            var emptyContent = CreateUsageTelemetryProvenanceContent(
+                runtimeQuery,
+                observedAtUtc,
+                [],
+                empty);
+            return new RuntimeUsageObservationLoad(
+                empty,
+                ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.UsageTelemetry,
+                    ProcessProjectionComponentAbsenceReason.NoData,
+                    ProcessProjectionContentFingerprintFactory.Create(
+                        ProcessWorkspaceProvenanceComponent.UsageTelemetry,
+                        emptyContent)));
         }
 
         var runIds = ResolveUsageTelemetryRunIds(runtimeQuery, result);
 
         if (runIds.Count == 0)
         {
-            return [];
+            var empty = ImmutableArray<ProcessRuntimeUsageObservation>.Empty;
+            var emptyContent = CreateUsageTelemetryProvenanceContent(
+                runtimeQuery,
+                observedAtUtc,
+                [],
+                empty);
+            return new RuntimeUsageObservationLoad(
+                empty,
+                ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.UsageTelemetry,
+                    ProcessProjectionComponentAbsenceReason.NoData,
+                    ProcessProjectionContentFingerprintFactory.Create(
+                        ProcessWorkspaceProvenanceComponent.UsageTelemetry,
+                        emptyContent)));
         }
 
         var historyWindow = ResolveHistoryWindow(runtimeQuery.HistoryWindow);
-        return await runtimeUsageTelemetryReader.ListAsync(
+        var orderedRunIds = runIds
+            .OrderBy(runId => runId.Value)
+            .ToImmutableArray();
+        var observations = (await runtimeUsageTelemetryReader.ListAsync(
                 new ProcessRuntimeUsageTelemetryQuery(
-                    runIds.ToArray(),
+                    orderedRunIds,
                     observedAtUtc.Subtract(historyWindow),
                     observedAtUtc,
                     ResolveUsageTelemetryTakePerRun(runtimeQuery.HistoryWindow)),
                 cancellationToken)
-            .ConfigureAwait(false);
+            .ConfigureAwait(false)).ToImmutableArray();
+        var fingerprint = ProcessProjectionContentFingerprintFactory.Create(
+            ProcessWorkspaceProvenanceComponent.UsageTelemetry,
+            CreateUsageTelemetryProvenanceContent(
+                runtimeQuery,
+                observedAtUtc,
+                orderedRunIds,
+                observations));
+        return new RuntimeUsageObservationLoad(
+            observations,
+            observations.IsEmpty
+                ? ProcessProjectionComponentProvenance.Absent(
+                    ProcessProjectionComponentSource.UsageTelemetry,
+                    ProcessProjectionComponentAbsenceReason.NoData,
+                    fingerprint)
+                : ProcessProjectionComponentProvenance.Present(
+                    ProcessProjectionComponentSource.UsageTelemetry,
+                    fingerprint));
     }
 
     private static HashSet<ProcessRunId> ResolveUsageTelemetryRunIds(
@@ -370,22 +533,34 @@ public sealed class ProcessWorkspaceShellProjectionService(
     private static ProcessRuntimeWorkspaceProjection CreateRuntimeWorkspace(
         ProcessRuntimeWorkspaceQueryProjection query,
         ProcessRuntimeWorkspaceResult result,
-        IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
+        RuntimeUsageObservationLoad usageLoad)
     {
-        var events = result.Events;
-        var metricEvents = result.MetricEvents;
+        var events = result.Events.ToImmutableArray();
+        var metricEvents = result.MetricEvents.ToImmutableArray();
+        var usageObservations = usageLoad.Observations;
         var selectedRunId = result.SelectedRun?.RunId.Value ?? query.SelectedRunId;
         var incidents = result.Runs
             .SelectMany(run => run.Incidents)
             .OrderByDescending(incident => incident.RaisedAtUtc)
-            .ToArray();
-        var managerMessages = BuildManagerMessages(metricEvents);
+            .ToImmutableArray();
+        var managerMessages = BuildManagerMessages(metricEvents).ToImmutableArray();
         var selectedRunRecord = result.SelectedRunRecord;
         var hasTerminalRecord = CanUseTerminalRecord(result);
         var hasDurableFacts = CanUseDurableFacts(result);
         var stats = hasTerminalRecord
             ? BuildRuntimeStats(result.Runs, selectedRunRecord!)
             : BuildRuntimeStats(result.Runs, metricEvents, usageObservations);
+
+        var metricPoints = (hasDurableFacts
+                ? BuildMetricPoints(selectedRunRecord!)
+                : hasTerminalRecord
+                    ? []
+                    : BuildMetricPoints(metricEvents, usageObservations))
+            .ToImmutableArray();
+        var toolUsage = (hasTerminalRecord
+                ? BuildToolUsage(selectedRunRecord!)
+                : BuildToolUsage(metricEvents))
+            .ToImmutableArray();
 
         return new ProcessRuntimeWorkspaceProjection(
             query.HistoryWindow,
@@ -400,14 +575,8 @@ public sealed class ProcessWorkspaceShellProjectionService(
             managerMessages,
             result.ActiveAgents,
             stats,
-            hasDurableFacts
-                ? BuildMetricPoints(selectedRunRecord!)
-                : hasTerminalRecord
-                    ? []
-                    : BuildMetricPoints(metricEvents, usageObservations),
-            hasTerminalRecord
-                ? BuildToolUsage(selectedRunRecord!)
-                : BuildToolUsage(metricEvents),
+            metricPoints,
+            toolUsage,
             result.Freshness,
             hasTerminalRecord
                 ? BuildRuntimeSummary(selectedRunRecord!)
@@ -417,9 +586,129 @@ public sealed class ProcessWorkspaceShellProjectionService(
                 : BuildAttentionSummary(result.Runs, incidents, metricEvents, result.SelectedRun, result.ActiveAgents))
         {
             SelectedRunRecord = selectedRunRecord,
-            ReusableRuns = result.ReusableRuns
+            ReusableRuns = result.ReusableRuns?.ToImmutableArray(),
+            Provenance = result.Provenance with
+            {
+                UsageTelemetry = usageLoad.Provenance
+            }
         };
     }
+
+    private static DerivedProjectionProvenanceContent CreateDerivedProvenanceContent(
+        ProcessRuntimeWorkspaceProjection runtime)
+        => new(
+            runtime.Stats,
+            runtime.MetricPoints
+                .OrderBy(point => point.TimestampUtc)
+                .ToImmutableArray(),
+            runtime.ToolUsage
+                .OrderByDescending(usage => usage.CallCount)
+                .ThenBy(usage => usage.ToolName, StringComparer.OrdinalIgnoreCase)
+                .ToImmutableArray(),
+            runtime.Summary,
+            runtime.AttentionSummary);
+
+    private static DefinitionCatalogProvenanceContent CreateDefinitionCatalogProvenanceContent(
+        ProcessDefinitionCatalogProjection catalog)
+        => new(
+            catalog.PublishedDefinitionCount,
+            catalog.DraftDefinitionCount,
+            catalog.TemplateCompatibilityIssueCount,
+            catalog.SelectedDefinitionKey,
+            catalog.SelectedItem is null
+                ? null
+                : new DefinitionCatalogItemProvenanceContent(
+                    catalog.SelectedItem.Key,
+                    catalog.SelectedItem.ScopeKind,
+                    catalog.SelectedItem.Name,
+                    catalog.SelectedItem.Status,
+                    catalog.SelectedItem.Criticality,
+                    catalog.SelectedItem.OperatingMode,
+                    catalog.SelectedItem.CompatibilityIssueCount));
+
+    private static UsageTelemetryProvenanceContent CreateUsageTelemetryProvenanceContent(
+        ProcessRuntimeWorkspaceQueryProjection runtimeQuery,
+        DateTimeOffset observedAtUtc,
+        IReadOnlyList<ProcessRunId> runIds,
+        IReadOnlyList<ProcessRuntimeUsageObservation> observations)
+    {
+        var historyWindow = ResolveHistoryWindow(runtimeQuery.HistoryWindow);
+        return new UsageTelemetryProvenanceContent(
+            observedAtUtc.Subtract(historyWindow),
+            observedAtUtc,
+            runIds
+                .OrderBy(runId => runId.Value)
+                .ToImmutableArray(),
+            observations
+                .OrderBy(observation => observation.CreatedAtUtc)
+                .ThenBy(observation => observation.UsageObservationId)
+                .Select(observation => new UsageObservationProvenanceContent(
+                    observation.UsageObservationId,
+                    observation.ExecutionRunId,
+                    observation.RunId,
+                    observation.StepInstanceId,
+                    observation.CreatedAtUtc,
+                    observation.ProviderName,
+                    observation.Model,
+                    observation.SourcePhase,
+                    observation.UsageStatus,
+                    observation.IsKnownUsage))
+                .ToImmutableArray());
+    }
+
+    private sealed record RuntimeUsageObservationLoad(
+        ImmutableArray<ProcessRuntimeUsageObservation> Observations,
+        ProcessProjectionComponentProvenance Provenance);
+
+    private sealed record ShellSelectionProvenanceContent(
+        ProcessWorkspaceShellScope Scope,
+        ProcessWorkspaceSelectionProjection RequestedSelection,
+        ProcessDefinitionCatalogItemKey? RequestedDefinitionKey,
+        ProcessDefinitionCatalogItemKey? EffectiveDefinitionKey,
+        Guid? RequestedRuntimeRunId,
+        Guid? EffectiveRuntimeRunId,
+        ProcessWorkspaceAgentEntryProjection AgentEntry);
+
+    private sealed record DerivedProjectionProvenanceContent(
+        ProcessRuntimeStatsProjection Stats,
+        ImmutableArray<ProcessRuntimeMetricPointProjection> MetricPoints,
+        ImmutableArray<ProcessRuntimeToolUsageProjection> ToolUsage,
+        string Summary,
+        string AttentionSummary);
+
+    private sealed record DefinitionCatalogProvenanceContent(
+        int PublishedDefinitionCount,
+        int DraftDefinitionCount,
+        int TemplateCompatibilityIssueCount,
+        ProcessDefinitionCatalogItemKey? SelectedDefinitionKey,
+        DefinitionCatalogItemProvenanceContent? SelectedItem);
+
+    private sealed record DefinitionCatalogItemProvenanceContent(
+        ProcessDefinitionCatalogItemKey Key,
+        ProcessDefinitionCatalogScopeKind ScopeKind,
+        string Name,
+        ProcessDefinitionCatalogItemStatus Status,
+        string Criticality,
+        string OperatingMode,
+        int CompatibilityIssueCount);
+
+    private sealed record UsageTelemetryProvenanceContent(
+        DateTimeOffset FromUtc,
+        DateTimeOffset ToUtc,
+        ImmutableArray<ProcessRunId> RunIds,
+        ImmutableArray<UsageObservationProvenanceContent> Observations);
+
+    private sealed record UsageObservationProvenanceContent(
+        Guid UsageObservationId,
+        Guid ExecutionRunId,
+        ProcessRunId RunId,
+        ProcessStepInstanceId? StepInstanceId,
+        DateTimeOffset CreatedAtUtc,
+        string ProviderName,
+        string Model,
+        string SourcePhase,
+        string UsageStatus,
+        bool IsKnownUsage);
 
     private static bool CanUseDurableFacts(ProcessRuntimeWorkspaceResult result)
     {

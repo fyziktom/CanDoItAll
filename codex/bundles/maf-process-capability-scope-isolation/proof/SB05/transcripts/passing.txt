@@ -1,6 +1,0 @@
-Command: dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~CapabilityTemplateSeedMaterializationTests|FullyQualifiedName~ProcessCapabilityScopeContractTests.Dotnet_ui_screenshot_template_scopes_development_image_guidance_to_storage_step" --artifacts-path artifacts\dotnet-test-isolated --no-restore
-Test: Dotnet_ui_screenshot_template_scopes_development_image_guidance_to_storage_step
-Test: Default_skill_templates_are_app_owned_inline_assets_under_capability_templates
-Invariant: MAF-SB05-DEVELOPMENT-SKILL-SCOPE
-Output: focused development capability seed and process scope tests passed
-ExitCode: 0

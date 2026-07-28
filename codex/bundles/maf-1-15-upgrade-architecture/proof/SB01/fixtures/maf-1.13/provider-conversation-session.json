@@ -1,0 +1,34 @@
+{
+  "fixtureFormat": "candoitall-maf-compatibility-v1",
+  "sourceFrameworkVersion": "1.13.0",
+  "scenario": "provider-managed-conversation",
+  "session": {
+    "id": "66666666-6666-4666-8666-666666666666",
+    "agentId": "22222222-2222-4222-8222-222222222222",
+    "title": "Provider conversation fixture",
+    "createdAtUtc": "2026-07-28T05:05:01Z",
+    "updatedAtUtc": "2026-07-28T05:06:01Z",
+    "messages": [
+      {
+        "id": "77777777-7777-4777-8777-777777777777",
+        "role": "User",
+        "content": "Continue the provider-managed conversation.",
+        "createdAtUtc": "2026-07-28T05:05:01Z",
+        "tokenEstimate": 5
+      }
+    ],
+    "latestExecutionRunId": null,
+    "compatibility": {
+      "runtimeSessionKey": "runtime-session-001",
+      "serializedSessionStateJson": "{\"conversationId\":\"provider-conversation-001\"}",
+      "pendingApprovals": [],
+      "autoApprovePendingToolCalls": false
+    }
+  },
+  "expectedTargetBehavior": {
+    "outcome": "provider-continuation",
+    "runtimeSessionKey": "runtime-session-001",
+    "providerConversationId": "provider-conversation-001",
+    "mustNotReplayLocalTranscript": true
+  }
+}

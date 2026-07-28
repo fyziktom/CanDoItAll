@@ -94,6 +94,8 @@ public sealed class AppDatabaseBootstrapper(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IProfileAppDbContextFactory dbContextFactory,
     ISecretVault secretVault,
+    IEnumerable<IProviderRuntimeProfileSnapshotInitializer>
+        providerRuntimeProfileSnapshotInitializers,
     ILogger<AppDatabaseBootstrapper> logger) : IAppDatabaseBootstrapper
 {
     private static readonly Guid ManagedDeliveryUnitPartyId = Guid.Parse("10BE49B1-EF4D-4A58-B9EA-B3F7D40F31A1");
@@ -106,13 +108,22 @@ public sealed class AppDatabaseBootstrapper(
     private static readonly Guid ManagedDeliveryManagerProfileId = Guid.Parse("E0EBEC09-C37B-4F42-9FA4-1B2DDAC20572");
     private static readonly Guid RuntimeBootstrapOpenAiProviderId = Guid.Parse("C1C103DB-707E-3F52-8809-8D804FC171D1");
     private static readonly Guid RuntimeBootstrapOpenAiChatCompletionsProviderId = Guid.Parse("036B360A-E3F4-8350-97CA-F88DE60BA2BB");
+    private static readonly Guid RuntimeBootstrapOpenAiImageProviderId = Guid.Parse("8958FA61-4BD6-1451-8123-4E4E4FEA2E26");
+    private static readonly Guid RuntimeBootstrapComfyUiProviderId = Guid.Parse("509EAF62-4A4E-1C50-856F-8836328A519E");
+    private static readonly Guid RuntimeBootstrapLocalOllamaProviderId = Guid.Parse("BD2BFFBB-23D5-D152-82F6-E1D37908B169");
     private const string RuntimeBootstrapOpenAiProviderName = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName;
     private const string RuntimeBootstrapOpenAiChatCompletionsProviderName = ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName;
+    private const string RuntimeBootstrapOpenAiImageProviderName = "OpenAI image generation";
     private const string RuntimeBootstrapOpenAiBaseUrl = "https://api.openai.com/v1";
     private const string RuntimeBootstrapOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string RuntimeBootstrapOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+    private const string RuntimeBootstrapOpenAiImageModel = "gpt-image-1-mini";
+    private const string RuntimeBootstrapLocalOllamaProviderName = "Local Ollama";
+    private const string RuntimeBootstrapLocalOllamaBaseUrl = "http://127.0.0.1:11434";
+    private const string RuntimeBootstrapLocalOllamaModel = "llama3.1";
     private const string RuntimeBootstrapProviderSchemaVersion = "1.0";
     private const int RuntimeBootstrapOpenAiTimeoutSeconds = 600;
+    private const int RuntimeBootstrapLocalOllamaTimeoutSeconds = 45;
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
     private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
@@ -131,9 +142,17 @@ public sealed class AppDatabaseBootstrapper(
         "Factory_PromptRuns"
     ];
 
-    public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureCurrentProfileReadyAsync(
+        CancellationToken cancellationToken = default)
     {
-        return EnsureProfileReadyAsync(profileAccessor.ResolveCurrentProfile(), cancellationToken);
+        await EnsureProfileReadyAsync(
+            profileAccessor.ResolveCurrentProfile(),
+            cancellationToken);
+        foreach (var initializer in
+                 providerRuntimeProfileSnapshotInitializers)
+        {
+            await initializer.InitializeAsync(cancellationToken);
+        }
     }
 
     public async Task EnsureProfileReadyAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
@@ -152,6 +171,13 @@ public sealed class AppDatabaseBootstrapper(
                 "Ensuring non-relational database profile {ProfileId} is created.",
                 profile.Profile.Id);
             await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+            logger.LogInformation(
+                "Ensuring agent provider bootstrap for non-relational profile {ProfileId}.",
+                profile.Profile.Id);
+            await EnsureAgentProviderBootstrapAsync(
+                profile,
+                dbContext,
+                cancellationToken);
             logger.LogInformation(
                 "Non-relational database profile {ProfileId} is ready.",
                 profile.Profile.Id);
@@ -640,6 +666,10 @@ public sealed class AppDatabaseBootstrapper(
         }
 
         changed |= UpdateRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(openAiChatCompletionsProvider);
+        changed |= await EnsureManagedCatalogProviderSeedsAsync(
+            dbContext,
+            openAiSecretId,
+            cancellationToken);
 
         var settings = await dbContext.Set<WorkspaceSettings>()
             .FirstOrDefaultAsync(cancellationToken);
@@ -668,6 +698,235 @@ public sealed class AppDatabaseBootstrapper(
             logger.LogInformation(
                 "Seeded OpenAI provider bootstrap for profile {ProfileId}.",
                 profile.Profile.Id);
+        }
+    }
+
+    private async Task<bool> EnsureManagedCatalogProviderSeedsAsync(
+        AppDbContext dbContext,
+        Guid? openAiSecretId,
+        CancellationToken cancellationToken)
+    {
+        var seeds = CreateManagedCatalogProviderSeeds(openAiSecretId);
+        var seedIds = seeds.Select(seed => seed.Id).ToArray();
+        var seedNames = seeds.Select(seed => seed.Name).ToArray();
+        var existingProviders = await dbContext
+            .Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            .Where(provider =>
+                seedIds.Contains(provider.Id) ||
+                seedNames.Contains(provider.Name))
+            .ToListAsync(cancellationToken);
+        var changed = false;
+
+        foreach (var seed in seeds)
+        {
+            var byId = existingProviders
+                .FirstOrDefault(provider => provider.Id == seed.Id);
+            var byName = existingProviders
+                .FirstOrDefault(provider =>
+                    string.Equals(
+                        provider.Name,
+                        seed.Name,
+                        StringComparison.Ordinal));
+            if (byId is not null &&
+                !string.Equals(byId.Name, seed.Name, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Managed provider seed '{seed.Name}' cannot use Id '{seed.Id:D}' because that Id belongs to '{byId.Name}'.");
+            }
+
+            if (byName is not null && byName.Id != seed.Id)
+            {
+                throw new InvalidOperationException(
+                    $"Managed provider seed '{seed.Name}' must use Id '{seed.Id:D}', but the canonical provider uses '{byName.Id:D}'.");
+            }
+
+            if (byId is not null)
+            {
+                continue;
+            }
+
+            dbContext
+                .Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+                .Add(seed.CreateEntity());
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static IReadOnlyList<ManagedCatalogProviderSeed>
+        CreateManagedCatalogProviderSeeds(Guid? openAiSecretId)
+    {
+        return
+        [
+            new ManagedCatalogProviderSeed(
+                RuntimeBootstrapOpenAiImageProviderId,
+                RuntimeBootstrapOpenAiImageProviderName,
+                CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
+                OpenAiProviderAdapter.PluginKey,
+                RuntimeBootstrapOpenAiBaseUrl,
+                openAiSecretId,
+                RuntimeBootstrapOpenAiImageModel,
+                RuntimeBootstrapOpenAiTimeoutSeconds,
+                SupportsStreaming: false,
+                SupportsToolCalling: false,
+                SupportsStructuredOutput: false,
+                BuildManagedProviderConfigurationJson(
+                    "{}",
+                    OpenAiProviderAdapter.PluginKey,
+                    openAiSecretId,
+                    RuntimeBootstrapOpenAiTimeoutSeconds,
+                    ProviderTransportKind.Responses,
+                    ProviderProfilePurpose.ImageGeneration,
+                    ["cloud", "image", "image-generation", "openai"],
+                    isPrivateProvider: false,
+                    ProviderPricingDefaults.CreateDefaultPrices(
+                        CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+                        RuntimeBootstrapOpenAiImageModel))),
+            new ManagedCatalogProviderSeed(
+                RuntimeBootstrapComfyUiProviderId,
+                ComfyUiFluxProviderDefaults.ProviderName,
+                ProviderKind: null,
+                ComfyUiProviderAdapter.PluginKey,
+                ComfyUiFluxProviderDefaults.DefaultBaseUrl,
+                ApiKeySecretId: null,
+                ComfyUiFluxProviderDefaults.DefaultModel,
+                ComfyUiFluxProviderDefaults.TimeoutSeconds,
+                SupportsStreaming: false,
+                SupportsToolCalling: false,
+                SupportsStructuredOutput: false,
+                BuildManagedProviderConfigurationJson(
+                    ComfyUiFluxProviderDefaults.CreateConfigurationJson(),
+                    ComfyUiProviderAdapter.PluginKey,
+                    secretRecordId: null,
+                    ComfyUiFluxProviderDefaults.TimeoutSeconds,
+                    ProviderTransportKind.ChatCompletions,
+                    ProviderProfilePurpose.ImageGeneration,
+                    ["comfyui", "flux", "image", "image-generation", "local"],
+                    isPrivateProvider: true,
+                    ProviderPricingDefaults.CreateDefaultPrices(
+                        CanDoItAll.AgentFramework.Models.ProviderKind.ComfyUi,
+                        ComfyUiFluxProviderDefaults.DefaultModel))),
+            new ManagedCatalogProviderSeed(
+                RuntimeBootstrapLocalOllamaProviderId,
+                RuntimeBootstrapLocalOllamaProviderName,
+                CanDoItAll.Modules.Workspace.ProviderKind.OllamaLocal,
+                OllamaProviderAdapter.PluginKey,
+                RuntimeBootstrapLocalOllamaBaseUrl,
+                ApiKeySecretId: null,
+                RuntimeBootstrapLocalOllamaModel,
+                RuntimeBootstrapLocalOllamaTimeoutSeconds,
+                SupportsStreaming: true,
+                SupportsToolCalling: true,
+                SupportsStructuredOutput: false,
+                BuildManagedProviderConfigurationJson(
+                    JsonSerializer.Serialize(new
+                    {
+                        history = "framework-managed",
+                        local = true,
+                        modelParameters = new
+                        {
+                            numPredict =
+                                AgentProviderModelParameterPolicy
+                                    .DefaultOllamaMaxOutputTokens,
+                            think =
+                                AgentProviderModelParameterPolicy
+                                    .DefaultOllamaThinkEnabled
+                        }
+                    }),
+                    OllamaProviderAdapter.PluginKey,
+                    secretRecordId: null,
+                    RuntimeBootstrapLocalOllamaTimeoutSeconds,
+                    ProviderTransportKind.ChatCompletions,
+                    ProviderProfilePurpose.Chat,
+                    ["chat", "local", "ollama"],
+                    isPrivateProvider: true,
+                    ProviderPricingDefaults.CreateDefaultPrices(
+                        CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
+                        RuntimeBootstrapLocalOllamaModel)))
+        ];
+    }
+
+    private static string BuildManagedProviderConfigurationJson(
+        string configurationJson,
+        string connectorPluginKey,
+        Guid? secretRecordId,
+        int timeoutSeconds,
+        ProviderTransportKind transport,
+        ProviderProfilePurpose purpose,
+        IEnumerable<string> tags,
+        bool isPrivateProvider,
+        IReadOnlyList<ProviderModelTokenPrice> modelPrices)
+    {
+        var configuration = JsonNode.Parse(configurationJson)?.AsObject()
+            ?? new JsonObject();
+        configuration["connectorPluginKey"] = connectorPluginKey;
+        configuration["configSchemaVersion"] =
+            RuntimeBootstrapProviderSchemaVersion;
+        configuration["timeoutSeconds"] = timeoutSeconds;
+        configuration["providerTransport"] = transport.ToString();
+        configuration["providerPurpose"] = purpose.ToString();
+        if (secretRecordId.HasValue)
+        {
+            configuration["secretRecordId"] =
+                secretRecordId.Value.ToString("D");
+            configuration["apiKeyEnvironmentVariable"] =
+                RuntimeBootstrapOpenAiApiKeyEnvironmentVariable;
+        }
+
+        var tagArray = new JsonArray();
+        foreach (var tag in tags
+                     .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                     .Select(tag => tag.Trim().TrimStart('#').ToLowerInvariant())
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase))
+        {
+            tagArray.Add(tag);
+        }
+
+        configuration["tags"] = tagArray;
+        return ProviderPricingMetadata.Write(
+            configuration.ToJsonString(),
+            isPrivateProvider,
+            modelPrices);
+    }
+
+    private sealed record ManagedCatalogProviderSeed(
+        Guid Id,
+        string Name,
+        CanDoItAll.Modules.Workspace.ProviderKind? ProviderKind,
+        string ConnectorPluginKey,
+        string BaseUrl,
+        Guid? ApiKeySecretId,
+        string DefaultModel,
+        int TimeoutSeconds,
+        bool SupportsStreaming,
+        bool SupportsToolCalling,
+        bool SupportsStructuredOutput,
+        string ExtraSettingsJson)
+    {
+        public CanDoItAll.Modules.Workspace.ProviderProfile CreateEntity()
+        {
+            return new CanDoItAll.Modules.Workspace.ProviderProfile
+            {
+                Id = Id,
+                Name = Name,
+                ProviderKind = ProviderKind,
+                ConnectorPluginKey = ConnectorPluginKey,
+                ConfigSchemaVersion =
+                    RuntimeBootstrapProviderSchemaVersion,
+                BaseUrl = BaseUrl,
+                ApiKeySecretId = ApiKeySecretId,
+                DefaultModel = DefaultModel,
+                TimeoutSeconds = TimeoutSeconds,
+                IsEnabled = true,
+                SupportsStreaming = SupportsStreaming,
+                SupportsToolCalling = SupportsToolCalling,
+                SupportsStructuredOutput = SupportsStructuredOutput,
+                SupportsVision = false,
+                LastHealthStatus = "Not checked",
+                ExtraSettingsJson = ExtraSettingsJson
+            };
         }
     }
 

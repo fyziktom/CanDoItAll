@@ -1,0 +1,5 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\maf-1-15-upgrade-architecture\proof\SB01\build-and-test-baseline\maf-handoff-1.13.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 331 ms - CanDoItAll.Tests.Integration.dll (net10.0)

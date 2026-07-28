@@ -250,7 +250,13 @@ public sealed class DashboardQueryServicesTests
             throw new NotSupportedException();
         }
 
-        public Task SaveCatalogAsync(
+        public Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<SandboxWorkspaceCatalog> SaveCatalogAsync(
             SandboxWorkspaceCatalog catalog,
             CancellationToken cancellationToken = default)
         {
@@ -317,7 +323,7 @@ public sealed class DashboardQueryServicesTests
             throw new NotSupportedException();
         }
 
-        public Task SaveAsync(
+        public Task<SandboxWorkspaceDocument> SaveAsync(
             SandboxWorkspaceDocument document,
             CancellationToken cancellationToken = default)
         {

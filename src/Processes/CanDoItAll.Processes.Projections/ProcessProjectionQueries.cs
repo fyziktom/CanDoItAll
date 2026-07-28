@@ -108,6 +108,9 @@ public sealed record ProcessRuntimeWorkspaceResult(
     public ProcessRunRecord? SelectedRunRecord { get; init; }
 
     public IReadOnlyList<ProcessLiveProcessSnapshot>? ReusableRuns { get; init; }
+
+    public ProcessWorkspaceProvenanceVector Provenance { get; init; } =
+        ProcessWorkspaceProvenanceVector.Empty;
 }
 
 public sealed record ProcessProjectionHistoryQuery(

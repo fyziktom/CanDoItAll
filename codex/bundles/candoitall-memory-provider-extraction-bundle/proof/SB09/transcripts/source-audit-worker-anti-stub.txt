@@ -1,4 +1,0 @@
-Command: Historical SB09 proof transcript: source-audit-worker-anti-stub.txt
-No SB09 anti-stub markers found.
-ExitCode: 0
-InvariantIds: SB09-CLOSURE

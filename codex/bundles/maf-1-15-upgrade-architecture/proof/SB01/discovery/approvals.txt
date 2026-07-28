@@ -1,0 +1,320 @@
+===== PATTERN: ToolApprovalRequestContent =====
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:292:Assert.DoesNotContain("ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>>", runtimeSource, StringComparison.Ordinal);
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:392:var request = new ToolApprovalRequestContent("approval-001", toolCall);
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:13:- Při pokračování se z vlastního záznamu rekonstruuje `ToolApprovalRequestContent`, ale modelu se posílá pouze approval response.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\04-workaround-decision-register.md:13:| W07 | Rehydrate `ToolApprovalRequestContent` from custom record | **Rewrite for 1.15 binding** | Legacy session state and exact request authority must be explicit | Function/MCP/restart/legacy/integrity tests |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:21:- records each surfaced `ToolApprovalRequestContent` in the active session state bag under `_pendingApprovalRequests`;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:87:1. process-local cache of raw `ToolApprovalRequestContent`;
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:13:void StorePendingApprovals(Guid sessionId, IReadOnlyList<ToolApprovalRequestContent> approvalRequests);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:17:PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:25:private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:35:public void StorePendingApprovals(Guid sessionId, IReadOnlyList<ToolApprovalRequestContent> approvalRequests)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:46:public PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:110:private IReadOnlyList<ToolApprovalRequestContent> GetCachedOrRehydratedApprovals(ChatSessionRecord session)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:133:private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:145:return new ToolApprovalRequestContent(record.ApprovalId, toolCall);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:596:IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:963:.OfType<ToolApprovalRequestContent>()
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:295:ToolApprovalRequestContent approval => new ToolApprovalRequestContent(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:242:IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:260:ToolApprovalRequestContent approval => approval.ToolCall?.CallId ?? approval.ToolCall?.ToString(),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafFinalizerDriver.cs:24:IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests,
+
+===== PATTERN: ToolApprovalResponseContent =====
+<no matches>
+
+===== PATTERN: ApprovalRequiredAIFunction =====
+docs\provider-capability-and-pricing.md:16:| Approval and background behavior | `supportsToolApprovalWrappers`, `supportsToolApprovalRequests`, `supportsApprovalRequiredAIFunction`, `supportsBackgroundResponses` |
+docs\maf-runtime-stabilization.md:71:- `SupportsApprovalRequiredAIFunction`
+docs\agent-recovery-stabilization.md:45:Process mutation tools are registered as mutation tools and require approval by default. Read-only process inspection tools remain read-only. Internal process mutation tools are wrapped with MAF `ApprovalRequiredAIFunction` unless approval requirements are explicitly suppressed for governed non-interactive automation.
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:112:Assert.IsNotType<ApprovalRequiredAIFunction>(GetTool(
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:115:Assert.IsNotType<ApprovalRequiredAIFunction>(GetTool(
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:118:Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:121:Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:124:Assert.IsType<ApprovalRequiredAIFunction>(GetTool(
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowAgentRuntimeToolProviderTests.cs:129:tool => Assert.IsNotType<ApprovalRequiredAIFunction>(tool));
+tests\Unit\CanDoItAll.Tests.Unit\ProviderFeatureMatrixTests.cs:30:Assert.True(matrix.SupportsApprovalRequiredAIFunction);
+tests\Unit\CanDoItAll.Tests.Unit\ProviderFeatureMatrixTests.cs:52:Assert.True(matrix.SupportsApprovalRequiredAIFunction);
+tests\Unit\CanDoItAll.Tests.Unit\ProviderFeatureMatrixTests.cs:71:Assert.True(matrix.SupportsApprovalRequiredAIFunction);
+tests\Unit\CanDoItAll.Tests.Unit\ProviderFeatureMatrixTests.cs:94:Assert.False(matrix.SupportsApprovalRequiredAIFunction);
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:554:Assert.IsNotType<ApprovalRequiredAIFunction>(Assert.Single(state.Tools, tool => tool.Name == "processes_runs_list"));
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:555:Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(state.Tools, tool => tool.Name == "processes_run_start"));
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:20:typeof(ApprovalRequiredAIFunction).Assembly,
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:46:Assert.Contains("ApprovalRequiredAIFunction", availableTypeNames);
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:393:Assert.IsNotType<ApprovalRequiredAIFunction>(Assert.Single(tools, tool => tool.Name == "processes_runs_list"));
+tests\Unit\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:394:Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(tools, tool => tool.Name == "processes_run_start"));
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:104:The MAF decorator only knows whether a tool is wrapped as `ApprovalRequiredAIFunction`. CanDoItAll's own mutation policy remains authoritative.
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Providers\ProviderModels.cs:34:bool SupportsApprovalRequiredAIFunction = false,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Providers\ProviderServices.cs:254:SupportsApprovalRequiredAIFunction: supportsToolApprovalRequests,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:360:.Where(tool => tool is ApprovalRequiredAIFunction)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:413:ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:441:activity?.SetTag("agentframework.provider_supports_tool_approval", featureMatrix.SupportsApprovalRequiredAIFunction);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:579:capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:584:if (featureMatrix.SupportsApprovalRequiredAIFunction)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:590:.Where(tool => tool is ApprovalRequiredAIFunction)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeAgentFactory.cs:612:capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ToolCapabilityBuilder.cs:352:? new ApprovalRequiredAIFunction(function)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\ToolCapabilityBuilder.ConfiguredWorkspace.cs:214:? new ApprovalRequiredAIFunction(function)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeToolProviderComposer.cs:117:request.State.HasApprovalTools |= request.State.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeToolProviderComposer.cs:139:return new ApprovalRequiredAIFunction(function);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:687:composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\RuntimeCapabilityComposer.cs:1075:? new ApprovalRequiredAIFunction(function)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\McpCapabilityBuilder.cs:113:state.Tools.Add(wrappedToolApprovalRequired ? new ApprovalRequiredAIFunction(boundedTool) : boundedTool);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\McpCapabilityBuilder.cs:144:state.Tools.Add(wrappedToolApprovalRequired ? new ApprovalRequiredAIFunction(boundedTool) : boundedTool);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafRuntimeCapabilityConfiguration.cs:225:? new ApprovalRequiredAIFunction(function)
+
+===== PATTERN: ToolApprovalAgent =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:33:- `ToolApprovalAgent` and related APIs were stabilized; rule callbacks now use `ToolAutoApprovalRuleContext`.
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:68:- evaluate after parity: approval-not-required bypass, stable ToolApprovalAgent, message injection, FileMemoryProvider;
+codex\bundles\maf-1-15-upgrade-architecture\subbundles\07-a2a-hosting-and-optional-api-inventory\README.md:61:10. Classify Harness/FileMemory/ToolApprovalAgent/message injection/compaction/CodeAct/Cosmos/Responses hosting.
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\qa-prompt.md:67:- AG-UI/Harness/declarative/FileMemory/compaction/message-injection/ToolApprovalAgent/Responses-hosting decisions are explicit;
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\implementation-prompt.md:41:- Do not adopt Harness, AG-UI, declarative workflows, FileMemory, compaction, ToolApprovalAgent, message injection, or OpenAI Responses hosting in the compatibility pass.
+codex\bundles\maf-1-15-upgrade-architecture\shared-prompts\discovery-prompt.md:6:Run the included discovery script, inspect every provider factory, ChatClientAgentOptions construction, custom chat-client stack, approval/session store, response snapshot/merge path, workflow checkpoint bridge, A2A mapping, Harness/FileAccess/AGUI/declarative/compaction/ToolApprovalAgent/MessageInjection/FileMemory/CodeAct/Cosmos/Responses-hosting match, and all direct/transitive MAF package references.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\09-open-questions-and-discovery-gates.md:18:| Q12 | Are AG-UI, declarative workflows, Harness, compaction, FileMemory, ToolApprovalAgent, LocalCodeAct, or Cosmos history active? | Hidden compile/behavior impact | Full branch grep and package graph |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\08-opportunities-not-in-first-pass.md:23:## Stable ToolApprovalAgent
+codex\bundles\maf-1-15-upgrade-architecture\analysis\02-impact-matrix.md:16:| `ToolApprovalAgent` API stabilization/signature change | No confirmed direct usage | Compile/optional | Grep and migrate only matches | P1 | Discovery |
+codex\bundles\maf-1-15-upgrade-architecture\reviews\00-bundle-self-review.md:52:- Harness, FileMemory, ToolApprovalAgent, message injection, AG-UI, declarative workflows, compaction, LocalCodeAct, Cosmos, and OpenAI Responses hosting are inventory/future items.
+codex\bundles\maf-1-15-upgrade-architecture\requirements\01-normalized-requirements.md:20:| R16 | Inventory AG-UI, declarative workflows, compaction, ToolApprovalAgent, Harness, FileMemory, message injection, and OpenAI Responses hosting without adopting them in the compatibility pass. | Optional-feature register has one decision per feature. |
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:15:| ToolApprovalAgent stabilization | https://github.com/microsoft/agent-framework/pull/7107 | Compile if used; future auto-approval evaluation | SB01, SB07 |
+codex\bundles\maf-1-15-upgrade-architecture\plan\06-final-acceptance-criteria.md:71:- [ ] ToolApprovalAgent status
+codex\bundles\maf-1-15-upgrade-architecture\plan\01-phase-plan.md:115:- inventory AG-UI, declarative, Harness, compaction, FileMemory, ToolApprovalAgent, message injection, CodeAct, Cosmos, and Responses hosting;
+
+===== PATTERN: ToolAutoApprovalRuleContext =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:33:- `ToolApprovalAgent` and related APIs were stabilized; rule callbacks now use `ToolAutoApprovalRuleContext`.
+
+===== PATTERN: PendingToolApprovalRecord =====
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationAdapterTests.cs:9442:new PendingToolApprovalRecord(
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:293:Assert.DoesNotContain("private static PendingToolApprovalRecord MapPendingApproval", runtimeSource, StringComparison.Ordinal);
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:422:new PendingToolApprovalRecord(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:1142:new PendingToolApprovalRecord(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2222:public IReadOnlyList<PendingToolApprovalRecord> InitialPendingApprovals { get; init; } =
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2224:new PendingToolApprovalRecord(
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs:447:var approval = new PendingToolApprovalRecord(
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:332:private static PendingToolApprovalRecord CreatePendingApproval(
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:337:return new PendingToolApprovalRecord(
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:351:private static ExecutionRunRecord CreateRun(IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
+tests\Components\CanDoItAll.Tests.Components\HrAgentProcessReviewServiceTests.cs:175:new PendingToolApprovalRecord(
+tests\Components\CanDoItAll.Tests.Components\HrAgentProcessReviewServiceTests.cs:297:public IReadOnlyList<PendingToolApprovalRecord> PendingApprovals { get; set; } = [];
+tests\Components\CanDoItAll.Tests.Components\AgentChatPanelResponsivenessTests.cs:411:new PendingToolApprovalRecord(
+codex\bundles\maf-1-15-upgrade-architecture\architecture\01-current-integration-map.md:39:ApprovalDriver --> AppPending[Custom PendingToolApprovalRecord]
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:88:2. persistent `PendingToolApprovalRecord` with approval ID, call ID, tool name/kind, endpoint detail, and arguments JSON.
+src\Modules\CanDoItAll.Modules.AgentFramework\Services\Hr\HrAgentProcessReviewService.cs:294:private static PendingToolApprovalRecord ProtectManagerReviewApproval(
+src\Modules\CanDoItAll.Modules.AgentFramework\Services\Hr\HrAgentProcessReviewService.cs:295:PendingToolApprovalRecord approval)
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:158:new PendingToolApprovalRecord(
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:13:public sealed record PendingToolApprovalRecord(
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:31:IReadOnlyList<PendingToolApprovalRecord>? pendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:46:public IReadOnlyList<PendingToolApprovalRecord> PendingApprovals { get; init; }
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:59:IReadOnlyList<PendingToolApprovalRecord>? pendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:112:IReadOnlyList<PendingToolApprovalRecord>? PendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:162:public IReadOnlyList<PendingToolApprovalRecord>? LegacyPendingApprovals
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:176:IReadOnlyList<PendingToolApprovalRecord>? pendingApprovals = null,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:459:IReadOnlyList<PendingToolApprovalRecord> PendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Packages\ZipAgentPackageService.cs:575:private static IReadOnlyList<PendingToolApprovalRecord> ProtectPendingApprovalsForExport(
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Packages\ZipAgentPackageService.cs:576:IReadOnlyList<PendingToolApprovalRecord>? approvals,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:62:IReadOnlyList<PendingToolApprovalRecord> pendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:184:PendingToolApprovalRecord pendingApproval,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:13:public static IReadOnlyList<PendingToolApprovalRecord> PendingApprovalsOrEmpty(ChatSessionRecord session)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\Chat\ChatSessionRuntimeCompatibilityAdapter.cs:25:IReadOnlyList<PendingToolApprovalRecord>? pendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:281:IReadOnlyList<PendingToolApprovalRecord> PendingApprovals)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:17:PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:19:string ResolveResponseText(AgentResponse response, IReadOnlyList<PendingToolApprovalRecord> pendingApprovals);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:46:public PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:71:return new PendingToolApprovalRecord(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:82:IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:133:private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:13:IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:19:IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:31:IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeSessionPersistenceDriver.cs:54:IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:224:IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:312:IReadOnlyList<PendingToolApprovalRecord> PendingApprovals,
+
+===== PATTERN: RespondToPendingApprovals =====
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowUsageAnalyticsRedGateTests.cs:785:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2276:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationMetadataTests.cs:1458:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRuntimeIntegrationAdapterTests.cs:9971:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessRunNarrativeGeneratorTests.cs:801:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\ProcessLaunchExecutorResolverTests.cs:2045:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, AgentExecutionOperationId activityOperationId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
+tests\Unit\CanDoItAll.Tests.Unit\ManagedSeedExecutionCredentialBoundaryTests.cs:252:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\FloatingAgentChatArchitectureTests.cs:1307:var approvalResult = await orchestrator.RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\FloatingAgentChatArchitectureTests.cs:1488:IAgentFrameworkWorkspaceActivityExecutionService.RespondToPendingApprovalsWithinOperationAsync))
+tests\Unit\CanDoItAll.Tests.Unit\FloatingAgentChatArchitectureTests.cs:1498:IAgentFrameworkWorkspaceService.RespondToPendingApprovalsAsync))
+tests\Unit\CanDoItAll.Tests.Unit\CurrentProfileAgentExecutionActivityAdmissionTests.cs:100:[InlineData(DirectExecutionEntry.RespondToPendingApprovals)]
+tests\Unit\CanDoItAll.Tests.Unit\CurrentProfileAgentExecutionActivityAdmissionTests.cs:352:case DirectExecutionEntry.RespondToPendingApprovals:
+tests\Unit\CanDoItAll.Tests.Unit\CurrentProfileAgentExecutionActivityAdmissionTests.cs:353:await service.RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\CurrentProfileAgentExecutionActivityAdmissionTests.cs:908:RespondToPendingApprovals
+tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:3510:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(Guid agentId, Guid chatSessionId, AgentExecutionOperationId activityOperationId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default)
+tests\Unit\CanDoItAll.Tests.Unit\AgentReferenceDataProviderTests.cs:775:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\AgentFrameworkWorkspaceActivityAdmissionTests.cs:280:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Unit\CanDoItAll.Tests.Unit\AgentChatExecutionActivityOrchestratorTests.cs:474:public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+tests\Integration\CanDoItAll.Tests.Integration\AgentJsonSchemaOutputExecutionIntegrationTests.cs:381:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:470:public async Task RespondToPendingApprovalsAsync_continues_chat_run_without_loading_unrelated_run_slices()
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:516:var completedResult = await workspaceService.RespondToPendingApprovalsAsync(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2103:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2186:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:2332:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+tests\Components\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:2186:var completion = RespondToPendingApprovalsAsync(
+tests\Components\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:2232:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+tests\Components\CanDoItAll.Tests.Components\ProcessWorkspaceShellTests.cs:2571:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+tests\Components\CanDoItAll.Tests.Components\HrAgentProcessReviewServiceTests.cs:334:public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+.codex\bundles\agent-preload-activity-stream-architecture\proof\SB02\source-assertions.md:56:- `RespondToPendingApprovalsAsync` at line 204.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\06-session-approval-migration.md:109:RespondToPendingApprovals(sessionId, approved: bool)
+codex\bundles\maf-1-15-upgrade-architecture\analysis\06-session-approval-migration.md:115:RespondToPendingApprovals(
+src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:506:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:519:(service, operation) => service.RespondToPendingApprovalsWithinOperationAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:549:public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Workspace\CurrentProfileAgentFrameworkWorkspaceService.cs:562:service => service.RespondToPendingApprovalsWithinOperationAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentChatExecutionOrchestrator.cs:122:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentChatExecutionOrchestrator.cs:224:.RespondToPendingApprovalsWithinOperationAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:171:public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:187:return await inner.RespondToPendingApprovalsAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs:188:public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs:204:return await inner.RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:264:public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:279:() => RespondToPendingApprovalsCoreAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:289:private async Task<AgentChatRunResult> RespondToPendingApprovalsCoreAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:388:currentResponse = await runtime.RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:455:runtimeResponse = await runtime.RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:340:Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:598:Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceActivityExecutionContracts.cs:34:Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.ExecutionFacade.cs:204:public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.ExecutionFacade.cs:220:operation => executionService.RespondToPendingApprovalsWithinOperationAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.ExecutionFacade.cs:229:public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.ExecutionFacade.cs:236:=> executionService.RespondToPendingApprovalsWithinOperationAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Workspace\FloatingAgentChatContracts.cs:102:Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:349:public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:366:return await RespondToPendingApprovalsCoreAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:384:return await RespondToPendingApprovalsCoreAsync(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:401:private async Task<AgentRuntimeResponse> RespondToPendingApprovalsCoreAsync(
+
+===== PATTERN: CreateResponse( =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:31:The current continuation sends only messages containing `request.CreateResponse(approved)`. This works after a 1.15 run only if the exact serialized session with the binding state is restored.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:90:On restart, the request is reconstructed and `CreateResponse(approved)` is called. Current risks:
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:31:.Select(item => new ChatMessage(ChatRole.User, [item.CreateResponse(approved)]))
+
+===== PATTERN: ApprovalId =====
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:396:Assert.Equal("approval-001", pending.ApprovalId);
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs:109:item.ApprovalId == scenario.ApprovalId));
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs:509:approval.ApprovalId,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs:566:approval.ApprovalId,
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs:663:string ApprovalId,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:217:ApprovalId: "manager-review-decided",
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:231:ApprovalId: pendingApprovals[0].ApprovalId,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:333:string approvalId,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:338:ApprovalId: approvalId,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:339:CallId: $"call-{approvalId}",
+codex\bundles\maf-1-15-upgrade-architecture\machine\approval-decision.schema.json:26:"approvalId",
+codex\bundles\maf-1-15-upgrade-architecture\machine\approval-decision.schema.json:30:"approvalId": {
+codex\bundles\maf-1-15-upgrade-architecture\analysis\06-session-approval-migration.md:118:{ approvalId, approved, reason?, expectedFingerprint? }
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:159:ApprovalId: $"{definition.Id}-approval",
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:271:EnsureAllRunsExist(document.ExecutionApprovals.Select(item => (item.ExecutionRunId, $"Execution approval '{item.ApprovalId}'")), runIds);
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:794:item => item.ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:795:item => $"{jsonStore.NormalizeFileName(item.ApprovalId)}.json",
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:1152:item => $"{item.ExecutionRunId:N}-{jsonStore.NormalizeFileName(item.ApprovalId)}.json",
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:1328:item => $"{jsonStore.NormalizeFileName(item.ApprovalId)}.json",
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:2540:item => item.ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:2606:item => item.ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:14:string ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:22:string ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:309:IReadOnlyList<string> PendingApprovalIds,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:484:string ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:1206:.ThenBy(item => item.ApprovalId, StringComparer.OrdinalIgnoreCase)
+src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:1223:PendingApprovalIds = checkpoint.PendingApprovalIds ?? []
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:50:.OrderBy(item => item.ApprovalId, StringComparer.OrdinalIgnoreCase)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:53:.OrderBy(item => item.ApprovalId, StringComparer.OrdinalIgnoreCase)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:76:string.Equals(item.ApprovalId, pendingApproval.ApprovalId, StringComparison.OrdinalIgnoreCase));
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:127:string.Equals(item.ApprovalId, pendingApproval.ApprovalId, StringComparison.OrdinalIgnoreCase));
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:189:ApprovalId: pendingApproval.ApprovalId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionGovernanceServices.cs:46:activity?.SetTag("agentframework.approval_id", approval.ApprovalId);
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionGovernanceServices.cs:73:activity?.SetTag("agentframework.approval_id", approval.ApprovalId);
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Telemetry\AgentFrameworkTelemetry.cs:130:tags.Add("agentframework.approval_id", approval.ApprovalId);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:72:ApprovalId: request.RequestId ?? toolCall.CallId ?? Guid.NewGuid().ToString("N"),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:145:return new ToolApprovalRequestContent(record.ApprovalId, toolCall);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:73:PendingApprovalIds: run.PendingApprovals
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:74:.Select(item => item.ApprovalId)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:272:var persistedApprovalIds = payload.PendingApprovals
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:273:.Select(item => item.ApprovalId)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:277:var currentApprovalIds = run.PendingApprovals
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:278:.Select(item => item.ApprovalId)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:283:var approvalIdsMatch = persistedApprovalIds.SequenceEqual(currentApprovalIds, StringComparer.OrdinalIgnoreCase);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:284:if (approvalIdsMatch
+
+===== PATTERN: CallId =====
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:397:Assert.Equal("call-001", pending.CallId);
+tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:1253:var synthesisId = CognitiveMemorySynthesizedRecallId.New();
+tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2675:var synthesisId = CognitiveMemorySynthesizedRecallId.New();
+tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:2724:var synthesisId = CognitiveMemorySynthesizedRecallId.New();
+tests\Unit\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:3302:CognitiveMemorySynthesizedRecallId SynthesisId,
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:550:["callId"] = $"call-{index + 1}",
+tests\Integration\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:559:["callId"] = $"call-{index + 1}",
+tests\Integration\CanDoItAll.Tests.Integration\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs:511:approval.CallId,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:219:CallId: "manager-review-call",
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:233:CallId: pendingApprovals[0].CallId,
+tests\Components\CanDoItAll.Tests.Components\HrAgentToolPolicyTests.cs:339:CallId: $"call-{approvalId}",
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ScenarioHarnessAgentRuntime.cs:160:CallId: $"{definition.Id}-guarded-call",
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:23:var statCallId = $"stat-{callSequence}";
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:24:var readCallId = $"read-{callSequence}";
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:25:callContents.Add(CreateFunctionCall(statCallId, WorkspaceStatPathToolName, artifactPath));
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:26:callContents.Add(CreateFunctionCall(readCallId, WorkspaceReadFileToolName, artifactPath));
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:28:statCallId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:36:readCallId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:48:var callId = $"required-tool-{callSequence}";
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:51:callContents.Add(CreateFunctionCallWithFilename(callId, toolName, browserOutputFile));
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:52:resultContents.Add(CreateFunctionResult(callId, BuildBrowserToolResult(toolName, browserOutputFile)));
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:57:callContents.Add(CreateFunctionCall(callId, toolName));
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:59:callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:277:string callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:284:["callId"] = callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:294:string callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:300:["callId"] = callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:307:string callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:314:["callId"] = callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:324:string callId,
+src\Modules\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs:330:["callId"] = callId,
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:555:CognitiveMemorySynthesizedRecallId SynthesisId,
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Advanced\CognitiveMemoryAdvancedContracts.cs:570:CognitiveMemorySynthesizedRecallId SynthesisId,
+src\Modules\CanDoItAll.Modules.CognitiveMemory\ReviewUi\CognitiveMemoryReviewUiQualityQueries.cs:323:new CognitiveMemorySynthesizedRecallId(recall.Id),
+src\Modules\CanDoItAll.Modules.CognitiveMemory\ReviewUi\CognitiveMemoryReviewUiContracts.cs:524:CognitiveMemorySynthesizedRecallId Id,
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:44:var synthesisId = CognitiveMemorySynthesizedRecallId.New();
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryRecallSynthesisService.cs:63:CognitiveMemorySynthesizedRecallId synthesisId,
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:131:public readonly record struct CognitiveMemorySynthesizedRecallId
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:134:public CognitiveMemorySynthesizedRecallId(Guid value)
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:141:public static CognitiveMemorySynthesizedRecallId New() => new(Guid.NewGuid());
+src\Modules\CanDoItAll.Modules.CognitiveMemory\Quality\CognitiveMemoryQualityContracts.cs:477:CognitiveMemorySynthesizedRecallId SynthesisId,
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:139:private readonly HashSet<string> observedHandoffCallIds = new(StringComparer.OrdinalIgnoreCase);
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:152:var callId = string.IsNullOrWhiteSpace(functionCall.CallId)
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:154:: functionCall.CallId;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:155:if (!observedHandoffCallIds.Add(callId))
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:15:string CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:486:string CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:81:CallId = pendingApproval.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:134:CallId = pendingApproval.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\ExecutionRunStateTransitions.cs:191:CallId: pendingApproval.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:11:string CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:65:Id: CreateDeterministicGuid($"{detail.Run.Id:N}|provider-native-mcp|{call.CallId}|{call.ToolName}|{call.RequestSummary}"),
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:228:CallId: entry.Id.ToString("N"),
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:321:var callId = content.TryGetProperty("callId", out var callIdElement)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:322:? callIdElement.GetString()
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:327:if (string.IsNullOrWhiteSpace(callId) || string.IsNullOrWhiteSpace(toolName))
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:339:callsById[callId] = new SuccessfulSessionToolCall(
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:340:CallId: callId,
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:352:var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:353:? resultCallIdElement.GetString()
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:355:if (string.IsNullOrWhiteSpace(resultCallId) ||
+src\MAF\Common\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:356:!callsById.TryGetValue(resultCallId, out var call) ||
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:72:ApprovalId: request.RequestId ?? toolCall.CallId ?? Guid.NewGuid().ToString("N"),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:73:CallId: toolCall.CallId ?? string.Empty,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:138:"mcp" or "hosted-mcp" => new McpServerToolCallContent(record.CallId, record.ToolName, record.Details)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafApprovalContinuationDriver.cs:142:_ => new FunctionCallContent(record.CallId, record.ToolName, arguments)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:521:var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:563:if (toolCall.CallId is null || guardedToolCallIds.Add(toolCall.CallId))
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:299:functionCall.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:303:mcpToolCall.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:324:functionCall.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:328:mcpToolCall.CallId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderStreamingRunner.cs:335:toolCall.CallId ?? Guid.NewGuid().ToString("N"),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafToolInvocationArgumentFormatter.cs:28:return toolCall.CallId
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:260:ToolApprovalRequestContent approval => approval.ToolCall?.CallId ?? approval.ToolCall?.ToString(),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:261:ToolCallContent toolCall => toolCall.CallId ?? MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),

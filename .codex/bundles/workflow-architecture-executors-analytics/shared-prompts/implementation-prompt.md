@@ -1,3 +1,0 @@
-# Implementation Prompt
-
-Implement only the active subbundle. Read its prerequisites, exact source references, architecture impact, dependency direction, pattern decision, testability contract, partial-class policy, and progression gate before editing. Preserve executor IDs/settings compatibility and existing user changes. Use the smallest cohesive change that moves behavior to its owning boundary; do not add a service locator, silent fallback, arbitrary command surface, duplicate tool/executor behavior, or untrusted UI activation. Add failing-first or characterization coverage, implement, run focused tests/build, capture portable proof artifacts, update `reviews/01-execution-report.md`, and stop/reopen the owning phase if its progression gate cannot honestly pass.

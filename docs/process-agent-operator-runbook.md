@@ -1,94 +1,123 @@
 # Process Agent Operator Runbook
 
-## Scope
+Last source review: 2026-07-28.
 
-This runbook covers current process runs that launch through `ProcessLaunchApplicationService`, dispatch through `ProcessRuntimeDispatchApplicationService`, and execute AgentFramework-backed steps through the module adapter in `CanDoItAll.Modules.Processes`.
+This runbook covers the current PostgreSQL-backed process runtime, local dispatch queue, AgentFramework execution adapter, projections, and durable run records.
 
-For the source-level map, read [Processes, MAF, and providers implementation map](processes-maf-providers-implementation-map.md).
+## Source Of Truth
 
-## Current Runtime Status
+- [`ProcessLaunchApplicationService.cs`](../src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs)
+- [`ProcessRuntimeDispatchApplicationService.cs`](../src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs)
+- [`ProcessRuntimeEngine.cs`](../src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs)
+- [`ProcessRuntimeDispatchQueue.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeDispatchQueue.cs)
+- [`ProcessRuntimeDispatchQueueServices.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeDispatchQueueServices.cs)
+- [`AgentFrameworkProcessExecutionAdapter.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.cs)
+- [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
+- [`ProcessRunRecordsApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessRunRecordsApi.cs)
 
-The current process runtime is source-backed by:
-
-- `src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs`
-- `src/Processes/CanDoItAll.Processes.Application/ProcessRuntimeDispatchApplicationService.cs`
-- `src/Processes/CanDoItAll.Processes.Runtime/ProcessRuntimeEngine.cs`
-- `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeDispatchQueueServices.cs`
-- `src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeIntegrationServices.cs`
-- `src/App/CanDoItAll.Web/Api/ProcessesApi.cs`
-
-Do not use older docs that reference `ProcessesService`, `ProcessRunAutomationDispatchService`, `ProcessOutboxService`, `ProcessRunRecoveryWorker`, or a process-driver runtime host as current runtime entry points. Those names are historical or roadmap context unless source files are reintroduced.
+Historical names such as `ProcessesService`, `ProcessRunAutomationDispatchService`, `ProcessOutboxService`, and `ProcessRunRecoveryWorker` are not current entry points.
 
 ## Triage Order
 
-1. Read the live projection with `GET /api/processes/live`.
-2. Read the target run with `GET /api/processes/runs/{runId}`.
-3. Read timeline history with `GET /api/processes/runs/{runId}/history`.
-4. If ready work is stuck, run `POST /api/processes/runs/{runId}/dispatch` once and read the run again.
-5. If the run must stop, use `POST /api/processes/runs/{runId}/cancel` with a concrete reason.
-6. If a step needs correction, use `POST /api/processes/runs/{runId}/steps/{stepInstanceId}/rework` with the smallest actionable rework reason.
-7. If the failure mentions provider quota, billing, rate limit, or disabled provider state, inspect the agent/provider profile before retrying.
+1. Confirm runtime readiness with `GET /_dev/runtime` and API state with `GET /api/access/status`.
+2. Read `GET /api/processes/live`.
+3. If the run id is unknown, search `GET /api/processes/runs` with the narrowest project, definition, participant, disposition, or time filter.
+4. Read `GET /api/processes/runs/{runId}` for current projection state.
+5. Read `GET /api/processes/runs/{runId}/summary` for durable facts, completeness warnings, costs, and manager narrative status.
+6. Use `GET /api/processes/runs/{runId}/graph` or `/history` only when topology or event sequence is needed.
+7. If ready work is not progressing, dispatch once, then repeat the reads before dispatching again.
+8. Cancel or request rework only with a concrete, evidence-backed reason.
 
-## Current Process API
+## Route Contract
 
-The active process API routes are:
+`GET /api/processes/contract` returns this source-backed set:
 
 | Method | Route | Operator use |
 | --- | --- | --- |
-| `GET` | `/api/processes/contract` | Confirm current route list and boundary note. |
-| `POST` | `/api/processes/launch/check` | Preflight process template, executor resolution, and readiness without creating a run. |
-| `POST` | `/api/processes/launch` | Launch a process from definition key or definition id. |
-| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work for a run. |
+| `GET` | `/api/processes/contract` | Discover the route contract. |
+| `POST` | `/api/processes/launch/check` | Validate launch readiness without creating a run. |
+| `POST` | `/api/processes/launch` | Create a durable run and optionally queue it. |
+| `POST` | `/api/processes/runs/{runId}/dispatch` | Execute ready work once. |
 | `POST` | `/api/processes/runs/{runId}/cancel` | Request cancellation. |
-| `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request step rework. |
-| `GET` | `/api/processes/live` | Read live process snapshots. |
-| `GET` | `/api/processes/runs/{runId}` | Read run detail projection. |
-| `GET` | `/api/processes/runs/{runId}/history` | Read timeline history projection. |
+| `POST` | `/api/processes/runs/{runId}/steps/{stepInstanceId}/rework` | Request focused step rework. |
+| `GET` | `/api/processes/live` | Read live projections. |
+| `GET` | `/api/processes/runs` | Search durable run records with cursor paging. |
+| `GET` | `/api/processes/runs/analytics` | Aggregate run-record metrics; the default window is 30 days. |
+| `GET` | `/api/processes/runs/{runId}` | Read current run detail projection. |
+| `GET` | `/api/processes/runs/{runId}/summary` | Read paged durable facts and bounded narrative. |
+| `GET` | `/api/processes/runs/{runId}/graph` | Read a paged run graph. |
+| `GET` | `/api/processes/runs/{runId}/history` | Read timeline history. |
 
-Older routes for assignments, artifacts, escalations, direct messages, approvals, manager directives, template import/export, and analytics are not currently mapped in `ProcessesApi.cs`. Do not operate them through undocumented endpoints.
+Use OpenAPI for query and body schemas. `launch/check` is the dry run. A successful `launch` persists a run; `execute: false` only prevents immediate queueing.
 
-Use `launch/check` for dry-run validation. `POST /api/processes/launch` creates and schedules a durable run when readiness allows launch; `execute: false` only avoids immediate dispatch queueing.
+## Dispatch And Run-Record Defaults
 
-## Project-Structure Launches
+The dispatch queue is bounded and process-local. PostgreSQL holds the run state; recovery scans repopulate local work after interruption. Defaults come from [`ProcessRuntimeDispatchQueueOptions.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRuntimeDispatchQueueOptions.cs).
 
-Project-structure process starts use `ProjectStructureProcessNodeService`.
+| Configuration key | Default |
+| --- | --- |
+| `Processes:RuntimeDispatchQueue:EnableRecovery` | `true` |
+| `Processes:RuntimeDispatchQueue:ImmediateQueueCapacity` | `4096` |
+| `Processes:RuntimeDispatchQueue:RecoveryQueueCapacity` | `4096` |
+| `Processes:RuntimeDispatchQueue:ActiveClaimWithoutExecutionRunStaleAfter` | `00:02:00` |
 
-- `project_structure_node_process_definition_link` links a project-structure node to a process definition.
-- `project_structure_node_process_start` starts or prepares the process linked to a project-structure node.
-- `project_structure_process_subprocess_launch` starts a child process from inside governed process automation and requires the parent step to allow `ExecuteExternalAction`.
+The worker allows up to two immediate and two recovery dispatches concurrently, performs recovery discovery every 15 seconds, and deduplicates/defer-retries a run id. These worker timings are implementation constants, not configuration settings.
 
-When triaging project-structure launches, preserve project id, node id, linked process definition id, process run node id, and launch variables. For subprocesses, verify parent run id, parent step id, parent assignment, operation contract, and inherited project scope.
+Durable fact aggregation and manager narratives use [`ProcessRunRecordProcessingOptions.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunRecordProcessingOptions.cs).
+
+| Configuration key | Default |
+| --- | --- |
+| `Processes:RunRecords:Enabled` | `true` |
+| `Processes:RunRecords:BatchSize` | `8` |
+| `Processes:RunRecords:MaximumAttempts` | `5` |
+| `Processes:RunRecords:LeaseDuration` | `00:10:00` |
+| `Processes:RunRecords:RetryBaseDelay` | `00:00:30` |
+| `Processes:RunRecords:RetryMaximumDelay` | `00:30:00` |
+| `Processes:RunRecords:PollInterval` | `00:00:02` |
+
+The run-record worker is hosted only on a runtime lane that permits background workers. A missing or pending narrative does not invalidate already-available hard facts; inspect status, attempts, next retry, completeness, and warnings.
+
+## Launch And Project Structure
+
+Project Structure starts are handled by `ProjectStructureProcessNodeService`.
+
+- `project_structure_node_process_definition_link` associates a node with a definition.
+- `project_structure_node_process_start` prepares or launches the associated definition.
+- `project_structure_process_subprocess_launch` launches a child from governed automation and requires the parent operation contract to allow external action.
+
+Preserve project id, node id, definition id, run id, launch variables, and the parent run/step relationship in operator evidence.
+
+## Dispatch
+
+Use manual dispatch only after confirming that the run has ready work and the background worker is not already progressing it. The queue prevents concurrent local dispatch of the same run and delays retry after unexpected dispatch failure. Repeated manual calls are not a substitute for repairing a provider, capability, database, or worker fault.
+
+After dispatch, read current detail, summary, and history again. Projection readback is the evidence that the operation completed.
 
 ## Provider Failures
 
-Provider failures are normalized by `AgentProviderFailureDisplayFormatter`.
+Provider failures are normalized into quota/billing, rate-limit, and general provider categories.
 
-- Quota or billing failures usually require adding provider credits/billing or switching the agent to a provider with available quota.
-- Rate-limit failures usually require waiting for reset or reducing concurrency.
-- General provider failures require checking provider profile state, credential resolution, model selection, transport metadata, and health check result.
+- Quota or billing: repair provider billing or select an available provider.
+- Rate limit: wait for reset or reduce concurrency.
+- General failure: check enablement, credential resolution, model, transport, base URL, timeout, and provider health.
 
-Do not paste provider keys into logs, docs, screenshots, or operator notes. Configure provider credentials through environment variables or the runtime secret mechanism documented in [Secure configuration](secure-configuration.md).
+Never paste credentials into logs, screenshots, documentation, or rework reasons. Use environment variables or the runtime secret store described in [Secure configuration](secure-configuration.md).
 
-## Rework Guidance
+## Rework And Cancellation
 
-Use rework only when the current step has a specific correction. The reason should say what to fix and cite current run evidence. Do not use rework to restart unrelated steps or hide provider/configuration failures.
+Rework must name the specific correction and cite current evidence. Do not use it to conceal provider/configuration failures or restart unrelated steps.
 
-If a step is blocked because an upstream artifact or subprocess is missing, fix the upstream cause first. Current dispatch logic can release/rework parent claims after terminal child runs, but it cannot invent missing external evidence.
+Cancellation must include a concrete reason. Read live, detail, summary, and history after the request to confirm terminal state and projection freshness.
 
-## Cancellation Guidance
+If a step waits on a subprocess, inspect the child run first. Recovery can release or rework parent claims after a child stops, but it cannot synthesize missing external evidence.
 
-Cancellation should include a concrete reason. After cancellation, read live/detail/history projections again to confirm state and projection freshness.
+## Validation
 
-## Validation Gates
-
-After changing process operator behavior, prefer focused tests first:
+For process behavior changes:
 
 ```powershell
 dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests"
 dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests"
 ```
-For documentation-only changes, run:
 
-```powershell
-git diff --check
-```
+Then run the stable gate in [Testing](testing.md).

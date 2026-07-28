@@ -1,6 +1,0 @@
-Command: rg -n -i "TODO|NotImplemented|throw new NotImplementedException|stub|placeholder|fake-only|test-only|inheritdoc" C:\repositories\CanDoItAll.CognitiveMemory\src -g "*.cs"
-Working directory: C:\repositories\CanDoItAll
-Start time UTC: 2026-07-05T23:53:40.0055450Z
-Output:
-PASS: no anti-stub markers found in native production source.
-Exit code: 0

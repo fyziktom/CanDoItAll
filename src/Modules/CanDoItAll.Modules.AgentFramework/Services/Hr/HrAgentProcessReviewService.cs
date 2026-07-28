@@ -156,6 +156,7 @@ public sealed class HrAgentProcessReviewService(
                 new ExecutionRunRequest(
                     manager.Id,
                     prompt,
+                    AgentExecutionOperationId.New(),
                     Context: invocationContext),
                 cancellationToken);
             reviewExecutionRunId = result.ExecutionRunId;

@@ -356,6 +356,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         var specPath = $"{state.InputRoot}/spec.md";
         var projectRoot = $"{state.OutputRoot}/GeneratedBlazorApp";
         var projectPath = $"{projectRoot}/GeneratedBlazorApp.csproj";
+        var buildBoundaryPath = $"{projectRoot}/Directory.Build.targets";
 
         fileService.WriteTextFile(specPath, GeneratedBlazorAppSpecMarkdown, overwrite: true);
 
@@ -370,6 +371,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             timeoutSeconds: 300);
         EnsureSucceeded(dotnetNewResult.Succeeded, dotnetNewResult.Message + Environment.NewLine + dotnetNewResult.StderrPreview);
 
+        fileService.WriteTextFile(buildBoundaryPath, GeneratedBlazorAppDirectoryBuildTargets, overwrite: true);
         fileService.WriteTextFile($"{projectRoot}/Components/Pages/Home.razor", GeneratedBlazorAppHomeRazor, overwrite: true);
         fileService.WriteTextFile($"{projectRoot}/README.md", GeneratedBlazorAppReadme, overwrite: true);
 
@@ -395,6 +397,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             - Spec: `{specPath}`
             - App page: `{projectRoot}/Components/Pages/Home.razor`
             - Run guide: `{projectRoot}/README.md`
+            - Build boundary: `{buildBoundaryPath}`
             - Build target: `{projectPath}`
 
             ## Build result
@@ -406,7 +409,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         return new ScenarioExecutionOutcome(
             ResponseText: "SC03 completed with a generated Blazor app project and a successful controlled build receipt.",
             ResponseMarkdown: reportMarkdown,
-            ToolCalls: 6);
+            ToolCalls: 7);
     }
 
     private async Task<ScenarioExecutionOutcome> ExecuteApprovalScenarioAsync(

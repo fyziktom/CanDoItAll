@@ -81,6 +81,91 @@ public sealed class WorkspaceFileServiceTests
     }
 
     [Fact]
+    public async Task AgentChatAttachmentStagingService_rejects_stream_larger_than_declared_limit_and_removes_partial_file()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ChatAttachmentTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+
+        try
+        {
+            var service = new AgentChatAttachmentStagingService(
+                new WorkspacePathResolutionService(workspaceRoot));
+            var oversizedContent = new byte[
+                checked((int)AgentChatAttachmentStagingService.MaxImageAttachmentBytes + 1)];
+
+            var exception =
+                await Assert.ThrowsAsync<
+                    AgentRuntimeInputAttachmentSizeException>(
+                    () => service.StageImageAsync(
+                        "deceptive.png",
+                        "image/png",
+                        AgentChatAttachmentStagingService
+                            .MaxImageAttachmentBytes,
+                        new MemoryStream(oversizedContent)));
+
+            Assert.Equal(
+                AgentChatAttachmentStagingService.MaxImageAttachmentBytes,
+                exception.MaximumBytes);
+            Assert.Empty(
+                Directory.GetFiles(
+                    workspaceRoot,
+                    "*",
+                    SearchOption.AllDirectories));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AgentRuntimeInputAttachmentPolicy_accepts_exact_limit_and_rejects_limit_plus_one()
+    {
+        var exactBytes = new byte[
+            checked((int)AgentRuntimeInputAttachmentPolicy.MaximumImageBytes)];
+        await using var exactOutput = new MemoryStream();
+
+        var copied = await AgentRuntimeInputAttachmentPolicy.CopyBoundedAsync(
+            new MemoryStream(exactBytes),
+            exactOutput,
+            "exact.png",
+            AgentRuntimeInputAttachmentPolicy.MaximumImageBytes,
+            CancellationToken.None);
+
+        Assert.Equal(exactBytes.LongLength, copied);
+        Assert.Equal(exactBytes.LongLength, exactOutput.Length);
+
+        var oversizedBytes = new byte[
+            checked((int)AgentRuntimeInputAttachmentPolicy.MaximumImageBytes + 1)];
+        await using var oversizedOutput = new MemoryStream();
+        var exception =
+            await Assert.ThrowsAsync<
+                AgentRuntimeInputAttachmentSizeException>(
+                () => AgentRuntimeInputAttachmentPolicy.CopyBoundedAsync(
+                    new MemoryStream(oversizedBytes),
+                    oversizedOutput,
+                    "oversized.png",
+                    AgentRuntimeInputAttachmentPolicy.MaximumImageBytes,
+                    CancellationToken.None));
+
+        Assert.Equal("oversized.png", exception.SourcePath);
+        Assert.Equal(
+            AgentRuntimeInputAttachmentPolicy.MaximumImageBytes + 1,
+            exception.ObservedBytes);
+        Assert.True(
+            oversizedOutput.Length <=
+            AgentRuntimeInputAttachmentPolicy.MaximumImageBytes);
+    }
+
+    [Fact]
     public void WriteTextFile_registers_showcase_deliverable_as_execution_artifact()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");

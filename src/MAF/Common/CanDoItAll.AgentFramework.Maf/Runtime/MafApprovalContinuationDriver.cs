@@ -67,10 +67,16 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
             FunctionCallContent function when function.Arguments is not null => JsonSerializer.Serialize(function.Arguments, SerializerOptions),
             _ => "{}"
         };
+        var approvalId = RequireStableIdentifier(
+            request.RequestId,
+            "approval request");
+        var callId = RequireStableIdentifier(
+            toolCall.CallId,
+            "approved tool call");
 
         return new PendingToolApprovalRecord(
-            ApprovalId: request.RequestId ?? toolCall.CallId ?? Guid.NewGuid().ToString("N"),
-            CallId: toolCall.CallId ?? string.Empty,
+            ApprovalId: approvalId,
+            CallId: callId,
             ToolName: MafToolInvocationArgumentFormatter.ResolveToolName(toolCall),
             ToolKind: toolKind,
             Details: details ?? string.Empty,
@@ -143,5 +149,16 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
         };
 
         return new ToolApprovalRequestContent(record.ApprovalId, toolCall);
+    }
+
+    private static string RequireStableIdentifier(string? identifier, string identifierKind)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            throw new InvalidOperationException(
+                $"Microsoft Agent Framework returned an {identifierKind} without a stable correlation identifier.");
+        }
+
+        return identifier;
     }
 }

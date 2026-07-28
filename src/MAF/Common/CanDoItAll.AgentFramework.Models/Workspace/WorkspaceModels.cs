@@ -1,4 +1,36 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
+
+public readonly record struct CatalogDataRevision
+{
+    [JsonConstructor]
+    public CatalogDataRevision(long value)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(value);
+        Value = value;
+    }
+
+    public static CatalogDataRevision Unassigned => default;
+
+    public static CatalogDataRevision Initial { get; } = new(1);
+
+    public long Value { get; }
+
+    [JsonIgnore]
+    public bool IsAssigned => Value > 0;
+
+    public CatalogDataRevision Next()
+    {
+        if (!IsAssigned)
+        {
+            throw new InvalidOperationException(
+                "An unassigned catalog data revision cannot be incremented.");
+        }
+
+        return new CatalogDataRevision(checked(Value + 1));
+    }
+}
 
 public sealed record SandboxWorkspaceDocument(
     string Version,
@@ -10,6 +42,7 @@ public sealed record SandboxWorkspaceDocument(
     IReadOnlyList<AgentRunMetric> Metrics,
     IReadOnlyList<AgentMemoryRecord> Memory)
 {
+    public CatalogDataRevision CatalogDataRevision { get; init; }
     public IReadOnlyList<AgentTeamDefinition> AgentTeams { get; init; } = [];
     public IReadOnlyList<ExecutionRunRecord> ExecutionRuns { get; init; } = [];
     public IReadOnlyList<ExecutionApprovalRecord> ExecutionApprovals { get; init; } = [];
@@ -40,6 +73,7 @@ public sealed record SandboxWorkspaceDocument(
             Capabilities,
             Memory)
         {
+            CatalogDataRevision = CatalogDataRevision,
             AgentTeams = AgentTeams,
             AgentPackageImportOperations = AgentPackageImportOperations,
             AgentExternalBindings = AgentExternalBindings,
@@ -82,6 +116,7 @@ public sealed record SandboxWorkspaceDocument(
             Metrics: executionState.Metrics,
             Memory: catalog.Memory)
         {
+            CatalogDataRevision = catalog.CatalogDataRevision,
             AgentTeams = catalog.AgentTeams,
             AgentPackageImportOperations = catalog.AgentPackageImportOperations,
             AgentExternalBindings = catalog.AgentExternalBindings,
@@ -103,6 +138,7 @@ public sealed record SandboxWorkspaceCatalog(
     IReadOnlyList<CapabilityCatalogItem> Capabilities,
     IReadOnlyList<AgentMemoryRecord> Memory)
 {
+    public CatalogDataRevision CatalogDataRevision { get; init; }
     public IReadOnlyList<AgentTeamDefinition> AgentTeams { get; init; } = [];
     public IReadOnlyList<AgentPackageImportOperationRecord> AgentPackageImportOperations { get; init; } = [];
     public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];

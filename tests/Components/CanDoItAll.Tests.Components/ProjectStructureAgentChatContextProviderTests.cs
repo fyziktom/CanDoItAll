@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
@@ -11,6 +12,77 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructureAgentChatContextProviderTests
 {
+    private static readonly DateTimeOffset InitialUtc =
+        new(2026, 7, 27, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Provider_recaptures_held_module_state_at_the_attachment_deadline()
+    {
+        using var context = new TestContext();
+        var clock = new ManualTimerTimeProvider(InitialUtc);
+        var registry = new AgentChatContextRegistry(clock);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var surface = CreateSurface(
+            projectId,
+            "Delivery project",
+            [CreateNode("project:root", "Root")]);
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(
+            new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton<TimeProvider>(clock);
+
+        var cut = context.RenderComponent<
+            ProjectStructureAgentChatContextProvider>(parameters => parameters
+                .Add(component => component.ProjectId, projectId)
+                .Add(component => component.ProjectName, "Delivery project")
+                .Add(component => component.Surface, surface)
+                .Add(
+                    component => component.ContextAccessState,
+                    AgentChatContextAccessState.Ready));
+        cut.WaitForAssertion(() =>
+        {
+            var initial = Assert.IsType<AgentChatContextSnapshot>(
+                registry.Capture());
+            Assert.Equal(InitialUtc, Assert.Single(initial.Attachments).CapturedAtUtc);
+            Assert.Equal(1, clock.PendingTimerCount);
+        });
+        var original = Assert.IsType<AgentChatContextSnapshot>(
+            registry.Capture());
+        var originalAttachment = Assert.Single(original.Attachments);
+
+        clock.Advance(
+            ProjectStructureInvocationSnapshotMapper.FreshnessLifetime);
+
+        cut.WaitForAssertion(() =>
+        {
+            var renewed = Assert.IsType<AgentChatContextSnapshot>(
+                registry.Capture());
+            var renewedAttachment = Assert.Single(renewed.Attachments);
+            Assert.True(renewed.Version > original.Version);
+            Assert.Equal(
+                InitialUtc +
+                ProjectStructureInvocationSnapshotMapper.FreshnessLifetime,
+                renewedAttachment.CapturedAtUtc);
+            Assert.Equal(
+                originalAttachment.ContentFingerprint,
+                renewedAttachment.ContentFingerprint);
+            Assert.Equal(
+                AgentChatContextAttachmentFreshness.Current,
+                renewedAttachment.ResolveFreshness(
+                    new DatabaseProfileGeneration(0),
+                    clock.GetUtcNow()));
+            Assert.Equal(1, clock.PendingTimerCount);
+        });
+    }
+
     [Fact]
     public async Task Provider_does_not_publish_parent_ready_while_agent_access_reload_is_loading_or_failed()
     {
@@ -24,16 +96,23 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
         context.Services.AddSingleton<IAgentReferenceDataProvider>(referenceDataProvider);
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
+        var projectId = Guid.NewGuid();
+        var surface = CreateSurface(projectId, "Delivery project");
 
         var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
-            .Add(component => component.ProjectId, Guid.NewGuid())
+            .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
 
         cut.WaitForAssertion(() =>
         {
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Single(snapshot.Attachments);
         });
 
         cacheInvalidator.Invalidate();
@@ -43,6 +122,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Assert.True(referenceDataProvider.HasPendingReload);
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(AgentChatContextAccessState.Loading, snapshot.Scope.AccessState);
+            Assert.Empty(snapshot.Attachments);
             Assert.Throws<AgentChatContextUnavailableException>(() =>
                 AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
         });
@@ -57,6 +137,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
 
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(AgentChatContextAccessState.Failed, snapshot.Scope.AccessState);
+            Assert.Empty(snapshot.Attachments);
             Assert.Throws<AgentChatContextUnavailableException>(() =>
                 AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
         }
@@ -87,17 +168,23 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new StubAgentReferenceDataProvider(agent));
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
             new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
         var projectId = Guid.NewGuid();
+        var surface = CreateSurface(projectId, "Delivery project");
 
         var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Loading));
 
         cut.WaitForAssertion(() =>
         {
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(AgentChatContextAccessState.Loading, snapshot.Scope.AccessState);
+            Assert.Empty(snapshot.Attachments);
             Assert.Throws<AgentChatContextUnavailableException>(() =>
                 AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
         });
@@ -106,6 +193,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         cut.SetParametersAndRender(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
 
         cut.WaitForAssertion(() =>
@@ -113,6 +201,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             Assert.Equal(loadingSnapshot.Scope.Id, snapshot.Scope.Id);
             Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Single(snapshot.Attachments);
             Assert.NotNull(AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
         });
     }
@@ -131,16 +220,24 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             CreateNode("node:alpha", "Alpha node"),
             CreateNode("node:beta", "Beta node")
         ];
+        var surface = CreateSurface(
+            projectId,
+            "Delivery project",
+            selectedNodes);
         context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(notificationHub);
         context.Services.AddSingleton<IAgentReferenceDataProvider>(
             new StubAgentReferenceDataProvider(agent));
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
 
         var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.ActiveView, ProjectStructureAgentChatView.Canvas)
             .Add(component => component.SelectedNodes, selectedNodes));
 
@@ -149,6 +246,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
             AssertProjectSource(snapshot, projectId);
             AssertContributors(snapshot);
+            Assert.Single(snapshot.Attachments);
             Assert.True(snapshot.CanRead(agent.Id));
             Assert.Contains(
                 "Current project workspace view: structure canvas.",
@@ -167,6 +265,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         cut.SetParametersAndRender(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.ActiveView, ProjectStructureAgentChatView.Gantt)
             .Add(component => component.SelectedNodes, Array.Empty<ProjectStructureNode>()));
 
@@ -177,6 +276,11 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Assert.Equal(source, snapshot.Scope.Source);
             Assert.True(snapshot.Version > canvasSnapshot.Version);
             AssertContributors(snapshot);
+            var attachment = Assert.Single(snapshot.Attachments);
+            Assert.True(
+                attachment.TryGetAttachment<ProjectStructureInvocationSnapshot>(
+                    out var invocationSnapshot));
+            Assert.Equal(ProjectStructureAgentChatView.Gantt, invocationSnapshot.ActiveView);
             var viewFragment = FindFragment(
                 snapshot,
                 ProjectStructureAgentChatContextBuilder.ViewContributorId);
@@ -201,6 +305,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         cut.SetParametersAndRender(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.ActiveView, ProjectStructureAgentChatView.Canvas)
             .Add(component => component.SelectedNodes, selectedNodes));
 
@@ -263,6 +368,13 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             MediaContentType = "text/markdown",
             MediaOriginalFileName = "architecture.md"
         };
+        var projectRoot = CreateNode(
+            selectedNode.ParentId!,
+            "Architecture project");
+        var surface = CreateSurface(
+            projectId,
+            "Architecture project",
+            [projectRoot, selectedNode]);
         context.Services.AddLogging();
         context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
         context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
@@ -270,10 +382,14 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             new StubAgentReferenceDataProvider(agent));
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
             new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
 
         var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Architecture project")
+            .Add(component => component.Surface, surface)
             .Add(component => component.SelectedNodes, new[] { selectedNode }));
 
         cut.WaitForAssertion(() =>
@@ -288,6 +404,9 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Assert.Contains("request.includeNotes", baseContent, StringComparison.Ordinal);
             Assert.Contains("request.includeMetadata", baseContent, StringComparison.Ordinal);
             Assert.Contains("request.includeAssets", baseContent, StringComparison.Ordinal);
+            Assert.Contains("ContextDefault", baseContent, StringComparison.Ordinal);
+            Assert.Contains("InvocationSnapshot", baseContent, StringComparison.Ordinal);
+            Assert.Contains("CanonicalCurrent", baseContent, StringComparison.Ordinal);
             Assert.Contains("request.sourceWorkspacePath", baseContent, StringComparison.Ordinal);
             Assert.Contains("no external-target path is needed", baseContent, StringComparison.Ordinal);
             Assert.Contains("project_structure_asset_get", baseContent, StringComparison.Ordinal);
@@ -300,11 +419,30 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Assert.Contains("objectType: ProjectBlock", selectionContent, StringComparison.Ordinal);
             Assert.Contains("objectSubtype: architecture", selectionContent, StringComparison.Ordinal);
             Assert.Contains("status: Draft", selectionContent, StringComparison.Ordinal);
-            Assert.Contains("notes: Initial architecture summary.", selectionContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("Initial architecture summary.", selectionContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("metadataJson", selectionContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("external-target", selectionContent, StringComparison.Ordinal);
             Assert.Contains(
                 "parentNodeKey=\"custom:architecture\"",
                 selectionContent,
                 StringComparison.Ordinal);
+            Assert.True(selectionContent.Length < AgentChatContextFragment.MaximumContentLength);
+
+            var envelope = Assert.Single(snapshot.Attachments);
+            Assert.Equal(
+                ProjectStructureInvocationSnapshotMapper.AttachmentKindValue,
+                envelope.Kind.Value);
+            Assert.True(
+                envelope.TryGetAttachment<ProjectStructureInvocationSnapshot>(
+                    out var invocationSnapshot));
+            var attachmentNode = Assert.Single(
+                invocationSnapshot.Nodes,
+                node => node.Id == selectedNode.Id);
+            Assert.Equal("Draft", attachmentNode.Status);
+            Assert.Equal(
+                envelope.ContentFingerprint,
+                ProjectStructureInvocationSnapshotMapper.ComputeContentFingerprint(
+                    invocationSnapshot));
         });
         var originalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
         var oversizedNotes = new string('x', 600);
@@ -314,10 +452,15 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Notes = oversizedNotes,
             MetadataJson = """{"owner":"delivery"}"""
         };
+        var updatedSurface = CreateSurface(
+            projectId,
+            "Architecture project",
+            [projectRoot, updatedNode]);
 
         cut.SetParametersAndRender(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.ProjectName, "Architecture project")
+            .Add(component => component.Surface, updatedSurface)
             .Add(component => component.SelectedNodes, new[] { updatedNode }));
 
         cut.WaitForAssertion(() =>
@@ -328,12 +471,133 @@ public sealed class ProjectStructureAgentChatContextProviderTests
                 snapshot,
                 ProjectStructureAgentChatContextBuilder.SelectionContributorId).Content;
             Assert.Contains("status: Ready", selectionContent, StringComparison.Ordinal);
-            Assert.Contains("""metadataJson: {"owner":"delivery"}""", selectionContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("metadataJson", selectionContent, StringComparison.Ordinal);
             Assert.DoesNotContain(oversizedNotes, selectionContent, StringComparison.Ordinal);
-            Assert.Contains(new string('x', 319) + "…", selectionContent, StringComparison.Ordinal);
             Assert.DoesNotContain("Initial architecture summary.", selectionContent, StringComparison.Ordinal);
+            var envelope = Assert.Single(snapshot.Attachments);
+            Assert.True(
+                envelope.TryGetAttachment<ProjectStructureInvocationSnapshot>(
+                    out var invocationSnapshot));
+            Assert.Equal(
+                "Ready",
+                Assert.Single(
+                    invocationSnapshot.Nodes,
+                    node => node.Id == updatedNode.Id).Status);
             Assert.True(selectionContent.Length < AgentChatContextFragment.MaximumContentLength);
         });
+    }
+
+    [Fact]
+    public void Provider_without_a_held_structure_surface_publishes_no_usable_snapshot()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(
+            new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
+
+        context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid())
+            .Add(component => component.ProjectName, "Loading project")
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.Equal(AgentChatContextAccessState.Loading, snapshot.Scope.AccessState);
+        Assert.Empty(snapshot.Attachments);
+        Assert.Throws<AgentChatContextUnavailableException>(() =>
+            AgentChatContextContributionComposer.Compose(snapshot, agent.Id));
+    }
+
+    [Fact]
+    public void Provider_replaces_scope_fragments_and_snapshot_as_one_atomic_publication()
+    {
+        using var context = new TestContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var root = CreateNode("project:root", "Root");
+        var oldNode = CreateNode("node:selected", "Old selection") with
+        {
+            ParentId = root.Id,
+            Status = "Draft"
+        };
+        var newNode = oldNode with
+        {
+            Title = "New selection",
+            Status = "Ready"
+        };
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(
+            new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
+
+        var cut = context.RenderComponent<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Old project")
+            .Add(component => component.Surface, CreateSurface(
+                projectId,
+                "Old project",
+                [root, oldNode]))
+            .Add(component => component.SelectedNodes, new[] { oldNode }));
+        var initialSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var observations = new List<string>();
+        registry.Changed += HandleChanged;
+        try
+        {
+            cut.SetParametersAndRender(parameters => parameters
+                .Add(component => component.ProjectId, projectId)
+                .Add(component => component.ProjectName, "New project")
+                .Add(component => component.Surface, CreateSurface(
+                    projectId,
+                    "New project",
+                    [root, newNode]))
+                .Add(component => component.SelectedNodes, new[] { newNode }));
+        }
+        finally
+        {
+            registry.Changed -= HandleChanged;
+        }
+
+        var finalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.True(finalSnapshot.Version > initialSnapshot.Version);
+        Assert.NotEmpty(observations);
+        Assert.Equal("New project|New selection|Ready", observations[^1]);
+
+        void HandleChanged(object? sender, EventArgs eventArgs)
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var envelope = Assert.Single(snapshot.Attachments);
+            Assert.True(
+                envelope.TryGetAttachment<ProjectStructureInvocationSnapshot>(
+                    out var invocationSnapshot));
+            var selectedNode = Assert.Single(
+                invocationSnapshot.Nodes,
+                node => node.Id == "node:selected");
+            var selectionFragment = FindFragment(
+                snapshot,
+                ProjectStructureAgentChatContextBuilder.SelectionContributorId);
+            Assert.Contains(invocationSnapshot.ProjectName, snapshot.Scope.DisplayName, StringComparison.Ordinal);
+            Assert.Contains(selectedNode.Title, selectionFragment.Content, StringComparison.Ordinal);
+            Assert.Contains($"status: {selectedNode.Status}", selectionFragment.Content, StringComparison.Ordinal);
+            observations.Add(
+                $"{invocationSnapshot.ProjectName}|{selectedNode.Title}|{selectedNode.Status}");
+        }
     }
 
     private static void AssertProjectSource(
@@ -404,6 +668,19 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Tags: [],
             CreatedAtUtc: timestamp,
             UpdatedAtUtc: timestamp);
+    }
+
+    private static ProjectStructureSurface CreateSurface(
+        Guid projectId,
+        string projectName,
+        IReadOnlyList<ProjectStructureNode>? nodes = null)
+    {
+        return new ProjectStructureSurface(
+            projectId,
+            projectName,
+            nodes ?? [],
+            [],
+            null);
     }
 
     private static ProjectStructureNode CreateNode(string id, string title)
@@ -543,6 +820,171 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             {
                 var currentOwner = Interlocked.Exchange(ref owner, null);
                 currentOwner?.subscriptions.Remove(id);
+            }
+        }
+    }
+
+    private sealed class ManualTimerTimeProvider(
+        DateTimeOffset initialUtc) : TimeProvider
+    {
+        private readonly object sync = new();
+        private readonly List<ManualTimer> timers = [];
+        private DateTimeOffset utcNow = initialUtc;
+
+        public int PendingTimerCount
+        {
+            get
+            {
+                lock (sync)
+                {
+                    return timers.Count;
+                }
+            }
+        }
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            lock (sync)
+            {
+                return utcNow;
+            }
+        }
+
+        public override ITimer CreateTimer(
+            TimerCallback callback,
+            object? state,
+            TimeSpan dueTime,
+            TimeSpan period)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+
+            var timer = new ManualTimer(this, callback, state);
+            timer.Change(dueTime, period);
+            return timer;
+        }
+
+        public void Advance(TimeSpan duration)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(
+                duration,
+                TimeSpan.Zero);
+
+            ManualTimer[] dueTimers;
+            lock (sync)
+            {
+                utcNow += duration;
+                dueTimers = timers
+                    .Where(timer => timer.IsDue(utcNow))
+                    .ToArray();
+                foreach (var timer in dueTimers)
+                {
+                    timer.MarkFired();
+                    timers.Remove(timer);
+                }
+            }
+
+            foreach (var timer in dueTimers)
+            {
+                timer.Invoke();
+            }
+        }
+
+        private bool ChangeTimer(
+            ManualTimer timer,
+            TimeSpan dueTime,
+            TimeSpan period)
+        {
+            if (dueTime < Timeout.InfiniteTimeSpan)
+            {
+                throw new ArgumentOutOfRangeException(nameof(dueTime));
+            }
+
+            if (period != Timeout.InfiniteTimeSpan)
+            {
+                throw new NotSupportedException(
+                    "The context test time provider supports one-shot timers only.");
+            }
+
+            lock (sync)
+            {
+                if (timer.IsDisposed)
+                {
+                    return false;
+                }
+
+                timer.DueAtUtc = dueTime == Timeout.InfiniteTimeSpan
+                    ? null
+                    : utcNow + dueTime;
+                if (!timers.Contains(timer))
+                {
+                    timers.Add(timer);
+                }
+
+                return true;
+            }
+        }
+
+        private void DisposeTimer(ManualTimer timer)
+        {
+            lock (sync)
+            {
+                timer.MarkDisposed();
+                timers.Remove(timer);
+            }
+        }
+
+        private sealed class ManualTimer(
+            ManualTimerTimeProvider owner,
+            TimerCallback callback,
+            object? state) : ITimer
+        {
+            private int isDisposed;
+
+            public DateTimeOffset? DueAtUtc { get; set; }
+
+            public bool IsDisposed
+                => Volatile.Read(ref isDisposed) == 1;
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                return owner.ChangeTimer(this, dueTime, period);
+            }
+
+            public void Dispose()
+            {
+                owner.DisposeTimer(this);
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+
+            public bool IsDue(DateTimeOffset nowUtc)
+            {
+                return !IsDisposed &&
+                       DueAtUtc.HasValue &&
+                       DueAtUtc.Value <= nowUtc;
+            }
+
+            public void MarkFired()
+            {
+                DueAtUtc = null;
+            }
+
+            public void MarkDisposed()
+            {
+                Interlocked.Exchange(ref isDisposed, 1);
+                DueAtUtc = null;
+            }
+
+            public void Invoke()
+            {
+                if (!IsDisposed)
+                {
+                    callback(state);
+                }
             }
         }
     }

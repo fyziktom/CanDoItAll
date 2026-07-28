@@ -782,7 +782,9 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             => new("Current migration markers must prevent component library access.");
     }
 
-    private sealed class TestProviderProfileRegistry(ProviderProfile provider) : IProviderProfileRegistry
+    private sealed class TestProviderProfileRegistry(ProviderProfile provider) :
+        IProviderProfileRegistry,
+        IProviderRuntimeProfileSource
     {
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(
             CancellationToken cancellationToken = default)

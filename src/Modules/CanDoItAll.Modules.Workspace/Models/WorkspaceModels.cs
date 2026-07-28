@@ -32,7 +32,7 @@ public sealed class WorkspaceSettings
     public DateTimeOffset UpdatedAtUtc { get; set; }
 }
 
-public sealed class ProviderProfile
+public sealed class ProviderProfile : IHasConcurrencyToken
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -67,6 +67,8 @@ public sealed class ProviderProfile
     public string? LastHealthStatus { get; set; }
 
     public string ExtraSettingsJson { get; set; } = "{}";
+
+    public Guid ConcurrencyToken { get; set; }
 }
 
 internal sealed class WorkspaceSettingsConfiguration : IEntityTypeConfiguration<WorkspaceSettings>
@@ -96,6 +98,7 @@ internal sealed class ProviderProfileConfiguration : IEntityTypeConfiguration<Pr
         builder.Property(profile => profile.DefaultModel).HasMaxLength(120);
         builder.Property(profile => profile.LastHealthStatus).HasMaxLength(120);
         builder.Property(profile => profile.ExtraSettingsJson).HasColumnType("TEXT");
+        builder.Property(profile => profile.ConcurrencyToken).IsConcurrencyToken();
     }
 }
 
@@ -175,7 +178,9 @@ public sealed partial class WorkspaceService(
     IStorageCatalogService storageCatalogService,
     IStorageDriverRegistry storageDriverRegistry,
     IActivityStream activityStream,
-    CurrencyDisplayState currencyDisplayState)
+    CurrencyDisplayState currencyDisplayState,
+    IEnumerable<IWorkspaceProviderProfileCommitObserver>
+        providerProfileCommitObservers)
 {
     public async Task<WorkspaceSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -408,6 +413,13 @@ public sealed partial class WorkspaceService(
             modelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        foreach (var observer in providerProfileCommitObservers)
+        {
+            await observer.ProviderSavedAsync(
+                entity.Id,
+                CancellationToken.None);
+        }
+
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "providers",
             model.Id.HasValue ? "update" : "create",
@@ -505,6 +517,13 @@ public sealed partial class WorkspaceService(
 
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+        foreach (var observer in providerProfileCommitObservers)
+        {
+            await observer.ProviderDeletedAsync(
+                entity.Id,
+                CancellationToken.None);
+        }
+
         await activityStream.RecordAsync(new ActivityWriteRequest(
             "providers",
             "delete",

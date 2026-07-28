@@ -1,86 +1,50 @@
-# Codex Skills
+# Codex Skills And Evidence
 
-The canonical portable CanDoItAll Codex skill pack lives in the sibling
-`CanDoItAll.SharedInfo` repository under `codex/skills`. This repository retains its
-historical mirror during the migration period, but its installers source SharedInfo.
+The canonical CanDoItAll Codex skills live in the sibling [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo) repository under `codex/skills`.
 
-It includes these custom skills:
+This repository owns an installer entry point, product-specific bundle evidence, and integration configuration. Its checked-in `codex/skills` tree is a historical mirror retained during repository migration. Do not edit, publish, or install that mirror as the current skill pack.
 
-- `candoitall-bundle-workflow`
-- `candoitall-bundle-preparation`
-- `candoitall-bundle-execution`
-- `candoitall-bundle-validator`
-- `candoitall-subbundle-validator`
-- `candoitall-watch-playwright-loop`
-- `candoitall-dotnetwatch-setup`
-- `candoitall-components-mcp`
-- `candoitall-codeanalytics-mcp`
-- `candoitall-frontend-theme`
-- `candoitall-csharp-architecture-bundle-guard`
-- `csharp-architecture-governor`
-- `csharp-modular-refactoring`
-- `csharp-project-boundary-extraction`
-- `csharp-factory-builder-composition`
-- `csharp-provider-tool-plugin-isolation`
-- `csharp-testability-contracts`
-- `csharp-dependency-graph-audit`
-- `csharp-design-pattern-selection`
-- `csharp-architecture-review-gate`
-- `canonical-model-review`
-- `feature-block-architecture-review`
-- `architecture-drift-audit`
+## Install Or Refresh
 
-It also depends on these public sibling skills:
-
-- From `openai/skills`: `openai-docs`, `playwright`, `screenshot`, `imagegen`
-- From `dotnet/skills`: `mtp-hot-reload`
-
-The bundle skills also use `frontend-skill` when it is already available in the local Codex home, but the current upstream `openai/skills` cache no longer exposes that skill under this installer path.
-
-## Install Or Refresh Skills
-
-From the repo root:
+Place `CanDoItAll.SharedInfo` beside this repository, then run from this repository root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
 ```
 
-That script:
+The script:
 
-- installs the canonical custom CanDoItAll skills from sibling `CanDoItAll.SharedInfo` into `$CODEX_HOME\skills`
-- installs SharedInfo-owned support folders such as `_csharp-architecture-shared` into `$CODEX_HOME\skills`
-- clones or updates the public `openai/skills` and `dotnet/skills` repos into temp caches
-- finds the required public sibling skills by name in the correct upstream repo
-- installs those sibling skills into the same Codex home
+- delegates CanDoItAll skill installation to the canonical SharedInfo installer
+- installs SharedInfo-owned support folders required by those skills
+- installs the required public skills from `openai/skills` and `dotnet/skills`
+- writes into `$CODEX_HOME\skills`, or the standard user Codex home when `CODEX_HOME` is unset
 
-## Useful Options
+The script fails explicitly when the SharedInfo installer is unavailable. It does not fall back to the historical mirror.
 
-Install only the custom repo-backed skills:
+Useful switches:
+
+- `-SkipCustomSkills` installs only the selected public skills
+- `-SkipPublicSkills` installs only SharedInfo-owned skills
+- `-CodexHome <path>` selects another Codex home
+- `-SharedInfoRepoRoot <path>` selects the canonical SharedInfo checkout
+
+`CANDOITALL_SHAREDINFO_ROOT` can provide the SharedInfo path when the command-line parameter is omitted.
+
+## MCP Setup
+
+The full local MCP reinstall also refreshes canonical skills unless `-SkipSkillSync` is supplied:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -SkipPublicSkills
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
 ```
 
-Install into a different Codex home:
+MCP server source is owned by the sibling `CanDoItAll.Mcp` repository. Place `CanDoItAll.CodeAnalysis` beside that repository because the reinstall script requires its CodeAnalytics application project. The active sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, and SshOps.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -CodexHome "D:\CodexHome"
-```
+## What Is Historical
 
-## Notes
+- `codex/skills` is a noncanonical migration mirror.
+- `codex/architecture-review` and `codex/csharp-architecture` are compatibility package notes, not install sources.
+- `codex/bundles` and `.codex/bundles` are execution evidence snapshots.
+- test counts, warnings, paths, package versions, and architecture claims inside completed bundles describe the recorded execution, not necessarily the current branch.
 
-- The bundle workflow skills are tuned for ChatGPT-5.5 style operation: outcome-first, concise phase decisions, durable bundle state after compaction or resume, and evidence-driven gates.
-- The bundle skills now assume real browser validation through Playwright MCP plus the `playwright` skill for UI-heavy work.
-- The bundle skill pack now includes explicit readiness, subbundle-gate, and final-closure validators.
-- `openai-docs` is installed with the repo skill pack so model and prompt guidance can be refreshed from official OpenAI docs on other machines.
-- `candoitall-components-mcp` is the repo skill to use before inventing page-local structure in BaseLib or CanvasLib consumers. It expects the `candoitall_components` MCP server to be available and points Codex toward shared component parameters, sandbox routes, and real product usages first.
-- `candoitall-codeanalytics-mcp` is the default repo skill for read-only C# investigation. It expects the `candoitall_codeanalytics` MCP server to be available and steers Codex toward scoped snapshots, dashboard health, solution/project inventory, dependency and cycle analysis, findings, DI, persistence, exact symbol tools, references, implementations, file inspection, exports, and focused context. SharpTools is backup-only and should stay disabled unless CodeAnalytics has a real unresolved capability gap.
-- The C# architecture skills add a strict architecture gate for large-class refactoring, partial-class clusters, provider/tool/plugin isolation, memory protocols, process drivers, runtime composition, project references, factories, builders, catalogs, and testability work. Architecture-heavy bundles must include current-state inventory, target boundary map, dependency-direction proof, pattern selection records, testability plan, partial-class policy, and architecture checkpoints before implementation.
-- `codex/csharp-architecture` keeps the package-level examples, checklists, bundle templates, and integration notes outside the discoverable skill folders. Use those artifacts when preparing architecture-heavy bundles or updating the bundle skills.
-- Large-screen validation comes first: maximize the browser window or fill the available desktop work area, capture a screenshot, review it, then continue to narrower widths.
-- `imagegen` is a planning aid only when UI direction is unclear; it does not replace shipped browser proof.
-- The repo also ships architecture review helper docs in `codex/architecture-review` and optional repo-local custom agents in `.codex/agents`.
-
-## Repo Plugin
-
-- `plugins/candoitall-components-mcp` is a repo-local Codex plugin that attaches the CanDoItAll components MCP from source for plugin-based workflows.
+Maintained contributor guidance starts at the [repository README](../README.md) and [documentation index](../docs/README.md). When current behavior changes, update maintained docs and the canonical SharedInfo skill in its owning repository; do not rewrite closed evidence to look current.

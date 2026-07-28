@@ -135,6 +135,13 @@ public sealed record ProjectStructureSubprojectChangeRequest(
     Guid? CurrentParentProjectId = null,
     string? LeaseToken = null);
 
+public enum ProjectStructureReadSource
+{
+    ContextDefault,
+    InvocationSnapshot,
+    CanonicalCurrent
+}
+
 public sealed record ProjectStructureReadRequest(
     IReadOnlyList<string>? NodeIds = null,
     IReadOnlyList<string>? SubtreeRootIds = null,
@@ -148,7 +155,8 @@ public sealed record ProjectStructureReadRequest(
     bool IncludeMetadata = false,
     bool IncludeNotes = false,
     bool IncludeAssets = false,
-    int? Take = null);
+    int? Take = null,
+    ProjectStructureReadSource Source = ProjectStructureReadSource.ContextDefault);
 
 public sealed record ProjectStructureNodeActionDescriptor(
     string ActionId,

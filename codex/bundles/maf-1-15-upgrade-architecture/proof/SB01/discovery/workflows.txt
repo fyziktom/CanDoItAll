@@ -1,0 +1,122 @@
+===== PATTERN: AgentWorkflowBuilder =====
+tests\Unit\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs:48:Assert.Contains("AgentWorkflowBuilder", availableTypeNames);
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:120:- `AgentWorkflowBuilder.CreateHandoffBuilderWith`;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:53:var builder = AgentWorkflowBuilder
+
+===== PATTERN: WorkflowHostAgent =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:108:MAF 1.15's `WorkflowHostAgent.RunCoreAsync` tracks all updates and terminal workflow output updates separately. If a terminal output exists, only that projection is used for the final non-streaming `AgentResponse`.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:8:WorkflowHostAgent.RunAsync
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:9:-> WorkflowHostAgent.RunCoreAsync
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:29:This bypasses `WorkflowHostAgent.RunCoreAsync`.
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:32:- `dotnet/src/Microsoft.Agents.AI.Workflows/WorkflowHostAgent.cs` at `dotnet-1.15.0`
+
+===== PATTERN: WorkflowSession =====
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:305:string WorkflowSessionId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:64:var checkpointInfo = await CreateCheckpointAsync(GetWorkflowSessionId(run.Id), payload, cancellationToken);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:69:WorkflowSessionId: checkpointInfo.SessionId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:187:string workflowSessionId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:197:workflowSessionId,
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:215:var knownCheckpoints = await checkpointStore.RetrieveIndexAsync(checkpoint.WorkflowSessionId, null!);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:217:string.Equals(item.SessionId, checkpoint.WorkflowSessionId, StringComparison.Ordinal) &&
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:222:$"Workflow checkpoint '{checkpoint.WorkflowCheckpointId}' was not present in the workflow checkpoint index for session '{checkpoint.WorkflowSessionId}'.");
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:225:var payloadPath = GetPayloadPath(checkpoint.WorkflowSessionId, checkpoint.WorkflowCheckpointId);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:260:private string GetPayloadPath(string workflowSessionId, string workflowCheckpointId)
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:264:$"{Uri.EscapeDataString(workflowSessionId)}_{Uri.EscapeDataString(workflowCheckpointId)}.json");
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Execution\WorkflowBackedAgentExecutionCheckpointBridge.cs:304:private static string GetWorkflowSessionId(Guid executionRunId)
+
+===== PATTERN: WorkflowOutputEvent =====
+tests\Unit\CanDoItAll.Tests.Unit\MafWorkflowEventNormalizerTests.cs:24:new WorkflowOutputEvent(new WorkflowNodeInput("{\"result\":\"ok\"}"), "work-a"),
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowEventNormalizer.cs:107:WorkflowOutputEvent => nodeId.HasValue
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowEventNormalizer.cs:143:WorkflowOutputEvent outputEvent => FirstNonEmpty(
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowEventNormalizer.cs:156:if (workflowEvent is WorkflowOutputEvent outputEvent)
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafWorkflowCompiler.cs:468:WorkflowOutputEvent => WorkflowEventKind.Output,
+
+===== PATTERN: AsAIAgent =====
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:38:- Non-streaming `Workflow.AsAIAgent()` prefers explicit terminal workflow outputs over intermediate agent updates.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:126:- `workflow.AsAIAgent(includeWorkflowOutputsInResponse: true)`;
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:21:| Handoff creation | `MafHandoffWorkflowFactory.Build` | handoff builder and `AsAIAgent(includeWorkflowOutputsInResponse: true)` | workflow-hosted agent uses explicit outputs | Confirmed |
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:82:var workflowAgent = workflow.AsAIAgent(
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:267:.AsAIAgent(options: options, services: services),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:273:.AsAIAgent(options: options, services: services),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:276:.AsAIAgent(options: options, model: model, services: services),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:307:.AsAIAgent(options: options, services: services),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:313:.AsAIAgent(options: options, services: services),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:316:.AsAIAgent(options: options, model: model, services: services),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Providers\MafProviderAgentFactory.cs:335:return chatClient.AsAIAgent(options: options);
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:81:var a2aAgent = agentCard.AsAIAgent(
+
+===== PATTERN: ToAgentResponse =====
+tests\Unit\CanDoItAll.Tests.Unit\MafRuntimeArchitectureServicesTests.cs:932:.ToAgentResponseAsync(cancellationToken);
+tests\Unit\CanDoItAll.Tests.Unit\MafContextMessageTransformationTests.cs:219:.ToAgentResponseAsync(cancellationToken);
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:150:.ToAgentResponseAsync(cancellationToken);
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:215:.ToAgentResponseAsync(cancellationToken);
+codex\bundles\maf-1-15-upgrade-architecture\inputs\02-upstream-release-baseline.md:39:- Workflow message merging delegates to MEAI `ToAgentResponse()` while preserving first-seen order and id-less reasoning segments.
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:14:- Handoff workflow je obalené vlastním depth guardem. Jeho non-streaming metoda ve skutečnosti spouští streaming a výslednou odpověď sama složí přes `ToAgentResponse()`.
+codex\bundles\maf-1-15-upgrade-architecture\architecture\01-current-integration-map.md:45:Updates --> Merge[MEAI ToAgentResponse]
+codex\bundles\maf-1-15-upgrade-architecture\analysis\09-open-questions-and-discovery-gates.md:22:| Q16 | Is MEAI 10.8 `ToAgentResponse()` behavior compatible with the MAF 1.15 workflow assumptions built against 10.6? | Actual resolved merge semantics | Targeted update sequence tests and package graph |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\04-workaround-decision-register.md:7:| W01 | `HandoffDepthGuardAgent.RunCoreAsync` streams and calls `updates.ToAgentResponse()` | **Rewrite** | It bypasses upstream non-streaming terminal-output projection | Direct MAF vs wrapper vs full-runtime output fixture |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\04-workaround-decision-register.md:8:| W02 | Main runtime collects all `AgentResponseUpdate` and calls `ToAgentResponse()` | **Keep temporarily; redesign projection for workflows if needed** | Correct for ordinary agents; potentially wrong for workflow terminal selection | Ordinary agent, handoff, reasoning, multi-response, tool adjacency matrix |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\03-breaking-behavior.md:128:- delegates contiguous update merging to MEAI `ToAgentResponse`;
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:26:-> MEAI ToAgentResponse
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:39:-> updates.ToAgentResponse()
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:49:The streaming MAF path computes and persists a merged final response internally after yielding updates, but it does not necessarily emit that merged response as another update. Therefore CanDoItAll cannot assume `updates.ToAgentResponse()` equals the framework's terminal projection.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:129:The depth guard's non-streaming path runs the streaming path and calls `updates.ToAgentResponse()`. The primary runtime also streams and independently calls `ToAgentResponse()`.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:160:- merges all updates via MEAI `ToAgentResponse()`;
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:22:| Handoff wrapper | `HandoffDepthGuardAgent.RunCoreAsync` | streaming collection + `ToAgentResponse()` | bypasses inner non-streaming terminal projection | Confirmed |
+codex\bundles\maf-1-15-upgrade-architecture\README.md:60:4. `HandoffDepthGuardAgent.RunCoreAsync` rebuilds a non-streaming response from streaming updates via `ToAgentResponse()`. That bypasses MAF 1.15's non-streaming terminal-workflow-output projection.
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:120:return updates.ToAgentResponse();
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:801:var jsonRepairProviderResponse = jsonRepairUpdates.ToAgentResponse();
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:960:var response = updates.ToAgentResponse();
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:91:updates.ToAgentResponse(),
+src\MAF\Common\CanDoItAll.AgentFramework.Maf\Runtime\MafRuntimeResponseAssembler.cs:102:group.ToAgentResponse(),
+
+===== PATTERN: MessageMerger =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\09-open-questions-and-discovery-gates.md:9:| Q03 | Is `MafAgentResponseSnapshotter` sorting, grouping, cloning, or assigning IDs? | Could undo MessageMerger fixes | Locate class and characterize each transform |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\02-impact-matrix.md:19:| New `MessageMerger` behavior | Runtime performs an additional MEAI merge | Correctness | Audit snapshot/merge code and resolved MEAI semantics | P0 | Confirmed |
+codex\bundles\maf-1-15-upgrade-architecture\references\02-upstream-change-index.md:33:- `dotnet/src/Microsoft.Agents.AI.Workflows/MessageMerger.cs` at `dotnet-1.15.0`
+
+===== PATTERN: HandoffDepthGuard =====
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:72:var guardedAgent = new HandoffDepthGuardAgent(
+codex\bundles\maf-1-15-upgrade-architecture\00-user-summary-cs.md:37:MAF opravilo preferenci explicitního terminálního workflow outputu v non-streaming odpovědi. Váš `HandoffDepthGuardAgent.RunCoreAsync` však tuto cestu obchází a odpověď znovu skládá ze streamu. Stejný problém může zůstat i v hlavním runtime, který stream používá kvůli průběžné aktivitě.
+codex\bundles\maf-1-15-upgrade-architecture\architecture\01-current-integration-map.md:36:Handoff --> DepthGuard[HandoffDepthGuardAgent]
+codex\bundles\maf-1-15-upgrade-architecture\analysis\04-workaround-decision-register.md:7:| W01 | `HandoffDepthGuardAgent.RunCoreAsync` streams and calls `updates.ToAgentResponse()` | **Rewrite** | It bypasses upstream non-streaming terminal-output projection | Direct MAF vs wrapper vs full-runtime output fixture |
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:21:HandoffDepthGuardAgent.RunAsync
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:22:-> HandoffDepthGuardAgent.RunCoreAsync
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:23:-> HandoffDepthGuardAgent.RunCoreStreamingAsync
+codex\bundles\maf-1-15-upgrade-architecture\analysis\07-workflow-handoff-streaming.md:47:Changing only `HandoffDepthGuardAgent.RunCoreAsync` to call `InnerAgent.RunAsync` would fix direct non-streaming callers, but the main runtime still uses streaming.
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:127:- a custom `HandoffDepthGuardAgent`.
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:22:| Handoff wrapper | `HandoffDepthGuardAgent.RunCoreAsync` | streaming collection + `ToAgentResponse()` | bypasses inner non-streaming terminal projection | Confirmed |
+codex\bundles\maf-1-15-upgrade-architecture\README.md:60:4. `HandoffDepthGuardAgent.RunCoreAsync` rebuilds a non-streaming response from streaming updates via `ToAgentResponse()`. That bypasses MAF 1.15's non-streaming terminal-workflow-output projection.
+codex\bundles\maf-1-15-upgrade-architecture\plan\02-file-by-file-plan.md:138:- change `HandoffDepthGuardAgent.RunCoreAsync` so it no longer blindly reconstructs all updates as final output;
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:92:new HandoffDepthGuardAgent(
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:101:internal sealed class HandoffDepthGuardAgent(
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:129:var guard = new HandoffDepthGuard(maxHandoffDepth, correlationId);
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:137:private sealed class HandoffDepthGuard(int maxDepth, string correlationId)
+
+===== PATTERN: EmitAgentResponseEvents =====
+tests\Unit\CanDoItAll.Tests.Unit\AgentHandoffMetadataTests.cs:54:EmitAgentResponseEvents = true,
+tests\Unit\CanDoItAll.Tests.Unit\AgentHandoffMetadataTests.cs:74:Assert.True(parsed.EmitAgentResponseEvents);
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:58:if (normalized.EmitAgentResponseEvents)
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:60:builder.EmitAgentResponseEvents();
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:18:public bool EmitAgentResponseEvents { get; set; }
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:55:private const string EmitAgentResponseEventsPropertyName = "emitAgentResponseEvents";
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:85:EmitAgentResponseEvents = TryReadBoolean(handoff, EmitAgentResponseEventsPropertyName),
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:124:[EmitAgentResponseEventsPropertyName] = normalized.EmitAgentResponseEvents,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:155:EmitAgentResponseEvents = settings.EmitAgentResponseEvents,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:312:!settings.EmitAgentResponseEvents &&
+
+===== PATTERN: EmitAgentResponseUpdateEvents =====
+tests\Unit\CanDoItAll.Tests.Unit\AgentHandoffMetadataTests.cs:55:EmitAgentResponseUpdateEvents = true,
+tests\Integration\CanDoItAll.Tests.Integration\MafAgentRuntimeHandoffTests.cs:96:EmitAgentResponseUpdateEvents = true,
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:55:.EmitAgentResponseUpdateEvents(normalized.EmitAgentResponseUpdateEvents)
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:20:public bool EmitAgentResponseUpdateEvents { get; set; } = true;
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:56:private const string EmitAgentResponseUpdateEventsPropertyName = "emitAgentResponseUpdateEvents";
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:86:EmitAgentResponseUpdateEvents = TryReadBoolean(handoff, EmitAgentResponseUpdateEventsPropertyName, defaultValue: true)
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:125:[EmitAgentResponseUpdateEventsPropertyName] = normalized.EmitAgentResponseUpdateEvents,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:156:EmitAgentResponseUpdateEvents = settings.EmitAgentResponseUpdateEvents,
+src\MAF\Common\CanDoItAll.AgentFramework.Models\Agents\Access\AgentHandoffModels.cs:313:settings.EmitAgentResponseUpdateEvents &&
+
+===== PATTERN: includeWorkflowOutputsInResponse =====
+codex\bundles\maf-1-15-upgrade-architecture\analysis\01-current-state.md:126:- `workflow.AsAIAgent(includeWorkflowOutputsInResponse: true)`;
+codex\bundles\maf-1-15-upgrade-architecture\references\01-repository-evidence-index.md:21:| Handoff creation | `MafHandoffWorkflowFactory.Build` | handoff builder and `AsAIAgent(includeWorkflowOutputsInResponse: true)` | workflow-hosted agent uses explicit outputs | Confirmed |
+src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\MafHandoffWorkflowFactory.cs:88:includeWorkflowOutputsInResponse: true);

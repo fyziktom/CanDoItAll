@@ -1,5 +1,0 @@
-Command: dotnet build CanDoItAll.slnx -nologo --no-restore
-ExitCode: 0
-Summary: Build succeeded with 0 warnings and 0 errors.
-Elapsed: 00:01:45.57
-BaselineCommit: 5f9d13dc04362442073b4782d544fbb88429af55

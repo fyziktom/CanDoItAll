@@ -1,4 +1,0 @@
-Command: audit SB02 template changes for broad all-tools fallback
-Exit code: 0
-Invariant: MTE-SB02-CONTRACTS
-Result: no broad fallback grant remains; mutation stays limited to implementation and repair lanes, while QA gains proof obligations rather than product mutation.

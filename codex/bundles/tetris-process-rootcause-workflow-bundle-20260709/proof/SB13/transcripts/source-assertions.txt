@@ -1,9 +1,0 @@
-SB13 source assertions
-
-PASS: workspace_dotnet_ identifiers are owned under Drivers/DotNet or concrete MAF command implementations, not generic process runtime/dispatcher code.
-PASS: DotNetSolutionSetup types are physically grouped under Drivers/DotNet.
-PASS: software-delivery subprocess mappings are owned by DotNetSoftwareDeliverySubprocessContractProvider.
-PASS: ProcessSubprocessContractResolver only composes providers.
-PASS: ProcessRuntimeToolPreflightService only composes runtime tool-plan guards.
-PASS: generic prompt builders no longer name concrete .NET runtime lifecycle tools.
-PASS: strengthened forbidden-domain token scan is green.

@@ -12,6 +12,11 @@ namespace CanDoItAll.Web;
 
 public static class ProjectStructureAgentApi
 {
+    private const string ReadSourceUnavailableErrorCode =
+        "ProjectStructureReadSourceUnavailable";
+    private const string ReadSourceInvalidErrorCode =
+        "ProjectStructureReadSourceInvalid";
+
     public static IEndpointRouteBuilder MapProjectStructureAgentApi(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/project-structure")
@@ -147,7 +152,10 @@ public static class ProjectStructureAgentApi
                 null,
                 null,
                 request,
-                (_, cancellationToken) => agentService.GetStructureAsync(projectId, request, cancellationToken),
+                (_, cancellationToken) => agentService.GetStructureAsync(
+                    projectId,
+                    ResolveHttpReadRequest(request),
+                    cancellationToken),
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/plan/summary", async (
@@ -1246,6 +1254,35 @@ public static class ProjectStructureAgentApi
         return endpoints;
     }
 
+    private static ProjectStructureReadRequest ResolveHttpReadRequest(
+        ProjectStructureReadRequest request)
+    {
+        return request.Source switch
+        {
+            ProjectStructureReadSource.ContextDefault or
+                ProjectStructureReadSource.CanonicalCurrent
+                => request with
+                {
+                    Source = ProjectStructureReadSource.CanonicalCurrent
+                },
+            ProjectStructureReadSource.InvocationSnapshot
+                => throw new ProjectStructureAgentException(
+                    StatusCodes.Status400BadRequest,
+                    ReadSourceUnavailableErrorCode,
+                    "Invocation snapshots are bound to an active in-process agent invocation and are not available through the Project Structure HTTP API.",
+                    new ProjectStructureReadSourceRejectionDetails(
+                        request.Source,
+                        ProjectStructureReadSource.CanonicalCurrent)),
+            _ => throw new ProjectStructureAgentException(
+                StatusCodes.Status400BadRequest,
+                ReadSourceInvalidErrorCode,
+                $"Project Structure read source '{request.Source}' is invalid.",
+                new ProjectStructureReadSourceRejectionDetails(
+                    request.Source,
+                    ProjectStructureReadSource.CanonicalCurrent))
+        };
+    }
+
     private static async Task EnsureGenericNodeUpdateAllowedAsync(
         ProjectStructureAgentService agentService,
         Guid projectId,
@@ -1464,5 +1501,9 @@ public static class ProjectStructureAgentApi
     {
         return (ProjectManagementGuidanceCategory)(int)category;
     }
+
+    private sealed record ProjectStructureReadSourceRejectionDetails(
+        ProjectStructureReadSource RequestedSource,
+        ProjectStructureReadSource SupportedSource);
 }
 

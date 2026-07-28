@@ -295,17 +295,8 @@ internal static class MafAgentResponseSnapshotter
             ToolApprovalRequestContent approval => new ToolApprovalRequestContent(
                 approval.RequestId,
                 SnapshotToolCall(approval.ToolCall)),
-            FunctionCallContent functionCall => new FunctionCallContent(
-                functionCall.CallId,
-                functionCall.Name,
-                SnapshotArguments(functionCall.Arguments)),
-            McpServerToolCallContent mcpToolCall => new McpServerToolCallContent(
-                mcpToolCall.CallId,
-                mcpToolCall.Name,
-                mcpToolCall.ServerName)
-            {
-                Arguments = SnapshotArguments(mcpToolCall.Arguments)
-            },
+            FunctionCallContent functionCall => SnapshotToolCall(functionCall),
+            McpServerToolCallContent mcpToolCall => SnapshotToolCall(mcpToolCall),
             ToolCallContent toolCall => SnapshotToolCall(toolCall),
             TextContent textContent => new TextContent(textContent.Text),
             DataContent dataContent => new DataContent(dataContent.Data, dataContent.MediaType)
@@ -318,24 +309,36 @@ internal static class MafAgentResponseSnapshotter
 
     private static ToolCallContent SnapshotToolCall(ToolCallContent toolCall)
     {
+        var callId = RequireStableToolCallId(toolCall);
         return toolCall switch
         {
             FunctionCallContent functionCall => new FunctionCallContent(
-                functionCall.CallId,
+                callId,
                 functionCall.Name,
                 SnapshotArguments(functionCall.Arguments)),
             McpServerToolCallContent mcpToolCall => new McpServerToolCallContent(
-                mcpToolCall.CallId,
+                callId,
                 mcpToolCall.Name,
                 mcpToolCall.ServerName)
             {
                 Arguments = SnapshotArguments(mcpToolCall.Arguments)
             },
             _ => new FunctionCallContent(
-                toolCall.CallId ?? Guid.NewGuid().ToString("N"),
+                callId,
                 ResolveOpaqueToolCallName(toolCall),
                 SnapshotNamedValues(ResolveOpaqueToolCallArguments(toolCall)))
         };
+    }
+
+    private static string RequireStableToolCallId(ToolCallContent toolCall)
+    {
+        if (string.IsNullOrWhiteSpace(toolCall.CallId))
+        {
+            throw new InvalidOperationException(
+                $"Cannot snapshot Microsoft Agent Framework tool call type '{toolCall.GetType().Name}' without a stable call identifier.");
+        }
+
+        return toolCall.CallId;
     }
 
     private static IDictionary<string, object?>? SnapshotArguments(IDictionary<string, object?>? arguments)

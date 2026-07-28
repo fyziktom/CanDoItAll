@@ -1,4 +1,0 @@
-Command: rg "TODO|NotImplemented|NotImplementedException|template-only|fixture-specific|fixture specific" src\Modules\CanDoItAll.Modules.AgentFramework\AgentTools\MemoryAgentRuntimeToolProvider.cs src\Modules\CanDoItAll.Modules.AgentFramework\WorkflowExecutors\MemoryWorkflowExecutor.cs src\Modules\CanDoItAll.Modules.AgentFramework\Context\MemoryAgentContextContributor.cs src\Modules\CanDoItAll.Modules.AgentFramework\MemoryIntegration -n
-rg exit code: 1
-Result: PASS - no production TODO, NotImplemented, fixture-specific, or template-only markers in SB19 MAF memory surfaces.
-InvariantIds: SB19-CLOSURE

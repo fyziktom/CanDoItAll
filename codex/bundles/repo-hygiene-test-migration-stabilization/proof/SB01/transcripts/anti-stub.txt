@@ -1,6 +1,0 @@
-Command: rg -n "return true|Skip|codex/bundles.*allow|tests/Memory.*allow" tests/Unit/CanDoItAll.Tests.Unit/RepositoryTransientArtifactHygieneTests.cs tests/Unit/CanDoItAll.Tests.Unit/RepositoryNamingHygieneTests.cs
-WorkingDirectory: repo://
-ExitCode: 1
-Invariant: SB01-HYGIENE-GUARD
-Result: no broad skip, unconditional pass, or broad scanner allowlist was added.
-
