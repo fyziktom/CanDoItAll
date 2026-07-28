@@ -18,8 +18,7 @@ public sealed class MemoryProviderExecutableActionGuard(
         }
 
         var providerId = MemoryProviderInstanceId.Parse(providerInstanceId);
-        var provider = (await providerStore.ListAsync(cancellationToken)).FirstOrDefault(candidate =>
-            string.Equals(candidate.InstanceId.Value, providerId.Value, StringComparison.OrdinalIgnoreCase));
+        var provider = await providerStore.GetAsync(providerId, cancellationToken);
         if (provider is null)
         {
             throw new InvalidOperationException($"Memory provider '{providerId}' was not found.");

@@ -1453,33 +1453,8 @@ public sealed class ProcessPersistenceStoreTests
         using var dbContext = new ProcessPersistenceDbContext(options);
         var parentRunId = ProcessRunId.New();
         var parentStepId = ProcessStepInstanceId.New();
-        var parentRunSnippet =
-            $"{JsonSerializer.Serialize(ProcessRuntimeLaunchVariables.ParentProcessRunId)}:{JsonSerializer.Serialize(parentRunId.ToString())}";
-        var parentStepSnippet =
-            $"{JsonSerializer.Serialize(ProcessRuntimeLaunchVariables.ParentProcessStepId)}:{JsonSerializer.Serialize(parentStepId.ToString())}";
-        var matchingAssignments = dbContext.RuntimeStepAssignments
-            .AsNoTracking()
-            .Where(assignment =>
-                assignment.LaunchVariablesJson.Contains(parentRunSnippet) &&
-                assignment.LaunchVariablesJson.Contains(parentStepSnippet));
-
-        var sql = matchingAssignments
-            .Select(assignment => assignment.RunId)
-            .Distinct()
-            .Select(runId => new
-            {
-                RunId = runId,
-                LaunchVariablesJson = matchingAssignments
-                    .Where(assignment => assignment.RunId == runId)
-                    .Select(assignment => assignment.LaunchVariablesJson)
-                    .First(),
-                CreatedAtUtc = matchingAssignments
-                    .Where(assignment => assignment.RunId == runId)
-                    .Max(assignment => assignment.CreatedAtUtc)
-            })
-            .OrderByDescending(child => child.CreatedAtUtc)
-            .ThenByDescending(child => child.RunId)
-            .Take(ProcessRuntimeChildLineageEvidenceRules.MaximumLinkedChildRunCount + 1)
+        var sql = BlockedRecoveryChildLineageQuery
+            .Compose(dbContext.RuntimeStepAssignments, parentRunId, parentStepId)
             .ToQueryString();
 
         Assert.Contains("LIMIT", sql, StringComparison.OrdinalIgnoreCase);

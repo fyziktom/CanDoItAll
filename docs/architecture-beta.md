@@ -57,7 +57,9 @@ The active module list is defined by [`ModuleAssemblies.cs`](../src/App/CanDoItA
 | Other product modules | Projects, prompts, plugins, scheduler, collaboration, CRM/HR, resources, security, workspace, and test-lab behavior. |
 | `CanDoItAll.AppComponents` | Product-facing component facade over shared component packages. Shared component source remains in the sibling `CanDoItAll.Components` repository. |
 
-The legacy `CanDoItAll.Modules.CognitiveMemory` project is not part of the base-host composition. The compatibility HTTP surface is retired; native Cognitive Memory is an explicit remote-provider integration.
+The base repository contains no native Cognitive Memory implementation or API.
+Native Cognitive Memory is owned by its standalone, unpublished work-in-progress
+repository and can be configured only as an explicit remote-provider integration.
 
 ## Startup
 
@@ -162,11 +164,13 @@ See [Provider capability and pricing](provider-capability-and-pricing.md).
 
 All four drivers and memory background workers are disabled in the base configuration. Enabling a driver is an explicit deployment decision. The base host has no implicit Qdrant dependency.
 
-The old `/api/cognitive-memory` and `/api/cognitive-memory/v1` paths expose only retirement contracts; other requests return `410 Gone`. Current setup is documented in [Memory providers](cognitive-memory/README.md).
+The experimental `/api/memory-providers` family exposes provider profiles and the
+supported provider-neutral operations. Native service APIs are not mapped by this host.
+Current setup is documented in [Memory providers](memory-providers/README.md).
 
 ## External Boundaries
 
-- HTTP route families: access, projects, Project Structure, agents, agent recruiting, Prompt Gallery, workflows, processes, retired Cognitive Memory compatibility, plugins, and CRM/HR.
+- HTTP route families: access, projects, Project Structure, agents, agent recruiting, Prompt Gallery, workflows, processes, memory providers, plugins, and CRM/HR.
 - MCP development sidecars: Code Analytics, Components, DotNetWatch, Mermaid, and SSH operations from the sibling `CanDoItAll.Mcp` repository.
 - Reusable repository standards and operator skills: sibling `CanDoItAll.SharedInfo`.
 - Shared Blazor component source: sibling `CanDoItAll.Components`.

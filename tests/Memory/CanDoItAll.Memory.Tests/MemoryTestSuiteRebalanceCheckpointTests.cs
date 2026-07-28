@@ -228,7 +228,7 @@ public sealed class MemoryTestSuiteRebalanceCheckpointTests
         var doc = File.ReadAllText(Path.Combine(
             RepoRoot,
             "docs",
-            "cognitive-memory",
+            "memory-providers",
             "operations",
             "memory-test-suite-rebalance.md"));
 

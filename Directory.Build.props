@@ -3,7 +3,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <CanDoItAllAgentFrameworkExtensionPackageVersion>0.1.15</CanDoItAllAgentFrameworkExtensionPackageVersion>
     <CanDoItAllComponentsPackageVersion>0.1.15</CanDoItAllComponentsPackageVersion>
     <CanDoItAllFileToolsPackageVersion>0.1.15</CanDoItAllFileToolsPackageVersion>
     <MicrosoftAspNetCoreComponentsVersion>10.0.10</MicrosoftAspNetCoreComponentsVersion>

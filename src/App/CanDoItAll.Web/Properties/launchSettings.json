@@ -31,21 +31,6 @@
         "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
       }
     },
-    "PostgreSQL cognitive memory multicycle": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "applicationUrl": "http://localhost:5032",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "Database__Provider": "PostgreSql",
-        "Database__ConnectionString": "Host=127.0.0.1;Port=5432;Database=candoitall_cognitive_memory_multicycle_20260517_03;Username=candoitall;Password=candoitall;Include Error Detail=true",
-        "Storage__WorkspaceRoot": ".artifacts/cognitive-memory-multicycle-postgres/workspace",
-        "ControlPlane__RootPath": ".artifacts/cognitive-memory-multicycle-postgres/control-plane",
-        "FileTools__DesktopLaunch__Enabled": "true",
-        "Processes__Runtime__RequirePostgreSqlForAgentAutomation": "true"
-      }
-    },
     "PostgreSQL workflow routing": {
       "commandName": "Project",
       "dotnetRunMessages": true,

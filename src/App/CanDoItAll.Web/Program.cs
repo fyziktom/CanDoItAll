@@ -92,16 +92,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapCanDoItAllManagedFiles();
 
-if (apiOptions.OpenApiEnabled)
-{
-    var openApiEndpoint = app.MapOpenApi();
-    var swaggerJsonEndpoint = app.MapOpenApi("/swagger/{documentName}/swagger.json");
-    if (apiOptions.Authorization.Enabled)
-    {
-        openApiEndpoint.RequireAuthorization();
-        swaggerJsonEndpoint.RequireAuthorization();
-    }
-}
+app.MapCanDoItAllApiDocumentation();
 
 if (app.Environment.IsDevelopment())
 {

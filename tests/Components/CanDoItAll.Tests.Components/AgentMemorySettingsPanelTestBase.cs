@@ -81,6 +81,11 @@ public abstract class AgentMemorySettingsPanelTestBase
             CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
+        public Task<MemoryProviderProfile?> GetAsync(
+            MemoryProviderInstanceId providerId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(profiles.FirstOrDefault(profile => profile.InstanceId == providerId));
+
         public Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<MemoryProviderProfile>>(profiles);
     }
@@ -92,6 +97,11 @@ public abstract class AgentMemorySettingsPanelTestBase
             DateTimeOffset updatedAtUtc,
             CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task<MemoryProviderProfile?> GetAsync(
+            MemoryProviderInstanceId providerId,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Profile store unavailable with secret=do-not-render.");
 
         public Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("Profile store unavailable with secret=do-not-render.");

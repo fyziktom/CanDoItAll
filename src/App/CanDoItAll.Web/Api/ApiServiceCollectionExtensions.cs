@@ -1,9 +1,12 @@
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Infrastructure;
+using CanDoItAll.Web.Api.Streaming;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -32,9 +35,54 @@ public static class ApiServiceCollectionExtensions
             .Validate(options => ApiAccessOptions.Validate(options).Count == 0, "API configuration is invalid.")
             .ValidateOnStart();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
+        services.TryAddScoped<MemoryProviderApiService>();
+        services.TryAddSingleton(
+            typeof(ProfileBoundedReplayEventStream<>),
+            typeof(ProfileBoundedReplayEventStream<>));
         services.AddOpenApi();
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(ApiAuthorizationPolicies.IssueTokens, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasScope(
+                        context.User,
+                        ApiAccessScopeNames.IssueTokens));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.ReadMemoryProviders, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.ReadMemoryProviders));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.WriteMemoryProviders, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.WriteMemoryProviders));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.QueryMemoryProviders, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.QueryMemoryProviders));
+            });
+        });
         services.AddHttpContextAccessor();
+        services.Replace(ServiceDescriptor.Singleton<IWorkflowEventSink, WorkflowApiEventSink>());
+        services.TryAddScoped<ProcessRuntimeProjectionProjector>();
+        services.Replace(ServiceDescriptor.Scoped<IProcessRuntimeProjector>(serviceProvider =>
+            new ApiNotifyingProcessRuntimeProjector(
+                serviceProvider.GetRequiredService<ProcessRuntimeProjectionProjector>(),
+                serviceProvider.GetRequiredService<ProfileBoundedReplayEventStream<ProcessApiRunEvent>>(),
+                serviceProvider.GetRequiredService<ILogger<ApiNotifyingProcessRuntimeProjector>>())));
         services.TryAddScoped<IAgentRecruitingTargetResolver, WorkspaceAgentRecruitingTargetResolver>();
         services.Replace(ServiceDescriptor.Scoped<IFileAccessContextProvider, HttpFileAccessContextProvider>());
         services.Replace(ServiceDescriptor.Singleton<IFileAccessPolicy, WebFileAccessPolicy>());

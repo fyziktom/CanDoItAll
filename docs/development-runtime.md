@@ -78,7 +78,9 @@ The base host composes the provider-neutral Memory subsystem. These provider dri
 
 Memory background workers are also disabled by default. Enabling a provider or worker is an explicit environment-specific decision; a missing provider must fail predictably rather than falling back to another provider.
 
-The legacy `/api/cognitive-memory` surface is not a Memory provider API. Its contract endpoint reports retirement, and legacy operations return `410 Gone`.
+The experimental `/api/memory-providers` surface exposes only provider-neutral profile,
+query, and owned-status operations. The main host does not map `/api/cognitive-memory`;
+native service operations belong to the standalone Cognitive Memory repository.
 
 ## Qdrant
 

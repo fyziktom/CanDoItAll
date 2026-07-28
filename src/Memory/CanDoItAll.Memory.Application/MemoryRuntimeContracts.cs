@@ -9,6 +9,10 @@ public interface IMemoryProviderProfileStore
         DateTimeOffset updatedAtUtc,
         CancellationToken cancellationToken = default);
 
+    Task<MemoryProviderProfile?> GetAsync(
+        MemoryProviderInstanceId providerId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default);
 }
 

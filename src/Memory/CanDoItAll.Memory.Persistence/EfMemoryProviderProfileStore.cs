@@ -29,6 +29,19 @@ public sealed class EfMemoryProviderProfileStore(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<MemoryProviderProfile?> GetAsync(
+        MemoryProviderInstanceId providerId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entity = await dbContext.Set<MemoryProviderProfileEntity>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                candidate => candidate.InstanceId == providerId.Value,
+                cancellationToken);
+        return entity?.ToProfile();
+    }
+
     public async Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

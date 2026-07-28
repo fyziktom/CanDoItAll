@@ -59,6 +59,8 @@ internal static class WorkflowsApi
                 "POST /api/workflows/runs/{runId}/cancel",
                 "GET /api/workflows/runs/{runId}/events",
                 "GET /api/workflows/runs/{runId}/events/page",
+                "GET /api/workflows/events/stream",
+                "GET /api/workflows/runs/{runId}/events/stream",
                 "GET /api/workflows/runs/{runId}/artifacts",
                 "GET /api/workflows/runs/{runId}/artifacts/{artifactId}/content",
                 "GET /api/workflows/runs/{runId}/checkpoints",

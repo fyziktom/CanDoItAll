@@ -492,6 +492,13 @@ public sealed class MemoryOperationHandlerTests
             throw new InvalidOperationException("secret-connection-string");
         }
 
+        public Task<MemoryProviderProfile?> GetAsync(
+            MemoryProviderInstanceId providerId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("secret-connection-string");
+        }
+
         public Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(
             CancellationToken cancellationToken = default)
         {
