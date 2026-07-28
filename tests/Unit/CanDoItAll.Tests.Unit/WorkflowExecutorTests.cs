@@ -20,6 +20,20 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkflowExecutorTests
 {
+    private const string WorkflowStructuredResponseSchemaJson =
+        """
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "markdown": { "type": "string" },
+            "projectId": { "type": "string" },
+            "nodeId": { "type": "string" }
+          },
+          "required": ["markdown", "projectId", "nodeId"]
+        }
+        """;
+
     private static readonly WorkflowValueShape JsonObjectShape = new(
         WorkflowValueShapeKind.Object,
         "{}",
@@ -956,6 +970,37 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRejectsLegacyTemplateInstructionPlaceholder()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
+        var node = CreateLlmNode("legacy-prompt-placeholder", component.Id) with
+        {
+            Settings = CreateLlmNode("legacy-prompt-placeholder", component.Id).Settings with
+            {
+                Instructions = WorkflowInstructionSnapshotPolicy.LegacyTemplatePlaceholder
+            }
+        };
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await invoker.ExecuteAsync(
+                definition,
+                node,
+                component,
+                new WorkflowNodeInput("{}")));
+
+        Assert.Contains("legacy template placeholder", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("backfilled", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(runtime.LastAgent);
+    }
+
+    [Fact]
     public async Task MafWorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
     {
         var runtime = new CapturingAgentRuntime("{\"ok\":true}")
@@ -1042,18 +1087,6 @@ public sealed class WorkflowExecutorTests
     [Fact]
     public async Task MafWorkflowLlmComponentInvokerRequestsJsonResponseFormatSchemaForJsonComponents()
     {
-        const string schemaJson = """
-            {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "markdown": { "type": "string" },
-                "projectId": { "type": "string" },
-                "nodeId": { "type": "string" }
-              },
-              "required": ["markdown", "projectId", "nodeId"]
-            }
-            """;
         var runtime = new CapturingAgentRuntime(
             """
             {
@@ -1070,21 +1103,250 @@ public sealed class WorkflowExecutorTests
         var component = CreateLlmComponent(
             JsonObjectShape,
             JsonPayloadShape,
-            responseFormatJsonSchema: schemaJson);
+            responseFormatJsonSchema: WorkflowStructuredResponseSchemaJson);
         var node = CreateLlmNode("summarize-office365", component.Id);
         var definition = CreateDefinition([node], [], node.Id.Value);
 
-        await invoker.ExecuteAsync(
+        var result = await invoker.ExecuteAsync(
             definition,
             node,
             component,
             new WorkflowNodeInput("{}"));
 
+        Assert.Contains("# Summary", result.PayloadJson, StringComparison.Ordinal);
         var executionOptions = runtime.LastExecutionOptions;
         Assert.NotNull(executionOptions);
         Assert.True(executionOptions!.RequireJsonResponseFormat);
-        Assert.Equal(schemaJson.Trim(), executionOptions.ResponseFormatJsonSchema);
+        Assert.Equal(WorkflowStructuredResponseSchemaJson.Trim(), executionOptions.ResponseFormatJsonSchema);
         Assert.Equal("workflow_llm_component_result", executionOptions.ResponseFormatSchemaName);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerAcceptsValidSchemaKeywordsOutsidePortableContractSubset()
+    {
+        const string responseSchema =
+            """
+            {
+              "$defs": {
+                "identifier": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "type": "object",
+              "required": [ "projectId", "result" ],
+              "properties": {
+                "projectId": { "$ref": "#/$defs/identifier" },
+                "result": {
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "number" }
+                  ]
+                }
+              }
+            }
+            """;
+        var runtime = new CapturingAgentRuntime(
+            """{"projectId":"ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f","result":"complete"}""");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: responseSchema);
+        var node = CreateLlmNode("complex-schema", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.Contains("\"complete\"", result.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerDoesNotMisapplySupportedRestrictionsToUnsupportedSchemaKeywords()
+    {
+        const string responseSchema =
+            """
+            {
+              "type": "object",
+              "patternProperties": {
+                "^x-": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+            """;
+        var runtime = new CapturingAgentRuntime("""{"x-workflow":"complete"}""");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: responseSchema);
+        var node = CreateLlmNode("pattern-schema", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.Contains("\"x-workflow\":\"complete\"", result.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerDoesNotMisclassifyIndirectBusinessRefusalProperty()
+    {
+        const string responseSchema =
+            """
+            {
+              "$defs": {
+                "businessResult": {
+                  "type": "object",
+                  "properties": {
+                    "refusal": { "type": "string" }
+                  },
+                  "required": [ "refusal" ]
+                }
+              },
+              "$ref": "#/$defs/businessResult"
+            }
+            """;
+        var runtime = new CapturingAgentRuntime("""{"refusal":"No objections"}""");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: responseSchema);
+        var node = CreateLlmNode("business-refusal-schema", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.Contains("\"refusal\":\"No objections\"", result.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerAcceptsUnconstrainedObjectResponseSchema()
+    {
+        var runtime = new CapturingAgentRuntime("""{"ok":true}""");
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: "{}");
+        var node = CreateLlmNode("unconstrained-schema", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.Contains("\"ok\":true", result.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRejectsJsonMissingRequiredSchemaFieldsAndPreservesUsage()
+    {
+        var runtime = new CapturingAgentRuntime("""{"markdown":"# Summary"}""")
+        {
+            InputTokens = 31,
+            OutputTokens = 7
+        };
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: WorkflowStructuredResponseSchemaJson);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var exception = await Assert.ThrowsAsync<WorkflowUsageObservationException>(() => invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains(node.Id.Value, exception.Message, StringComparison.Ordinal);
+        Assert.Contains(component.Id.ToString(), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("response JSON Schema validation", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("required-property-missing", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("projectId", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("nodeId", exception.Message, StringComparison.Ordinal);
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
+        var observation = Assert.Single(exception.Observations);
+        Assert.Equal(31, observation.InputTokens);
+        Assert.Equal(7, observation.OutputTokens);
+        Assert.Equal(38, observation.TotalTokens);
+        Assert.Equal(node.Id, observation.NodeId);
+        Assert.Equal(component.Id, observation.ComponentId);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerRejectsSchemaShapedJsonInsteadOfBusinessResult()
+    {
+        var runtime = new CapturingAgentRuntime(
+            """
+            {
+              "type": "object",
+              "properties": {
+                "markdown": { "type": "string" },
+                "projectId": { "type": "string" },
+                "nodeId": { "type": "string" }
+              }
+            }
+            """);
+        var provider = CreateProviderProfile("gpt-5-mini");
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(
+            JsonObjectShape,
+            JsonPayloadShape,
+            responseFormatJsonSchema: WorkflowStructuredResponseSchemaJson);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var exception = await Assert.ThrowsAsync<WorkflowUsageObservationException>(() => invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains("response JSON Schema validation", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("markdown", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("projectId", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("nodeId", exception.Message, StringComparison.Ordinal);
+        Assert.NotEmpty(exception.Observations);
     }
 
     [Fact]

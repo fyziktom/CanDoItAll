@@ -355,7 +355,7 @@ public sealed class WorkflowDashboardActivityQueryTests
             Status = WorkflowLifecycleStatus.Active,
             PreferredBackend = WorkflowRuntimeBackendKind.InProcess,
             DefinitionJson = "{}",
-            InstructionSnapshotSchemaVersion = 2,
+            InstructionSnapshotSchemaVersion = 3,
             CreatedAtUtc = Now,
             UpdatedAtUtc = updatedAtUtc
         };

@@ -17,6 +17,21 @@ internal static class WorkflowTemplateGraphMaterializer
     {
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(template);
+        return CreateGraph(
+            pack,
+            template,
+            componentId,
+            pack.CreateComponentInstructions(template));
+    }
+
+    private static WorkflowGraph CreateGraph(
+        WorkflowTemplatePack pack,
+        WorkflowTemplateDefinition template,
+        WorkflowComponentId componentId,
+        string componentInstructions)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(template);
 
         var context = WorkflowTemplatePack.CreateContext(template);
         if (template.Graph.Nodes.Count == 0)
@@ -35,7 +50,12 @@ internal static class WorkflowTemplateGraphMaterializer
                 context.WithYamlPath("graph.startNodeId"),
                 "Set graph.startNodeId to the id of an existing start node.")),
             template.Graph.Nodes
-                .Select((node, index) => CreateNode(pack, node, componentId, context.WithYamlPath($"graph.nodes[{index}]")))
+                .Select((node, index) => CreateNode(
+                    pack,
+                    node,
+                    componentId,
+                    componentInstructions,
+                    context.WithYamlPath($"graph.nodes[{index}]")))
                 .ToArray(),
             template.Graph.Edges
                 .Select((edge, index) => CreateEdge(edge, context.WithYamlPath($"graph.edges[{index}]")))
@@ -47,7 +67,7 @@ internal static class WorkflowTemplateGraphMaterializer
         WorkflowTemplateDefinition template,
         LlmCallComponent component)
     {
-        var graph = CreateGraph(pack, template, component.Id);
+        var graph = CreateGraph(pack, template, component.Id, component.Instructions);
         var builder = WorkflowDefinitionBuilder
             .Create(string.IsNullOrWhiteSpace(template.Name) ? template.Key : template.Name)
             .WithDescription(template.Description)
@@ -77,6 +97,7 @@ internal static class WorkflowTemplateGraphMaterializer
         WorkflowTemplatePack pack,
         WorkflowTemplateNode node,
         WorkflowComponentId componentId,
+        string componentInstructions,
         WorkflowTemplateContext context)
     {
         var nodeId = WorkflowTemplateDiagnostics.Require(
@@ -90,9 +111,11 @@ internal static class WorkflowTemplateGraphMaterializer
             $"node '{nodeId}' kind",
             nodeContext.WithYamlPath($"{context.YamlPath}.kind"),
             WorkflowTemplateFailureKind.GraphMaterializationFailed);
-        var instructions = string.IsNullOrWhiteSpace(node.Instructions)
-            ? ResolveDefaultInstruction(kind, pack.Manifest.NodeInstructionDefaults)
-            : node.Instructions.Trim();
+        var instructions = ResolveInstructions(
+            node.Instructions,
+            kind,
+            componentInstructions,
+            pack.Manifest.NodeInstructionDefaults);
 
         var builder = WorkflowNodeBuilder
             .For(nodeId, kind)
@@ -275,6 +298,23 @@ internal static class WorkflowTemplateGraphMaterializer
         => defaults.TryGetValue(kind.ToString(), out var value) && !string.IsNullOrWhiteSpace(value)
             ? value
             : string.Empty;
+
+    private static string ResolveInstructions(
+        string? instructions,
+        WorkflowNodeKind kind,
+        string componentInstructions,
+        IReadOnlyDictionary<string, string> defaults)
+    {
+        if (kind == WorkflowNodeKind.LlmCall &&
+            WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(instructions))
+        {
+            return componentInstructions.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(instructions)
+            ? ResolveDefaultInstruction(kind, defaults)
+            : instructions.Trim();
+    }
 
     private static IReadOnlyList<WorkflowPort> BuildPorts(
         WorkflowNodeKind kind,

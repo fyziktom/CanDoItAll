@@ -23,7 +23,10 @@ internal sealed record PreparedAgentJsonSchemaOutputContract(
     string Name,
     string SchemaJson,
     string SchemaHash,
-    bool Strict);
+    bool Strict)
+{
+    public bool EvaluateInstanceSchema { get; init; } = true;
+}
 
 internal static partial class AgentJsonSchemaOutputContractProcessor
 {
@@ -129,6 +132,40 @@ internal static partial class AgentJsonSchemaOutputContractProcessor
         return new PreparedAgentJsonSchemaOutputContract(kind, version, name, schemaJson, schemaHash, contract.Strict);
     }
 
+    public static PreparedAgentJsonSchemaOutputContract PrepareResponseFormatValidation(
+        JsonElement schema,
+        string name,
+        bool strict)
+    {
+        if (schema.ValueKind != JsonValueKind.Object)
+        {
+            throw ContractError(
+                "agents.structured-output-schema-invalid",
+                "Structured output schema must be a JSON object.");
+        }
+
+        var normalizedName = name?.Trim() ?? string.Empty;
+        if (!SchemaNamePattern().IsMatch(normalizedName))
+        {
+            throw ContractError(
+                "agents.structured-output-name-invalid",
+                "Structured output name must start with a letter and contain at most 64 ASCII letters, digits, underscores, or hyphens.");
+        }
+
+        var schemaJson = schema.GetRawText();
+        var schemaHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaJson))).ToLowerInvariant();
+        return new PreparedAgentJsonSchemaOutputContract(
+            AgentJsonSchemaOutputContractVersions.Kind,
+            AgentJsonSchemaOutputContractVersions.Current,
+            normalizedName,
+            schemaJson,
+            schemaHash,
+            strict)
+        {
+            EvaluateInstanceSchema = CanEvaluateResponseFormatSchema(schema)
+        };
+    }
+
     public static PreparedAgentJsonSchemaOutputContract? Restore(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -205,12 +242,11 @@ internal static partial class AgentJsonSchemaOutputContractProcessor
         }
 
         using (outputDocument)
-        using (var schemaDocument = JsonDocument.Parse(
-                   contract.SchemaJson,
-                   new JsonDocumentOptions { MaxDepth = MaximumSchemaDepth + 2 }))
+        using (var schemaDocument = JsonDocument.Parse(contract.SchemaJson))
         {
             var output = outputDocument.RootElement;
-            if (IsStructuredRefusal(output, schemaDocument.RootElement))
+            if (contract.EvaluateInstanceSchema &&
+                IsStructuredRefusal(output, schemaDocument.RootElement))
             {
                 return new AgentJsonSchemaOutputResult(
                     output.Clone(),
@@ -224,7 +260,11 @@ internal static partial class AgentJsonSchemaOutputContractProcessor
             }
 
             var errors = new List<AgentJsonSchemaOutputValidationError>();
-            ValidateInstance(schemaDocument.RootElement, output, "$", errors);
+            if (contract.EvaluateInstanceSchema)
+            {
+                ValidateInstance(schemaDocument.RootElement, output, "$", errors);
+            }
+
             return new AgentJsonSchemaOutputResult(
                 output.Clone(),
                 raw,
@@ -381,6 +421,39 @@ internal static partial class AgentJsonSchemaOutputContractProcessor
         }
     }
 
+    private static bool CanEvaluateResponseFormatSchema(JsonElement schema)
+    {
+        if (schema.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return true;
+        }
+
+        if (schema.ValueKind != JsonValueKind.Object ||
+            schema.EnumerateObject().Any(property => !SupportedKeywords.Contains(property.Name)))
+        {
+            return false;
+        }
+
+        if (schema.TryGetProperty("properties", out var properties))
+        {
+            if (properties.ValueKind != JsonValueKind.Object ||
+                properties.EnumerateObject().Any(property => !CanEvaluateResponseFormatSchema(property.Value)))
+            {
+                return false;
+            }
+        }
+
+        if (schema.TryGetProperty("additionalProperties", out var additionalProperties) &&
+            additionalProperties.ValueKind == JsonValueKind.Object &&
+            !CanEvaluateResponseFormatSchema(additionalProperties))
+        {
+            return false;
+        }
+
+        return !schema.TryGetProperty("items", out var items) ||
+               CanEvaluateResponseFormatSchema(items);
+    }
+
     private static void EnsureRootObjectSchema(JsonElement schema)
     {
         if (!SchemaAllowsType(schema, "object"))
@@ -492,6 +565,22 @@ internal static partial class AgentJsonSchemaOutputContractProcessor
         List<AgentJsonSchemaOutputValidationError> errors)
     {
         if (errors.Count >= MaximumValidationErrors)
+        {
+            return;
+        }
+
+        if (schema.ValueKind == JsonValueKind.True)
+        {
+            return;
+        }
+
+        if (schema.ValueKind == JsonValueKind.False)
+        {
+            AddError(errors, "false-schema", "Value is rejected by the false JSON Schema.", path);
+            return;
+        }
+
+        if (schema.ValueKind != JsonValueKind.Object)
         {
             return;
         }

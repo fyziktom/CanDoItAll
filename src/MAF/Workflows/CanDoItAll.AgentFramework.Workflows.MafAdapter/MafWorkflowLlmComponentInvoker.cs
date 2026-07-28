@@ -206,10 +206,11 @@ public sealed class MafWorkflowLlmComponentInvoker(
         string model)
     {
         var now = DateTimeOffset.UtcNow;
-        if (string.IsNullOrWhiteSpace(node.Settings.Instructions))
+        if (WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(node.Settings.Instructions))
         {
             throw new InvalidOperationException(
-                $"LLM workflow node '{node.Id}' has no immutable instruction snapshot.");
+                $"LLM workflow node '{node.Id}' has no usable immutable instruction snapshot. " +
+                "Its instructions are blank or contain the legacy template placeholder and must be backfilled from the component before execution.");
         }
 
         var instructions = node.Settings.Instructions.Trim();
@@ -372,6 +373,36 @@ public sealed class MafWorkflowLlmComponentInvoker(
         WorkflowNode node,
         LlmCallComponent component)
     {
+        var schemaJson = ResolveResponseFormatJsonSchema(component);
+        if (!string.IsNullOrWhiteSpace(schemaJson))
+        {
+            AgentJsonSchemaOutputResult validation;
+            try
+            {
+                validation = AgentJsonSchemaOutputValidator.Validate(
+                    schemaJson,
+                    payload,
+                    schemaName: "workflow_llm_component_result");
+            }
+            catch (AgentJsonSchemaOutputContractException exception)
+            {
+                throw new InvalidOperationException(
+                    $"LLM workflow node '{node.Id}' component '{component.Id}' has an invalid response JSON Schema " +
+                    $"({exception.Code}): {exception.Message}",
+                    exception);
+            }
+
+            if (validation.ValidationStatus != AgentJsonSchemaOutputValidationStatus.Valid)
+            {
+                throw new InvalidOperationException(
+                    $"LLM workflow node '{node.Id}' component '{component.Id}' returned output that failed the configured " +
+                    $"response JSON Schema validation ({validation.ValidationStatus}): " +
+                    FormatSchemaValidationErrors(validation.ValidationErrors));
+            }
+
+            return;
+        }
+
         try
         {
             using var _ = JsonDocument.Parse(payload);
@@ -382,5 +413,24 @@ public sealed class MafWorkflowLlmComponentInvoker(
                 $"LLM workflow node '{node.Id}' component '{component.Id}' returned invalid JSON: {exception.Message}",
                 exception);
         }
+    }
+
+    private static string FormatSchemaValidationErrors(
+        IReadOnlyList<AgentJsonSchemaOutputValidationError> errors)
+    {
+        const int maximumReportedErrors = 8;
+        if (errors.Count == 0)
+        {
+            return "No validation details were reported.";
+        }
+
+        var summary = string.Join(
+            "; ",
+            errors.Take(maximumReportedErrors)
+                .Select(error => $"[{error.Code}] {error.Path}: {error.Message}"));
+        var remaining = errors.Count - maximumReportedErrors;
+        return remaining > 0
+            ? $"{summary}; plus {remaining} more validation error(s)."
+            : summary;
     }
 }

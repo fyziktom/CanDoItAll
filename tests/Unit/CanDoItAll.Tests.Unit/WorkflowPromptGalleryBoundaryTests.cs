@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
@@ -183,15 +184,22 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             migratedComponentJson = componentRecord.ComponentJson;
 
             var definitionRecord = await assertContext.Set<WorkflowDefinitionRecord>().SingleAsync();
-            Assert.Equal(2, definitionRecord.InstructionSnapshotSchemaVersion);
+            Assert.Equal(3, definitionRecord.InstructionSnapshotSchemaVersion);
             migratedDefinitionJson = definitionRecord.DefinitionJson;
             var migratedDefinition = JsonSerializer.Deserialize<WorkflowDefinition>(
                 definitionRecord.DefinitionJson,
                 JsonOptions);
-            var llmNode = Assert.Single(migratedDefinition!.Graph.Nodes);
-            Assert.Equal(component.Instructions, llmNode.Settings.Instructions);
-            Assert.Equal(providerProfileId, llmNode.Settings.ProviderProfileId);
-            Assert.Equal(component.Model, llmNode.Settings.Model);
+            var llmNodes = migratedDefinition!.Graph.Nodes.ToDictionary(node => node.Id.Value);
+            Assert.Equal(component.Instructions, llmNodes["llm-blank"].Settings.Instructions);
+            Assert.Equal(component.Instructions, llmNodes["llm-placeholder"].Settings.Instructions);
+            Assert.Equal(
+                "Keep this custom immutable workflow instruction.",
+                llmNodes["llm-custom"].Settings.Instructions);
+            Assert.All(llmNodes.Values, llmNode =>
+            {
+                Assert.Equal(providerProfileId, llmNode.Settings.ProviderProfileId);
+                Assert.Equal(component.Model, llmNode.Settings.Model);
+            });
 
             Assert.Single(await assertContext.Set<PromptArtifact>().ToArrayAsync());
             Assert.Single(await assertContext.Set<PromptVersion>().ToArrayAsync());
@@ -210,6 +218,55 @@ public sealed class WorkflowPromptGalleryBoundaryTests
         Assert.Equal(migratedDefinitionJson, persistedDefinition.DefinitionJson);
         Assert.Single(await idempotencyContext.Set<PromptArtifact>().ToArrayAsync());
         Assert.Single(await idempotencyContext.Set<PromptVersion>().ToArrayAsync());
+    }
+
+    [Fact]
+    public async Task StartupMigrationPreservesLegacyDefinitionWhenReferencedComponentIsMissing()
+    {
+        var factory = CreateWorkflowFactory("missing-component-migration");
+        var componentId = WorkflowComponentId.New();
+        var definition = CreateLegacyDefinition(componentId);
+        var originalDefinitionJson = string.Empty;
+        await using (var arrangeContext = factory.CreateDbContext())
+        {
+            var record = WorkflowDefinitionRecord.FromDefinition(definition, revision: 1);
+            record.InstructionSnapshotSchemaVersion = 0;
+            originalDefinitionJson = record.DefinitionJson;
+            arrangeContext.Add(record);
+            await arrangeContext.SaveChangesAsync();
+        }
+
+        var componentLibrary = new MissingWorkflowComponentLibrary();
+        var logger = new RecordingLogger<WorkflowPromptGalleryMigrationService>();
+        var migration = new WorkflowPromptGalleryMigrationService(
+            componentLibrary,
+            factory,
+            logger);
+
+        await migration.EnsureMigratedAsync();
+
+        await using (var assertContext = factory.CreateDbContext())
+        {
+            var record = await assertContext.Set<WorkflowDefinitionRecord>().SingleAsync();
+            Assert.Equal(3, record.InstructionSnapshotSchemaVersion);
+            Assert.Equal(originalDefinitionJson, record.DefinitionJson);
+        }
+
+        Assert.Equal(1, componentLibrary.GetComponentCallCount);
+        Assert.Contains(logger.Entries, entry =>
+            entry.Level == LogLevel.Warning &&
+            entry.Message.Contains(definition.Id.Value.ToString(), StringComparison.OrdinalIgnoreCase) &&
+            entry.Message.Contains(definition.VersionId.Value.ToString(), StringComparison.OrdinalIgnoreCase) &&
+            entry.Message.Contains("llm-placeholder", StringComparison.Ordinal) &&
+            entry.Message.Contains(componentId.Value.ToString(), StringComparison.OrdinalIgnoreCase));
+
+        await migration.EnsureMigratedAsync();
+
+        Assert.Equal(1, componentLibrary.GetComponentCallCount);
+        await using var idempotencyContext = factory.CreateDbContext();
+        var persistedRecord = await idempotencyContext.Set<WorkflowDefinitionRecord>().SingleAsync();
+        Assert.Equal(3, persistedRecord.InstructionSnapshotSchemaVersion);
+        Assert.Equal(originalDefinitionJson, persistedRecord.DefinitionJson);
     }
 
     [Fact]
@@ -357,7 +414,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
                 VersionId = Guid.NewGuid(),
                 Name = "Current definition",
                 DefinitionJson = "not-json",
-                InstructionSnapshotSchemaVersion = 2
+                InstructionSnapshotSchemaVersion = 3
             });
             await arrangeContext.SaveChangesAsync();
         }
@@ -404,7 +461,7 @@ public sealed class WorkflowPromptGalleryBoundaryTests
 
     private static WorkflowDefinition CreateLegacyDefinition(WorkflowComponentId componentId)
     {
-        var nodeId = new WorkflowNodeId("llm");
+        var nodeId = new WorkflowNodeId("llm-blank");
         var now = DateTimeOffset.UnixEpoch;
         return new WorkflowDefinition(
             WorkflowId.New(),
@@ -415,19 +472,15 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             new WorkflowGraph(
                 nodeId,
                 [
-                    new WorkflowNode(
-                        nodeId,
-                        WorkflowNodeKind.LlmCall,
-                        "LLM",
-                        [],
-                        new WorkflowNodeSettings(
-                            componentId,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: string.Empty,
-                            WorkflowValueShape.Text,
-                            WorkflowValueShape.Text))
+                    CreateLegacyNode("llm-blank", componentId, string.Empty),
+                    CreateLegacyNode(
+                        "llm-placeholder",
+                        componentId,
+                        WorkflowInstructionSnapshotPolicy.LegacyTemplatePlaceholder),
+                    CreateLegacyNode(
+                        "llm-custom",
+                        componentId,
+                        "Keep this custom immutable workflow instruction.")
                 ],
                 []),
             new WorkflowRuntimePolicy(
@@ -439,6 +492,24 @@ public sealed class WorkflowPromptGalleryBoundaryTests
             now,
             now);
     }
+
+    private static WorkflowNode CreateLegacyNode(
+        string id,
+        WorkflowComponentId componentId,
+        string instructions)
+        => new(
+            new WorkflowNodeId(id),
+            WorkflowNodeKind.LlmCall,
+            "LLM",
+            [],
+            new WorkflowNodeSettings(
+                componentId,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                instructions,
+                WorkflowValueShape.Text,
+                WorkflowValueShape.Text));
 
     private static WorkflowDefinition CreateValidationDefinition(LlmCallComponent component)
     {
@@ -780,6 +851,60 @@ public sealed class WorkflowPromptGalleryBoundaryTests
 
         private static InvalidOperationException Unused()
             => new("Current migration markers must prevent component library access.");
+    }
+
+    private sealed class MissingWorkflowComponentLibrary : IWorkflowComponentLibraryService
+    {
+        public int GetComponentCallCount { get; private set; }
+
+        public Task<IReadOnlyList<WorkflowProviderOption>> ListProviderOptionsAsync(
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<IReadOnlyList<LlmCallComponent>> ListComponentsAsync(
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<LlmCallComponent?> GetComponentAsync(
+            WorkflowComponentId componentId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            GetComponentCallCount++;
+            return Task.FromResult<LlmCallComponent?>(null);
+        }
+
+        public Task<LlmCallComponent> SaveComponentAsync(
+            LlmCallComponentSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task DeleteComponentAsync(
+            WorkflowComponentId componentId,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        private static NotSupportedException Unused()
+            => new("This migration test only looks up a missing workflow component.");
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+            => Entries.Add((logLevel, formatter(state, exception)));
     }
 
     private sealed class TestProviderProfileRegistry(ProviderProfile provider) :

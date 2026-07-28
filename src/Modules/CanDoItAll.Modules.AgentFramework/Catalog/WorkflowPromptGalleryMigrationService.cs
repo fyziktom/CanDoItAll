@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
@@ -126,7 +127,7 @@ public sealed class WorkflowPromptGalleryMigrationService(
                 .SelectMany(item => item.Definition.Graph.Nodes)
                 .Where(node =>
                     node.Kind == WorkflowNodeKind.LlmCall &&
-                    (string.IsNullOrWhiteSpace(node.Settings.Instructions) ||
+                    (WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(node.Settings.Instructions) ||
                      !node.Settings.ProviderProfileId.HasValue ||
                      string.IsNullOrWhiteSpace(node.Settings.Model)) &&
                     node.Settings.ComponentId.HasValue)
@@ -145,6 +146,17 @@ public sealed class WorkflowPromptGalleryMigrationService(
                     var result = BackfillNode(node, components);
                     nodes.Add(result.Node);
                     changed |= result.Changed;
+                    if (result.FailureReason is not null)
+                    {
+                        logger.LogWarning(
+                            "Could not backfill workflow {WorkflowId} version {WorkflowVersionId} LLM node {WorkflowNodeId} from component {WorkflowComponentId}: {BackfillFailure}. The node was preserved unchanged and its definition was advanced to instruction snapshot schema {InstructionSnapshotSchemaVersion}.",
+                            item.Definition.Id.Value,
+                            item.Definition.VersionId.Value,
+                            node.Id.Value,
+                            node.Settings.ComponentId?.Value,
+                            result.FailureReason,
+                            WorkflowPersistenceSchemaVersions.InstructionSnapshot);
+                    }
                 }
 
                 if (changed)
@@ -187,27 +199,43 @@ public sealed class WorkflowPromptGalleryMigrationService(
         return components;
     }
 
-    private static (WorkflowNode Node, bool Changed) BackfillNode(
+    private static NodeBackfillResult BackfillNode(
         WorkflowNode node,
         IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent> components)
     {
         if (node.Kind != WorkflowNodeKind.LlmCall ||
-            !string.IsNullOrWhiteSpace(node.Settings.Instructions) &&
+            !WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(node.Settings.Instructions) &&
             node.Settings.ProviderProfileId.HasValue &&
             !string.IsNullOrWhiteSpace(node.Settings.Model))
         {
-            return (node, false);
+            return new NodeBackfillResult(node, Changed: false, FailureReason: null);
         }
 
-        if (node.Settings.ComponentId is not { } componentId ||
-            !components.TryGetValue(componentId, out var component) ||
-            string.IsNullOrWhiteSpace(component.Instructions))
+        if (node.Settings.ComponentId is not { } componentId)
         {
-            throw new InvalidOperationException(
-                $"Workflow definition node '{node.Id}' cannot be backfilled because its LLM component snapshot is unavailable.");
+            return new NodeBackfillResult(
+                node,
+                Changed: false,
+                FailureReason: "the node has no component reference");
         }
 
-        return (
+        if (!components.TryGetValue(componentId, out var component))
+        {
+            return new NodeBackfillResult(
+                node,
+                Changed: false,
+                FailureReason: "the referenced component is unavailable");
+        }
+
+        if (string.IsNullOrWhiteSpace(component.Instructions))
+        {
+            return new NodeBackfillResult(
+                node,
+                Changed: false,
+                FailureReason: "the referenced component has no instruction snapshot");
+        }
+
+        return new NodeBackfillResult(
             node with
             {
                 Settings = node.Settings with
@@ -216,12 +244,13 @@ public sealed class WorkflowPromptGalleryMigrationService(
                     Model = string.IsNullOrWhiteSpace(node.Settings.Model)
                         ? component.Model
                         : node.Settings.Model.Trim(),
-                    Instructions = string.IsNullOrWhiteSpace(node.Settings.Instructions)
+                    Instructions = WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(node.Settings.Instructions)
                         ? component.Instructions
                         : node.Settings.Instructions
                 }
             },
-            true);
+            Changed: true,
+            FailureReason: null);
     }
 
     private static T Deserialize<T>(string json, string resourceName)
@@ -255,6 +284,11 @@ public sealed class WorkflowPromptGalleryMigrationService(
     private sealed record DefinitionMigrationItem(
         WorkflowDefinitionRecord Record,
         WorkflowDefinition Definition);
+
+    private sealed record NodeBackfillResult(
+        WorkflowNode Node,
+        bool Changed,
+        string? FailureReason);
 
     private sealed record DefinitionMigrationResult(int ProcessedCount, int RepairedCount);
 }

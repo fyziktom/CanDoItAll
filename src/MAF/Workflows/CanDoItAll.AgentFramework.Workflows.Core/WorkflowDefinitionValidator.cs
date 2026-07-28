@@ -127,11 +127,11 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                     node.Id));
             }
 
-            if (string.IsNullOrWhiteSpace(node.Settings.Instructions))
+            if (WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(node.Settings.Instructions))
             {
                 issues.Add(new WorkflowValidationIssue(
                     WorkflowValidationIssueCode.InvalidComponentReference,
-                    $"LLM workflow node '{node.Id}' must contain an immutable instruction snapshot.",
+                    $"LLM workflow node '{node.Id}' must contain a materialized immutable instruction snapshot.",
                     node.Id));
             }
         }

@@ -177,7 +177,7 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
             Status = status,
             PreferredBackend = WorkflowRuntimeBackendKind.InProcess,
             DefinitionJson = "{\"payload\":\"catalog search must not select this column\"}",
-            InstructionSnapshotSchemaVersion = 2,
+            InstructionSnapshotSchemaVersion = 3,
             CreatedAtUtc = BaselineUtc.AddHours(-1),
             UpdatedAtUtc = updatedAtUtc
         };

@@ -2341,7 +2341,7 @@ internal static class WorkflowPersistenceSchemaVersions
 {
     public const int PromptGalleryBinding = 1;
 
-    public const int InstructionSnapshot = 2;
+    public const int InstructionSnapshot = 3;
 }
 
 public sealed class WorkflowSettingsRecord

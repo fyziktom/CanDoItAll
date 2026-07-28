@@ -41,7 +41,7 @@ public sealed class WorkflowFoundationTests
         var component = CreateComponent();
         var definition = CreateDefinition([
             CreateNode("start", WorkflowNodeKind.Start),
-            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id),
+            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id, component.Instructions),
             CreateNode("end", WorkflowNodeKind.End)
         ], [
             CreateEdge("start-to-llm", "start", "llm"),
@@ -54,12 +54,37 @@ public sealed class WorkflowFoundationTests
     }
 
     [Fact]
+    public void ValidatorRejectsLegacyTemplateInstructionPlaceholder()
+    {
+        var component = CreateComponent();
+        var definition = CreateDefinition([
+            CreateNode("start", WorkflowNodeKind.Start),
+            CreateNode(
+                "llm",
+                WorkflowNodeKind.LlmCall,
+                component.Id,
+                WorkflowInstructionSnapshotPolicy.LegacyTemplatePlaceholder),
+            CreateNode("end", WorkflowNodeKind.End)
+        ], [
+            CreateEdge("start-to-llm", "start", "llm"),
+            CreateEdge("llm-to-end", "llm", "end")
+        ]);
+
+        var result = new WorkflowDefinitionValidator().Validate(definition, [component]);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidComponentReference &&
+            issue.NodeId == new WorkflowNodeId("llm") &&
+            issue.Message.Contains("materialized immutable instruction snapshot", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void MafCompilerBuildsWorkflowWithoutLeakingMafTypesThroughCoreContracts()
     {
         var component = CreateComponent();
         var definition = CreateDefinition([
             CreateNode("start", WorkflowNodeKind.Start),
-            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id),
+            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id, component.Instructions),
             CreateNode("end", WorkflowNodeKind.End)
         ], [
             CreateEdge("start-to-llm", "start", "llm"),
@@ -270,7 +295,7 @@ public sealed class WorkflowFoundationTests
         var component = CreateComponent();
         var definition = CreateDefinition([
             CreateNode("start", WorkflowNodeKind.Start),
-            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id),
+            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id, component.Instructions),
             CreateNode("end", WorkflowNodeKind.End)
         ], [
             CreateEdge("start-to-llm", "start", "llm"),
@@ -349,7 +374,7 @@ public sealed class WorkflowFoundationTests
         var component = CreateComponent();
         var definition = CreateDefinition([
             CreateNode("start", WorkflowNodeKind.Start),
-            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id),
+            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id, component.Instructions),
             CreateNode("end", WorkflowNodeKind.End)
         ], [
             CreateEdge("start-to-llm", "start", "llm"),
@@ -398,7 +423,7 @@ public sealed class WorkflowFoundationTests
         var component = CreateComponent();
         var definition = CreateDefinition([
             CreateNode("start", WorkflowNodeKind.Start),
-            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id),
+            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id, component.Instructions),
             CreateNode("end", WorkflowNodeKind.End)
         ], [
             CreateEdge("start-to-llm", "start", "llm"),
@@ -771,7 +796,7 @@ public sealed class WorkflowFoundationTests
         var component = CreateComponent();
         var definition = CreateDefinition([
             CreateNode("start", WorkflowNodeKind.Start),
-            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id),
+            CreateNode("llm", WorkflowNodeKind.LlmCall, component.Id, component.Instructions),
             CreateNode("end", WorkflowNodeKind.End)
         ], [
             CreateEdge("start-to-llm", "start", "llm"),
@@ -864,7 +889,8 @@ public sealed class WorkflowFoundationTests
     private static WorkflowNode CreateNode(
         string id,
         WorkflowNodeKind kind,
-        WorkflowComponentId? componentId = null)
+        WorkflowComponentId? componentId = null,
+        string instructions = "")
     {
         return new WorkflowNode(
             new WorkflowNodeId(id),
@@ -876,7 +902,7 @@ public sealed class WorkflowFoundationTests
                 AgentId: null,
                 SubworkflowId: null,
                 ExternalRequestKind: kind == WorkflowNodeKind.HumanInput ? WorkflowExternalRequestKind.HumanInput : null,
-                Instructions: string.Empty,
+                instructions,
                 InputShape: WorkflowValueShape.Text,
                 ResultShape: WorkflowValueShape.Text));
     }

@@ -36,6 +36,66 @@ public sealed class WorkflowTemplatePackLoaderTests
     }
 
     [Fact]
+    public void Load_default_pack_snapshots_component_instructions_for_every_llm_node()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+        var llmNodeCount = 0;
+
+        foreach (var template in pack.Workflows)
+        {
+            var component = CreateComponent(pack, template);
+            var graph = pack.CreateGraph(template, component.Id);
+            var expectedInstructions = pack.CreateComponentInstructions(template);
+            var llmNodes = graph.Nodes
+                .Where(node => node.Kind == WorkflowNodeKind.LlmCall)
+                .ToArray();
+
+            llmNodeCount += llmNodes.Length;
+            Assert.All(llmNodes, node =>
+            {
+                Assert.Equal(expectedInstructions, node.Settings.Instructions);
+                Assert.Contains(template.RoutingInstructions, node.Settings.Instructions, StringComparison.Ordinal);
+                Assert.NotEqual(
+                    WorkflowInstructionSnapshotPolicy.LegacyTemplatePlaceholder,
+                    node.Settings.Instructions);
+            });
+        }
+
+        Assert.Equal(28, llmNodeCount);
+    }
+
+    [Fact]
+    public void CreateDefinition_snapshots_component_instructions_and_preserves_explicit_node_override()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+        var template = pack.Workflows.First(item =>
+            item.Graph.Nodes.Any(node =>
+                string.Equals(node.Kind, nameof(WorkflowNodeKind.LlmCall), StringComparison.OrdinalIgnoreCase)));
+        var sourceNode = template.Graph.Nodes.First(node =>
+            string.Equals(node.Kind, nameof(WorkflowNodeKind.LlmCall), StringComparison.OrdinalIgnoreCase));
+        var component = CreateComponent(pack, template) with
+        {
+            Instructions = "Use this pinned component instruction snapshot."
+        };
+
+        var componentDefinition = pack.CreateDefinition(template, component);
+
+        var componentSnapshotNode = Assert.Single(
+            componentDefinition.Graph.Nodes,
+            node => node.Id.Value == sourceNode.Id);
+        Assert.Equal(component.Instructions, componentSnapshotNode.Settings.Instructions);
+
+        sourceNode.Instructions = "Use this pinned node-specific workflow instruction.";
+
+        var overrideDefinition = pack.CreateDefinition(template, component);
+
+        var overrideNode = Assert.Single(
+            overrideDefinition.Graph.Nodes,
+            node => node.Id.Value == sourceNode.Id);
+        Assert.Equal(sourceNode.Instructions, overrideNode.Settings.Instructions);
+    }
+
+    [Fact]
     public void Load_default_pack_validates_current_executor_references_against_descriptor_catalog()
     {
         var pack = new WorkflowTemplatePackLoader().Load();

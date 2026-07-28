@@ -1,8 +1,8 @@
 packKey: candoitall-workflow-template-pack
 name: CanDoItAll default workflow template pack
-version: 2026-05-office365-email-watch-schema-v1
+version: 2026-07-workflow-llm-instruction-snapshot-v2
 seedMarker: Managed workflow example seed
-seedVersion: 2026-05-office365-email-watch-schema-v1
+seedVersion: 2026-07-workflow-llm-instruction-snapshot-v2
 definitionNamePrefix: "Example: "
 componentNamePrefix: "Example LLM: "
 component:
@@ -104,7 +104,6 @@ executorPolicies:
     captureOutputArtifact: true
 nodeInstructionDefaults:
   Start: Accept the workflow input payload.
-  LlmCall: Run the prepared LLM component and return the strict JSON contract.
   Triage: Route deterministic JSON branch values.
   StrictLogic: Apply deterministic branch handling for this workflow outcome.
   HumanInput: Request explicit review before this workflow continues.
