@@ -1,9 +1,0 @@
-Failing-first command:
-
-dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -m:1 --filter "FullyQualifiedName~WorkflowProcessStepExecutorTests|FullyQualifiedName~ProcessLaunchExecutorResolverTests.ResolveAsync_binds_only_the_explicit_workflow|FullyQualifiedName~ProcessLaunchExecutorResolverTests.ResolveAsync_rejects_exact_workflow|FullyQualifiedName~ProcessLaunchExecutorResolverTests.ResolveAsync_rejects_workflow_kind_without_explicit|FullyQualifiedName~ProcessPersistenceStoreTests.Runtime_step_assignment_store_round_trips_launch_variables"
-
-Expected red-gate result:
-
-- CS0246: `WorkflowProcessStepExecutor` did not exist.
-- CS0246: `ProcessWorkflowExecutorBinding` did not exist.
-- The focused tests therefore proved the production system lacked both an explicit typed process workflow binding and a cohesive process-to-workflow execution driver before implementation.

@@ -1,6 +1,0 @@
-Command:
-dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~EmailPluginClientTests" -v:minimal -m:1
-
-Result: 19 passed, 0 failed.
-
-The optional database-backed runtime-package integration filter compiled but stalled in the previously documented database harness. It was terminated by exact filtered process identity. Deterministic runtime-package ID and full metadata parity are covered by PluginWorkflowExecutorBoundaryTests.

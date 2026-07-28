@@ -1,3 +1,0 @@
-# QA Prompt
-
-Review the active subbundle against normalized requirements and raw notes. Verify production producer and consumer paths, negative behavior, dependency direction, direct collaborator tests, descriptor/catalog/invoker parity, explicit error semantics, and compatibility. For UI work, retry components MCP, use existing BaseLib/CanvasLib, run component tests, open maximized `/agents/workflows`, exercise create/edit/save/reload plus analytics, and review screenshots; do not add small/medium scope. Reject file-only moves, partial-class reshuffling, fabricated plugin descriptors, event-JSON UI analytics, silent defaulting, or proof that cites commands without artifacts. Record pass/fail and downstream impact in the execution report.

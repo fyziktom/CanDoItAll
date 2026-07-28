@@ -1,1 +1,0 @@
-Compliance memo requires export retention evidence, reviewer sign-off, and deletion policy confirmation before launch.
