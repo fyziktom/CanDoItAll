@@ -29,15 +29,15 @@
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\..\src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.Gantt" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Charts" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
-    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />

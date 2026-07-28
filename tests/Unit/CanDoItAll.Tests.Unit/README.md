@@ -7,15 +7,8 @@ in the sibling `CanDoItAll.Mcp` repository.
 
 ## Prerequisites
 
-The unit project retains compatibility coverage that references two sibling source
-repositories. Clone them beside this repository before restoring or running the project:
-
-```text
-<parent>\
-  CanDoItAll\
-  CanDoItAll.AgentFramework.Rag\
-  CanDoItAll.AgentFramework.SemanticCompletion\
-```
+The retained RAG and Semantic Completion compatibility dependencies restore from
+NuGet.org; their sibling source repositories are not required.
 
 ## Project Type
 

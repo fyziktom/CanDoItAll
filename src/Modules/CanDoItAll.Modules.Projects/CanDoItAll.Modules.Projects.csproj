@@ -12,16 +12,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="0.2.0" />
-    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="0.1.0" />
-    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="0.2.1" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileBrowser.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj" />

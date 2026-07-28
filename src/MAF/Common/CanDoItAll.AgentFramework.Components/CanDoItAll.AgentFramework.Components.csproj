@@ -13,15 +13,15 @@
 
   <ItemGroup>
     <PackageReference Include="Markdig" Version="1.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.4" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
   </ItemGroup>
 
 </Project>

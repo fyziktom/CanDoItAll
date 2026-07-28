@@ -8,15 +8,8 @@ active web-host composition.
 
 ## Prerequisites
 
-This retained project has source references to two sibling repositories. Clone them
-beside this repository before restoring or building it:
-
-```text
-<parent>\
-  CanDoItAll\
-  CanDoItAll.AgentFramework.Rag\
-  CanDoItAll.AgentFramework.SemanticCompletion\
-```
+This retained project restores its RAG and Semantic Completion driver dependencies from
+NuGet.org; their sibling source repositories are not required.
 
 ## Project Type
 

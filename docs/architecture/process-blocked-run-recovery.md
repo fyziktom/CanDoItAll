@@ -142,7 +142,7 @@ EF relationship materialization does not guarantee result-receipt insertion orde
 
 Every result receipt now receives a monotonic `AppliedSequence` from Runtime. Persistence requires a positive, unique sequence per run, rehydrates in that sequence, and fails closed on mixed, duplicate, or nonpositive values.
 
-The legacy migration maps each receipt to its completed claim and then to the adjacent durable step-result event. It validates claim token, result hash, applied status, correlation, actor, schema, sensitivity, causation, and `RootSequence`. The mapping must be a bijection: an unmatched or ambiguous receipt aborts the migration instead of inventing an order. Per-run sequence is assigned from the actual result-application event order, not claim creation time.
+The squashed PostgreSQL baseline creates this invariant directly. No production database consumed the earlier development migrations, so the baseline does not carry a legacy receipt backfill.
 
 ### Rework budgets were not durable actions
 
@@ -274,7 +274,7 @@ Required no-model proof:
 - producer restoration can lead to consumer rework without a repeated-fingerprint loop;
 - a new result id cannot reset the same source-step, fingerprint, and phase budget;
 - receipt ordering and recovery actions survive an EF context restart;
-- a PostgreSQL migration fixture proves result-application order wins when claim creation order is reversed;
+- PostgreSQL persistence tests prove receipt ordering survives context recreation;
 - producer recovery, artifact restoration, consumer recovery, and replay denial survive repeated EF context recreation;
 - a same-run redispatch queued during active dispatch is deferred, not dropped;
 - immediate and recovery follow-ups are deferred without blocking when their bounded channel is full;

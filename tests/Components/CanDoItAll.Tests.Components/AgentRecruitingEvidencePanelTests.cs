@@ -55,12 +55,12 @@ public sealed class AgentRecruitingEvidencePanelTests
         Assert.Equal(fixture.ApplicationId, request.RecruitmentApplicationId);
         Assert.Contains(nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync), workspaceProxy.Invocations);
         Assert.Contains(nameof(IAgentFrameworkWorkspaceService.ListProvidersAsync), workspaceProxy.Invocations);
-        Assert.Empty(
-            cut.FindAll("button")
-                .Where(button => string.Equals(
-                    button.TextContent.Trim(),
-                    "Activate",
-                    StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(
+            cut.FindAll("button"),
+            button => string.Equals(
+                button.TextContent.Trim(),
+                "Activate",
+                StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

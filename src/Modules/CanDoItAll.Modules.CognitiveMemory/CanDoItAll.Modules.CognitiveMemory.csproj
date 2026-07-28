@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
     <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
@@ -20,10 +20,10 @@
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
-    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.4" />
-    <PackageReference Include="CanDoItAll.Components.Common" Version="0.1.4" />
-    <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
-    <ProjectReference Include="..\..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Common" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.AgentFramework.Rag.Driver" Version="$(CanDoItAllAgentFrameworkExtensionPackageVersion)" />
+    <PackageReference Include="CanDoItAll.AgentFramework.SemanticCompletion.Driver" Version="$(CanDoItAllAgentFrameworkExtensionPackageVersion)" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>

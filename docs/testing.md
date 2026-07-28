@@ -4,18 +4,7 @@ The routine verification contract is the filtered Release gate. Browser, live-pr
 
 ## Prerequisites
 
-The primary solution retains compatibility coverage for the retired Cognitive Memory module. That test coverage references these sibling source repositories:
-
-```text
-<parent>\
-  CanDoItAll\
-  CanDoItAll.AgentFramework.Rag\
-  CanDoItAll.AgentFramework.SemanticCompletion\
-```
-
-Place those repositories beside this one before restoring `CanDoItAll.slnx`. DotNetWatch integration tests additionally require the sibling `CanDoItAll.Mcp` repository.
-
-The web project itself does not require the retired Cognitive Memory siblings for the quick-start build.
+The primary solution retains compatibility coverage for the retired Cognitive Memory module. Its RAG and Semantic Completion driver dependencies restore from NuGet.org, so sibling source repositories are not required. DotNetWatch integration tests still require the sibling `CanDoItAll.Mcp` repository.
 
 ## Stable Release Gate
 

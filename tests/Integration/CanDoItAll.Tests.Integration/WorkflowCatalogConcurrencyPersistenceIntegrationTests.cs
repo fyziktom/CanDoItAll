@@ -8,16 +8,12 @@ using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
 {
-    private const string PreviousMigration = "20260719161437_AddPromptGalleryFavoritesAndPreferences";
-
     [Fact]
     public async Task PostgreSql_ConcurrentDefinitionAndStatusWrites_FromSameHead_AppendExactlyOneVersion()
     {
@@ -145,51 +141,6 @@ public sealed class WorkflowCatalogConcurrencyPersistenceIntegrationTests
         Assert.Equal(active.VersionId, historicalActive?.Definition.VersionId);
         Assert.Equal(WorkflowLifecycleStatus.Active, historicalActive?.Definition.Status);
         Assert.Null(latestActive);
-    }
-
-    [Fact]
-    public async Task PostgreSql_MigrationBackfill_UsesPreviousLatestOrderingAndSequentialRevisions()
-    {
-        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-        await using var database = PostgresTestDatabaseLease.Create("workflowcatalogheadmigration");
-        var factory = new WorkflowUsagePostgresDbContextFactory(database.CreateAppDbContextOptions());
-        var workflowId = Guid.NewGuid();
-        var oldestVersionId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var lowerTiedVersionId = Guid.Parse("00000000-0000-0000-0000-000000000002");
-        var latestVersionId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
-        var createdAtUtc = new DateTimeOffset(2026, 7, 19, 12, 0, 0, TimeSpan.Zero);
-        var latestUpdatedAtUtc = createdAtUtc.AddMinutes(1);
-
-        await using var dbContext = factory.CreateDbContext();
-        var migrator = dbContext.Database.GetService<IMigrator>();
-        await migrator.MigrateAsync(PreviousMigration);
-        await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "AgentFramework_WorkflowDefinitions"
-                ("VersionId", "WorkflowId", "Name", "Description", "Status", "PreferredBackend",
-                 "DefinitionJson", "InstructionSnapshotSchemaVersion", "CreatedAtUtc", "UpdatedAtUtc")
-            VALUES
-                ({oldestVersionId}, {workflowId}, {"Oldest"}, {"Oldest version"},
-                 {(int)WorkflowLifecycleStatus.Draft}, {(int)WorkflowRuntimeBackendKind.InProcess},
-                 {"{}"}, {2}, {createdAtUtc}, {createdAtUtc}),
-                ({lowerTiedVersionId}, {workflowId}, {"Lower tie"}, {"Lower tied version"},
-                 {(int)WorkflowLifecycleStatus.Active}, {(int)WorkflowRuntimeBackendKind.InProcess},
-                 {"{}"}, {2}, {createdAtUtc}, {latestUpdatedAtUtc}),
-                ({latestVersionId}, {workflowId}, {"Latest tie"}, {"Latest tied version"},
-                 {(int)WorkflowLifecycleStatus.Suspended}, {(int)WorkflowRuntimeBackendKind.InProcess},
-                 {"{}"}, {2}, {createdAtUtc}, {latestUpdatedAtUtc});
-            """);
-
-        await migrator.MigrateAsync();
-
-        var revisions = await dbContext.Set<WorkflowDefinitionRecord>()
-            .Where(record => record.WorkflowId == workflowId)
-            .ToDictionaryAsync(record => record.VersionId, record => record.Revision);
-        Assert.Equal(1, revisions[oldestVersionId]);
-        Assert.Equal(2, revisions[lowerTiedVersionId]);
-        Assert.Equal(3, revisions[latestVersionId]);
-        var head = await dbContext.Set<WorkflowDefinitionHeadRecord>()
-            .SingleAsync(record => record.WorkflowId == workflowId);
-        Assert.Equal(latestVersionId, head.VersionId);
     }
 
     private static async Task<WorkflowDefinition> AssertSinglePersistedWinnerAsync(
