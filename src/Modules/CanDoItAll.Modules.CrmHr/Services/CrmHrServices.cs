@@ -6325,6 +6325,41 @@ public sealed class ProjectPartyIntegrationService(
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
+        IReadOnlyCollection<Guid> projectIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(projectIds);
+        var distinctProjectIds = projectIds.Distinct().ToArray();
+        if (distinctProjectIds.Length == 0)
+        {
+            return [];
+        }
+
+        if (distinctProjectIds.Any(static projectId => projectId == Guid.Empty))
+        {
+            throw new ArgumentException(
+                "Project identifiers cannot contain an empty value.",
+                nameof(projectIds));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Set<ProjectPartyAssignment>()
+            .Where(item =>
+                distinctProjectIds.Contains(item.ProjectId) &&
+                item.AssignmentKind == ProjectPartyAssignmentKind.WorkItemAssignee)
+            .Join(
+                dbContext.Set<Party>(),
+                assignment => assignment.PartyId,
+                party => party.Id,
+                (assignment, party) => new ProjectWorkItemAssigneeBinding(
+                    assignment.ProjectId,
+                    assignment.NodeKey,
+                    assignment.PartyId,
+                    MapProjectPartyType(party.PartyType)))
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task<IReadOnlyList<ProjectPartyAssignmentDetail>> ListAssignmentsDetailedCoreAsync(
         Guid projectId,
         IReadOnlyCollection<ProjectPartyAssignmentRole> roles,

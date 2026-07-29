@@ -920,6 +920,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .ToList();
     }
 
+    public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+        AgentExecutionReportQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        return executionReportReader.QueryExecutionReportAsync(
+            query,
+            cancellationToken);
+    }
+
     public async Task<ExecutionRunDetail> GetExecutionRunDetailAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default)

@@ -47,7 +47,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
                                           ProjectName="@(surface?.ProjectName ?? "Requested project")"
                                           Surface="@surface"
-                                          ActiveView="@(IsGanttViewVisible ? ProjectStructureAgentChatView.Gantt : ProjectStructureAgentChatView.Canvas)"
+                                          ActiveView="@ActiveAgentChatView"
                                           SelectedNodes="@(surface is not null && structureViewIndex == CanvasViewIndex ? selectedNodes : [])"
                                           ContextNavigationIdentity="@AgentChatNavigationFence"
                                           ContextAccessState="@agentChatContextAccessState"
@@ -331,9 +331,12 @@ else
                                             OpenAgentCatalog="ToggleAgentWindowAsync"
                                             MutationCommitted="@(() => ReloadSurfaceAsync())" />
             </TabsItem>
+            <TabsItem Text="Manager Summary" Icon="monitoring">
+                <ProjectManagerSummaryPanel ProjectId="@ProjectId" />
+            </TabsItem>
         </Tabs>
 
-        @if (CanShowPartyEditor)
+        @if (structureViewIndex == CanvasViewIndex && CanShowPartyEditor)
         {
             <SectionCard Title="@PartyEditorTitle"
                          Description="@PartyEditorDescription">
@@ -748,7 +751,9 @@ else
     private const double HealthWindowDefaultLeft = SignalsWindowDefaultLeft + SignalsWindowDefaultWidth + DefaultCanvasWindowGap;
     private const int CanvasViewIndex = 0;
     private const int GanttViewIndex = 1;
+    private const int ManagerSummaryViewIndex = 2;
     private const string GanttTabQueryValue = "gantt";
+    private const string ManagerSummaryTabQueryValue = "manager-summary";
 
     [Parameter]
     public Guid ProjectId { get; set; }
@@ -763,6 +768,14 @@ else
     private StructureViewNavigationIdentity? appliedStructureViewNavigationIdentity;
 
     private bool IsGanttViewVisible => structureViewIndex == GanttViewIndex;
+
+    private ProjectStructureAgentChatView ActiveAgentChatView
+        => structureViewIndex switch
+        {
+            GanttViewIndex => ProjectStructureAgentChatView.Gantt,
+            ManagerSummaryViewIndex => ProjectStructureAgentChatView.ManagerSummary,
+            _ => ProjectStructureAgentChatView.Canvas
+        };
 
     private Task OpenGanttViewAsync()
     {
@@ -955,19 +968,26 @@ else
         structureViewIndex = navigationIdentity.View switch
         {
             StructureView.Gantt => GanttViewIndex,
+            StructureView.ManagerSummary => ManagerSummaryViewIndex,
             _ => CanvasViewIndex
         };
     }
 
     private static StructureView ResolveRequestedStructureView(string? tab)
-        => string.Equals(tab, GanttTabQueryValue, StringComparison.OrdinalIgnoreCase)
-            ? StructureView.Gantt
-            : StructureView.Canvas;
+        => tab?.Trim() switch
+        {
+            var value when string.Equals(value, GanttTabQueryValue, StringComparison.OrdinalIgnoreCase) =>
+                StructureView.Gantt,
+            var value when string.Equals(value, ManagerSummaryTabQueryValue, StringComparison.OrdinalIgnoreCase) =>
+                StructureView.ManagerSummary,
+            _ => StructureView.Canvas
+        };
 
     private enum StructureView
     {
         Canvas,
-        Gantt
+        Gantt,
+        ManagerSummary
     }
 
     private readonly record struct StructureViewNavigationIdentity(Guid ProjectId, StructureView View);

@@ -1467,7 +1467,8 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
     IWorkflowOverviewStore,
-    IWorkflowDashboardActivityStore
+    IWorkflowDashboardActivityStore,
+    IWorkflowProjectStructureReportStore
 {
     private const int MaximumOverviewRecentTake = 12;
     private const int MaximumOverviewTopWorkflowTake = 10;
@@ -1532,6 +1533,10 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             IsolationLevel.Serializable,
             cancellationToken);
         var originJson = WorkflowRunRecordEntity.SerializeOrigin(updatedRun.Origin);
+        var originKind = updatedRun.Origin?.Kind;
+        var originProjectId = WorkflowRunRecordEntity.ResolveOriginProjectId(updatedRun.Origin);
+        var originProcessRunId = WorkflowRunRecordEntity.ResolveOriginProcessRunId(updatedRun.Origin);
+        var reportingActivityAtUtc = WorkflowRunRecordEntity.ResolveReportingActivityAtUtc(updatedRun);
         var affected = await dbContext.Set<WorkflowRunRecordEntity>()
             .Where(record => record.RunId == runId.Value && states.Contains(record.State))
             .ExecuteUpdateAsync(setters => setters
@@ -1544,7 +1549,11 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
                 .SetProperty(record => record.CreatedAtUtc, updatedRun.CreatedAtUtc)
                 .SetProperty(record => record.UpdatedAtUtc, updatedRun.UpdatedAtUtc)
                 .SetProperty(record => record.TerminalAtUtc, updatedRun.TerminalAtUtc)
-                .SetProperty(record => record.OriginJson, originJson),
+                .SetProperty(record => record.ReportingActivityAtUtc, reportingActivityAtUtc)
+                .SetProperty(record => record.OriginJson, originJson)
+                .SetProperty(record => record.OriginKind, originKind)
+                .SetProperty(record => record.OriginProjectId, originProjectId)
+                .SetProperty(record => record.OriginProcessRunId, originProcessRunId),
                 cancellationToken);
         if (affected == 0)
         {
@@ -1623,6 +1632,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             record.UpdatedAtUtc = run.UpdatedAtUtc;
             record.TerminalAtUtc = run.TerminalAtUtc;
             record.OriginJson = WorkflowRunRecordEntity.SerializeOrigin(run.Origin);
+            record.SetOriginProjection(run.Origin);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -1666,6 +1676,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ValidateRunPageRequest(request);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var pageIndex = NormalizePageIndex(request.PageIndex);
@@ -1687,9 +1698,33 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             query = query.Where(item => item.State == request.State.Value);
         }
 
+        if (request.States.Count > 0)
+        {
+            var states = request.States.Distinct().ToArray();
+            query = query.Where(item => states.Contains(item.State));
+        }
+
         if (request.Backend.HasValue)
         {
             query = query.Where(item => item.Backend == request.Backend.Value);
+        }
+
+        if (request.ProjectIds.Count > 0)
+        {
+            var projectIds = request.ProjectIds.Distinct().ToArray();
+            query = query.Where(item =>
+                item.OriginProjectId.HasValue &&
+                projectIds.Contains(item.OriginProjectId.Value));
+        }
+
+        if (request.UpdatedFromUtc.HasValue)
+        {
+            query = query.Where(item => item.UpdatedAtUtc >= request.UpdatedFromUtc.Value);
+        }
+
+        if (request.UpdatedToUtc.HasValue)
+        {
+            query = query.Where(item => item.UpdatedAtUtc <= request.UpdatedToUtc.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -1712,6 +1747,175 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             pageIndex,
             pageSize,
             totalCount);
+    }
+
+    public async Task<WorkflowProjectStructureReport> QueryProjectStructureReportAsync(
+        WorkflowProjectStructureReportQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var filteredRuns = ApplyProjectStructureReportFilter(
+            dbContext.Set<WorkflowRunRecordEntity>().AsNoTracking(),
+            query);
+        var reportRuns = filteredRuns.Select(run => new
+        {
+            run.RunId,
+            run.WorkflowId,
+            run.State,
+            run.Backend,
+            run.Summary,
+            run.CreatedAtUtc,
+            ActivityAtUtc = run.ReportingActivityAtUtc
+        });
+        var offset = checked(query.PageIndex * query.PageSize);
+        var pageRuns = reportRuns
+            .OrderByDescending(run => run.ActivityAtUtc)
+            .ThenByDescending(run => run.RunId)
+            .Skip(offset)
+            .Take(query.PageSize);
+        var pageRunIds = pageRuns.Select(run => run.RunId);
+        var pageUsageByRun = dbContext.Set<WorkflowUsageObservationRecordEntity>()
+            .AsNoTracking()
+            .Where(observation => pageRunIds.Contains(observation.RunId))
+            .GroupBy(observation => observation.RunId)
+            .Select(group => new
+            {
+                RunId = group.Key,
+                ObservationCount = group.Count(),
+                PricingUnknownObservationCount = group.Count(
+                    observation => observation.PricingStatus == WorkflowPricingStatus.Unknown),
+                KnownCostUsd = group.Sum(observation =>
+                    observation.PricingStatus == WorkflowPricingStatus.Known
+                        ? observation.CostUsd ?? 0m
+                        : 0m)
+            });
+        var pageReportRows =
+            from run in pageRuns
+            join usage in pageUsageByRun on run.RunId equals usage.RunId into usageMatches
+            from usage in usageMatches.DefaultIfEmpty()
+            select new
+            {
+                run.RunId,
+                run.WorkflowId,
+                run.State,
+                run.Backend,
+                run.Summary,
+                run.CreatedAtUtc,
+                run.ActivityAtUtc,
+                ObservationCount = usage == null ? null : (int?)usage.ObservationCount,
+                PricingUnknownObservationCount = usage == null
+                    ? null
+                    : (int?)usage.PricingUnknownObservationCount,
+                KnownCostUsd = usage == null ? null : (decimal?)usage.KnownCostUsd
+            };
+
+        var pageRows = await pageReportRows
+            .OrderByDescending(row => row.ActivityAtUtc)
+            .ThenByDescending(row => row.RunId)
+            .ToArrayAsync(cancellationToken);
+
+        var totalCount = 0;
+        var knownCostUsd = 0m;
+        var unknownCostRunCount = 0;
+        var totalDurationMilliseconds = 0L;
+        WorkflowProjectStructureDailyCost[] dailyCost = [];
+        if (query.IncludeAggregate)
+        {
+            var aggregateRunIds = reportRuns.Select(run => run.RunId);
+            var aggregateUsageByRun = dbContext.Set<WorkflowUsageObservationRecordEntity>()
+                .AsNoTracking()
+                .Where(observation => aggregateRunIds.Contains(observation.RunId))
+                .GroupBy(observation => observation.RunId)
+                .Select(group => new
+                {
+                    RunId = group.Key,
+                    ObservationCount = group.Count(),
+                    PricingUnknownObservationCount = group.Count(
+                        observation => observation.PricingStatus == WorkflowPricingStatus.Unknown),
+                    KnownCostUsd = group.Sum(observation =>
+                        observation.PricingStatus == WorkflowPricingStatus.Known
+                            ? observation.CostUsd ?? 0m
+                            : 0m)
+                });
+            var aggregateRows =
+                from run in reportRuns
+                join usage in aggregateUsageByRun on run.RunId equals usage.RunId into usageMatches
+                from usage in usageMatches.DefaultIfEmpty()
+                select new
+                {
+                    run.CreatedAtUtc,
+                    run.ActivityAtUtc,
+                    ObservationCount = usage == null ? null : (int?)usage.ObservationCount,
+                    PricingUnknownObservationCount = usage == null
+                        ? null
+                        : (int?)usage.PricingUnknownObservationCount,
+                    KnownCostUsd = usage == null ? null : (decimal?)usage.KnownCostUsd
+                };
+            var totals = await aggregateRows
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    TotalCount = group.Count(),
+                    KnownCostUsd = group.Sum(row => row.KnownCostUsd ?? 0m),
+                    UnknownCostRunCount = group.Count(row =>
+                        !row.ObservationCount.HasValue ||
+                        row.PricingUnknownObservationCount > 0),
+                    DurationMilliseconds = group.Sum(row =>
+                        row.ActivityAtUtc > row.CreatedAtUtc
+                            ? (row.ActivityAtUtc - row.CreatedAtUtc).TotalMilliseconds
+                            : 0d)
+                })
+                .SingleOrDefaultAsync(cancellationToken);
+            totalCount = totals?.TotalCount ?? 0;
+            knownCostUsd = NormalizeKnownCost(totals?.KnownCostUsd ?? 0m);
+            unknownCostRunCount = totals?.UnknownCostRunCount ?? 0;
+            totalDurationMilliseconds = NormalizeDurationMilliseconds(
+                totals?.DurationMilliseconds ?? 0d);
+            var dailyCostRows = await aggregateRows
+                .Where(row =>
+                    row.ActivityAtUtc >= query.ChartFromUtc &&
+                    row.ActivityAtUtc <= query.ActivityToUtc)
+                .GroupBy(row => row.ActivityAtUtc.Date)
+                .Select(group => new
+                {
+                    Date = group.Key,
+                    KnownCostUsd = group.Sum(row => row.KnownCostUsd ?? 0m)
+                })
+                .OrderBy(row => row.Date)
+                .ToArrayAsync(cancellationToken);
+            dailyCost = dailyCostRows
+                .Select(row => new WorkflowProjectStructureDailyCost(
+                    DateOnly.FromDateTime(row.Date),
+                    NormalizeKnownCost(row.KnownCostUsd)))
+                .ToArray();
+        }
+
+        return new WorkflowProjectStructureReport(
+            pageRows
+                .Select(row => new WorkflowProjectStructureReportRun(
+                    new WorkflowRunId(row.RunId),
+                    new WorkflowId(row.WorkflowId),
+                    row.State,
+                    row.Backend,
+                    row.Summary,
+                    row.ActivityAtUtc,
+                    NormalizeDurationMilliseconds(
+                        row.ActivityAtUtc > row.CreatedAtUtc
+                            ? (row.ActivityAtUtc - row.CreatedAtUtc).TotalMilliseconds
+                            : 0d),
+                    NormalizeKnownCost(row.KnownCostUsd ?? 0m),
+                    !row.ObservationCount.HasValue ||
+                    row.PricingUnknownObservationCount > 0))
+                .ToArray(),
+            query.PageIndex,
+            query.PageSize,
+            totalCount,
+            knownCostUsd,
+            unknownCostRunCount,
+            totalDurationMilliseconds,
+            dailyCost);
     }
 
     public async Task<WorkflowOverviewStoreSnapshot> QueryOverviewAsync(
@@ -2136,6 +2340,87 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     private static int NormalizePageIndex(int pageIndex)
         => Math.Max(0, pageIndex);
 
+    private static IQueryable<WorkflowRunRecordEntity> ApplyProjectStructureReportFilter(
+        IQueryable<WorkflowRunRecordEntity> source,
+        WorkflowProjectStructureReportQuery query)
+    {
+        var projectIds = query.ProjectIds.ToArray();
+        source = source.Where(run =>
+            run.OriginKind == WorkflowLaunchOriginKind.ProjectStructureNode &&
+            run.OriginProjectId.HasValue &&
+            projectIds.Contains(run.OriginProjectId.Value) &&
+            run.ReportingActivityAtUtc <= query.ActivityToUtc);
+        if (query.ActivityFromUtc.HasValue)
+        {
+            source = source.Where(run => run.ReportingActivityAtUtc >= query.ActivityFromUtc.Value);
+        }
+
+        if (query.States.Count > 0)
+        {
+            var states = query.States.ToArray();
+            source = source.Where(run => states.Contains(run.State));
+        }
+
+        return source;
+    }
+
+    private static decimal NormalizeKnownCost(decimal value)
+        => decimal.Round(value, 6, MidpointRounding.AwayFromZero);
+
+    private static long NormalizeDurationMilliseconds(double value)
+    {
+        if (value <= 0d || double.IsNaN(value))
+        {
+            return 0L;
+        }
+
+        return value >= long.MaxValue
+            ? long.MaxValue
+            : (long)value;
+    }
+
+    private static void ValidateRunPageRequest(WorkflowRunPageRequest request)
+    {
+        if (request.State.HasValue && !Enum.IsDefined(request.State.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                request.State,
+                "The workflow run state filter is not supported.");
+        }
+
+        if (request.States.Any(static state => !Enum.IsDefined(state)))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                request.States,
+                "The plural workflow run state filter contains an unsupported value.");
+        }
+
+        if (request.ProjectIds.Any(static projectId => projectId == Guid.Empty))
+        {
+            throw new ArgumentException(
+                "Workflow run project filters cannot contain an empty identifier.",
+                nameof(request));
+        }
+
+        if (request.State.HasValue && request.States.Count > 0)
+        {
+            throw new ArgumentException(
+                "Use either the single workflow state filter or the plural state filter, not both.",
+                nameof(request));
+        }
+
+        if (request.UpdatedFromUtc.HasValue &&
+            request.UpdatedToUtc.HasValue &&
+            request.UpdatedFromUtc.Value > request.UpdatedToUtc.Value)
+        {
+            throw new ArgumentException(
+                "Workflow run updated-from timestamp cannot be later than updated-to.",
+                nameof(request));
+        }
+    }
+
     private static bool IsWorkflowRunPrimaryKeyViolation(DbUpdateException exception)
     {
         for (Exception? current = exception; current is not null; current = current.InnerException)
@@ -2356,6 +2641,8 @@ public sealed class WorkflowSettingsRecord
 public sealed class WorkflowRunRecordEntity
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private DateTimeOffset updatedAtUtc;
+    private DateTimeOffset? terminalAtUtc;
 
     public Guid RunId { get; set; }
 
@@ -2373,26 +2660,56 @@ public sealed class WorkflowRunRecordEntity
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 
-    public DateTimeOffset UpdatedAtUtc { get; set; }
+    public DateTimeOffset UpdatedAtUtc
+    {
+        get => updatedAtUtc;
+        set
+        {
+            updatedAtUtc = value;
+            ReportingActivityAtUtc = terminalAtUtc ?? value;
+        }
+    }
 
-    public DateTimeOffset? TerminalAtUtc { get; set; }
+    public DateTimeOffset? TerminalAtUtc
+    {
+        get => terminalAtUtc;
+        set
+        {
+            terminalAtUtc = value;
+            ReportingActivityAtUtc = value ?? updatedAtUtc;
+        }
+    }
+
+    public DateTimeOffset ReportingActivityAtUtc { get; private set; }
 
     public string OriginJson { get; set; } = string.Empty;
 
-    public static WorkflowRunRecordEntity FromSnapshot(WorkflowRunSnapshot run) => new()
+    public WorkflowLaunchOriginKind? OriginKind { get; set; }
+
+    public Guid? OriginProjectId { get; set; }
+
+    public Guid? OriginProcessRunId { get; set; }
+
+    public static WorkflowRunRecordEntity FromSnapshot(WorkflowRunSnapshot run)
     {
-        RunId = run.RunId.Value,
-        WorkflowId = run.WorkflowId.Value,
-        VersionId = run.VersionId.Value,
-        State = run.State,
-        Backend = run.Backend,
-        BackendRunId = run.BackendRunId,
-        Summary = run.Summary,
-        CreatedAtUtc = run.CreatedAtUtc,
-        UpdatedAtUtc = run.UpdatedAtUtc,
-        TerminalAtUtc = run.TerminalAtUtc,
-        OriginJson = SerializeOrigin(run.Origin)
-    };
+        var record = new WorkflowRunRecordEntity
+        {
+            RunId = run.RunId.Value,
+            WorkflowId = run.WorkflowId.Value,
+            VersionId = run.VersionId.Value,
+            State = run.State,
+            Backend = run.Backend,
+            BackendRunId = run.BackendRunId,
+            Summary = run.Summary,
+            CreatedAtUtc = run.CreatedAtUtc,
+            UpdatedAtUtc = run.UpdatedAtUtc,
+            TerminalAtUtc = run.TerminalAtUtc,
+            ReportingActivityAtUtc = ResolveReportingActivityAtUtc(run),
+            OriginJson = SerializeOrigin(run.Origin)
+        };
+        record.SetOriginProjection(run.Origin);
+        return record;
+    }
 
     public WorkflowRunSnapshot ToSnapshot() => new(
         new WorkflowRunId(RunId),
@@ -2413,6 +2730,26 @@ public sealed class WorkflowRunRecordEntity
 
     public static string SerializeOrigin(WorkflowLaunchOrigin? origin)
         => origin is null ? string.Empty : JsonSerializer.Serialize(origin, JsonOptions);
+
+    public static DateTimeOffset ResolveReportingActivityAtUtc(WorkflowRunSnapshot run)
+        => run.TerminalAtUtc ?? run.UpdatedAtUtc;
+
+    public void SetOriginProjection(WorkflowLaunchOrigin? origin)
+    {
+        OriginKind = origin?.Kind;
+        OriginProjectId = ResolveOriginProjectId(origin);
+        OriginProcessRunId = ResolveOriginProcessRunId(origin);
+    }
+
+    public static Guid? ResolveOriginProjectId(WorkflowLaunchOrigin? origin)
+        => origin is WorkflowLaunchOrigin.ProjectStructureNode projectOrigin
+            ? projectOrigin.ProjectId
+            : null;
+
+    public static Guid? ResolveOriginProcessRunId(WorkflowLaunchOrigin? origin)
+        => origin is WorkflowLaunchOrigin.ProcessAssignment processOrigin
+            ? processOrigin.ProcessRunId
+            : null;
 }
 
 public sealed class WorkflowEventRecordEntity
@@ -2707,6 +3044,7 @@ internal sealed class WorkflowRunRecordEntityConfiguration : IEntityTypeConfigur
         builder.HasKey(item => item.RunId);
         builder.Property(item => item.State).HasConversion<int>();
         builder.Property(item => item.Backend).HasConversion<int>();
+        builder.Property(item => item.OriginKind).HasConversion<int?>();
         builder.Property(item => item.BackendRunId).HasMaxLength(300);
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.OriginJson).HasColumnType("TEXT");
@@ -2714,6 +3052,15 @@ internal sealed class WorkflowRunRecordEntityConfiguration : IEntityTypeConfigur
         builder.HasIndex(item => item.UpdatedAtUtc);
         builder.HasIndex(item => new { item.State, item.UpdatedAtUtc, item.RunId })
             .IsDescending(false, true, true);
+        builder.HasIndex(item => new
+            {
+                item.OriginProjectId,
+                item.OriginKind,
+                item.ReportingActivityAtUtc,
+                item.RunId
+            })
+            .IsDescending(false, false, true, true)
+            .HasDatabaseName("IX_WorkflowRuns_ProjectReportingActivity");
     }
 }
 

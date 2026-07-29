@@ -1,0 +1,33 @@
+.project-manager-summary-shell {
+    max-height: calc(100dvh - 8.5rem);
+    min-width: 0;
+    padding-block: 0.25rem 1.5rem;
+    padding-right: 0.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.project-manager-summary-shell ::deep .project-manager-summary {
+    min-width: 0;
+}
+
+.project-manager-summary-shell ::deep .project-manager-summary__activity {
+    min-width: 0;
+}
+
+.project-manager-summary-shell ::deep .project-manager-summary__overview {
+    min-width: 0;
+}
+
+.project-manager-summary-shell ::deep .project-manager-summary__cost-chart,
+.project-manager-summary-shell ::deep .project-manager-summary__latest,
+.project-manager-summary-shell ::deep .project-manager-summary__expense-chart {
+    min-width: 0;
+    height: 100%;
+}
+
+@media (max-width: 1199px) {
+    .project-manager-summary-shell {
+        max-height: calc(100dvh - 9.5rem);
+    }
+}

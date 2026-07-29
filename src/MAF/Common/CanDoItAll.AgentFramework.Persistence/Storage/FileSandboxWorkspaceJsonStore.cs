@@ -17,6 +17,7 @@ internal readonly record struct FileSandboxWorkspacePhysicalJsonRead(
 
 internal sealed class FileSandboxWorkspaceJsonReadDiagnostics
 {
+    private readonly object sync = new();
     private readonly Action<FileSandboxWorkspacePhysicalJsonRead> record;
 
     public FileSandboxWorkspaceJsonReadDiagnostics(
@@ -27,7 +28,12 @@ internal sealed class FileSandboxWorkspaceJsonReadDiagnostics
     }
 
     public void Record(FileSandboxWorkspacePhysicalJsonRead physicalRead)
-        => record(physicalRead);
+    {
+        lock (sync)
+        {
+            record(physicalRead);
+        }
+    }
 }
 
 internal sealed class FileSandboxWorkspaceJsonStore

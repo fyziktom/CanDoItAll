@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Charts" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.Desktop" Version="$(CanDoItAllFileToolsPackageVersion)" />
@@ -49,6 +50,7 @@
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj" />
+    <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
   </ItemGroup>
 
 </Project>

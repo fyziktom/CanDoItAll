@@ -137,6 +137,11 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => executionService.ListExecutionRunsAsync(query, cancellationToken);
 
+    public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+        AgentExecutionReportQuery query,
+        CancellationToken cancellationToken = default)
+        => executionService.QueryExecutionReportAsync(query, cancellationToken);
+
     public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default)

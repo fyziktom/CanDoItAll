@@ -1,0 +1,443 @@
+@using System.Globalization
+@using CanDoItAll.Processes.Projections
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject ProjectManagerSummaryQueryService SummaryQueryService
+@inject ILogger<ProjectManagerActivityDialog> Logger
+
+<Dialog IsOpen="@IsOpen"
+        Eyebrow="Manager Summary"
+        Title="Project activity"
+        Subtitle="Filtered totals cover every matching run. Page payloads load only while this dialog is open."
+        Size="ModalSize.Wide"
+        DenseChrome="true"
+        TestId="manager-summary-activity-dialog"
+        OnClose="CloseAsync">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnTemplateMd="repeat(2,minmax(0,1fr))"
+                  ColumnTemplateXl="repeat(4,minmax(0,1fr))"
+                  AlignItems="AlignItems.End">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Caption" Value="Activity type" />
+                    <InputSelect TValue="ProjectManagerActivityKind"
+                                 @bind-Value="activityKind"
+                                 @bind-Value:after="ResetAndLoadAsync"
+                                 class="cda-input"
+                                 disabled="@isLoading"
+                                 data-testid="manager-activity-kind">
+                        <option value="@ProjectManagerActivityKind.Conversation">Agents</option>
+                        <option value="@ProjectManagerActivityKind.Workflow">Workflows</option>
+                        <option value="@ProjectManagerActivityKind.Process">Processes</option>
+                    </InputSelect>
+                </Stack>
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Caption" Value="Outcome" />
+                    <InputSelect TValue="ProjectManagerActivityStatusFilter"
+                                 @bind-Value="statusFilter"
+                                 @bind-Value:after="ResetAndLoadAsync"
+                                 class="cda-input"
+                                 disabled="@isLoading"
+                                 data-testid="manager-activity-status">
+                        <option value="@ProjectManagerActivityStatusFilter.All">All outcomes</option>
+                        <option value="@ProjectManagerActivityStatusFilter.Active">Active</option>
+                        <option value="@ProjectManagerActivityStatusFilter.Succeeded">Succeeded</option>
+                        <option value="@ProjectManagerActivityStatusFilter.Failed">Failed</option>
+                        <option value="@ProjectManagerActivityStatusFilter.Cancelled">Cancelled</option>
+                    </InputSelect>
+                </Stack>
+                <MetricCard Label="Matching runs"
+                            Value="@FormatCount(page?.TotalCount ?? 0)" />
+                <MetricCard Label="Total length"
+                            Value="@FormatDuration(page?.TotalDurationMilliseconds ?? 0L)" />
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnTemplateMd="repeat(3,minmax(0,1fr))">
+                <MetricCard Label="Known cost"
+                            Value="@FormatUsd(page?.Totals.HistoricalKnownUsd ?? 0m)" />
+                <MetricCard Label="Recorded estimate"
+                            Value="@FormatUsd(page?.Totals.HistoricalEstimatedUsd ?? 0m)" />
+                <MetricCard Label="Unknown-cost runs"
+                            Value="@FormatCount(page?.Totals.UnknownHistoricalCostCount ?? 0)" />
+            </Grid>
+
+            @if (isLoading)
+            {
+                <Stack data-testid="manager-activity-loading">
+                    <LoadingState Eyebrow="Project activity"
+                                  Title="Loading filtered activity"
+                                  Description="Reading the selected reporting projection and filtered totals." />
+                </Stack>
+            }
+            else if (!string.IsNullOrWhiteSpace(loadError))
+            {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       Variant="Variant.Outlined"
+                       data-testid="manager-activity-error">
+                    <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                             AlignItems="AlignItems.Center"
+                             Gap="LayoutGap.Medium">
+                        <TextBlock Value="@loadError" />
+                        <Button Text="Retry"
+                                Icon="refresh"
+                                Variant="Variant.Outlined"
+                                Click="LoadPageAsync" />
+                    </Cluster>
+                </Alert>
+            }
+            else if (page is null || page.Items.Count == 0)
+            {
+                <EmptyState Eyebrow="Project activity"
+                            Title="No matching runs"
+                            Description="Try a different activity type, outcome, or Manager Summary time window." />
+            }
+            else
+            {
+                <SurfaceCard Soft="true">
+                    <DataGrid TItem="ProjectManagerActivity"
+                              Data="@(page.Items)"
+                              AllowPaging="false"
+                              data-testid="manager-activity-list">
+                        <Columns>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Activity">
+                                <Template Context="activity">
+                                    <Stack GapScale="LayoutGap.Tiny"
+                                           Class="project-manager-activity__identity">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                   Value="@activity.Title" />
+                                        <span class="project-manager-activity__summary"
+                                              title="@activity.Summary">@activity.Summary</span>
+                                    </Stack>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Type">
+                                <Template Context="activity">
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@FormatActivityKind(activity.Kind)"
+                                                 NoWrap="true" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Activity time">
+                                <Template Context="activity">
+                                    <span class="project-manager-activity__nowrap">
+                                        @activity.ActivityAtUtc.LocalDateTime.ToString("g")
+                                    </span>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Length">
+                                <Template Context="activity">
+                                    <span class="project-manager-activity__nowrap">
+                                        @FormatDuration(activity.DurationMilliseconds)
+                                    </span>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Cost">
+                                <Template Context="activity">
+                                    <span class="project-manager-activity__nowrap"
+                                          title="@FormatActivityCostDetail(activity)">
+                                        @FormatActivityCost(activity)
+                                    </span>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Status">
+                                <Template Context="activity">
+                                    <StatusBadge Tone="@ResolveActivityTone(activity.Status)"
+                                                 Text="@FormatActivityStatus(activity.Status)"
+                                                 NoWrap="true" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                </SurfaceCard>
+            }
+
+            <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                     AlignItems="AlignItems.Center"
+                     Gap="LayoutGap.Medium"
+                     Wrap="FlexWrap.Wrap">
+                <TextBlock TextStyle="TextStyle.Caption"
+                           Value="@PageDescription" />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Previous"
+                            Icon="chevron_left"
+                            Variant="Variant.Outlined"
+                            Disabled="@(!CanMovePrevious || isLoading)"
+                            Click="MovePreviousAsync"
+                            data-testid="manager-activity-previous" />
+                    <Button Text="Next"
+                            Icon="chevron_right"
+                            Variant="Variant.Outlined"
+                            Disabled="@(!CanMoveNext || isLoading)"
+                            Click="MoveNextAsync"
+                            data-testid="manager-activity-next" />
+                </Cluster>
+            </Cluster>
+        </Stack>
+    </ChildContent>
+</Dialog>
+
+@code {
+    private const int PageSize = 20;
+    private readonly List<ProcessRunRecordCursor?> processPageCursors = [null];
+    private readonly Dictionary<
+        (ProjectManagerActivityKind Kind, ProjectManagerActivityStatusFilter Status),
+        ProjectManagerActivityAggregate> aggregates = [];
+    private CancellationTokenSource? loadCancellation;
+    private ProjectManagerActivityPage? page;
+    private ProjectManagerActivityKind activityKind = ProjectManagerActivityKind.Conversation;
+    private ProjectManagerActivityStatusFilter statusFilter = ProjectManagerActivityStatusFilter.All;
+    private int pageIndex;
+    private bool initialized;
+    private bool isLoading;
+    private string loadError = string.Empty;
+
+    [Parameter, EditorRequired]
+    public ProjectManagerSummarySnapshot Summary { get; set; } = default!;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private bool CanMovePrevious => pageIndex > 0;
+
+    private bool CanMoveNext
+        => page is not null &&
+           (activityKind == ProjectManagerActivityKind.Process
+               ? page.NextProcessCursor is not null
+               : checked((pageIndex + 1) * PageSize) < page.TotalCount);
+
+    private string PageDescription
+        => page is null || page.TotalCount == 0
+            ? "No results"
+            : $"Page {pageIndex + 1:N0} · showing {page.Items.Count:N0} of {page.TotalCount:N0}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen || initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+        await LoadPageAsync();
+    }
+
+    public void Dispose()
+    {
+        loadCancellation?.Cancel();
+        loadCancellation?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task ResetAndLoadAsync()
+    {
+        pageIndex = 0;
+        processPageCursors.Clear();
+        processPageCursors.Add(null);
+        await LoadPageAsync();
+    }
+
+    private async Task MovePreviousAsync()
+    {
+        if (!CanMovePrevious)
+        {
+            return;
+        }
+
+        pageIndex--;
+        await LoadPageAsync();
+    }
+
+    private async Task MoveNextAsync()
+    {
+        if (!CanMoveNext || page is null)
+        {
+            return;
+        }
+
+        if (activityKind == ProjectManagerActivityKind.Process)
+        {
+            var nextCursor = page.NextProcessCursor;
+            if (nextCursor is null)
+            {
+                return;
+            }
+
+            var nextPageIndex = pageIndex + 1;
+            if (processPageCursors.Count == nextPageIndex)
+            {
+                processPageCursors.Add(nextCursor);
+            }
+            else
+            {
+                processPageCursors[nextPageIndex] = nextCursor;
+            }
+        }
+
+        pageIndex++;
+        await LoadPageAsync();
+    }
+
+    private async Task LoadPageAsync()
+    {
+        var cancellation = BeginLoad();
+        try
+        {
+            var cursor = activityKind == ProjectManagerActivityKind.Process
+                ? processPageCursors[pageIndex]
+                : null;
+            page = await SummaryQueryService.QueryActivityPageAsync(
+                new ProjectManagerActivityPageRequest(
+                    Summary,
+                    activityKind,
+                    statusFilter,
+                    pageIndex,
+                    PageSize)
+                {
+                    ProcessCursor = cursor,
+                    KnownAggregate = aggregates.GetValueOrDefault(
+                        (activityKind, statusFilter))
+                },
+                cancellation.Token);
+            aggregates[(activityKind, statusFilter)] = page.Aggregate;
+            loadError = string.Empty;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            loadError = "The filtered activity page could not be loaded.";
+            Logger.LogError(
+                exception,
+                "Manager activity load failed for project {ProjectId}, activity kind {ActivityKind}, status {StatusFilter}, and page {PageIndex}.",
+                Summary.ProjectId,
+                activityKind,
+                statusFilter,
+                pageIndex);
+        }
+        finally
+        {
+            CompleteLoad(cancellation);
+        }
+    }
+
+    private CancellationTokenSource BeginLoad()
+    {
+        var cancellation = new CancellationTokenSource();
+        var previousCancellation = Interlocked.Exchange(ref loadCancellation, cancellation);
+        previousCancellation?.Cancel();
+        loadError = string.Empty;
+        isLoading = true;
+        return cancellation;
+    }
+
+    private void CompleteLoad(CancellationTokenSource cancellation)
+    {
+        if (ReferenceEquals(loadCancellation, cancellation))
+        {
+            isLoading = false;
+            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+        }
+
+        cancellation.Dispose();
+    }
+
+    private async Task CloseAsync()
+    {
+        loadCancellation?.Cancel();
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private static string FormatCount(int value)
+        => value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatUsd(decimal value)
+        => value.ToString("C4", CultureInfo.GetCultureInfo("en-US"));
+
+    private static string FormatDuration(long milliseconds)
+    {
+        if (milliseconds <= 0)
+        {
+            return "0m";
+        }
+
+        var duration = TimeSpan.FromMilliseconds(milliseconds);
+        if (duration.TotalDays >= 1)
+        {
+            return $"{(int)duration.TotalDays:N0}d {duration.Hours:N0}h";
+        }
+
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours:N0}h {duration.Minutes:N0}m";
+        }
+
+        return $"{Math.Max(1, (int)duration.TotalMinutes):N0}m";
+    }
+
+    private static string FormatActivityCost(ProjectManagerActivity activity)
+    {
+        if (activity.KnownCostUsd > 0)
+        {
+            return FormatUsd(activity.KnownCostUsd);
+        }
+
+        if (activity.EstimatedCostUsd > 0)
+        {
+            return $"Est. {FormatUsd(activity.EstimatedCostUsd)}";
+        }
+
+        return activity.HasUnknownCost
+            ? "Unknown"
+            : FormatUsd(0m);
+    }
+
+    private static string FormatActivityCostDetail(ProjectManagerActivity activity)
+        => activity.HasUnknownCost
+            ? $"{FormatActivityCost(activity)} · pricing incomplete"
+            : activity.EstimatedCostUsd > 0
+                ? $"{FormatActivityCost(activity)} · recorded estimate {FormatUsd(activity.EstimatedCostUsd)}"
+                : FormatActivityCost(activity);
+
+    private static string FormatActivityKind(ProjectManagerActivityKind kind)
+        => kind switch
+        {
+            ProjectManagerActivityKind.Conversation => "Agent",
+            ProjectManagerActivityKind.Workflow => "Workflow",
+            ProjectManagerActivityKind.Process => "Process",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported manager activity kind.")
+        };
+
+    private static string FormatActivityStatus(ProjectManagerActivityStatus status)
+        => status switch
+        {
+            ProjectManagerActivityStatus.Active => "Active",
+            ProjectManagerActivityStatus.Waiting => "Waiting",
+            ProjectManagerActivityStatus.Succeeded => "Succeeded",
+            ProjectManagerActivityStatus.Failed => "Failed",
+            ProjectManagerActivityStatus.Cancelled => "Cancelled",
+            ProjectManagerActivityStatus.Blocked => "Blocked",
+            ProjectManagerActivityStatus.Escalated => "Escalated",
+            ProjectManagerActivityStatus.Unknown => "Unknown",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported manager activity status.")
+        };
+
+    private static string ResolveActivityTone(ProjectManagerActivityStatus status)
+        => status switch
+        {
+            ProjectManagerActivityStatus.Succeeded => "success",
+            ProjectManagerActivityStatus.Failed => "danger",
+            ProjectManagerActivityStatus.Cancelled => "neutral",
+            ProjectManagerActivityStatus.Blocked => "warning",
+            ProjectManagerActivityStatus.Escalated => "warning",
+            ProjectManagerActivityStatus.Waiting => "warning",
+            ProjectManagerActivityStatus.Active => "info",
+            ProjectManagerActivityStatus.Unknown => "neutral",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported manager activity status.")
+        };
+}

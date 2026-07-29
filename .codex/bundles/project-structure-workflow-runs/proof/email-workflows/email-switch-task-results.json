@@ -1,0 +1,143 @@
+{
+  "completedAtUtc": "2026-07-29T10:04:11.0120799+00:00",
+  "workflowId": "b4c45941-f9d5-41b2-9ff5-552e30667752",
+  "workflowVersionId": "4b29b62d-b598-4c7c-8638-b4b565502500",
+  "results": [
+    {
+      "id": "E01",
+      "subject": "FYI: Maintenance window confirmed",
+      "route": "informative",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [],
+      "createdAssetTitles": [
+        "Email intake summary"
+      ],
+      "createdNodeIds": [
+        "custom:e926172a46e54065b412b8aaf27a463d"
+      ],
+      "createdAssetIds": [
+        "custom:e926172a46e54065b412b8aaf27a463d"
+      ]
+    },
+    {
+      "id": "E02",
+      "subject": "Action required: Q3 renewal checklist",
+      "route": "tasks",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Confirm legal review owner",
+        "Prepare Q3 renewal checklist",
+        "Upload updated pricing appendix"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:5c8f760c8f154fcca516386bb4afbf99",
+        "custom:bd82ffb055b54e30a5205abec6611dad",
+        "custom:162901270c9c459cb09107be7674cdbd"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E03",
+      "subject": "ASAP: customer outage executive response",
+      "route": "asap_response",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Respond to Contoso outage escalation",
+        "Send mitigation timeline"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:a52c77af255644a0b4b783af728d0686",
+        "custom:2e785f06ce6e4a678abe64d977b69601"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E04",
+      "subject": "Newsletter: product analytics release notes",
+      "route": "informative",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [],
+      "createdAssetTitles": [
+        "Email intake summary"
+      ],
+      "createdNodeIds": [
+        "custom:ab6819ffdfb241aa92afadd9b0297e0c"
+      ],
+      "createdAssetIds": [
+        "custom:ab6819ffdfb241aa92afadd9b0297e0c"
+      ]
+    },
+    {
+      "id": "E05",
+      "subject": "Delegated: invoice cleanup assigned to Petra",
+      "route": "no_action",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [],
+      "createdAssetTitles": [
+        "Email intake summary"
+      ],
+      "createdNodeIds": [
+        "custom:19c0be380c474c52941cc5043712c697"
+      ],
+      "createdAssetIds": [
+        "custom:19c0be380c474c52941cc5043712c697"
+      ]
+    },
+    {
+      "id": "E06",
+      "subject": "ASAP: board packet and same-day reply",
+      "route": "asap_response",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Export churn-risk customer list",
+        "Prepare board packet risk slide",
+        "Reply with board packet ETA"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:9668393450a849d79f6c7f1aad88b181",
+        "custom:0713428d460a4be49b25d1341c9c5455",
+        "custom:82866b529aa9484ba326b46660f8629b"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E07",
+      "subject": "Action required: partner portal cleanup",
+      "route": "tasks",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Clean partner portal duplicates"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:a243a6e9a4da405eb11356e9941d99bb"
+      ],
+      "createdAssetIds": []
+    },
+    {
+      "id": "E08",
+      "subject": "Question: contract status for Delta",
+      "route": "tasks",
+      "state": "Completed",
+      "progressPercent": 100,
+      "createdTaskTitles": [
+        "Reply with contract status"
+      ],
+      "createdAssetTitles": [],
+      "createdNodeIds": [
+        "custom:0758d784b14141e5bf600fab101aa163"
+      ],
+      "createdAssetIds": []
+    }
+  ]
+}

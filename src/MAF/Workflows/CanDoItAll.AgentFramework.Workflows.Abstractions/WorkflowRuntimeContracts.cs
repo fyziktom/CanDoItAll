@@ -223,7 +223,16 @@ public sealed record WorkflowRunPageRequest(
     int PageIndex = 0,
     int PageSize = 10,
     WorkflowVersionId? VersionId = null,
-    bool IncludeTotalCount = true);
+    bool IncludeTotalCount = true)
+{
+    public IReadOnlyList<Guid> ProjectIds { get; init; } = [];
+
+    public IReadOnlyList<WorkflowRunState> States { get; init; } = [];
+
+    public DateTimeOffset? UpdatedFromUtc { get; init; }
+
+    public DateTimeOffset? UpdatedToUtc { get; init; }
+}
 
 public sealed record WorkflowEventPageRequest(
     WorkflowRunId RunId,

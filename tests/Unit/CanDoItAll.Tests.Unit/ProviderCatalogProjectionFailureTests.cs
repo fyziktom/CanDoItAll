@@ -333,6 +333,11 @@ public sealed class ProviderCatalogProjectionFailureTests
         public int CatalogLoadCount =>
             Volatile.Read(ref catalogLoadCount);
 
+        public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+            AgentExecutionReportQuery query,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public bool ContainsCatalogProvider(Guid providerId)
         {
             return document.Providers.Any(item => item.Id == providerId);

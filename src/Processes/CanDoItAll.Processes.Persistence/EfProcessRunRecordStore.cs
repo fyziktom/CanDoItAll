@@ -12,6 +12,10 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContext) : IProcessRunRecordStore
 {
+    private static readonly string MissingPricingWarningCollectionJson = Serialize(
+        new[] { ProcessRunRecordWarningCode.MissingPricing });
+    private static readonly string MissingPricingWarningValueJson = Serialize(
+        ProcessRunRecordWarningCode.MissingPricing);
     private static readonly SemaphoreSlim NonRelationalMutationGate = new(1, 1);
 
     public async Task<bool> UpsertSeedAsync(
@@ -169,6 +173,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         ArgumentNullException.ThrowIfNull(query);
         ValidatePageSize(query.Take);
         ValidateRunIdFilter(query.RunIds);
+        var projectIds = ResolveProjectIds(query.ProjectId, query.ProjectIds);
         if (!Enum.IsDefined(query.Payload))
         {
             throw new ArgumentOutOfRangeException(
@@ -177,7 +182,10 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
                 "Process run record list payload is not supported.");
         }
 
-        var recordsQuery = ApplyListFilters(dbContext.RunRecords.AsNoTracking(), query);
+        var recordsQuery = ApplyListFilters(
+            dbContext.RunRecords.AsNoTracking(),
+            query,
+            projectIds);
         var rows = await SelectSummaryColumns(recordsQuery)
             .OrderByDescending(record => record.EndedAtUtc)
             .ThenByDescending(record => record.RunId)
@@ -215,75 +223,102 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        if (query.ToUtc <= query.FromUtc)
+        if (!query.AllTime && query.ToUtc <= query.FromUtc)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(query),
                 query.ToUtc,
                 "Process run analytics end time must be later than the start time.");
         }
+        if (!query.AllTime &&
+            query.ToUtc - query.FromUtc >
+            TimeSpan.FromDays(ProcessRunRecordPayloadLimits.MaximumAnalyticsDaySpan))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                query.ToUtc,
+                $"Process run analytics cannot span more than {ProcessRunRecordPayloadLimits.MaximumAnalyticsDaySpan} days.");
+        }
 
+        var projectIds = ResolveProjectIds(query.ProjectId, query.ProjectIds);
         var recordsQuery = dbContext.RunRecords
             .AsNoTracking()
             .Where(record =>
                 record.LifecycleState == ProcessRunRecordLifecycleState.Current &&
-                record.EndedAtUtc >= query.FromUtc &&
                 record.EndedAtUtc < query.ToUtc);
-        if (query.ProjectId is { } projectId)
+        if (!query.AllTime)
         {
-            recordsQuery = recordsQuery.Where(record => record.ProjectId == projectId);
+            recordsQuery = recordsQuery.Where(record => record.EndedAtUtc >= query.FromUtc);
         }
 
-        if (query.DefinitionId is { } definitionId)
-        {
-            recordsQuery = recordsQuery.Where(record => record.DefinitionId == definitionId.Value);
-        }
+        recordsQuery = ApplyAnalyticsFilters(
+            recordsQuery,
+            query,
+            projectIds);
 
-        if (query.RootRunId is { } rootRunId)
+        IReadOnlyList<ProcessRunRecordAnalyticsGroup> groups = [];
+        if (query.IncludeTotals)
         {
-            recordsQuery = recordsQuery.Where(record => record.RootRunId == rootRunId.Value);
-        }
-
-        if (query.ParticipantId is { } participantId)
-        {
-            var participantRunIds = dbContext.RunRecordParticipants
-                .AsNoTracking()
-                .Where(participant => participant.ParticipantId == participantId.Value)
-                .Select(participant => participant.RunId);
-            recordsQuery = recordsQuery.Where(record => participantRunIds.Contains(record.RunId));
-        }
-
-        var groups = await recordsQuery
-            .GroupBy(record => new
+            IQueryable<IGrouping<ProcessRunRecordAnalyticsKey, ProcessRunRecordEntity>> groupedRecordsQuery;
+            if (dbContext.Database.IsNpgsql())
             {
-                record.Disposition,
-                FactsAvailable = record.FactsStatus == ProcessRunFactsStatus.Completed,
-                record.Completeness
-            })
-            .Select(group => new ProcessRunRecordAnalyticsGroup(
-                group.Key.Disposition,
-                group.Key.FactsAvailable,
-                group.Key.Completeness,
-                group.Count(),
-                group.Max(record => record.EndedAtUtc),
-                group.Max(record => record.SourceGlobalSequence),
-                group.Sum(record => record.DurationMilliseconds ?? 0),
-                group.Sum(record => record.InputTokenCount),
-                group.Sum(record => record.CachedInputTokenCount),
-                group.Sum(record => record.OutputTokenCount),
-                group.Sum(record => record.ReasoningTokenCount),
-                group.Sum(record => record.TotalTokenCount),
-                group.Sum(record => record.EstimatedCost),
-                group.Sum(record => record.ActualCost),
-                group.Sum(record => record.RepetitionCount),
-                group.Sum(record => record.ExecutionCount),
-                group.Sum(record => record.ReworkCount),
-                group.Sum(record => record.IncidentCount),
-                group.Sum(record => record.EscalationCount),
-                group.Sum(record => record.ToolCallCount),
-                group.Sum(record => record.ArtifactCount)))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+                groupedRecordsQuery = recordsQuery.GroupBy(record =>
+                    new ProcessRunRecordAnalyticsKey(
+                        record.Disposition,
+                        record.FactsStatus == ProcessRunFactsStatus.Completed,
+                        record.FactsStatus != ProcessRunFactsStatus.Completed ||
+                        EF.Functions.JsonContains(
+                            record.CompletenessWarningsJson,
+                            MissingPricingWarningCollectionJson),
+                        record.Completeness));
+            }
+            else
+            {
+                groupedRecordsQuery = recordsQuery.GroupBy(record =>
+                    new ProcessRunRecordAnalyticsKey(
+                        record.Disposition,
+                        record.FactsStatus == ProcessRunFactsStatus.Completed,
+                        record.FactsStatus != ProcessRunFactsStatus.Completed ||
+                        record.CompletenessWarningsJson.Contains(
+                            MissingPricingWarningValueJson),
+                        record.Completeness));
+            }
+
+            groups = await groupedRecordsQuery
+                .Select(group => new ProcessRunRecordAnalyticsGroup(
+                    group.Key.Disposition,
+                    group.Key.FactsAvailable,
+                    group.Key.HasUnknownCost,
+                    group.Key.Completeness,
+                    group.Count(),
+                    group.Max(record => record.EndedAtUtc),
+                    group.Max(record => record.SourceGlobalSequence),
+                    group.Sum(record => record.DurationMilliseconds ?? 0),
+                    group.Sum(record => record.InputTokenCount),
+                    group.Sum(record => record.CachedInputTokenCount),
+                    group.Sum(record => record.OutputTokenCount),
+                    group.Sum(record => record.ReasoningTokenCount),
+                    group.Sum(record => record.TotalTokenCount),
+                    group.Sum(record => record.EstimatedCost),
+                    group.Sum(record => record.ActualCost),
+                    group.Sum(record => record.RepetitionCount),
+                    group.Sum(record => record.ExecutionCount),
+                    group.Sum(record => record.ReworkCount),
+                    group.Sum(record => record.IncidentCount),
+                    group.Sum(record => record.EscalationCount),
+                    group.Sum(record => record.ToolCallCount),
+                    group.Sum(record => record.ArtifactCount)))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        IReadOnlyList<ProcessRunDailyCostGroup> dailyCostGroups = [];
+        if (query.IncludeDailyCostTrend)
+        {
+            dailyCostGroups = await ReadDailyCostGroupsAsync(
+                recordsQuery,
+                cancellationToken).ConfigureAwait(false);
+        }
         var dispositions = groups
             .GroupBy(group => group.Disposition)
             .OrderBy(group => group.Key)
@@ -328,7 +363,19 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
             factsAvailableGroups.Sum(group => group.EscalationCount),
             factsAvailableGroups.Sum(group => group.ToolCallCount),
             factsAvailableGroups.Sum(group => group.ArtifactCount),
-            dispositions);
+            dispositions)
+        {
+            UnknownCostRunCount = groups
+                .Where(group => group.HasUnknownCost)
+                .Sum(group => group.MatchingRunCount),
+            DailyCostTrend = dailyCostGroups
+                .OrderBy(group => group.DayUtc)
+                .Select(group => new ProcessRunDailyCostTrendPoint(
+                    DateOnly.FromDateTime(group.DayUtc),
+                    group.EstimatedCost,
+                    group.ActualCost))
+                .ToArray()
+        };
     }
 
     public async Task<IReadOnlyList<ProcessRunFactsClaim>> ClaimFactsAsync(
@@ -898,7 +945,8 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
 
     private IQueryable<ProcessRunRecordEntity> ApplyListFilters(
         IQueryable<ProcessRunRecordEntity> recordsQuery,
-        ProcessRunRecordListQuery query)
+        ProcessRunRecordListQuery query,
+        Guid[] projectIds)
     {
         if (!query.IncludeSuperseded)
         {
@@ -911,15 +959,8 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
             recordsQuery = recordsQuery.Where(record => runIds.Contains(record.RunId));
         }
 
-        if (query.RootRunsOnly)
-        {
-            recordsQuery = recordsQuery.Where(record => record.RunId == record.RootRunId);
-        }
-
-        if (query.ProjectId is { } projectId)
-        {
-            recordsQuery = recordsQuery.Where(record => record.ProjectId == projectId);
-        }
+        recordsQuery = ApplyRootRunScope(recordsQuery, query.RootRunsOnly);
+        recordsQuery = ApplyProjectFilter(recordsQuery, projectIds);
 
         if (query.DefinitionId is { } definitionId)
         {
@@ -964,6 +1005,146 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         }
 
         return recordsQuery;
+    }
+
+    private IQueryable<ProcessRunRecordEntity> ApplyAnalyticsFilters(
+        IQueryable<ProcessRunRecordEntity> recordsQuery,
+        ProcessRunRecordAnalyticsQuery query,
+        Guid[] projectIds)
+    {
+        recordsQuery = ApplyRootRunScope(recordsQuery, query.RootRunsOnly);
+        recordsQuery = ApplyProjectFilter(recordsQuery, projectIds);
+
+        if (query.DefinitionId is { } definitionId)
+        {
+            recordsQuery = recordsQuery.Where(record => record.DefinitionId == definitionId.Value);
+        }
+
+        if (query.RootRunId is { } rootRunId)
+        {
+            recordsQuery = recordsQuery.Where(record => record.RootRunId == rootRunId.Value);
+        }
+
+        if (query.Disposition is { } disposition)
+        {
+            recordsQuery = recordsQuery.Where(record => record.Disposition == disposition);
+        }
+
+        if (query.ParticipantId is { } participantId)
+        {
+            var participantRunIds = dbContext.RunRecordParticipants
+                .AsNoTracking()
+                .Where(participant => participant.ParticipantId == participantId.Value)
+                .Select(participant => participant.RunId);
+            recordsQuery = recordsQuery.Where(record => participantRunIds.Contains(record.RunId));
+        }
+
+        return recordsQuery;
+    }
+
+    private async Task<IReadOnlyList<ProcessRunDailyCostGroup>> ReadDailyCostGroupsAsync(
+        IQueryable<ProcessRunRecordEntity> recordsQuery,
+        CancellationToken cancellationToken)
+    {
+        var completedRecordsQuery = recordsQuery
+            .Where(record => record.FactsStatus == ProcessRunFactsStatus.Completed);
+        if (dbContext.Database.IsRelational())
+        {
+            var groups = await completedRecordsQuery
+                .GroupBy(record => record.EndedAtUtc.Date)
+                .Select(group => new
+                {
+                    DayUtc = group.Key,
+                    EstimatedCost = group.Sum(record => record.EstimatedCost),
+                    ActualCost = group.Sum(record => record.ActualCost)
+                })
+                .OrderByDescending(group => group.DayUtc)
+                .Take(ProcessRunRecordPayloadLimits.MaximumAnalyticsDaySpan)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            return groups
+                .Select(group => new ProcessRunDailyCostGroup(
+                    group.DayUtc,
+                    group.EstimatedCost,
+                    group.ActualCost))
+                .ToArray();
+        }
+
+        var rows = await completedRecordsQuery
+            .Select(record => new ProcessRunDailyCostRow(
+                record.EndedAtUtc,
+                record.EstimatedCost,
+                record.ActualCost))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return rows
+            .GroupBy(row => row.EndedAtUtc.UtcDateTime.Date)
+            .Select(group => new ProcessRunDailyCostGroup(
+                group.Key,
+                group.Sum(row => row.EstimatedCost),
+                group.Sum(row => row.ActualCost)))
+            .OrderByDescending(group => group.DayUtc)
+            .Take(ProcessRunRecordPayloadLimits.MaximumAnalyticsDaySpan)
+            .ToArray();
+    }
+
+    private static IQueryable<ProcessRunRecordEntity> ApplyRootRunScope(
+        IQueryable<ProcessRunRecordEntity> recordsQuery,
+        bool rootRunsOnly)
+    {
+        return rootRunsOnly
+            ? recordsQuery.Where(record => record.RunId == record.RootRunId)
+            : recordsQuery;
+    }
+
+    private static IQueryable<ProcessRunRecordEntity> ApplyProjectFilter(
+        IQueryable<ProcessRunRecordEntity> recordsQuery,
+        Guid[] projectIds)
+    {
+        return projectIds.Length == 0
+            ? recordsQuery
+            : recordsQuery.Where(record =>
+                record.ProjectId.HasValue &&
+                projectIds.Contains(record.ProjectId.Value));
+    }
+
+    private static Guid[] ResolveProjectIds(
+        Guid? projectId,
+        IReadOnlyList<Guid> projectIds)
+    {
+        ArgumentNullException.ThrowIfNull(projectIds);
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Process run record ProjectId filter cannot be empty.",
+                nameof(projectId));
+        }
+
+        if (projectIds.Count > ProcessRunRecordPayloadLimits.MaximumProjectIdFilterCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(projectIds),
+                projectIds.Count,
+                $"Process run record ProjectIds filter cannot exceed {ProcessRunRecordPayloadLimits.MaximumProjectIdFilterCount} items.");
+        }
+
+        if (projectIds.Any(id => id == Guid.Empty))
+        {
+            throw new ArgumentException(
+                "Process run record ProjectIds filter cannot contain an empty identifier.",
+                nameof(projectIds));
+        }
+
+        if (projectId.HasValue && projectIds.Count > 0)
+        {
+            throw new ArgumentException(
+                "Specify either ProjectId or ProjectIds for a process run record query, not both.",
+                nameof(projectIds));
+        }
+
+        return projectId.HasValue
+            ? [projectId.Value]
+            : projectIds.Distinct().ToArray();
     }
 
     private static IQueryable<ProcessRunRecordEntity> SelectSummaryColumns(
@@ -1677,6 +1858,7 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
     private sealed record ProcessRunRecordAnalyticsGroup(
         ProcessRunDisposition Disposition,
         bool FactsAvailable,
+        bool HasUnknownCost,
         ProcessRunRecordCompleteness Completeness,
         int MatchingRunCount,
         DateTimeOffset LatestEndedAtUtc,
@@ -1696,5 +1878,21 @@ public sealed class EfProcessRunRecordStore(ProcessPersistenceDbContext dbContex
         int EscalationCount,
         int ToolCallCount,
         int ArtifactCount);
+
+    private sealed record ProcessRunRecordAnalyticsKey(
+        ProcessRunDisposition Disposition,
+        bool FactsAvailable,
+        bool HasUnknownCost,
+        ProcessRunRecordCompleteness Completeness);
+
+    private sealed record ProcessRunDailyCostGroup(
+        DateTime DayUtc,
+        decimal EstimatedCost,
+        decimal ActualCost);
+
+    private sealed record ProcessRunDailyCostRow(
+        DateTimeOffset EndedAtUtc,
+        decimal EstimatedCost,
+        decimal ActualCost);
 
 }

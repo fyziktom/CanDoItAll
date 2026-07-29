@@ -519,6 +519,14 @@ public static class ExecutionInvocationMetadata
             : null;
     }
 
+    internal static RecordedContextWorkspaceScopeResolution
+        ResolveRecordedContextWorkspaceScopeForReporting(
+        ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        return ResolveRecordedContextWorkspaceScope(run.MetadataJson);
+    }
+
     public static ProjectStructureAgentIdentityDescriptor? ResolveProjectStructureLaunchAgent(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -800,28 +808,42 @@ public static class ExecutionInvocationMetadata
     }
 
     private static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(string? metadataJson)
+        => ResolveRecordedContextWorkspaceScope(metadataJson).Scope;
+
+    private static RecordedContextWorkspaceScopeResolution
+        ResolveRecordedContextWorkspaceScope(string? metadataJson)
     {
         if (string.IsNullOrWhiteSpace(metadataJson))
         {
-            return null;
+            return RecordedContextWorkspaceScopeResolution.Missing;
         }
 
         try
         {
             using var document = JsonDocument.Parse(metadataJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object ||
-                !document.RootElement.TryGetProperty(ContextWorkspaceScopeMetadataKey, out var scopeElement) ||
-                scopeElement.ValueKind != JsonValueKind.Object ||
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return RecordedContextWorkspaceScopeResolution.Invalid;
+            }
+
+            if (!document.RootElement.TryGetProperty(
+                    ContextWorkspaceScopeMetadataKey,
+                    out var scopeElement))
+            {
+                return RecordedContextWorkspaceScopeResolution.Missing;
+            }
+
+            if (scopeElement.ValueKind != JsonValueKind.Object ||
                 !scopeElement.TryGetProperty(ContextWorkspaceScopeKindPropertyName, out var kindElement) ||
                 kindElement.ValueKind != JsonValueKind.String)
             {
-                return null;
+                return RecordedContextWorkspaceScopeResolution.Invalid;
             }
 
             var kindValue = kindElement.GetString();
             if (!Enum.TryParse<WorkspaceScopeKind>(kindValue, ignoreCase: true, out var kind))
             {
-                return null;
+                return RecordedContextWorkspaceScopeResolution.Invalid;
             }
 
             var key = scopeElement.TryGetProperty(ContextWorkspaceScopeKeyPropertyName, out var keyElement) &&
@@ -829,13 +851,14 @@ public static class ExecutionInvocationMetadata
                 ? keyElement.GetString()
                 : null;
 
-            return kind == WorkspaceScopeKind.Sandbox && string.IsNullOrWhiteSpace(key)
+            var scope = kind == WorkspaceScopeKind.Sandbox && string.IsNullOrWhiteSpace(key)
                 ? WorkspaceScopeDescriptor.Sandbox
                 : new WorkspaceScopeDescriptor(kind, key);
+            return RecordedContextWorkspaceScopeResolution.Resolved(scope);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException)
         {
-            return null;
+            return RecordedContextWorkspaceScopeResolution.Invalid;
         }
     }
 
@@ -1055,5 +1078,27 @@ public static class ExecutionInvocationMetadata
                string.Equals(run.RequestedByKind, "system", StringComparison.OrdinalIgnoreCase) &&
                !string.IsNullOrWhiteSpace(run.ProcessRunId) &&
                !string.IsNullOrWhiteSpace(run.ProcessStepId);
+    }
+}
+
+internal readonly record struct RecordedContextWorkspaceScopeResolution(
+    bool IsPresent,
+    bool IsValid,
+    WorkspaceScopeDescriptor? Scope)
+{
+    public static RecordedContextWorkspaceScopeResolution Missing { get; } =
+        new(IsPresent: false, IsValid: true, Scope: null);
+
+    public static RecordedContextWorkspaceScopeResolution Invalid { get; } =
+        new(IsPresent: true, IsValid: false, Scope: null);
+
+    public static RecordedContextWorkspaceScopeResolution Resolved(
+        WorkspaceScopeDescriptor scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        return new RecordedContextWorkspaceScopeResolution(
+            IsPresent: true,
+            IsValid: true,
+            scope);
     }
 }

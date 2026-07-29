@@ -1365,6 +1365,10 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             return Task.FromResult<IReadOnlyList<ExecutionRunRecord>>(result);
         }
 
+        public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+            AgentExecutionReportQuery query,
+            CancellationToken cancellationToken = default) => throw Unused();
+
         public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(
             Guid executionRunId,
             CancellationToken cancellationToken = default)

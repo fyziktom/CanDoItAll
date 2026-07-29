@@ -1015,6 +1015,18 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("OriginKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OriginProcessRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OriginProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ReportingActivityAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
@@ -1042,6 +1054,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("State", "UpdatedAtUtc", "RunId")
                         .IsDescending(false, true, true);
+
+                    b.HasIndex("OriginProjectId", "OriginKind", "ReportingActivityAtUtc", "RunId")
+                        .IsDescending(false, false, true, true)
+                        .HasDatabaseName("IX_WorkflowRuns_ProjectReportingActivity");
 
                     b.ToTable("AgentFramework_WorkflowRuns", (string)null);
                 });

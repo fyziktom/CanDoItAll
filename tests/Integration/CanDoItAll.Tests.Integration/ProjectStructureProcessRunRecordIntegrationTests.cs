@@ -71,6 +71,74 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
     }
 
     [Fact]
+    public async Task ReadAnalyticsAsync_groups_completed_costs_by_utc_day_in_postgresql()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("process-run-record-daily-cost");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            TestEnvironment = testEnvironment,
+            ActiveProfile = activeProfile
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var runRecordStore = scope.ServiceProvider.GetRequiredService<IProcessRunRecordStore>();
+        var projectId = await CreateProjectAsync(projects, "Daily process cost analytics");
+        var definitionId = ProcessDefinitionCatalogProjectionService
+            .CreateDefinitionId(new ProcessDefinitionCatalogItemKey("software-delivery"))
+            .Value;
+        var midnightUtc = new DateTimeOffset(2026, 7, 24, 0, 0, 0, TimeSpan.Zero);
+
+        await SeedCompletedRecordAsync(
+            runRecordStore,
+            CreateIdentity(ProcessRunId.New(), projectId, definitionId),
+            midnightUtc.AddMinutes(-10),
+            sourceSequence: 101,
+            estimatedCost: 1.25m,
+            actualCost: 1m);
+        await SeedCompletedRecordAsync(
+            runRecordStore,
+            CreateIdentity(ProcessRunId.New(), projectId, definitionId),
+            midnightUtc.AddMinutes(-1),
+            sourceSequence: 102,
+            estimatedCost: 2.75m,
+            actualCost: 2m);
+        await SeedCompletedRecordAsync(
+            runRecordStore,
+            CreateIdentity(ProcessRunId.New(), projectId, definitionId),
+            midnightUtc.AddMinutes(5),
+            sourceSequence: 103,
+            estimatedCost: 4.5m,
+            actualCost: 4m);
+
+        var analytics = await runRecordStore.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(
+                midnightUtc.AddHours(-1),
+                midnightUtc.AddHours(1))
+            {
+                ProjectId = projectId,
+                RootRunsOnly = true,
+                IncludeTotals = false,
+                IncludeDailyCostTrend = true
+            });
+
+        Assert.Collection(
+            analytics.DailyCostTrend,
+            first =>
+            {
+                Assert.Equal(new DateOnly(2026, 7, 23), first.DayUtc);
+                Assert.Equal(4m, first.EstimatedCost);
+                Assert.Equal(3m, first.ActualCost);
+            },
+            second =>
+            {
+                Assert.Equal(new DateOnly(2026, 7, 24), second.DayUtc);
+                Assert.Equal(4.5m, second.EstimatedCost);
+                Assert.Equal(4m, second.ActualCost);
+            });
+    }
+
+    [Fact]
     public async Task LoadAsync_caps_current_root_history_and_logs_older_records()
     {
         var projectId = Guid.NewGuid();
@@ -259,20 +327,32 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
 
     private static async Task SeedCompletedRecordAsync(
         IProcessRunRecordStore runRecordStore,
-        ProcessRunRecordIdentity identity)
+        ProcessRunRecordIdentity identity,
+        DateTimeOffset? endedAtUtc = null,
+        long sourceSequence = 10,
+        decimal estimatedCost = 1.5m,
+        decimal actualCost = 1.25m)
     {
-        Assert.True(await runRecordStore.UpsertSeedAsync(CreateSeed(identity, ProcessRunDisposition.Succeeded)));
+        var completedAtUtc = endedAtUtc ?? EndedAtUtc;
+        Assert.True(await runRecordStore.UpsertSeedAsync(
+            new ProcessRunRecordSeed(
+                identity,
+                ProcessRunDisposition.Succeeded,
+                completedAtUtc,
+                sourceSequence,
+                sourceSequence,
+                completedAtUtc)));
         var claim = Assert.Single(
             await runRecordStore.ClaimFactsAsync(
                 new ProcessRunRecordClaimRequest(
-                    EndedAtUtc.AddMinutes(1),
+                    completedAtUtc.AddMinutes(1),
                     TimeSpan.FromMinutes(5),
                     10)),
             candidate => candidate.RunId == identity.RunId);
         var participantId = new ProcessRunParticipantId("agent:archive-manager");
         var metrics = new ProcessRunRecordMetrics(
-            StartedAtUtc: EndedAtUtc.AddMinutes(-12),
-            EndedAtUtc,
+            StartedAtUtc: completedAtUtc.AddMinutes(-12),
+            completedAtUtc,
             DurationMilliseconds: 720_000,
             TotalStepCount: 4,
             ExecutableStepCount: 4,
@@ -289,8 +369,8 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
             OutputTokenCount: 400,
             ReasoningTokenCount: 25,
             TotalTokenCount: 1_525,
-            EstimatedCost: 1.5m,
-            ActualCost: 1.25m,
+            EstimatedCost: estimatedCost,
+            ActualCost: actualCost,
             ToolCallCount: 7,
             ArtifactCount: 3,
             SubprocessCount: 1);
@@ -313,7 +393,7 @@ public sealed class ProjectStructureProcessRunRecordIntegrationTests
                 [ProcessRunRecordWarningCode.MissingRuntimeEvents],
                 metrics,
                 facts,
-                EndedAtUtc.AddMinutes(2))));
+                completedAtUtc.AddMinutes(2))));
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

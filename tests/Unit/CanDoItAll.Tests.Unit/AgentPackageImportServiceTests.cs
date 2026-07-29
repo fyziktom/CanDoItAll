@@ -179,6 +179,11 @@ public sealed class AgentPackageImportServiceTests
     {
         public SandboxWorkspaceDocument Document { get; private set; } = initialDocument;
 
+        public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+            AgentExecutionReportQuery query,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(Document);
 

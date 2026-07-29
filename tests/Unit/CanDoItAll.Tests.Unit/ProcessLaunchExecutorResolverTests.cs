@@ -2058,6 +2058,10 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default) => throw Unused();
 
+        public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+            AgentExecutionReportQuery query,
+            CancellationToken cancellationToken = default) => throw Unused();
+
         public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default) => throw Unused();

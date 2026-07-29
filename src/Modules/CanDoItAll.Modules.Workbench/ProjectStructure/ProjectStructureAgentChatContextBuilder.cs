@@ -10,7 +10,8 @@ public enum ProjectStructureAgentChatView
 {
     Canvas,
     Gantt,
-    Calendar
+    Calendar,
+    ManagerSummary
 }
 
 public static class ProjectStructureAgentChatContextBuilder
@@ -94,6 +95,10 @@ public static class ProjectStructureAgentChatContextBuilder
                 Surface: "project-calendar",
                 View: "calendar",
                 Route: $"/projects/{projectId:D}/calendar"),
+            ProjectStructureAgentChatView.ManagerSummary => (
+                Surface: "project-structure",
+                View: "manager-summary",
+                Route: $"/projects/{projectId:D}/structure?tab=manager-summary"),
             _ => throw new ArgumentOutOfRangeException(nameof(activeView), activeView, "The project-structure agent-chat view is undefined.")
         };
 
@@ -325,6 +330,11 @@ Current project workspace view: project calendar.
 - The visible surface is the calendar of scheduled project-structure nodes.
 - A selected calendar event is supplied as its canonical project-structure node key by the separate selection fragment.
 """,
+            ProjectStructureAgentChatView.ManagerSummary => """
+Current project workspace view: Manager Summary.
+- The visible surface is the explicitly loaded project reporting snapshot.
+- Do not imply that report filters or cost totals are available to agent chat unless the user supplies them; use project tools for canonical plan facts.
+""",
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The project-structure agent-chat view is undefined.")
         };
 
@@ -354,9 +364,12 @@ Current project workspace view: project calendar.
         string projectName,
         ProjectStructureAgentChatView activeView)
     {
-        var surfaceName = activeView == ProjectStructureAgentChatView.Calendar
-            ? "Project calendar"
-            : "Project structure";
+        var surfaceName = activeView switch
+        {
+            ProjectStructureAgentChatView.Calendar => "Project calendar",
+            ProjectStructureAgentChatView.ManagerSummary => "Manager Summary",
+            _ => "Project structure"
+        };
         return $"{surfaceName} · {NormalizeProjectName(projectName)}";
     }
 

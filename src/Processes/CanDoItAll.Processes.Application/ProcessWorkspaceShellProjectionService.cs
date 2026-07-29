@@ -765,9 +765,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
         IReadOnlyList<ProcessTimelineEventProjection> events,
         IReadOnlyList<ProcessRuntimeUsageObservation> usageObservations)
     {
-        var durationMs = events.Count < 2
-            ? 0
-            : checked((long)Math.Max(0, (events[^1].OccurredAtUtc - events[0].OccurredAtUtc).TotalMilliseconds));
+        var durationMs = ResolveObservedDurationMilliseconds(events);
 
         return new ProcessRuntimeStatsProjection(
             runs.Count,
@@ -784,6 +782,33 @@ public sealed class ProcessWorkspaceShellProjectionService(
             TotalTokens: usageObservations.Sum(ResolveTotalTokens),
             EstimatedCost: decimal.Round(usageObservations.Sum(observation => observation.EstimatedCostUsd), 6, MidpointRounding.AwayFromZero),
             ActualCost: decimal.Round(usageObservations.Sum(observation => observation.ActualCostUsd), 6, MidpointRounding.AwayFromZero));
+    }
+
+    private static long ResolveObservedDurationMilliseconds(
+        IReadOnlyList<ProcessTimelineEventProjection> events)
+    {
+        if (events.Count < 2)
+        {
+            return 0;
+        }
+
+        var firstOccurredAtUtc = events[0].OccurredAtUtc;
+        var lastOccurredAtUtc = firstOccurredAtUtc;
+        for (var index = 1; index < events.Count; index++)
+        {
+            var occurredAtUtc = events[index].OccurredAtUtc;
+            if (occurredAtUtc < firstOccurredAtUtc)
+            {
+                firstOccurredAtUtc = occurredAtUtc;
+            }
+
+            if (occurredAtUtc > lastOccurredAtUtc)
+            {
+                lastOccurredAtUtc = occurredAtUtc;
+            }
+        }
+
+        return checked((long)(lastOccurredAtUtc - firstOccurredAtUtc).TotalMilliseconds);
     }
 
     private static ProcessRuntimeStatsProjection BuildRuntimeStats(

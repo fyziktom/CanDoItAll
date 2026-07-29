@@ -67,6 +67,260 @@ public sealed class ProjectPlanSummaryCalculatorTests
     }
 
     [Fact]
+    public void Build_projects_only_nonterminal_expected_cost_and_keeps_resource_currency_and_date()
+    {
+        var scheduledStartUtc = AsOfUtc.AddDays(2);
+        var tasks = new[]
+        {
+            CreateTask(
+                "agent",
+                startUtc: scheduledStartUtc,
+                endUtc: scheduledStartUtc.AddHours(2),
+                metadataJson: CreateEstimateMetadata(expectedCostAmount: 100m, expectedCostCurrencyCode: "USD")),
+            CreateTask(
+                "external-overdue",
+                progressPercent: 50,
+                startUtc: AsOfUtc.AddDays(-2),
+                endUtc: AsOfUtc.AddDays(1),
+                metadataJson: CreateEstimateMetadata(expectedCostAmount: 50m, expectedCostCurrencyCode: "USD")),
+            CreateTask(
+                "mixed-unscheduled",
+                metadataJson: CreateEstimateMetadata(expectedCostAmount: 20m, expectedCostCurrencyCode: "EUR")),
+            CreateTask(
+                "completed",
+                status: "done",
+                progressPercent: 100,
+                metadataJson: CreateEstimateMetadata(expectedCostAmount: 75m, expectedCostCurrencyCode: "USD"))
+        };
+        var bindings = new[]
+        {
+            new ProjectPlanResourceBindingFact("agent", ProjectPlanResourceGroup.Agent, "agent:1"),
+            new ProjectPlanResourceBindingFact("external-overdue", ProjectPlanResourceGroup.External, "organization:1"),
+            new ProjectPlanResourceBindingFact("mixed-unscheduled", ProjectPlanResourceGroup.Person, "person:1"),
+            new ProjectPlanResourceBindingFact("mixed-unscheduled", ProjectPlanResourceGroup.Agent, "agent:2"),
+            new ProjectPlanResourceBindingFact("completed", ProjectPlanResourceGroup.Process, "process:1")
+        };
+
+        var summary = Build(tasks, resourceBindings: bindings);
+
+        Assert.Collection(
+            summary.FutureExpectedCostTotals,
+            mixed =>
+            {
+                Assert.Equal(ProjectPlanResourceGroup.Mixed, mixed.Group);
+                Assert.Equal("EUR", mixed.CurrencyCode);
+                Assert.Equal(20m, mixed.Amount);
+            },
+            agent =>
+            {
+                Assert.Equal(ProjectPlanResourceGroup.Agent, agent.Group);
+                Assert.Equal("USD", agent.CurrencyCode);
+                Assert.Equal(100m, agent.Amount);
+            },
+            external =>
+            {
+                Assert.Equal(ProjectPlanResourceGroup.External, external.Group);
+                Assert.Equal("USD", external.CurrencyCode);
+                Assert.Equal(25m, external.Amount);
+            });
+        Assert.Equal(1, summary.UnscheduledFutureExpectedCostTaskCount);
+        Assert.Collection(
+            summary.FutureExpectedCostTrend,
+            overdue =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(1).UtcDateTime), overdue.Date);
+                Assert.Equal(ProjectPlanResourceGroup.External, overdue.Group);
+                Assert.Equal(25m, overdue.Amount);
+            },
+            scheduled =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(scheduledStartUtc.AddHours(2).UtcDateTime), scheduled.Date);
+                Assert.Equal(ProjectPlanResourceGroup.Agent, scheduled.Group);
+                Assert.Equal(100m, scheduled.Amount);
+            });
+        Assert.DoesNotContain(
+            summary.FutureExpectedCostTotals,
+            total => total.Group == ProjectPlanResourceGroup.Process);
+    }
+
+    [Fact]
+    public void BuildManagerSummary_schedule_only_calculates_schedule_without_forecast_work()
+    {
+        var snapshot = new ProjectPlanManagerScheduleSnapshot(
+            ProjectId,
+            "Lean schedule",
+            [
+                new ProjectPlanScheduleTaskFact(AsOfUtc.AddHours(-2), AsOfUtc),
+                new ProjectPlanScheduleTaskFact(AsOfUtc.AddHours(1), AsOfUtc.AddHours(3)),
+                new ProjectPlanScheduleTaskFact(null, AsOfUtc.AddHours(4)),
+                new ProjectPlanScheduleTaskFact(AsOfUtc.AddHours(5), AsOfUtc.AddHours(4))
+            ]);
+
+        var summary = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            snapshot,
+            new ProjectPlanManagerSummaryQuery(
+                ProjectPlanManagerSummaryMode.ScheduleOnly,
+                AsOfUtc));
+
+        Assert.Equal(4, summary.TotalTaskCount);
+        Assert.Equal(AsOfUtc.AddHours(-2), summary.Schedule.EarliestStartUtc);
+        Assert.Equal(AsOfUtc.AddHours(3), summary.Schedule.LatestEndUtc);
+        Assert.Equal(5m, summary.Schedule.DeliveryLeadTimeHours);
+        Assert.Equal(4m, summary.Schedule.ScheduledTaskDurationHours);
+        Assert.Empty(summary.FutureExpectedCostTotals);
+        Assert.Empty(summary.FutureExpectedCostTrend);
+        Assert.Equal(0, summary.UnscheduledFutureExpectedCostTaskCount);
+        Assert.Contains(
+            summary.Warnings,
+            warning => warning.Contains("incomplete schedule", StringComparison.Ordinal));
+        Assert.Contains(
+            summary.Warnings,
+            warning => warning.Contains("end before they start", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildManagerSummary_forecast_calculates_remaining_cost_without_dependency_state_graph()
+    {
+        var snapshot = new ProjectPlanManagerForecastSnapshot(
+            ProjectId,
+            "Lean forecast",
+            [
+                CreateTask(
+                    "agent",
+                    progressPercent: 25,
+                    startUtc: AsOfUtc.AddDays(1),
+                    endUtc: AsOfUtc.AddDays(2),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 100m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask(
+                    "external",
+                    progressPercent: 101,
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 50m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask(
+                    "completed",
+                    status: "done",
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 200m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask("unpriced")
+            ],
+            [
+                new ProjectPlanResourceBindingFact(
+                    "agent",
+                    ProjectPlanResourceGroup.Agent,
+                    "agent:1"),
+                new ProjectPlanResourceBindingFact(
+                    "external",
+                    ProjectPlanResourceGroup.External,
+                    "organization:1"),
+                new ProjectPlanResourceBindingFact(
+                    "completed",
+                    ProjectPlanResourceGroup.Process,
+                    "process:1")
+            ]);
+
+        var summary = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            snapshot,
+            new ProjectPlanManagerSummaryQuery(
+                ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts,
+                AsOfUtc));
+
+        Assert.Collection(
+            summary.FutureExpectedCostTotals,
+            agent =>
+            {
+                Assert.Equal(ProjectPlanResourceGroup.Agent, agent.Group);
+                Assert.Equal(75m, agent.Amount);
+            },
+            external =>
+            {
+                Assert.Equal(ProjectPlanResourceGroup.External, external.Group);
+                Assert.Equal(50m, external.Amount);
+            });
+        var trend = Assert.Single(summary.FutureExpectedCostTrend);
+        Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(2).UtcDateTime), trend.Date);
+        Assert.Equal(75m, trend.Amount);
+        Assert.Equal(1, summary.UnscheduledFutureExpectedCostTaskCount);
+        Assert.DoesNotContain(
+            summary.FutureExpectedCostTotals,
+            total => total.Group == ProjectPlanResourceGroup.Process);
+        Assert.Contains(
+            summary.Warnings,
+            warning => warning.Contains("no expected cost", StringComparison.Ordinal));
+        Assert.Contains(
+            summary.Warnings,
+            warning => warning.Contains("outside the supported 0-100", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildManagerSummary_forecast_spreads_started_tasks_across_completion_dates()
+    {
+        var snapshot = new ProjectPlanManagerForecastSnapshot(
+            ProjectId,
+            "Completion forecast",
+            [
+                CreateTask(
+                    "near",
+                    progressPercent: 50,
+                    startUtc: AsOfUtc.AddDays(-4),
+                    endUtc: AsOfUtc.AddDays(1),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 100m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask(
+                    "far",
+                    progressPercent: 25,
+                    startUtc: AsOfUtc.AddDays(-2),
+                    endUtc: AsOfUtc.AddDays(4),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 200m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask(
+                    "overdue",
+                    progressPercent: 50,
+                    startUtc: AsOfUtc.AddDays(-5),
+                    endUtc: AsOfUtc.AddDays(-1),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 50m,
+                        expectedCostCurrencyCode: "USD"))
+            ],
+            []);
+
+        var summary = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            snapshot,
+            new ProjectPlanManagerSummaryQuery(
+                ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts,
+                AsOfUtc));
+
+        Assert.Collection(
+            summary.FutureExpectedCostTrend,
+            overdue =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.UtcDateTime), overdue.Date);
+                Assert.Equal(25m, overdue.Amount);
+            },
+            near =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(1).UtcDateTime), near.Date);
+                Assert.Equal(50m, near.Amount);
+            },
+            far =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(4).UtcDateTime), far.Date);
+                Assert.Equal(150m, far.Amount);
+            });
+        Assert.Equal(
+            summary.FutureExpectedCostTotals.Sum(static total => total.Amount),
+            summary.FutureExpectedCostTrend.Sum(static point => point.Amount));
+        Assert.DoesNotContain(
+            summary.FutureExpectedCostTrend,
+            static point => point.Amount == 225m);
+    }
+
+    [Fact]
     public void Build_interprets_depends_on_direction_and_classifies_task_states()
     {
         var tasks = new[]
@@ -315,23 +569,34 @@ public sealed class ProjectPlanSummaryCalculatorTests
     }
 
     [Fact]
-    public void BuildAssigneeBindings_isolates_project_task_and_supported_party_type()
+    public void BuildAssigneeBindings_isolates_project_task_and_maps_internal_and_external_parties()
     {
         var personId = Guid.NewGuid();
+        var organizationId = Guid.NewGuid();
         var bindings = ProjectPlanAnalyticsQueryService.BuildAssigneeBindings(
             ProjectId,
             new HashSet<string>(["task-a"], StringComparer.Ordinal),
             [
                 new ProjectWorkItemAssigneeBinding(ProjectId, "task-a", personId, ProjectPartyType.Person),
                 new ProjectWorkItemAssigneeBinding(Guid.NewGuid(), "task-a", Guid.NewGuid(), ProjectPartyType.AiAgent),
-                new ProjectWorkItemAssigneeBinding(ProjectId, "task-a", Guid.NewGuid(), ProjectPartyType.Organization),
+                new ProjectWorkItemAssigneeBinding(ProjectId, "task-a", organizationId, ProjectPartyType.Organization),
                 new ProjectWorkItemAssigneeBinding(ProjectId, "task-b", Guid.NewGuid(), ProjectPartyType.AiAgent)
             ]);
 
-        var binding = Assert.Single(bindings);
-        Assert.Equal("task-a", binding.TaskNodeId);
-        Assert.Equal(ProjectPlanResourceGroup.Person, binding.Group);
-        Assert.Equal(personId.ToString("D"), binding.ResourceKey);
+        Assert.Collection(
+            bindings,
+            person =>
+            {
+                Assert.Equal("task-a", person.TaskNodeId);
+                Assert.Equal(ProjectPlanResourceGroup.Person, person.Group);
+                Assert.Equal(personId.ToString("D"), person.ResourceKey);
+            },
+            organization =>
+            {
+                Assert.Equal("task-a", organization.TaskNodeId);
+                Assert.Equal(ProjectPlanResourceGroup.External, organization.Group);
+                Assert.Equal(organizationId.ToString("D"), organization.ResourceKey);
+            });
     }
 
     [Fact]
@@ -369,6 +634,25 @@ public sealed class ProjectPlanSummaryCalculatorTests
             (decimal)hoursPerManDay);
 
         Assert.Throws<ArgumentOutOfRangeException>(() => Build([], query: query));
+    }
+
+    [Fact]
+    public void Build_honors_pre_cancelled_token_before_entering_large_calculator_loops()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var snapshot = new ProjectPlanSnapshot(
+            ProjectId,
+            "Cancelled",
+            [CreateTask("task")],
+            [],
+            []);
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new ProjectPlanSummaryCalculator().Build(
+                snapshot,
+                new ProjectPlanSummaryQuery(AsOfUtc),
+                cancellation.Token));
     }
 
     private static ProjectPlanSummary Build(
