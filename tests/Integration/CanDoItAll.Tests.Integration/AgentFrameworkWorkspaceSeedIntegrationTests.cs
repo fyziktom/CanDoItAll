@@ -304,6 +304,179 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public void Customized_hr_normalization_unions_curation_access_once_without_overwriting_customer_policy()
+    {
+        const string unrelatedRevokedCapabilityKey = "hr-crm-search";
+        const string customizedSummary = "Customer-owned Terra HR policy.";
+        const string customizedInstructions = "Retain the customer's HR operating instructions.";
+        const string customerConfigurationValue = "retain-this-policy";
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var seededOpenAiProvider = Assert.Single(
+            seed.Providers,
+            provider => string.Equals(
+                provider.Name,
+                ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
+                StringComparison.Ordinal));
+        var terraProvider = seededOpenAiProvider with
+        {
+            Id = Guid.NewGuid(),
+            Name = "Customer Terra HR provider",
+            DefaultModel = OpenAiModelIds.Gpt56Terra,
+            Tags = seededOpenAiProvider.Tags
+                .Append("customer-owned")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+        };
+        var curationAssignments = seededHrAgent.Capabilities
+            .Where(assignment => HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(
+                assignment.CapabilityKey))
+            .ToArray();
+        Assert.Equal(HrAgentIdentity.CapabilityCurationCapabilityKeys.Count, curationAssignments.Length);
+        var unrelatedRevokedAssignment = Assert.Single(
+            seededHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                unrelatedRevokedCapabilityKey,
+                StringComparison.Ordinal));
+        var retainedAssignments = seededHrAgent.Capabilities
+            .Where(assignment =>
+                assignment.CapabilityId != unrelatedRevokedAssignment.CapabilityId &&
+                !HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(assignment.CapabilityKey))
+            .ToArray();
+
+        var customizedConfiguration = JsonNode.Parse(seededHrAgent.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The seeded HR configuration must be a JSON object.");
+        customizedConfiguration.Remove(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName);
+        customizedConfiguration["customerHrPolicy"] = customerConfigurationValue;
+        var customizedHrAgent = seededHrAgent with
+        {
+            Summary = customizedSummary,
+            Instructions = customizedInstructions,
+            ProviderProfileId = terraProvider.Id,
+            Model = OpenAiModelIds.Gpt56Terra,
+            Permissions = seededHrAgent.Permissions with
+            {
+                CanAskOtherAgents = !seededHrAgent.Permissions.CanAskOtherAgents
+            },
+            ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(
+                customizedConfiguration.ToJsonString()),
+            Capabilities = retainedAssignments,
+            Tags = seededHrAgent.Tags
+                .Append("customer-managed-hr")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+        };
+        var spoofConfiguration = JsonNode.Parse(customizedHrAgent.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The customized HR configuration must be a JSON object.");
+        spoofConfiguration["customerHrPolicy"] = "spoof-must-remain-untouched";
+        var hrIdentitySpoof = customizedHrAgent with
+        {
+            Id = Guid.NewGuid(),
+            Name = "HR identity spoof",
+            ConfigurationJson = spoofConfiguration.ToJsonString(),
+            Capabilities = []
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Providers = seed.Providers.Append(terraProvider).ToArray(),
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? customizedHrAgent : agent)
+                .ToArray()
+        });
+        var migratedHrAgent = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.Equal(terraProvider.Id, migratedHrAgent.ProviderProfileId);
+        Assert.Equal(OpenAiModelIds.Gpt56Terra, migratedHrAgent.Model);
+        Assert.Equal(customizedSummary, migratedHrAgent.Summary);
+        Assert.Equal(customizedInstructions, migratedHrAgent.Instructions);
+        Assert.Equal(customizedHrAgent.Permissions, migratedHrAgent.Permissions);
+        Assert.Contains("customer-managed-hr", migratedHrAgent.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(
+            retainedAssignments
+                .Concat(curationAssignments)
+                .Select(assignment => assignment.CapabilityKey)
+                .OrderBy(item => item, StringComparer.Ordinal),
+            migratedHrAgent.Capabilities
+                .Select(assignment => assignment.CapabilityKey)
+                .OrderBy(item => item, StringComparer.Ordinal));
+        Assert.DoesNotContain(
+            migratedHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                unrelatedRevokedCapabilityKey,
+                StringComparison.Ordinal));
+        using (var migratedConfiguration = JsonDocument.Parse(migratedHrAgent.ConfigurationJson))
+        {
+            Assert.Equal(
+                customerConfigurationValue,
+                migratedConfiguration.RootElement.GetProperty("customerHrPolicy").GetString());
+            Assert.Equal(
+                HrAgentIdentity.CurrentCapabilityCurationAccessVersion,
+                migratedConfiguration.RootElement
+                    .GetProperty(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName)
+                    .GetString());
+        }
+
+        var normalizedSpoofCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Providers = seed.Providers.Append(terraProvider).ToArray(),
+            Agents = seed.Agents
+                .Where(agent => agent.Id != seededHrAgent.Id)
+                .Append(hrIdentitySpoof)
+                .ToArray()
+        });
+        var normalizedSpoof = Assert.Single(
+            normalizedSpoofCatalog.Agents,
+            agent => agent.Id == hrIdentitySpoof.Id);
+        Assert.Equal(hrIdentitySpoof.ConfigurationJson, normalizedSpoof.ConfigurationJson);
+        Assert.Empty(normalizedSpoof.Capabilities);
+        Assert.False(HrAgentIdentity.Matches(normalizedSpoof));
+
+        var deliberatelyRemovedCapabilityKey = CapabilityCuratorAgentIdentity.SaveCapabilityKey;
+        const string preexistingLedgerMarker = "operator-preserved-ledger-entry";
+        var postMigrationConfiguration = JsonNode.Parse(migratedHrAgent.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The migrated HR configuration must be a JSON object.");
+        postMigrationConfiguration[HrAgentIdentity.CapabilityCurationAccessVersionPropertyName] =
+            preexistingLedgerMarker;
+        var hrAgentAfterDeliberateRemoval = migratedHrAgent with
+        {
+            ConfigurationJson = postMigrationConfiguration.ToJsonString(),
+            Capabilities = migratedHrAgent.Capabilities
+                .Where(assignment => !string.Equals(
+                    assignment.CapabilityKey,
+                    deliberatelyRemovedCapabilityKey,
+                    StringComparison.Ordinal))
+                .ToArray()
+        };
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized with
+        {
+            Agents = normalized.Agents
+                .Select(agent => agent.Id == migratedHrAgent.Id ? hrAgentAfterDeliberateRemoval : agent)
+                .ToArray()
+        });
+        var preservedRemoval = Assert.Single(normalizedAgain.Agents, HrAgentIdentity.Matches);
+
+        Assert.DoesNotContain(
+            preservedRemoval.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                deliberatelyRemovedCapabilityKey,
+                StringComparison.Ordinal));
+        Assert.Equal(terraProvider.Id, preservedRemoval.ProviderProfileId);
+        Assert.Equal(OpenAiModelIds.Gpt56Terra, preservedRemoval.Model);
+        Assert.Equal(customizedSummary, preservedRemoval.Summary);
+        using var preservedConfiguration = JsonDocument.Parse(preservedRemoval.ConfigurationJson);
+        Assert.Equal(
+            preexistingLedgerMarker,
+            preservedConfiguration.RootElement
+                .GetProperty(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName)
+                .GetString());
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_playwright_mcp_for_ui_delivery_agents()
     {
         await using var application = await TestApplication.CreateAsync();

@@ -20,6 +20,7 @@ The initial tool surface is:
 
 - agent search and settings inspection;
 - technical-agent creation and an allowlisted settings patch;
+- least-privilege reusable capability authoring through the existing Capability Curator runtime;
 - AI avatar generation and assignment as one approval-gated operation;
 - usage and cost aggregation with explicit work-scope and date filters;
 - process participation and run-review evidence;
@@ -32,11 +33,23 @@ All mutations are added to `AgentToolInvocationPolicyMetadata`, `ToolContractCat
 
 Settings updates use an allowlisted typed patch. They never accept raw configuration JSON, secret references, template identity, or HR authority. The caller supplies the target's observed `UpdatedAtUtc`; stale updates fail predictably. Avatar generation uses only the HR seed's explicitly configured image provider/model, requires the requested JPEG result, validates marker structure, dimensions, square shape, and the shared avatar byte limit, and preserves the old avatar on every pre-save failure.
 
+The shared provider-runtime image-generation boundary opens a nested credential-dispatch scope for only the exact image provider in each validated request. Disposing that narrow scope restores any outer chat-provider scope. This covers HR avatars and generic image tools without pre-resolving credentials for unrelated image providers, keeps credentials resolver-owned and unavailable to the model, and preserves the existing configuration-fingerprint fail-closed guard.
+
 Usage aggregation reads stored observations through the workspace-store contract. It reports observed/estimated/missing counts separately, sums known cost only, and states whether the result is incomplete. Basic chat, process, workflow, and other work are disjoint typed scopes.
 
 CRM/HR access is implemented behind a narrow query contract owned by the CRM/HR module. Results are bounded and redact private contact values, confidential notes, rates, and sensitive-party detail. Returned text is labelled as untrusted business data, not instructions.
 
 Agent-authored catalog/settings text and peer-manager responses are also labelled with typed untrusted-text markers. Tool descriptions and the HR governance instructions require those fields to be treated as attributed data and never as instructions, including when they contain prompt-injection-shaped commands.
+
+### Capability-curation extension
+
+As of 2026-07-28, the exact managed HR identity may use a bounded subset of the existing Capability Curator runtime while provisioning technical agents. This does not duplicate capability persistence or create a second catalog owner. The Capability Curator provider remains responsible for typed Skill, Tool, and MCP definitions, setup attestations, optimistic concurrency, verification, approvals, and receipts.
+
+The HR subset is catalog search, editor inspection, capability save, Tool setup test, MCP setup test, and verification. Capability assignment editor/update remain hard-denied for HR even if their capability records are accidentally assigned later. HR assigns an approved reusable capability only through its own typed agent-create/settings workflow. Both provider attachment and every invocation still require the immutable HR ID and template key, Active non-template state, tool permission, and an exact assignment-to-catalog match.
+
+The HR-specific inline curation skill keeps the workflow explicit: search the exact planned key before create and after every approval continuation; request separate approval for capability authoring, agent mutation, assignment verification, and avatar generation; use one-time setup attestations for Tool/MCP saves; never store secret values; create new agents as Draft; and read back every changed record. `capability_curator_verify` is deliberately sequenced after agent creation or update because it requires a non-template target with the capability already assigned; it is not a definition-only check after save. The workflow permits at most one approval-gated stage per user turn. Capability authoring, agent creation/update, assignment verification, and avatar generation therefore occur in separate turns, preventing an approval replay from regenerating an earlier completed payload or collapsing distinct approvals. Tool/MCP setup test and save are separate host approvals inside the single capability-authoring stage because the setup attestation is one-time, candidate-bound, session-bound, and short-lived.
+
+Existing customized HR agents need the new subset without losing their selected provider, Terra model, instructions, or unrelated capability choices. Seed normalization therefore applies an exact-identity, append-only `hrCapabilityCurationAccessVersion` migration once. The marker is a migration ledger entry, not desired-state reconciliation. It remains after a later operator removal, so subsequent startup normalization does not resurrect revoked capability access. Any future grant must use a new append-only migration marker and add only its newly introduced keys.
 
 Process insight uses the authoritative AgentFramework execution-history and usage-store contracts. Process-originated runs already persist typed agent, process-run, process-step, outcome, error, activity, tool, and usage lineage there. Dependency direction therefore remains:
 
@@ -57,6 +70,8 @@ The Agents tab opens only the managed HR identity in an OverlayLib `OverlayWindo
 | --- | --- |
 | Stable privileged identity | AgentFramework Models |
 | HR tool contracts, access policy, orchestration, usage aggregation, avatar mutation | AgentFramework module |
+| Reusable Skill, Tool, and MCP definition, setup attestation, save, and verification | Existing AgentFramework Capability Curator provider |
+| Agent capability assignment and lifecycle mutation | HR typed administration workflow |
 | CRM/HR safe search and summary | CRM/HR module |
 | Process evidence and participant validation | AgentFramework HR process-review service over persisted execution lineage |
 | Approval classification and receipts | Existing AgentFramework tool policy/runtime |
@@ -77,9 +92,12 @@ The Agents tab opens only the managed HR identity in an OverlayLib `OverlayWindo
 ## Test seams and proof
 
 - Provider unit tests prove tools attach only to the managed HR identity and only for interactive chat.
+- Capability Curator provider tests prove the bounded subset attaches to exact HR, spoofed identities fail closed, and assignment-admin tools remain hard-denied even when assigned.
+- Seed integration tests prove the one-time capability grant preserves customized provider/model/instructions and does not regrant an operator-removed capability after the migration marker is recorded.
 - Administration tests prove allowlisted patch preservation, stale-update rejection, self-update rejection, and no authority/secret mutation.
 - Usage tests prove scope separation and known-versus-unknown cost reporting.
 - Avatar tests fake image generation and prove invalid MIME, oversized output, and provider failure preserve the old avatar.
+- Provider-runtime image credential-scope tests prove the exact requested image provider works inside an active chat-provider scope and that disposal restores the outer scope.
 - CRM/HR query tests prove bounds and redaction.
 - Process-review tests prove attempt/error evidence and explicit participating-manager validation.
 - Composition smoke tests prove provider and process adapter registration through contracts.

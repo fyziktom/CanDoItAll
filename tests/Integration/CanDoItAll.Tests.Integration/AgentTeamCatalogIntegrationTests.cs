@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
-    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v66";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v69";
 
     private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -212,6 +212,32 @@ public sealed class AgentTeamCatalogIntegrationTests
                 Assert.True(member.Settings.Access.Processes.AllowAllDefinitions);
             });
 
+        var hrTemplate = Assert.Single(
+            members,
+            member => string.Equals(
+                member.Key,
+                HrAgentIdentity.TemplateKey,
+                StringComparison.Ordinal));
+        var hrTemplateCurationKeys = hrTemplate.Skills.CapabilityKeys
+            .Where(IsCapabilityCurationKey)
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(
+            HrAgentIdentity.CapabilityCurationCapabilityKeys.OrderBy(item => item, StringComparer.Ordinal),
+            hrTemplateCurationKeys);
+        Assert.DoesNotContain(
+            CapabilityCuratorAgentIdentity.AssignmentEditorGetCapabilityKey,
+            hrTemplate.Skills.CapabilityKeys,
+            StringComparer.Ordinal);
+        Assert.DoesNotContain(
+            CapabilityCuratorAgentIdentity.AssignmentUpdateCapabilityKey,
+            hrTemplate.Skills.CapabilityKeys,
+            StringComparer.Ordinal);
+        Assert.DoesNotContain(
+            CapabilityCuratorAgentIdentity.CuratorSkillCapabilityKey,
+            hrTemplate.Skills.CapabilityKeys,
+            StringComparer.Ordinal);
+
         var curatorTemplate = Assert.Single(
             members,
             member => string.Equals(
@@ -295,6 +321,54 @@ public sealed class AgentTeamCatalogIntegrationTests
                 .Where(agent => string.Equals(agent.Model, OpenAiModelIds.Gpt56Luna, StringComparison.OrdinalIgnoreCase))
                 .Select(agent => agent.TemplateKey)
                 .OrderBy(key => key, StringComparer.OrdinalIgnoreCase));
+
+        var hrAgent = agentsByTemplateKey[HrAgentIdentity.TemplateKey];
+        Assert.Equal(HrAgentIdentity.AgentId, hrAgent.Id);
+        Assert.True(HrAgentIdentity.Matches(hrAgent));
+        Assert.Equal(
+            HrAgentIdentity.CapabilityCurationCapabilityKeys.OrderBy(item => item, StringComparer.Ordinal),
+            hrAgent.Capabilities
+                .Select(item => item.CapabilityKey)
+                .Where(IsCapabilityCurationKey)
+                .OrderBy(item => item, StringComparer.Ordinal));
+        var hrCapabilityCurationSkill = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                HrAgentIdentity.CapabilityCurationSkillCapabilityKey,
+                StringComparison.Ordinal));
+        Assert.Equal(CapabilityKind.Skill, hrCapabilityCurationSkill.Kind);
+        Assert.True(hrCapabilityCurationSkill.IsBuiltIn);
+        var hrCapabilityCurationInstructions = ReadInlineSkillInstructions(
+            hrCapabilityCurationSkill.ConfigurationJson);
+        Assert.Contains(
+            "Complete at most one approval-gated stage per user turn.",
+            hrCapabilityCurationInstructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "pass that exact key as the entire `text` value",
+            hrCapabilityCurationInstructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "`capability_curator_verify` is not a standalone definition check",
+            hrCapabilityCurationInstructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ask the user to continue with assignment verification",
+            hrCapabilityCurationInstructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "draft the smallest typed save candidate from the `capability_curator_save` schema",
+            hrCapabilityCurationInstructions,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            hrAgent.Capabilities,
+            assignment =>
+                assignment.CapabilityId == hrCapabilityCurationSkill.Id &&
+                string.Equals(
+                    assignment.CapabilityKey,
+                    HrAgentIdentity.CapabilityCurationSkillCapabilityKey,
+                    StringComparison.Ordinal));
 
         var deliveryManager = agentsByTemplateKey["delivery-manager"];
         Assert.Equal(DeliveryManagerAgentIdentity.AgentId, deliveryManager.Id);
@@ -388,6 +462,19 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(agentsByTemplateKey["app-screenshot-capture-agent"].Id, visualTemplateTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["screenshot-review-storage-agent"].Id, visualTemplateTeam.AgentIds);
         Assert.Contains(agentsByTemplateKey["layout-image-generation-agent"].Id, visualTemplateTeam.AgentIds);
+    }
+
+    private static bool IsCapabilityCurationKey(string capabilityKey)
+    {
+        return string.Equals(
+                   capabilityKey,
+                   HrAgentIdentity.CapabilityCurationSkillCapabilityKey,
+                   StringComparison.Ordinal) ||
+               string.Equals(
+                   capabilityKey,
+                   CapabilityCuratorAgentIdentity.CuratorSkillCapabilityKey,
+                   StringComparison.Ordinal) ||
+               CapabilityCuratorAgentIdentity.ToolCapabilityKeys.Contains(capabilityKey);
     }
 
     [Fact]
@@ -574,6 +661,16 @@ public sealed class AgentTeamCatalogIntegrationTests
         using var document = JsonDocument.Parse(configurationJson);
         return document.RootElement.GetProperty(ManagedSeedVersionPropertyName).GetString()
             ?? throw new InvalidOperationException("Managed seed version is required for agent template refresh tests.");
+    }
+
+    private static string ReadInlineSkillInstructions(string configurationJson)
+    {
+        using var document = JsonDocument.Parse(configurationJson);
+        return document.RootElement
+                   .GetProperty("inlineSkill")
+                   .GetProperty("instructions")
+                   .GetString()
+               ?? throw new InvalidOperationException("Inline skill instructions are required.");
     }
 
     [Fact]

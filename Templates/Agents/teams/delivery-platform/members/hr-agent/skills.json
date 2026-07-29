@@ -1,6 +1,7 @@
 {
   "capabilityKeys": [
     "hr-agent-governance-inline-skill",
+    "hr-agent-capability-curation-inline-skill",
     "hr-agents-search",
     "hr-agent-settings-get",
     "hr-agent-creation-options-get",
@@ -11,7 +12,13 @@
     "hr-agent-process-history-get",
     "hr-agent-process-manager-review-request",
     "hr-crm-search",
-    "hr-crm-item-summary-get"
+    "hr-crm-item-summary-get",
+    "capability-curator-catalog-search",
+    "capability-curator-editor-get",
+    "capability-curator-save",
+    "capability-curator-tool-setup-test",
+    "capability-curator-mcp-setup-test",
+    "capability-curator-verify"
   ],
-  "notes": "Privileged managed HR capability set. Runtime providers also verify the immutable HR agent identity and each assigned capability."
+  "notes": "Privileged managed HR capability set. Runtime providers verify the immutable HR agent identity and each assigned capability. Capability assignment remains owned by the HR settings tools."
 }

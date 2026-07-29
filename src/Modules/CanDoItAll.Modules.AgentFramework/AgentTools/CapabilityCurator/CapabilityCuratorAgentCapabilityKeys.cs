@@ -1,19 +1,20 @@
 using System.Collections.Frozen;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 public static class CapabilityCuratorAgentCapabilityKeys
 {
-    public const string CuratorSkill = "capability-curator-agent-inline-skill";
-    public const string CatalogSearch = "capability-curator-catalog-search";
-    public const string EditorGet = "capability-curator-editor-get";
-    public const string Save = "capability-curator-save";
-    public const string ToolSetupTest = "capability-curator-tool-setup-test";
-    public const string McpSetupTest = "capability-curator-mcp-setup-test";
-    public const string AssignmentEditorGet = "capability-curator-assignment-editor-get";
-    public const string AssignmentUpdate = "capability-curator-assignment-update";
-    public const string Verify = "capability-curator-verify";
+    public const string CuratorSkill = CapabilityCuratorAgentIdentity.CuratorSkillCapabilityKey;
+    public const string CatalogSearch = CapabilityCuratorAgentIdentity.CatalogSearchCapabilityKey;
+    public const string EditorGet = CapabilityCuratorAgentIdentity.EditorGetCapabilityKey;
+    public const string Save = CapabilityCuratorAgentIdentity.SaveCapabilityKey;
+    public const string ToolSetupTest = CapabilityCuratorAgentIdentity.ToolSetupTestCapabilityKey;
+    public const string McpSetupTest = CapabilityCuratorAgentIdentity.McpSetupTestCapabilityKey;
+    public const string AssignmentEditorGet = CapabilityCuratorAgentIdentity.AssignmentEditorGetCapabilityKey;
+    public const string AssignmentUpdate = CapabilityCuratorAgentIdentity.AssignmentUpdateCapabilityKey;
+    public const string Verify = CapabilityCuratorAgentIdentity.VerifyCapabilityKey;
 
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)

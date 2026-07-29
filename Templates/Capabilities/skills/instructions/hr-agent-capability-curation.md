@@ -1,0 +1,21 @@
+# HR agent capability curation
+
+Use this workflow only as the exact managed HR Agent when a technical agent needs a reusable skill, tool, or MCP server that is not already available.
+
+Search the capability catalog first with `capability_curator_catalog_search`. Reuse a suitable capability when one exists. For an exact existence check, choose the planned canonical key first and pass that exact key as the entire `text` value. The search text is a literal substring, so never concatenate keywords such as `"garden gardening vegetable herb"` for this check. Search the exact display name separately only when needed.
+
+Repeat that exact-key search after every approval continuation, rejected approval, resumed run, or new user turn. If exactly one capability with the planned key already exists, the save stage is complete: do not draft or invoke another `capability_curator_save`. Retain its capability ID and fingerprint, inspect it with `capability_curator_editor_get`, and continue from the persisted result. If none exists, draft the smallest typed save candidate from the `capability_curator_save` schema, describe it, and request explicit approval before saving it.
+
+Create focused reusable knowledge as an inline Skill with `capability_curator_save`. Keep instructions factual, bounded to the requested domain, and explicit about assumptions, validation, and safety constraints. Do not hide broad authority or unrelated workflows in a skill.
+
+For a Tool or MCP server, use typed configuration only. Never put credentials or secret values in capability configuration; use approved secret bindings. Run the matching setup test first, then pass its one-time attestation to `capability_curator_save`. A failed, stale, or mismatched attestation is a stop condition. The setup test and save remain separate host approvals within the same capability-authoring stage; do not insert an unrelated mutation between them or reuse the one-time attestation for another candidate.
+
+After a capability is saved, create the requested agent as Draft with `hr_agent_create` and include the new capability ID in its least-privilege capability set. For an existing target, inspect it with `hr_agent_settings_get`, retain its update timestamp, and use the allowlisted `hr_agent_settings_update` operation. Do not use the Capability Curator assignment tools: HR settings remain the owner of agent assignment and lifecycle changes.
+
+Capability authoring, agent creation or update, assignment verification, and avatar generation are distinct approval-gated stages. State each proposed action clearly and never treat approval for one as approval for another.
+
+Complete at most one approval-gated stage per user turn. After a capability save succeeds, read it back with `capability_curator_editor_get`, report its ID and fingerprint, then stop and ask the user to continue with agent creation. After agent creation or update succeeds, read the agent back, report its ID, settings, and assigned capability ID, then stop and ask the user to continue with assignment verification. In that later turn, invoke `capability_curator_verify` only for the exact non-template target and capability that are already assigned, report the proof result, then stop. Generate and assign an avatar with `hr_agent_avatar_generate` only in a still later user turn and only after the target agent exists and the new assignment has been verified. These stage boundaries are mandatory even when the user pre-approved several proposed actions in one message; recorded intent does not collapse the runtime approval boundaries.
+
+`capability_curator_verify` is not a standalone definition check: it requires both a non-template target agent and a capability already assigned to that agent. Never call it immediately after saving an unassigned capability. Read back every saved capability and changed agent, and report capability authoring, agent creation or update, assignment verification, and avatar assignment separately.
+
+Built-in capabilities are immutable. Never grant HR administration, Capability Curator administration, secrets, raw configuration, broad execution, or unrelated external access to a new agent. If required authority is unavailable, explain the exact missing boundary instead of embedding a workaround in instructions.

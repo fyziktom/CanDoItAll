@@ -1,10 +1,12 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 public static class HrAgentCapabilityKeys
 {
     public const string GovernanceSkill = "hr-agent-governance-inline-skill";
+    public const string CapabilityCurationSkill = HrAgentIdentity.CapabilityCurationSkillCapabilityKey;
     public const string AgentsSearch = "hr-agents-search";
     public const string AgentSettingsGet = "hr-agent-settings-get";
     public const string AgentCreationOptionsGet = "hr-agent-creation-options-get";
@@ -34,6 +36,8 @@ public static class HrAgentCapabilityKeys
         };
 
     public static IReadOnlySet<string> PrivilegedKeys { get; } = new HashSet<string>(
-        ToolNameToCapabilityKey.Values.Append(GovernanceSkill),
+        ToolNameToCapabilityKey.Values
+            .Append(GovernanceSkill)
+            .Append(CapabilityCurationSkill),
         StringComparer.OrdinalIgnoreCase);
 }
