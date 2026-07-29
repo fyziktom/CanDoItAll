@@ -516,7 +516,15 @@ public sealed class ProjectStructureGanttProjectionAdapter
         {
             foreach (var partyAssignment in taskPartyAssignments)
             {
-                if (!TryResolvePartyAssignmentKind(partyAssignment.PartyType, out var assignmentKind))
+                var decorationResolution = ResolvePartyAssignmentDecoration(
+                    partyAssignment.PartyType,
+                    out var assignmentKind);
+                if (decorationResolution == PartyAssignmentDecorationResolution.IntentionallyOmitted)
+                {
+                    continue;
+                }
+
+                if (decorationResolution == PartyAssignmentDecorationResolution.Unsupported)
                 {
                     issues.Add(Warning(
                         ProjectStructureGanttProjectionIssueCode.InvalidAssignment,
@@ -578,7 +586,7 @@ public sealed class ProjectStructureGanttProjectionAdapter
         assignments.Add(new ProjectedAssignment(kind, name.Trim(), identity));
     }
 
-    private static bool TryResolvePartyAssignmentKind(
+    private static PartyAssignmentDecorationResolution ResolvePartyAssignmentDecoration(
         ProjectPartyType partyType,
         out GanttAssignmentKind assignmentKind)
     {
@@ -586,13 +594,17 @@ public sealed class ProjectStructureGanttProjectionAdapter
         {
             case ProjectPartyType.AiAgent:
                 assignmentKind = GanttAssignmentKind.Agent;
-                return true;
+                return PartyAssignmentDecorationResolution.Supported;
             case ProjectPartyType.Person:
                 assignmentKind = GanttAssignmentKind.Person;
-                return true;
+                return PartyAssignmentDecorationResolution.Supported;
+            case ProjectPartyType.Organization:
+            case ProjectPartyType.OrganizationUnit:
+                assignmentKind = default;
+                return PartyAssignmentDecorationResolution.IntentionallyOmitted;
             default:
                 assignmentKind = default;
-                return false;
+                return PartyAssignmentDecorationResolution.Unsupported;
         }
     }
 
@@ -652,6 +664,13 @@ public sealed class ProjectStructureGanttProjectionAdapter
         StartSynthesized,
         EndSynthesized,
         IntervalSynthesized
+    }
+
+    private enum PartyAssignmentDecorationResolution
+    {
+        Supported,
+        IntentionallyOmitted,
+        Unsupported
     }
 
     private sealed record ProjectedTaskSchedule(

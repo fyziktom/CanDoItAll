@@ -1,6 +1,8 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Projections;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -39,6 +41,9 @@ public sealed class ProjectManagerSummaryWorkflowQueryTests
             agentWorkspace: null!,
             workflowProjectStructureReportStore: reportStore,
             processRunRecordStore: null!,
+            processDefinitionCatalog:
+                new ProcessDefinitionCatalogProjectionService(
+                    new SystemProcessProjectionClock()),
             clock: null!);
         var knownTotals = new ProjectManagerCostTotals(
             HistoricalKnownUsd: 9.50m,

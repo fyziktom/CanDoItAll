@@ -184,6 +184,67 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
     }
 
     [Fact]
+    public void Organization_assignees_are_known_external_resources_without_a_gantt_decoration()
+    {
+        var projectId = Guid.NewGuid();
+        var task = CreateTask(
+            "task-a",
+            "External delivery",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(2));
+        var surface = CreateSurface(projectId, [task], []);
+        var partyAssignments = new[]
+        {
+            CreatePartyAssignment(
+                projectId,
+                task.Id,
+                "Northwind partner",
+                ProjectPartyType.Organization,
+                ProjectPartyAssignmentRole.WorkItemAssignee),
+            CreatePartyAssignment(
+                projectId,
+                task.Id,
+                "Northwind delivery unit",
+                ProjectPartyType.OrganizationUnit,
+                ProjectPartyAssignmentRole.WorkItemAssignee)
+        };
+
+        var result = Build(surface, partyAssignments);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(Assert.Single(result.Tasks).Assignments);
+        Assert.DoesNotContain(
+            result.Issues,
+            issue => issue.Code == ProjectStructureGanttProjectionIssueCode.InvalidAssignment);
+    }
+
+    [Fact]
+    public void Unknown_assignee_party_type_is_reported()
+    {
+        var projectId = Guid.NewGuid();
+        var task = CreateTask(
+            "task-a",
+            "Unknown assignment",
+            ProjectionOrigin,
+            ProjectionOrigin.AddHours(2));
+        var surface = CreateSurface(projectId, [task], []);
+        var assignment = CreatePartyAssignment(
+            projectId,
+            task.Id,
+            "Unknown resource",
+            (ProjectPartyType)999,
+            ProjectPartyAssignmentRole.WorkItemAssignee);
+
+        var result = Build(surface, [assignment]);
+
+        Assert.True(result.IsValid);
+        var issue = Assert.Single(
+            result.Issues,
+            issue => issue.Code == ProjectStructureGanttProjectionIssueCode.InvalidAssignment);
+        Assert.Equal(new GanttTaskId(task.Id), issue.TaskId);
+    }
+
+    [Fact]
     public void Task_metrics_keep_one_week_delivery_separate_from_one_man_day_effort_and_cost()
     {
         var projectId = Guid.NewGuid();

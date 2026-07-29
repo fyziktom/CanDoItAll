@@ -13,13 +13,6 @@
         DenseChrome="true"
         TestId="manager-summary-activity-dialog"
         OnClose="CloseAsync">
-    <HeaderActions>
-        <Button Text="Close"
-                Icon="close"
-                Size="ButtonSize.Small"
-                Variant="Variant.Outlined"
-                Click="CloseAsync" />
-    </HeaderActions>
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <Grid Gap="LayoutGap.Medium"
@@ -34,7 +27,7 @@
                                  class="cda-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-kind">
-                        <option value="@ProjectManagerActivityKind.Conversation">Conversations</option>
+                        <option value="@ProjectManagerActivityKind.Conversation">Agents</option>
                         <option value="@ProjectManagerActivityKind.Workflow">Workflows</option>
                         <option value="@ProjectManagerActivityKind.Process">Processes</option>
                     </InputSelect>
@@ -364,7 +357,7 @@
     private static string FormatActivityKind(ProjectManagerActivityKind kind)
         => kind switch
         {
-            ProjectManagerActivityKind.Conversation => "Conversation",
+            ProjectManagerActivityKind.Conversation => "Agent",
             ProjectManagerActivityKind.Workflow => "Workflow",
             ProjectManagerActivityKind.Process => "Process",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported manager activity kind.")

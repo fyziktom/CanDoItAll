@@ -1,9 +1,11 @@
+using System.Collections.Concurrent;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 
@@ -14,12 +16,15 @@ public sealed class ProjectManagerSummaryQueryService(
     IAgentExecutionReportReader agentWorkspace,
     IWorkflowProjectStructureReportStore workflowProjectStructureReportStore,
     IProcessRunRecordStore processRunRecordStore,
+    ProcessDefinitionCatalogProjectionService processDefinitionCatalog,
     IClock clock)
 {
     internal const int MaximumChartDayCount =
         ProjectManagerSummarySnapshotCalculator.MaximumChartDayCount;
     private const int LatestActivityCount =
         ProjectManagerSummarySnapshotCalculator.LatestActivityCount;
+    private readonly ConcurrentDictionary<Guid, IReadOnlyDictionary<Guid, string>>
+        processDefinitionTitlesByProject = [];
 
     public async Task<ProjectManagerSummarySnapshot> LoadAsync(
         ProjectManagerSummaryScopeResolution scope,
@@ -91,35 +96,22 @@ public sealed class ProjectManagerSummaryQueryService(
                 requestedPageSize: LatestActivityCount,
                 includeAggregate: true,
                 cancellationToken);
-        var processReportTask = uncategorizedOnly
-            ? Task.FromResult(ProjectManagerProcessSummaryInput.Empty)
-            : ReadProcessReportAsync(
+        var processSummaryTask = uncategorizedOnly
+            ? Task.FromResult(ProcessSummary.Empty)
+            : ReadProcessSummaryAsync(
                 scope.ProjectIds,
                 historyFromUtc,
                 asOfUtc,
                 chartFromUtc,
                 ProjectManagerActivityStatusFilter.All,
-                includeTrend: true,
-                cancellationToken);
-        var processPageTask = uncategorizedOnly
-            ? Task.FromResult(ProcessPage.Empty)
-            : ReadProcessPageAsync(
-                scope.ProjectIds,
-                historyFromUtc,
-                asOfUtc,
-                ProjectManagerActivityStatusFilter.All,
-                cursor: null,
-                pageSize: LatestActivityCount,
                 cancellationToken);
         await Task.WhenAll(
             agentReportTask,
             workflowReportTask,
-            processReportTask,
-            processPageTask);
+            processSummaryTask);
         var agentReport = await agentReportTask;
         var workflowReport = await workflowReportTask;
-        var processReport = await processReportTask;
-        var processPage = await processPageTask;
+        var processSummary = await processSummaryTask;
 
         var snapshot = ProjectManagerSummarySnapshotCalculator.Calculate(
             new ProjectManagerSummaryCompositionInput(
@@ -131,9 +123,9 @@ public sealed class ProjectManagerSummaryQueryService(
                 plans,
                 MapAgentSummaryInput(agentReport),
                 workflowReport,
-                processReport with
+                processSummary.Report with
                 {
-                    Activities = processPage.Items
+                    Activities = processSummary.Page.Items
                 }));
         await ReportProgressAsync(
             reportProgress,
@@ -407,6 +399,33 @@ public sealed class ProjectManagerSummaryQueryService(
         return result.Build();
     }
 
+    private async Task<ProcessSummary> ReadProcessSummaryAsync(
+        IReadOnlyList<Guid> projectIds,
+        DateTimeOffset? historyFromUtc,
+        DateTimeOffset asOfUtc,
+        DateTimeOffset chartFromUtc,
+        ProjectManagerActivityStatusFilter statusFilter,
+        CancellationToken cancellationToken)
+    {
+        var report = await ReadProcessReportAsync(
+            projectIds,
+            historyFromUtc,
+            asOfUtc,
+            chartFromUtc,
+            statusFilter,
+            includeTrend: true,
+            cancellationToken);
+        var page = await ReadProcessPageAsync(
+            projectIds,
+            historyFromUtc,
+            asOfUtc,
+            statusFilter,
+            cursor: null,
+            pageSize: LatestActivityCount,
+            cancellationToken);
+        return new ProcessSummary(report, page);
+    }
+
     private async Task<ProcessPage> ReadProcessPageAsync(
         IReadOnlyList<Guid> projectIds,
         DateTimeOffset? historyFromUtc,
@@ -452,9 +471,38 @@ public sealed class ProjectManagerSummaryQueryService(
                 selected[^1].Metrics.EndedAtUtc,
                 selected[^1].Identity.RunId)
             : null;
+        var definitionTitles = selected.Length == 0
+            ? EmptyProcessDefinitionTitles
+            : await GetProcessDefinitionTitlesAsync(
+                projectIds[0],
+                cancellationToken);
         return new ProcessPage(
-            selected.Select(MapProcessActivity).ToArray(),
+            selected
+                .Select(record => MapProcessActivity(record, definitionTitles))
+                .ToArray(),
             nextCursor);
+    }
+
+    private static IReadOnlyDictionary<Guid, string> EmptyProcessDefinitionTitles { get; } =
+        new Dictionary<Guid, string>();
+
+    private async Task<IReadOnlyDictionary<Guid, string>> GetProcessDefinitionTitlesAsync(
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        if (processDefinitionTitlesByProject.TryGetValue(projectId, out var cachedTitles))
+        {
+            return cachedTitles;
+        }
+
+        var definitions = await processDefinitionCatalog.GetCompleteCatalogItemsAsync(
+            ProcessWorkspaceShellScope.ForProject(projectId),
+            cancellationToken: cancellationToken);
+        var loadedTitles = definitions.ToDictionary(
+            definition =>
+                ProcessDefinitionCatalogProjectionService.CreateDefinitionId(definition.Key).Value,
+            static definition => definition.Name);
+        return processDefinitionTitlesByProject.GetOrAdd(projectId, loadedTitles);
     }
 
     private static ProjectManagerAgentSummaryInput MapAgentSummaryInput(
@@ -606,12 +654,17 @@ public sealed class ProjectManagerSummaryQueryService(
             ]);
     }
 
-    private static ProjectManagerActivity MapProcessActivity(ProcessRunRecordSummary run)
+    private static ProjectManagerActivity MapProcessActivity(
+        ProcessRunRecordSummary run,
+        IReadOnlyDictionary<Guid, string> definitionTitles)
     {
         var definitionId = run.Identity.DefinitionId?.Value;
-        var title = definitionId.HasValue
-            ? $"Process {definitionId.Value:D}"
-            : $"Process run {run.Identity.RunId.Value:D}";
+        var title = definitionId.HasValue &&
+                    definitionTitles.TryGetValue(definitionId.Value, out var definitionTitle)
+            ? $"{definitionTitle} run"
+            : definitionId.HasValue
+                ? $"Process {definitionId.Value:D}"
+                : $"Process run {run.Identity.RunId.Value:D}";
         var hasUnknownCost = run.FactsStatus != ProcessRunFactsStatus.Completed ||
             run.CompletenessWarnings.Contains(ProcessRunRecordWarningCode.MissingPricing);
         return new ProjectManagerActivity(
@@ -970,5 +1023,14 @@ public sealed class ProjectManagerSummaryQueryService(
         ProcessRunRecordCursor? NextCursor)
     {
         public static ProcessPage Empty { get; } = new([], null);
+    }
+
+    private sealed record ProcessSummary(
+        ProjectManagerProcessSummaryInput Report,
+        ProcessPage Page)
+    {
+        public static ProcessSummary Empty { get; } = new(
+            ProjectManagerProcessSummaryInput.Empty,
+            ProcessPage.Empty);
     }
 }

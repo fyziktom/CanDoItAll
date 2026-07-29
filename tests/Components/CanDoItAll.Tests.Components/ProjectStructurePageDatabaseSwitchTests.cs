@@ -154,6 +154,20 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             Assert.Empty(cut.FindAll("[data-testid='manager-activity-loading']"));
             Assert.NotNull(cut.Find("[data-testid='manager-activity-previous']"));
             Assert.NotNull(cut.Find("[data-testid='manager-activity-next']"));
+            var activityKind = cut.Find("[data-testid='manager-activity-kind']");
+            Assert.Contains("Agents", activityKind.TextContent, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "Conversations",
+                activityKind.TextContent,
+                StringComparison.Ordinal);
+            Assert.Single(
+                cut.FindAll("button"),
+                button =>
+                    string.Equals(
+                        button.GetAttribute("aria-label"),
+                        "Close",
+                        StringComparison.Ordinal) ||
+                    button.TextContent.Contains("Close", StringComparison.Ordinal));
         });
     }
 

@@ -6,9 +6,10 @@
 @inject ProjectManagerSummaryStateStore StateStore
 @inject ILogger<ProjectManagerSummaryPanel> Logger
 
+<section class="project-manager-summary-shell"
+         data-testid="project-manager-summary">
 <Stack GapScale="LayoutGap.Large"
-       Class="project-manager-summary"
-       data-testid="project-manager-summary">
+       Class="project-manager-summary">
     <SurfaceCard Soft="true">
         <Stack GapScale="LayoutGap.Medium">
             <Cluster JustifyContent="JustifyContent.SpaceBetween"
@@ -170,71 +171,75 @@
         </Grid>
 
         <Grid Gap="LayoutGap.Large"
-              ColumnTemplateXl="minmax(20rem,0.85fr) minmax(0,1.15fr)">
-            <Stack GapScale="LayoutGap.Medium">
+              ColumnTemplateXl="minmax(17rem,0.55fr) minmax(0,1.45fr)"
+              AlignItems="AlignItems.Stretch"
+              Class="project-manager-summary__overview">
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="project-manager-summary__cost-chart">
                 <CdaChart Title="Cost ratio"
                           Description="@CostDistributionDescription"
                           Series="@CostDistributionSeries"
                           Options="@CostDistributionOptions"
-                          Height="320"
+                          Height="260"
                           EmptyText="No known USD cost is available for this scope." />
             </Stack>
-            <Stack GapScale="LayoutGap.Medium">
-                <CdaChart Title="Expense trend"
-                          Description="Known historical, estimated historical, and remaining planned USD cost by day."
-                          Series="@ExpenseSeries"
-                          Options="@ExpenseOptions"
-                          Height="320"
-                          EmptyText="No dated expense points are available for this scope." />
-            </Stack>
+            <SurfaceCard Soft="true"
+                         Class="project-manager-summary__latest">
+                <Stack GapScale="LayoutGap.Medium">
+                    <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                             AlignItems="AlignItems.Center"
+                             Gap="LayoutGap.Medium"
+                             Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Latest activity" />
+                            <TextBlock Value="The five latest direct agent runs, standalone workflows, and root processes." />
+                        </Stack>
+                        <Button Text="Open all activity"
+                                Icon="open_in_full"
+                                Variant="Variant.Outlined"
+                                Click="OpenActivityDialog"
+                                data-testid="manager-summary-open-activity" />
+                    </Cluster>
+
+                    @if (snapshot.LatestActivities.Count == 0)
+                    {
+                        <EmptyState Eyebrow="Activity"
+                                    Title="No matching activity"
+                                    Description="No project-attributed activity was recorded in this window." />
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Tiny">
+                            @foreach (var activity in snapshot.LatestActivities)
+                            {
+                                <SelectionListItem Title="@activity.Title"
+                                                   Meta="@FormatActivityMeta(activity)"
+                                                   Dense="true"
+                                                   Class="project-manager-summary__activity">
+                                    <Status>
+                                        <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                            <StatusBadge Tone="@ResolveActivityTone(activity.Status)"
+                                                         Text="@FormatActivityStatus(activity.Status)" />
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@FormatActivityKind(activity.Kind)" />
+                                        </Cluster>
+                                    </Status>
+                                </SelectionListItem>
+                            }
+                        </Stack>
+                    }
+                </Stack>
+            </SurfaceCard>
         </Grid>
 
-        <SurfaceCard Soft="true">
-            <Stack GapScale="LayoutGap.Medium">
-                <Cluster JustifyContent="JustifyContent.SpaceBetween"
-                         AlignItems="AlignItems.Center"
-                         Gap="LayoutGap.Medium"
-                         Wrap="FlexWrap.Wrap">
-                    <Stack GapScale="LayoutGap.Tiny">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Latest activity" />
-                        <TextBlock Value="The five latest direct conversations, standalone workflows, and root processes." />
-                    </Stack>
-                    <Button Text="Open all activity"
-                            Icon="open_in_full"
-                            Variant="Variant.Outlined"
-                            Click="OpenActivityDialog"
-                            data-testid="manager-summary-open-activity" />
-                </Cluster>
-
-                @if (snapshot.LatestActivities.Count == 0)
-                {
-                    <EmptyState Eyebrow="Activity"
-                                Title="No matching activity"
-                                Description="No project-attributed activity was recorded in this window." />
-                }
-                else
-                {
-                    <Stack GapScale="LayoutGap.Tiny">
-                        @foreach (var activity in snapshot.LatestActivities)
-                        {
-                            <SelectionListItem Title="@activity.Title"
-                                               Meta="@FormatActivityMeta(activity)"
-                                               Dense="true"
-                                               Class="project-manager-summary__activity">
-                                <Status>
-                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
-                                        <StatusBadge Tone="@ResolveActivityTone(activity.Status)"
-                                                     Text="@FormatActivityStatus(activity.Status)" />
-                                        <StatusBadge Tone="neutral"
-                                                     Text="@FormatActivityKind(activity.Kind)" />
-                                    </Cluster>
-                                </Status>
-                            </SelectionListItem>
-                        }
-                    </Stack>
-                }
-            </Stack>
-        </SurfaceCard>
+        <Stack GapScale="LayoutGap.Medium">
+            <CdaChart Title="Expense trend"
+                      Description="Known historical, estimated historical, and remaining planned USD cost across the selected range."
+                      Series="@ExpenseSeries"
+                      Options="@ExpenseOptions"
+                      Height="320"
+                      EmptyText="No dated expense points are available for this scope." />
+        </Stack>
 
         @if (snapshot.OtherCurrencyFutureCosts.Count > 0)
         {
@@ -258,6 +263,7 @@
         }
     }
 </Stack>
+</section>
 
 @code {
     private static readonly ProjectManagerSummaryTimeRange[] TimeRanges =
@@ -283,21 +289,6 @@
         TooltipPrecision = 4,
         LegendPosition = CdaChartLegendPosition.Bottom,
         Palette = CdaChartPalette.Energetic
-    };
-
-    private static readonly CdaChartOptions ExpenseOptions = new()
-    {
-        Type = CdaChartType.Line,
-        XAxisType = CdaChartAxisType.DateTime,
-        Unit = "USD",
-        YAxisTitle = "USD",
-        ShowToolbar = false,
-        EnableZoom = false,
-        ShowLegend = true,
-        ValuePrecision = 4,
-        TooltipPrecision = 4,
-        LegendPosition = CdaChartLegendPosition.Bottom,
-        Palette = CdaChartPalette.Calm
     };
 
     private CancellationTokenSource? loadCancellation;
@@ -331,6 +322,9 @@
     }
 
     private ProjectManagerSummaryTimeRange TimeRange => State.Options.TimeRange;
+
+    private CdaChartOptions ExpenseOptions
+        => ProjectManagerSummaryChartOptions.ResolveExpenseOptions(TimeRange);
 
     private bool HasPendingOptionChanges => State.Snapshot?.Options != State.Options;
 
@@ -683,7 +677,7 @@
     private static string FormatActivityKind(ProjectManagerActivityKind kind)
         => kind switch
         {
-            ProjectManagerActivityKind.Conversation => "Conversation",
+            ProjectManagerActivityKind.Conversation => "Agent",
             ProjectManagerActivityKind.Workflow => "Workflow",
             ProjectManagerActivityKind.Process => "Process",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported manager activity kind.")
