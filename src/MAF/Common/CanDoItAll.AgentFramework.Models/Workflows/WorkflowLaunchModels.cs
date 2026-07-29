@@ -181,12 +181,12 @@ public readonly record struct WorkflowProjectStructureNodeId
 
 public enum WorkflowLaunchOriginKind
 {
-    Api,
-    Preview,
-    SchedulerPlanRun,
-    ProjectStructureNode,
-    AgentRuntimeInvocation,
-    ProcessAssignment
+    Api = 0,
+    Preview = 1,
+    SchedulerPlanRun = 2,
+    ProjectStructureNode = 3,
+    AgentRuntimeInvocation = 4,
+    ProcessAssignment = 5
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$origin")]

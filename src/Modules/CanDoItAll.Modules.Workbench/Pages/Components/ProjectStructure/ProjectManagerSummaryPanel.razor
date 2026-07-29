@@ -1,0 +1,726 @@
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject ProjectManagerSummaryScopeResolver ScopeResolver
+@inject ProjectManagerSummaryQueryService SummaryQueryService
+@inject ProjectManagerSummaryStateStore StateStore
+@inject ILogger<ProjectManagerSummaryPanel> Logger
+
+<Stack GapScale="LayoutGap.Large"
+       Class="project-manager-summary"
+       data-testid="project-manager-summary">
+    <SurfaceCard Soft="true">
+        <Stack GapScale="LayoutGap.Medium">
+            <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                     AlignItems="AlignItems.Start"
+                     Wrap="FlexWrap.Wrap"
+                     Gap="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager Summary" />
+                    <TextBlock Value="Choose the reporting scope first. No report data loads until you request it." />
+                </Stack>
+                @if (State.Snapshot is { } loadedSnapshot)
+                {
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="success" Text="Loaded" />
+                        <StatusBadge Tone="neutral" Text="@($"As of {loadedSnapshot.GeneratedAtUtc.LocalDateTime:g}")" />
+                        @if (HasPendingOptionChanges)
+                        {
+                            <StatusBadge Tone="warning" Text="Options changed" />
+                        }
+                    </Cluster>
+                }
+            </Cluster>
+
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnTemplateXl="minmax(14rem,0.8fr) minmax(16rem,1fr) minmax(0,1.5fr) auto"
+                  AlignItems="AlignItems.End">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Caption" Value="Cost view" />
+                    <InputSelect TValue="ProjectManagerSummaryContentMode"
+                                 @bind-Value="ContentMode"
+                                 class="cda-input"
+                                 disabled="@isLoading"
+                                 data-testid="manager-summary-content-mode">
+                        <option value="@ProjectManagerSummaryContentMode.HistoryOnly">History only</option>
+                        <option value="@ProjectManagerSummaryContentMode.HistoryAndFuture">History + remaining plan</option>
+                    </InputSelect>
+                </Stack>
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Caption" Value="Project scope" />
+                    <InputSelect TValue="ProjectManagerSummaryScope"
+                                 @bind-Value="Scope"
+                                 class="cda-input"
+                                 disabled="@isLoading"
+                                 data-testid="manager-summary-project-scope">
+                        <option value="@ProjectManagerSummaryScope.CurrentProject">This project</option>
+                        <option value="@ProjectManagerSummaryScope.ProjectAndDescendants">Project + all subprojects</option>
+                        <option value="@ProjectManagerSummaryScope.UncategorizedAgentActivity">Uncategorized agent activity</option>
+                    </InputSelect>
+                </Stack>
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Caption" Value="History window" />
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap" data-testid="manager-summary-time-ranges">
+                        @foreach (var range in TimeRanges)
+                        {
+                            <Button Text="@FormatTimeRange(range)"
+                                    Size="ButtonSize.Small"
+                                    Variant="@(TimeRange == range ? Variant.Filled : Variant.Outlined)"
+                                    Disabled="@isLoading"
+                                    Click="@(() => SetTimeRange(range))"
+                                    data-testid="@($"manager-summary-range-{range.ToString().ToLowerInvariant()}")" />
+                        }
+                    </Cluster>
+                </Stack>
+                <Button Text="Load summary"
+                        Icon="refresh"
+                        IsBusy="@isLoading"
+                        Disabled="@isLoading"
+                        Click="LoadAsync"
+                        data-testid="manager-summary-load" />
+            </Grid>
+        </Stack>
+    </SurfaceCard>
+
+    @if (pendingLargeScope is { } largeScope)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               Variant="Variant.Outlined"
+               data-testid="manager-summary-large-scope-warning">
+            <Stack GapScale="LayoutGap.Small">
+                <TextBlock Value="@($"This scope contains {largeScope.ProjectIds.Count:N0} projects ({largeScope.DescendantCount:N0} subprojects). The report can take longer and will query every confirmed project.")" />
+                @if (largeScope.PlanPreflight is { } planPreflight)
+                {
+                    <TextBlock Value="@($"Plan payload: {planPreflight.PlanNodeCount:N0} nodes and {planPreflight.PlanLinkCount:N0} links.")" />
+                    @foreach (var warning in planPreflight.Warnings)
+                    {
+                        <TextBlock Value="@warning" />
+                    }
+                }
+                <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                    <Button Text="Cancel"
+                            Variant="Variant.Text"
+                            Click="CancelLargeScope" />
+                    <Button Text="Continue and load"
+                            Icon="play_arrow"
+                            Click="ContinueLargeScopeAsync"
+                            data-testid="manager-summary-large-scope-continue" />
+                </Cluster>
+            </Stack>
+        </Alert>
+    }
+
+    @if (isLoading)
+    {
+        <Stack data-testid="manager-summary-loading">
+            <LoadingState Eyebrow="@ProgressEyebrow"
+                          Title="@ProgressTitle"
+                          Description="@ProgressDescription" />
+        </Stack>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               Variant="Variant.Outlined"
+               data-testid="manager-summary-error">
+            <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                     AlignItems="AlignItems.Center"
+                     Gap="LayoutGap.Medium"
+                     Wrap="FlexWrap.Wrap">
+                <TextBlock Value="@loadError" />
+                <Button Text="Retry"
+                        Icon="refresh"
+                        Variant="Variant.Outlined"
+                        Disabled="@isLoading"
+                        Click="LoadAsync" />
+            </Cluster>
+        </Alert>
+    }
+
+    @if (!isLoading && State.Snapshot is null && pendingLargeScope is null)
+    {
+        <Stack data-testid="manager-summary-empty">
+            <EmptyState Eyebrow="Manager Summary"
+                        Title="The report is ready when you are"
+                        Description="Select the cost view, project scope, and history window, then load the bounded reporting projections." />
+        </Stack>
+    }
+    else if (State.Snapshot is { } snapshot)
+    {
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsXl="4"
+              data-testid="manager-summary-metrics">
+            <MetricCard Label="Tasks"
+                        Value="@snapshot.Schedule.TaskCount.ToString("N0", CultureInfo.InvariantCulture)" />
+            <MetricCard Label="Start"
+                        Value="@FormatDate(snapshot.Schedule.StartUtc)" />
+            <MetricCard Label="End"
+                        Value="@FormatDate(snapshot.Schedule.EndUtc)" />
+            <MetricCard Label="Project length"
+                        Value="@FormatHours(snapshot.Schedule.DeliveryLeadTimeHours)" />
+            <MetricCard Label="Historical known"
+                        Value="@FormatUsd(snapshot.Costs.HistoricalKnownUsd)" />
+            <MetricCard Label="Historical estimated"
+                        Value="@FormatUsd(snapshot.Costs.HistoricalEstimatedUsd)" />
+            <MetricCard Label="Future plan remaining"
+                        Value="@FormatUsd(snapshot.Costs.FuturePlannedUsd)" />
+            <MetricCard Label="Known + future"
+                        Value="@FormatUsd(snapshot.Costs.CommittedUsd)" />
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnTemplateXl="minmax(20rem,0.85fr) minmax(0,1.15fr)">
+            <Stack GapScale="LayoutGap.Medium">
+                <CdaChart Title="Cost ratio"
+                          Description="@CostDistributionDescription"
+                          Series="@CostDistributionSeries"
+                          Options="@CostDistributionOptions"
+                          Height="320"
+                          EmptyText="No known USD cost is available for this scope." />
+            </Stack>
+            <Stack GapScale="LayoutGap.Medium">
+                <CdaChart Title="Expense trend"
+                          Description="Known historical, estimated historical, and remaining planned USD cost by day."
+                          Series="@ExpenseSeries"
+                          Options="@ExpenseOptions"
+                          Height="320"
+                          EmptyText="No dated expense points are available for this scope." />
+            </Stack>
+        </Grid>
+
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Center"
+                         Gap="LayoutGap.Medium"
+                         Wrap="FlexWrap.Wrap">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Latest activity" />
+                        <TextBlock Value="The five latest direct conversations, standalone workflows, and root processes." />
+                    </Stack>
+                    <Button Text="Open all activity"
+                            Icon="open_in_full"
+                            Variant="Variant.Outlined"
+                            Click="OpenActivityDialog"
+                            data-testid="manager-summary-open-activity" />
+                </Cluster>
+
+                @if (snapshot.LatestActivities.Count == 0)
+                {
+                    <EmptyState Eyebrow="Activity"
+                                Title="No matching activity"
+                                Description="No project-attributed activity was recorded in this window." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Tiny">
+                        @foreach (var activity in snapshot.LatestActivities)
+                        {
+                            <SelectionListItem Title="@activity.Title"
+                                               Meta="@FormatActivityMeta(activity)"
+                                               Dense="true"
+                                               Class="project-manager-summary__activity">
+                                <Status>
+                                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="@ResolveActivityTone(activity.Status)"
+                                                     Text="@FormatActivityStatus(activity.Status)" />
+                                        <StatusBadge Tone="neutral"
+                                                     Text="@FormatActivityKind(activity.Kind)" />
+                                    </Cluster>
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </Stack>
+                }
+            </Stack>
+        </SurfaceCard>
+
+        @if (snapshot.OtherCurrencyFutureCosts.Count > 0)
+        {
+            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                <TextBlock Value="@FormatOtherCurrencyCosts(snapshot.OtherCurrencyFutureCosts)" />
+            </Alert>
+        }
+
+        @foreach (var warning in snapshot.Warnings)
+        {
+            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
+                <TextBlock Value="@warning" />
+            </Alert>
+        }
+
+        @if (activityDialogOpen)
+        {
+            <ProjectManagerActivityDialog Summary="@snapshot"
+                                          IsOpen="true"
+                                          IsOpenChanged="HandleActivityDialogOpenChanged" />
+        }
+    }
+</Stack>
+
+@code {
+    private static readonly ProjectManagerSummaryTimeRange[] TimeRanges =
+    [
+        ProjectManagerSummaryTimeRange.Day,
+        ProjectManagerSummaryTimeRange.Week,
+        ProjectManagerSummaryTimeRange.Month,
+        ProjectManagerSummaryTimeRange.Quarter,
+        ProjectManagerSummaryTimeRange.Year,
+        ProjectManagerSummaryTimeRange.All
+    ];
+
+    private static readonly CdaChartOptions CostDistributionOptions = new()
+    {
+        Type = CdaChartType.Donut,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "USD",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = true,
+        ShowDataLabels = true,
+        ValuePrecision = 4,
+        TooltipPrecision = 4,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = CdaChartPalette.Energetic
+    };
+
+    private static readonly CdaChartOptions ExpenseOptions = new()
+    {
+        Type = CdaChartType.Line,
+        XAxisType = CdaChartAxisType.DateTime,
+        Unit = "USD",
+        YAxisTitle = "USD",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = true,
+        ValuePrecision = 4,
+        TooltipPrecision = 4,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = CdaChartPalette.Calm
+    };
+
+    private CancellationTokenSource? loadCancellation;
+    private ProjectManagerSummaryViewState? retainedState;
+    private ProjectManagerSummaryScopeResolution? pendingLargeScope;
+    private ProjectManagerSummaryLoadProgress? progress;
+    private ProjectManagerSummarySnapshot? chartSeriesSnapshot;
+    private IReadOnlyList<CdaChartSeries> cachedCostDistributionSeries = [];
+    private IReadOnlyList<CdaChartSeries> cachedExpenseSeries = [];
+    private Guid appliedProjectId;
+    private bool isLoading;
+    private bool activityDialogOpen;
+    private string loadError = string.Empty;
+
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    private ProjectManagerSummaryViewState State
+        => retainedState ?? throw new InvalidOperationException("Manager summary state has not been initialized.");
+
+    private ProjectManagerSummaryContentMode ContentMode
+    {
+        get => State.Options.ContentMode;
+        set => UpdateOptions(State.Options with { ContentMode = value });
+    }
+
+    private ProjectManagerSummaryScope Scope
+    {
+        get => State.Options.Scope;
+        set => UpdateOptions(State.Options with { Scope = value });
+    }
+
+    private ProjectManagerSummaryTimeRange TimeRange => State.Options.TimeRange;
+
+    private bool HasPendingOptionChanges => State.Snapshot?.Options != State.Options;
+
+    private string ProgressEyebrow
+        => progress is null
+            ? "Manager Summary"
+            : $"Manager Summary · {progress.CompletedStageCount}/{progress.TotalStageCount}";
+
+    private string ProgressTitle => progress?.Stage ?? "Preparing report";
+
+    private string ProgressDescription => progress?.Message ?? "Resolving the selected project scope.";
+
+    private string CostDistributionDescription
+        => State.Snapshot?.Options.ContentMode == ProjectManagerSummaryContentMode.HistoryAndFuture
+            ? "Known historical plus remaining planned USD cost. Historical estimates stay separate."
+            : "Known historical USD cost. Unknown pricing and estimates stay separate.";
+
+    private IReadOnlyList<CdaChartSeries> CostDistributionSeries
+    {
+        get
+        {
+            EnsureChartSeriesCache();
+            return cachedCostDistributionSeries;
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> ExpenseSeries
+    {
+        get
+        {
+            EnsureChartSeriesCache();
+            return cachedExpenseSeries;
+        }
+    }
+
+    private void EnsureChartSeriesCache()
+    {
+        var snapshot = State.Snapshot;
+        if (ReferenceEquals(chartSeriesSnapshot, snapshot))
+        {
+            return;
+        }
+
+        chartSeriesSnapshot = snapshot;
+        cachedCostDistributionSeries = BuildCostDistributionSeries(snapshot);
+        cachedExpenseSeries = BuildExpenseSeries(snapshot);
+    }
+
+    private static IReadOnlyList<CdaChartSeries> BuildCostDistributionSeries(
+        ProjectManagerSummarySnapshot? snapshot)
+    {
+        if (snapshot is null)
+        {
+            return [];
+        }
+
+        var points = snapshot.CostBreakdown
+            .Select(cost => new
+            {
+                cost.Category,
+                Amount = snapshot.Options.ContentMode == ProjectManagerSummaryContentMode.HistoryAndFuture
+                    ? cost.CommittedUsd
+                    : cost.HistoricalKnownUsd
+            })
+            .Where(static cost => cost.Amount > 0)
+            .Select(cost => new CdaChartPoint(
+                FormatCostCategory(cost.Category),
+                cost.Amount))
+            .ToArray();
+        return points.Length == 0
+            ? []
+            :
+            [
+                new CdaChartSeries
+                {
+                    Name = "Cost",
+                    Type = CdaChartType.Donut,
+                    Points = points
+                }
+            ];
+    }
+
+    private static IReadOnlyList<CdaChartSeries> BuildExpenseSeries(
+        ProjectManagerSummarySnapshot? snapshot)
+    {
+        if (snapshot is not { ExpenseTrend.Count: > 0 })
+        {
+            return [];
+        }
+
+        var result = new List<CdaChartSeries>(3);
+        AddExpenseSeries(result, snapshot.ExpenseTrend, "Known history", "#2563eb", static point => point.HistoricalKnownUsd);
+        AddExpenseSeries(result, snapshot.ExpenseTrend, "Estimated history", "#f59e0b", static point => point.HistoricalEstimatedUsd);
+        if (snapshot.Options.ContentMode == ProjectManagerSummaryContentMode.HistoryAndFuture)
+        {
+            AddExpenseSeries(result, snapshot.ExpenseTrend, "Remaining plan estimate", "#7c3aed", static point => point.FuturePlannedUsd);
+        }
+
+        return result;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (ProjectId == appliedProjectId && retainedState is not null)
+        {
+            return;
+        }
+
+        loadCancellation?.Cancel();
+        appliedProjectId = ProjectId;
+        retainedState = StateStore.GetOrCreate(ProjectId);
+        pendingLargeScope = null;
+        progress = null;
+        loadError = string.Empty;
+        isLoading = false;
+        activityDialogOpen = false;
+    }
+
+    public void Dispose()
+    {
+        loadCancellation?.Cancel();
+        loadCancellation?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void UpdateOptions(ProjectManagerSummaryOptions options)
+    {
+        State.Options = options;
+        pendingLargeScope = null;
+        loadError = string.Empty;
+    }
+
+    private void SetTimeRange(ProjectManagerSummaryTimeRange range)
+        => UpdateOptions(State.Options with { TimeRange = range });
+
+    private async Task LoadAsync()
+    {
+        var cancellation = BeginLoad();
+        try
+        {
+            progress = new ProjectManagerSummaryLoadProgress(
+                "Resolving project scope",
+                "Checking the selected project and descendant hierarchy.",
+                0,
+                3);
+            var scopeResolution = await ScopeResolver.ResolveAsync(
+                ProjectId,
+                State.Options.Scope,
+                State.Options.ContentMode,
+                cancellation.Token);
+            if (scopeResolution.RequiresConfirmation)
+            {
+                pendingLargeScope = scopeResolution;
+                return;
+            }
+
+            await LoadResolvedScopeAsync(scopeResolution, cancellation);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            HandleLoadFailure(exception);
+        }
+        finally
+        {
+            CompleteLoad(cancellation);
+        }
+    }
+
+    private async Task ContinueLargeScopeAsync()
+    {
+        if (pendingLargeScope is not { } scopeResolution)
+        {
+            return;
+        }
+
+        var cancellation = BeginLoad();
+        pendingLargeScope = null;
+        try
+        {
+            await LoadResolvedScopeAsync(scopeResolution, cancellation);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            HandleLoadFailure(exception);
+        }
+        finally
+        {
+            CompleteLoad(cancellation);
+        }
+    }
+
+    private async Task LoadResolvedScopeAsync(
+        ProjectManagerSummaryScopeResolution scopeResolution,
+        CancellationTokenSource cancellation)
+    {
+        var snapshot = await SummaryQueryService.LoadAsync(
+            scopeResolution,
+            State.Options,
+            ReportProgressAsync,
+            cancellation.Token);
+        if (cancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        State.Snapshot = snapshot;
+        loadError = string.Empty;
+    }
+
+    private CancellationTokenSource BeginLoad()
+    {
+        var cancellation = new CancellationTokenSource();
+        var previousCancellation = Interlocked.Exchange(ref loadCancellation, cancellation);
+        previousCancellation?.Cancel();
+        pendingLargeScope = null;
+        loadError = string.Empty;
+        isLoading = true;
+        return cancellation;
+    }
+
+    private void CompleteLoad(CancellationTokenSource cancellation)
+    {
+        if (ReferenceEquals(loadCancellation, cancellation))
+        {
+            isLoading = false;
+            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+        }
+
+        cancellation.Dispose();
+    }
+
+    private ValueTask ReportProgressAsync(ProjectManagerSummaryLoadProgress nextProgress)
+    {
+        progress = nextProgress;
+        return new ValueTask(InvokeAsync(StateHasChanged));
+    }
+
+    private void HandleLoadFailure(Exception exception)
+    {
+        loadError = exception is ProjectStructureAgentException
+        {
+            StatusCode: 413,
+            ErrorCode: ProjectPlanAnalyticsErrorCodes.ScopeLimitExceeded or
+                ProjectPlanAnalyticsErrorCodes.PayloadLimitExceeded
+        }
+            ? exception.Message
+            : "Manager Summary could not be loaded. The previous successful snapshot, if any, is still shown.";
+        Logger.LogError(
+            exception,
+            "Manager summary load failed for project {ProjectId}, scope {Scope}, content mode {ContentMode}, and time range {TimeRange}.",
+            ProjectId,
+            State.Options.Scope,
+            State.Options.ContentMode,
+            State.Options.TimeRange);
+    }
+
+    private void CancelLargeScope()
+        => pendingLargeScope = null;
+
+    private void OpenActivityDialog()
+        => activityDialogOpen = true;
+
+    private void HandleActivityDialogOpenChanged(bool isOpen)
+        => activityDialogOpen = isOpen;
+
+    private static void AddExpenseSeries(
+        ICollection<CdaChartSeries> target,
+        IReadOnlyList<ProjectManagerExpensePoint> points,
+        string name,
+        string color,
+        Func<ProjectManagerExpensePoint, decimal> selectValue)
+    {
+        if (!points.Any(point => selectValue(point) > 0))
+        {
+            return;
+        }
+
+        target.Add(new CdaChartSeries
+        {
+            Name = name,
+            Type = CdaChartType.Line,
+            Color = color,
+            Points = points
+                .Select(point => new CdaChartPoint(
+                    DateTime.SpecifyKind(point.Date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc),
+                    selectValue(point)))
+                .ToArray()
+        });
+    }
+
+    private static string FormatTimeRange(ProjectManagerSummaryTimeRange range)
+        => range switch
+        {
+            ProjectManagerSummaryTimeRange.Day => "1d",
+            ProjectManagerSummaryTimeRange.Week => "1w",
+            ProjectManagerSummaryTimeRange.Month => "1m",
+            ProjectManagerSummaryTimeRange.Quarter => "1q",
+            ProjectManagerSummaryTimeRange.Year => "1y",
+            ProjectManagerSummaryTimeRange.All => "All",
+            _ => throw new ArgumentOutOfRangeException(nameof(range), range, "Unsupported manager summary time range.")
+        };
+
+    private static string FormatCostCategory(ProjectManagerCostCategory category)
+        => category switch
+        {
+            ProjectManagerCostCategory.ChatsAndAgents => "Chats · Agents",
+            ProjectManagerCostCategory.Workflows => "Workflows",
+            ProjectManagerCostCategory.Processes => "Processes",
+            ProjectManagerCostCategory.Workforce => "Workforce",
+            ProjectManagerCostCategory.External => "External",
+            ProjectManagerCostCategory.Other => "Other",
+            _ => throw new ArgumentOutOfRangeException(nameof(category), category, "Unsupported manager cost category.")
+        };
+
+    private static string FormatDate(DateTimeOffset? value)
+        => value?.LocalDateTime.ToString("d", CultureInfo.CurrentCulture) ?? "Not scheduled";
+
+    private static string FormatHours(decimal? hours)
+        => hours.HasValue
+            ? FormatDuration((long)(hours.Value * 60m * 60m * 1000m))
+            : "Not scheduled";
+
+    private static string FormatUsd(decimal value)
+        => value.ToString("C4", CultureInfo.GetCultureInfo("en-US"));
+
+    private static string FormatActivityMeta(ProjectManagerActivity activity)
+    {
+        var cost = activity.HasUnknownCost
+            ? "cost incomplete"
+            : FormatUsd(activity.KnownCostUsd);
+        return $"{activity.ActivityAtUtc.LocalDateTime:g} · {FormatDuration(activity.DurationMilliseconds)} · {cost}";
+    }
+
+    private static string FormatDuration(long durationMilliseconds)
+    {
+        var duration = TimeSpan.FromMilliseconds(Math.Max(0, durationMilliseconds));
+        return duration.TotalDays >= 1
+            ? $"{(int)duration.TotalDays}d {duration.Hours}h"
+            : duration.TotalHours >= 1
+                ? $"{(int)duration.TotalHours}h {duration.Minutes}m"
+                : $"{Math.Max(0, (int)duration.TotalMinutes)}m";
+    }
+
+    private static string FormatActivityKind(ProjectManagerActivityKind kind)
+        => kind switch
+        {
+            ProjectManagerActivityKind.Conversation => "Conversation",
+            ProjectManagerActivityKind.Workflow => "Workflow",
+            ProjectManagerActivityKind.Process => "Process",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported manager activity kind.")
+        };
+
+    private static string FormatActivityStatus(ProjectManagerActivityStatus status)
+        => status switch
+        {
+            ProjectManagerActivityStatus.Active => "Active",
+            ProjectManagerActivityStatus.Waiting => "Waiting",
+            ProjectManagerActivityStatus.Succeeded => "Succeeded",
+            ProjectManagerActivityStatus.Failed => "Failed",
+            ProjectManagerActivityStatus.Cancelled => "Cancelled",
+            ProjectManagerActivityStatus.Blocked => "Blocked",
+            ProjectManagerActivityStatus.Escalated => "Escalated",
+            ProjectManagerActivityStatus.Unknown => "Unknown",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported manager activity status.")
+        };
+
+    private static string ResolveActivityTone(ProjectManagerActivityStatus status)
+        => status switch
+        {
+            ProjectManagerActivityStatus.Succeeded => "success",
+            ProjectManagerActivityStatus.Failed => "danger",
+            ProjectManagerActivityStatus.Cancelled => "neutral",
+            ProjectManagerActivityStatus.Blocked or ProjectManagerActivityStatus.Escalated => "warning",
+            ProjectManagerActivityStatus.Active => "info",
+            ProjectManagerActivityStatus.Waiting => "accent",
+            ProjectManagerActivityStatus.Unknown => "neutral",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported manager activity status.")
+        };
+
+    private static string FormatOtherCurrencyCosts(
+        IReadOnlyList<ProjectManagerCurrencyCostTotal> costs)
+    {
+        var values = costs.Select(cost =>
+            $"{cost.FuturePlannedAmount.ToString("N2", CultureInfo.CurrentCulture)} {cost.CurrencyCode}");
+        return $"Remaining planned costs in other currencies are kept separate: {string.Join(", ", values)}.";
+    }
+}

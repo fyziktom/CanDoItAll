@@ -9996,6 +9996,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     .Select(detail => detail.Run)
                     .ToArray());
 
+        public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+            AgentExecutionReportQuery query,
+            CancellationToken cancellationToken = default) => throw Unused();
+
         public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(
             Guid executionRunId,
             CancellationToken cancellationToken = default)

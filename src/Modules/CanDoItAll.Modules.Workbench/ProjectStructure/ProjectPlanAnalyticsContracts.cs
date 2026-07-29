@@ -1,9 +1,53 @@
 namespace CanDoItAll.Modules.Workbench;
 
+public static class ProjectPlanAnalyticsPayloadPolicy
+{
+    public const int ConfirmationNodeCount = 5_000;
+    public const int ConfirmationLinkCount = 10_000;
+    public const int MaximumProjectCount = 250;
+    public const int MaximumNodeCount = 50_000;
+    public const int MaximumLinkCount = 100_000;
+}
+
+public static class ProjectPlanAnalyticsErrorCodes
+{
+    public const string ScopeLimitExceeded = "PlanSummaryScopeLimitExceeded";
+    public const string PayloadLimitExceeded = "PlanSummaryPayloadLimitExceeded";
+}
+
+public sealed record ProjectPlanAnalyticsPreflight(
+    int ProjectCount,
+    long PlanNodeCount,
+    long PlanLinkCount,
+    IReadOnlyList<string> Warnings)
+{
+    public long PayloadItemCount => PlanNodeCount + PlanLinkCount;
+
+    public bool RequiresConfirmation => Warnings.Count > 0;
+}
+
+public sealed record ProjectPlanAnalyticsLimitDetails(
+    int ProjectCount,
+    long? PlanNodeCount,
+    long? PlanLinkCount,
+    int MaximumProjectCount,
+    int MaximumNodeCount,
+    int MaximumLinkCount);
+
 public sealed record ProjectPlanSummaryQuery(
     DateTimeOffset? AsOfUtc = null,
     int TaskPreviewLimit = 20,
     decimal HoursPerManDay = ProjectTaskEstimatePolicy.DefaultHoursPerManDay);
+
+public enum ProjectPlanManagerSummaryMode
+{
+    ScheduleOnly,
+    ScheduleAndRemainingCosts
+}
+
+public sealed record ProjectPlanManagerSummaryQuery(
+    ProjectPlanManagerSummaryMode Mode,
+    DateTimeOffset? AsOfUtc = null);
 
 public enum ProjectPlanTaskState
 {
@@ -24,7 +68,8 @@ public enum ProjectPlanResourceGroup
     Workflow,
     Process,
     Unassigned,
-    Mixed
+    Mixed,
+    External
 }
 
 public sealed record ProjectPlanTaskStateSummary(
@@ -36,6 +81,18 @@ public sealed record ProjectPlanExpectedCostTotal(
     string CurrencyCode,
     decimal Amount,
     int PricedTaskCount);
+
+public sealed record ProjectPlanExpectedResourceCostTotal(
+    ProjectPlanResourceGroup Group,
+    string CurrencyCode,
+    decimal Amount,
+    int PricedTaskCount);
+
+public sealed record ProjectPlanExpectedCostTrendPoint(
+    DateOnly Date,
+    ProjectPlanResourceGroup Group,
+    string CurrencyCode,
+    decimal Amount);
 
 public sealed record ProjectPlanResourceGroupSummary(
     ProjectPlanResourceGroup Group,
@@ -65,6 +122,17 @@ public sealed record ProjectPlanScheduleSummary(
     DateTimeOffset? LatestEndUtc,
     decimal? DeliveryLeadTimeHours,
     decimal ScheduledTaskDurationHours);
+
+public sealed record ProjectPlanManagerSummary(
+    Guid ProjectId,
+    string ProjectName,
+    DateTimeOffset AsOfUtc,
+    int TotalTaskCount,
+    ProjectPlanScheduleSummary Schedule,
+    IReadOnlyList<ProjectPlanExpectedResourceCostTotal> FutureExpectedCostTotals,
+    IReadOnlyList<ProjectPlanExpectedCostTrendPoint> FutureExpectedCostTrend,
+    int UnscheduledFutureExpectedCostTaskCount,
+    IReadOnlyList<string> Warnings);
 
 public sealed record ProjectPlanDataCompleteness(
     int MissingScheduleTaskCount,
@@ -101,6 +169,12 @@ public sealed record ProjectPlanSummary
     public required decimal? EffortWeightedProgressPercent { get; init; }
 
     public required IReadOnlyList<ProjectPlanExpectedCostTotal> ExpectedCostTotals { get; init; }
+
+    public required IReadOnlyList<ProjectPlanExpectedResourceCostTotal> FutureExpectedCostTotals { get; init; }
+
+    public required IReadOnlyList<ProjectPlanExpectedCostTrendPoint> FutureExpectedCostTrend { get; init; }
+
+    public required int UnscheduledFutureExpectedCostTaskCount { get; init; }
 
     public required IReadOnlyList<ProjectPlanResourceGroupSummary> ResourceGroups { get; init; }
 

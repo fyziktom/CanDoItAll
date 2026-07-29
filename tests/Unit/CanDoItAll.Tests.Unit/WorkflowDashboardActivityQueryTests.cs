@@ -144,6 +144,65 @@ public sealed class WorkflowDashboardActivityQueryTests
     }
 
     [Fact]
+    public async Task Persistent_run_page_filters_project_state_and_time_without_deserializing_unrelated_origins()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(AgentFrameworkModuleAssemblyMarker).Assembly]);
+        var options = AppDbContextTestOptionsBuilder.Create()
+            .UseInMemoryDatabase($"workflow-manager-report-{Guid.NewGuid():N}")
+            .Options;
+        var factory = new TrackingAppDbContextFactory(options);
+        var projectId = Guid.NewGuid();
+        var directMatch = CreateRun(30, WorkflowRunState.Completed, Now) with
+        {
+            Origin = CreateProjectOrigin(projectId, "matching-node")
+        };
+        var failedSameProject = CreateRun(31, WorkflowRunState.Failed, Now.AddMinutes(-1)) with
+        {
+            Origin = CreateProjectOrigin(projectId, "failed-node")
+        };
+        var otherProject = CreateRun(32, WorkflowRunState.Completed, Now.AddMinutes(-2)) with
+        {
+            Origin = CreateProjectOrigin(Guid.NewGuid(), "other-project-node")
+        };
+        var processOwned = CreateRun(33, WorkflowRunState.Completed, Now.AddMinutes(-3)) with
+        {
+            Origin = new WorkflowLaunchOrigin.ProcessAssignment(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                new WorkflowLaunchCorrelationId(Guid.NewGuid()))
+        };
+        var tooOld = CreateRun(34, WorkflowRunState.Completed, Now.AddDays(-10)) with
+        {
+            Origin = CreateProjectOrigin(projectId, "old-node")
+        };
+        await using (var dbContext = factory.CreateDbContext())
+        {
+            dbContext.Set<WorkflowRunRecordEntity>().AddRange(
+                WorkflowRunRecordEntity.FromSnapshot(directMatch),
+                WorkflowRunRecordEntity.FromSnapshot(failedSameProject),
+                WorkflowRunRecordEntity.FromSnapshot(otherProject),
+                WorkflowRunRecordEntity.FromSnapshot(processOwned),
+                WorkflowRunRecordEntity.FromSnapshot(tooOld));
+            await dbContext.SaveChangesAsync();
+        }
+
+        factory.ResetTrackedEntityCount();
+        var store = new PersistentWorkflowRunStore(factory);
+        var result = await store.ListRunPageAsync(
+            new WorkflowRunPageRequest(PageSize: 10)
+            {
+                ProjectIds = [projectId],
+                States = [WorkflowRunState.Completed],
+                UpdatedFromUtc = Now.AddDays(-1),
+                UpdatedToUtc = Now.AddMinutes(1)
+            });
+
+        Assert.Equal(directMatch.RunId, Assert.Single(result.Items).RunId);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal(0, factory.TrackedEntityCount);
+    }
+
+    [Fact]
     public async Task Persistent_catalog_lookup_returns_only_requested_write_heads_without_tracking()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
@@ -298,6 +357,9 @@ public sealed class WorkflowDashboardActivityQueryTests
         AssertAlias<IWorkflowDashboardActivityStore, PersistentWorkflowRunStore>(
             moduleServices,
             ServiceLifetime.Scoped);
+        AssertAlias<IWorkflowProjectStructureReportStore, PersistentWorkflowRunStore>(
+            moduleServices,
+            ServiceLifetime.Scoped);
     }
 
     private static WorkflowRunSnapshot CreateRun(
@@ -314,6 +376,16 @@ public sealed class WorkflowDashboardActivityQueryTests
             $"Run {sequence}",
             updatedAtUtc.AddMinutes(-1),
             updatedAtUtc);
+
+    private static WorkflowLaunchOrigin.ProjectStructureNode CreateProjectOrigin(
+        Guid projectId,
+        string nodeId)
+        => new(
+            projectId,
+            new WorkflowProjectStructureNodeId(nodeId),
+            new WorkflowLaunchActor(WorkflowLaunchActorKind.Agent, "manager-summary-test-agent"),
+            new WorkflowLaunchSessionId("manager-summary-test-session"),
+            new WorkflowLaunchCorrelationId(Guid.NewGuid()));
 
     private static WorkflowDashboardActivityRun CreateDashboardRun(
         int sequence,

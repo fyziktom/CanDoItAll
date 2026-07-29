@@ -197,6 +197,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<CurrentProfileAgentFrameworkWorkspaceService>();
         services.AddScoped<IAgentFrameworkWorkspaceService>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
+        services.AddScoped<IAgentExecutionReportReader>(serviceProvider =>
+            serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentFrameworkWorkspaceActivityExecutionService>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentChatAttachmentStagingService, AgentChatAttachmentStagingService>();
@@ -247,6 +249,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowDashboardActivityStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowProjectStructureReportStore>(
+            serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());

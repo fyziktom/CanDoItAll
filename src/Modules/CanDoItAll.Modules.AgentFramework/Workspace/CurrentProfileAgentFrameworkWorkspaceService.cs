@@ -603,6 +603,13 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().ListExecutionRunsAsync(query, cancellationToken);
     }
 
+    public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+        AgentExecutionReportQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        return ResolveService().QueryExecutionReportAsync(query, cancellationToken);
+    }
+
     public Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default)
     {
         return ResolveService().GetExecutionRunDetailAsync(executionRunId, cancellationToken);

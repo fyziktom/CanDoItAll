@@ -52,7 +52,6 @@ public sealed partial class AgentFrameworkWorkspaceService :
         ArgumentNullException.ThrowIfNull(activityWorkspaceIdentity);
         ArgumentNullException.ThrowIfNull(executionPreparationCache);
         ArgumentNullException.ThrowIfNull(executionProfileGenerationSource);
-
         this.store = store;
         this.logger = logger;
         this.activityCoordinator = activityCoordinator;
@@ -101,6 +100,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
             resolvedProviderRuntimeProfileSource);
 
         executionService = new AgentFrameworkWorkspaceExecutionService(
+            store,
             store,
             runtime,
             resolvedExecutionGovernanceBridge,

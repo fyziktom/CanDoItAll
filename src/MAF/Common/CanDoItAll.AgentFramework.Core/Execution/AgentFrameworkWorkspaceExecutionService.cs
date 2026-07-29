@@ -5,6 +5,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     ISandboxWorkspaceStore store,
+    IAgentExecutionReportReader executionReportReader,
     IAgentRuntime runtime,
     IAgentExecutionGovernanceBridge executionGovernanceBridge,
     IAgentExecutionEventSink executionEventSink,

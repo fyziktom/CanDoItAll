@@ -239,6 +239,11 @@ public sealed class DashboardQueryServicesTests
 
         public int LoadUsageProjectionCallCount { get; private set; }
 
+        public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+            AgentExecutionReportQuery query,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
         {
             LoadUsageProjectionCallCount++;

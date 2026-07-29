@@ -314,6 +314,26 @@ public interface IProjectPartyIntegrationBridge
         Guid projectId,
         CancellationToken cancellationToken = default);
 
+    async Task<IReadOnlyList<ProjectWorkItemAssigneeBinding>> ListWorkItemAssigneeBindingsAsync(
+        IReadOnlyCollection<Guid> projectIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(projectIds);
+        var distinctProjectIds = projectIds.Distinct().ToArray();
+        if (distinctProjectIds.Any(static projectId => projectId == Guid.Empty))
+        {
+            throw new ArgumentException(
+                "Project identifiers cannot contain an empty value.",
+                nameof(projectIds));
+        }
+
+        var assignmentTasks = distinctProjectIds
+            .Select(projectId => ListWorkItemAssigneeBindingsAsync(projectId, cancellationToken))
+            .ToArray();
+        var assignments = await Task.WhenAll(assignmentTasks);
+        return assignments.SelectMany(static items => items).ToArray();
+    }
+
     Task<Result<Guid>> SaveAssignmentAsync(
         ProjectPartyAssignmentUpsertRequest request,
         CancellationToken cancellationToken = default);

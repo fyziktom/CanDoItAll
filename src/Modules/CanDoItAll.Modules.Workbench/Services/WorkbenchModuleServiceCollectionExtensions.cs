@@ -56,6 +56,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureAnalyticsService>();
         services.AddSingleton<ProjectPlanSummaryCalculator>();
         services.AddScoped<ProjectPlanAnalyticsQueryService>();
+        services.AddScoped<ProjectManagerSummaryScopeResolver>();
+        services.AddScoped<ProjectManagerSummaryQueryService>();
+        services.AddScoped<ProjectManagerSummaryStateStore>();
         services.AddScoped<ProjectStructureAgentAuthorizationService>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();

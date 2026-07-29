@@ -195,6 +195,15 @@ public sealed record ChatSessionSummaryRecord(
     int PendingApprovalCount,
     bool AutoApprovePendingToolCalls);
 
+public enum AgentExecutionProjectAttributionSource
+{
+    None = 0,
+    RecordedScope = 1,
+    LegacySource = 2,
+    InvalidRecordedScope = 3,
+    InvalidLegacySource = 4
+}
+
 public sealed record ChatRunSummaryRecord(
     Guid ExecutionRunId,
     Guid AgentId,
@@ -203,7 +212,279 @@ public sealed record ChatRunSummaryRecord(
     ExecutionState State,
     string Phase,
     string Message,
-    RunOutcome? Outcome);
+    RunOutcome? Outcome)
+{
+    private IReadOnlyList<string> workflowRunIds = [];
+    private IReadOnlyList<Guid> correlatedWorkflowRunIds = [];
+
+    public string Title { get; init; } = string.Empty;
+
+    public string Summary { get; init; } = string.Empty;
+
+    public string SourceKind { get; init; } = string.Empty;
+
+    public string SourceId { get; init; } = string.Empty;
+
+    public Guid? ProjectId { get; init; }
+
+    public AgentExecutionProjectAttributionSource ProjectAttributionSource { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyList<string> Tags => string.IsNullOrWhiteSpace(SourceKind)
+        ? []
+        : [SourceKind];
+
+    public string ProcessRunId { get; init; } = string.Empty;
+
+    public Guid? CorrelatedProcessRunId { get; init; }
+
+    public IReadOnlyList<string> WorkflowRunIds
+    {
+        get => workflowRunIds;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            workflowRunIds = value.Count == 0
+                ? []
+                : value.ToArray();
+        }
+    }
+
+    [JsonIgnore]
+    public string WorkflowRunId => WorkflowRunIds.FirstOrDefault() ?? string.Empty;
+
+    public IReadOnlyList<Guid> CorrelatedWorkflowRunIds
+    {
+        get => correlatedWorkflowRunIds;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            correlatedWorkflowRunIds = value.Count == 0
+                ? []
+                : value.ToArray();
+        }
+    }
+
+    public int InvalidCorrelationIdCount { get; init; }
+
+    public DateTimeOffset CreatedAtUtc { get; init; }
+
+    public DateTimeOffset? StartedAtUtc { get; init; }
+
+    public DateTimeOffset? CompletedAtUtc { get; init; }
+
+    [JsonIgnore]
+    public DateTimeOffset ActivityAtUtc => CompletedAtUtc ?? UpdatedAtUtc;
+
+    public TimeSpan? Duration { get; init; }
+
+    public decimal KnownCostUsd { get; init; }
+
+    public bool HasUnknownCost { get; init; } = true;
+
+    public int ReportingProjectionVersion { get; init; }
+
+    public bool Equals(ChatRunSummaryRecord? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return other is not null &&
+               ExecutionRunId == other.ExecutionRunId &&
+               AgentId == other.AgentId &&
+               ChatSessionId == other.ChatSessionId &&
+               UpdatedAtUtc == other.UpdatedAtUtc &&
+               State == other.State &&
+               string.Equals(Phase, other.Phase, StringComparison.Ordinal) &&
+               string.Equals(Message, other.Message, StringComparison.Ordinal) &&
+               Outcome == other.Outcome &&
+               string.Equals(Title, other.Title, StringComparison.Ordinal) &&
+               string.Equals(Summary, other.Summary, StringComparison.Ordinal) &&
+               string.Equals(SourceKind, other.SourceKind, StringComparison.Ordinal) &&
+               string.Equals(SourceId, other.SourceId, StringComparison.Ordinal) &&
+               ProjectId == other.ProjectId &&
+               ProjectAttributionSource == other.ProjectAttributionSource &&
+               string.Equals(ProcessRunId, other.ProcessRunId, StringComparison.Ordinal) &&
+               CorrelatedProcessRunId == other.CorrelatedProcessRunId &&
+               WorkflowRunIds.SequenceEqual(
+                   other.WorkflowRunIds,
+                   StringComparer.Ordinal) &&
+               CorrelatedWorkflowRunIds.SequenceEqual(
+                   other.CorrelatedWorkflowRunIds) &&
+               InvalidCorrelationIdCount == other.InvalidCorrelationIdCount &&
+               CreatedAtUtc == other.CreatedAtUtc &&
+               StartedAtUtc == other.StartedAtUtc &&
+               CompletedAtUtc == other.CompletedAtUtc &&
+               Duration == other.Duration &&
+               KnownCostUsd == other.KnownCostUsd &&
+               HasUnknownCost == other.HasUnknownCost &&
+               ReportingProjectionVersion == other.ReportingProjectionVersion;
+    }
+
+    public override int GetHashCode()
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(ExecutionRunId);
+        hashCode.Add(AgentId);
+        hashCode.Add(ChatSessionId);
+        hashCode.Add(UpdatedAtUtc);
+        hashCode.Add(State);
+        hashCode.Add(Phase, StringComparer.Ordinal);
+        hashCode.Add(Message, StringComparer.Ordinal);
+        hashCode.Add(Outcome);
+        hashCode.Add(Title, StringComparer.Ordinal);
+        hashCode.Add(Summary, StringComparer.Ordinal);
+        hashCode.Add(SourceKind, StringComparer.Ordinal);
+        hashCode.Add(SourceId, StringComparer.Ordinal);
+        hashCode.Add(ProjectId);
+        hashCode.Add(ProjectAttributionSource);
+        hashCode.Add(ProcessRunId, StringComparer.Ordinal);
+        hashCode.Add(CorrelatedProcessRunId);
+        foreach (var workflowRunId in WorkflowRunIds)
+        {
+            hashCode.Add(workflowRunId, StringComparer.Ordinal);
+        }
+
+        foreach (var workflowRunId in CorrelatedWorkflowRunIds)
+        {
+            hashCode.Add(workflowRunId);
+        }
+
+        hashCode.Add(InvalidCorrelationIdCount);
+        hashCode.Add(CreatedAtUtc);
+        hashCode.Add(StartedAtUtc);
+        hashCode.Add(CompletedAtUtc);
+        hashCode.Add(Duration);
+        hashCode.Add(KnownCostUsd);
+        hashCode.Add(HasUnknownCost);
+        hashCode.Add(ReportingProjectionVersion);
+        return hashCode.ToHashCode();
+    }
+}
+
+public static class AgentExecutionReportQueryLimits
+{
+    public const int DefaultPageSize = 25;
+    public const int MaximumPageSize = 100;
+    public const int MaximumDailyTrendDays = 366;
+}
+
+public enum AgentExecutionReportStatus
+{
+    Active,
+    Waiting,
+    Succeeded,
+    Failed,
+    Cancelled
+}
+
+public static class AgentExecutionReportStatusPolicy
+{
+    public static AgentExecutionReportStatus Resolve(
+        ExecutionState state,
+        RunOutcome? outcome)
+    {
+        if (!Enum.IsDefined(state))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(state),
+                state,
+                "The execution state is not supported.");
+        }
+
+        if (outcome.HasValue && !Enum.IsDefined(outcome.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(outcome),
+                outcome,
+                "The run outcome is not supported.");
+        }
+
+        if (outcome == RunOutcome.Cancelled)
+        {
+            return AgentExecutionReportStatus.Cancelled;
+        }
+
+        if (state == ExecutionState.Failed || outcome == RunOutcome.Failed)
+        {
+            return AgentExecutionReportStatus.Failed;
+        }
+
+        if (state == ExecutionState.Completed || outcome == RunOutcome.Succeeded)
+        {
+            return AgentExecutionReportStatus.Succeeded;
+        }
+
+        return state == ExecutionState.WaitingOnTool
+            ? AgentExecutionReportStatus.Waiting
+            : AgentExecutionReportStatus.Active;
+    }
+}
+
+public sealed record AgentExecutionReportQuery(
+    IReadOnlyList<string>? SourceKinds = null,
+    IReadOnlyList<string>? SourceIds = null,
+    DateTimeOffset? CreatedFromUtc = null,
+    DateTimeOffset? CreatedToUtc = null,
+    DateTimeOffset? ActivityFromUtc = null,
+    DateTimeOffset? ActivityToUtc = null,
+    ExecutionState? State = null,
+    RunOutcome? Outcome = null,
+    IReadOnlyList<ExecutionState>? States = null,
+    IReadOnlyList<RunOutcome>? Outcomes = null,
+    int PageIndex = 0,
+    int PageSize = AgentExecutionReportQueryLimits.DefaultPageSize,
+    bool ExcludeProcessCorrelatedRuns = false,
+    bool ExcludeWorkflowCorrelatedRuns = false,
+    bool ExcludeInvalidCorrelationRuns = false)
+{
+    public IReadOnlyList<Guid>? ProjectIds { get; init; }
+
+    public bool UnattributedOnly { get; init; }
+
+    public IReadOnlyList<AgentExecutionReportStatus>? Statuses { get; init; }
+
+    public DateTimeOffset? DailyTrendFromUtc { get; init; }
+
+    public bool IncludeAggregate { get; init; } = true;
+
+    public int? KnownTotalCount { get; init; }
+}
+
+public sealed record AgentExecutionReportTotals(
+    int RunCount,
+    decimal KnownCostUsd,
+    TimeSpan TotalDuration,
+    int UnknownCostRunCount)
+{
+    public int LegacyProjectAttributionRunCount { get; init; }
+
+    public int InvalidProjectAttributionRunCount { get; init; }
+
+    public int InvalidCorrelationRunCount { get; init; }
+}
+
+public sealed record AgentExecutionDailyCost(
+    DateOnly DayUtc,
+    decimal KnownCostUsd,
+    int RunCount,
+    int UnknownCostRunCount);
+
+public sealed record AgentExecutionReportPage(
+    IReadOnlyList<ChatRunSummaryRecord> Items,
+    int PageIndex,
+    int PageSize,
+    AgentExecutionReportTotals Totals,
+    IReadOnlyList<AgentExecutionDailyCost> DailyCostTrend)
+{
+    public int TotalCount => Totals.RunCount;
+
+    public int TotalPages => TotalCount == 0
+        ? 0
+        : ((TotalCount - 1) / PageSize) + 1;
+}
 
 public sealed record ChatAgentWorkspaceSnapshot(
     Guid AgentId,

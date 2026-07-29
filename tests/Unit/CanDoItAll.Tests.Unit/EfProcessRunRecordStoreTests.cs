@@ -1,9 +1,11 @@
+using System.Linq.Expressions;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Tests.Unit;
@@ -260,6 +262,7 @@ public sealed class EfProcessRunRecordStoreTests
         Assert.Equal(0, analytics.EvidenceCompleteRunCount);
         Assert.Equal(1, analytics.EvidencePartialRunCount);
         Assert.Equal(2, analytics.FactsUnavailableRunCount);
+        Assert.Equal(3, analytics.UnknownCostRunCount);
         Assert.Equal(Now, analytics.LatestEndedAtUtc);
         Assert.Equal(33, analytics.MaximumSourceGlobalSequence);
         var stageUpdatedRecord = Assert.IsType<ProcessRunRecord>(await store.GetAsync(firstClaim.RunId));
@@ -269,6 +272,62 @@ public sealed class EfProcessRunRecordStoreTests
         Assert.Contains(
             analytics.Dispositions,
             item => item.Disposition == ProcessRunDisposition.Succeeded && item.MatchingRunCount == 1);
+    }
+
+    [Fact]
+    public async Task List_and_analytics_include_only_selected_projects()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRunRecordStore(dbContext);
+        var firstProjectId = Guid.NewGuid();
+        var secondProjectId = Guid.NewGuid();
+        var excludedProjectId = Guid.NewGuid();
+        var firstRunId = ProcessRunId.New();
+        var secondRunId = ProcessRunId.New();
+        var excludedRunId = ProcessRunId.New();
+        await store.UpsertSeedAsync(NewSeed(
+            firstRunId,
+            ProcessRunDisposition.Succeeded,
+            34,
+            Now.AddMinutes(-3)) with
+        {
+            Identity = NewIdentity(firstRunId) with { ProjectId = firstProjectId }
+        });
+        await store.UpsertSeedAsync(NewSeed(
+            secondRunId,
+            ProcessRunDisposition.Failed,
+            35,
+            Now.AddMinutes(-2)) with
+        {
+            Identity = NewIdentity(secondRunId) with { ProjectId = secondProjectId }
+        });
+        await store.UpsertSeedAsync(NewSeed(
+            excludedRunId,
+            ProcessRunDisposition.Cancelled,
+            36,
+            Now.AddMinutes(-1)) with
+        {
+            Identity = NewIdentity(excludedRunId) with { ProjectId = excludedProjectId }
+        });
+
+        var page = await store.ListAsync(new ProcessRunRecordListQuery
+        {
+            ProjectIds = [firstProjectId, secondProjectId]
+        });
+        var analytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddHours(-1), Now.AddHours(1))
+            {
+                ProjectIds = [firstProjectId, secondProjectId]
+            });
+
+        Assert.Equal(2, page.Records.Count);
+        Assert.Contains(page.Records, record => record.Identity.RunId == firstRunId);
+        Assert.Contains(page.Records, record => record.Identity.RunId == secondRunId);
+        Assert.DoesNotContain(page.Records, record => record.Identity.RunId == excludedRunId);
+        Assert.Equal(2, analytics.MatchingRunCount);
+        Assert.DoesNotContain(
+            analytics.Dispositions,
+            disposition => disposition.Disposition == ProcessRunDisposition.Cancelled);
     }
 
     [Fact]
@@ -290,30 +349,257 @@ public sealed class EfProcessRunRecordStoreTests
     }
 
     [Fact]
-    public async Task List_root_runs_only_excludes_descendant_records()
+    public async Task Root_only_list_and_analytics_exclude_subprocess_counts_and_costs()
     {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessRunRecordStore(dbContext);
-        var rootRunId = ProcessRunId.New();
+        var firstRootRunId = ProcessRunId.New();
+        var secondRootRunId = ProcessRunId.New();
         var childRunId = ProcessRunId.New();
-        await store.UpsertSeedAsync(NewSeed(rootRunId, ProcessRunDisposition.Succeeded, 35));
+        await store.UpsertSeedAsync(NewSeed(firstRootRunId, ProcessRunDisposition.Succeeded, 37));
+        await store.UpsertSeedAsync(NewSeed(secondRootRunId, ProcessRunDisposition.Failed, 38));
         var childSeed = NewSeed(childRunId, ProcessRunDisposition.Succeeded, 36) with
         {
             Identity = NewIdentity(childRunId) with
             {
-                RootRunId = rootRunId,
-                ParentRunId = rootRunId
+                RootRunId = firstRootRunId,
+                ParentRunId = null
             }
         };
         await store.UpsertSeedAsync(childSeed);
+        var claims = await store.ClaimFactsAsync(
+            new ProcessRunRecordClaimRequest(Now.AddMinutes(1), TimeSpan.FromMinutes(5), 10));
+        Assert.Equal(3, claims.Count);
+        foreach (var claim in claims)
+        {
+            var completion = NewFactsCompletion(claim.RunId, claim);
+            if (claim.RunId == childRunId)
+            {
+                completion = completion with { Identity = childSeed.Identity };
+            }
+
+            Assert.True(await store.CompleteFactsAsync(completion));
+        }
 
         var page = await store.ListAsync(new ProcessRunRecordListQuery
         {
             RootRunsOnly = true
         });
+        var unfilteredAnalytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddHours(-1), Now.AddHours(1)));
+        var rootAnalytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddHours(-1), Now.AddHours(1))
+            {
+                RootRunsOnly = true
+            });
+        var failedRootAnalytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddHours(-1), Now.AddHours(1))
+            {
+                Disposition = ProcessRunDisposition.Failed,
+                RootRunsOnly = true
+            });
+        var totalsOnlyAnalytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddHours(-1), Now.AddHours(1))
+            {
+                IncludeDailyCostTrend = false,
+                RootRunsOnly = true
+            });
 
-        var record = Assert.Single(page.Records);
-        Assert.Equal(rootRunId, record.Identity.RunId);
+        Assert.Equal(2, page.Records.Count);
+        Assert.DoesNotContain(page.Records, record => record.Identity.RunId == childRunId);
+        Assert.Equal(3, unfilteredAnalytics.MatchingRunCount);
+        Assert.Equal(3.75m, unfilteredAnalytics.ActualCost);
+        Assert.Equal(3, unfilteredAnalytics.UnknownCostRunCount);
+        Assert.Equal(2, rootAnalytics.MatchingRunCount);
+        Assert.Equal(3m, rootAnalytics.EstimatedCost);
+        Assert.Equal(2.5m, rootAnalytics.ActualCost);
+        Assert.Equal(2, rootAnalytics.UnknownCostRunCount);
+        var dailyCost = Assert.Single(rootAnalytics.DailyCostTrend);
+        Assert.Equal(DateOnly.FromDateTime(Now.UtcDateTime), dailyCost.DayUtc);
+        Assert.Equal(3m, dailyCost.EstimatedCost);
+        Assert.Equal(2.5m, dailyCost.ActualCost);
+        Assert.Equal(1, failedRootAnalytics.MatchingRunCount);
+        Assert.Equal(1.5m, failedRootAnalytics.EstimatedCost);
+        Assert.Equal(1.25m, failedRootAnalytics.ActualCost);
+        Assert.Equal(1, failedRootAnalytics.UnknownCostRunCount);
+        Assert.Equal(2.5m, totalsOnlyAnalytics.ActualCost);
+        Assert.Equal(2, totalsOnlyAnalytics.UnknownCostRunCount);
+        Assert.Empty(totalsOnlyAnalytics.DailyCostTrend);
+    }
+
+    [Fact]
+    public async Task Analytics_trend_only_skips_grouped_totals_query()
+    {
+        var interceptor = new QueryCompilationCountingInterceptor();
+        await using var dbContext = CreateDbContext(interceptor);
+        var store = new EfProcessRunRecordStore(dbContext);
+        var runId = ProcessRunId.New();
+        await store.UpsertSeedAsync(NewSeed(
+            runId,
+            ProcessRunDisposition.Succeeded,
+            39,
+            Now.AddDays(-1)));
+        var claim = Assert.Single(await store.ClaimFactsAsync(
+            new ProcessRunRecordClaimRequest(Now, TimeSpan.FromMinutes(5), 1)));
+        var completion = NewFactsCompletion(runId, claim);
+        completion = completion with
+        {
+            Metrics = completion.Metrics with
+            {
+                StartedAtUtc = Now.AddDays(-1).AddMinutes(-5),
+                EndedAtUtc = Now.AddDays(-1)
+            }
+        };
+        Assert.True(await store.CompleteFactsAsync(completion));
+        interceptor.Reset();
+
+        var analytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddDays(-2), Now)
+            {
+                IncludeTotals = false,
+                IncludeDailyCostTrend = true,
+                RootRunsOnly = true
+            });
+
+        Assert.Equal(1, interceptor.CompilationCount);
+        Assert.Equal(0, analytics.MatchingRunCount);
+        Assert.Equal(0, analytics.FactsUnavailableRunCount);
+        Assert.Equal(0, analytics.UnknownCostRunCount);
+        Assert.Equal(0m, analytics.ActualCost);
+        Assert.Empty(analytics.Dispositions);
+        var trend = Assert.Single(analytics.DailyCostTrend);
+        Assert.Equal(DateOnly.FromDateTime(Now.AddDays(-1).UtcDateTime), trend.DayUtc);
+        Assert.Equal(1.5m, trend.EstimatedCost);
+        Assert.Equal(1.25m, trend.ActualCost);
+
+        interceptor.Reset();
+        var emptyAnalytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddDays(-2), Now)
+            {
+                IncludeTotals = false,
+                IncludeDailyCostTrend = false
+            });
+
+        Assert.Equal(0, interceptor.CompilationCount);
+        Assert.Equal(0, emptyAnalytics.MatchingRunCount);
+        Assert.Empty(emptyAnalytics.DailyCostTrend);
+    }
+
+    [Fact]
+    public async Task Queries_reject_invalid_project_scopes_and_oversized_analytics_windows()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRunRecordStore(dbContext);
+        var projectId = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.ListAsync(
+            new ProcessRunRecordListQuery
+            {
+                ProjectId = Guid.Empty
+            }));
+        await Assert.ThrowsAsync<ArgumentException>(() => store.ListAsync(
+            new ProcessRunRecordListQuery
+            {
+                ProjectId = projectId,
+                ProjectIds = [projectId]
+            }));
+        await Assert.ThrowsAsync<ArgumentException>(() => store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddDays(-1), Now)
+            {
+                ProjectIds = [Guid.Empty]
+            }));
+        await Assert.ThrowsAsync<ArgumentException>(() => store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddDays(-1), Now)
+            {
+                ProjectId = projectId,
+                ProjectIds = [projectId]
+            }));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(
+                Now.AddDays(-ProcessRunRecordPayloadLimits.MaximumAnalyticsDaySpan - 1),
+                Now)));
+        var tooManyProjectIds = Enumerable
+            .Range(0, ProcessRunRecordPayloadLimits.MaximumProjectIdFilterCount + 1)
+            .Select(_ => Guid.NewGuid())
+            .ToArray();
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.ListAsync(
+            new ProcessRunRecordListQuery
+            {
+                ProjectIds = tooManyProjectIds
+            }));
+    }
+
+    [Fact]
+    public async Task Analytics_all_time_skips_the_lower_bound_and_preserves_other_scopes()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRunRecordStore(dbContext);
+        var projectId = Guid.NewGuid();
+        var otherProjectId = Guid.NewGuid();
+        var includedRunId = ProcessRunId.New();
+        var futureRunId = ProcessRunId.New();
+        var otherProjectRunId = ProcessRunId.New();
+        var failedRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        await store.UpsertSeedAsync(NewSeed(
+            includedRunId,
+            ProcessRunDisposition.Succeeded,
+            60,
+            Now.AddDays(-800)) with
+        {
+            Identity = NewIdentity(includedRunId) with { ProjectId = projectId }
+        });
+        await store.UpsertSeedAsync(NewSeed(
+            futureRunId,
+            ProcessRunDisposition.Succeeded,
+            61,
+            Now.AddMinutes(1)) with
+        {
+            Identity = NewIdentity(futureRunId) with { ProjectId = projectId }
+        });
+        await store.UpsertSeedAsync(NewSeed(
+            otherProjectRunId,
+            ProcessRunDisposition.Succeeded,
+            62,
+            Now.AddDays(-700)) with
+        {
+            Identity = NewIdentity(otherProjectRunId) with { ProjectId = otherProjectId }
+        });
+        await store.UpsertSeedAsync(NewSeed(
+            failedRunId,
+            ProcessRunDisposition.Failed,
+            63,
+            Now.AddDays(-600)) with
+        {
+            Identity = NewIdentity(failedRunId) with { ProjectId = projectId }
+        });
+        await store.UpsertSeedAsync(NewSeed(
+            childRunId,
+            ProcessRunDisposition.Succeeded,
+            64,
+            Now.AddDays(-500)) with
+        {
+            Identity = NewIdentity(childRunId) with
+            {
+                RootRunId = includedRunId,
+                ParentRunId = null,
+                ProjectId = projectId
+            }
+        });
+
+        var analytics = await store.ReadAnalyticsAsync(
+            new ProcessRunRecordAnalyticsQuery(Now.AddDays(1), Now)
+            {
+                AllTime = true,
+                Disposition = ProcessRunDisposition.Succeeded,
+                ProjectIds = [projectId],
+                RootRunsOnly = true
+            });
+
+        Assert.Equal(1, analytics.MatchingRunCount);
+        var disposition = Assert.Single(analytics.Dispositions);
+        Assert.Equal(ProcessRunDisposition.Succeeded, disposition.Disposition);
+        Assert.Equal(1, disposition.MatchingRunCount);
     }
 
     [Fact]
@@ -503,9 +789,45 @@ public sealed class EfProcessRunRecordStoreTests
                 .OrderByDescending(runtimeEvent => runtimeEvent.GlobalSequence)
                 .First())
             .ToQueryString();
+        var projectIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var dailyCostSql = dbContext.RunRecords
+            .Where(record =>
+                record.RunId == record.RootRunId &&
+                record.ProjectId.HasValue &&
+                projectIds.Contains(record.ProjectId.Value))
+            .GroupBy(record => record.EndedAtUtc.Date)
+            .Select(group => new
+            {
+                DayUtc = group.Key,
+                EstimatedCost = group.Sum(record => record.EstimatedCost),
+                ActualCost = group.Sum(record => record.ActualCost)
+            })
+            .OrderByDescending(group => group.DayUtc)
+            .Take(ProcessRunRecordPayloadLimits.MaximumAnalyticsDaySpan)
+            .ToQueryString();
+        var missingPricingWarningJson = ProcessRunRecordPersistenceCodec.Serialize(
+            new[] { ProcessRunRecordWarningCode.MissingPricing });
+        var unknownCostSql = dbContext.RunRecords
+            .GroupBy(record => new AnalyticsTranslationKey(
+                record.Disposition,
+                record.FactsStatus == ProcessRunFactsStatus.Completed,
+                record.FactsStatus != ProcessRunFactsStatus.Completed ||
+                EF.Functions.JsonContains(
+                    record.CompletenessWarningsJson,
+                    missingPricingWarningJson),
+                record.Completeness))
+            .Select(group => new
+            {
+                group.Key.HasUnknownCost,
+                MatchingRunCount = group.Count()
+            })
+            .ToQueryString();
 
         Assert.Contains("ORDER BY", keysetSql, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ROW_NUMBER", latestEventSql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GROUP BY", dailyCostSql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GROUP BY", unknownCostSql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@>", unknownCostSql, StringComparison.Ordinal);
     }
 
     private static ProcessRunRecordSeed NewSeed(
@@ -694,6 +1016,41 @@ public sealed class EfProcessRunRecordStoreTests
             .UseInMemoryDatabase(databaseName, databaseRoot)
             .Options;
         return new ProcessPersistenceDbContext(options);
+    }
+
+    private static ProcessPersistenceDbContext CreateDbContext(
+        QueryCompilationCountingInterceptor interceptor)
+    {
+        var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"), new InMemoryDatabaseRoot())
+            .EnableServiceProviderCaching(false)
+            .AddInterceptors(interceptor)
+            .Options;
+        return new ProcessPersistenceDbContext(options);
+    }
+
+    private sealed record AnalyticsTranslationKey(
+        ProcessRunDisposition Disposition,
+        bool FactsAvailable,
+        bool HasUnknownCost,
+        ProcessRunRecordCompleteness Completeness);
+
+    private sealed class QueryCompilationCountingInterceptor : IQueryExpressionInterceptor
+    {
+        public int CompilationCount { get; private set; }
+
+        public Expression QueryCompilationStarting(
+            Expression queryExpression,
+            QueryExpressionEventData eventData)
+        {
+            CompilationCount++;
+            return queryExpression;
+        }
+
+        public void Reset()
+        {
+            CompilationCount = 0;
+        }
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

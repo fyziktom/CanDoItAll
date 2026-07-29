@@ -1190,13 +1190,16 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         var projection = WorkspaceChatProjectionBuilder.Build(
             executionState.ChatSessions,
             executionState.ExecutionRuns,
-            executionState.ExecutionLog);
+            executionState.ExecutionLog,
+            executionState.Metrics,
+            executionState.ProviderUsageObservations);
         var nextChatIndex = new ExecutionChatIndex(
             Version: nextIndex.Version,
             Revision: nextIndex.Revision,
             UpdatedAtUtc: nextIndex.UpdatedAtUtc,
             SessionSummaries: projection.SessionSummaries,
-            RunSummaries: projection.RunSummaries);
+            RunSummaries: projection.RunSummaries,
+            ReportingProjectionVersion: WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion);
 
         if (changed || currentChatIndex is null || jsonStore.RequiresSave(currentChatIndex, nextChatIndex))
         {
@@ -2696,7 +2699,8 @@ internal sealed record ExecutionChatIndex(
     long Revision,
     DateTimeOffset UpdatedAtUtc,
     IReadOnlyList<ChatSessionSummaryRecord> SessionSummaries,
-    IReadOnlyList<ChatRunSummaryRecord> RunSummaries);
+    IReadOnlyList<ChatRunSummaryRecord> RunSummaries,
+    int ReportingProjectionVersion = 0);
 
 internal abstract class UsageProjectionAccumulator
 {

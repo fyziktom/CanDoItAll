@@ -11,6 +11,8 @@ public static class ProcessRunRecordPayloadLimits
 {
     public const int MaximumPageSize = 200;
     public const int MaximumRunIdFilterCount = 200;
+    public const int MaximumProjectIdFilterCount = 2_000;
+    public const int MaximumAnalyticsDaySpan = 366;
     public const int MaximumClaimBatchSize = 100;
     public const int MaximumSteps = 2_048;
     public const int MaximumParticipants = 512;
@@ -366,6 +368,8 @@ public sealed record ProcessRunRecordListQuery(int Take = 50)
 
     public Guid? ProjectId { get; init; }
 
+    public IReadOnlyList<Guid> ProjectIds { get; init; } = [];
+
     public ProcessDefinitionId? DefinitionId { get; init; }
 
     public ProcessRunId? RootRunId { get; init; }
@@ -395,16 +399,33 @@ public sealed record ProcessRunRecordAnalyticsQuery(
 {
     public Guid? ProjectId { get; init; }
 
+    public IReadOnlyList<Guid> ProjectIds { get; init; } = [];
+
     public ProcessDefinitionId? DefinitionId { get; init; }
 
     public ProcessRunId? RootRunId { get; init; }
 
+    public ProcessRunDisposition? Disposition { get; init; }
+
     public ProcessRunParticipantId? ParticipantId { get; init; }
+
+    public bool RootRunsOnly { get; init; }
+
+    public bool AllTime { get; init; }
+
+    public bool IncludeTotals { get; init; } = true;
+
+    public bool IncludeDailyCostTrend { get; init; } = true;
 }
 
 public sealed record ProcessRunDispositionAnalytics(
     ProcessRunDisposition Disposition,
     int MatchingRunCount);
+
+public sealed record ProcessRunDailyCostTrendPoint(
+    DateOnly DayUtc,
+    decimal EstimatedCost,
+    decimal ActualCost);
 
 public sealed record ProcessRunRecordAnalytics(
     int MatchingRunCount,
@@ -429,7 +450,12 @@ public sealed record ProcessRunRecordAnalytics(
     int EscalationCount,
     int ToolCallCount,
     int ArtifactCount,
-    IReadOnlyList<ProcessRunDispositionAnalytics> Dispositions);
+    IReadOnlyList<ProcessRunDispositionAnalytics> Dispositions)
+{
+    public int UnknownCostRunCount { get; init; }
+
+    public IReadOnlyList<ProcessRunDailyCostTrendPoint> DailyCostTrend { get; init; } = [];
+}
 
 public sealed record ProcessRunRecordClaimRequest(
     DateTimeOffset NowUtc,

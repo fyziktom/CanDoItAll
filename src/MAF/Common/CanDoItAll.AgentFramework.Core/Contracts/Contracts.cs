@@ -151,7 +151,10 @@ public interface ISandboxWorkspaceExecutionRunMutationStore
         CancellationToken cancellationToken = default);
 }
 
-public interface ISandboxWorkspaceStore : ISandboxWorkspaceCatalogStore, ISandboxWorkspaceExecutionStore
+public interface ISandboxWorkspaceStore :
+    ISandboxWorkspaceCatalogStore,
+    ISandboxWorkspaceExecutionStore,
+    IAgentExecutionReportReader
 {
     Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotAsync(CancellationToken cancellationToken = default);
@@ -188,7 +191,15 @@ public interface ISandboxWorkspaceChatQueryStore
         CancellationToken cancellationToken = default);
 }
 
-public interface ISandboxWorkspaceChatProjectionQueryStore
+public interface IAgentExecutionReportReader
+{
+    Task<AgentExecutionReportPage> QueryExecutionReportAsync(
+        AgentExecutionReportQuery query,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ISandboxWorkspaceChatProjectionQueryStore :
+    IAgentExecutionReportReader
 {
     Task<ChatWorkspaceProjectionSnapshot> LoadChatWorkspaceProjectionAsync(
         Guid agentId,
@@ -501,7 +512,9 @@ public interface IAgentExecutionHistoryReader
     Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
 }
 
-public interface IAgentFrameworkWorkspaceService : IAgentExecutionHistoryReader
+public interface IAgentFrameworkWorkspaceService :
+    IAgentExecutionHistoryReader,
+    IAgentExecutionReportReader
 {
     event EventHandler<ExecutionLogEntry>? ExecutionUpdated;
 
