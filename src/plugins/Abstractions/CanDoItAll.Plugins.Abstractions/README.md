@@ -27,4 +27,4 @@ Manifest validation should stay strict so plugins cannot silently declare duplic
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

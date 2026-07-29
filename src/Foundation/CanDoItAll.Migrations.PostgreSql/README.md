@@ -22,30 +22,19 @@ The authoritative project and package dependency list is in [CanDoItAll.Migratio
 
 This project owns provider-specific EF Core migration assets only. Runtime behavior belongs in Infrastructure or the owning product module.
 
-The migration chain starts with one squashed baseline,
-`20260728161028_InitialPostgreSqlBaseline`. It describes the complete database required by
-the current application model. Provider-specific indexes that EF cannot represent in the
+`20260728161028_InitialPostgreSqlBaseline` defines the complete baseline database required
+by the application model. Provider-specific indexes that EF cannot represent in the
 model are owned by
 [PostgreSqlMigrationBaseline.cs](../CanDoItAll.Infrastructure/Persistence/PostgreSqlMigrationBaseline.cs)
 and are applied by the baseline migration.
 
-### Existing development database
+Startup validates the baseline schema and migration identity before applying pending
+migrations. Partial or unexpected migration state fails with an actionable error; the
+bootstrapper never marks an incomplete schema as current.
 
-Back up the database before the first startup after the squash. Startup recognizes the
-complete 42-migration PostgreSQL development chain that ended at
-`20260727232724_AddProviderProfileConcurrencyToken`, including installations that retain
-older predecessor rows from before the PostgreSQL baseline. It validates the baseline
-schema, idempotently restores missing baseline-owned custom indexes after all other
-schema requirements pass, atomically replaces all pre-squash history rows in
-`__EFMigrationsHistory` with the single squashed-baseline row, and then lets EF apply
-any migrations created after the baseline.
-
-Partial or unexpected migration histories are rejected with an actionable error. The
-bootstrapper does not silently mark an incomplete schema as current. No manual history
-SQL is required for the supported complete legacy chain.
-
-New migrations must be added after this baseline through the normal EF workflow. Do not
-edit the baseline after another database has started consuming later migrations.
+Create new migrations through the normal EF workflow and append them after the baseline.
+Do not edit an applied migration. Back up authoritative data before applying schema
+changes.
 
 ## Migration Validation
 
@@ -64,4 +53,4 @@ dotnet ef migrations has-pending-model-changes --project src/Foundation/CanDoItA
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

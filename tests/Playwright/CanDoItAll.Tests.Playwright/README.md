@@ -43,4 +43,4 @@ Keep tests focused on observable behavior and use shared fixtures from CanDoItAl
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

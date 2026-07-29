@@ -1,7 +1,5 @@
 # Provider Capability And Pricing
 
-Last source review: 2026-07-28.
-
 Provider behavior is configuration, runtime policy, and cost-estimation input. Do not infer support or price from a provider name alone.
 
 ## Sources Of Truth

@@ -31,5 +31,5 @@ dependency only when an application-owned surface has a real need for it.
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`
 - Shared UI boundary: `docs/ui-shared-components/README.md`

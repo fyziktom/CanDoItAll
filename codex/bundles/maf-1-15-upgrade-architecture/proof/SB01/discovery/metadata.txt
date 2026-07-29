@@ -1,7 +1,0 @@
-repositoryRoot=C:\repositories\CanDoItAll
-capturedAtUtc=2026-07-28T04:35:14.4436272+00:00
-gitHead=797d7ce11205d630756ec9335b1b84295257a315
-gitBranch=agents-loading-refactor
-gitStatusBegin
- M codex/bundles/maf-1-15-upgrade-architecture/machine/grep-discovery.ps1
-gitStatusEnd

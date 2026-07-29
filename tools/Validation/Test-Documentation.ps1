@@ -30,7 +30,7 @@ function Test-MaintainedMarkdownPath {
     }
 
     if ($normalized.StartsWith(".codex/", [System.StringComparison]::OrdinalIgnoreCase) -or
-        $normalized.StartsWith("codex/bundles/", [System.StringComparison]::OrdinalIgnoreCase) -or
+        $normalized.StartsWith("codex/", [System.StringComparison]::OrdinalIgnoreCase) -or
         $normalized.StartsWith("Templates/", [System.StringComparison]::OrdinalIgnoreCase)) {
         return $false
     }
@@ -38,7 +38,6 @@ function Test-MaintainedMarkdownPath {
     return $normalized -eq "README.md" -or
         $normalized -eq "CONTRIBUTING.md" -or
         $normalized -eq "SECURITY.md" -or
-        $normalized -eq "codex/README.md" -or
         $normalized -eq ".github/copilot-instructions.md" -or
         $normalized.StartsWith("docs/", [System.StringComparison]::OrdinalIgnoreCase) -or
         $normalized.StartsWith("src/", [System.StringComparison]::OrdinalIgnoreCase) -or
@@ -72,11 +71,33 @@ function Get-LinkTargetPath {
 
 $repositoryRoot = Resolve-RepositoryPath -RequestedPath $RepositoryPath
 $requiredFiles = @(
+    ".editorconfig",
+    ".gitattributes",
+    ".gitignore",
+    ".env.example",
+    ".github\workflows\ci.yml",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
     "SECURITY.md",
-    "docs\README.md"
+    "compose.yaml",
+    "docs\README.md",
+    "docs\architecture\README.md",
+    "docs\architecture\overview.md",
+    "docs\architecture\internal-communication.md",
+    "docs\architecture\modules.md",
+    "src\README.md",
+    "src\App\README.md",
+    "src\Foundation\README.md",
+    "src\Integration\README.md",
+    "src\MAF\README.md",
+    "src\Memory\README.md",
+    "src\Modules\README.md",
+    "src\plugins\README.md",
+    "src\Processes\README.md",
+    "src\UI\README.md",
+    "tests\README.md",
+    "tools\README.md"
 )
 $errors = [System.Collections.Generic.List[string]]::new()
 
@@ -104,12 +125,17 @@ $maintainedMarkdown = @(
 $markdownLinkPattern = [regex]'!?\[[^\]]*\]\((?<target>[^)\r\n]+)\)'
 $inlinePathPattern = [regex]'`(?<path>(?:src|tests|tools|docs|Tailwind|codex)[\\/][^`\r\n]+)`'
 $absoluteDeveloperPathPattern = [regex]'(?im)(?:[A-Z]:[\\/](?:repositories|repos|source|users)[\\/]|/home/[^/\s]+/)'
+$previewWebsitePattern = [regex]'(?i)https://alpha\.aicandoitall\.com'
 
 foreach ($relativePath in $maintainedMarkdown) {
     $fullPath = Join-Path $repositoryRoot $relativePath
     $content = Get-Content -LiteralPath $fullPath -Raw
     if ($absoluteDeveloperPathPattern.IsMatch($content)) {
         $errors.Add("Developer-specific absolute path found in $relativePath")
+    }
+
+    if ($previewWebsitePattern.IsMatch($content)) {
+        $errors.Add("Preview website address found in ${relativePath}; use https://aicandoitall.com.")
     }
 
     foreach ($match in $markdownLinkPattern.Matches($content)) {
@@ -149,6 +175,109 @@ foreach ($relativePath in $maintainedMarkdown) {
             $errors.Add("Missing inline repository path in ${relativePath}: $sourcePath")
         }
     }
+}
+
+$projects = @(
+    & git -C $repositoryRoot ls-files --cached --others --exclude-standard -- "*.csproj"
+)
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to enumerate C# projects."
+}
+
+foreach ($project in $projects) {
+    $projectPath = Join-Path $repositoryRoot $project
+    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
+        continue
+    }
+
+    $readmePath = Join-Path (Split-Path -Parent $projectPath) "README.md"
+    if (-not (Test-Path -LiteralPath $readmePath -PathType Leaf)) {
+        $errors.Add("Project README is missing for $project")
+    }
+}
+
+$forbiddenTrackedPatterns = @(
+    '^(?:\.codex|\.codex-runtime|codex/bundles|docs/images|outputs?)/',
+    '^CanDoItAll\.Mcp\..*\.settings\.json$',
+    '^\.vscode/mcp\.json$',
+    '\.csproj\.user$',
+    '(?:^|/)(?:__pycache__|TestResults)/',
+    '\.(?:log|pyc|pid)$',
+    '^(?:gantt-.*|.*infographic.*)\.(?:png|jpg|jpeg|webp)$'
+)
+$presentTrackedFiles = @(
+    & git -C $repositoryRoot ls-files --cached |
+        Where-Object {
+            Test-Path -LiteralPath (Join-Path $repositoryRoot $_) -PathType Leaf
+        }
+)
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to enumerate tracked files."
+}
+
+foreach ($pattern in $forbiddenTrackedPatterns) {
+    $matches = @(
+        $presentTrackedFiles |
+            Where-Object {
+                $_.Replace("\", "/") -match $pattern
+            }
+    )
+    if ($matches.Count -gt 0) {
+        $errors.Add(
+            "Generated or local-only tracked files match '$pattern': $($matches.Count) file(s); first is $($matches[0])")
+    }
+}
+
+$rootReadmePath = Join-Path $repositoryRoot "README.md"
+if (Test-Path -LiteralPath $rootReadmePath -PathType Leaf) {
+    $rootReadme = Get-Content -LiteralPath $rootReadmePath -Raw
+    if ($rootReadme -notmatch 'actions/workflows/ci\.yml/badge\.svg\?branch=main&event=push') {
+        $errors.Add("README.md is missing the canonical CI badge.")
+    }
+
+    if ($rootReadme -notmatch 'https://aicandoitall\.com') {
+        $errors.Add("README.md is missing the final CanDoItAll website address.")
+    }
+}
+
+$directoryBuildPropsPath = Join-Path $repositoryRoot "Directory.Build.props"
+if (Test-Path -LiteralPath $directoryBuildPropsPath -PathType Leaf) {
+    $directoryBuildProps = Get-Content -LiteralPath $directoryBuildPropsPath -Raw
+    if ($directoryBuildProps -notmatch '<IsPackable>\s*false\s*</IsPackable>') {
+        $errors.Add("Directory.Build.props must disable NuGet packaging with IsPackable=false.")
+    }
+}
+
+$packagingOptIns = @(
+    $presentTrackedFiles |
+        Where-Object {
+            $_ -match '\.(?:csproj|props|targets)$'
+        } |
+        Where-Object {
+            $content = Get-Content -LiteralPath (Join-Path $repositoryRoot $_) -Raw
+            $content -match '<IsPackable>\s*true\s*</IsPackable>' -or
+                $content -match '<GeneratePackageOnBuild>\s*true\s*</GeneratePackageOnBuild>'
+        }
+)
+if ($packagingOptIns.Count -gt 0) {
+    $errors.Add(
+        "NuGet packaging is disabled for this repository, but packaging opt-ins exist: $($packagingOptIns -join ', ')")
+}
+
+$publishingEntryPoints = @(
+    $presentTrackedFiles |
+        Where-Object {
+            $_ -match '^(?:\.github/workflows|tools)/' -and
+                $_ -match '\.(?:ya?ml|ps1|sh|cmd|bat)$'
+        } |
+        Where-Object {
+            (Get-Content -LiteralPath (Join-Path $repositoryRoot $_) -Raw) -match
+                '(?im)\bdotnet\s+(?:nuget\s+)?push\b'
+        }
+)
+if ($publishingEntryPoints.Count -gt 0) {
+    $errors.Add(
+        "NuGet publishing entry points are not allowed yet: $($publishingEntryPoints -join ', ')")
 }
 
 $packageJsonPath = Join-Path $repositoryRoot "package.json"

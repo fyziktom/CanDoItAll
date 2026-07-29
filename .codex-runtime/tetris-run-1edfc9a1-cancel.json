@@ -1,1 +1,0 @@
-{"runId":"1edfc9a1-2022-4673-865a-ce335af19509","kind":"CancelRun","outcome":"Applied","status":"Cancelled","diagnostics":["Cancellation cascaded to 1 descendant process run(s): a1d83ae2-1aa5-41cb-a2b3-bafc7dad52e9.","Signaled cancellation to 1 active AgentFramework execution run(s)."]}

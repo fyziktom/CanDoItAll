@@ -27,4 +27,4 @@ Voice settings are normalized through the AgentFramework workflow settings path.
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

@@ -25,4 +25,4 @@ Keep this project aligned with its solution boundary and avoid introducing depen
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

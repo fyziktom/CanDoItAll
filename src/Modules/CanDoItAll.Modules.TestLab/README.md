@@ -25,4 +25,4 @@ This module owns product semantics for its bounded area. Keep business behavior 
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

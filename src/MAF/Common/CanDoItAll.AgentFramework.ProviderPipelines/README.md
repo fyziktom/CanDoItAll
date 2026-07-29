@@ -51,5 +51,5 @@ dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filt
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`
 - Provider runtime README: `src/MAF/Common/CanDoItAll.AgentFramework.Providers/README.md`

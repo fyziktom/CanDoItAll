@@ -1,7 +1,5 @@
 # Agent Runtime Tool Surface
 
-Last source review: 2026-07-28.
-
 This page defines the boundary between tools attached to an agent execution and operations exposed only through the HTTP control plane.
 
 ## What Makes A Tool Executable
@@ -61,7 +59,8 @@ Process run-record search, analytics, summary, graph, detail, and history are HT
 
 There is no silent snapshot-to-database fallback. Writes always go through canonical services and authorization gates. The HTTP Project Structure read endpoint has no in-process invocation attachment, so `ContextDefault` is normalized to canonical state and `InvocationSnapshot` is rejected.
 
-See [Agent execution activity and runtime snapshots](architecture/agent-execution-activity-and-runtime-snapshots.md) for the snapshot contract.
+See [Internal communication](architecture/internal-communication.md) for the execution
+and live-event communication contract.
 
 ## HTTP And Runtime Authorization Are Different
 

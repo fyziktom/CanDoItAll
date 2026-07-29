@@ -50,6 +50,6 @@ per execution.
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
-- Agent execution activity and runtime snapshots: `docs/architecture/agent-execution-activity-and-runtime-snapshots.md`
-- Reusable floating agent chats: `docs/architecture/reusable-floating-agent-chats.md`
+- Current architecture: `docs/architecture/overview.md`
+- Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
+- Reusable floating agent chats: `docs/architecture/internal-communication.md`

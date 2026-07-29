@@ -70,13 +70,16 @@ The `candoitall-api-*` skills are Codex/operator skills for controlling the runn
 | Reviewer or QA | Workspace read tools; validation/browser tools named by the step; current process readback routes | Read access unless an explicit current mutation route is authorized | Review decisions must cite current-run evidence and required receipts. |
 | Template curator | Process template authoring UI or future API/tool path when reintroduced | Read/write only when importing or publishing templates through a current surface | Template inspection is read-only unless import or publish is explicitly supported by current implementation. |
 
-Anti-improvisation is enforced in two layers. `DefaultAgentToolInvocationPolicy` denies tools that are not in the composed capability set and denies known tools with no registered classification. `AgentCapabilityRequirementEvaluator` catches missing, stale, or retired role capabilities before dispatch so callers can block or restaff explicitly.
-
-Current gap: policy constants and some tests still mention legacy or planned direct `processes_*` runtime tools. The current source tree does not contain a concrete process runtime tool provider. Reintroduce that provider deliberately or remove the stale capability names in a hardening pass.
+Anti-improvisation is enforced in two layers. `DefaultAgentToolInvocationPolicy` denies
+tools that are not in the composed capability set and denies known tools with no
+registered classification. `AgentCapabilityRequirementEvaluator` catches missing or
+unavailable role capabilities before dispatch so callers can block or restaff explicitly.
+Process control is exposed through the HTTP API; no direct `processes_*` runtime tool
+provider is registered.
 
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
-- Agent execution activity and runtime snapshots: `docs/architecture/agent-execution-activity-and-runtime-snapshots.md`
-- Process/MAF/provider implementation map: `docs/processes-maf-providers-implementation-map.md`
+- Current architecture: `docs/architecture/overview.md`
+- Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
+- Process/MAF/provider implementation map: `docs/architecture/internal-communication.md`

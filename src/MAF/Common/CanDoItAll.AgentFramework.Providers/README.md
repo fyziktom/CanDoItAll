@@ -52,5 +52,5 @@ dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --filt
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
-- Process/MAF/provider implementation map: `docs/processes-maf-providers-implementation-map.md`
+- Current architecture: `docs/architecture/overview.md`
+- Process/MAF/provider implementation map: `docs/architecture/internal-communication.md`

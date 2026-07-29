@@ -1,7 +1,5 @@
 # API Control Plane
 
-Last source review: 2026-07-28.
-
 The web-hosted HTTP API is the supported external automation boundary for CanDoItAll. Request and response schemas come from the running OpenAPI document; this page records the durable route families and operating rules.
 
 ## Start And Discover

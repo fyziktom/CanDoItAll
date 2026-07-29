@@ -1,7 +1,5 @@
 # Process Agent Operator Runbook
 
-Last source review: 2026-07-28.
-
 This runbook covers the current PostgreSQL-backed process runtime, local dispatch queue, AgentFramework execution adapter, projections, and durable run records.
 
 ## Source Of Truth
@@ -14,8 +12,6 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 - [`AgentFrameworkProcessExecutionAdapter.cs`](../src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessExecutionAdapter.cs)
 - [`ProcessesApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessesApi.cs)
 - [`ProcessRunRecordsApi.cs`](../src/App/CanDoItAll.Web/Api/ProcessRunRecordsApi.cs)
-
-Historical names such as `ProcessesService`, `ProcessRunAutomationDispatchService`, `ProcessOutboxService`, and `ProcessRunRecoveryWorker` are not current entry points.
 
 ## Triage Order
 

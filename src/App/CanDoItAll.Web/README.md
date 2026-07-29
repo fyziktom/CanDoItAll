@@ -36,6 +36,6 @@ The checked-in API configuration is intended for a trusted local host and leaves
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`
 - Development runtime: `docs/development-runtime.md`
 - CRM-HR API: `docs/crm-hr-api.md`

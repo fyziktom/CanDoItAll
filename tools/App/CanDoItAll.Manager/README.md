@@ -26,4 +26,4 @@ This is a local development or operations tool. Keep it explicit about ports, fi
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

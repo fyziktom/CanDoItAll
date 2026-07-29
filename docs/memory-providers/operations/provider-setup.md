@@ -200,9 +200,8 @@ Create an enabled profile with `DriverKind` set to `NativeRemote` and include:
 | `native.cognitiveMemory.remote.maxRetryAttempts` | No | Non-negative integer override. |
 
 The native remote driver adapts these keys into the generic synchronous HTTP driver.
-The standalone service is work in progress and is not published yet. Its startup,
-database migrations, projection, model execution, native API, and advanced UI remain
-owned by that external repository.
+The standalone service owns its startup, database migrations, projection, model
+execution, native API, and advanced UI.
 
 ## UI Surface Setup
 
@@ -219,4 +218,4 @@ To roll back provider-backed memory dispatch:
 3. Restart the host if driver registration changed.
 4. Verify `/memory` renders zero-provider or disabled-provider state.
 
-Rollback does not require dropping generic memory ledgers or legacy main database `CognitiveMemory_*` tables.
+Rollback does not drop generic memory ledgers or provider-owned tables.

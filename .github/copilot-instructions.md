@@ -22,7 +22,7 @@ Act as a pragmatic senior C#/.NET and Blazor engineer. Prefer the smallest corre
 
 Keep UI, application, domain, and infrastructure responsibilities separate. Add an interface only for a real boundary, substitution point, or test seam.
 
-PostgreSQL is the application database. InMemory is test-only, and SQLite is retired. Generic Memory providers and workers are disabled by default. Do not restore old Cognitive Memory, Qdrant, or SQLite assumptions as hidden compatibility paths.
+PostgreSQL is the application database. InMemory is test-only. Generic Memory providers and workers are disabled by default. Cognitive Memory, Qdrant, and SQLite are not base runtime dependencies.
 
 ## Blazor And Components
 
@@ -41,27 +41,13 @@ PostgreSQL is the application database. InMemory is test-only, and SQLite is ret
 - Keep provider-neutral agent orchestration separate from MAF, model-provider, MCP, plugin, and Memory-driver adapters.
 - First-party agent tools belong in registered `IAgentRuntimeToolProvider` implementations at the owning module boundary.
 - Preserve approval, capability-policy, workspace-sandbox, and process-governance checks. Never reconstruct incompatible approval state or bypass a missing tool with prompt-only behavior.
-- Processes and Project Structure use the HTTP API control plane; do not reintroduce retired MCP servers.
+- Processes and Project Structure use the HTTP API control plane.
 
-## MCP And Skills
+## External Development Tooling
 
-MCP server source lives in the sibling `CanDoItAll.Mcp` repository. This repository owns configuration and install entry points. The active sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, and SshOps.
-
-Prefer the managed DotNetWatch MCP loop for interactive application work:
-
-1. inspect workspace defaults
-2. start or reuse the managed app
-3. make focused edits
-4. wait for readiness
-5. validate with targeted tests and browser evidence
-
-Use the stable commands in `docs/testing.md` for release validation. If the managed MCP is unavailable, report that explicitly before using an appropriate local validation command.
-
-Canonical Codex development skills and plugins live in the sibling `CanDoItAll.SharedInfo` repository; this product repository does not carry a source mirror. Refresh the local toolset with:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
-```
+MCP server source and setup belong to `CanDoItAll.Mcp`. Canonical Codex skills, plugins,
+and repository-family standards belong to `CanDoItAll.SharedInfo`. Keep developer-machine
+launch configuration and local MCP settings outside this repository.
 
 ## Validation And Documentation
 
@@ -69,4 +55,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAll
 - Use Playwright for shipped UI behavior and capture evidence at the supported large-desktop viewport.
 - Never describe quarantined, skipped, unavailable, or unfiltered failing tests as green.
 - Update maintained docs when public behavior, configuration, architecture, or validation changes.
-- Do not treat closed `codex/bundles` or `.codex/bundles` as current documentation.
+- Keep architecture and operator guidance under `docs` and project boundaries in local READMEs.

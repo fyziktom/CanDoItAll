@@ -1,211 +1,142 @@
 # CanDoItAll
 
+[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License](https://img.shields.io/badge/license-MIT--derived%20with%20website%20link-blue.svg)](LICENSE)
 
-CanDoItAll is a local-first .NET 10 Blazor Web App for project delivery, durable process execution, workforce coordination, and governed AI-agent automation.
-
-The repository is under active development. It does not currently publish a public NuGet package or provide a supported public release pipeline.
+CanDoItAll is a local-first .NET 10 Blazor application for governed project delivery,
+durable process execution, workforce coordination, and AI-agent automation. Product
+information is available at [aicandoitall.com](https://aicandoitall.com); this repository
+focuses on the implementation and its engineering contracts.
 
 ## Ownership
 
 This repository owns:
 
-- the Blazor host, runtime composition, product modules, and HTTP API control plane
-- durable project, workflow, process, CRM/HR, plugin, and automation behavior
-- the experimental provider-neutral Memory subsystem, its provider integrations, and its AgentFramework integration
-- Microsoft Agent Framework (MAF) adapters, tools, workflow execution, and application templates
-- repository-local install, development, validation, and Tailwind entry points
+- the Blazor host, HTTP API, application composition, and product modules
+- project, workflow, process, CRM/HR, plugin, Memory, and automation behavior
+- provider-neutral AgentFramework contracts and Microsoft Agent Framework adapters
+- PostgreSQL persistence, migrations, runtime templates, tests, and repository tooling
 
 This repository does not own:
 
-- MCP server source, which lives in [CanDoItAll.Mcp](https://github.com/fyziktom/CanDoItAll.Mcp)
-- shared UI packages, which live in [CanDoItAll.Components](https://github.com/fyziktom/CanDoItAll.Components)
-- canonical standards and Codex skills, which live in [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo)
-- native [Cognitive Memory](https://github.com/fyziktom/CanDoItAll.CognitiveMemory), which is work in progress in its standalone repository and will be published later
-- optional RAG and Semantic Completion implementations, which live in their respective sibling repositories
+- development MCP servers from [CanDoItAll.Mcp](https://github.com/fyziktom/CanDoItAll.Mcp)
+- shared Blazor components from [CanDoItAll.Components](https://github.com/fyziktom/CanDoItAll.Components)
+- family standards and reusable Codex assets from [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo)
+- native Cognitive Memory from [CanDoItAll.CognitiveMemory](https://github.com/fyziktom/CanDoItAll.CognitiveMemory)
 
-Memory providers are experimental and under active development. Native Cognitive
-Memory source, APIs, UI, persistence, runtime, and tests are owned entirely by its
-standalone repository and are not published yet. This repository keeps only
-provider-neutral Memory contracts and orchestration, provider integrations, the
-isolated external-service driver under
-`src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory`, and the migration-only
-legacy PostgreSQL export bridge. It does not expose a Cognitive Memory API.
+## Entry Points
 
-## Runtime Shape
+| Entry point | Responsibility |
+|---|---|
+| [`CanDoItAll.Web`](src/App/CanDoItAll.Web/README.md) | Blazor host, HTTP API, OpenAPI, and runtime endpoints |
+| [`CanDoItAll.Composition`](src/App/CanDoItAll.Composition/README.md) | Dependency injection and application runtime composition |
+| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules |
+| [`src/Processes`](src/Processes/README.md) | Durable process model, execution, projections, and persistence |
+| [`src/Memory`](src/Memory/README.md) | Provider-neutral Memory contracts, drivers, and persistence |
+| [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
+| [`Templates`](Templates/README.md) | Repository-owned runtime seed and template packs |
 
-```mermaid
-flowchart LR
-    User["User"] --> Web["CanDoItAll.Web"]
-    Client["API client"] --> Api["HTTP API control plane"]
-    Web --> Composition["CanDoItAll.Composition"]
-    Api --> Composition
-    Composition --> Modules["Product modules"]
-    Composition --> Memory["Generic Memory"]
-    Composition --> AgentFramework["AgentFramework and MAF 1.15"]
-    Modules --> PostgreSQL[("PostgreSQL")]
-    AgentFramework --> Providers["AI providers"]
-    AgentFramework --> Tools["First-party runtime tool providers"]
-    Developer["IDE or Codex client"] --> Sidecars["Local MCP sidecars"]
-    Sidecars --> DevSurfaces["Repository development surfaces"]
-    Sidecars --> DotNetWatch["DotNetWatch"]
-    DotNetWatch -. supervises .-> Web
-```
-
-`CanDoItAll.slnx` is the primary solution.
-
-The runtime registers first-party tool providers for Memory, Project Structure, image generation, workflows, Prompt Gallery, prompt curation, workflow curation, capability curation, HR, and Scheduler. A provider still applies its own purpose and authorization policy before attaching tools.
+`CanDoItAll.slnx` is the canonical solution.
 
 ## Requirements
 
-- .NET SDK `10.0.200` feature band or a later patch allowed by `global.json`
-- PostgreSQL for the application runtime
-- Docker Desktop or another Compose-compatible runtime when using the repository PostgreSQL service
-- Windows PowerShell for the local installer and MCP setup scripts
-- Node.js and npm only when rebuilding application Tailwind output
-
-The MCP reinstall workflow needs sibling `CanDoItAll.Mcp` and
-`CanDoItAll.CodeAnalysis` repositories; it also needs `CanDoItAll.SharedInfo` unless
-skill synchronization is explicitly skipped.
+- the .NET SDK selected by [`global.json`](global.json)
+- PostgreSQL 16 or a compatible supported server
+- Docker Desktop or another Compose v2 runtime when using the included database service
+- Node.js and npm when rebuilding application Tailwind output
+- PowerShell 7 for repository automation
 
 ## Quick Start
 
-Run these commands from the repository root:
+Run from the repository root:
 
 ```powershell
-docker compose up -d postgres
-dotnet restore .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
+Copy-Item .env.example .env
+docker compose up -d --wait db
+dotnet restore .\CanDoItAll.slnx
 dotnet run --project .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
 ```
 
-The default development profile uses:
-
-```text
-Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true
-```
-
-Open `http://localhost:5032`. Runtime diagnostics are available at:
-
-- `http://localhost:5032/_dev/runtime`
-- `http://localhost:5032/_dev/database/selection`
-
-For a native PostgreSQL installation, prepare the development role and database with:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\dev\Ensure-DevelopmentPostgres.ps1
-```
-
-Important defaults:
-
-- PostgreSQL is the only supported application database. The InMemory driver is test-only, and SQLite is retired.
-- The checked-in Compose file publishes database ports without a loopback-only binding. Use it only on a trusted development host, and restrict the binding before joining an untrusted network.
-- All generic Memory providers and Memory background workers are disabled until explicitly configured.
-- Qdrant is not configured or required by the base host. The Compose service remains available only for optional external or legacy integration work.
-- API authorization is disabled by the local default configuration. Do not expose that configuration to an untrusted network.
-- Development workspace and control-plane data live under `%LOCALAPPDATA%\CanDoItAll`.
-
-See [Development runtime](docs/development-runtime.md) for configuration and troubleshooting.
+Open `http://localhost:5032`. The checked-in database credential is a loopback-only local
+development default; replace it before using a shared host.
 
 ## Build And Test
-
-The canonical Release gate, extended test categories, and sibling-repository prerequisites are documented in [Testing](docs/testing.md).
 
 ```powershell
 dotnet restore .\CanDoItAll.slnx
 dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
 dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
-```
-
-Validate maintained documentation with:
-
-```powershell
 & .\tools\Validation\Test-Documentation.ps1
 ```
 
-## Main Project Families
+The filtered command is the routine repository gate. Environment-dependent and extended
+test lanes are documented in [Testing](docs/testing.md).
 
-| Area | Responsibility |
-|---|---|
-| `src/App` | Blazor host and runtime composition |
-| `src/Foundation` | infrastructure, shared primitives, PostgreSQL migrations, and Git integration |
-| `src/Integration` | file-tool and external integration adapters |
-| `src/Modules` | product-facing module boundaries |
-| `src/Processes` | process contracts, drivers, persistence, projections, and runtime |
-| `src/Memory` | provider-neutral Memory contracts, orchestration, persistence, and drivers |
-| `src/MAF` | AgentFramework core, MAF adapters, providers, tools, workflows, and executors |
-| `src/UI` | application-owned UI facade and Git-specific UI integration |
-| `src/plugins` | plugin contracts and bundled implementations |
-| `tests` | unit, integration, component, Memory, MAF, Playwright, and support tests |
-| `tools` | local manager, diagnostics, seeding, installation, and validation |
+## Containers
 
-Project and package dependencies are authoritative in each `.csproj`; project READMEs describe purpose and local validation without duplicating that dependency graph.
-
-## API, Memory, And Agent Runtime
-
-The host exposes typed API groups for projects, project structure, agents, agent recruiting, Prompt Gallery, workflows, processes and run records, plugins, and CRM/HR. OpenAPI and the interactive `/swagger` page are enabled by default and can be disabled independently in `appsettings.json`. Start with [API control plane](docs/api-control-plane.md).
-
-The experimental Memory subsystem is the generic provider model under `src/Memory`,
-composed through `CanDoItAll.Modules.Memory` and
-`CanDoItAll.AgentFramework.Memory`. Provider setup is explicit and disabled by
-default. Native Cognitive Memory can connect only through the isolated external-service
-driver. See [Memory providers](docs/memory-providers/README.md) for the current boundary
-and migration guidance.
-
-MAF package versions are centralized in `src/MAF/MicrosoftAgentFramework.Packages.props`: stable packages use `1.15.0`, and preview-only packages use `1.15.0-preview.260722.1`. See [MAF 1.15 compatibility](docs/maf-1.15-compatibility.md).
-
-## Local MCP And Codex Setup
-
-Install or refresh MCP sidecars from the sibling source repository:
+The base Compose model owns the local PostgreSQL dependency only. It publishes PostgreSQL
+on loopback, stores authoritative data in a named volume, and preserves that volume on
+normal shutdown.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp
+docker compose --env-file .env.example config --quiet
+docker compose up -d --wait db
+docker compose down
 ```
 
-Place `CanDoItAll.CodeAnalysis` beside `CanDoItAll.Mcp`. By default the script also resolves `CanDoItAll.SharedInfo` beside this repository; pass `-SharedInfoRepoRoot` when it lives elsewhere, or `-SkipSkillSync` when intentionally omitting skill synchronization.
+See [container operations](docs/operations/containers.md) and
+[backup and restore](docs/operations/backup-and-restore.md).
 
-The active set is CodeAnalytics, Components, DotNetWatch, Mermaid, and SshOps. Processes and Project Structure are HTTP API surfaces, not active MCP servers. There is no LocalRuntime MCP sidecar.
+## Architecture
 
-Install the canonical Codex skills from the sibling SharedInfo repository:
+The main dependency direction is:
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1 -SharedInfoRepoRoot ..\CanDoItAll.SharedInfo
+```mermaid
+flowchart LR
+    Web["Web host and API"] --> Composition["Composition root"]
+    Composition --> Modules["Product modules"]
+    Modules --> Application["Application services"]
+    Application --> Domain["Domain contracts and runtime"]
+    Composition --> Adapters["MAF, providers, plugins, and integration adapters"]
+    Adapters --> Application
+    Composition --> Infrastructure["Infrastructure and PostgreSQL"]
+    Infrastructure --> Domain
 ```
 
-This repository does not vendor SharedInfo-owned development skills or Codex plugins. See [Codex integration](codex/README.md). App-internal agent, capability, process, and workflow seeds remain repository-owned under [Templates](Templates/README.md).
+Start with:
+
+- [Architecture overview](docs/architecture/overview.md)
+- [Internal communication](docs/architecture/internal-communication.md)
+- [Module map](docs/architecture/modules.md)
+- [Documentation index](docs/README.md)
 
 ## Styling
 
-Application-specific Tailwind styles are built here; shared component styles arrive through `CanDoItAll.Components.*` packages.
+Application-specific Tailwind assets live under [`Tailwind`](Tailwind/README.md).
 
 ```powershell
 npm install --prefix .\Tailwind
 npm run tailwind:build
 ```
 
-The output is `src/App/CanDoItAll.Web/wwwroot/css/output.css`. See [Tailwind](Tailwind/README.md).
+Shared component structure and styling belong to `CanDoItAll.Components`.
 
 ## Packaging
 
-Published CanDoItAll dependencies restore from NuGet.org. Reusable component previews and their tests are owned by the sibling `CanDoItAll.Components` repository, so this repository no longer carries a local component package source. The root `package.json` is private and exists only to provide repository-level Tailwind commands.
+NuGet packaging and publishing are disabled for this repository. `Directory.Build.props`
+sets `IsPackable` to `false` for every project. Package metadata and release tooling will
+be introduced only with an explicit package contract and validation gate.
 
-The Windows-local web installer is:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Install-CanDoItAllWebApp.ps1
-```
-
-## Documentation
-
-- [Documentation index](docs/README.md)
-- [Architecture](docs/architecture-beta.md)
-- [Development runtime](docs/development-runtime.md)
-- [Testing](docs/testing.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security](SECURITY.md)
+The root npm package is private and exists only to run Tailwind commands.
 
 ## License And Contributions
 
-This repository uses the [MIT-Derived License with CanDoItAll Website Link Requirement](LICENSE). Redistributions of the software or a substantial portion of it in source or binary form must include at least one link to [aicandoitall.com](https://aicandoitall.com).
+This repository uses the
+[MIT-Derived License with CanDoItAll Website Link Requirement](LICENSE). Redistributions
+of the software or a substantial portion of it in source or binary form must include at
+least one link to [aicandoitall.com](https://aicandoitall.com).
 
-Code contributions are limited to partners approved by the maintainer. See [CONTRIBUTING.md](CONTRIBUTING.md) and contact [fyziktom on LinkedIn](https://www.linkedin.com/in/fyziktom/) before opening a pull request.
+Code contributions are limited to partners approved by the maintainer. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and contact the `fyziktom` account on LinkedIn before
+opening a pull request.

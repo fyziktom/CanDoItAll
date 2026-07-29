@@ -68,4 +68,4 @@ The generic HTTP transport and the Cognitive Memory adapter are separate assembl
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`

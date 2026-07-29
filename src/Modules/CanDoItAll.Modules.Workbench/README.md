@@ -49,6 +49,6 @@ concurrency checks.
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
-- Agent execution activity and runtime snapshots: `docs/architecture/agent-execution-activity-and-runtime-snapshots.md`
+- Current architecture: `docs/architecture/overview.md`
+- Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
 - Agent runtime tool surface: `docs/agent-runtime-tool-surface.md`

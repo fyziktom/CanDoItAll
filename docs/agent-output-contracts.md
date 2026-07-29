@@ -74,7 +74,10 @@ Machine-critical output flows through this sequence:
 
 `AgentOutputJson` uses strict JSON settings: no comments, no trailing commas, and string enums. Raw output hashes are available for diagnostics without logging sensitive full payloads.
 
-The execution service now preserves structured-output metadata on `ExecutionRunRecord` and workflow checkpoints. Approval continuations restore the original contract before resuming the provider call, and governed process-step runs fail if the stored contract cannot be resolved.
+The execution service preserves structured-output metadata on `ExecutionRunRecord` and
+workflow checkpoints. Approval continuations restore the original contract before
+resuming the provider call, and governed process-step runs fail if the stored contract
+cannot be resolved.
 
 ## Business rules
 
@@ -98,7 +101,14 @@ Invalid output is not accepted silently. Governed process-step runs default to o
 - the target contract name and schema expectation,
 - the instruction to return only the target structured output.
 
-The default repair behavior is implemented by `JsonObjectExtractionAgentOutputRepairService`. It is conservative extraction, not semantic repair: it can recover a single balanced JSON object from wrapped prose, then re-runs normal deserialization and validation. It does not invent missing fields, repair invalid enum values, pick branch outcomes, or fix business-rule failures. `DefaultAgentOutputRepairService` remains as a compatibility wrapper over this extraction service. After the retry limit, the run fails with structured validation errors. Required finalizer missing, duplicate, or invalid failures are not repaired as ordinary assistant text.
+The default repair behavior is implemented by
+`JsonObjectExtractionAgentOutputRepairService`. It is conservative extraction, not
+semantic repair: it can recover a single balanced JSON object from wrapped prose, then
+re-runs normal deserialization and validation. It does not invent missing fields, repair
+invalid enum values, pick branch outcomes, or fix business-rule failures.
+`DefaultAgentOutputRepairService` delegates to this extraction service. After the retry
+limit, the run fails with structured validation errors. Required finalizer missing,
+duplicate, or invalid failures are not repaired as ordinary assistant text.
 
 ## Finalizer tools
 

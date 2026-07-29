@@ -1,8 +1,0 @@
-{
-  "runId": "c5a1a7ae-707d-4aeb-9fe1-3e744cd25f52",
-  "stage": "Running",
-  "status": "Active",
-  "diagnostics": [
-    "Step 'architecture-review' is waiting for active child process run 'ff69244b-ef4c-4bcb-809d-636982918fa1'."
-  ]
-}

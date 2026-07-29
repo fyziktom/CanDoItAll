@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore .\CanDoItAll.slnx
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
+
+      - name: Test routine gate
+        shell: pwsh
+        run: dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+
+      - name: Validate documentation and repository structure
+        shell: pwsh
+        run: .\tools\Validation\Test-Documentation.ps1
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate Compose policy
+        shell: pwsh
+        run: ./tools/Validation/Test-Docker.ps1
+
+      - name: Start PostgreSQL and wait for health
+        run: docker compose --env-file .env.example -p "candoitall-app-ci-${{ github.run_id }}" up -d --wait --wait-timeout 120 db
+
+      - name: Show service state
+        if: always()
+        run: docker compose --env-file .env.example -p "candoitall-app-ci-${{ github.run_id }}" ps --all
+
+      - name: Remove disposable CI resources
+        if: always()
+        run: docker compose --env-file .env.example -p "candoitall-app-ci-${{ github.run_id }}" down --volumes --remove-orphans

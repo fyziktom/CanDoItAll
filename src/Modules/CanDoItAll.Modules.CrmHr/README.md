@@ -31,5 +31,5 @@ The Web host exposes the supported HTTP slice at `/api/crm-hr`. Web owns route b
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
-- Current architecture: `docs/architecture-beta.md`
+- Current architecture: `docs/architecture/overview.md`
 - CRM-HR HTTP API: `docs/crm-hr-api.md`
