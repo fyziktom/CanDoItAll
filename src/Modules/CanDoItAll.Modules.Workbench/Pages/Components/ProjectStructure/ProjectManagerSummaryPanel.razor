@@ -22,12 +22,23 @@
                 </Stack>
                 @if (State.Snapshot is { } loadedSnapshot)
                 {
-                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                    <Cluster Gap="LayoutGap.Tiny"
+                             Wrap="FlexWrap.Wrap"
+                             data-testid="manager-summary-header-actions">
                         <StatusBadge Tone="success" Text="Loaded" />
                         <StatusBadge Tone="neutral" Text="@($"As of {loadedSnapshot.GeneratedAtUtc.LocalDateTime:g}")" />
                         @if (HasPendingOptionChanges)
                         {
                             <StatusBadge Tone="warning" Text="Options changed" />
+                        }
+                        @if (HasReportDiagnostics(loadedSnapshot))
+                        {
+                            <PageHeaderActionButton Icon="warning_amber"
+                                                    Label="Open report notes and warnings"
+                                                    TooltipText="@FormatReportDiagnosticsTooltip(loadedSnapshot)"
+                                                    ButtonStyle="ButtonStyle.Warning"
+                                                    Click="OpenWarningsDialog"
+                                                    TestId="manager-summary-open-warnings" />
                         }
                     </Cluster>
                 }
@@ -171,7 +182,7 @@
         </Grid>
 
         <Grid Gap="LayoutGap.Large"
-              ColumnTemplateXl="minmax(17rem,0.55fr) minmax(0,1.45fr)"
+              ColumnTemplateXl="minmax(12rem,0.68fr) minmax(18rem,0.92fr) minmax(24rem,1.7fr)"
               AlignItems="AlignItems.Stretch"
               Class="project-manager-summary__overview">
             <Stack GapScale="LayoutGap.Medium"
@@ -180,24 +191,24 @@
                           Description="@CostDistributionDescription"
                           Series="@CostDistributionSeries"
                           Options="@CostDistributionOptions"
-                          Height="260"
+                          Height="280"
                           EmptyText="No known USD cost is available for this scope." />
             </Stack>
             <SurfaceCard Soft="true"
                          Class="project-manager-summary__latest">
-                <Stack GapScale="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Small">
                     <Cluster JustifyContent="JustifyContent.SpaceBetween"
                              AlignItems="AlignItems.Center"
-                             Gap="LayoutGap.Medium"
-                             Wrap="FlexWrap.Wrap">
-                        <Stack GapScale="LayoutGap.Tiny">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Latest activity" />
-                            <TextBlock Value="The five latest direct agent runs, standalone workflows, and root processes." />
-                        </Stack>
-                        <Button Text="Open all activity"
+                             Gap="LayoutGap.Small"
+                             Wrap="FlexWrap.NoWrap">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Latest activity" />
+                        <Button Text=""
                                 Icon="open_in_full"
                                 Variant="Variant.Outlined"
+                                Size="ButtonSize.Small"
                                 Click="OpenActivityDialog"
+                                aria-label="Open all activity"
+                                title="Open all activity"
                                 data-testid="manager-summary-open-activity" />
                     </Cluster>
 
@@ -219,9 +230,11 @@
                                     <Status>
                                         <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
                                             <StatusBadge Tone="@ResolveActivityTone(activity.Status)"
-                                                         Text="@FormatActivityStatus(activity.Status)" />
+                                                         Text="@FormatActivityStatus(activity.Status)"
+                                                         NoWrap="true" />
                                             <StatusBadge Tone="neutral"
-                                                         Text="@FormatActivityKind(activity.Kind)" />
+                                                         Text="@FormatActivityKind(activity.Kind)"
+                                                         NoWrap="true" />
                                         </Cluster>
                                     </Status>
                                 </SelectionListItem>
@@ -230,36 +243,61 @@
                     }
                 </Stack>
             </SurfaceCard>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="project-manager-summary__expense-chart">
+                <CdaChart Title="Expense trend"
+                          Description="Known, estimated, and remaining planned USD cost across the selected range."
+                          Series="@ExpenseSeries"
+                          Options="@ExpenseOptions"
+                          Height="300"
+                          EmptyText="No dated expense points are available for this scope." />
+            </Stack>
         </Grid>
-
-        <Stack GapScale="LayoutGap.Medium">
-            <CdaChart Title="Expense trend"
-                      Description="Known historical, estimated historical, and remaining planned USD cost across the selected range."
-                      Series="@ExpenseSeries"
-                      Options="@ExpenseOptions"
-                      Height="320"
-                      EmptyText="No dated expense points are available for this scope." />
-        </Stack>
-
-        @if (snapshot.OtherCurrencyFutureCosts.Count > 0)
-        {
-            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
-                <TextBlock Value="@FormatOtherCurrencyCosts(snapshot.OtherCurrencyFutureCosts)" />
-            </Alert>
-        }
-
-        @foreach (var warning in snapshot.Warnings)
-        {
-            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
-                <TextBlock Value="@warning" />
-            </Alert>
-        }
 
         @if (activityDialogOpen)
         {
             <ProjectManagerActivityDialog Summary="@snapshot"
                                           IsOpen="true"
                                           IsOpenChanged="HandleActivityDialogOpenChanged" />
+        }
+
+        @if (warningsDialogOpen && HasReportDiagnostics(snapshot))
+        {
+            <Dialog IsOpen="true"
+                    Eyebrow="Manager Summary"
+                    Title="Report notes and warnings"
+                    Subtitle="@FormatReportDiagnosticsSubtitle(snapshot)"
+                    Size="ModalSize.Medium"
+                    DenseChrome="true"
+                    TestId="manager-summary-warnings-dialog"
+                    OnClose="CloseWarningsDialogAsync">
+                <ChildContent>
+                    <Stack GapScale="LayoutGap.Medium">
+                        @if (snapshot.OtherCurrencyFutureCosts.Count > 0)
+                        {
+                            <Alert AlertStyle="AlertStyle.Info"
+                                   Variant="Variant.Outlined"
+                                   data-testid="manager-summary-currency-note">
+                                <TextBlock Value="@FormatOtherCurrencyCosts(snapshot.OtherCurrencyFutureCosts)" />
+                            </Alert>
+                        }
+
+                        @if (snapshot.Warnings.Count > 0)
+                        {
+                            <Alert AlertStyle="AlertStyle.Warning"
+                                   Variant="Variant.Outlined">
+                                <Stack GapScale="LayoutGap.Small">
+                                    @foreach (var warning in snapshot.Warnings)
+                                    {
+                                        <TextBlock Value="@warning"
+                                                   data-testid="manager-summary-warning-item" />
+                                    }
+                                </Stack>
+                            </Alert>
+                        }
+                    </Stack>
+                </ChildContent>
+            </Dialog>
         }
     }
 </Stack>
@@ -301,6 +339,7 @@
     private Guid appliedProjectId;
     private bool isLoading;
     private bool activityDialogOpen;
+    private bool warningsDialogOpen;
     private string loadError = string.Empty;
 
     [Parameter, EditorRequired]
@@ -441,6 +480,7 @@
         loadError = string.Empty;
         isLoading = false;
         activityDialogOpen = false;
+        warningsDialogOpen = false;
     }
 
     public void Dispose()
@@ -538,6 +578,7 @@
 
         State.Snapshot = snapshot;
         loadError = string.Empty;
+        warningsDialogOpen = false;
     }
 
     private CancellationTokenSource BeginLoad()
@@ -595,6 +636,20 @@
 
     private void HandleActivityDialogOpenChanged(bool isOpen)
         => activityDialogOpen = isOpen;
+
+    private void OpenWarningsDialog()
+    {
+        if (State.Snapshot is { } snapshot && HasReportDiagnostics(snapshot))
+        {
+            warningsDialogOpen = true;
+        }
+    }
+
+    private Task CloseWarningsDialogAsync()
+    {
+        warningsDialogOpen = false;
+        return Task.CompletedTask;
+    }
 
     private static void AddExpenseSeries(
         ICollection<CdaChartSeries> target,
@@ -716,5 +771,27 @@
         var values = costs.Select(cost =>
             $"{cost.FuturePlannedAmount.ToString("N2", CultureInfo.CurrentCulture)} {cost.CurrencyCode}");
         return $"Remaining planned costs in other currencies are kept separate: {string.Join(", ", values)}.";
+    }
+
+    private static bool HasReportDiagnostics(ProjectManagerSummarySnapshot snapshot)
+        => snapshot.Warnings.Count > 0 ||
+           snapshot.OtherCurrencyFutureCosts.Count > 0;
+
+    private static int CountReportDiagnostics(ProjectManagerSummarySnapshot snapshot)
+        => snapshot.Warnings.Count +
+           (snapshot.OtherCurrencyFutureCosts.Count > 0 ? 1 : 0);
+
+    private static string FormatReportDiagnosticsTooltip(
+        ProjectManagerSummarySnapshot snapshot)
+    {
+        var count = CountReportDiagnostics(snapshot);
+        return $"Open {count:N0} report {(count == 1 ? "note" : "notes")} and warnings.";
+    }
+
+    private static string FormatReportDiagnosticsSubtitle(
+        ProjectManagerSummarySnapshot snapshot)
+    {
+        var count = CountReportDiagnostics(snapshot);
+        return $"{count:N0} reporting {(count == 1 ? "note explains" : "notes explain")} scope, completeness, and forecast assumptions.";
     }
 }

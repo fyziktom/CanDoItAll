@@ -66,6 +66,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
 
         cut.WaitForElement("[data-testid='manager-summary-metrics']");
         Assert.Contains("Loaded", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("[data-testid='manager-summary-open-warnings']"));
         Assert.Equal(
             options,
             stateStore.GetOrCreate(projectId).Snapshot?.Options);
@@ -142,7 +143,13 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
             .Add(page => page.ProjectId, projectId));
 
-        cut.WaitForElement("[data-testid='manager-summary-open-activity']");
+        var openActivityButton = cut.WaitForElement("[data-testid='manager-summary-open-activity']");
+        Assert.Equal("Open all activity", openActivityButton.GetAttribute("aria-label"));
+        Assert.Equal("Open all activity", openActivityButton.GetAttribute("title"));
+        Assert.DoesNotContain(
+            "Open all activity",
+            openActivityButton.TextContent,
+            StringComparison.Ordinal);
         Assert.Empty(cut.FindAll("[data-testid='manager-summary-activity-dialog']"));
 
         await cut.InvokeAsync(() =>
@@ -169,6 +176,59 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
                         StringComparison.Ordinal) ||
                     button.TextContent.Contains("Close", StringComparison.Ordinal));
         });
+    }
+
+    [Fact]
+    public async Task Manager_summary_warnings_are_disclosed_only_on_demand()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var stateStore = harness.Context.Services.GetRequiredService<ProjectManagerSummaryStateStore>();
+        var projectId = await CreateProjectAsync(projectsService, "Manager summary warning project");
+        var snapshot = CreateManagerSummarySnapshot(
+            projectId,
+            "Manager summary warning project",
+            new ProjectManagerSummaryOptions()) with
+        {
+            OtherCurrencyFutureCosts =
+            [
+                new ProjectManagerCurrencyCostTotal("EUR", 125m, 2)
+            ],
+            Warnings =
+            [
+                "Historical workforce costs are not available.",
+                "The forecast uses planned completion dates."
+            ]
+        };
+        stateStore.GetOrCreate(projectId).Snapshot = snapshot;
+        navigation.NavigateTo($"http://localhost/projects/{projectId:D}/structure?tab=manager-summary");
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(page => page.ProjectId, projectId));
+
+        var openWarningsButton = cut.WaitForElement("[data-testid='manager-summary-open-warnings']");
+        Assert.Equal(
+            "Open report notes and warnings",
+            openWarningsButton.GetAttribute("aria-label"));
+        Assert.Empty(cut.FindAll("[data-testid='manager-summary-warnings-dialog']"));
+        Assert.DoesNotContain(snapshot.Warnings[0], cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(snapshot.Warnings[1], cut.Markup, StringComparison.Ordinal);
+
+        await cut.InvokeAsync(() => openWarningsButton.Click());
+
+        var dialog = cut.WaitForElement("[data-testid='manager-summary-warnings-dialog']");
+        var warningItems = cut.FindAll("[data-testid='manager-summary-warning-item']");
+        Assert.Equal(2, warningItems.Count);
+        Assert.Contains(snapshot.Warnings[0], dialog.TextContent, StringComparison.Ordinal);
+        Assert.Contains(snapshot.Warnings[1], dialog.TextContent, StringComparison.Ordinal);
+        Assert.Contains("125", dialog.TextContent, StringComparison.Ordinal);
+        Assert.Contains("EUR", dialog.TextContent, StringComparison.Ordinal);
+
+        await cut.InvokeAsync(() =>
+            dialog.QuerySelector("button[aria-label='Close']")!.Click());
+
+        cut.WaitForAssertion(() =>
+            Assert.Empty(cut.FindAll("[data-testid='manager-summary-warnings-dialog']")));
     }
 
     [Fact]

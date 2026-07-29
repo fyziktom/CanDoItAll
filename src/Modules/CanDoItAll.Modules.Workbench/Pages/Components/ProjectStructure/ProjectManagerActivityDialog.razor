@@ -96,22 +96,60 @@
             else
             {
                 <SurfaceCard Soft="true">
-                    <Stack GapScale="LayoutGap.Tiny"
-                           data-testid="manager-activity-list">
-                        @foreach (var activity in page.Items)
-                        {
-                            <SelectionListItem Title="@activity.Title"
-                                               Eyebrow="@FormatActivityKind(activity.Kind)"
-                                               Summary="@activity.Summary"
-                                               Meta="@FormatActivityMeta(activity)"
-                                               Dense="true">
-                                <Status>
+                    <DataGrid TItem="ProjectManagerActivity"
+                              Data="@(page.Items)"
+                              AllowPaging="false"
+                              data-testid="manager-activity-list">
+                        <Columns>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Activity">
+                                <Template Context="activity">
+                                    <Stack GapScale="LayoutGap.Tiny"
+                                           Class="project-manager-activity__identity">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                   Value="@activity.Title" />
+                                        <span class="project-manager-activity__summary"
+                                              title="@activity.Summary">@activity.Summary</span>
+                                    </Stack>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Type">
+                                <Template Context="activity">
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@FormatActivityKind(activity.Kind)"
+                                                 NoWrap="true" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Activity time">
+                                <Template Context="activity">
+                                    <span class="project-manager-activity__nowrap">
+                                        @activity.ActivityAtUtc.LocalDateTime.ToString("g")
+                                    </span>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Length">
+                                <Template Context="activity">
+                                    <span class="project-manager-activity__nowrap">
+                                        @FormatDuration(activity.DurationMilliseconds)
+                                    </span>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Cost">
+                                <Template Context="activity">
+                                    <span class="project-manager-activity__nowrap"
+                                          title="@FormatActivityCostDetail(activity)">
+                                        @FormatActivityCost(activity)
+                                    </span>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="ProjectManagerActivity" Title="Status">
+                                <Template Context="activity">
                                     <StatusBadge Tone="@ResolveActivityTone(activity.Status)"
-                                                 Text="@FormatActivityStatus(activity.Status)" />
-                                </Status>
-                            </SelectionListItem>
-                        }
-                    </Stack>
+                                                 Text="@FormatActivityStatus(activity.Status)"
+                                                 NoWrap="true" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
                 </SurfaceCard>
             }
 
@@ -342,17 +380,29 @@
         return $"{Math.Max(1, (int)duration.TotalMinutes):N0}m";
     }
 
-    private static string FormatActivityMeta(ProjectManagerActivity activity)
+    private static string FormatActivityCost(ProjectManagerActivity activity)
     {
-        var knownCost = FormatUsd(activity.KnownCostUsd);
-        var estimated = activity.EstimatedCostUsd > 0
-            ? $" · estimate {FormatUsd(activity.EstimatedCostUsd)}"
-            : string.Empty;
-        var incomplete = activity.HasUnknownCost
-            ? " · pricing incomplete"
-            : string.Empty;
-        return $"{activity.ActivityAtUtc.LocalDateTime:g} · {FormatDuration(activity.DurationMilliseconds)} · {knownCost}{estimated}{incomplete}";
+        if (activity.KnownCostUsd > 0)
+        {
+            return FormatUsd(activity.KnownCostUsd);
+        }
+
+        if (activity.EstimatedCostUsd > 0)
+        {
+            return $"Est. {FormatUsd(activity.EstimatedCostUsd)}";
+        }
+
+        return activity.HasUnknownCost
+            ? "Unknown"
+            : FormatUsd(0m);
     }
+
+    private static string FormatActivityCostDetail(ProjectManagerActivity activity)
+        => activity.HasUnknownCost
+            ? $"{FormatActivityCost(activity)} · pricing incomplete"
+            : activity.EstimatedCostUsd > 0
+                ? $"{FormatActivityCost(activity)} · recorded estimate {FormatUsd(activity.EstimatedCostUsd)}"
+                : FormatActivityCost(activity);
 
     private static string FormatActivityKind(ProjectManagerActivityKind kind)
         => kind switch

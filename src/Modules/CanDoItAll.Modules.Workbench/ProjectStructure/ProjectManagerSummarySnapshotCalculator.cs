@@ -283,7 +283,7 @@ internal static class ProjectManagerSummarySnapshotCalculator
         if (options.TimeRange == ProjectManagerSummaryTimeRange.All)
         {
             warnings.Add(
-                $"Totals are all-time. The daily expense chart is bounded to the latest {MaximumChartDayCount:N0} days.");
+                $"Totals are all-time. Historical daily expenses are bounded to the latest {MaximumChartDayCount:N0} days; remaining plan milestones can extend beyond today.");
         }
 
         var unscheduledFutureCostTaskCount = plans.Sum(

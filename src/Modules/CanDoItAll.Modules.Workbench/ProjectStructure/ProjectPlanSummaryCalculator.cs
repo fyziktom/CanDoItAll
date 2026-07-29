@@ -228,17 +228,15 @@ public sealed class ProjectPlanSummaryCalculator
                 currentFutureCost.Amount + remainingAmount,
                 currentFutureCost.TaskCount + 1);
 
-            if (!task.StartUtc.HasValue)
+            var trendDate = ResolveFutureCostTrendDate(task, normalizedQuery.AsOfUtc);
+            if (!trendDate.HasValue)
             {
                 unscheduledFutureExpectedCostTaskCount++;
                 continue;
             }
 
-            var trendTimestamp = task.StartUtc.Value < normalizedQuery.AsOfUtc
-                ? normalizedQuery.AsOfUtc
-                : task.StartUtc.Value;
             var trendKey = (
-                DateOnly.FromDateTime(trendTimestamp.UtcDateTime),
+                trendDate.Value,
                 resourceGroup,
                 currencyCode);
             futureCostTrend.TryGetValue(trendKey, out var currentTrendCost);
@@ -619,13 +617,13 @@ public sealed class ProjectPlanSummaryCalculator
                             currentFutureCost.Amount + remainingAmount,
                             currentFutureCost.TaskCount + 1);
 
-                        if (evaluation.Task.StartUtc.HasValue)
+                        var trendDate = ResolveFutureCostTrendDate(
+                            evaluation.Task,
+                            query.AsOfUtc);
+                        if (trendDate.HasValue)
                         {
-                            var trendTimestamp = evaluation.Task.StartUtc.Value < query.AsOfUtc
-                                ? query.AsOfUtc
-                                : evaluation.Task.StartUtc.Value;
                             var trendKey = (
-                                DateOnly.FromDateTime(trendTimestamp.UtcDateTime),
+                                trendDate.Value,
                                 resourceGroup,
                                 currencyCode);
                             futureCostTrend.TryGetValue(trendKey, out var currentTrendCost);
@@ -1221,6 +1219,26 @@ public sealed class ProjectPlanSummaryCalculator
         return ProjectProgressPolicy.IsTrackedPercent(progressPercent)
             ? new ProjectPlanProgressParseResult(progressPercent, IsMissing: false, IsInvalid: false)
             : new ProjectPlanProgressParseResult(null, IsMissing: false, IsInvalid: true);
+    }
+
+    private static DateOnly? ResolveFutureCostTrendDate(
+        IProjectPlanScheduleFact task,
+        DateTimeOffset asOfUtc)
+    {
+        if (task.StartUtc is not { } startUtc)
+        {
+            return null;
+        }
+
+        var fallbackUtc = startUtc > asOfUtc
+            ? startUtc
+            : asOfUtc;
+        var forecastUtc = task.EndUtc is { } endUtc &&
+                          endUtc >= startUtc &&
+                          endUtc > fallbackUtc
+            ? endUtc
+            : fallbackUtc;
+        return DateOnly.FromDateTime(forecastUtc.UtcDateTime);
     }
 
     private static bool HasValidSchedule(ProjectPlanTaskFact task)

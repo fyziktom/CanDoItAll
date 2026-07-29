@@ -128,13 +128,13 @@ public sealed class ProjectPlanSummaryCalculatorTests
             summary.FutureExpectedCostTrend,
             overdue =>
             {
-                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.UtcDateTime), overdue.Date);
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(1).UtcDateTime), overdue.Date);
                 Assert.Equal(ProjectPlanResourceGroup.External, overdue.Group);
                 Assert.Equal(25m, overdue.Amount);
             },
             scheduled =>
             {
-                Assert.Equal(DateOnly.FromDateTime(scheduledStartUtc.UtcDateTime), scheduled.Date);
+                Assert.Equal(DateOnly.FromDateTime(scheduledStartUtc.AddHours(2).UtcDateTime), scheduled.Date);
                 Assert.Equal(ProjectPlanResourceGroup.Agent, scheduled.Group);
                 Assert.Equal(100m, scheduled.Amount);
             });
@@ -241,7 +241,7 @@ public sealed class ProjectPlanSummaryCalculatorTests
                 Assert.Equal(50m, external.Amount);
             });
         var trend = Assert.Single(summary.FutureExpectedCostTrend);
-        Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(1).UtcDateTime), trend.Date);
+        Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(2).UtcDateTime), trend.Date);
         Assert.Equal(75m, trend.Amount);
         Assert.Equal(1, summary.UnscheduledFutureExpectedCostTaskCount);
         Assert.DoesNotContain(
@@ -253,6 +253,71 @@ public sealed class ProjectPlanSummaryCalculatorTests
         Assert.Contains(
             summary.Warnings,
             warning => warning.Contains("outside the supported 0-100", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildManagerSummary_forecast_spreads_started_tasks_across_completion_dates()
+    {
+        var snapshot = new ProjectPlanManagerForecastSnapshot(
+            ProjectId,
+            "Completion forecast",
+            [
+                CreateTask(
+                    "near",
+                    progressPercent: 50,
+                    startUtc: AsOfUtc.AddDays(-4),
+                    endUtc: AsOfUtc.AddDays(1),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 100m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask(
+                    "far",
+                    progressPercent: 25,
+                    startUtc: AsOfUtc.AddDays(-2),
+                    endUtc: AsOfUtc.AddDays(4),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 200m,
+                        expectedCostCurrencyCode: "USD")),
+                CreateTask(
+                    "overdue",
+                    progressPercent: 50,
+                    startUtc: AsOfUtc.AddDays(-5),
+                    endUtc: AsOfUtc.AddDays(-1),
+                    metadataJson: CreateEstimateMetadata(
+                        expectedCostAmount: 50m,
+                        expectedCostCurrencyCode: "USD"))
+            ],
+            []);
+
+        var summary = new ProjectPlanSummaryCalculator().BuildManagerSummary(
+            snapshot,
+            new ProjectPlanManagerSummaryQuery(
+                ProjectPlanManagerSummaryMode.ScheduleAndRemainingCosts,
+                AsOfUtc));
+
+        Assert.Collection(
+            summary.FutureExpectedCostTrend,
+            overdue =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.UtcDateTime), overdue.Date);
+                Assert.Equal(25m, overdue.Amount);
+            },
+            near =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(1).UtcDateTime), near.Date);
+                Assert.Equal(50m, near.Amount);
+            },
+            far =>
+            {
+                Assert.Equal(DateOnly.FromDateTime(AsOfUtc.AddDays(4).UtcDateTime), far.Date);
+                Assert.Equal(150m, far.Amount);
+            });
+        Assert.Equal(
+            summary.FutureExpectedCostTotals.Sum(static total => total.Amount),
+            summary.FutureExpectedCostTrend.Sum(static point => point.Amount));
+        Assert.DoesNotContain(
+            summary.FutureExpectedCostTrend,
+            static point => point.Amount == 225m);
     }
 
     [Fact]

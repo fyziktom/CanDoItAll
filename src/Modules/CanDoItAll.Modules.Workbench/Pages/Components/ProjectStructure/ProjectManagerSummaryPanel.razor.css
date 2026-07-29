@@ -20,7 +20,8 @@
 }
 
 .project-manager-summary-shell ::deep .project-manager-summary__cost-chart,
-.project-manager-summary-shell ::deep .project-manager-summary__latest {
+.project-manager-summary-shell ::deep .project-manager-summary__latest,
+.project-manager-summary-shell ::deep .project-manager-summary__expense-chart {
     min-width: 0;
     height: 100%;
 }
