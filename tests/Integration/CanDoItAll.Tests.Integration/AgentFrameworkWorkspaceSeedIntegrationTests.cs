@@ -20,6 +20,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var retiredCapabilityId = Guid.NewGuid();
         var retiredBundleWorkflowCapabilityId = Guid.NewGuid();
         var retiredMemoryCapabilityId = Guid.NewGuid();
+        var retiredProjectTaskCreateCapabilityId = Guid.NewGuid();
+        var retiredProjectTaskUpdateCapabilityId = Guid.NewGuid();
         var retiredCapability = new CapabilityCatalogItem(
             retiredCapabilityId,
             CapabilityKind.Skill,
@@ -60,6 +62,30 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             string.Empty,
             null,
             true);
+        var retiredProjectTaskCreateCapability = new CapabilityCatalogItem(
+            retiredProjectTaskCreateCapabilityId,
+            CapabilityKind.Tool,
+            "project-task-create",
+            "Project Task Create",
+            "Retired duplicate authority; project task tools are governed by project-structure access metadata.",
+            "sandbox://project-task-create",
+            """{"tool":"project_task_create"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+        var retiredProjectTaskUpdateCapability = new CapabilityCatalogItem(
+            retiredProjectTaskUpdateCapabilityId,
+            CapabilityKind.Tool,
+            "project-task-update",
+            "Project Task Update",
+            "Retired duplicate authority; project task tools are governed by project-structure access metadata.",
+            "sandbox://project-task-update",
+            """{"tool":"project_task_update"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
         var financialStrategist = Assert.Single(
             seed.Agents,
             item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
@@ -69,7 +95,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var catalog = seed.ToCatalog() with
         {
             Capabilities = seed.Capabilities
-                .Concat([retiredCapability, retiredBundleWorkflowCapability, retiredMemoryCapability])
+                .Concat([
+                    retiredCapability,
+                    retiredBundleWorkflowCapability,
+                    retiredMemoryCapability,
+                    retiredProjectTaskCreateCapability,
+                    retiredProjectTaskUpdateCapability
+                ])
                 .ToList(),
             Agents = seed.Agents.Select(agent => agent.Id == financialStrategist.Id
                 ? agent with
@@ -95,6 +127,20 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                             retiredMemoryCapability.Kind,
                             CapabilityProofStatus.NotRun,
                             null,
+                            string.Empty),
+                        new AgentCapabilityAssignment(
+                            retiredProjectTaskCreateCapabilityId,
+                            retiredProjectTaskCreateCapability.Key,
+                            retiredProjectTaskCreateCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
+                            string.Empty),
+                        new AgentCapabilityAssignment(
+                            retiredProjectTaskUpdateCapabilityId,
+                            retiredProjectTaskUpdateCapability.Key,
+                            retiredProjectTaskUpdateCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
                             string.Empty)
                     ]).ToList()
                 }
@@ -109,10 +155,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredBundleWorkflowCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredMemoryCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredProjectTaskCreateCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredProjectTaskUpdateCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "project-task-create", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "project-task-update", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredCapabilityId);
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredBundleWorkflowCapabilityId);
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredMemoryCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredProjectTaskCreateCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredProjectTaskUpdateCapabilityId);
         Assert.Contains(spreadsheetAnalyst.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
         Assert.Contains(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
     }

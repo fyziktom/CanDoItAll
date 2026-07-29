@@ -164,8 +164,9 @@ public sealed class CrmHrAgentQueryService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var candidate = await CandidateQuery(dbContext, reference.RecordKind)
-            .SingleOrDefaultAsync(item => item.Id == reference.Id, cancellationToken);
+        var candidate = (await CandidateQuery(dbContext, reference.RecordKind, reference.Id)
+                .ToListAsync(cancellationToken))
+            .SingleOrDefault();
         if (candidate is null)
         {
             return Result<CrmHrAgentQueryItem>.Failure(Error.Failure(
@@ -246,43 +247,213 @@ public sealed class CrmHrAgentQueryService(
         int take,
         CancellationToken cancellationToken)
     {
-        return CandidateQuery(dbContext, recordKind)
-            .Where(item => !item.IsSensitive)
-            .Where(item =>
-                item.DisplayLabel.ToUpper().Contains(normalizedSearchText) ||
-                item.SearchContext.ToUpper().Contains(normalizedSearchText))
-            .OrderBy(item => item.DisplayLabel.ToUpper() == normalizedSearchText
+        return recordKind switch
+        {
+            CrmHrAgentRecordKind.Party => SearchPartiesAsync(
+                dbContext,
+                normalizedSearchText,
+                take,
+                cancellationToken),
+            CrmHrAgentRecordKind.Workforce => SearchWorkforceAsync(
+                dbContext,
+                normalizedSearchText,
+                take,
+                cancellationToken),
+            CrmHrAgentRecordKind.CrmAccount => SearchAccountsAsync(
+                dbContext,
+                normalizedSearchText,
+                take,
+                cancellationToken),
+            CrmHrAgentRecordKind.Opportunity => Task.FromResult(new List<Candidate>()),
+            CrmHrAgentRecordKind.AiAgent => SearchAiAgentsAsync(
+                dbContext,
+                normalizedSearchText,
+                take,
+                cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(recordKind),
+                recordKind,
+                "Unsupported CRM/HR record kind.")
+        };
+    }
+
+    private static Task<List<Candidate>> SearchPartiesAsync(
+        AppDbContext dbContext,
+        string normalizedSearchText,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        return dbContext.Set<Party>()
+            .AsNoTracking()
+            .Where(party => !party.IsSensitive)
+            .Where(party => party.DisplayName.ToUpper().Contains(normalizedSearchText))
+            .OrderBy(party => party.DisplayName.ToUpper() == normalizedSearchText
                 ? 0
-                : item.DisplayLabel.ToUpper().StartsWith(normalizedSearchText)
+                : party.DisplayName.ToUpper().StartsWith(normalizedSearchText)
                     ? 1
-                    : item.DisplayLabel.ToUpper().Contains(normalizedSearchText)
-                        ? 2
-                        : 3)
-            .ThenBy(item => item.DisplayLabel)
-            .ThenBy(item => item.Id)
+                    : 2)
+            .ThenBy(party => party.DisplayName)
+            .ThenBy(party => party.Id)
+            .Select(party => new Candidate(
+                party.Id,
+                CrmHrAgentRecordKind.Party,
+                party.DisplayName,
+                party.Summary,
+                party.TagsJson,
+                string.Empty,
+                party.IsSensitive,
+                party.LifecycleStatus,
+                string.Empty,
+                null,
+                null,
+                null))
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    private static Task<List<Candidate>> SearchWorkforceAsync(
+        AppDbContext dbContext,
+        string normalizedSearchText,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        var query =
+            from profile in dbContext.Set<WorkforceProfile>().AsNoTracking()
+            join party in dbContext.Set<Party>().AsNoTracking()
+                on profile.PartyId equals party.Id
+            where party.PartyType != PartyType.AiAgent && !party.IsSensitive
+            where party.DisplayName.ToUpper().Contains(normalizedSearchText) ||
+                  (profile.JobTitle + " " + profile.Discipline + " " + profile.Status)
+                  .ToUpper()
+                  .Contains(normalizedSearchText)
+            orderby party.DisplayName.ToUpper() == normalizedSearchText
+                    ? 0
+                    : party.DisplayName.ToUpper().StartsWith(normalizedSearchText)
+                        ? 1
+                        : party.DisplayName.ToUpper().Contains(normalizedSearchText)
+                            ? 2
+                            : 3,
+                party.DisplayName,
+                party.Id
+            select new Candidate(
+                party.Id,
+                CrmHrAgentRecordKind.Workforce,
+                party.DisplayName,
+                party.Summary + " Role: " + profile.JobTitle + "; discipline: " + profile.Discipline,
+                party.TagsJson,
+                profile.JobTitle + " " + profile.Discipline + " " + profile.Status,
+                party.IsSensitive,
+                party.LifecycleStatus,
+                profile.Status,
+                null,
+                null,
+                null);
+
+        return query
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    private static Task<List<Candidate>> SearchAccountsAsync(
+        AppDbContext dbContext,
+        string normalizedSearchText,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        var query =
+            from party in dbContext.Set<Party>().AsNoTracking()
+            join profile in dbContext.Set<CrmAccountProfile>().AsNoTracking()
+                on party.Id equals profile.AccountPartyId
+            where party.PartyType == PartyType.Organization && !party.IsSensitive
+            where party.DisplayName.ToUpper().Contains(normalizedSearchText)
+            orderby party.DisplayName.ToUpper() == normalizedSearchText
+                    ? 0
+                    : party.DisplayName.ToUpper().StartsWith(normalizedSearchText)
+                        ? 1
+                        : 2,
+                party.DisplayName,
+                party.Id
+            select new Candidate(
+                party.Id,
+                CrmHrAgentRecordKind.CrmAccount,
+                party.DisplayName,
+                party.Summary,
+                party.TagsJson,
+                string.Empty,
+                party.IsSensitive,
+                party.LifecycleStatus,
+                string.Empty,
+                profile.RelationshipStage,
+                null,
+                null);
+
+        return query
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    private static Task<List<Candidate>> SearchAiAgentsAsync(
+        AppDbContext dbContext,
+        string normalizedSearchText,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        var query =
+            from party in dbContext.Set<Party>().AsNoTracking()
+            where party.PartyType == PartyType.AiAgent && !party.IsSensitive
+            where party.DisplayName.ToUpper().Contains(normalizedSearchText)
+            join profile in dbContext.Set<AiAgentProfile>().AsNoTracking()
+                on party.Id equals profile.PartyId into profiles
+            from profile in profiles.DefaultIfEmpty()
+            orderby party.DisplayName.ToUpper() == normalizedSearchText
+                    ? 0
+                    : party.DisplayName.ToUpper().StartsWith(normalizedSearchText)
+                        ? 1
+                        : 2,
+                party.DisplayName,
+                party.Id
+            select new Candidate(
+                party.Id,
+                CrmHrAgentRecordKind.AiAgent,
+                party.DisplayName,
+                party.Summary,
+                party.TagsJson,
+                string.Empty,
+                party.IsSensitive,
+                party.LifecycleStatus,
+                string.Empty,
+                null,
+                null,
+                profile == null ? null : profile.ValidationStatus);
+
+        return query
             .Take(take)
             .ToListAsync(cancellationToken);
     }
 
     private static IQueryable<Candidate> CandidateQuery(
         AppDbContext dbContext,
-        CrmHrAgentRecordKind recordKind)
+        CrmHrAgentRecordKind recordKind,
+        Guid? recordId = null)
     {
         return recordKind switch
         {
-            CrmHrAgentRecordKind.Party => PartyCandidates(dbContext),
-            CrmHrAgentRecordKind.Workforce => WorkforceCandidates(dbContext),
-            CrmHrAgentRecordKind.CrmAccount => AccountCandidates(dbContext),
-            CrmHrAgentRecordKind.Opportunity => OpportunityCandidates(dbContext),
-            CrmHrAgentRecordKind.AiAgent => AiAgentCandidates(dbContext),
+            CrmHrAgentRecordKind.Party => PartyCandidates(dbContext, recordId),
+            CrmHrAgentRecordKind.Workforce => WorkforceCandidates(dbContext, recordId),
+            CrmHrAgentRecordKind.CrmAccount => AccountCandidates(dbContext, recordId),
+            CrmHrAgentRecordKind.Opportunity => OpportunityCandidates(dbContext, recordId),
+            CrmHrAgentRecordKind.AiAgent => AiAgentCandidates(dbContext, recordId),
             _ => throw new ArgumentOutOfRangeException(nameof(recordKind), recordKind, "Unsupported CRM/HR record kind.")
         };
     }
 
-    private static IQueryable<Candidate> PartyCandidates(AppDbContext dbContext)
+    private static IQueryable<Candidate> PartyCandidates(
+        AppDbContext dbContext,
+        Guid? recordId)
     {
         return dbContext.Set<Party>()
             .AsNoTracking()
+            .Where(party => !recordId.HasValue || party.Id == recordId.Value)
             .Select(party => new Candidate(
                 party.Id,
                 CrmHrAgentRecordKind.Party,
@@ -298,13 +469,16 @@ public sealed class CrmHrAgentQueryService(
                 null));
     }
 
-    private static IQueryable<Candidate> WorkforceCandidates(AppDbContext dbContext)
+    private static IQueryable<Candidate> WorkforceCandidates(
+        AppDbContext dbContext,
+        Guid? recordId)
     {
         return
             from profile in dbContext.Set<WorkforceProfile>().AsNoTracking()
             join party in dbContext.Set<Party>().AsNoTracking()
                 on profile.PartyId equals party.Id
             where party.PartyType != PartyType.AiAgent
+            where !recordId.HasValue || party.Id == recordId.Value
             select new Candidate(
                 party.Id,
                 CrmHrAgentRecordKind.Workforce,
@@ -320,13 +494,16 @@ public sealed class CrmHrAgentQueryService(
                 null);
     }
 
-    private static IQueryable<Candidate> AccountCandidates(AppDbContext dbContext)
+    private static IQueryable<Candidate> AccountCandidates(
+        AppDbContext dbContext,
+        Guid? recordId)
     {
         return
             from party in dbContext.Set<Party>().AsNoTracking()
             join profile in dbContext.Set<CrmAccountProfile>().AsNoTracking()
                 on party.Id equals profile.AccountPartyId
             where party.PartyType == PartyType.Organization
+            where !recordId.HasValue || party.Id == recordId.Value
             select new Candidate(
                 party.Id,
                 CrmHrAgentRecordKind.CrmAccount,
@@ -342,10 +519,13 @@ public sealed class CrmHrAgentQueryService(
                 null);
     }
 
-    private static IQueryable<Candidate> OpportunityCandidates(AppDbContext dbContext)
+    private static IQueryable<Candidate> OpportunityCandidates(
+        AppDbContext dbContext,
+        Guid? recordId)
     {
         return
             from opportunity in dbContext.Set<Opportunity>().AsNoTracking()
+            where !recordId.HasValue || opportunity.Id == recordId.Value
             join account in dbContext.Set<Party>().AsNoTracking()
                 on opportunity.AccountPartyId equals account.Id into accounts
             from account in accounts.DefaultIfEmpty()
@@ -364,11 +544,14 @@ public sealed class CrmHrAgentQueryService(
                 null);
     }
 
-    private static IQueryable<Candidate> AiAgentCandidates(AppDbContext dbContext)
+    private static IQueryable<Candidate> AiAgentCandidates(
+        AppDbContext dbContext,
+        Guid? recordId)
     {
         return
             from party in dbContext.Set<Party>().AsNoTracking()
             where party.PartyType == PartyType.AiAgent
+            where !recordId.HasValue || party.Id == recordId.Value
             join profile in dbContext.Set<AiAgentProfile>().AsNoTracking()
                 on party.Id equals profile.PartyId into profiles
             from profile in profiles.DefaultIfEmpty()

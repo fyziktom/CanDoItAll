@@ -55,6 +55,26 @@ public sealed record HrAgentSafePermissions(
     bool RequiresApprovalForExternalCalls,
     bool AutoApproveExternalCallsByDefault);
 
+public sealed record HrAgentProjectStructureAccessInput(
+    bool? CanRead = null,
+    bool? CanWrite = null,
+    bool? CanWriteNonTaskStructure = null,
+    bool? CanWriteTasks = null,
+    bool? CanCreateProjects = null,
+    bool? CanCreateSubprojects = null,
+    bool? AllowAllProjects = null,
+    IReadOnlyList<Guid>? AllowedProjectIds = null);
+
+public sealed record HrAgentSafeProjectStructureAccess(
+    bool CanRead,
+    bool CanWrite,
+    bool CanWriteNonTaskStructure,
+    bool CanWriteTasks,
+    bool CanCreateProjects,
+    bool CanCreateSubprojects,
+    bool AllowAllProjects,
+    IReadOnlyList<Guid> AllowedProjectIds);
+
 public sealed record HrAgentCapabilityDescriptor(
     Guid Id,
     string Key,
@@ -94,6 +114,7 @@ public sealed record HrAgentSafeSettings(
     AgentChatHistoryMode ChatHistoryMode,
     double Temperature,
     HrAgentSafePermissions Permissions,
+    HrAgentSafeProjectStructureAccess ProjectStructureAccess,
     IReadOnlyList<HrAgentCapabilityDescriptor> Capabilities,
     IReadOnlyList<string> Tags,
     DateTimeOffset CreatedAtUtc,
@@ -151,7 +172,8 @@ public sealed record HrAgentCreateInput(
     IReadOnlyList<Guid>? CapabilityIds = null,
     IReadOnlyList<string>? Tags = null,
     HrAgentPermissionsInput? Permissions = null,
-    Guid? TeamId = null);
+    Guid? TeamId = null,
+    HrAgentProjectStructureAccessInput? ProjectStructureAccess = null);
 
 public sealed record HrAgentPermissionsPatch(
     bool? CanUseTools = null,
@@ -177,7 +199,8 @@ public sealed record HrAgentSettingsUpdateInput(
     double? Temperature = null,
     IReadOnlyList<Guid>? CapabilityIds = null,
     IReadOnlyList<string>? Tags = null,
-    HrAgentPermissionsPatch? Permissions = null);
+    HrAgentPermissionsPatch? Permissions = null,
+    HrAgentProjectStructureAccessInput? ProjectStructureAccess = null);
 
 public sealed record HrAgentMutationResult(
     Guid AgentId,

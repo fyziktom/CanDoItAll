@@ -18,6 +18,9 @@ public static class HrAgentCapabilityKeys
     public const string AgentProcessManagerReviewRequest = "hr-agent-process-manager-review-request";
     public const string CrmSearch = "hr-crm-search";
     public const string CrmItemSummaryGet = "hr-crm-item-summary-get";
+    public const string CrmPartyCreate = "hr-crm-party-create";
+    public const string CrmPartyAffiliationsList = "hr-crm-party-affiliations-list";
+    public const string CrmAffiliationUpsert = "hr-crm-affiliation-upsert";
 
     public static IReadOnlyDictionary<string, string> ToolNameToCapabilityKey { get; } =
         new Dictionary<string, string>(StringComparer.Ordinal)
@@ -32,7 +35,10 @@ public static class HrAgentCapabilityKeys
             [AgentToolInvocationPolicyMetadata.HrAgentProcessHistoryGet] = AgentProcessHistoryGet,
             [AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest] = AgentProcessManagerReviewRequest,
             [AgentToolInvocationPolicyMetadata.HrCrmSearch] = CrmSearch,
-            [AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet] = CrmItemSummaryGet
+            [AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet] = CrmItemSummaryGet,
+            [AgentToolInvocationPolicyMetadata.HrCrmPartyCreate] = CrmPartyCreate,
+            [AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList] = CrmPartyAffiliationsList,
+            [AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert] = CrmAffiliationUpsert
         };
 
     public static IReadOnlySet<string> PrivilegedKeys { get; } = new HashSet<string>(

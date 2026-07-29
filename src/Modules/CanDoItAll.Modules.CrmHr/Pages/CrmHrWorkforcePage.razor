@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Logging
 @inject HrService HrService
 @inject PartyDirectoryService PartyDirectoryService
+@inject IPartyOrganizationAffiliationService AffiliationService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrWorkforcePage> Logger
@@ -49,19 +50,16 @@
                                     data-testid="crmhr-workforce-new-delivery-unit" />
                         </Actions>
                     </ListPanelHeader>
-                    <PartyRecordBrowser @key="workforceBrowserVersion"
-                                        AllowedScope="@(PartyRecordScope.People | PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                        InitialScope="@(PartyRecordScope.People | PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                        Population="PartyRecordPopulation.Workforce"
-                                        SelectedPartyId="selectedWorkspace?.PartyId"
-                                        SelectionChanged="SelectPartyAsync"
-                                        LoadFailed="HandleWorkforceBrowserLoadFailedAsync"
-                                        PageSize="12"
-                                        ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
-                                        GridMode="PagedRecordGridMode.BoundedCatalog"
-                                        SearchPlaceholder="Search workforce name, code, summary, or tag"
-                                        DataTestId="crmhr-workforce"
-                                        OptionTestId="crmhr-workforce-item" />
+                    <WorkforceRecordBrowser @key="workforceBrowserVersion"
+                                            SelectedPartyId="selectedWorkspace?.PartyId"
+                                            SelectionChanged="SelectPartyAsync"
+                                            LoadFailed="HandleWorkforceBrowserLoadFailedAsync"
+                                            PageSize="12"
+                                            ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
+                                            GridMode="PagedRecordGridMode.BoundedCatalog"
+                                            SearchPlaceholder="Search workforce name, summary, organization, or title"
+                                            DataTestId="crmhr-workforce"
+                                            OptionTestId="crmhr-workforce-item" />
                 </Stack>
             </SurfaceCard>
 
@@ -93,8 +91,17 @@
                                     </p>
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                    <StatusBadge Tone="@ResolveKindTone(profileEditor.WorkforceKind)" Text="@profileEditor.WorkforceKind.ToString()" />
-                                    <StatusBadge Tone="@ResolveStatusTone(profileEditor.Status)" Text="@profileEditor.Status" />
+                                    <StatusBadge Tone="@SelectedClassificationTone"
+                                                 Text="@SelectedClassificationLabel"
+                                                 data-testid="crmhr-workforce-classification" />
+                                    <StatusBadge Tone="@ResolveLifecycleTone(selectedWorkspace.LifecycleStatus)"
+                                                 Text="@selectedWorkspace.LifecycleStatus.ToString()"
+                                                 data-testid="crmhr-workforce-lifecycle" />
+                                    @if (selectedWorkspace.Profile.Id.HasValue)
+                                    {
+                                        <StatusBadge Tone="@ResolveStatusTone(profileEditor.Status)"
+                                                     Text="@profileEditor.Status" />
+                                    }
                                     @if (SelectedAvailabilityState is { } availabilityState)
                                     {
                                         <StatusBadge Tone="@ResolveAvailabilityTone(availabilityState)"
@@ -104,6 +111,27 @@
                             </Split>
                         </SurfaceCard>
 
+                        @if (SelectedIsExternalContactWithoutProfile && !isProfileCreationRequested)
+                        {
+                            <SurfaceCard Soft="true" data-testid="crmhr-workforce-no-staffable-profile">
+                                <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Start">
+                                    <div>
+                                        <p class="cda-eyebrow">External contact</p>
+                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">No staffable profile</h3>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">
+                                            This person can participate in project work, but has no employee, contractor, or freelancer profile. Creating staffing, rate, skill, or capacity data is a deliberate action.
+                                        </p>
+                                    </div>
+                                    <Button Text="Create staffable profile"
+                                            Icon="person_add"
+                                            ButtonStyle="ButtonStyle.Warning"
+                                            Click="RequestProfileCreation"
+                                            data-testid="crmhr-workforce-create-profile" />
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                        else
+                        {
                         <Tabs SelectedIndex="@selectedDetailTabIndex"
                               SelectedIndexChanged="HandleDetailTabChangedAsync"
                               RenderMode="TabRenderMode.Server"
@@ -413,6 +441,7 @@
                                 </div>
                             </TabsItem>
                         </Tabs>
+                        }
                     </ChildContent>
                     <Footer>
                         <Split Breakpoint="LayoutBreakpoint.None"
@@ -531,6 +560,9 @@
     };
     private CrmActivityHistoryPage activityPage = CrmActivityHistoryPage.Empty();
     private WorkforceProfileWorkspaceModel? selectedWorkspace;
+    private IReadOnlyList<PartyOrganizationAffiliationListItemModel> selectedAffiliations = [];
+    private WorkforceRecordClassification selectedClassification =
+        WorkforceRecordClassification.ExternalContact;
     private WorkforceCapacityWorkspaceModel? capacityWorkspace;
     private Task<WorkforceCapacityWorkspaceModel?>? capacityWorkspaceLoadTask;
     private Guid? capacityWorkspaceLoadPartyId;
@@ -552,6 +584,7 @@
     private bool isCapacityWorkspaceLoading;
     private bool isHistoryLoading;
     private bool isRecordDialogOpen;
+    private bool isProfileCreationRequested;
     private bool isDeliveryUnitDialogOpen;
     private bool isDeliveryUnitSaving;
     private bool isDisposed;
@@ -587,8 +620,21 @@
         => capacityWorkspace?.CapacitySummary.NextAvailabilityOn;
 
     private string SelectedAvailabilityMessage
-        => capacityWorkspace?.CapacitySummary.AvailabilityMessage
+        => SelectedIsExternalContactWithoutProfile
+            ? "No staffable profile. Capacity and availability are not inferred for an external contact."
+            : capacityWorkspace?.CapacitySummary.AvailabilityMessage
            ?? "Capacity details are available from the Allocations tab.";
+
+    private bool SelectedIsExternalContactWithoutProfile
+        => selectedWorkspace is { PartyType: PartyType.Person } workspace &&
+           !workspace.Profile.Id.HasValue &&
+           selectedClassification == WorkforceRecordClassification.ExternalContact;
+
+    private string SelectedClassificationLabel
+        => WorkforceRecordPresentation.ResolveClassificationLabel(selectedClassification);
+
+    private string SelectedClassificationTone
+        => WorkforceRecordPresentation.ResolveClassificationTone(selectedClassification);
 
     private string AllocationBadgeText
         => capacityWorkspace?.ProjectAllocations.Count.ToString() ?? string.Empty;
@@ -685,8 +731,12 @@
             return WorkforceLoadSnapshot.Empty(requestedPartyFound: false);
         }
 
+        var affiliations = workspace.PartyType == PartyType.Person
+            ? await AffiliationService.ListAsync(workspace.PartyId)
+            : [];
         return new WorkforceLoadSnapshot(
             workspace,
+            affiliations,
             RequestedPartyFound: true);
     }
 
@@ -706,6 +756,7 @@
         }
 
         InvalidateHistory();
+        selectedAffiliations = snapshot.Affiliations;
         ApplyLoadedWorkspace(snapshot.Workspace);
     }
 
@@ -719,6 +770,10 @@
     private void ApplyLoadedWorkspace(WorkforceProfileWorkspaceModel workspace)
     {
         selectedWorkspace = workspace;
+        selectedClassification = WorkforceRecordPresentation.ResolveSelectedClassification(
+            workspace,
+            selectedAffiliations);
+        isProfileCreationRequested = false;
         profileEditor = new WorkforceProfileEditorModel
         {
             Id = workspace.Profile.Id,
@@ -805,6 +860,9 @@
     private void ClearWorkforceSelection()
     {
         selectedWorkspace = null;
+        selectedAffiliations = [];
+        selectedClassification = WorkforceRecordClassification.ExternalContact;
+        isProfileCreationRequested = false;
         selectedDetailTabIndex = OverviewTabIndex;
         InvalidateCapacityWorkspace();
         InvalidateHistory();
@@ -875,6 +933,18 @@
         {
             await EnsureHistoryLoadedAsync();
         }
+    }
+
+    private Task RequestProfileCreation()
+    {
+        if (!SelectedIsExternalContactWithoutProfile)
+        {
+            return Task.CompletedTask;
+        }
+
+        isProfileCreationRequested = true;
+        selectedDetailTabIndex = ProfileTabIndex;
+        return Task.CompletedTask;
     }
 
     private async Task EnsureHistoryLoadedAsync()
@@ -1403,6 +1473,18 @@
         };
     }
 
+    private static string ResolveLifecycleTone(PartyLifecycleStatus lifecycleStatus)
+    {
+        return lifecycleStatus switch
+        {
+            PartyLifecycleStatus.Active => "success",
+            PartyLifecycleStatus.Candidate or PartyLifecycleStatus.Prospect => "info",
+            PartyLifecycleStatus.Former or PartyLifecycleStatus.Inactive => "warning",
+            PartyLifecycleStatus.Archived => "neutral",
+            _ => "neutral"
+        };
+    }
+
     private static string ResolveStatusTone(string status)
     {
         return status switch
@@ -1496,11 +1578,13 @@
 
     private sealed record WorkforceLoadSnapshot(
         WorkforceProfileWorkspaceModel? Workspace,
+        IReadOnlyList<PartyOrganizationAffiliationListItemModel> Affiliations,
         bool RequestedPartyFound)
     {
         public static WorkforceLoadSnapshot Empty(bool requestedPartyFound)
             => new(
                 Workspace: null,
+                Affiliations: [],
                 RequestedPartyFound: requestedPartyFound);
     }
 

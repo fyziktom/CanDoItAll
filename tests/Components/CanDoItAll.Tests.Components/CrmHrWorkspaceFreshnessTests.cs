@@ -308,7 +308,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
     }
 
     [Fact]
-    public async Task Workforce_party_without_profile_reports_unloaded_availability_until_allocations_are_requested()
+    public async Task Workforce_external_contact_without_profile_requires_deliberate_profile_creation()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var partyDirectoryService = harness.Context.Services.GetRequiredService<PartyDirectoryService>();
@@ -318,7 +318,7 @@ public sealed class CrmHrWorkspaceFreshnessTests
             "Worker without profile",
             PartyType.Person,
             PartyLifecycleStatus.Active,
-            PartyRoleKind.Employee);
+            PartyRoleKind.CustomerContact);
 
         navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId:D}");
         var cut = harness.Context.Render<CrmHrWorkforcePage>();
@@ -326,29 +326,27 @@ public sealed class CrmHrWorkspaceFreshnessTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(
-                "Not loaded",
-                cut.Find("[data-testid='crmhr-workforce-summary-available']").TextContent.Trim());
+                "External contact",
+                cut.Find("[data-testid='crmhr-workforce-classification']").TextContent.Trim());
             Assert.Equal(
-                "Not loaded",
-                cut.Find("[data-testid='crmhr-workforce-summary-next-availability']").TextContent.Trim());
+                "Active",
+                cut.Find("[data-testid='crmhr-workforce-lifecycle']").TextContent.Trim());
+            Assert.Single(cut.FindAll("[data-testid='crmhr-workforce-no-staffable-profile']"));
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-workforce-kind']"));
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-workforce-save-button']"));
             var contextProvider = cut.FindComponent<AgentChatContextSurfaceProvider>();
             var fact = Assert.Single(contextProvider.Instance.Surface.Position.Facts);
             Assert.Equal("lifecycle-status", fact.Name);
             Assert.Equal("Active", fact.Value);
         });
 
-        cut.Find("[data-testid='crmhr-workforce-tab-allocations']").Click();
-        cut.WaitForElement("[data-testid='crmhr-capacity-block-save-button']");
-        cut.Find("[data-testid='crmhr-workforce-tab-overview']").Click();
+        cut.Find("[data-testid='crmhr-workforce-create-profile']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal(
-                "100%",
-                cut.Find("[data-testid='crmhr-workforce-summary-available']").TextContent.Trim());
-            Assert.Equal(
-                "Not set",
-                cut.Find("[data-testid='crmhr-workforce-summary-next-availability']").TextContent.Trim());
+            Assert.Single(cut.FindAll("[data-testid='crmhr-workforce-kind']"));
+            Assert.Single(cut.FindAll("[data-testid='crmhr-workforce-save-button']"));
+            Assert.Empty(cut.FindAll("[data-testid='crmhr-workforce-no-staffable-profile']"));
         });
     }
 

@@ -27,6 +27,34 @@
                     </SurfaceCard>
                 </Grid>
 
+                @if (Assignment.Affiliation is not null)
+                {
+                    <SurfaceCard Soft="true"
+                                 data-testid="crmhr-assignment-affiliation-details">
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Start"
+                               JustifyContent="JustifyContent.SpaceBetween">
+                            <div class="min-w-0">
+                                <p class="cda-eyebrow">Party affiliation</p>
+                                <p class="mt-1 text-sm font-semibold text-slate-950">
+                                    @(string.IsNullOrWhiteSpace(Assignment.Affiliation.PrimaryDisplayText)
+                                        ? "No organization recorded"
+                                        : Assignment.Affiliation.PrimaryDisplayText)
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(Assignment.Affiliation.OtherAffiliationsSummary))
+                                {
+                                    <p class="mt-1 text-xs leading-5 text-slate-600">
+                                        Other affiliations: @Assignment.Affiliation.OtherAffiliationsSummary
+                                    </p>
+                                }
+                            </div>
+                            <StatusBadge Tone="neutral"
+                                         Text="@Assignment.Affiliation.AffiliationLabel" />
+                        </Split>
+                    </SurfaceCard>
+                }
+
                 @if (!string.IsNullOrWhiteSpace(Assignment.Notes))
                 {
                     <SurfaceCard Soft="true">

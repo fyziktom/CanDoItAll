@@ -33,9 +33,9 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["aspnet-core-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["project-plan-analysis-inline-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-plan-summary-get"].Kind);
-        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-task-create"].Kind);
-        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-task-update"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Rag, byKey["workspace-source-rag"].Kind);
+        Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "project-task-create", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "project-task-update", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(capabilities, capability =>
             capability.Kind == CanDoItAll.AgentFramework.Models.CapabilityKind.Memory);
@@ -371,6 +371,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "generated-app-summary-inline-skill",
         "git-standard-operations",
         "hr-agent-avatar-generate",
+        "hr-agent-capability-curation-inline-skill",
         "hr-agent-create",
         "hr-agent-creation-options-get",
         "hr-agent-governance-inline-skill",
@@ -380,7 +381,10 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "hr-agent-settings-update",
         "hr-agent-usage-get",
         "hr-agents-search",
+        "hr-crm-affiliation-upsert",
         "hr-crm-item-summary-get",
+        "hr-crm-party-affiliations-list",
+        "hr-crm-party-create",
         "hr-crm-search",
         "mail-summary-inline-skill",
         "mail-triage-context",
@@ -395,8 +399,6 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "prompts-curator-agent-inline-skill",
         "project-plan-analysis-inline-skill",
         "project-plan-summary-get",
-        "project-task-create",
-        "project-task-update",
         "provider-health",
         "provider-native-code-interpreter",
         "provider-native-file-search",

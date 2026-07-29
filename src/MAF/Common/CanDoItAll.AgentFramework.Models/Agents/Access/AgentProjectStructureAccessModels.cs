@@ -125,6 +125,14 @@ public static class AgentProjectStructureAccessMetadata
     {
         ArgumentNullException.ThrowIfNull(settings);
 
+        List<Guid> allowedProjectIds = settings.AllowAllProjects
+            ? []
+            : settings.AllowedProjectIds
+                .Where(projectId => projectId != Guid.Empty)
+                .Distinct()
+                .OrderBy(projectId => projectId)
+                .ToList();
+
         return new AgentProjectStructureAccessSettings
         {
             CanRead = settings.CanRead ||
@@ -132,18 +140,16 @@ public static class AgentProjectStructureAccessMetadata
                 settings.CanWriteNonTaskStructure ||
                 settings.CanWriteTasks ||
                 settings.CanCreateProjects ||
-                settings.CanCreateSubprojects,
+                settings.CanCreateSubprojects ||
+                settings.AllowAllProjects ||
+                allowedProjectIds.Count > 0,
             CanWrite = settings.CanWrite,
             CanWriteNonTaskStructure = settings.CanWriteNonTaskStructure,
             CanWriteTasks = settings.CanWriteTasks,
             CanCreateProjects = settings.CanCreateProjects,
             CanCreateSubprojects = settings.CanCreateSubprojects,
             AllowAllProjects = settings.AllowAllProjects,
-            AllowedProjectIds = settings.AllowedProjectIds
-                .Where(projectId => projectId != Guid.Empty)
-                .Distinct()
-                .OrderBy(projectId => projectId)
-                .ToList()
+            AllowedProjectIds = allowedProjectIds
         };
     }
 

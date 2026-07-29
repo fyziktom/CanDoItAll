@@ -165,6 +165,15 @@
     min-width: 0;
 }
 
+.paged-record-browser__kind-corner {
+    width: max-content;
+}
+
+.paged-record-browser__kind-corner .paged-record-browser__kind-row {
+    justify-content: flex-start;
+    max-width: 100%;
+}
+
 .paged-record-browser__icon {
     align-items: center;
     background: var(--paged-record-accent-soft);

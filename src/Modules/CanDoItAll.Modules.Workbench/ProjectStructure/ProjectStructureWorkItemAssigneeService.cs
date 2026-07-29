@@ -137,6 +137,9 @@ public sealed class ProjectStructureWorkItemAssigneeService(
                         AssignmentId = previousAssignment.Id,
                         ProjectId = projectId,
                         PartyId = previousAssignment.PartyId,
+                        PartyAffiliationId =
+                            previousAssignment.PartyAffiliationId ??
+                            previousAssignment.Affiliation?.AffiliationId,
                         Role = previousAssignment.Role,
                         NodeKey = taskNodeId,
                         IsPrimary = previousAssignment.IsPrimary,
@@ -216,6 +219,8 @@ public sealed class ProjectStructureWorkItemAssigneeService(
                 {
                     ProjectId = projectId,
                     PartyId = party.PartyId,
+                    PartyAffiliationId =
+                        party.Affiliation?.AffiliationId,
                     Role = ProjectPartyAssignmentRole.WorkItemAssignee,
                     NodeKey = taskNodeId,
                     IsPrimary = true,
@@ -388,7 +393,11 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             string.Equals(
                 assignments[0].Notes,
                 expected.Notes,
-                StringComparison.Ordinal);
+                StringComparison.Ordinal) &&
+            (assignments[0].PartyAffiliationId ??
+             assignments[0].Affiliation?.AffiliationId) ==
+            (expected.PartyAffiliationId ??
+             expected.Affiliation?.AffiliationId);
     }
 
     private static DateOnly? ToDateOnly(DateTimeOffset? value)
@@ -406,15 +415,19 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             : ProjectStructureTaskResourceKind.Person;
         var description = option.IsSensitive
             ? string.Empty
-            : string.IsNullOrWhiteSpace(option.PrimaryEmail)
-                ? option.PrimaryPhone
-                : option.PrimaryEmail;
+            : !string.IsNullOrWhiteSpace(
+                option.Affiliation?.PrimaryDisplayText)
+                ? option.Affiliation.PrimaryDisplayText
+                : string.IsNullOrWhiteSpace(option.PrimaryEmail)
+                    ? option.PrimaryPhone
+                    : option.PrimaryEmail;
         return new ProjectStructureTaskResourceOption(
             kind,
             option.PartyId,
             VersionId: null,
             option.DisplayName,
-            option.PartyTypeLabel,
+            option.Affiliation?.AffiliationLabel ??
+                option.PartyTypeLabel,
             description,
             IsFavorite: false,
             option.IsSensitive);

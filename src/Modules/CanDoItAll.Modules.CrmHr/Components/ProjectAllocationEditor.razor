@@ -163,6 +163,17 @@
                                                    JustifyContent="JustifyContent.SpaceBetween">
                                                 <div class="min-w-0">
                                                     <p class="truncate text-base font-semibold text-slate-950">@candidate.DisplayName</p>
+                                                    <div class="mt-2 flex min-w-0 items-center gap-2"
+                                                         title="@candidate.OtherAffiliationsSummary">
+                                                        <StatusBadge Tone="@ResolveClassificationTone(candidate.Classification)"
+                                                                     Text="@ResolveClassificationLabel(candidate.Classification)" />
+                                                        @if (!string.IsNullOrWhiteSpace(candidate.PrimaryAffiliationText))
+                                                        {
+                                                            <span class="truncate text-xs text-slate-600">
+                                                                @candidate.PrimaryAffiliationText
+                                                            </span>
+                                                        }
+                                                    </div>
                                                     <p class="mt-1 text-sm leading-5 text-slate-600">@BuildCandidateMeta(candidate)</p>
                                                 </div>
                                                 <StatusBadge Tone="@ResolveAvailabilityTone(candidate.AvailabilityState)"
@@ -228,6 +239,11 @@
                                  SelectedPartyId="Draft.PartyId"
                                  SelectedPartyIdChanged="HandlePartyChanged" />
                 </Grid>
+
+                <PartyAffiliationPicker PartyId="Draft.PartyId"
+                                        SelectedAffiliationId="Draft.PartyAffiliationId"
+                                        SelectedAffiliationIdChanged="HandleAffiliationChanged"
+                                        TestIdPrefix="crmhr-allocation-affiliation" />
 
                 @if (SelectedCandidate is not null) {
                     <div class="@ResolveSelectedCandidateClasses()"
@@ -469,7 +485,13 @@
 
     private Task HandlePartyChanged(Guid? partyId) {
         Draft.PartyId = partyId ?? Guid.Empty;
+        Draft.PartyAffiliationId = null;
         selectedCandidate = Candidates.FirstOrDefault(candidate => candidate.PartyId == Draft.PartyId);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAffiliationChanged(Guid? affiliationId) {
+        Draft.PartyAffiliationId = affiliationId;
         return Task.CompletedTask;
     }
 
@@ -494,6 +516,7 @@
     private Task SelectCandidateAsync(StaffingCandidateItemModel candidate) {
         selectedCandidate = candidate;
         Draft.PartyId = candidate.PartyId;
+        Draft.PartyAffiliationId = null;
         Draft.Role = candidate.PartyType == PartyType.OrganizationUnit
             ? ProjectPartyAssignmentRole.DeliveryUnit
             : ProjectPartyAssignmentRole.TeamMember;
@@ -613,6 +636,26 @@
             WorkforceAvailabilityState.Bench => "success",
             WorkforceAvailabilityState.NearAvailable => "warning",
             _ => "info"
+        };
+    }
+
+    private static string ResolveClassificationLabel(
+        WorkforceRecordClassification classification) {
+        return classification switch {
+            WorkforceRecordClassification.ExternalContact => "External contact",
+            WorkforceRecordClassification.DeliveryUnit => "Delivery unit",
+            _ => classification.ToString()
+        };
+    }
+
+    private static string ResolveClassificationTone(
+        WorkforceRecordClassification classification) {
+        return classification switch {
+            WorkforceRecordClassification.Employee => "success",
+            WorkforceRecordClassification.Contractor => "warning",
+            WorkforceRecordClassification.Freelancer => "info",
+            WorkforceRecordClassification.DeliveryUnit => "primary",
+            _ => "neutral"
         };
     }
 }

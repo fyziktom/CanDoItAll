@@ -108,6 +108,9 @@ public sealed class HrAgentAdministrationService(
             AgentToolInvocationPolicyMetadata.HrAgentCreate,
             cancellationToken);
         ValidateCreateInput(input);
+        var projectStructureAccess = ApplyProjectStructureAccessPatch(
+            new AgentProjectStructureAccessSettings(),
+            input.ProjectStructureAccess);
 
         var id = Guid.NewGuid();
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
@@ -139,6 +142,7 @@ public sealed class HrAgentAdministrationService(
                 permissions.RequiresApprovalForExternalCalls,
                 AutoApproveExternalCallsByDefault: false,
                 AllowedSecrets: []),
+            ProjectStructureAccess = projectStructureAccess,
             SelectedCapabilityIds = capabilities.Select(item => item.Id).ToList(),
             Tags = NormalizeTags(input.Tags).ToList()
         };
@@ -257,6 +261,13 @@ public sealed class HrAgentAdministrationService(
         if (input.Permissions is not null)
         {
             editor.Permissions = ApplyPermissionsPatch(editor.Permissions, input.Permissions);
+        }
+
+        if (input.ProjectStructureAccess is not null)
+        {
+            editor.ProjectStructureAccess = ApplyProjectStructureAccessPatch(
+                editor.ProjectStructureAccess,
+                input.ProjectStructureAccess);
         }
 
         var warnings = await SaveAndInspectProjectionOutcomeAsync(
@@ -446,6 +457,7 @@ public sealed class HrAgentAdministrationService(
                 agent.Permissions.CanScheduleWork,
                 agent.Permissions.RequiresApprovalForExternalCalls,
                 agent.Permissions.AutoApproveExternalCallsByDefault),
+            MapProjectStructureAccess(agent.ConfigurationJson),
             agent.Capabilities
                 .Select(assignment => capabilityLookup.TryGetValue(assignment.CapabilityId, out var capability)
                     ? MapCapability(capability) with { ProofStatus = assignment.ProofStatus }
@@ -460,6 +472,21 @@ public sealed class HrAgentAdministrationService(
             agent.Tags,
             agent.CreatedAtUtc,
             agent.UpdatedAtUtc);
+    }
+
+    private static HrAgentSafeProjectStructureAccess MapProjectStructureAccess(
+        string? configurationJson)
+    {
+        var access = AgentProjectStructureAccessMetadata.Read(configurationJson);
+        return new HrAgentSafeProjectStructureAccess(
+            access.CanRead,
+            access.CanWrite,
+            access.CanWriteNonTaskStructure,
+            access.CanWriteTasks,
+            access.CanCreateProjects,
+            access.CanCreateSubprojects,
+            access.AllowAllProjects,
+            access.AllowedProjectIds.ToArray());
     }
 
     private static HrAgentAvatarMetadata MapAvatarMetadata(string? avatarImageUrl)
@@ -643,6 +670,64 @@ public sealed class HrAgentAdministrationService(
         {
             throw new InvalidOperationException("Workload and chat-history mode must be defined enum values.");
         }
+    }
+
+    private static AgentProjectStructureAccessSettings ApplyProjectStructureAccessPatch(
+        AgentProjectStructureAccessSettings current,
+        HrAgentProjectStructureAccessInput? patch)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        var normalizedCurrent = AgentProjectStructureAccessMetadata.Normalize(current);
+        if (patch is null)
+        {
+            return normalizedCurrent;
+        }
+
+        var projectIdsWereSupplied = patch.AllowedProjectIds is not null;
+        var requestedProjectIds = patch.AllowedProjectIds ?? normalizedCurrent.AllowedProjectIds;
+        if (projectIdsWereSupplied && requestedProjectIds.Any(projectId => projectId == Guid.Empty))
+        {
+            throw new InvalidOperationException("Project-structure access IDs cannot contain an empty GUID.");
+        }
+
+        if (patch.AllowAllProjects == true &&
+            projectIdsWereSupplied &&
+            requestedProjectIds.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "AllowAllProjects cannot be combined with explicit project-structure access IDs.");
+        }
+
+        var allowedProjectIds = requestedProjectIds
+            .Distinct()
+            .OrderBy(projectId => projectId)
+            .ToList();
+        var allowAllProjects = patch.AllowAllProjects ?? normalizedCurrent.AllowAllProjects;
+        if (patch.AllowAllProjects == true)
+        {
+            allowedProjectIds.Clear();
+        }
+        else if (projectIdsWereSupplied && allowedProjectIds.Count > 0)
+        {
+            allowAllProjects = false;
+        }
+
+        return AgentProjectStructureAccessMetadata.Normalize(
+            new AgentProjectStructureAccessSettings
+            {
+                CanRead = (patch.CanRead ?? normalizedCurrent.CanRead) ||
+                    allowAllProjects ||
+                    allowedProjectIds.Count > 0,
+                CanWrite = patch.CanWrite ?? normalizedCurrent.CanWrite,
+                CanWriteNonTaskStructure =
+                    patch.CanWriteNonTaskStructure ?? normalizedCurrent.CanWriteNonTaskStructure,
+                CanWriteTasks = patch.CanWriteTasks ?? normalizedCurrent.CanWriteTasks,
+                CanCreateProjects = patch.CanCreateProjects ?? normalizedCurrent.CanCreateProjects,
+                CanCreateSubprojects =
+                    patch.CanCreateSubprojects ?? normalizedCurrent.CanCreateSubprojects,
+                AllowAllProjects = allowAllProjects,
+                AllowedProjectIds = allowedProjectIds
+            });
     }
 
     private static void ValidateTemperature(double? temperature)

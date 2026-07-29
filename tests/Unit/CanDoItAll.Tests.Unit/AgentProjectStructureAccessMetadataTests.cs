@@ -55,6 +55,59 @@ public sealed class AgentProjectStructureAccessMetadataTests
     }
 
     [Fact]
+    public void Normalize_all_projects_scope_implies_read_and_discards_explicit_project_ids()
+    {
+        var settings = AgentProjectStructureAccessMetadata.Normalize(new AgentProjectStructureAccessSettings
+        {
+            AllowAllProjects = true,
+            AllowedProjectIds =
+            [
+                Guid.Parse("3487184d-3b57-4cb8-9b73-c163ac73d487"),
+                Guid.Parse("546612cf-bb74-4b8f-9cf5-714992c75f89")
+            ]
+        });
+
+        Assert.True(settings.CanRead);
+        Assert.True(settings.AllowAllProjects);
+        Assert.Empty(settings.AllowedProjectIds);
+    }
+
+    [Fact]
+    public void Normalize_explicit_project_scope_implies_read_and_canonicalizes_project_ids()
+    {
+        var firstProjectId = Guid.Parse("3487184d-3b57-4cb8-9b73-c163ac73d487");
+        var secondProjectId = Guid.Parse("546612cf-bb74-4b8f-9cf5-714992c75f89");
+
+        var settings = AgentProjectStructureAccessMetadata.Normalize(new AgentProjectStructureAccessSettings
+        {
+            AllowedProjectIds = [secondProjectId, Guid.Empty, firstProjectId, secondProjectId]
+        });
+
+        Assert.True(settings.CanRead);
+        Assert.False(settings.AllowAllProjects);
+        Assert.Equal([firstProjectId, secondProjectId], settings.AllowedProjectIds);
+    }
+
+    [Fact]
+    public void Write_persists_only_all_projects_when_both_scope_forms_are_requested()
+    {
+        var configurationJson = AgentProjectStructureAccessMetadata.Write(
+            configurationJson: null,
+            settings: new AgentProjectStructureAccessSettings
+            {
+                AllowAllProjects = true,
+                AllowedProjectIds = [Guid.Parse("3487184d-3b57-4cb8-9b73-c163ac73d487")]
+            });
+
+        var root = JsonNode.Parse(configurationJson)!.AsObject();
+        var projectStructure = root["projectStructure"]!.AsObject();
+
+        Assert.True(projectStructure["canRead"]!.GetValue<bool>());
+        Assert.True(projectStructure["allowAllProjects"]!.GetValue<bool>());
+        Assert.Empty(projectStructure["allowedProjectIds"]!.AsArray());
+    }
+
+    [Fact]
     public void Write_and_read_round_trip_task_write_scope_and_preserve_unrelated_configuration()
     {
         var projectId = Guid.Parse("580e32b9-8955-42c9-9646-0e9675f51f81");

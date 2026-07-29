@@ -269,6 +269,15 @@
   .end {
     inset-inline-end: var(--spacing);
   }
+  .top-3 {
+    top: calc(var(--spacing) * 3);
+  }
+  .left-3 {
+    left: calc(var(--spacing) * 3);
+  }
+  .z-\[3\] {
+    z-index: 3;
+  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -496,9 +505,6 @@
   }
   .max-w-\[44rem\] {
     max-width: 44rem;
-  }
-  .max-w-\[1880px\] {
-    max-width: 1880px;
   }
   .max-w-full {
     max-width: 100%;
@@ -1289,10 +1295,6 @@
   .outline {
     outline-style: var(--tw-outline-style);
     outline-width: 1px;
-  }
-  .invert {
-    --tw-invert: invert(100%);
-    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
   }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);

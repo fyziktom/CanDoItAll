@@ -1,0 +1,187 @@
+@inject IPartyOrganizationAffiliationService PartyOrganizationAffiliationService
+
+@if (PartyId != Guid.Empty)
+{
+    @if (isLoading)
+    {
+        <SurfaceCard Soft="true"
+                     data-testid="@($"{TestIdPrefix}-loading")">
+            <p class="text-sm text-slate-600">Loading organization affiliations...</p>
+        </SurfaceCard>
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <SurfaceCard Soft="true"
+                     data-testid="@($"{TestIdPrefix}-error")">
+            <p class="text-sm font-semibold text-rose-700">Affiliations could not be loaded.</p>
+            <p class="mt-1 text-xs leading-5 text-slate-600">@loadError</p>
+        </SurfaceCard>
+    }
+    else if (affiliations.Count > 0)
+    {
+        <FormField Text="@Label">
+            <InputSelect TValue="Guid?"
+                         Value="@SelectedAffiliationId"
+                         ValueChanged="HandleSelectionChangedAsync"
+                         ValueExpression="@(() => SelectedAffiliationId)"
+                         class="cda-input"
+                         data-testid="@TestIdPrefix">
+                <option value="">Use directory classification</option>
+                @foreach (var affiliation in affiliations)
+                {
+                    <option value="@affiliation.Id">
+                        @FormatAffiliationOption(affiliation)
+                    </option>
+                }
+            </InputSelect>
+            <p class="mt-1 text-xs leading-5 text-slate-500">
+                This preserves the company and worker relationship used for the assignment.
+            </p>
+        </FormField>
+    }
+    else
+    {
+        <SurfaceCard Soft="true"
+                     data-testid="@($"{TestIdPrefix}-fallback")">
+            <p class="cda-eyebrow">@Label</p>
+            <p class="mt-1 text-sm font-semibold text-slate-900">Directory classification</p>
+            <p class="mt-1 text-xs leading-5 text-slate-600">
+                A person without an organization affiliation is disclosed as an external contact.
+            </p>
+        </SurfaceCard>
+    }
+}
+
+@code {
+    private IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations = [];
+    private Guid loadedPartyId;
+    private bool isLoading;
+    private string loadError = string.Empty;
+    private long loadGeneration;
+
+    [Parameter]
+    public Guid PartyId { get; set; }
+
+    [Parameter]
+    public Guid? SelectedAffiliationId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedAffiliationIdChanged { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = "Assignment affiliation";
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "party-affiliation";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedPartyId == PartyId)
+        {
+            return;
+        }
+
+        loadedPartyId = PartyId;
+        await LoadAsync(PartyId);
+    }
+
+    private async Task LoadAsync(Guid partyId)
+    {
+        var generation = ++loadGeneration;
+        affiliations = [];
+        loadError = string.Empty;
+        if (partyId == Guid.Empty)
+        {
+            isLoading = false;
+            if (SelectedAffiliationId.HasValue)
+            {
+                await SelectedAffiliationIdChanged.InvokeAsync(null);
+            }
+
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var loaded = await PartyOrganizationAffiliationService.ListAsync(partyId);
+            if (generation != loadGeneration || PartyId != partyId)
+            {
+                return;
+            }
+
+            affiliations = loaded;
+            if (SelectedAffiliationId is Guid selectedId &&
+                loaded.Any(item => item.Id == selectedId))
+            {
+                return;
+            }
+
+            var defaultAffiliationId = loaded
+                .Where(item => item.IsCurrent)
+                .OrderByDescending(item => item.IsCurrent && item.IsPrimary)
+                .ThenByDescending(item => item.ValidFrom)
+                .ThenBy(item => item.OrganizationDisplayName, StringComparer.OrdinalIgnoreCase)
+                .Select(item => (Guid?)item.Id)
+                .FirstOrDefault();
+            if (SelectedAffiliationId != defaultAffiliationId)
+            {
+                await SelectedAffiliationIdChanged.InvokeAsync(defaultAffiliationId);
+            }
+        }
+        catch (InvalidOperationException exception)
+        {
+            loadError = exception.Message;
+            if (SelectedAffiliationId.HasValue)
+            {
+                await SelectedAffiliationIdChanged.InvokeAsync(null);
+            }
+        }
+        finally
+        {
+            if (generation == loadGeneration)
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private Task HandleSelectionChangedAsync(Guid? affiliationId)
+        => SelectedAffiliationIdChanged.InvokeAsync(affiliationId);
+
+    private static string FormatAffiliationOption(
+        PartyOrganizationAffiliationListItemModel affiliation)
+    {
+        var parts = new List<string>
+        {
+            ResolveAffiliationKindLabel(affiliation.AffiliationKind),
+            affiliation.OrganizationDisplayName
+        };
+        if (!string.IsNullOrWhiteSpace(affiliation.JobTitle))
+        {
+            parts.Add(affiliation.JobTitle);
+        }
+
+        if (affiliation.IsPrimary)
+        {
+            parts.Add("Primary");
+        }
+
+        if (!affiliation.IsCurrent)
+        {
+            parts.Add("Not current");
+        }
+
+        return string.Join(" / ", parts);
+    }
+
+    private static string ResolveAffiliationKindLabel(
+        PartyOrganizationAffiliationKind kind)
+    {
+        return kind switch
+        {
+            PartyOrganizationAffiliationKind.ExternalContact => "External contact",
+            _ => kind.ToString()
+        };
+    }
+}

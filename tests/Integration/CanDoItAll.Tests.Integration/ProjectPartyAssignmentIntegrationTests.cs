@@ -293,6 +293,128 @@ public sealed class ProjectPartyAssignmentIntegrationTests
     }
 
     [Fact]
+    public async Task Bridge_validates_and_projects_the_selected_party_affiliation()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryService>();
+        var affiliationService = scope.ServiceProvider
+            .GetRequiredService<IPartyOrganizationAffiliationService>();
+        var projectsService = scope.ServiceProvider
+            .GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider
+            .GetRequiredService<IProjectPartyIntegrationBridge>();
+
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            "Affiliation-aware assignment project");
+        var organizationId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Organization,
+            "External Design Partners");
+        var personId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Person,
+            "Alex External");
+        var otherPersonId = await CreatePartyAsync(
+            partyDirectoryService,
+            PartyType.Person,
+            "Sam Different");
+        var affiliationResult = await affiliationService.UpsertAsync(
+            new PartyOrganizationAffiliationEditorModel
+            {
+                PersonPartyId = personId,
+                OrganizationPartyId = organizationId,
+                AffiliationKind =
+                    PartyOrganizationAffiliationKind.ExternalContact,
+                IsPrimary = true,
+                JobTitle = "Garden designer",
+                ValidFrom = new DateOnly(2026, 1, 1),
+                ValidTo = new DateOnly(2026, 12, 31)
+            },
+            "integration-tests");
+        Assert.True(affiliationResult.IsSuccess);
+        var affiliationId = affiliationResult.Value!.Id;
+
+        var wrongPersonResult = await bridge.SaveAssignmentAsync(
+            new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = otherPersonId,
+                PartyAffiliationId = affiliationId,
+                Role = ProjectPartyAssignmentRole.TeamMember,
+                Source = "integration-tests"
+            });
+        var outsideDateResult = await bridge.SaveAssignmentAsync(
+            new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = personId,
+                PartyAffiliationId = affiliationId,
+                Role = ProjectPartyAssignmentRole.TeamMember,
+                StartsOn = new DateOnly(2027, 1, 1),
+                EndsOn = new DateOnly(2027, 1, 31),
+                Source = "integration-tests"
+            });
+        var partiallyCoveredDateResult = await bridge.SaveAssignmentAsync(
+            new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = personId,
+                PartyAffiliationId = affiliationId,
+                Role = ProjectPartyAssignmentRole.TeamMember,
+                StartsOn = new DateOnly(2025, 12, 15),
+                EndsOn = new DateOnly(2026, 1, 15),
+                Source = "integration-tests"
+            });
+        var validResult = await bridge.SaveAssignmentAsync(
+            new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = personId,
+                PartyAffiliationId = affiliationId,
+                Role = ProjectPartyAssignmentRole.TeamMember,
+                StartsOn = new DateOnly(2026, 8, 1),
+                EndsOn = new DateOnly(2026, 8, 31),
+                Source = "integration-tests"
+            });
+
+        Assert.False(wrongPersonResult.IsSuccess);
+        Assert.Contains(
+            wrongPersonResult.Errors,
+            error =>
+                error.Code ==
+                ProjectPartyAffiliationErrorCodes.PartyMismatch);
+        Assert.False(outsideDateResult.IsSuccess);
+        Assert.Contains(
+            outsideDateResult.Errors,
+            error =>
+                error.Code ==
+                ProjectPartyAffiliationErrorCodes.DateMismatch);
+        Assert.False(partiallyCoveredDateResult.IsSuccess);
+        Assert.Contains(
+            partiallyCoveredDateResult.Errors,
+            error =>
+                error.Code ==
+                ProjectPartyAffiliationErrorCodes.DateMismatch);
+        Assert.True(validResult.IsSuccess);
+
+        var assignment = Assert.Single(
+            await bridge.ListAssignmentsDetailedAsync(projectId));
+        Assert.NotNull(assignment.Affiliation);
+        Assert.Equal(affiliationId, assignment.PartyAffiliationId);
+        Assert.Equal(affiliationId, assignment.Affiliation.AffiliationId);
+        Assert.Equal(
+            "External contact",
+            assignment.Affiliation.AffiliationLabel);
+        Assert.Equal(
+            "External Design Partners",
+            assignment.Affiliation.OrganizationName);
+        Assert.Equal("Garden designer", assignment.Affiliation.RoleTitle);
+    }
+
+    [Fact]
     public async Task Bridge_rejects_missing_and_cross_project_canonical_node_assignments()
     {
         await using var application = await TestApplication.CreateAsync();

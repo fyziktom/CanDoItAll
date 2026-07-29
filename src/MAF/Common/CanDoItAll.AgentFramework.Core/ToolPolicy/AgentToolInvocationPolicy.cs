@@ -2745,7 +2745,10 @@ public static class AgentToolInvocationPolicyMetadata
         HrAgentSettingsUpdate,
         HrAgentAvatarGenerate,
         HrAgentProcessManagerReviewRequest,
-        HrCrmSearch
+        HrCrmSearch,
+        HrCrmPartyCreate,
+        HrCrmPartyAffiliationsList,
+        HrCrmAffiliationUpsert
     };
 
     private static readonly IReadOnlySet<string> SensitivePromptCuratorArgumentToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -2786,6 +2789,7 @@ public static class AgentToolInvocationPolicyMetadata
 
     private static readonly IReadOnlySet<string> SensitiveManagedArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        "affiliationId",
         "allowedExternalRoots",
         "allowedWorkingDirectories",
         "arguments",
@@ -2793,26 +2797,36 @@ public static class AgentToolInvocationPolicyMetadata
         "configurationJson",
         "displayName",
         "content",
+        "countryCode",
         "creationReason",
         "description",
         "environmentVariableBindings",
         "endpoint",
         "endpointOrPath",
+        "externalCode",
         "executorSettingsJson",
         "expectedValueJson",
         "headerBindings",
         "inputJson",
         "inlineInstructions",
         "instructions",
+        "jobTitle",
         "jsonInput",
+        "legalName",
+        "managerPartyId",
         "name",
         "notes",
+        "organizationPartyId",
+        "organizationUnitPartyId",
         "otherConfiguration",
         "outputFormat",
         "phase",
+        "personPartyId",
         "prompt",
+        "preferredName",
         "query",
         "question",
+        "region",
         "responseJson",
         "roleTitle",
         "searchText",
@@ -2821,6 +2835,7 @@ public static class AgentToolInvocationPolicyMetadata
         "summary",
         "tags",
         "text",
+        "timeZone",
         "title",
         "visualBrief",
         "workingDirectory"
@@ -2896,6 +2911,9 @@ public static class AgentToolInvocationPolicyMetadata
     public const string HrAgentProcessManagerReviewRequest = "hr_agent_process_manager_review_request";
     public const string HrCrmSearch = "hr_crm_search";
     public const string HrCrmItemSummaryGet = "hr_crm_item_summary_get";
+    public const string HrCrmPartyCreate = "hr_crm_party_create";
+    public const string HrCrmPartyAffiliationsList = "hr_crm_party_affiliations_list";
+    public const string HrCrmAffiliationUpsert = "hr_crm_affiliation_upsert";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
     public const string WorkspaceAnalyzeImage = "workspace_analyze_image";
     public const string WorkspaceAnalyzeImages = "workspace_analyze_images";

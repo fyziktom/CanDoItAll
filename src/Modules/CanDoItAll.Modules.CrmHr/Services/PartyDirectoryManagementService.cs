@@ -275,6 +275,13 @@ public sealed class PartyDirectoryManagementService(
                 "crmhr.party.merge-not-found"));
         }
 
+        if (retainedParty.PartyType != mergedParty.PartyType)
+        {
+            return Result<PartyMergeSummaryModel>.Failure(Error.Validation(
+                "Only parties of the same type can be merged.",
+                "crmhr.party.merge-type-mismatch"));
+        }
+
         retainedParty.DisplayName = PreferExisting(retainedParty.DisplayName, mergedParty.DisplayName);
         retainedParty.LegalName = PreferExisting(retainedParty.LegalName, mergedParty.LegalName);
         retainedParty.PreferredName = PreferExisting(retainedParty.PreferredName, mergedParty.PreferredName);
@@ -301,6 +308,14 @@ public sealed class PartyDirectoryManagementService(
         await MergeRelationshipsAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
         await MergePartySkillsAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
         await MergeAiAgentProfilesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergeWorkforceProfilesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergePartyOrganizationAffiliationsAsync(
+            dbContext,
+            retainedPartyId,
+            mergedPartyId,
+            ResolveActor(actor),
+            clock.GetUtcNow(),
+            cancellationToken);
         await ReassignDirectPartyReferencesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
         await ReassignOptionalPartyReferencesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
 
@@ -823,6 +838,389 @@ public sealed class PartyDirectoryManagementService(
         dbContext.Set<AiAgentProfile>().Remove(mergedProfile);
     }
 
+    private static async Task MergeWorkforceProfilesAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var profiles = await dbContext.Set<WorkforceProfile>()
+            .Where(item =>
+                item.PartyId == retainedPartyId ||
+                item.PartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        var retainedProfile = profiles
+            .SingleOrDefault(item => item.PartyId == retainedPartyId);
+        var mergedProfile = profiles
+            .SingleOrDefault(item => item.PartyId == mergedPartyId);
+        if (mergedProfile is null)
+        {
+            return;
+        }
+
+        if (retainedProfile is null)
+        {
+            mergedProfile.PartyId = retainedPartyId;
+            return;
+        }
+
+        retainedProfile.EmployeeCode = PreferExisting(
+            retainedProfile.EmployeeCode,
+            mergedProfile.EmployeeCode);
+        retainedProfile.JobTitle = PreferExisting(
+            retainedProfile.JobTitle,
+            mergedProfile.JobTitle);
+        retainedProfile.Discipline = PreferExisting(
+            retainedProfile.Discipline,
+            mergedProfile.Discipline);
+        retainedProfile.Seniority = PreferExisting(
+            retainedProfile.Seniority,
+            mergedProfile.Seniority);
+        retainedProfile.HomeUnitPartyId ??= mergedProfile.HomeUnitPartyId;
+        retainedProfile.ManagerPartyId ??= mergedProfile.ManagerPartyId;
+        retainedProfile.StartDateUtc = MinDate(
+            retainedProfile.StartDateUtc,
+            mergedProfile.StartDateUtc);
+        retainedProfile.EndDateUtc = MergeOpenEndedEndDate(
+            retainedProfile.EndDateUtc,
+            mergedProfile.EndDateUtc);
+        retainedProfile.Location = PreferExisting(
+            retainedProfile.Location,
+            mergedProfile.Location);
+        retainedProfile.TimeZone = PreferExisting(
+            retainedProfile.TimeZone,
+            mergedProfile.TimeZone);
+        retainedProfile.InternalCostRate ??= mergedProfile.InternalCostRate;
+        retainedProfile.ExternalBillingRate ??=
+            mergedProfile.ExternalBillingRate;
+        retainedProfile.RateCurrencyCode = PreferExisting(
+            retainedProfile.RateCurrencyCode,
+            mergedProfile.RateCurrencyCode);
+        retainedProfile.Status = PreferExisting(
+            retainedProfile.Status,
+            mergedProfile.Status);
+        retainedProfile.ExtendedDataJson = PreferExisting(
+            retainedProfile.ExtendedDataJson,
+            mergedProfile.ExtendedDataJson);
+        retainedProfile.Notes = CombineText(
+            retainedProfile.Notes,
+            mergedProfile.Notes);
+        dbContext.Set<WorkforceProfile>().Remove(mergedProfile);
+    }
+
+    private static async Task MergePartyOrganizationAffiliationsAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        string actor,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var affectedPersonIds = await dbContext
+            .Set<PartyOrganizationAffiliation>()
+            .Where(item =>
+                item.PersonPartyId == retainedPartyId ||
+                item.PersonPartyId == mergedPartyId ||
+                item.OrganizationPartyId == retainedPartyId ||
+                item.OrganizationPartyId == mergedPartyId ||
+                item.OrganizationUnitPartyId == retainedPartyId ||
+                item.OrganizationUnitPartyId == mergedPartyId ||
+                item.ManagerPartyId == retainedPartyId ||
+                item.ManagerPartyId == mergedPartyId)
+            .Select(item => item.PersonPartyId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (affectedPersonIds.Count == 0)
+        {
+            return;
+        }
+
+        if (affectedPersonIds.Remove(mergedPartyId))
+        {
+            affectedPersonIds.Add(retainedPartyId);
+        }
+
+        var affiliations = await dbContext
+            .Set<PartyOrganizationAffiliation>()
+            .Where(item =>
+                affectedPersonIds.Contains(item.PersonPartyId) ||
+                item.PersonPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        var retainedPrimaryIds = affiliations
+            .Where(item =>
+                item.PersonPartyId == retainedPartyId &&
+                item.IsPrimary)
+            .Select(item => item.Id)
+            .ToHashSet();
+
+        var groupedAffiliations = affiliations
+            .GroupBy(item => BuildMergedAffiliationKey(
+                item,
+                retainedPartyId,
+                mergedPartyId))
+            .ToList();
+        var removedToRetainedAffiliationIds = new Dictionary<Guid, Guid>();
+        foreach (var group in groupedAffiliations)
+        {
+            var ordered = group
+                .OrderByDescending(item => item.IsPrimary)
+                .ThenBy(item => CountMergedPartyReferences(
+                    item,
+                    mergedPartyId))
+                .ThenBy(item => item.CreatedAtUtc)
+                .ThenBy(item => item.Id)
+                .ToArray();
+            var retainedAffiliation = ordered[0];
+            foreach (var duplicate in ordered.Skip(1))
+            {
+                MergeAffiliationValues(
+                    retainedAffiliation,
+                    duplicate,
+                    retainedPartyId,
+                    mergedPartyId,
+                    actor,
+                    now);
+                removedToRetainedAffiliationIds[duplicate.Id] =
+                    retainedAffiliation.Id;
+                dbContext
+                    .Set<PartyOrganizationAffiliation>()
+                    .Remove(duplicate);
+            }
+        }
+
+        if (removedToRetainedAffiliationIds.Count > 0)
+        {
+            var removedIds = removedToRetainedAffiliationIds.Keys.ToArray();
+            var assignments = await dbContext
+                .Set<ProjectPartyAssignment>()
+                .Where(item =>
+                    item.PartyOrganizationAffiliationId.HasValue &&
+                    removedIds.Contains(
+                        item.PartyOrganizationAffiliationId.Value))
+                .ToListAsync(cancellationToken);
+            foreach (var assignment in assignments)
+            {
+                assignment.PartyOrganizationAffiliationId =
+                    removedToRetainedAffiliationIds[
+                        assignment.PartyOrganizationAffiliationId!.Value];
+            }
+
+            // Remove duplicate business keys before changing the surviving
+            // endpoint identifiers. This avoids transient unique-key clashes.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var survivingAffiliations = affiliations
+            .Where(item =>
+                !removedToRetainedAffiliationIds.ContainsKey(item.Id))
+            .ToArray();
+        var todayUtc = new DateTimeOffset(
+            now.UtcDateTime.Year,
+            now.UtcDateTime.Month,
+            now.UtcDateTime.Day,
+            0,
+            0,
+            0,
+            TimeSpan.Zero);
+        var clearedPrimaryBeforeEndpointRewrite = false;
+        foreach (var futurePersonGroup in survivingAffiliations
+                     .GroupBy(item => ReplacePartyId(
+                         item.PersonPartyId,
+                         retainedPartyId,
+                         mergedPartyId)))
+        {
+            var selectedPrimary = futurePersonGroup
+                .Where(item =>
+                    item.IsPrimary &&
+                    (!item.ValidFromUtc.HasValue ||
+                     item.ValidFromUtc.Value <= todayUtc) &&
+                    (!item.ValidToUtc.HasValue ||
+                     item.ValidToUtc.Value >= todayUtc))
+                .OrderByDescending(item =>
+                    retainedPrimaryIds.Contains(item.Id))
+                .ThenByDescending(item => item.ValidFromUtc)
+                .ThenByDescending(item => item.UpdatedAtUtc)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
+            foreach (var affiliation in futurePersonGroup.Where(item =>
+                         item.IsPrimary &&
+                         (selectedPrimary is null ||
+                          item.Id != selectedPrimary.Id)))
+            {
+                affiliation.IsPrimary = false;
+                affiliation.LastChangedBy = actor;
+                affiliation.UpdatedAtUtc = now;
+                clearedPrimaryBeforeEndpointRewrite = true;
+            }
+        }
+
+        if (clearedPrimaryBeforeEndpointRewrite)
+        {
+            // PostgreSQL enforces one primary per person with an immediate
+            // partial unique index. Persist the losing primary first so an
+            // endpoint rewrite cannot transiently create two primary rows.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        foreach (var affiliation in survivingAffiliations)
+        {
+            var changed = ReplacePartyReference(
+                affiliation,
+                retainedPartyId,
+                mergedPartyId);
+            if (affiliation.ManagerPartyId == affiliation.PersonPartyId)
+            {
+                affiliation.ManagerPartyId = null;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                affiliation.LastChangedBy = actor;
+                affiliation.UpdatedAtUtc = now;
+            }
+        }
+
+        foreach (var personGroup in survivingAffiliations
+                     .GroupBy(item => item.PersonPartyId))
+        {
+            var selectedPrimary = personGroup
+                .Where(item =>
+                    item.IsPrimary &&
+                    (!item.ValidFromUtc.HasValue ||
+                     item.ValidFromUtc.Value <= todayUtc) &&
+                    (!item.ValidToUtc.HasValue ||
+                     item.ValidToUtc.Value >= todayUtc))
+                .OrderByDescending(item =>
+                    retainedPrimaryIds.Contains(item.Id))
+                .ThenByDescending(item => item.ValidFromUtc)
+                .ThenByDescending(item => item.UpdatedAtUtc)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
+            foreach (var affiliation in personGroup)
+            {
+                var shouldBePrimary =
+                    selectedPrimary is not null &&
+                    affiliation.Id == selectedPrimary.Id;
+                if (affiliation.IsPrimary == shouldBePrimary)
+                {
+                    continue;
+                }
+
+                affiliation.IsPrimary = shouldBePrimary;
+                affiliation.LastChangedBy = actor;
+                affiliation.UpdatedAtUtc = now;
+            }
+        }
+    }
+
+    private static AffiliationMergeKey BuildMergedAffiliationKey(
+        PartyOrganizationAffiliation affiliation,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+    {
+        return new AffiliationMergeKey(
+            ReplacePartyId(
+                affiliation.PersonPartyId,
+                retainedPartyId,
+                mergedPartyId),
+            ReplacePartyId(
+                affiliation.OrganizationPartyId,
+                retainedPartyId,
+                mergedPartyId),
+            affiliation.AffiliationKind,
+            affiliation.ValidFromUtc,
+            affiliation.ValidToUtc);
+    }
+
+    private static int CountMergedPartyReferences(
+        PartyOrganizationAffiliation affiliation,
+        Guid mergedPartyId)
+    {
+        var count = 0;
+        count += affiliation.PersonPartyId == mergedPartyId ? 1 : 0;
+        count += affiliation.OrganizationPartyId == mergedPartyId ? 1 : 0;
+        count += affiliation.OrganizationUnitPartyId == mergedPartyId ? 1 : 0;
+        count += affiliation.ManagerPartyId == mergedPartyId ? 1 : 0;
+        return count;
+    }
+
+    private static void MergeAffiliationValues(
+        PartyOrganizationAffiliation retained,
+        PartyOrganizationAffiliation merged,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        string actor,
+        DateTimeOffset now)
+    {
+        retained.IsPrimary = retained.IsPrimary || merged.IsPrimary;
+        retained.JobTitle = PreferExisting(
+            retained.JobTitle,
+            merged.JobTitle);
+        retained.EmployeeCode = PreferExisting(
+            retained.EmployeeCode,
+            merged.EmployeeCode);
+        retained.OrganizationUnitPartyId ??= ReplaceOptionalPartyId(
+            merged.OrganizationUnitPartyId,
+            retainedPartyId,
+            mergedPartyId);
+        retained.ManagerPartyId ??= ReplaceOptionalPartyId(
+            merged.ManagerPartyId,
+            retainedPartyId,
+            mergedPartyId);
+        retained.Notes = CombineText(retained.Notes, merged.Notes);
+        retained.CreatedAtUtc = retained.CreatedAtUtc <= merged.CreatedAtUtc
+            ? retained.CreatedAtUtc
+            : merged.CreatedAtUtc;
+        retained.UpdatedAtUtc = now;
+        retained.LastChangedBy = actor;
+    }
+
+    private static bool ReplacePartyReference(
+        PartyOrganizationAffiliation affiliation,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+    {
+        var changed = false;
+        if (affiliation.PersonPartyId == mergedPartyId)
+        {
+            affiliation.PersonPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        if (affiliation.OrganizationPartyId == mergedPartyId)
+        {
+            affiliation.OrganizationPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        if (affiliation.OrganizationUnitPartyId == mergedPartyId)
+        {
+            affiliation.OrganizationUnitPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        if (affiliation.ManagerPartyId == mergedPartyId)
+        {
+            affiliation.ManagerPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static Guid ReplacePartyId(
+        Guid partyId,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+        => partyId == mergedPartyId ? retainedPartyId : partyId;
+
+    private static Guid? ReplaceOptionalPartyId(
+        Guid? partyId,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+        => partyId == mergedPartyId ? retainedPartyId : partyId;
+
     private static async Task ReassignDirectPartyReferencesAsync(
         AppDbContext dbContext,
         Guid retainedPartyId,
@@ -830,7 +1228,6 @@ public sealed class PartyDirectoryManagementService(
         CancellationToken cancellationToken)
     {
         await ReassignPartyIdAsync(dbContext.Set<PartyConfidentialNote>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
-        await ReassignPartyIdAsync(dbContext.Set<WorkforceProfile>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
         await ReassignPartyIdAsync(dbContext.Set<CapacityBlock>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
         await ReassignPartyIdAsync(dbContext.Set<RecruitmentApplication>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
         await ReassignPartyIdAsync(dbContext.Set<OnboardingTask>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
@@ -1085,6 +1482,13 @@ public sealed class PartyDirectoryManagementService(
         string NormalizedExternalCode);
 
     private sealed record DuplicateCandidateScore(PartyDuplicateCandidateModel Candidate, int Score);
+
+    private readonly record struct AffiliationMergeKey(
+        Guid PersonPartyId,
+        Guid OrganizationPartyId,
+        PartyOrganizationAffiliationKind AffiliationKind,
+        DateTimeOffset? ValidFromUtc,
+        DateTimeOffset? ValidToUtc);
 
     private sealed class DuplicateAnalysisLimitException(string message) : Exception(message);
 
@@ -1538,6 +1942,18 @@ public sealed class PartyDirectoryManagementService(
             _ when right is null => left,
             _ => left >= right ? left : right
         };
+    }
+
+    private static DateTimeOffset? MergeOpenEndedEndDate(
+        DateTimeOffset? left,
+        DateTimeOffset? right)
+    {
+        if (!left.HasValue || !right.HasValue)
+        {
+            return null;
+        }
+
+        return left.Value >= right.Value ? left : right;
     }
 
     private static void AddIfNotBlank(ICollection<string> target, string value)

@@ -339,7 +339,10 @@ public static class ToolCapabilityRegistry
             Read(AgentToolInvocationPolicyMetadata.HrAgentProcessHistoryGet, ToolCapabilitySideEffectKind.InternalDataRead),
             Mutation(AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest, ToolCapabilitySideEffectKind.ExternalAction, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction)),
             Read(AgentToolInvocationPolicyMetadata.HrCrmSearch, ToolCapabilitySideEffectKind.InternalDataRead),
-            Read(AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet, ToolCapabilitySideEffectKind.InternalDataRead)
+            Read(AgentToolInvocationPolicyMetadata.HrCrmItemSummaryGet, ToolCapabilitySideEffectKind.InternalDataRead),
+            Mutation(AgentToolInvocationPolicyMetadata.HrCrmPartyCreate, ToolCapabilitySideEffectKind.InternalStateMutation),
+            Read(AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList, ToolCapabilitySideEffectKind.InternalDataRead),
+            Mutation(AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert, ToolCapabilitySideEffectKind.InternalStateMutation)
         };
 
         capabilities.AddRange(AgentToolInvocationPolicyMetadata.ProjectStructureReadTools.Select(toolName =>

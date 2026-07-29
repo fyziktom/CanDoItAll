@@ -638,7 +638,11 @@ public sealed record StaffingCandidateItemModel(
     string SkillSummary,
     WorkforceAvailabilityState AvailabilityState,
     decimal AvailablePercent,
-    DateOnly? NextAvailabilityOn);
+    DateOnly? NextAvailabilityOn,
+    WorkforceRecordClassification Classification =
+        WorkforceRecordClassification.ExternalContact,
+    string PrimaryAffiliationText = "",
+    string OtherAffiliationsSummary = "");
 
 public static class StaffingQueryLimits
 {
@@ -3175,6 +3179,8 @@ public sealed partial class CrmService(
             AssignmentId = assignment.Id,
             ProjectId = assignment.ProjectId,
             PartyId = assignment.PartyId,
+            PartyAffiliationId = assignment.PartyAffiliationId ??
+                assignment.Affiliation?.AffiliationId,
             Role = assignment.Role,
             NodeKey = assignment.NodeKey,
             IsPrimary = assignment.IsPrimary,
@@ -4403,6 +4409,7 @@ public sealed partial class HrService(
             candidate.Party.Id,
             candidate.Party.DisplayName,
             candidate.Party.PartyType,
+            candidate.Profile.WorkforceKind,
             candidate.Profile.JobTitle,
             candidate.Profile.Discipline,
             candidate.Profile.Seniority,
@@ -4488,6 +4495,39 @@ public sealed partial class HrService(
         }
 
         var partyIds = rows.Select(item => item.Id).ToList();
+        var currentAffiliationRows = await (
+                from affiliation in dbContext
+                    .Set<PartyOrganizationAffiliation>()
+                    .AsNoTracking()
+                where partyIds.Contains(affiliation.PersonPartyId) &&
+                      (!affiliation.ValidFromUtc.HasValue ||
+                       affiliation.ValidFromUtc.Value <= todayUtc) &&
+                      (!affiliation.ValidToUtc.HasValue ||
+                       affiliation.ValidToUtc.Value >= todayUtc)
+                join organization in dbContext.Set<Party>().AsNoTracking()
+                    on affiliation.OrganizationPartyId equals organization.Id
+                select new
+                {
+                    affiliation.Id,
+                    affiliation.PersonPartyId,
+                    affiliation.AffiliationKind,
+                    affiliation.IsPrimary,
+                    affiliation.JobTitle,
+                    affiliation.ValidFromUtc,
+                    affiliation.UpdatedAtUtc,
+                    OrganizationName = organization.DisplayName
+                })
+            .ToListAsync(cancellationToken);
+        var currentAffiliationsByPartyId = currentAffiliationRows
+            .GroupBy(item => item.PersonPartyId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(item => item.IsPrimary)
+                    .ThenByDescending(item => item.ValidFromUtc)
+                    .ThenByDescending(item => item.UpdatedAtUtc)
+                    .ThenBy(item => item.Id)
+                    .ToArray());
         var partySkillsByPartyId = await GetPartySkillMapAsync(
             dbContext,
             partyIds,
@@ -4506,6 +4546,27 @@ public sealed partial class HrService(
                 ", ",
                 (partySkillsByPartyId.GetValueOrDefault(item.Id) ?? [])
                     .Select(skill => $"{skill.SkillName} ({skill.Proficiency})"));
+            var currentAffiliations =
+                currentAffiliationsByPartyId.GetValueOrDefault(item.Id) ?? [];
+            var selectedAffiliation = currentAffiliations.FirstOrDefault();
+            var classification = WorkforceRecordClassificationPolicy.Resolve(
+                selectedAffiliation?.AffiliationKind,
+                item.WorkforceKind,
+                item.PartyType,
+                hasDeliveryUnitRole: false);
+            var primaryAffiliationText = selectedAffiliation is null
+                ? item.JobTitle
+                : FormatOrganizationAffiliation(
+                    selectedAffiliation.OrganizationName,
+                    selectedAffiliation.JobTitle);
+            var otherAffiliationsSummary = string.Join(
+                "; ",
+                currentAffiliations
+                    .Skip(1)
+                    .Select(affiliation => FormatOrganizationAffiliation(
+                        affiliation.OrganizationName,
+                        affiliation.JobTitle))
+                    .Where(value => !string.IsNullOrWhiteSpace(value)));
             return new StaffingCandidateItemModel(
                 item.Id,
                 item.DisplayName,
@@ -4517,13 +4578,32 @@ public sealed partial class HrService(
                 skillSummary,
                 availabilityState,
                 Math.Max(0m, 100m - item.ActiveAllocationPercent - item.ActiveBlockedPercent),
-                nextAvailabilityOn);
+                nextAvailabilityOn,
+                classification,
+                primaryAffiliationText,
+                otherAffiliationsSummary);
         }).ToList();
         return new StaffingCandidatePage(
             items,
             normalized.PageIndex,
             normalized.PageSize,
             totalCount);
+    }
+
+    private static string FormatOrganizationAffiliation(
+        string organizationName,
+        string jobTitle)
+    {
+        var organization = organizationName?.Trim() ?? string.Empty;
+        var title = jobTitle?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(organization))
+        {
+            return title;
+        }
+
+        return string.IsNullOrEmpty(title)
+            ? organization
+            : $"{organization} / {title}";
     }
 
     public async Task<StaffingDashboardModel> GetStaffingDashboardAsync(CancellationToken cancellationToken = default)
@@ -5742,6 +5822,8 @@ public sealed class ProjectPartyIntegrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     PartyDirectoryService partyDirectoryService,
     ProjectPartyAssignmentNodePolicy projectPartyAssignmentNodePolicy,
+    ProjectPartyAffiliationContextService
+        projectPartyAffiliationContextService,
     IProjectWorkItemAssignmentMutationBridge
         workItemAssignmentMutationBridge) :
     IProjectPartyIntegrationBridge,
@@ -5829,11 +5911,13 @@ public sealed class ProjectPartyIntegrationService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var assignedPartyIds = await dbContext.Set<ProjectPartyAssignment>()
+            .AsNoTracking()
             .Where(item => item.ProjectId == projectId)
             .Select(item => item.PartyId)
             .Distinct()
             .ToListAsync(cancellationToken);
         var parties = await dbContext.Set<Party>()
+            .AsNoTracking()
             .Select(party => new
             {
                 party.Id,
@@ -5844,6 +5928,7 @@ public sealed class ProjectPartyIntegrationService(
             .ToListAsync(cancellationToken);
         var partyIds = parties.Select(item => item.Id).ToList();
         var contacts = await dbContext.Set<PartyContactPoint>()
+            .AsNoTracking()
             .Where(item => partyIds.Contains(item.PartyId) && item.IsPublic)
             .OrderByDescending(item => item.IsPrimary)
             .Select(item => new CrmPartyContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
@@ -5851,6 +5936,13 @@ public sealed class ProjectPartyIntegrationService(
         var contactsByPartyId = contacts
             .GroupBy(item => item.PartyId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<CrmPartyContactValue>)group.ToList());
+        var affiliationContexts =
+            await projectPartyAffiliationContextService.LoadPartyContextsAsync(
+                dbContext,
+                parties.ToDictionary(
+                    item => item.Id,
+                    item => item.PartyType),
+                cancellationToken);
         var assignedSet = assignedPartyIds.ToHashSet();
 
         return parties
@@ -5870,7 +5962,10 @@ public sealed class ProjectPartyIntegrationService(
                     item.IsSensitive
                         ? string.Empty
                         : ResolvePrimaryContactValue(partyContacts, PartyContactType.Phone),
-                    item.IsSensitive);
+                    item.IsSensitive,
+                    item.IsSensitive
+                        ? null
+                        : affiliationContexts.GetValueOrDefault(item.Id));
             })
             .ToList();
     }
@@ -5879,6 +5974,7 @@ public sealed class ProjectPartyIntegrationService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var party = await dbContext.Set<Party>()
+            .AsNoTracking()
             .Select(item => new
             {
                 item.Id,
@@ -5893,10 +5989,19 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         var contacts = await dbContext.Set<PartyContactPoint>()
+            .AsNoTracking()
             .Where(item => item.PartyId == partyId && item.IsPublic)
             .OrderByDescending(item => item.IsPrimary)
             .Select(item => new CrmPartyContactValue(item.PartyId, item.ContactType, item.Value, item.IsPrimary))
             .ToListAsync(cancellationToken);
+        var affiliationContexts =
+            await projectPartyAffiliationContextService.LoadPartyContextsAsync(
+                dbContext,
+                new Dictionary<Guid, PartyType>
+                {
+                    [party.Id] = party.PartyType
+                },
+                cancellationToken);
 
         return new ProjectPartyOption(
             party.Id,
@@ -5909,7 +6014,10 @@ public sealed class ProjectPartyIntegrationService(
             party.IsSensitive
                 ? string.Empty
                 : ResolvePrimaryContactValue(contacts, PartyContactType.Phone),
-            party.IsSensitive);
+            party.IsSensitive,
+            party.IsSensitive
+                ? null
+                : affiliationContexts.GetValueOrDefault(party.Id));
     }
 
     public async Task<ProjectPartyCostRate?> GetInternalCostRateAsync(
@@ -6030,6 +6138,7 @@ public sealed class ProjectPartyIntegrationService(
                 assignment.Id,
                 assignment.ProjectId,
                 assignment.PartyId,
+                assignment.PartyOrganizationAffiliationId,
                 assignment.AssignmentKind,
                 assignment.NodeKey,
                 assignment.IsPrimary,
@@ -6039,7 +6148,8 @@ public sealed class ProjectPartyIntegrationService(
                 assignment.Source,
                 assignment.Notes,
                 party.DisplayName,
-                party.PartyType
+                party.PartyType,
+                party.IsSensitive
             };
 
         if (query.AllocationOnly)
@@ -6076,13 +6186,27 @@ public sealed class ProjectPartyIntegrationService(
         }
 
         var totalCount = await candidates.CountAsync(cancellationToken);
-        var items = await candidates
+        var pageRows = await candidates
             .OrderByDescending(item => item.IsPrimary)
             .ThenBy(item => item.StartsAtUtc)
             .ThenBy(item => item.DisplayName)
             .ThenBy(item => item.Id)
             .Skip(query.PageIndex * query.PageSize)
             .Take(query.PageSize)
+            .ToListAsync(cancellationToken);
+        var affiliationContexts = await projectPartyAffiliationContextService
+            .LoadAssignmentContextsAsync(
+                dbContext,
+                pageRows
+                    .Select(item => new ProjectPartyAffiliationReference(
+                        item.Id,
+                        item.PartyId,
+                        item.PartyType,
+                        item.PartyOrganizationAffiliationId,
+                        item.IsSensitive))
+                    .ToArray(),
+                cancellationToken);
+        var items = pageRows
             .Select(item => new ProjectPartyAssignmentDetail(
                 item.Id,
                 item.ProjectId,
@@ -6097,8 +6221,10 @@ public sealed class ProjectPartyIntegrationService(
                 item.StartsAtUtc,
                 item.EndsAtUtc,
                 item.Source,
-                item.Notes))
-            .ToListAsync(cancellationToken);
+                item.Notes,
+                affiliationContexts.GetValueOrDefault(item.Id),
+                item.PartyOrganizationAffiliationId))
+            .ToList();
         return new(
             items,
             query.PageIndex,
@@ -6214,9 +6340,10 @@ public sealed class ProjectPartyIntegrationService(
         var assignmentKinds = roles.Select(MapRole).Distinct().ToArray();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var query = dbContext.Set<ProjectPartyAssignment>()
+            .AsNoTracking()
             .Where(item => item.ProjectId == projectId && assignmentKinds.Contains(item.AssignmentKind))
             .Join(
-                dbContext.Set<Party>(),
+                dbContext.Set<Party>().AsNoTracking(),
                 assignment => assignment.PartyId,
                 party => party.Id,
                 (assignment, party) => new
@@ -6224,6 +6351,7 @@ public sealed class ProjectPartyIntegrationService(
                     assignment.Id,
                     assignment.ProjectId,
                     assignment.PartyId,
+                    assignment.PartyOrganizationAffiliationId,
                     assignment.AssignmentKind,
                     assignment.NodeKey,
                     assignment.IsPrimary,
@@ -6233,7 +6361,8 @@ public sealed class ProjectPartyIntegrationService(
                     assignment.Source,
                     assignment.Notes,
                     party.DisplayName,
-                    party.PartyType
+                    party.PartyType,
+                    party.IsSensitive
                 });
         if (orderResults)
         {
@@ -6244,7 +6373,20 @@ public sealed class ProjectPartyIntegrationService(
                 .ThenBy(item => item.DisplayName);
         }
 
-        return await query
+        var rows = await query.ToListAsync(cancellationToken);
+        var affiliationContexts = await projectPartyAffiliationContextService
+            .LoadAssignmentContextsAsync(
+                dbContext,
+                rows
+                    .Select(item => new ProjectPartyAffiliationReference(
+                        item.Id,
+                        item.PartyId,
+                        item.PartyType,
+                        item.PartyOrganizationAffiliationId,
+                        item.IsSensitive))
+                    .ToArray(),
+                cancellationToken);
+        return rows
             .Select(item => new ProjectPartyAssignmentDetail(
                 item.Id,
                 item.ProjectId,
@@ -6259,8 +6401,10 @@ public sealed class ProjectPartyIntegrationService(
                 item.StartsAtUtc,
                 item.EndsAtUtc,
                 item.Source,
-                item.Notes))
-            .ToListAsync(cancellationToken);
+                item.Notes,
+                affiliationContexts.GetValueOrDefault(item.Id),
+                item.PartyOrganizationAffiliationId))
+            .ToList();
     }
 
     public async Task<Result<Guid>> SaveAssignmentAsync(
@@ -6308,6 +6452,19 @@ public sealed class ProjectPartyIntegrationService(
         if (partyTypeError is not null)
         {
             return Result<Guid>.Failure(partyTypeError);
+        }
+
+        var affiliationError =
+            await projectPartyAffiliationContextService.ValidateAsync(
+                dbContext,
+                request.PartyId,
+                request.PartyAffiliationId,
+                ToUtcDate(request.StartsOn),
+                ToUtcDate(request.EndsOn),
+                cancellationToken);
+        if (affiliationError is not null)
+        {
+            return Result<Guid>.Failure(affiliationError);
         }
 
         var normalizedNodeKey = request.NodeKey?.Trim() ?? string.Empty;
@@ -6381,6 +6538,8 @@ public sealed class ProjectPartyIntegrationService(
 
         entity.ProjectId = request.ProjectId;
         entity.PartyId = request.PartyId;
+        entity.PartyOrganizationAffiliationId =
+            request.PartyAffiliationId;
         entity.AssignmentKind = assignmentKind;
         entity.NodeKey = normalizedNodeKey;
         entity.IsPrimary = request.IsPrimary;
@@ -6593,6 +6752,23 @@ public sealed class ProjectPartyIntegrationService(
             }
         }
 
+        var affiliationError =
+            await projectPartyAffiliationContextService.ValidateAsync(
+                dbContext,
+                desiredAssignments
+                    .Select(item =>
+                        new ProjectPartyAffiliationValidation(
+                            item.PartyId,
+                            item.PartyAffiliationId,
+                            ToUtcDate(item.StartsOn),
+                            ToUtcDate(item.EndsOn)))
+                    .ToArray(),
+                cancellationToken);
+        if (affiliationError is not null)
+        {
+            return Result.Failure(affiliationError);
+        }
+
         foreach (var desiredAssignment in desiredAssignments)
         {
             if (desiredAssignment.ProjectId != Guid.Empty && desiredAssignment.ProjectId != projectId)
@@ -6649,7 +6825,8 @@ public sealed class ProjectPartyIntegrationService(
                         assignment.PartyId,
                         MapProjectPartyType(
                             currentPartyTypes[assignment.PartyId]),
-                        assignment.IsPrimary))
+                        assignment.IsPrimary,
+                        assignment.PartyOrganizationAffiliationId))
                 .ToHashSet();
             if (currentSnapshots.Count != existingAssignments.Count ||
                 !currentSnapshots.SetEquals(expectedAssignments))
@@ -6707,6 +6884,8 @@ public sealed class ProjectPartyIntegrationService(
                         : Guid.NewGuid(),
                 ProjectId = projectId,
                 PartyId = desiredAssignment.Request.PartyId,
+                PartyOrganizationAffiliationId =
+                    desiredAssignment.Request.PartyAffiliationId,
                 AssignmentKind = desiredAssignment.AssignmentKind,
                 NodeKey = normalizedNodeKey,
                 IsPrimary = isPrimary,

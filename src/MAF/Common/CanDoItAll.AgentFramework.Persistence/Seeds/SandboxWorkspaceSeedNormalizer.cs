@@ -17,6 +17,11 @@ internal static class SandboxWorkspaceSeedNormalizer
         "OpenAI chat completions",
         "OpenAI image generation"
     };
+    private static readonly IReadOnlySet<string> RetiredProjectStructureCatalogToolKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "project-task-create",
+        "project-task-update"
+    };
 
     internal static SandboxWorkspaceDocument Normalize(SandboxWorkspaceDocument document)
     {
@@ -942,6 +947,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         return capabilities
             .Where(capability => !LegacyMemoryCapabilityPolicy.IsRetired(capability.Kind) &&
                                  !IsRetiredSandboxRegisteredSkillCapability(capability) &&
+                                 !IsRetiredProjectStructureCatalogTool(capability) &&
                                  !IsRetiredBuiltInInlineSkillCapability(capability, seededCapabilityKeys))
             .OrderBy(item => item.Kind)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
@@ -1020,6 +1026,12 @@ internal static class SandboxWorkspaceSeedNormalizer
                !seededCapabilityKeys.Contains(capability.Key) &&
                !string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
                capability.EndpointOrPath.StartsWith("inline://", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRetiredProjectStructureCatalogTool(CapabilityCatalogItem capability)
+    {
+        return capability.Kind == CapabilityKind.Tool &&
+               RetiredProjectStructureCatalogToolKeys.Contains(capability.Key);
     }
 
     private static bool IsRetiredSandboxRegisteredSkillServiceType(string? serviceTypeName)

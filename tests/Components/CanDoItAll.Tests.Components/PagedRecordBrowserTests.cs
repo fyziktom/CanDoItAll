@@ -240,6 +240,7 @@ public sealed class PagedRecordBrowserTests : BunitContext
             "AI agent")
         {
             Subtitle = "Long business identity that remains aligned",
+            SubtitleTooltip = "Primary organization. Other affiliations: Contoso / Advisor.",
             Description = "A long operational summary that is clamped visually while its complete value remains discoverable.",
             Meta = "Updated 27.07.2026 09:45",
             Icon = "smart_toy",
@@ -263,6 +264,19 @@ public sealed class PagedRecordBrowserTests : BunitContext
         Assert.NotNull(shell.QuerySelector(".paged-record-browser__title-slot"));
         Assert.NotNull(shell.QuerySelector(".paged-record-browser__description-slot"));
         Assert.NotNull(shell.QuerySelector(".paged-record-browser__footer"));
+
+        shell.QuerySelector(".paged-record-browser__subtitle-slot .paged-record-browser__tooltip-target")!
+            .TriggerEvent(
+                "onmouseenter",
+                new MouseEventArgs
+                {
+                    ClientX = 120,
+                    ClientY = 80
+                });
+        var subtitleTooltip = Services.GetRequiredService<TooltipService>().Current;
+        Assert.Equal(
+            "Primary organization. Other affiliations: Contoso / Advisor.",
+            subtitleTooltip?.Text);
 
         var tagTargets = shell.QuerySelectorAll(".paged-record-browser__tag-target");
         Assert.Equal(3, tagTargets.Length);
