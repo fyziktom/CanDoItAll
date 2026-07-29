@@ -130,6 +130,24 @@
                                 </span>
                             }
 
+                            @if (option.PinKindToUpperLeft)
+                            {
+                                <div class="paged-record-browser__kind-corner absolute left-3 top-3 z-[3] max-w-[9rem]"
+                                     data-testid="@($"{ResolveOptionTestId(option)}-kind-corner")">
+                                    <div class="paged-record-browser__kind-row">
+                                        <TooltipTarget Text="@option.KindLabel"
+                                                       Position="TooltipPosition.Bottom"
+                                                       Duration="@((TimeSpan?)null)"
+                                                       TestId="@($"{ResolveOptionTestId(option)}-kind-tooltip")"
+                                                       TriggerClass="@ResolveBadgeTargetClass(option.KindTone, "paged-record-browser__kind-target")">
+                                            <StatusBadge Tone="neutral"
+                                                         Text="@option.KindLabel"
+                                                         NoWrap="true" />
+                                        </TooltipTarget>
+                                    </div>
+                                </div>
+                            }
+
                             <button type="button"
                                     class="paged-record-browser__select"
                                     aria-label="@($"Select {option.Title}")"
@@ -144,23 +162,29 @@
                                             <Icon Name="@option.Icon" />
                                         </span>
 
-                                        <div class="paged-record-browser__kind-row">
-                                            <TooltipTarget Text="@option.KindLabel"
-                                                           Position="TooltipPosition.Bottom"
-                                                           Duration="@((TimeSpan?)null)"
-                                                           TestId="@($"{ResolveOptionTestId(option)}-kind-tooltip")"
-                                                           TriggerClass="@ResolveBadgeTargetClass(option.KindTone, "paged-record-browser__kind-target")">
-                                                <StatusBadge Tone="neutral"
-                                                             Text="@option.KindLabel"
-                                                             NoWrap="true" />
-                                            </TooltipTarget>
-                                            @if (isSelected)
-                                            {
-                                                <StatusBadge Tone="info"
-                                                             Text="Selected"
-                                                             NoWrap="true" />
-                                            }
-                                        </div>
+                                        @if (!option.PinKindToUpperLeft || isSelected)
+                                        {
+                                            <div class="paged-record-browser__kind-row">
+                                                @if (!option.PinKindToUpperLeft)
+                                                {
+                                                    <TooltipTarget Text="@option.KindLabel"
+                                                                   Position="TooltipPosition.Bottom"
+                                                                   Duration="@((TimeSpan?)null)"
+                                                                   TestId="@($"{ResolveOptionTestId(option)}-kind-tooltip")"
+                                                                   TriggerClass="@ResolveBadgeTargetClass(option.KindTone, "paged-record-browser__kind-target")">
+                                                        <StatusBadge Tone="neutral"
+                                                                     Text="@option.KindLabel"
+                                                                     NoWrap="true" />
+                                                    </TooltipTarget>
+                                                }
+                                                @if (isSelected)
+                                                {
+                                                    <StatusBadge Tone="info"
+                                                                 Text="Selected"
+                                                                 NoWrap="true" />
+                                                }
+                                            </div>
+                                        }
                                     </div>
 
                                     <div class="paged-record-browser__title-slot">
@@ -178,7 +202,7 @@
                                     <div class="paged-record-browser__subtitle-slot">
                                         @if (!string.IsNullOrWhiteSpace(option.Subtitle))
                                         {
-                                            <TooltipTarget Text="@option.Subtitle"
+                                            <TooltipTarget Text="@ResolveSubtitleTooltip(option)"
                                                            Position="TooltipPosition.Bottom"
                                                            Duration="@((TimeSpan?)null)"
                                                            TestId="@($"{ResolveOptionTestId(option)}-subtitle-tooltip")"
@@ -726,6 +750,11 @@
 
     private string BuildHiddenTags(IReadOnlyList<string> tags)
         => string.Join(", ", tags.Skip(MaximumVisibleTags));
+
+    private static string ResolveSubtitleTooltip(PagedRecordOption<TKey> option)
+        => string.IsNullOrWhiteSpace(option.SubtitleTooltip)
+            ? option.Subtitle
+            : option.SubtitleTooltip;
 
     private static string ResolveOptionTestId(PagedRecordOption<TKey> option)
     {

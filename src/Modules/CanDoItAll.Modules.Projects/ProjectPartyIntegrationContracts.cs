@@ -66,6 +66,19 @@ public sealed record ProjectPortfolioPartyContext(
     IReadOnlyList<ProjectPortfolioPartyItem> Items,
     string SearchText);
 
+public sealed record ProjectPartyAffiliationContext(
+    Guid? AffiliationId,
+    string AffiliationLabel,
+    string OrganizationName,
+    string RoleTitle,
+    string OtherAffiliationsSummary)
+{
+    public string PrimaryDisplayText => string.Join(
+        " · ",
+        new[] { OrganizationName, RoleTitle }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
+}
+
 public sealed record ProjectPartyOption(
     Guid PartyId,
     string DisplayName,
@@ -73,7 +86,8 @@ public sealed record ProjectPartyOption(
     ProjectPartyType PartyType,
     string PrimaryEmail,
     string PrimaryPhone,
-    bool IsSensitive);
+    bool IsSensitive,
+    ProjectPartyAffiliationContext? Affiliation = null);
 
 public sealed record ProjectPartyCostRate(
     Guid PartyId,
@@ -95,13 +109,16 @@ public sealed record ProjectPartyAssignmentDetail(
     DateTimeOffset? StartsAtUtc,
     DateTimeOffset? EndsAtUtc,
     string Source,
-    string Notes);
+    string Notes,
+    ProjectPartyAffiliationContext? Affiliation = null,
+    Guid? PartyAffiliationId = null);
 
 public sealed record ProjectPartyAssignmentConcurrencySnapshot(
     Guid AssignmentId,
     Guid PartyId,
     ProjectPartyType PartyType,
-    bool IsPrimary)
+    bool IsPrimary,
+    Guid? PartyAffiliationId = null)
 {
     public static ProjectPartyAssignmentConcurrencySnapshot From(
         ProjectPartyAssignmentDetail assignment)
@@ -111,7 +128,9 @@ public sealed record ProjectPartyAssignmentConcurrencySnapshot(
             assignment.Id,
             assignment.PartyId,
             assignment.PartyType,
-            assignment.IsPrimary);
+            assignment.IsPrimary,
+            assignment.PartyAffiliationId ??
+            assignment.Affiliation?.AffiliationId);
     }
 }
 
@@ -196,6 +215,8 @@ public sealed class ProjectPartyAssignmentUpsertRequest
     public Guid ProjectId { get; set; }
 
     public Guid PartyId { get; set; }
+
+    public Guid? PartyAffiliationId { get; set; }
 
     public ProjectPartyAssignmentRole Role { get; set; }
 

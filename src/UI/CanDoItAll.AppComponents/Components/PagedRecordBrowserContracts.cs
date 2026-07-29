@@ -63,6 +63,8 @@ public sealed record PagedRecordOption<TKey>(
 {
     public string Subtitle { get; init; } = string.Empty;
 
+    public string SubtitleTooltip { get; init; } = string.Empty;
+
     public string Description { get; init; } = string.Empty;
 
     public string Meta { get; init; } = string.Empty;
@@ -76,6 +78,8 @@ public sealed record PagedRecordOption<TKey>(
     public PagedRecordBadgeTone TagTone { get; init; } = PagedRecordBadgeTone.Neutral;
 
     public PagedRecordCornerStatus? CornerStatus { get; init; }
+
+    public bool PinKindToUpperLeft { get; init; }
 
     public bool IsDisabled { get; init; }
 

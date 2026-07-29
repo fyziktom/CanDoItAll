@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -41,6 +42,7 @@ public sealed class HrAgentCompositionTests
         var agent = Assert.Single(agents, HrAgentIdentity.Matches);
         var expectedCapabilityKeys = HrAgentCapabilityKeys.ToolNameToCapabilityKey.Values
             .Append(HrAgentCapabilityKeys.GovernanceSkill)
+            .Concat(HrAgentIdentity.CapabilityCurationCapabilityKeys)
             .OrderBy(key => key, StringComparer.Ordinal)
             .ToArray();
         var imageAccess = AgentImageGenerationAccessMetadata.Read(agent.ConfigurationJson);
@@ -52,6 +54,10 @@ public sealed class HrAgentCompositionTests
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<HrAgentRuntimeToolProvider>()
             .ToArray();
+        var projectStructureRuntimeProvider = Assert.Single(
+            scope.ServiceProvider
+                .GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProjectStructureAgentRuntimeToolProvider>());
         var chatProvider = Assert.Single(
             providers,
             provider => provider.IsEnabled &&
@@ -93,6 +99,18 @@ public sealed class HrAgentCompositionTests
         var administration = new HrAgentAdministrationService(
             workspace,
             NullLogger<HrAgentAdministrationService>.Instance);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentCreateInput(
+                "Invalid scoped specialist",
+                "Focused validation specialist",
+                "Validates one focused concern.",
+                "Inspect the supplied concern, report evidence, and stop.",
+                chatProvider.Id,
+                chatProvider.DefaultModel,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    AllowedProjectIds: [Guid.Empty])),
+            CancellationToken.None));
         var createResult = await administration.CreateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentCreateInput(
@@ -101,7 +119,12 @@ public sealed class HrAgentCompositionTests
                 "Validates one focused concern.",
                 "Inspect the supplied concern, report evidence, and stop.",
                 chatProvider.Id,
-                chatProvider.DefaultModel),
+                chatProvider.DefaultModel,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    CanRead: true,
+                    CanWriteNonTaskStructure: true,
+                    CanWriteTasks: true,
+                    AllowAllProjects: true)),
             CancellationToken.None);
         var createdAgent = Assert.Single(
             await workspace.ListAgentsAsync(includeTemplates: true),
@@ -112,6 +135,138 @@ public sealed class HrAgentCompositionTests
         Assert.Empty(createdAgent.Permissions.NormalizedAllowedSecrets);
         Assert.Empty(createdAgent.Capabilities);
         Assert.Contains(createResult.Warnings, warning => warning.Contains("No capabilities", StringComparison.Ordinal));
+        var createdProjectStructureAccess =
+            AgentProjectStructureAccessMetadata.Read(createdAgent.ConfigurationJson);
+        var createdSafeSettings =
+            await administration.GetSettingsAsync(createdAgent.Id, CancellationToken.None);
+        var projectContext = CreateRuntimeToolContext(createdAgent, chatProvider, capabilities) with
+        {
+            ContextIntent = AgentRuntimeContextIntent.Empty with
+            {
+                SourceKind = "project-structure",
+                SourceId = Guid.NewGuid().ToString("D")
+            }
+        };
+        var projectToolNames = (await projectStructureRuntimeProvider.CreateToolsAsync(
+                projectContext,
+                CancellationToken.None))
+            .Select(tool => tool.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.True(createdProjectStructureAccess.CanRead);
+        Assert.False(createdProjectStructureAccess.CanWrite);
+        Assert.True(createdProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.True(createdProjectStructureAccess.CanWriteTasks);
+        Assert.False(createdProjectStructureAccess.CanCreateProjects);
+        Assert.False(createdProjectStructureAccess.CanCreateSubprojects);
+        Assert.True(createdProjectStructureAccess.AllowAllProjects);
+        Assert.Empty(createdProjectStructureAccess.AllowedProjectIds);
+        Assert.True(createdSafeSettings.ProjectStructureAccess.CanRead);
+        Assert.False(createdSafeSettings.ProjectStructureAccess.CanWrite);
+        Assert.True(createdSafeSettings.ProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.True(createdSafeSettings.ProjectStructureAccess.CanWriteTasks);
+        Assert.False(createdSafeSettings.ProjectStructureAccess.CanCreateProjects);
+        Assert.False(createdSafeSettings.ProjectStructureAccess.CanCreateSubprojects);
+        Assert.True(createdSafeSettings.ProjectStructureAccess.AllowAllProjects);
+        Assert.Empty(createdSafeSettings.ProjectStructureAccess.AllowedProjectIds);
+        Assert.Contains("project_structure_node_create", projectToolNames);
+        Assert.Contains("project_task_create", projectToolNames);
+        Assert.Contains("project_structure_asset_create", projectToolNames);
+        Assert.DoesNotContain("project_structure_project_create", projectToolNames);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                createdAgent.Id,
+                createdAgent.UpdatedAtUtc,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    AllowAllProjects: true,
+                    AllowedProjectIds: [Guid.NewGuid()])),
+            CancellationToken.None));
+        var firstAllowedProjectId = Guid.NewGuid();
+        var secondAllowedProjectId = Guid.NewGuid();
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                createdAgent.Id,
+                createdAgent.UpdatedAtUtc,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    AllowedProjectIds:
+                    [
+                        secondAllowedProjectId,
+                        firstAllowedProjectId,
+                        secondAllowedProjectId
+                    ])),
+            CancellationToken.None);
+        var updatedAgent = Assert.Single(
+            await workspace.ListAgentsAsync(includeTemplates: true),
+            candidate => candidate.Id == createdAgent.Id);
+        var updatedSafeSettings =
+            await administration.GetSettingsAsync(createdAgent.Id, CancellationToken.None);
+        var expectedAllowedProjectIds = new[]
+        {
+            firstAllowedProjectId,
+            secondAllowedProjectId
+        }.OrderBy(projectId => projectId).ToArray();
+
+        Assert.True(updatedSafeSettings.ProjectStructureAccess.CanRead);
+        Assert.False(updatedSafeSettings.ProjectStructureAccess.CanWrite);
+        Assert.True(updatedSafeSettings.ProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.True(updatedSafeSettings.ProjectStructureAccess.CanWriteTasks);
+        Assert.False(updatedSafeSettings.ProjectStructureAccess.CanCreateProjects);
+        Assert.False(updatedSafeSettings.ProjectStructureAccess.CanCreateSubprojects);
+        Assert.False(updatedSafeSettings.ProjectStructureAccess.AllowAllProjects);
+        Assert.Equal(
+            expectedAllowedProjectIds,
+            updatedSafeSettings.ProjectStructureAccess.AllowedProjectIds);
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                createdAgent.Id,
+                updatedAgent.UpdatedAtUtc,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    AllowedProjectIds: [])),
+            CancellationToken.None);
+        var afterClearedIds = Assert.Single(
+            await workspace.ListAgentsAsync(includeTemplates: true),
+            candidate => candidate.Id == createdAgent.Id);
+        var afterClearedIdsSettings =
+            await administration.GetSettingsAsync(createdAgent.Id, CancellationToken.None);
+
+        Assert.True(afterClearedIdsSettings.ProjectStructureAccess.CanRead);
+        Assert.True(afterClearedIdsSettings.ProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.True(afterClearedIdsSettings.ProjectStructureAccess.CanWriteTasks);
+        Assert.False(afterClearedIdsSettings.ProjectStructureAccess.AllowAllProjects);
+        Assert.Empty(afterClearedIdsSettings.ProjectStructureAccess.AllowedProjectIds);
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                createdAgent.Id,
+                afterClearedIds.UpdatedAtUtc,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    AllowedProjectIds: [firstAllowedProjectId])),
+            CancellationToken.None);
+        var afterRestoredIdScope = Assert.Single(
+            await workspace.ListAgentsAsync(includeTemplates: true),
+            candidate => candidate.Id == createdAgent.Id);
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                createdAgent.Id,
+                afterRestoredIdScope.UpdatedAtUtc,
+                ProjectStructureAccess: new HrAgentProjectStructureAccessInput(
+                    AllowAllProjects: true)),
+            CancellationToken.None);
+        var afterAllowAll = Assert.Single(
+            await workspace.ListAgentsAsync(includeTemplates: true),
+            candidate => candidate.Id == createdAgent.Id);
+        var afterAllowAllSettings =
+            await administration.GetSettingsAsync(createdAgent.Id, CancellationToken.None);
+
+        Assert.True(afterAllowAllSettings.ProjectStructureAccess.CanRead);
+        Assert.True(afterAllowAllSettings.ProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.True(afterAllowAllSettings.ProjectStructureAccess.CanWriteTasks);
+        Assert.True(afterAllowAllSettings.ProjectStructureAccess.AllowAllProjects);
+        Assert.Empty(afterAllowAllSettings.ProjectStructureAccess.AllowedProjectIds);
         await Assert.ThrowsAsync<AgentCatalogConcurrencyException>(() => administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(
@@ -138,7 +293,7 @@ public sealed class HrAgentCompositionTests
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
                 createdAgent.Id,
-                createdAgent.UpdatedAtUtc,
+                afterAllowAll.UpdatedAtUtc,
                 "Abstract blue validation compass"),
             CancellationToken.None));
         var afterFailedAvatar = Assert.Single(

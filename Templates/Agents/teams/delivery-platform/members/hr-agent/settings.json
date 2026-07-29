@@ -16,6 +16,7 @@
     "enableCompaction": true,
     "maxLocalRagResults": 4,
     "runtimeUse": "hr-agent-governance",
+    "hrCapabilityCurationAccessVersion": "2026-07-hr-capability-curation-v1",
     "memory": {
       "invocationMode": "Disabled",
       "canUseMemoryTools": false,

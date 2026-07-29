@@ -20,6 +20,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var retiredCapabilityId = Guid.NewGuid();
         var retiredBundleWorkflowCapabilityId = Guid.NewGuid();
         var retiredMemoryCapabilityId = Guid.NewGuid();
+        var retiredProjectTaskCreateCapabilityId = Guid.NewGuid();
+        var retiredProjectTaskUpdateCapabilityId = Guid.NewGuid();
         var retiredCapability = new CapabilityCatalogItem(
             retiredCapabilityId,
             CapabilityKind.Skill,
@@ -60,6 +62,30 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             string.Empty,
             null,
             true);
+        var retiredProjectTaskCreateCapability = new CapabilityCatalogItem(
+            retiredProjectTaskCreateCapabilityId,
+            CapabilityKind.Tool,
+            "project-task-create",
+            "Project Task Create",
+            "Retired duplicate authority; project task tools are governed by project-structure access metadata.",
+            "sandbox://project-task-create",
+            """{"tool":"project_task_create"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+        var retiredProjectTaskUpdateCapability = new CapabilityCatalogItem(
+            retiredProjectTaskUpdateCapabilityId,
+            CapabilityKind.Tool,
+            "project-task-update",
+            "Project Task Update",
+            "Retired duplicate authority; project task tools are governed by project-structure access metadata.",
+            "sandbox://project-task-update",
+            """{"tool":"project_task_update"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
         var financialStrategist = Assert.Single(
             seed.Agents,
             item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
@@ -69,7 +95,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var catalog = seed.ToCatalog() with
         {
             Capabilities = seed.Capabilities
-                .Concat([retiredCapability, retiredBundleWorkflowCapability, retiredMemoryCapability])
+                .Concat([
+                    retiredCapability,
+                    retiredBundleWorkflowCapability,
+                    retiredMemoryCapability,
+                    retiredProjectTaskCreateCapability,
+                    retiredProjectTaskUpdateCapability
+                ])
                 .ToList(),
             Agents = seed.Agents.Select(agent => agent.Id == financialStrategist.Id
                 ? agent with
@@ -95,6 +127,20 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                             retiredMemoryCapability.Kind,
                             CapabilityProofStatus.NotRun,
                             null,
+                            string.Empty),
+                        new AgentCapabilityAssignment(
+                            retiredProjectTaskCreateCapabilityId,
+                            retiredProjectTaskCreateCapability.Key,
+                            retiredProjectTaskCreateCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
+                            string.Empty),
+                        new AgentCapabilityAssignment(
+                            retiredProjectTaskUpdateCapabilityId,
+                            retiredProjectTaskUpdateCapability.Key,
+                            retiredProjectTaskUpdateCapability.Kind,
+                            CapabilityProofStatus.NotRun,
+                            null,
                             string.Empty)
                     ]).ToList()
                 }
@@ -109,10 +155,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredBundleWorkflowCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredMemoryCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredProjectTaskCreateCapabilityId);
+        Assert.DoesNotContain(normalized.Capabilities, item => item.Id == retiredProjectTaskUpdateCapabilityId);
         Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "candoitall-bundle-workflow", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "project-task-create", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(normalized.Capabilities, item => string.Equals(item.Key, "project-task-update", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredCapabilityId);
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredBundleWorkflowCapabilityId);
         Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredMemoryCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredProjectTaskCreateCapabilityId);
+        Assert.DoesNotContain(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == retiredProjectTaskUpdateCapabilityId);
         Assert.Contains(spreadsheetAnalyst.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
         Assert.Contains(normalizedFinancialStrategist.Capabilities, item => item.CapabilityId == reconciliationCapability.Id);
     }
@@ -301,6 +353,179 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Equal(staleCustomizedAgent.ConfigurationJson, preservedAgent.ConfigurationJson);
         Assert.Contains(staleManagedSeedVersion, preservedAgent.ConfigurationJson, StringComparison.Ordinal);
         Assert.True(AgentManagedSeedCustomizationMetadata.HasCustomization(preservedAgent.ConfigurationJson));
+    }
+
+    [Fact]
+    public void Customized_hr_normalization_unions_curation_access_once_without_overwriting_customer_policy()
+    {
+        const string unrelatedRevokedCapabilityKey = "hr-crm-search";
+        const string customizedSummary = "Customer-owned Terra HR policy.";
+        const string customizedInstructions = "Retain the customer's HR operating instructions.";
+        const string customerConfigurationValue = "retain-this-policy";
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var seededOpenAiProvider = Assert.Single(
+            seed.Providers,
+            provider => string.Equals(
+                provider.Name,
+                ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
+                StringComparison.Ordinal));
+        var terraProvider = seededOpenAiProvider with
+        {
+            Id = Guid.NewGuid(),
+            Name = "Customer Terra HR provider",
+            DefaultModel = OpenAiModelIds.Gpt56Terra,
+            Tags = seededOpenAiProvider.Tags
+                .Append("customer-owned")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+        };
+        var curationAssignments = seededHrAgent.Capabilities
+            .Where(assignment => HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(
+                assignment.CapabilityKey))
+            .ToArray();
+        Assert.Equal(HrAgentIdentity.CapabilityCurationCapabilityKeys.Count, curationAssignments.Length);
+        var unrelatedRevokedAssignment = Assert.Single(
+            seededHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                unrelatedRevokedCapabilityKey,
+                StringComparison.Ordinal));
+        var retainedAssignments = seededHrAgent.Capabilities
+            .Where(assignment =>
+                assignment.CapabilityId != unrelatedRevokedAssignment.CapabilityId &&
+                !HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(assignment.CapabilityKey))
+            .ToArray();
+
+        var customizedConfiguration = JsonNode.Parse(seededHrAgent.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The seeded HR configuration must be a JSON object.");
+        customizedConfiguration.Remove(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName);
+        customizedConfiguration["customerHrPolicy"] = customerConfigurationValue;
+        var customizedHrAgent = seededHrAgent with
+        {
+            Summary = customizedSummary,
+            Instructions = customizedInstructions,
+            ProviderProfileId = terraProvider.Id,
+            Model = OpenAiModelIds.Gpt56Terra,
+            Permissions = seededHrAgent.Permissions with
+            {
+                CanAskOtherAgents = !seededHrAgent.Permissions.CanAskOtherAgents
+            },
+            ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(
+                customizedConfiguration.ToJsonString()),
+            Capabilities = retainedAssignments,
+            Tags = seededHrAgent.Tags
+                .Append("customer-managed-hr")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+        };
+        var spoofConfiguration = JsonNode.Parse(customizedHrAgent.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The customized HR configuration must be a JSON object.");
+        spoofConfiguration["customerHrPolicy"] = "spoof-must-remain-untouched";
+        var hrIdentitySpoof = customizedHrAgent with
+        {
+            Id = Guid.NewGuid(),
+            Name = "HR identity spoof",
+            ConfigurationJson = spoofConfiguration.ToJsonString(),
+            Capabilities = []
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Providers = seed.Providers.Append(terraProvider).ToArray(),
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? customizedHrAgent : agent)
+                .ToArray()
+        });
+        var migratedHrAgent = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.Equal(terraProvider.Id, migratedHrAgent.ProviderProfileId);
+        Assert.Equal(OpenAiModelIds.Gpt56Terra, migratedHrAgent.Model);
+        Assert.Equal(customizedSummary, migratedHrAgent.Summary);
+        Assert.Equal(customizedInstructions, migratedHrAgent.Instructions);
+        Assert.Equal(customizedHrAgent.Permissions, migratedHrAgent.Permissions);
+        Assert.Contains("customer-managed-hr", migratedHrAgent.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(
+            retainedAssignments
+                .Concat(curationAssignments)
+                .Select(assignment => assignment.CapabilityKey)
+                .OrderBy(item => item, StringComparer.Ordinal),
+            migratedHrAgent.Capabilities
+                .Select(assignment => assignment.CapabilityKey)
+                .OrderBy(item => item, StringComparer.Ordinal));
+        Assert.DoesNotContain(
+            migratedHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                unrelatedRevokedCapabilityKey,
+                StringComparison.Ordinal));
+        using (var migratedConfiguration = JsonDocument.Parse(migratedHrAgent.ConfigurationJson))
+        {
+            Assert.Equal(
+                customerConfigurationValue,
+                migratedConfiguration.RootElement.GetProperty("customerHrPolicy").GetString());
+            Assert.Equal(
+                HrAgentIdentity.CurrentCapabilityCurationAccessVersion,
+                migratedConfiguration.RootElement
+                    .GetProperty(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName)
+                    .GetString());
+        }
+
+        var normalizedSpoofCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Providers = seed.Providers.Append(terraProvider).ToArray(),
+            Agents = seed.Agents
+                .Where(agent => agent.Id != seededHrAgent.Id)
+                .Append(hrIdentitySpoof)
+                .ToArray()
+        });
+        var normalizedSpoof = Assert.Single(
+            normalizedSpoofCatalog.Agents,
+            agent => agent.Id == hrIdentitySpoof.Id);
+        Assert.Equal(hrIdentitySpoof.ConfigurationJson, normalizedSpoof.ConfigurationJson);
+        Assert.Empty(normalizedSpoof.Capabilities);
+        Assert.False(HrAgentIdentity.Matches(normalizedSpoof));
+
+        var deliberatelyRemovedCapabilityKey = CapabilityCuratorAgentIdentity.SaveCapabilityKey;
+        const string preexistingLedgerMarker = "operator-preserved-ledger-entry";
+        var postMigrationConfiguration = JsonNode.Parse(migratedHrAgent.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The migrated HR configuration must be a JSON object.");
+        postMigrationConfiguration[HrAgentIdentity.CapabilityCurationAccessVersionPropertyName] =
+            preexistingLedgerMarker;
+        var hrAgentAfterDeliberateRemoval = migratedHrAgent with
+        {
+            ConfigurationJson = postMigrationConfiguration.ToJsonString(),
+            Capabilities = migratedHrAgent.Capabilities
+                .Where(assignment => !string.Equals(
+                    assignment.CapabilityKey,
+                    deliberatelyRemovedCapabilityKey,
+                    StringComparison.Ordinal))
+                .ToArray()
+        };
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized with
+        {
+            Agents = normalized.Agents
+                .Select(agent => agent.Id == migratedHrAgent.Id ? hrAgentAfterDeliberateRemoval : agent)
+                .ToArray()
+        });
+        var preservedRemoval = Assert.Single(normalizedAgain.Agents, HrAgentIdentity.Matches);
+
+        Assert.DoesNotContain(
+            preservedRemoval.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                deliberatelyRemovedCapabilityKey,
+                StringComparison.Ordinal));
+        Assert.Equal(terraProvider.Id, preservedRemoval.ProviderProfileId);
+        Assert.Equal(OpenAiModelIds.Gpt56Terra, preservedRemoval.Model);
+        Assert.Equal(customizedSummary, preservedRemoval.Summary);
+        using var preservedConfiguration = JsonDocument.Parse(preservedRemoval.ConfigurationJson);
+        Assert.Equal(
+            preexistingLedgerMarker,
+            preservedConfiguration.RootElement
+                .GetProperty(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName)
+                .GetString());
     }
 
     [Fact]

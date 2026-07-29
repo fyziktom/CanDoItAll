@@ -6,7 +6,9 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed class ProviderRuntimeImageGenerationService(
     IProviderRuntimeDescriptorStore descriptorStore,
-    IProviderRuntimePool runtimePool) : IAgentImageGenerationService
+    IProviderRuntimePool runtimePool,
+    IAgentProviderCredentialResolver? providerCredentialResolver = null) :
+    IAgentImageGenerationService
 {
     public async Task<AgentImageGenerationResult> GenerateAsync(
         AgentImageGenerationRequest request,
@@ -15,38 +17,63 @@ public sealed class ProviderRuntimeImageGenerationService(
         ArgumentNullException.ThrowIfNull(request);
         EnsureImageRequest(request);
 
-        var handle = await GetRuntimeHandleAsync(request.Provider, cancellationToken).ConfigureAwait(false);
-        var operation = request.Sources.Count == 0
-            ? AgentProviderOperationKind.GenerateImage
-            : AgentProviderOperationKind.EditImage;
-        var query = new ProviderDispatchQuery(
-            request.Provider,
-            AgentProviderCapabilityKind.ImageGeneration,
-            operation,
-            request.Model);
-        var payload = new ProviderImageGenerationRequest(
-            request.Provider,
-            request.Model,
-            request.Prompt,
-            request.Size,
-            request.Quality,
-            MapFormat(request.Format),
-            request.Sources
-                .Select(source => new ProviderImageSource(source.Name, source.ContentType, source.Bytes))
-                .ToList())
+        ProviderImageGenerationResult result;
+        using (var credentialPreparation =
+               await PrepareProviderCredentialDispatchAsync(
+                       request.Provider,
+                       cancellationToken)
+                   .ConfigureAwait(false))
         {
-            OutputCompression = request.OutputCompression
-        };
-
-        var result = await handle.DispatchAsync(
-            new ProviderRuntimeDispatchRequest<ProviderImageGenerationRequest>(query, payload),
-            async (context, token) =>
+            using var credentialScope = credentialPreparation?.BeginScope();
+            var handle = await GetRuntimeHandleAsync(
+                    request.Provider,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            var operation = request.Sources.Count == 0
+                ? AgentProviderOperationKind.GenerateImage
+                : AgentProviderOperationKind.EditImage;
+            var query = new ProviderDispatchQuery(
+                request.Provider,
+                AgentProviderCapabilityKind.ImageGeneration,
+                operation,
+                request.Model);
+            var payload = new ProviderImageGenerationRequest(
+                request.Provider,
+                request.Model,
+                request.Prompt,
+                request.Size,
+                request.Quality,
+                MapFormat(request.Format),
+                request.Sources
+                    .Select(source => new ProviderImageSource(
+                        source.Name,
+                        source.ContentType,
+                        source.Bytes))
+                    .ToList())
             {
-                EnsureProviderKindMatches(context.Descriptor, context.Query.Provider);
-                var driver = handle.ProviderFactory.Resolve<IProviderImageGenerationDriver>(context.Query.Provider.Kind);
-                return await driver.GenerateImageAsync(context.Payload, token).ConfigureAwait(false);
-            },
-            cancellationToken).ConfigureAwait(false);
+                OutputCompression = request.OutputCompression
+            };
+
+            result = await handle.DispatchAsync(
+                    new ProviderRuntimeDispatchRequest<
+                        ProviderImageGenerationRequest>(query, payload),
+                    async (context, token) =>
+                    {
+                        EnsureProviderKindMatches(
+                            context.Descriptor,
+                            context.Query.Provider);
+                        var driver = handle.ProviderFactory.Resolve<
+                            IProviderImageGenerationDriver>(
+                            context.Query.Provider.Kind);
+                        return await driver.GenerateImageAsync(
+                                context.Payload,
+                                token)
+                            .ConfigureAwait(false);
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         if (result.Images.Count == 0)
         {
             throw new InvalidOperationException("Image generation completed without image data.");
@@ -58,6 +85,22 @@ public sealed class ProviderRuntimeImageGenerationService(
             result.Images
                 .Select(image => new AgentGeneratedImage(image.ContentType, image.Bytes, image.RevisedPrompt))
                 .ToList());
+    }
+
+    private async ValueTask<IAgentProviderCredentialDispatchScopePreparation?>
+        PrepareProviderCredentialDispatchAsync(
+        ProviderProfile provider,
+        CancellationToken cancellationToken)
+    {
+        if (providerCredentialResolver is not
+            IAgentProviderCredentialDispatchScopeFactory scopeFactory)
+        {
+            return null;
+        }
+
+        return await scopeFactory
+            .PrepareAsync([provider], cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async ValueTask<IProviderRuntimeHandle> GetRuntimeHandleAsync(

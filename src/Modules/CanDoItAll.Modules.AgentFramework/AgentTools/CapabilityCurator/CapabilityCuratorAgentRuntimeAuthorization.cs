@@ -11,12 +11,12 @@ public static class CapabilityCuratorAgentRuntimeAuthorizationPolicy
         ArgumentNullException.ThrowIfNull(context);
 
         return context.Purpose == AgentRuntimeToolProviderPurpose.InteractiveChat &&
-               IsManagedCuratorActor(context.Agent);
+               IsManagedCapabilityCurationActor(context.Agent);
     }
 
-    public static bool IsManagedCuratorActor(AgentDefinition? agent)
+    public static bool IsManagedCapabilityCurationActor(AgentDefinition? agent)
     {
-        return CapabilityCuratorAgentIdentity.Matches(agent) &&
+        return (CapabilityCuratorAgentIdentity.Matches(agent) || HrAgentIdentity.Matches(agent)) &&
                agent!.Status == AgentLifecycleStatus.Active &&
                !agent.IsTemplate &&
                agent.Permissions.CanUseTools;
@@ -34,6 +34,12 @@ public static class CapabilityCuratorAgentRuntimeAuthorizationPolicy
         {
             throw new InvalidOperationException(
                 $"Capability Curator runtime tool '{toolName}' does not have a capability key mapping.");
+        }
+
+        if (HrAgentIdentity.Matches(agent) &&
+            !HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(capabilityKey))
+        {
+            return false;
         }
 
         var assignments = agent.Capabilities
@@ -62,7 +68,8 @@ public sealed class CapabilityCuratorAgentRuntimeAuthorizationService(
         string toolName,
         CancellationToken cancellationToken)
     {
-        if (actorAgentId != CapabilityCuratorAgentIdentity.AgentId)
+        if (actorAgentId != CapabilityCuratorAgentIdentity.AgentId &&
+            actorAgentId != HrAgentIdentity.AgentId)
         {
             throw CreateDeniedException(toolName);
         }
@@ -71,7 +78,7 @@ public sealed class CapabilityCuratorAgentRuntimeAuthorizationService(
             includeTemplates: true,
             cancellationToken);
         var actor = agents.FirstOrDefault(agent => agent.Id == actorAgentId);
-        if (!CapabilityCuratorAgentRuntimeAuthorizationPolicy.IsManagedCuratorActor(actor))
+        if (!CapabilityCuratorAgentRuntimeAuthorizationPolicy.IsManagedCapabilityCurationActor(actor))
         {
             throw CreateDeniedException(toolName);
         }
@@ -89,6 +96,6 @@ public sealed class CapabilityCuratorAgentRuntimeAuthorizationService(
     private static UnauthorizedAccessException CreateDeniedException(string toolName)
     {
         return new UnauthorizedAccessException(
-            $"The current managed Capability Curator agent is not authorized to invoke '{toolName}'.");
+            $"The current managed capability-curation actor is not authorized to invoke '{toolName}'.");
     }
 }

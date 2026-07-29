@@ -1,0 +1,560 @@
+@inject IPartyRecordQueryService PartyRecordQueryService
+
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="crmhr-affiliations-editor">
+    <Split Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <div>
+            <p class="cda-eyebrow">Organization affiliations</p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">
+                Record each company relationship separately. Selecting a primary affiliation clears the previous primary.
+            </p>
+        </div>
+        <Button Text="Add affiliation"
+                Icon="add"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Disabled="@(!CurrentPersonPartyId.HasValue)"
+                Click="AddAffiliationAsync"
+                data-testid="crmhr-affiliation-add" />
+    </Split>
+
+    @if (!CurrentPersonPartyId.HasValue)
+    {
+        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+            Save the person first, then add organization affiliations.
+        </div>
+    }
+    else if (edits.Count == 0)
+    {
+        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600"
+             data-testid="crmhr-affiliations-empty">
+            No organization affiliations are recorded. A person without a staffable affiliation appears as an external contact in Workforce.
+        </div>
+    }
+    else
+    {
+        @foreach (var row in edits.Select((item, index) => (Item: item, Index: index)))
+        {
+            var item = row.Item;
+            var rowIndex = row.Index;
+            <PanelCard @key="item" Soft="true" data-testid="@($"crmhr-affiliation-row-{rowIndex}")">
+                <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                    <Split Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Center"
+                           JustifyContent="JustifyContent.SpaceBetween">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-slate-950"
+                               data-testid="@($"crmhr-affiliation-company-name-{rowIndex}")">
+                                @ResolvePartyName(item.OrganizationPartyId, "No company selected")
+                            </p>
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                                @FormatAffiliationKind(item.AffiliationKind)
+                            </p>
+                        </div>
+                        @if (item.IsPrimary)
+                        {
+                            <StatusBadge Tone="info" Text="Primary" />
+                        }
+                    </Split>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
+                        <div>
+                            <label class="cda-field-label">Company</label>
+                            <Button Text="Choose company"
+                                    Icon="business"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => OpenPicker(item, AffiliationPartyField.Organization))"
+                                    data-testid="@($"crmhr-affiliation-company-{rowIndex}")" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Affiliation kind</label>
+                            <InputSelect TValue="PartyOrganizationAffiliationKind"
+                                         Value="@item.AffiliationKind"
+                                         ValueChanged="@((PartyOrganizationAffiliationKind value) => UpdateKindAsync(item, value))"
+                                         ValueExpression="@(() => item.AffiliationKind)"
+                                         class="cda-input"
+                                         data-testid="@($"crmhr-affiliation-kind-{rowIndex}")">
+                                @foreach (var kind in Enum.GetValues<PartyOrganizationAffiliationKind>())
+                                {
+                                    <option value="@kind">@FormatAffiliationKind(kind)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Job title</label>
+                            <InputText Value="@item.JobTitle"
+                                       ValueChanged="@((string? value) => UpdateJobTitleAsync(item, value))"
+                                       ValueExpression="@(() => item.JobTitle)"
+                                       class="cda-input"
+                                       data-testid="@($"crmhr-affiliation-title-{rowIndex}")" />
+                        </div>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
+                        <div>
+                            <label class="cda-field-label">Employee / engagement code</label>
+                            <InputText Value="@item.EmployeeCode"
+                                       ValueChanged="@((string? value) => UpdateEmployeeCodeAsync(item, value))"
+                                       ValueExpression="@(() => item.EmployeeCode)"
+                                       class="cda-input"
+                                       data-testid="@($"crmhr-affiliation-code-{rowIndex}")" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Valid from</label>
+                            <InputDate TValue="DateOnly?"
+                                       Value="@item.ValidFrom"
+                                       ValueChanged="@((DateOnly? value) => UpdateValidFromAsync(item, value))"
+                                       ValueExpression="@(() => item.ValidFrom)"
+                                       class="cda-input"
+                                       data-testid="@($"crmhr-affiliation-start-{rowIndex}")" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Valid to</label>
+                            <InputDate TValue="DateOnly?"
+                                       Value="@item.ValidTo"
+                                       ValueChanged="@((DateOnly? value) => UpdateValidToAsync(item, value))"
+                                       ValueExpression="@(() => item.ValidTo)"
+                                       class="cda-input"
+                                       data-testid="@($"crmhr-affiliation-end-{rowIndex}")" />
+                        </div>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
+                        <SurfaceCard Soft="true">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div class="min-w-0">
+                                    <p class="cda-field-label">Organization unit</p>
+                                    <p class="truncate text-sm text-slate-700"
+                                       data-testid="@($"crmhr-affiliation-unit-name-{rowIndex}")">
+                                        @ResolveOptionalPartyName(item.OrganizationUnitPartyId)
+                                    </p>
+                                </div>
+                                <Cluster Gap="LayoutGap.XSmall">
+                                    @if (item.OrganizationUnitPartyId.HasValue)
+                                    {
+                                        <Button Text="Clear"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Variant="Variant.Text"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => ClearUnitAsync(item))"
+                                                data-testid="@($"crmhr-affiliation-unit-clear-{rowIndex}")" />
+                                    }
+                                    <Button Text="Choose"
+                                            Icon="account_tree"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => OpenPicker(item, AffiliationPartyField.OrganizationUnit))"
+                                            data-testid="@($"crmhr-affiliation-unit-{rowIndex}")" />
+                                </Cluster>
+                            </Split>
+                        </SurfaceCard>
+
+                        <SurfaceCard Soft="true">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <div class="min-w-0">
+                                    <p class="cda-field-label">Manager</p>
+                                    <p class="truncate text-sm text-slate-700"
+                                       data-testid="@($"crmhr-affiliation-manager-name-{rowIndex}")">
+                                        @ResolveOptionalPartyName(item.ManagerPartyId)
+                                    </p>
+                                </div>
+                                <Cluster Gap="LayoutGap.XSmall">
+                                    @if (item.ManagerPartyId.HasValue)
+                                    {
+                                        <Button Text="Clear"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Variant="Variant.Text"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => ClearManagerAsync(item))"
+                                                data-testid="@($"crmhr-affiliation-manager-clear-{rowIndex}")" />
+                                    }
+                                    <Button Text="Choose"
+                                            Icon="supervisor_account"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => OpenPicker(item, AffiliationPartyField.Manager))"
+                                            data-testid="@($"crmhr-affiliation-manager-{rowIndex}")" />
+                                </Cluster>
+                            </Split>
+                        </SurfaceCard>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
+                        <div>
+                            <label class="cda-field-label">Notes</label>
+                            <InputTextArea Value="@item.Notes"
+                                           ValueChanged="@((string? value) => UpdateNotesAsync(item, value))"
+                                           ValueExpression="@(() => item.Notes)"
+                                           class="cda-input min-h-24"
+                                           data-testid="@($"crmhr-affiliation-notes-{rowIndex}")" />
+                        </div>
+                        <div class="flex items-end justify-between gap-3">
+                            <label class="cda-inline-option">
+                                <InputCheckbox Value="@item.IsPrimary"
+                                               ValueChanged="@((bool value) => UpdatePrimaryAsync(item, value))"
+                                               ValueExpression="@(() => item.IsPrimary)"
+                                               data-testid="@($"crmhr-affiliation-primary-{rowIndex}")" />
+                                Primary affiliation
+                            </label>
+                            <Button Text="Remove"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => RemoveAffiliationAsync(item))"
+                                    data-testid="@($"crmhr-affiliation-remove-{rowIndex}")" />
+                        </div>
+                    </Grid>
+                </Stack>
+            </PanelCard>
+        }
+    }
+</Stack>
+
+<PartyRecordPickerDialog IsOpen="@(pickerTarget is not null)"
+                         SelectedPartyId="@PickerSelectedPartyId"
+                         AllowedScope="@PickerScope"
+                         InitialScope="@PickerScope"
+                         ExcludedPartyId="@CurrentPersonPartyId"
+                         SelectionConfirmed="SelectPartyAsync"
+                         OnClose="ClosePickerAsync"
+                         Eyebrow="Organization affiliation"
+                         Title="@PickerTitle"
+                         Subtitle="@PickerSubtitle"
+                         DataTestId="crmhr-affiliation-picker" />
+
+@code {
+    private readonly Dictionary<Guid, string> partyNames = [];
+    private List<PartyOrganizationAffiliationEditorModel> edits = [];
+    private IReadOnlyList<PartyOrganizationAffiliationEditorModel>? configuredAffiliations;
+    private IReadOnlyList<PartyOrganizationAffiliationEditorModel>? lastPublishedAffiliations;
+    private PartyOrganizationAffiliationEditorModel? pickerTarget;
+    private AffiliationPartyField pickerField;
+    private bool isNewPickerTarget;
+
+    [Parameter]
+    public Guid? CurrentPersonPartyId { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PartyOrganizationAffiliationEditorModel> Affiliations { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<PartyOrganizationAffiliationEditorModel>> AffiliationsChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyDictionary<Guid, string> PartyDisplayNames { get; set; } =
+        new Dictionary<Guid, string>();
+
+    private PartyRecordScope PickerScope => pickerField switch
+    {
+        AffiliationPartyField.Organization => PartyRecordScope.Organizations,
+        AffiliationPartyField.OrganizationUnit => PartyRecordScope.OrganizationUnits,
+        AffiliationPartyField.Manager => PartyRecordScope.People,
+        _ => PartyRecordScope.All
+    };
+
+    private Guid? PickerSelectedPartyId => pickerTarget is null
+        ? null
+        : pickerField switch
+        {
+            AffiliationPartyField.Organization => AsOptionalId(pickerTarget.OrganizationPartyId),
+            AffiliationPartyField.OrganizationUnit => pickerTarget.OrganizationUnitPartyId,
+            AffiliationPartyField.Manager => pickerTarget.ManagerPartyId,
+            _ => null
+        };
+
+    private string PickerTitle => pickerField switch
+    {
+        AffiliationPartyField.Organization => "Choose a company",
+        AffiliationPartyField.OrganizationUnit => "Choose an organization unit",
+        AffiliationPartyField.Manager => "Choose a manager",
+        _ => "Choose a party"
+    };
+
+    private string PickerSubtitle => pickerField switch
+    {
+        AffiliationPartyField.Organization => "Select the organization for this affiliation.",
+        AffiliationPartyField.OrganizationUnit => "Optionally select a unit within the organization.",
+        AffiliationPartyField.Manager => "Optionally select the person's manager for this affiliation.",
+        _ => "Search the directory."
+    };
+
+    protected override void OnParametersSet()
+    {
+        foreach (var pair in PartyDisplayNames)
+        {
+            partyNames[pair.Key] = pair.Value;
+        }
+
+        if (ReferenceEquals(Affiliations, configuredAffiliations) ||
+            IsPublishedSnapshot(Affiliations))
+        {
+            configuredAffiliations = Affiliations;
+            return;
+        }
+
+        edits = Affiliations.Select(Clone).ToList();
+        configuredAffiliations = Affiliations;
+        lastPublishedAffiliations = null;
+        pickerTarget = null;
+        isNewPickerTarget = false;
+    }
+
+    private async Task AddAffiliationAsync()
+    {
+        if (CurrentPersonPartyId is not Guid personPartyId)
+        {
+            return;
+        }
+
+        var affiliation = new PartyOrganizationAffiliationEditorModel
+        {
+            PersonPartyId = personPartyId,
+            AffiliationKind = PartyOrganizationAffiliationKind.ExternalContact,
+            IsPrimary = edits.Count == 0
+        };
+        edits.Add(affiliation);
+        pickerTarget = affiliation;
+        pickerField = AffiliationPartyField.Organization;
+        isNewPickerTarget = true;
+        await PublishAsync();
+    }
+
+    private async Task RemoveAffiliationAsync(PartyOrganizationAffiliationEditorModel affiliation)
+    {
+        edits.Remove(affiliation);
+        if (ReferenceEquals(pickerTarget, affiliation))
+        {
+            pickerTarget = null;
+            isNewPickerTarget = false;
+        }
+
+        await PublishAsync();
+    }
+
+    private void OpenPicker(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        AffiliationPartyField field)
+    {
+        pickerTarget = affiliation;
+        pickerField = field;
+        isNewPickerTarget = false;
+    }
+
+    private async Task SelectPartyAsync(Guid partyId)
+    {
+        if (pickerTarget is null)
+        {
+            return;
+        }
+
+        var selectedParty = await PartyRecordQueryService.GetAsync(
+            partyId,
+            includeArchived: false);
+        if (selectedParty is null || !IsExpectedPartyType(selectedParty.PartyType))
+        {
+            throw new InvalidOperationException(
+                $"Selected affiliation party '{partyId}' is unavailable or has the wrong party type.");
+        }
+
+        partyNames[partyId] = selectedParty.DisplayName;
+        switch (pickerField)
+        {
+            case AffiliationPartyField.Organization:
+                pickerTarget.OrganizationPartyId = partyId;
+                break;
+            case AffiliationPartyField.OrganizationUnit:
+                pickerTarget.OrganizationUnitPartyId = partyId;
+                break;
+            case AffiliationPartyField.Manager:
+                pickerTarget.ManagerPartyId = partyId;
+                break;
+            default:
+                throw new InvalidOperationException("No affiliation party field is selected.");
+        }
+
+        pickerTarget = null;
+        isNewPickerTarget = false;
+        await PublishAsync();
+    }
+
+    private async Task ClosePickerAsync()
+    {
+        if (isNewPickerTarget &&
+            pickerTarget is { OrganizationPartyId: var organizationPartyId } &&
+            organizationPartyId == Guid.Empty)
+        {
+            edits.Remove(pickerTarget);
+            await PublishAsync();
+        }
+
+        pickerTarget = null;
+        isNewPickerTarget = false;
+    }
+
+    private bool IsExpectedPartyType(PartyType partyType)
+    {
+        return pickerField switch
+        {
+            AffiliationPartyField.Organization => partyType == PartyType.Organization,
+            AffiliationPartyField.OrganizationUnit => partyType == PartyType.OrganizationUnit,
+            AffiliationPartyField.Manager => partyType == PartyType.Person,
+            _ => false
+        };
+    }
+
+    private async Task UpdatePrimaryAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        bool value)
+    {
+        if (value)
+        {
+            foreach (var item in edits)
+            {
+                item.IsPrimary = ReferenceEquals(item, affiliation);
+            }
+        }
+        else
+        {
+            affiliation.IsPrimary = false;
+        }
+
+        await PublishAsync();
+    }
+
+    private async Task UpdateKindAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        PartyOrganizationAffiliationKind value)
+    {
+        affiliation.AffiliationKind = value;
+        await PublishAsync();
+    }
+
+    private async Task UpdateJobTitleAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        string? value)
+    {
+        affiliation.JobTitle = value ?? string.Empty;
+        await PublishAsync();
+    }
+
+    private async Task UpdateEmployeeCodeAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        string? value)
+    {
+        affiliation.EmployeeCode = value ?? string.Empty;
+        await PublishAsync();
+    }
+
+    private async Task UpdateValidFromAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        DateOnly? value)
+    {
+        affiliation.ValidFrom = value;
+        await PublishAsync();
+    }
+
+    private async Task UpdateValidToAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        DateOnly? value)
+    {
+        affiliation.ValidTo = value;
+        await PublishAsync();
+    }
+
+    private async Task UpdateNotesAsync(
+        PartyOrganizationAffiliationEditorModel affiliation,
+        string? value)
+    {
+        affiliation.Notes = value ?? string.Empty;
+        await PublishAsync();
+    }
+
+    private async Task ClearUnitAsync(PartyOrganizationAffiliationEditorModel affiliation)
+    {
+        affiliation.OrganizationUnitPartyId = null;
+        await PublishAsync();
+    }
+
+    private async Task ClearManagerAsync(PartyOrganizationAffiliationEditorModel affiliation)
+    {
+        affiliation.ManagerPartyId = null;
+        await PublishAsync();
+    }
+
+    private async Task PublishAsync()
+    {
+        var snapshot = edits.Select(Clone).ToList();
+        lastPublishedAffiliations = snapshot;
+        await AffiliationsChanged.InvokeAsync(snapshot);
+    }
+
+    private bool IsPublishedSnapshot(
+        IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliations)
+    {
+        return lastPublishedAffiliations is not null &&
+               affiliations.Count == lastPublishedAffiliations.Count &&
+               affiliations
+                   .Zip(lastPublishedAffiliations)
+                   .All(pair => ReferenceEquals(pair.First, pair.Second));
+    }
+
+    private string ResolvePartyName(Guid partyId, string emptyLabel)
+    {
+        if (partyId == Guid.Empty)
+        {
+            return emptyLabel;
+        }
+
+        return partyNames.GetValueOrDefault(partyId) ?? partyId.ToString("D");
+    }
+
+    private string ResolveOptionalPartyName(Guid? partyId)
+        => partyId.HasValue
+            ? ResolvePartyName(partyId.Value, "Not selected")
+            : "Not selected";
+
+    private static Guid? AsOptionalId(Guid partyId)
+        => partyId == Guid.Empty ? null : partyId;
+
+    private static string FormatAffiliationKind(PartyOrganizationAffiliationKind kind)
+        => kind == PartyOrganizationAffiliationKind.ExternalContact
+            ? "External contact"
+            : kind.ToString();
+
+    private static PartyOrganizationAffiliationEditorModel Clone(
+        PartyOrganizationAffiliationEditorModel affiliation)
+    {
+        return new PartyOrganizationAffiliationEditorModel
+        {
+            Id = affiliation.Id,
+            PersonPartyId = affiliation.PersonPartyId,
+            OrganizationPartyId = affiliation.OrganizationPartyId,
+            AffiliationKind = affiliation.AffiliationKind,
+            IsPrimary = affiliation.IsPrimary,
+            JobTitle = affiliation.JobTitle,
+            EmployeeCode = affiliation.EmployeeCode,
+            OrganizationUnitPartyId = affiliation.OrganizationUnitPartyId,
+            ManagerPartyId = affiliation.ManagerPartyId,
+            ValidFrom = affiliation.ValidFrom,
+            ValidTo = affiliation.ValidTo,
+            Notes = affiliation.Notes,
+            ExpectedUpdatedAtUtc = affiliation.ExpectedUpdatedAtUtc
+        };
+    }
+
+    private enum AffiliationPartyField
+    {
+        Organization,
+        OrganizationUnit,
+        Manager
+    }
+}

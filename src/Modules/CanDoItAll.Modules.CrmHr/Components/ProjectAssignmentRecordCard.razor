@@ -10,6 +10,21 @@
                 <p class="cda-eyebrow cda-eyebrow--tight">Project</p>
                 <p class="truncate text-xs font-semibold text-slate-600">@ProjectName</p>
                 <h3 class="mt-2 truncate text-base font-semibold text-slate-950">@Assignment.PartyDisplayName</h3>
+                @if (Assignment.Affiliation is not null)
+                {
+                    <div class="mt-2 flex min-w-0 items-center gap-2"
+                         title="@Assignment.Affiliation.OtherAffiliationsSummary"
+                         data-testid="@($"{TestIdPrefix}-affiliation")">
+                        <StatusBadge Tone="neutral"
+                                     Text="@Assignment.Affiliation.AffiliationLabel" />
+                        @if (!string.IsNullOrWhiteSpace(Assignment.Affiliation.PrimaryDisplayText))
+                        {
+                            <span class="truncate text-xs text-slate-600">
+                                @Assignment.Affiliation.PrimaryDisplayText
+                            </span>
+                        }
+                    </div>
+                }
             </div>
             @if (Assignment.IsPrimary)
             {

@@ -2373,6 +2373,97 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("CrmHr_PartyContactPoints", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AffiliationKind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmployeeCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("LastChangedBy")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid?>("ManagerPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrganizationUnitPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonPartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ValidFromUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ValidToUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ManagerPartyId");
+
+                    b.HasIndex("OrganizationPartyId");
+
+                    b.HasIndex("OrganizationUnitPartyId");
+
+                    b.HasIndex("PersonPartyId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CrmHr_Affiliations_PrimaryPerson")
+                        .HasFilter("\"IsPrimary\" = TRUE");
+
+                    b.HasIndex("PersonPartyId", "ValidFromUtc", "ValidToUtc");
+
+                    b.HasIndex("PersonPartyId", "OrganizationPartyId", "AffiliationKind", "ValidFromUtc", "ValidToUtc")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CrmHr_Affiliations_BusinessKey");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("PersonPartyId", "OrganizationPartyId", "AffiliationKind", "ValidFromUtc", "ValidToUtc"), false);
+
+                    b.ToTable("CrmHr_PartyOrganizationAffiliations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CrmHr_PartyOrganizationAffiliations_PersonManager", "\"ManagerPartyId\" IS NULL OR \"PersonPartyId\" <> \"ManagerPartyId\"");
+
+                            t.HasCheckConstraint("CK_CrmHr_PartyOrganizationAffiliations_PersonOrganization", "\"PersonPartyId\" <> \"OrganizationPartyId\"");
+
+                            t.HasCheckConstraint("CK_CrmHr_PartyOrganizationAffiliations_PersonUnit", "\"OrganizationUnitPartyId\" IS NULL OR \"PersonPartyId\" <> \"OrganizationUnitPartyId\"");
+
+                            t.HasCheckConstraint("CK_CrmHr_PartyOrganizationAffiliations_ValidDates", "\"ValidToUtc\" IS NULL OR \"ValidFromUtc\" IS NULL OR \"ValidToUtc\" >= \"ValidFromUtc\"");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyRelationship", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2526,6 +2617,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("PartyId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PartyOrganizationAffiliationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("PhaseName")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -2547,6 +2641,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("OpportunityId");
 
                     b.HasIndex("PartyId");
+
+                    b.HasIndex("PartyOrganizationAffiliationId");
 
                     b.HasIndex("ProjectId");
 
@@ -2840,7 +2936,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("ManagerPartyId");
 
-                    b.HasIndex("PartyId");
+                    b.HasIndex("PartyId")
+                        .IsUnique();
 
                     b.HasIndex("Status");
 
@@ -6122,6 +6219,40 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CrmHr.Party", null)
+                        .WithMany()
+                        .HasForeignKey("ManagerPartyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Modules.CrmHr.Party", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationPartyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.CrmHr.Party", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationUnitPartyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_CrmHr_PartyOrganizationAffiliations_CrmHr_Parties_Organiza~1");
+
+                    b.HasOne("CanDoItAll.Modules.CrmHr.Party", null)
+                        .WithMany()
+                        .HasForeignKey("PersonPartyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignment", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", null)
+                        .WithMany()
+                        .HasForeignKey("PartyOrganizationAffiliationId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b =>

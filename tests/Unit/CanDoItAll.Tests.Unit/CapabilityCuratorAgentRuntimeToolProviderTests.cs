@@ -88,6 +88,172 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
     }
 
     [Fact]
+    public async Task Provider_attaches_assigned_tools_to_exact_managed_hr_identity_and_fails_closed_for_spoofs()
+    {
+        var harness = CreateHarness(
+            [CapabilityCuratorAgentCapabilityKeys.CatalogSearch],
+            useHrActor: true);
+
+        var search = Assert.IsAssignableFrom<AIFunction>(Assert.Single(
+            await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None)));
+        Assert.Equal(
+            AgentToolInvocationPolicyMetadata.CapabilityCuratorCatalogSearch,
+            Assert.Single(harness.Provider.GetToolMetadata(harness.Context)).ToolName);
+
+        var wrongId = harness.Context with
+        {
+            Agent = harness.Context.Agent with { Id = Guid.NewGuid() }
+        };
+        var wrongTemplateKey = harness.Context with
+        {
+            Agent = harness.Context.Agent with { TemplateKey = $"{HrAgentIdentity.TemplateKey}-spoof" }
+        };
+        var suspended = harness.Context with
+        {
+            Agent = harness.Context.Agent with { Status = AgentLifecycleStatus.Suspended }
+        };
+        var template = harness.Context with
+        {
+            Agent = harness.Context.Agent with { IsTemplate = true }
+        };
+        var toolsDisabled = harness.Context with
+        {
+            Agent = harness.Context.Agent with
+            {
+                Permissions = harness.Context.Agent.Permissions with { CanUseTools = false }
+            }
+        };
+        var revokedAssignment = harness.Context with
+        {
+            Agent = harness.Context.Agent with { Capabilities = [] }
+        };
+
+        foreach (var context in new[]
+                 {
+                     wrongId,
+                     wrongTemplateKey,
+                     suspended,
+                     template,
+                     toolsDisabled,
+                     revokedAssignment
+                 })
+        {
+            Assert.Empty(await harness.Provider.CreateToolsAsync(context, CancellationToken.None));
+            Assert.Empty(harness.Provider.GetToolMetadata(context));
+        }
+
+        var wrongCase = CreateHarness(
+            [CapabilityCuratorAgentCapabilityKeys.CatalogSearch.ToUpperInvariant()],
+            useHrActor: true);
+        Assert.Empty(await wrongCase.Provider.CreateToolsAsync(wrongCase.Context, CancellationToken.None));
+        Assert.Empty(wrongCase.Provider.GetToolMetadata(wrongCase.Context));
+
+        harness.Workspace.Agents = harness.Workspace.Agents
+            .Select(agent => agent.Id == HrAgentIdentity.AgentId
+                ? agent with { Capabilities = [] }
+                : agent)
+            .ToArray();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => search.InvokeAsync(
+            new AIFunctionArguments
+            {
+                ["request"] = new CapabilityCuratorCatalogSearchInput()
+            }).AsTask());
+    }
+
+    [Fact]
+    public async Task Hr_actor_attaches_only_least_privilege_curation_tools_even_if_assignment_tools_are_assigned()
+    {
+        var harness = CreateHarness(
+            CapabilityCuratorAgentIdentity.ToolCapabilityKeys,
+            useHrActor: true);
+        var expectedToolNames = CapabilityCuratorAgentCapabilityKeys.ToolNameToCapabilityKey
+            .Where(item => HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(item.Value))
+            .Select(item => item.Key)
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+
+        var tools = await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context);
+
+        Assert.Equal(
+            expectedToolNames,
+            tools.Select(tool => tool.Name).OrderBy(item => item, StringComparer.Ordinal));
+        Assert.Equal(
+            expectedToolNames,
+            metadata.Select(item => item.ToolName).OrderBy(item => item, StringComparer.Ordinal));
+        Assert.DoesNotContain(
+            AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentEditorGet,
+            tools.Select(tool => tool.Name),
+            StringComparer.Ordinal);
+        Assert.DoesNotContain(
+            AgentToolInvocationPolicyMetadata.CapabilityCuratorAssignmentUpdate,
+            tools.Select(tool => tool.Name),
+            StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task Hr_actor_can_create_custom_inline_skill_and_verify_only_after_assignment()
+    {
+        var harness = CreateHarness(
+            [
+                CapabilityCuratorAgentCapabilityKeys.Save,
+                CapabilityCuratorAgentCapabilityKeys.Verify
+            ],
+            useHrActor: true);
+        var tools = await CreateToolDictionaryAsync(harness);
+        var save = tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave];
+        var verify = tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorVerify];
+
+        var created = await InvokeAsync<CapabilityCuratorEditorResult>(
+            save,
+            CreateInlineSkillCandidate(
+                "hr-authored-inline-skill",
+                "HR authored inline skill",
+                "Apply this narrowly scoped HR-authored skill."));
+
+        Assert.Equal(HrAgentIdentity.AgentId, harness.Context.Agent.Id);
+        Assert.Equal(AgentToolInvocationPolicyMetadata.CapabilityCuratorSave, save.Name);
+        Assert.Equal("hr-authored-inline-skill", created.Key);
+        Assert.Equal(
+            "Apply this narrowly scoped HR-authored skill.",
+            created.Configuration.Skill!.InlineInstructions);
+        Assert.False(created.IsBuiltIn);
+        Assert.Equal(1, harness.Workspace.SaveCapabilityCallCount);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            InvokeAsync<CapabilityCuratorVerifyResult>(
+                verify,
+                new CapabilityCuratorVerifyInput(
+                    harness.TargetAgentId,
+                    created.CapabilityId)));
+
+        var savedCapability = Assert.Single(
+            harness.Workspace.Capabilities,
+            capability => capability.Id == created.CapabilityId);
+        harness.Workspace.Agents = harness.Workspace.Agents
+            .Select(agent => agent.Id == harness.TargetAgentId
+                ? agent with
+                {
+                    Capabilities = agent.Capabilities
+                        .Append(ToAssignment(savedCapability))
+                        .ToArray()
+                }
+                : agent)
+            .ToArray();
+
+        var verified = await InvokeAsync<CapabilityCuratorVerifyResult>(
+            verify,
+            new CapabilityCuratorVerifyInput(
+                harness.TargetAgentId,
+                created.CapabilityId));
+
+        Assert.Equal(CapabilityProofStatus.Verified, verified.ProofStatus);
+        Assert.Equal(harness.TargetAgentId, verified.AgentId);
+        Assert.Equal(created.CapabilityId, verified.CapabilityId);
+    }
+
+    [Fact]
     public async Task Capability_assignment_gates_tools_exactly_and_rejects_wrong_case()
     {
         var harness = CreateHarness([CapabilityCuratorAgentCapabilityKeys.EditorGet]);
@@ -686,7 +852,9 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         => (await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None))
             .ToDictionary(tool => tool.Name, StringComparer.Ordinal);
 
-    private static RuntimeHarness CreateHarness(IEnumerable<string>? capabilityKeys = null)
+    private static RuntimeHarness CreateHarness(
+        IEnumerable<string>? capabilityKeys = null,
+        bool useHrActor = false)
     {
         var now = DateTimeOffset.Parse("2026-07-21T12:00:00Z");
         var keys = (capabilityKeys ?? CapabilityCuratorAgentCapabilityKeys.ToolNameToCapabilityKey.Values).ToArray();
@@ -732,14 +900,14 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             string.Empty,
             null,
             IsBuiltIn: false);
-        var curatorAssignments = runtimeCapabilities.Select(ToAssignment).ToArray();
+        var actorAssignments = runtimeCapabilities.Select(ToAssignment).ToArray();
         var providerProfileId = Guid.NewGuid();
-        var curator = CreateAgent(
-            CapabilityCuratorAgentIdentity.AgentId,
-            CapabilityCuratorAgentIdentity.DefaultDisplayName,
-            CapabilityCuratorAgentIdentity.TemplateKey,
+        var actor = CreateAgent(
+            useHrActor ? HrAgentIdentity.AgentId : CapabilityCuratorAgentIdentity.AgentId,
+            useHrActor ? HrAgentIdentity.DefaultDisplayName : CapabilityCuratorAgentIdentity.DefaultDisplayName,
+            useHrActor ? HrAgentIdentity.TemplateKey : CapabilityCuratorAgentIdentity.TemplateKey,
             providerProfileId,
-            curatorAssignments,
+            actorAssignments,
             now);
         var targetAgentId = Guid.NewGuid();
         var target = CreateAgent(
@@ -755,7 +923,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             ProviderKind.OpenAi,
             "https://api.openai.com/v1",
             "OPENAI_API_KEY",
-            curator.Model,
+            actor.Model,
             ProviderTransportKind.Responses,
             IsEnabled: true,
             SupportsStreaming: true,
@@ -770,7 +938,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             ProviderProfilePurpose.Chat);
         var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, CapabilityWorkspaceProxy>();
         var workspace = (CapabilityWorkspaceProxy)(object)workspaceService;
-        workspace.Agents = [curator, target];
+        workspace.Agents = [actor, target];
         workspace.Capabilities = runtimeCapabilities
             .Append(customCapability)
             .Append(unrelatedCapability)
@@ -782,7 +950,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             new CapabilityCuratorAgentRuntimeAuthorizationService(workspaceService),
             new CapabilityCuratorSetupAttestationStore(TimeProvider.System));
         var context = new AgentRuntimeToolProviderContext(
-            curator,
+            actor,
             providerProfile,
             workspace.Capabilities,
             SuppressApprovalRequirements: false,

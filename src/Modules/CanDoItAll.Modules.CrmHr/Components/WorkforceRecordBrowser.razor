@@ -1,0 +1,90 @@
+@inject IWorkforceRecordQueryService WorkforceRecordQueryService
+
+<PagedRecordBrowser TKey="Guid"
+                    TFilter="WorkforceRecordViewFilter"
+                    Loader="LoadPageAsync"
+                    InitialFilter="WorkforceRecordViewFilter.All"
+                    FilterOptions="@filterOptions"
+                    ShowTagFilter="false"
+                    Selection="@Selection"
+                    SelectionChanged="@SelectionChanged"
+                    LoadFailed="@LoadFailed"
+                    PageSize="@PageSize"
+                    ResultsScrollMode="@ResultsScrollMode"
+                    GridMode="@GridMode"
+                    SearchPlaceholder="@SearchPlaceholder"
+                    FilterAriaLabel="Workforce affiliation"
+                    LoadingEyebrow="Workforce"
+                    LoadingTitle="Loading workforce records"
+                    EmptyEyebrow="No workforce records"
+                    EmptyTitle="No workforce records match"
+                    EmptyDescription="Change the search or affiliation filter."
+                    DataTestId="@DataTestId" />
+
+@code {
+    private readonly IReadOnlyList<PagedRecordFilterOption<WorkforceRecordViewFilter>> filterOptions =
+        WorkforceRecordPresentation.BuildFilterOptions();
+
+    [Parameter]
+    public Guid? SelectedPartyId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    [Parameter]
+    public bool IncludeArchived { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 12;
+
+    [Parameter]
+    public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } =
+        PagedRecordResultsScrollMode.Page;
+
+    [Parameter]
+    public PagedRecordGridMode GridMode { get; set; } = PagedRecordGridMode.Fluid;
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } =
+        "Search workforce name, summary, organization, or title";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "crmhr-workforce";
+
+    [Parameter]
+    public string OptionTestId { get; set; } = string.Empty;
+
+    private PagedRecordSelection<Guid>? Selection => SelectedPartyId.HasValue
+        ? new PagedRecordSelection<Guid>(SelectedPartyId.Value)
+        : null;
+
+    private async Task<PagedRecordPage<Guid>> LoadPageAsync(
+        PagedRecordRequest<WorkforceRecordViewFilter> request,
+        CancellationToken cancellationToken)
+    {
+        var result = await WorkforceRecordQueryService.SearchAsync(
+            new WorkforceRecordQuery(
+                SearchText: request.SearchText,
+                Classification: WorkforceRecordPresentation.ResolveClassificationFilter(request.Filter),
+                LifecycleStatus: null,
+                PageIndex: request.PageIndex,
+                PageSize: request.PageSize,
+                IncludeArchived: IncludeArchived),
+            cancellationToken);
+
+        var options = result.Items
+            .Select(WorkforceRecordPresentation.ToOption)
+            .Select(option => string.IsNullOrWhiteSpace(OptionTestId)
+                ? option
+                : option with { TestId = OptionTestId })
+            .ToList();
+        return new PagedRecordPage<Guid>(
+            options,
+            result.PageIndex,
+            result.PageSize,
+            result.TotalCount);
+    }
+}

@@ -501,6 +501,28 @@
     },
     {
       "kind": "skill",
+      "key": "hr-agent-capability-curation-inline-skill",
+      "displayName": "HR Agent Capability Curation Skill",
+      "description": "Approval-aware workflow for creating reusable skills, tools, and MCP servers while provisioning technical agents.",
+      "stableId": "skill:hr-agent-capability-curation:v1",
+      "stableGuidKey": "capabilities/hr-agent-capability-curation-inline-skill",
+      "endpointOrPath": "inline://hr-agent-capability-curation",
+      "skillSource": "inline",
+      "inlineSkill": {
+        "name": "hr-agent-capability-curation",
+        "description": "Create and validate the least-privilege reusable capabilities required by a new or managed technical agent.",
+        "instructionsAssetKey": "skills/instructions/hr-agent-capability-curation.md"
+      },
+      "operationClassifications": [
+        "read",
+        "mutation",
+        "validation",
+        "external-action"
+      ],
+      "proofNotes": "Template-owned capability-authoring workflow for the exact privileged managed HR agent."
+    },
+    {
+      "kind": "skill",
       "key": "prompt-gallery-tools-inline-skill",
       "displayName": "Prompt Gallery Tools Skill",
       "description": "Guidance for finding and retrieving canonical reusable prompts and prompt parts with internal agent tools.",

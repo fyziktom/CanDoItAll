@@ -301,6 +301,8 @@ public partial class AgentDetailsDialog
         SyncWorkspaceToolAccessFromEditorText();
         NormalizeRuntimeModelSelectionForSave();
         NormalizeImageGenerationAccessForSave();
+        editorModel.ProjectStructureAccess =
+            AgentProjectStructureAccessMetadata.Normalize(editorModel.ProjectStructureAccess);
         editorModel.Tags = BuildAgentTagsForSave().ToList();
         return await WorkspaceService.SaveAgentAsync(editorModel);
     }
@@ -803,6 +805,7 @@ public partial class AgentDetailsDialog
             editorModel.ProjectStructureAccess.CanCreateProjects = false;
             editorModel.ProjectStructureAccess.CanCreateSubprojects = false;
             editorModel.ProjectStructureAccess.AllowAllProjects = false;
+            editorModel.ProjectStructureAccess.AllowedProjectIds = [];
         }
     }
 
@@ -875,6 +878,7 @@ public partial class AgentDetailsDialog
         if (isEnabled)
         {
             editorModel.ProjectStructureAccess.CanRead = true;
+            editorModel.ProjectStructureAccess.AllowedProjectIds = [];
         }
     }
 
@@ -1073,6 +1077,7 @@ public partial class AgentDetailsDialog
         var isEnabled = rawValue is bool value && value;
         if (isEnabled)
         {
+            editorModel.ProjectStructureAccess.AllowAllProjects = false;
             if (!selectedProjects.Contains(projectId))
             {
                 selectedProjects.Add(projectId);
@@ -1091,6 +1096,7 @@ public partial class AgentDetailsDialog
 
     private void SelectAllProjectStructureProjects()
     {
+        editorModel.ProjectStructureAccess.AllowAllProjects = false;
         editorModel.ProjectStructureAccess.AllowedProjectIds = projectStructureProjects
             .Select(item => item.Id)
             .Distinct()

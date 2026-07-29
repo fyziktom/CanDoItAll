@@ -122,6 +122,11 @@
                          SelectedPartyId="Draft.PartyId"
                          SelectedPartyIdChanged="HandlePartyChanged" />
 
+            <PartyAffiliationPicker PartyId="Draft.PartyId"
+                                    SelectedAffiliationId="Draft.PartyAffiliationId"
+                                    SelectedAffiliationIdChanged="HandleAffiliationChanged"
+                                    TestIdPrefix="crmhr-assignment-affiliation" />
+
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="3">
                 <FormField Text="Allocation %">
@@ -325,6 +330,12 @@
 
     private Task HandlePartyChanged(Guid? partyId) {
         Draft.PartyId = partyId ?? Guid.Empty;
+        Draft.PartyAffiliationId = null;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAffiliationChanged(Guid? affiliationId) {
+        Draft.PartyAffiliationId = affiliationId;
         return Task.CompletedTask;
     }
 

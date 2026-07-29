@@ -332,7 +332,9 @@ public partial class ProjectStructurePage
             metadata.Participant.Phone = option.PrimaryPhone;
             if (string.IsNullOrWhiteSpace(metadata.Participant.Organization))
             {
-                metadata.Participant.Organization = option.PartyTypeLabel;
+                metadata.Participant.Organization =
+                    option.Affiliation?.OrganizationName ??
+                    option.PartyTypeLabel;
             }
 
             if (!await ReplaceNodeAssignmentsAsync(
@@ -342,6 +344,8 @@ public partial class ProjectStructurePage
                         {
                             ProjectId = ProjectId,
                             PartyId = option.PartyId,
+                            PartyAffiliationId =
+                                option.Affiliation?.AffiliationId,
                             Role = GetPreferredNodeAssignmentRole(selectedNode),
                             NodeKey = selectedNode.Id,
                             IsPrimary = true,
@@ -399,6 +403,8 @@ public partial class ProjectStructurePage
                     {
                         ProjectId = ProjectId,
                         PartyId = option.PartyId,
+                        PartyAffiliationId =
+                            option.Affiliation?.AffiliationId,
                         Role = preferredRole,
                         NodeKey = selectedNode.Id,
                         IsPrimary = index == 0,

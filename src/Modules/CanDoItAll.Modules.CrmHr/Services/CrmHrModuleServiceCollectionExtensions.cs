@@ -14,7 +14,10 @@ public static class CrmHrModuleServiceCollectionExtensions
     {
         services.AddScoped<PartyDirectoryService>();
         services.AddScoped<PartyDirectoryManagementService>();
+        services.AddScoped<ICrmPartyCommandService, CrmPartyCommandService>();
+        services.AddScoped<IPartyOrganizationAffiliationService, PartyOrganizationAffiliationService>();
         services.AddScoped<IPartyRecordQueryService, PartyRecordQueryService>();
+        services.AddScoped<IWorkforceRecordQueryService, WorkforceRecordQueryService>();
         services.AddScoped<ICrmHrHomeQueryService, CrmHrHomeQueryService>();
         services.AddScoped<CrmService>();
         services.AddScoped<IOpportunityPipelineQueryService, OpportunityPipelineQueryService>();
@@ -25,6 +28,7 @@ public static class CrmHrModuleServiceCollectionExtensions
         services.AddScoped<IAiAgentDirectoryQueryService, AiAgentDirectoryQueryService>();
         services.AddScoped<ICrmHrAgentQueryService, CrmHrAgentQueryService>();
         services.AddScoped<ProjectPartyAssignmentNodePolicy>();
+        services.AddScoped<ProjectPartyAffiliationContextService>();
         services.AddScoped<ProjectPartyIntegrationService>();
         services.AddScoped<ICrmHrSourceSnapshotProvider, CrmHrSourceSnapshotProvider>();
         services.AddMemorySourceGatewayAdapter<CrmHrMemorySourceGatewayAdapter>();

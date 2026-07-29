@@ -205,6 +205,7 @@ public sealed class HrAgentRuntimeToolProviderTests
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentProcessReviewService>()));
         services.Replace(ServiceDescriptor.Scoped(_ => CreateUninitialized<HrAgentRuntimeAuthorizationService>()));
         services.Replace(ServiceDescriptor.Scoped<ICrmHrAgentQueryService>(_ => new ThrowingCrmHrAgentQueryService()));
+        services.Replace(ServiceDescriptor.Scoped<ICrmPartyCommandService>(_ => new ThrowingCrmPartyCommandService()));
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
 
@@ -221,6 +222,7 @@ public sealed class HrAgentRuntimeToolProviderTests
             CreateUninitialized<HrAgentUsageAnalyticsService>(),
             CreateUninitialized<HrAgentProcessReviewService>(),
             new ThrowingCrmHrAgentQueryService(),
+            new ThrowingCrmPartyCommandService(),
             CreateUninitialized<HrAgentRuntimeAuthorizationService>());
     }
 
@@ -348,6 +350,36 @@ public sealed class HrAgentRuntimeToolProviderTests
             CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException("This gating test does not invoke CRM/HR services.");
+        }
+    }
+
+    private sealed class ThrowingCrmPartyCommandService : ICrmPartyCommandService
+    {
+        public Task<Result<CrmPartyCreateResult>> CreatePartyAsync(
+            CrmPartyCreateCommand command,
+            string actor,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException(
+                "This gating test does not invoke CRM commands.");
+        }
+
+        public Task<Result<IReadOnlyList<CrmPartyAffiliationResult>>>
+            ListAffiliationsAsync(
+                Guid personPartyId,
+                CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException(
+                "This gating test does not invoke CRM commands.");
+        }
+
+        public Task<Result<CrmPartyAffiliationResult>> UpsertAffiliationAsync(
+            CrmPartyAffiliationUpsertCommand command,
+            string actor,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException(
+                "This gating test does not invoke CRM commands.");
         }
     }
 }

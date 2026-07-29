@@ -17,6 +17,11 @@ internal static class SandboxWorkspaceSeedNormalizer
         "OpenAI chat completions",
         "OpenAI image generation"
     };
+    private static readonly IReadOnlySet<string> RetiredProjectStructureCatalogToolKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "project-task-create",
+        "project-task-update"
+    };
 
     internal static SandboxWorkspaceDocument Normalize(SandboxWorkspaceDocument document)
     {
@@ -226,25 +231,26 @@ internal static class SandboxWorkspaceSeedNormalizer
             }
 
             idMap[seededAgent.Id] = match.Id;
-            var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(match, seededAgent, providersById);
-            var hasCustomization = AgentManagedSeedCustomizationMetadata.HasCustomization(match.ConfigurationJson);
+            var migratedMatch = ApplyHrCapabilityCurationGrantMigration(match, seededAgent);
+            var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(migratedMatch, seededAgent, providersById);
+            var hasCustomization = AgentManagedSeedCustomizationMetadata.HasCustomization(migratedMatch.ConfigurationJson);
             var mergedAgent = hasCustomization
-                ? match
-                : match with
+                ? migratedMatch
+                : migratedMatch with
                 {
-                    RoleTitle = string.IsNullOrWhiteSpace(match.RoleTitle) ? seededAgent.RoleTitle : match.RoleTitle,
-                    Summary = string.IsNullOrWhiteSpace(match.Summary) ? seededAgent.Summary : match.Summary,
-                    Instructions = string.IsNullOrWhiteSpace(match.Instructions) ? seededAgent.Instructions : match.Instructions,
-                    ProviderProfileId = match.ProviderProfileId ?? seededAgent.ProviderProfileId,
-                    Model = ResolveMergedAgentModel(match, seededAgent, preserveProviderAssignment),
-                    RequirePerServiceCallChatHistoryPersistence = match.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
-                    EnableBackgroundResponses = match.EnableBackgroundResponses || seededAgent.EnableBackgroundResponses,
-                    ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededAgent.ConfigurationJson : match.ConfigurationJson,
-                    Capabilities = MergeAgentCapabilities(match.Capabilities, seededAgent.Capabilities),
-                    Tags = match.Tags.Concat(seededAgent.Tags).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                    RoleTitle = string.IsNullOrWhiteSpace(migratedMatch.RoleTitle) ? seededAgent.RoleTitle : migratedMatch.RoleTitle,
+                    Summary = string.IsNullOrWhiteSpace(migratedMatch.Summary) ? seededAgent.Summary : migratedMatch.Summary,
+                    Instructions = string.IsNullOrWhiteSpace(migratedMatch.Instructions) ? seededAgent.Instructions : migratedMatch.Instructions,
+                    ProviderProfileId = migratedMatch.ProviderProfileId ?? seededAgent.ProviderProfileId,
+                    Model = ResolveMergedAgentModel(migratedMatch, seededAgent, preserveProviderAssignment),
+                    RequirePerServiceCallChatHistoryPersistence = migratedMatch.RequirePerServiceCallChatHistoryPersistence || seededAgent.RequirePerServiceCallChatHistoryPersistence,
+                    EnableBackgroundResponses = migratedMatch.EnableBackgroundResponses || seededAgent.EnableBackgroundResponses,
+                    ConfigurationJson = string.IsNullOrWhiteSpace(migratedMatch.ConfigurationJson) ? seededAgent.ConfigurationJson : migratedMatch.ConfigurationJson,
+                    Capabilities = MergeAgentCapabilities(migratedMatch.Capabilities, seededAgent.Capabilities),
+                    Tags = migratedMatch.Tags.Concat(seededAgent.Tags).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
                 };
 
-            if (ShouldRefreshManagedAgentFromSeed(match, seededAgent))
+            if (ShouldRefreshManagedAgentFromSeed(migratedMatch, seededAgent))
             {
                 mergedAgent = RefreshManagedAgentFromSeed(mergedAgent, seededAgent, providersById);
             }
@@ -300,6 +306,71 @@ internal static class SandboxWorkspaceSeedNormalizer
         }
 
         return merged.OrderBy(item => item.Kind).ThenBy(item => item.CapabilityKey, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static AgentDefinition ApplyHrCapabilityCurationGrantMigration(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent)
+    {
+        if (!HrAgentIdentity.Matches(existingAgent) ||
+            !HrAgentIdentity.Matches(seededAgent))
+        {
+            return existingAgent;
+        }
+
+        JsonObject existingConfiguration;
+        JsonObject seededConfiguration;
+        try
+        {
+            existingConfiguration = JsonNode.Parse(existingAgent.ConfigurationJson) as JsonObject
+                ?? throw new JsonException("The existing HR agent configuration is not a JSON object.");
+            seededConfiguration = JsonNode.Parse(seededAgent.ConfigurationJson) as JsonObject
+                ?? throw new JsonException("The seeded HR agent configuration is not a JSON object.");
+        }
+        catch (JsonException)
+        {
+            return existingAgent;
+        }
+
+        // This is an append-only migration ledger entry, not desired-state reconciliation.
+        // Once present, an operator's later capability removal must remain removed.
+        if (existingConfiguration.ContainsKey(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName))
+        {
+            return existingAgent;
+        }
+
+        if (seededConfiguration[HrAgentIdentity.CapabilityCurationAccessVersionPropertyName] is not JsonValue seededVersion ||
+            !seededVersion.TryGetValue<string>(out var version) ||
+            !string.Equals(
+                version,
+                HrAgentIdentity.CurrentCapabilityCurationAccessVersion,
+                StringComparison.Ordinal))
+        {
+            return existingAgent;
+        }
+
+        var migrationCapabilities = seededAgent.Capabilities
+            .Where(item => HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(item.CapabilityKey))
+            .ToArray();
+        var migrationCapabilityKeys = migrationCapabilities
+            .Select(item => item.CapabilityKey)
+            .ToHashSet(StringComparer.Ordinal);
+        var missingCapabilityKeys = HrAgentIdentity.CapabilityCurationCapabilityKeys
+            .Except(migrationCapabilityKeys, StringComparer.Ordinal)
+            .ToArray();
+        if (missingCapabilityKeys.Length > 0 ||
+            migrationCapabilities.Length != HrAgentIdentity.CapabilityCurationCapabilityKeys.Count)
+        {
+            throw new InvalidOperationException(
+                $"The managed HR capability-curation migration is incomplete: {string.Join(", ", missingCapabilityKeys)}.");
+        }
+
+        existingConfiguration[HrAgentIdentity.CapabilityCurationAccessVersionPropertyName] = version;
+        return existingAgent with
+        {
+            ConfigurationJson = existingConfiguration.ToJsonString(),
+            Capabilities = MergeAgentCapabilities(existingAgent.Capabilities, migrationCapabilities)
+        };
     }
 
     private static bool ShouldRefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
@@ -876,6 +947,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         return capabilities
             .Where(capability => !LegacyMemoryCapabilityPolicy.IsRetired(capability.Kind) &&
                                  !IsRetiredSandboxRegisteredSkillCapability(capability) &&
+                                 !IsRetiredProjectStructureCatalogTool(capability) &&
                                  !IsRetiredBuiltInInlineSkillCapability(capability, seededCapabilityKeys))
             .OrderBy(item => item.Kind)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
@@ -954,6 +1026,12 @@ internal static class SandboxWorkspaceSeedNormalizer
                !seededCapabilityKeys.Contains(capability.Key) &&
                !string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
                capability.EndpointOrPath.StartsWith("inline://", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRetiredProjectStructureCatalogTool(CapabilityCatalogItem capability)
+    {
+        return capability.Kind == CapabilityKind.Tool &&
+               RetiredProjectStructureCatalogToolKeys.Contains(capability.Key);
     }
 
     private static bool IsRetiredSandboxRegisteredSkillServiceType(string? serviceTypeName)

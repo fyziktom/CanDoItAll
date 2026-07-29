@@ -14,6 +14,8 @@ public sealed class HrAgentToolPolicyTests
     [InlineData(AgentToolInvocationPolicyMetadata.HrAgentSettingsUpdate)]
     [InlineData(AgentToolInvocationPolicyMetadata.HrAgentAvatarGenerate)]
     [InlineData(AgentToolInvocationPolicyMetadata.HrAgentProcessManagerReviewRequest)]
+    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmPartyCreate)]
+    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert)]
     public void HR_mutations_require_host_approval(string toolName)
     {
         Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(toolName));
@@ -63,6 +65,68 @@ public sealed class HrAgentToolPolicyTests
 
         Assert.DoesNotContain(privateSearchText, signature, StringComparison.Ordinal);
         Assert.Contains("take", signature, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmPartyCreate)]
+    [InlineData(AgentToolInvocationPolicyMetadata.HrCrmAffiliationUpsert)]
+    public void HR_CRM_mutation_redaction_masks_party_business_data(
+        string toolName)
+    {
+        const string privateDisplayName = "Private CRM person";
+        const string privateTitle = "Confidential engagement lead";
+        var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
+            toolName,
+        [
+            new KeyValuePair<string, object?>("request", new
+            {
+                personPartyId =
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                organizationPartyId =
+                    Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                displayName = privateDisplayName,
+                jobTitle = privateTitle
+            })
+        ]);
+        var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            toolName,
+            redacted);
+
+        Assert.DoesNotContain(
+            privateDisplayName,
+            signature,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            privateTitle,
+            signature,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "11111111-1111-1111-1111-111111111111",
+            signature,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HR_CRM_affiliation_list_redaction_masks_person_identity()
+    {
+        const string personPartyId =
+            "11111111-1111-1111-1111-111111111111";
+        var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
+            AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList,
+        [
+            new KeyValuePair<string, object?>("request", new
+            {
+                personPartyId
+            })
+        ]);
+        var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            AgentToolInvocationPolicyMetadata.HrCrmPartyAffiliationsList,
+            redacted);
+
+        Assert.DoesNotContain(
+            personPartyId,
+            signature,
+            StringComparison.Ordinal);
     }
 
     [Fact]

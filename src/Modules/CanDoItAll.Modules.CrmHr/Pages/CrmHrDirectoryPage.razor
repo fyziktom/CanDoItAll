@@ -2,6 +2,7 @@
 @using Microsoft.Extensions.Logging
 @inject PartyDirectoryService PartyDirectoryService
 @inject PartyDirectoryManagementService ManagementService
+@inject IPartyOrganizationAffiliationService AffiliationService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrDirectoryPage> Logger
@@ -90,6 +91,28 @@
                             <p class="cda-eyebrow">Party editor</p>
                             <h2 class="cda-title-xl">@EditorTitle</h2>
                             <p class="cda-body-muted">Shared identity and stewardship record.</p>
+                            @if (editor.PartyType == PartyType.Person && editor.Id.HasValue)
+                            {
+                                @if (CurrentPrimaryAffiliation is { } primaryAffiliation)
+                                {
+                                    <TooltipTarget Text="@OtherCurrentAffiliationsTooltip"
+                                                   Position="TooltipPosition.Bottom"
+                                                   Duration="@((TimeSpan?)null)"
+                                                   TestId="crmhr-directory-primary-affiliation-tooltip">
+                                        <p class="text-sm font-medium text-slate-700"
+                                           data-testid="crmhr-directory-primary-affiliation">
+                                            @FormatAffiliation(primaryAffiliation)
+                                        </p>
+                                    </TooltipTarget>
+                                }
+                                else
+                                {
+                                    <p class="text-sm font-medium text-slate-600"
+                                       data-testid="crmhr-directory-primary-affiliation">
+                                        No current organization affiliation
+                                    </p>
+                                }
+                            }
                         </Stack>
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                             <StatusBadge Tone="@ResolveStatusTone(editor.LifecycleStatus)" Text="@editor.LifecycleStatus.ToString()" />
@@ -616,6 +639,14 @@
                             <FormSection Title="Relationships and duplicate stewardship"
                                          Description="Model org structure and safe deduplication here so downstream CRM, workforce, recruiting, and assignment flows inherit trusted references.">
                                 <Stack GapScale="LayoutGap.XLarge">
+                                    @if (editor.PartyType == PartyType.Person)
+                                    {
+                                        <PartyAffiliationsEditor CurrentPersonPartyId="editor.Id"
+                                                                 Affiliations="affiliationEditors"
+                                                                 AffiliationsChanged="HandleAffiliationsChangedAsync"
+                                                                 PartyDisplayNames="affiliationPartyDisplayNames" />
+                                    }
+
                                     <PartyRelationshipsEditor CurrentPartyId="editor.Id"
                                                              Relationships="relationships" />
 
@@ -742,6 +773,10 @@
     private static readonly IReadOnlyList<string> ConfidentialNoteCategories = PartyConfidentialNoteCategories.All;
 
     private PartyEditorViewModel editor = PartyEditorViewModel.CreateNew();
+    private IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliationItems = [];
+    private IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliationEditors = [];
+    private IReadOnlyDictionary<Guid, string> affiliationPartyDisplayNames =
+        new Dictionary<Guid, string>();
     private List<PartyRelationshipEditorModel> relationships = [];
     private IReadOnlyList<PartyDuplicateCandidateModel> duplicateCandidates = [];
     private CrmActivityHistoryPage activityPage = CrmActivityHistoryPage.Empty();
@@ -762,6 +797,7 @@
     private string activityLoadError = string.Empty;
     private string projectAssignmentsLoadError = string.Empty;
     private Guid? relationshipsLoadedPartyId;
+    private Guid? affiliationsLoadedPartyId;
     private Guid? activityLoadedPartyId;
     private Guid? projectAssignmentsLoadedPartyId;
     private Guid? relationshipsLoadPartyId;
@@ -792,6 +828,28 @@
             [new("partyId", PartyIdQuery?.ToString("D"))]);
 
     private string EditorTitle => editor.Id.HasValue ? editor.DisplayName : "New party";
+
+    private PartyOrganizationAffiliationListItemModel? CurrentPrimaryAffiliation
+        => affiliationItems
+            .Where(item => item.IsCurrent)
+            .OrderByDescending(item => item.IsPrimary)
+            .ThenBy(item => item.OrganizationDisplayName)
+            .FirstOrDefault();
+
+    private string OtherCurrentAffiliationsTooltip
+    {
+        get
+        {
+            var primaryAffiliation = CurrentPrimaryAffiliation;
+            var otherAffiliations = affiliationItems
+                .Where(item => item.IsCurrent && item.Id != primaryAffiliation?.Id)
+                .Select(FormatAffiliation)
+                .ToList();
+            return otherAffiliations.Count == 0
+                ? "No other current affiliations."
+                : $"Other current affiliations: {string.Join("; ", otherAffiliations)}";
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -915,8 +973,12 @@
             return DirectoryLoadSnapshot.ForMissingParty();
         }
 
+        var affiliations = party.PartyType == PartyType.Person
+            ? await AffiliationService.ListAsync(requestedPartyId.Value)
+            : [];
         return new DirectoryLoadSnapshot(
             PartyEditorViewModel.FromEditorModel(party),
+            affiliations,
             RequestedPartyFound: true);
     }
 
@@ -930,6 +992,7 @@
         }
 
         ResetDirectoryDetailState();
+        ApplyAffiliations(snapshot.Affiliations);
     }
 
     private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
@@ -988,6 +1051,29 @@
         var savedPartyId = result.Value;
         editor.Id = savedPartyId;
         handledPartyKey = savedPartyId.ToString("N");
+
+        if (affiliationsLoadedPartyId == savedPartyId)
+        {
+            var affiliationSaveResult = await AffiliationService.ReplaceAsync(
+                savedPartyId,
+                affiliationEditors,
+                editor.LastChangedBy);
+            if (!IsCurrentDirectoryAction(action))
+            {
+                return;
+            }
+
+            if (affiliationSaveResult.IsFailure)
+            {
+                directoryBrowserVersion++;
+                NotificationService.Warning(
+                    "Party saved with affiliation issue",
+                    $"Affiliations were not updated. {string.Join(" ", affiliationSaveResult.Errors.Select(error => error.Message))}");
+                return;
+            }
+
+            ApplyAffiliations(affiliationSaveResult.Value ?? []);
+        }
 
         if (relationshipsLoadedPartyId == savedPartyId)
         {
@@ -1454,11 +1540,15 @@
 
     private void ResetDirectoryDetailState()
     {
+        affiliationItems = [];
+        affiliationEditors = [];
+        affiliationPartyDisplayNames = new Dictionary<Guid, string>();
         relationships = [];
         duplicateCandidates = [];
         activityPage = CrmActivityHistoryPage.Empty();
         projectAssignmentsPage = PartyProjectAssignmentPage.Empty();
         relationshipsLoadedPartyId = null;
+        affiliationsLoadedPartyId = null;
         activityLoadedPartyId = null;
         projectAssignmentsLoadedPartyId = null;
         relationshipsLoadPartyId = null;
@@ -1491,6 +1581,72 @@
         projectAssignmentsLoadCancellation?.Cancel();
         projectAssignmentsLoadCancellation?.Dispose();
         projectAssignmentsLoadCancellation = null;
+    }
+
+    private Task HandleAffiliationsChangedAsync(
+        IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliations)
+    {
+        affiliationEditors = affiliations;
+        return Task.CompletedTask;
+    }
+
+    private void ApplyAffiliations(
+        IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliations)
+    {
+        affiliationItems = affiliations;
+        affiliationEditors = affiliations
+            .Select(MapAffiliation)
+            .ToList();
+        var displayNames = new Dictionary<Guid, string>();
+        foreach (var affiliation in affiliations)
+        {
+            displayNames[affiliation.OrganizationPartyId] =
+                affiliation.OrganizationDisplayName;
+            if (affiliation.OrganizationUnitPartyId is Guid organizationUnitPartyId)
+            {
+                displayNames[organizationUnitPartyId] =
+                    affiliation.OrganizationUnitDisplayName;
+            }
+
+            if (affiliation.ManagerPartyId is Guid managerPartyId)
+            {
+                displayNames[managerPartyId] = affiliation.ManagerDisplayName;
+            }
+        }
+
+        affiliationPartyDisplayNames = displayNames;
+        affiliationsLoadedPartyId = editor.PartyType == PartyType.Person
+            ? editor.Id
+            : null;
+    }
+
+    private static PartyOrganizationAffiliationEditorModel MapAffiliation(
+        PartyOrganizationAffiliationListItemModel affiliation)
+    {
+        return new PartyOrganizationAffiliationEditorModel
+        {
+            Id = affiliation.Id,
+            PersonPartyId = affiliation.PersonPartyId,
+            OrganizationPartyId = affiliation.OrganizationPartyId,
+            AffiliationKind = affiliation.AffiliationKind,
+            IsPrimary = affiliation.IsPrimary,
+            JobTitle = affiliation.JobTitle,
+            EmployeeCode = affiliation.EmployeeCode,
+            OrganizationUnitPartyId = affiliation.OrganizationUnitPartyId,
+            ManagerPartyId = affiliation.ManagerPartyId,
+            ValidFrom = affiliation.ValidFrom,
+            ValidTo = affiliation.ValidTo,
+            Notes = affiliation.Notes,
+            ExpectedUpdatedAtUtc = affiliation.UpdatedAtUtc
+        };
+    }
+
+    private static string FormatAffiliation(
+        PartyOrganizationAffiliationListItemModel affiliation)
+    {
+        return string.IsNullOrWhiteSpace(affiliation.JobTitle)
+            ? affiliation.OrganizationDisplayName
+            : $"{affiliation.OrganizationDisplayName} / {affiliation.JobTitle}";
     }
 
     private static PartyRelationshipEditorModel MapRelationship(PartyRelationshipListItemModel relationship)
@@ -1585,6 +1741,7 @@
 
     private sealed record DirectoryLoadSnapshot(
         PartyEditorViewModel Editor,
+        IReadOnlyList<PartyOrganizationAffiliationListItemModel> Affiliations,
         bool RequestedPartyFound)
     {
         public static DirectoryLoadSnapshot ForNewParty()
@@ -1596,6 +1753,7 @@
         private static DirectoryLoadSnapshot Empty(bool requestedPartyFound)
             => new(
                 PartyEditorViewModel.CreateNew(),
+                [],
                 requestedPartyFound);
     }
 

@@ -135,6 +135,291 @@ public sealed class PartyMergeIntegrationTests
     }
 
     [Fact]
+    public async Task Merge_persons_deduplicates_profiles_and_affiliations_and_preserves_assignment_context()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryService>();
+        var managementService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryManagementService>();
+        var dbContextFactory = scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var now = DateTimeOffset.UtcNow;
+
+        var organizationId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Contoso Services",
+            "contact@contoso.example",
+            PartyType.Organization,
+            PartyRoleKind.Partner);
+        var retainedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Taylor Morgan",
+            "taylor@contoso.example",
+            PartyType.Person,
+            PartyRoleKind.Employee);
+        var mergedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Taylor Morgan Duplicate",
+            "taylor.duplicate@contoso.example",
+            PartyType.Person,
+            PartyRoleKind.Freelancer);
+
+        Guid retainedAffiliationId;
+        Guid mergedAffiliationId;
+        Guid assignmentId;
+        await using (var dbContext =
+                     await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<WorkforceProfile>().AddRange(
+                new WorkforceProfile
+                {
+                    PartyId = retainedPartyId,
+                    WorkforceKind = WorkforceKind.Employee,
+                    EmployeeCode = "EMP-101",
+                    JobTitle = "Delivery lead",
+                    Notes = "Retained profile"
+                },
+                new WorkforceProfile
+                {
+                    PartyId = mergedPartyId,
+                    WorkforceKind = WorkforceKind.Freelancer,
+                    Discipline = "Delivery",
+                    Location = "Remote",
+                    Notes = "Merged profile"
+                });
+            var retainedAffiliation = new PartyOrganizationAffiliation
+            {
+                PersonPartyId = retainedPartyId,
+                OrganizationPartyId = organizationId,
+                AffiliationKind = PartyOrganizationAffiliationKind.Employee,
+                IsPrimary = true,
+                JobTitle = "Delivery lead",
+                EmployeeCode = "EMP-101",
+                LastChangedBy = "integration-tests",
+                CreatedAtUtc = now.AddDays(-2),
+                UpdatedAtUtc = now.AddDays(-2)
+            };
+            var mergedAffiliation = new PartyOrganizationAffiliation
+            {
+                PersonPartyId = mergedPartyId,
+                OrganizationPartyId = organizationId,
+                AffiliationKind = PartyOrganizationAffiliationKind.Employee,
+                IsPrimary = true,
+                Notes = "Imported duplicate affiliation",
+                LastChangedBy = "integration-tests",
+                CreatedAtUtc = now.AddDays(-1),
+                UpdatedAtUtc = now.AddDays(-1)
+            };
+            dbContext.Set<PartyOrganizationAffiliation>().AddRange(
+                retainedAffiliation,
+                mergedAffiliation);
+            var assignmentToPersist = new ProjectPartyAssignment
+            {
+                ProjectId = Guid.NewGuid(),
+                PartyId = mergedPartyId,
+                PartyOrganizationAffiliationId = mergedAffiliation.Id,
+                AssignmentKind = ProjectPartyAssignmentKind.TeamMember,
+                Source = "integration-tests"
+            };
+            dbContext.Set<ProjectPartyAssignment>().Add(
+                assignmentToPersist);
+            await dbContext.SaveChangesAsync();
+            retainedAffiliationId = retainedAffiliation.Id;
+            mergedAffiliationId = mergedAffiliation.Id;
+            assignmentId = assignmentToPersist.Id;
+        }
+
+        var mergeResult = await managementService.MergePartyAsync(
+            retainedPartyId,
+            mergedPartyId,
+            "integration-tests",
+            "Duplicate person cleanup");
+
+        Assert.True(mergeResult.IsSuccess);
+
+        await using var verificationContext =
+            await dbContextFactory.CreateDbContextAsync();
+        var profile = await verificationContext.Set<WorkforceProfile>()
+            .SingleAsync(item => item.PartyId == retainedPartyId);
+        var affiliation = await verificationContext
+            .Set<PartyOrganizationAffiliation>()
+            .SingleAsync(item => item.PersonPartyId == retainedPartyId);
+        var assignment = await verificationContext
+            .Set<ProjectPartyAssignment>()
+            .SingleAsync(item => item.Id == assignmentId);
+
+        Assert.Equal("EMP-101", profile.EmployeeCode);
+        Assert.Equal("Delivery", profile.Discipline);
+        Assert.Contains("Retained profile", profile.Notes, StringComparison.Ordinal);
+        Assert.Contains("Merged profile", profile.Notes, StringComparison.Ordinal);
+        Assert.Equal(retainedAffiliationId, affiliation.Id);
+        Assert.True(affiliation.IsPrimary);
+        Assert.Contains(
+            "Imported duplicate affiliation",
+            affiliation.Notes,
+            StringComparison.Ordinal);
+        Assert.Equal(retainedPartyId, assignment.PartyId);
+        Assert.Equal(retainedAffiliationId, assignment.PartyOrganizationAffiliationId);
+        Assert.NotEqual(mergedAffiliationId, assignment.PartyOrganizationAffiliationId);
+    }
+
+    [Fact]
+    public async Task Merge_persons_stages_distinct_primary_affiliations_before_endpoint_rewrite()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryService>();
+        var managementService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryManagementService>();
+        var dbContextFactory = scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var now = DateTimeOffset.UtcNow;
+
+        var retainedOrganizationId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Retained primary organization",
+            "retained.organization@example.test",
+            PartyType.Organization,
+            PartyRoleKind.Partner);
+        var mergedOrganizationId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Merged primary organization",
+            "merged.organization@example.test",
+            PartyType.Organization,
+            PartyRoleKind.Partner);
+        var retainedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Primary retained person",
+            "primary.retained@example.test",
+            PartyType.Person,
+            PartyRoleKind.Employee);
+        var mergedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Primary merged person",
+            "primary.merged@example.test",
+            PartyType.Person,
+            PartyRoleKind.Freelancer);
+
+        Guid retainedAffiliationId;
+        Guid mergedAffiliationId;
+        Guid assignmentId;
+        await using (var dbContext =
+                     await dbContextFactory.CreateDbContextAsync())
+        {
+            var retainedAffiliation = new PartyOrganizationAffiliation
+            {
+                PersonPartyId = retainedPartyId,
+                OrganizationPartyId = retainedOrganizationId,
+                AffiliationKind = PartyOrganizationAffiliationKind.Employee,
+                IsPrimary = true,
+                LastChangedBy = "integration-tests",
+                CreatedAtUtc = now.AddDays(-2),
+                UpdatedAtUtc = now.AddDays(-2)
+            };
+            var mergedAffiliation = new PartyOrganizationAffiliation
+            {
+                PersonPartyId = mergedPartyId,
+                OrganizationPartyId = mergedOrganizationId,
+                AffiliationKind =
+                    PartyOrganizationAffiliationKind.ExternalContact,
+                IsPrimary = true,
+                LastChangedBy = "integration-tests",
+                CreatedAtUtc = now.AddDays(-1),
+                UpdatedAtUtc = now.AddDays(-1)
+            };
+            dbContext.Set<PartyOrganizationAffiliation>().AddRange(
+                retainedAffiliation,
+                mergedAffiliation);
+            var assignmentToPersist = new ProjectPartyAssignment
+            {
+                ProjectId = Guid.NewGuid(),
+                PartyId = mergedPartyId,
+                PartyOrganizationAffiliationId = mergedAffiliation.Id,
+                AssignmentKind = ProjectPartyAssignmentKind.TeamMember,
+                Source = "integration-tests"
+            };
+            dbContext.Set<ProjectPartyAssignment>().Add(
+                assignmentToPersist);
+            await dbContext.SaveChangesAsync();
+            retainedAffiliationId = retainedAffiliation.Id;
+            mergedAffiliationId = mergedAffiliation.Id;
+            assignmentId = assignmentToPersist.Id;
+        }
+
+        var mergeResult = await managementService.MergePartyAsync(
+            retainedPartyId,
+            mergedPartyId,
+            "integration-tests",
+            "Duplicate person with distinct primary relationships");
+
+        Assert.True(mergeResult.IsSuccess);
+
+        await using var verificationContext =
+            await dbContextFactory.CreateDbContextAsync();
+        var affiliations = await verificationContext
+            .Set<PartyOrganizationAffiliation>()
+            .Where(item => item.PersonPartyId == retainedPartyId)
+            .OrderBy(item => item.Id)
+            .ToListAsync();
+        var assignment = await verificationContext
+            .Set<ProjectPartyAssignment>()
+            .SingleAsync(item => item.Id == assignmentId);
+
+        Assert.Equal(2, affiliations.Count);
+        var primary = Assert.Single(
+            affiliations,
+            item => item.IsPrimary);
+        Assert.Equal(retainedAffiliationId, primary.Id);
+        Assert.Contains(
+            affiliations,
+            item =>
+                item.Id == mergedAffiliationId &&
+                !item.IsPrimary);
+        Assert.Equal(retainedPartyId, assignment.PartyId);
+        Assert.Equal(
+            mergedAffiliationId,
+            assignment.PartyOrganizationAffiliationId);
+    }
+
+    [Fact]
+    public async Task Merge_party_rejects_cross_type_duplicates()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryService>();
+        var managementService = scope.ServiceProvider
+            .GetRequiredService<PartyDirectoryManagementService>();
+
+        var retainedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Cross-type person",
+            "cross-type.person@example.test",
+            PartyType.Person,
+            PartyRoleKind.Employee);
+        var mergedPartyId = await CreatePartyAsync(
+            partyDirectoryService,
+            "Cross-type organization",
+            "cross-type.organization@example.test",
+            PartyType.Organization,
+            PartyRoleKind.Customer);
+
+        var mergeResult = await managementService.MergePartyAsync(
+            retainedPartyId,
+            mergedPartyId,
+            "integration-tests",
+            "Should not merge");
+
+        Assert.False(mergeResult.IsSuccess);
+        Assert.Contains(
+            mergeResult.Errors,
+            error => error.Code == "crmhr.party.merge-type-mismatch");
+    }
+
+    [Fact]
     public async Task Preview_apply_and_export_support_csv_directory_stewardship()
     {
         await using var application = await TestApplication.CreateAsync();

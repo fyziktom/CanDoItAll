@@ -429,6 +429,7 @@ public sealed class ProjectPartyAssignment
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
     public Guid PartyId { get; set; }
+    public Guid? PartyOrganizationAffiliationId { get; set; }
     public ProjectPartyAssignmentKind AssignmentKind { get; set; }
     public string NodeKey { get; set; } = string.Empty;
     public string PhaseName { get; set; } = string.Empty;
@@ -595,7 +596,7 @@ internal sealed class WorkforceProfileConfiguration : IEntityTypeConfiguration<W
         builder.Property(profile => profile.Status).HasMaxLength(80);
         builder.Property(profile => profile.ExtendedDataJson).HasColumnType("TEXT");
         builder.Property(profile => profile.Notes).HasColumnType("TEXT");
-        builder.HasIndex(profile => profile.PartyId);
+        builder.HasIndex(profile => profile.PartyId).IsUnique();
         builder.HasIndex(profile => profile.HomeUnitPartyId);
         builder.HasIndex(profile => profile.ManagerPartyId);
         builder.HasIndex(profile => profile.Status);
@@ -731,6 +732,11 @@ internal sealed class ProjectPartyAssignmentConfiguration : IEntityTypeConfigura
         builder.HasIndex(assignment => new { assignment.ProjectId, assignment.AssignmentKind, assignment.NodeKey });
         builder.HasIndex(assignment => assignment.ProjectId);
         builder.HasIndex(assignment => assignment.PartyId);
+        builder.HasIndex(assignment => assignment.PartyOrganizationAffiliationId);
         builder.HasIndex(assignment => assignment.OpportunityId);
+        builder.HasOne<PartyOrganizationAffiliation>()
+            .WithMany()
+            .HasForeignKey(assignment => assignment.PartyOrganizationAffiliationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
