@@ -706,16 +706,12 @@
 
     private string? ResolveRootStyle()
     {
-        return Mode == AppShellMode.FocusWorkbench
-            ? "height:100vh;overflow:hidden;"
-            : null;
+        return "height:100vh;height:100dvh;min-height:0;overflow:hidden;";
     }
 
     private string? ResolveFrameStyle()
     {
-        return Mode == AppShellMode.FocusWorkbench
-            ? "height:100%;min-height:0;overflow:hidden;"
-            : null;
+        return "height:100%;min-height:0;overflow:hidden;";
     }
 
     private string ResolveNavigationToggleLabel()

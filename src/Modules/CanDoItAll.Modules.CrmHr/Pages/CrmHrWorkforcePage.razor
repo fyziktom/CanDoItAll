@@ -16,7 +16,8 @@
                                  ContextNavigationIdentity="@AgentChatNavigationFence"
                                  ContextAccessState="@agentChatContextAccessState" />
 
-<PageScaffold MaxWidthClass="max-w-full">
+<PageScaffold MaxWidthClass="max-w-full"
+              FillHeight="true">
     <Header>
         <PageHeader Eyebrow="CRM / HR"
                     Title="Workforce workspace"
@@ -32,11 +33,17 @@
     </Header>
 
     <ChildContent>
-        <Stack GapScale="LayoutGap.Medium">
+        <Stack GapScale="LayoutGap.Medium"
+               FillHeight="true"
+               Class="min-h-0 flex-1 overflow-hidden">
             <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Workforce" />
 
-            <SurfaceCard data-testid="crmhr-workforce-catalog">
-                <Stack GapScale="LayoutGap.Medium">
+            <SurfaceCard Class="flex min-h-0 flex-1 flex-col overflow-hidden"
+                         data-testid="crmhr-workforce-catalog">
+                <Stack GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.Stretch"
+                       FillHeight="true"
+                       Class="min-h-0 flex-1 overflow-hidden">
                     <ListPanelHeader Title="Workforce records"
                                      Description="Search and page through workers and delivery units. Open a card to manage its profile, skills, allocations, and history."
                                      Count="Server-paged">
@@ -57,6 +64,7 @@
                                             PageSize="12"
                                             ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
                                             GridMode="PagedRecordGridMode.BoundedCatalog"
+                                            FillHeight="true"
                                             SearchPlaceholder="Search workforce name, summary, organization, or title"
                                             DataTestId="crmhr-workforce"
                                             OptionTestId="crmhr-workforce-item" />

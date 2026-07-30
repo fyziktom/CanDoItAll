@@ -10,6 +10,24 @@ namespace CanDoItAll.Tests.Components;
 public sealed class WorkforceRecordBrowserTests
 {
     [Fact]
+    public void Fill_height_is_forwarded_to_the_shared_record_browser()
+    {
+        var queryService = new StubWorkforceRecordQueryService([]);
+        using var context = CreateContext(queryService);
+        var cut = context.Render<WorkforceRecordBrowser>(parameters => parameters
+            .Add(component => component.FillHeight, true));
+
+        var browser = cut.Find("[data-testid='crmhr-workforce']");
+
+        Assert.Contains(
+            "paged-record-browser--fill-height",
+            browser.ClassList);
+        var browserStyle = browser.GetAttribute("style")!.Replace(" ", string.Empty);
+        Assert.Contains(";height:100%", browserStyle);
+        Assert.Contains(";min-height:0", browserStyle);
+    }
+
+    [Fact]
     public void Affiliation_filters_issue_typed_bounded_queries()
     {
         var record = Record(

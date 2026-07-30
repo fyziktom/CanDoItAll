@@ -579,7 +579,8 @@
   }
 
   .cda-shell-body-surface--standard {
-    flex: 1 0 auto;
+    @apply min-h-0 overflow-y-auto;
+    flex: 1 1 0%;
   }
 
   .cda-shell-rail {
