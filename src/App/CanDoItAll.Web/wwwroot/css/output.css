@@ -3127,6 +3127,9 @@
       padding: calc(var(--spacing) * 6);
     }
   }
+  .cda-shell-body-surface--standard {
+    flex: 1 0 auto;
+  }
   .cda-shell-rail {
     display: none;
     border-radius: 1.75rem;

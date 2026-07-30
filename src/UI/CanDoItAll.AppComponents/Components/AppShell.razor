@@ -373,7 +373,7 @@
                 }
                 else
                 {
-                    <section class="cda-shell-body-surface">
+                    <section class="cda-shell-body-surface cda-shell-body-surface--standard">
                         @Body
                     </section>
                 }
@@ -626,9 +626,7 @@
             return "grid min-h-0 flex-1 gap-2 2xl:grid-cols-[minmax(0,1fr)_20rem]";
         }
 
-        return Mode == AppShellMode.FocusWorkbench
-            ? "flex min-h-0 flex-1 flex-col"
-            : "block";
+        return "flex min-h-0 flex-1 flex-col";
     }
 
     private string ResolveBodyHostClass()
