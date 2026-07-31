@@ -92,7 +92,7 @@ public partial class AgentDetailsDialog
     private ProviderProfile? SelectedImageGenerationProvider
         => editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue
             ? providers.FirstOrDefault(item => item.Id == editorModel.ImageGenerationAccess.PreferredProviderProfileId.Value)
-            : ImageCapableRuntimeProvider;
+            : ImageGenerationProviderSelectionPolicy.ResolveDefault(providers, SelectedRuntimeProvider);
 
     private ProviderProfile? ImageCapableRuntimeProvider
         => SelectedRuntimeProvider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration } provider
@@ -1157,6 +1157,13 @@ public partial class AgentDetailsDialog
     private void ToggleImageGenerationAccess(object? rawValue)
     {
         editorModel.ImageGenerationAccess.CanGenerateImages = rawValue is bool value && value;
+        if (editorModel.ImageGenerationAccess.CanGenerateImages &&
+            !editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue &&
+            SelectedImageGenerationProvider is { } provider)
+        {
+            editorModel.ImageGenerationAccess.PreferredProviderProfileId = provider.Id;
+        }
+
         editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
     }
 
@@ -1178,6 +1185,13 @@ public partial class AgentDetailsDialog
     private void NormalizeImageGenerationAccessForSave()
     {
         var access = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
+        if (access.CanGenerateImages &&
+            !access.PreferredProviderProfileId.HasValue &&
+            SelectedImageGenerationProvider is { } selectedProvider)
+        {
+            access.PreferredProviderProfileId = selectedProvider.Id;
+        }
+
         access.DefaultModel = SelectedImageGenerationProvider is { } provider
             ? ProviderModelSelector.NormalizeProviderDefaultModel(access.DefaultModel, provider)
             : string.IsNullOrWhiteSpace(access.DefaultModel)
@@ -1200,9 +1214,9 @@ public partial class AgentDetailsDialog
                 : "The selected image-generation provider is not available.";
         }
 
-        return ImageCapableRuntimeProvider is { } runtimeProvider
-            ? $"Image requests use the runtime provider '{runtimeProvider.Name}'."
-            : "Image requests use the first enabled image-generation provider unless a provider is selected here.";
+        return SelectedImageGenerationProvider is { } recommendedProvider
+            ? $"Image requests use the recommended provider '{recommendedProvider.Name}'; saving makes that choice explicit."
+            : "No enabled image-generation provider is available.";
     }
 
     private string ResolveImageGenerationWarning()

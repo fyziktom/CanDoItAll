@@ -263,6 +263,7 @@ public sealed class ProjectStructureAgentService(
         CancellationToken cancellationToken)
     {
         EnsureValidMediaPayload(request.Media);
+        ProjectStructureSvgAssetValidator.Validate(request.Media);
 
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
@@ -1491,6 +1492,7 @@ public sealed class ProjectStructureAgentService(
         CancellationToken cancellationToken = default)
     {
         EnsureValidMediaPayload(request.Media);
+        ProjectStructureSvgAssetValidator.Validate(request.Media);
 
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,

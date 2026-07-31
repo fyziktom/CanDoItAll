@@ -214,7 +214,7 @@ else
                                                          class="cda-input"
                                                          disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || !areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
                                                          data-testid="agents-catalog-image-generation-provider">
-                                                <option value="">Use runtime/default image provider</option>
+                                                <option value="">Choose recommended image provider on save</option>
                                                 @foreach (var provider in ImageGenerationProviderOptions)
                                                 {
                                                     <option value="@provider.Id">@($"{provider.Name}{(provider.IsEnabled ? string.Empty : " (disabled)")}")</option>
