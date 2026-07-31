@@ -6,4 +6,6 @@ Re-read the inherited authoritative scope packet. A passing build, app shell, or
 
 Before completing, read representative current product source under the grounded product root at that likely owning boundary. Upstream diagnosis prose is not product inspection. For a visible UI error, compare rendered state, console diagnostics, styling, and the owning source before assuming which layer caused it.
 
+For source-backed UI mismatches, translate the observed difference into a falsifiable presentation invariant and separate semantic application data from view-only presentation capacity. Inspect whether the current component and styling boundary can represent that invariant without manufacturing domain records. The proposed repair must use the smallest mechanism supported by the application's existing UI architecture, and its proof must cover both sparse and populated states. The process does not prescribe a particular DOM or styling technique.
+
 Do not edit product files and do not repeat the first plan unchanged. State the primary failure signature, owning boundary, competing hypothesis rejected, smallest different repair, and validation recipe that can falsify the second repair.

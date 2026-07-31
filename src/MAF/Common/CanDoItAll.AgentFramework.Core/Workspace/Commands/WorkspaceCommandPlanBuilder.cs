@@ -1096,7 +1096,7 @@ internal sealed class WorkspaceCommandPlanBuilder
 
     private DotnetRunArtifactPaths BuildDotnetRunArtifactPaths()
     {
-        var stamp = DateTimeOffset.UtcNow.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
+        var stamp = $"{DateTimeOffset.UtcNow.UtcDateTime:yyyyMMdd-HHmmssfff}-{Guid.NewGuid():N}";
         var relativeDirectory = pathPolicy.WorkspaceScope.CombineArtifactPath("process-runs", "dotnet-run", stamp);
         var fullDirectory = Path.GetFullPath(Path.Combine(pathPolicy.WorkspaceRoot, relativeDirectory.Replace('/', Path.DirectorySeparatorChar)));
         var stdoutRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stdout.log"));

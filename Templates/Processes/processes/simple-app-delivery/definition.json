@@ -12,7 +12,7 @@
   "GovernancePolicySummary": "Require only proof applicable to the declared application kind; do not impose browser or runtime gates on console and library work.",
   "ConstitutionRuleSummary": "Agents own implementation and validation within the approved product root. Reviewers do not mutate concurrently with the implementation owner.",
   "OperatingModeSummary": "Governed local development with bounded repair and no deployment execution.",
-  "SimulationReadinessSummary": "Suitable for low-risk sample applications such as games, calculators, small APIs, console tools, and libraries.",
+  "SimulationReadinessSummary": "Suitable for bounded, low-risk application, service, tool, and library delivery.",
   "Criticality": "Medium",
   "AutonomyLevel": "Guarded",
   "OperatingMode": "GovernedLive",

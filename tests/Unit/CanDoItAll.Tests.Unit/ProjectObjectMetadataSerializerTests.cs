@@ -179,8 +179,10 @@ public sealed class ProjectObjectMetadataSerializerTests
             }
             """;
 
-        var exception = Assert.Throws<InvalidOperationException>(() => ProjectObjectMetadataSerializer.Parse(json));
+        var exception = Assert.Throws<ProjectObjectMetadataPayloadException>(
+            () => ProjectObjectMetadataSerializer.Parse(json));
 
         Assert.IsType<System.Text.Json.JsonException>(exception.InnerException);
+        Assert.Contains("script.arguments", exception.JsonPath, StringComparison.OrdinalIgnoreCase);
     }
 }

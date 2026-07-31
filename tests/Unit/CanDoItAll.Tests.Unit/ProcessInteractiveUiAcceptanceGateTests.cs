@@ -10,6 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class BrowserInteractiveAcceptanceCompletionGateContributionTests
 {
+    private static readonly ProcessRunId RunId = ProcessRunId.New();
     private static readonly Guid ExecutionRunId = Guid.NewGuid();
     private static readonly DateTimeOffset StartedAtUtc = new(2026, 7, 10, 20, 0, 0, TimeSpan.Zero);
 
@@ -104,10 +105,10 @@ public sealed class BrowserInteractiveAcceptanceCompletionGateContributionTests
         [
             Receipt(ToolContractCatalog.WorkspaceReadFile, "external-target/C/work/product/src/App/Home.razor", 1),
             Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 2),
-            Receipt(ToolContractCatalog.BrowserSnapshot, "filename=before.yml", 3),
+            Receipt(ToolContractCatalog.BrowserSnapshot, ManagedBrowserFile("before.yml"), 3),
             Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 4),
-            Receipt(ToolContractCatalog.BrowserEvaluate, "filename=after.json", 5),
-            Receipt(ToolContractCatalog.BrowserTakeScreenshot, "filename=after.png", 6)
+            Receipt(ToolContractCatalog.BrowserEvaluate, ManagedBrowserFile("after.json"), 5),
+            Receipt(ToolContractCatalog.BrowserTakeScreenshot, ManagedBrowserFile("after.png"), 6)
         ]);
 
         var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
@@ -115,10 +116,159 @@ public sealed class BrowserInteractiveAcceptanceCompletionGateContributionTests
         Assert.Null(issue);
     }
 
+    [Fact]
+    public void Validate_InteractionAndBarePostState_ReturnsManagedStateIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(ToolContractCatalog.BrowserEvaluate, "filename=after.json", 3),
+            Receipt(ToolContractCatalog.BrowserTakeScreenshot, "filename=after.png", 4)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+        Assert.Contains($"artifacts/process-runs/{RunId.Value:D}/browser/", issue.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_InteractionAndOtherRunPostState_ReturnsManagedStateIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserTakeScreenshot,
+                $"filename=artifacts/process-runs/{Guid.NewGuid():D}/browser/after.png",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+    }
+
+    [Fact]
+    public void Validate_ManagedFilenameAfterDecoyText_ReturnsNoIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserEvaluate,
+                $"function=\"() => 'filename=decoy.json'\", {ManagedBrowserFile("after.json")}",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Validate_RuntimeProviderSignatureWithManagedFilename_ReturnsNoIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserTakeScreenshot,
+                $"browser_take_screenshot|{ManagedBrowserFile("after.png")},fullPage=False",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Validate_FilenameOnlyInsideFunction_ReturnsManagedStateIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserEvaluate,
+                $"function=\"() => ({{ value: 1, filename: '{ManagedBrowserPath("decoy.json")}' }})\"",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+    }
+
+    [Fact]
+    public void Validate_ManagedCurrentRunPathOutsideBrowserFolder_ReturnsManagedStateIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserTakeScreenshot,
+                $"filename=artifacts/process-runs/{RunId.Value:D}/steps/after.png",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+    }
+
+    [Fact]
+    public void Validate_ScopedCurrentRunBrowserPath_ReturnsManagedStateIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserTakeScreenshot,
+                $"filename=artifacts/scopes/organization/example/process-runs/{RunId.Value:D}/browser/after.png",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+    }
+
+    [Fact]
+    public void Validate_ManagedFilenameWithTraversal_ReturnsManagedStateIssue()
+    {
+        var context = CreateContext(
+        [
+            Receipt(ToolContractCatalog.BrowserNavigate, "http://127.0.0.1:5000", 1),
+            Receipt(ToolContractCatalog.BrowserPressKey, "key=ArrowRight", 2),
+            Receipt(
+                ToolContractCatalog.BrowserTakeScreenshot,
+                $"filename=artifacts/process-runs/{RunId.Value:D}/browser/../../after.png",
+                3)
+        ]);
+
+        var issue = new BrowserInteractiveAcceptanceCompletionGateContribution().Validate(context);
+
+        Assert.NotNull(issue);
+        Assert.Equal(ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing, issue.Code);
+    }
+
     private static ProcessCompletionGateContext CreateContext(IReadOnlyList<ToolExecutionReceiptRecord> receipts)
     {
         var assignment = new ProcessRuntimeStepAssignment(
-            ProcessRunId.New(),
+            RunId,
             ProcessInstancePlanId.New(),
             ProcessStepInstanceId.New(),
             "qa-validation",
@@ -164,6 +314,12 @@ public sealed class BrowserInteractiveAcceptanceCompletionGateContributionTests
             receipts,
             ExecutionRunId);
     }
+
+    private static string ManagedBrowserFile(string fileName)
+        => $"filename=\"{ManagedBrowserPath(fileName)}\"";
+
+    private static string ManagedBrowserPath(string fileName)
+        => $"artifacts/process-runs/{RunId.Value:D}/browser/{fileName}";
 
     private static Dictionary<string, object> BranchReceipt(string toolName)
         => new(StringComparer.Ordinal)

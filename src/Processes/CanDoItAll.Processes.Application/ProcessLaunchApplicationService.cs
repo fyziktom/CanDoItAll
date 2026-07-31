@@ -790,7 +790,7 @@ public sealed class ProcessLaunchApplicationService(
         var launchContextToolNames = ResolveLaunchPlanRequiredRuntimeToolNameSet(assignment.LaunchVariables);
         return launchContextToolNames
             .Concat(ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(templateStep?.ExecutionContract?.RequiredRuntimeToolNames))
-            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
+            .Concat(ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
@@ -806,7 +806,7 @@ public sealed class ProcessLaunchApplicationService(
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(value)
+        return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 

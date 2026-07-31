@@ -2,6 +2,11 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
+public static class WorkspaceFileLimits
+{
+    public const int MaxTextReadCharacters = 64_000;
+}
+
 public interface IWorkspaceFileService
 {
     WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100);

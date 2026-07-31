@@ -3,6 +3,7 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -10,6 +11,44 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentFinalizerPolicyTests
 {
+    [Theory]
+    [InlineData(WorkspaceFileLimits.MaxTextReadCharacters, true)]
+    [InlineData(WorkspaceFileLimits.MaxTextReadCharacters + 1, false)]
+    public void Process_step_artifact_finalizer_recovery_requires_a_complete_bounded_read(
+        int artifactCharacters,
+        bool expectedSuccess)
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("process-artifact-finalizer-recovery");
+        try
+        {
+            const string artifactRef = "artifacts/process-runs/run-001/steps/implementation.md";
+            var artifactPath = Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                "run-001",
+                "steps",
+                "implementation.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(artifactPath)!);
+            File.WriteAllText(artifactPath, new string('x', artifactCharacters));
+
+            var recovered = MafAgentRuntime.TryReadCompleteRecoveryArtifact(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox,
+                artifactRef,
+                out var artifactMarkdown);
+
+            Assert.Equal(expectedSuccess, recovered);
+            Assert.Equal(
+                expectedSuccess ? artifactCharacters : 0,
+                artifactMarkdown.Length);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     [Fact]
     public void Process_step_artifact_recovery_creates_completed_outcome_from_primary_artifact()
     {
@@ -32,6 +71,7 @@ public sealed class AgentFinalizerPolicyTests
             - external-target/C/programovani/dotnet/output/src/App/App.csproj
             """,
             ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var recoveryFailure);
 
@@ -46,7 +86,7 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_preserves_branch_outcome_key_from_primary_artifact()
+    public void Process_step_artifact_recovery_does_not_project_branch_outcome_key_from_primary_artifact()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
@@ -67,18 +107,19 @@ public sealed class AgentFinalizerPolicyTests
             - workspace_dotnet_test exit code 0
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var recoveryFailure);
 
         Assert.True(recovered, recoveryFailure);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
-        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
+        Assert.Empty(outcome.BranchOutcomeKey);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
         Assert.Contains("provider streaming timed out", outcome.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_preserves_branch_outcome_key_from_markdown_section()
+    public void Process_step_artifact_recovery_does_not_project_branch_outcome_key_from_markdown_section()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
@@ -101,17 +142,18 @@ public sealed class AgentFinalizerPolicyTests
             - workspace_dotnet_test exit code 0
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var recoveryFailure);
 
         Assert.True(recovered, recoveryFailure);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
-        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
+        Assert.Empty(outcome.BranchOutcomeKey);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_uses_canonical_branch_key_over_nested_body_metadata()
+    public void Process_step_artifact_recovery_does_not_project_conflicting_branch_metadata()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
@@ -130,16 +172,17 @@ public sealed class AgentFinalizerPolicyTests
             Branch outcome key: feature-repair-required
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var recoveryFailure);
 
         Assert.True(recovered, recoveryFailure);
         Assert.NotNull(outcome);
-        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
+        Assert.Empty(outcome.BranchOutcomeKey);
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_uses_canonical_branch_key_over_nested_body_section()
+    public void Process_step_artifact_recovery_does_not_project_conflicting_branch_sections()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "targeted-validation");
@@ -159,12 +202,13 @@ public sealed class AgentFinalizerPolicyTests
             feature-repair-required
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var recoveryFailure);
 
         Assert.True(recovered, recoveryFailure);
         Assert.NotNull(outcome);
-        Assert.Equal("feature-accepted", outcome.BranchOutcomeKey);
+        Assert.Empty(outcome.BranchOutcomeKey);
     }
 
     [Fact]
@@ -182,6 +226,7 @@ public sealed class AgentFinalizerPolicyTests
             Status: InProgress  # Feature implementation change set
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var failure);
 
@@ -205,6 +250,7 @@ public sealed class AgentFinalizerPolicyTests
             Status: Blocked
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var failure);
 
@@ -231,6 +277,7 @@ public sealed class AgentFinalizerPolicyTests
             Evidence: artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var failure);
 
@@ -241,7 +288,7 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_infers_completed_from_nonempty_artifact_without_status()
+    public void Process_step_artifact_recovery_rejects_nonempty_artifact_without_canonical_status()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "scaffold-contract");
@@ -261,18 +308,17 @@ public sealed class AgentFinalizerPolicyTests
             This step records the intended scaffold contract only.
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var failure);
 
-        Assert.True(recovered, failure);
-        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
-        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
-        Assert.Empty(outcome.NextActions);
-        Assert.Contains("inferred status 'Completed'", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.False(recovered);
+        Assert.Null(outcome);
+        Assert.Contains("canonical Status", failure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Process_step_artifact_recovery_infers_blocked_from_artifact_without_status()
+    public void Process_step_artifact_recovery_rejects_blocker_text_without_canonical_status()
     {
         var runId = Guid.NewGuid();
         var context = CreateGovernedProcessContext(runId, "external-check");
@@ -288,14 +334,50 @@ public sealed class AgentFinalizerPolicyTests
             Manager action required before retry.
             """,
             ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
+            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
             out var outcome,
             out var failure);
 
-        Assert.True(recovered, failure);
-        Assert.Equal(ProcessStepOutcomeStatus.Blocked, outcome.Status);
-        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
-        Assert.NotEmpty(outcome.NextActions);
-        Assert.Contains("inferred status 'Blocked'", outcome.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.False(recovered);
+        Assert.Null(outcome);
+        Assert.Contains("canonical Status", failure, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Process_step_artifact_recovery_rejects_completed_artifact_without_matching_current_write_trace()
+    {
+        var runId = Guid.NewGuid();
+        var context = CreateGovernedProcessContext(runId, "code-change");
+        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/code-change.md";
+
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Feature implementation change set
+
+            Status: Completed
+            """,
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
+            [
+                CreatePrimaryArtifactWriteTrace(primaryArtifactRef) with
+                {
+                    Succeeded = false,
+                    FailureMessage = "The write failed."
+                },
+                CreatePrimaryArtifactWriteTrace(primaryArtifactRef, ToolContractCatalog.WorkspaceAppendFile),
+                CreatePrimaryArtifactWriteTrace($"{primaryArtifactRef}.stale") with
+                {
+                    Signature = $"{ToolContractCatalog.WorkspaceWriteFile}|content=Status: Completed,path={primaryArtifactRef}"
+                }
+            ],
+            out var outcome,
+            out var failure);
+
+        Assert.False(recovered);
+        Assert.Null(outcome);
+        Assert.Contains("current execution", failure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exact primary process artifact", failure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -613,6 +695,100 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal(policy.ToolName, repairRunTool.Name);
         var requiredToolMode = Assert.IsType<RequiredChatToolMode>(repairChatOptions.ToolMode);
         Assert.Equal(policy.ToolName, requiredToolMode.RequiredFunctionName);
+    }
+
+    [Fact]
+    public void Required_finalizer_repair_is_requested_after_invalid_matching_attempt()
+    {
+        var options = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Required,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 1);
+        var invalidAttempt = new AgentFinalizerInvocation(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            """{"status":"Completed","reason":"","evidenceRefs":[],"nextActions":[]}""",
+            Sequence: 1);
+
+        var shouldRepair = MafFinalizerDriver.ShouldRequestMissingRequiredFinalizerRepair(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            options,
+            [],
+            [invalidAttempt],
+            out var policy);
+
+        Assert.True(shouldRepair);
+        Assert.Equal(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            policy.ToolName);
+    }
+
+    [Fact]
+    public void Required_finalizer_repair_is_not_requested_after_valid_matching_attempt()
+    {
+        var options = new AgentRuntimeExecutionOptions(
+            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            FinalizerMode: AgentFinalizerMode.Required,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 1);
+        var validAttempt = new AgentFinalizerInvocation(
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Validated."),
+            Sequence: 1);
+
+        var shouldRepair = MafFinalizerDriver.ShouldRequestMissingRequiredFinalizerRepair(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required,
+            options,
+            [],
+            [validAttempt],
+            out _);
+
+        Assert.False(shouldRepair);
+    }
+
+    [Fact]
+    public void Provider_timeout_artifact_recovery_is_eligible_after_invalid_finalizer_attempt()
+    {
+        var policy = CreatePolicy();
+        var invalidAttempt = new AgentFinalizerInvocation(
+            policy.ToolName,
+            """{"status":"Completed","reason":"","evidenceRefs":[],"nextActions":[]}""",
+            Sequence: 1);
+        var providerFailure = new InvalidOperationException(
+            "Provider failed.",
+            new TimeoutException("Provider stream exceeded its absolute deadline."));
+
+        var shouldRecover = MafFinalizerDriver.ShouldAttemptProviderFailureArtifactRecovery(
+            policy,
+            [invalidAttempt],
+            providerFailure);
+
+        Assert.True(shouldRecover);
+    }
+
+    [Fact]
+    public void Provider_failure_artifact_recovery_rejects_valid_finalizer_or_non_timeout_failure()
+    {
+        var policy = CreatePolicy();
+        var validAttempt = new AgentFinalizerInvocation(
+            policy.ToolName,
+            SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Validated."),
+            Sequence: 1);
+        var invalidAttempt = new AgentFinalizerInvocation(
+            policy.ToolName,
+            """{"status":"Completed","reason":"","evidenceRefs":[],"nextActions":[]}""",
+            Sequence: 2);
+
+        Assert.False(MafFinalizerDriver.ShouldAttemptProviderFailureArtifactRecovery(
+            policy,
+            [validAttempt],
+            new TimeoutException("Provider stream timed out.")));
+        Assert.False(MafFinalizerDriver.ShouldAttemptProviderFailureArtifactRecovery(
+            policy,
+            [invalidAttempt],
+            new InvalidOperationException("Provider failed without a timeout.")));
     }
 
     [Fact]
@@ -1069,9 +1245,24 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Contains("Do not submit a generic no-prior-evidence blocker", toolRepairPrompt, StringComparison.Ordinal);
         Assert.Contains("workspace_read_file", toolRepairPrompt, StringComparison.Ordinal);
         Assert.Contains("artifacts/process-runs/run-001/steps/implementation-approach.md", toolRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("primary managed output alone was not written", toolRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("process runtime will materialize the canonical managed artifact", toolRepairPrompt, StringComparison.Ordinal);
+        var toolRepairInstructions = MafFinalizerDriver.BuildRequiredFinalizerRepairInstructions(policy);
+        Assert.Contains("never use this rule to waive product work", toolRepairInstructions, StringComparison.Ordinal);
+        Assert.Contains("acceptanceCriteriaEvidence", toolRepairInstructions, StringComparison.Ordinal);
+        Assert.Contains("criterionId", toolRepairInstructions, StringComparison.Ordinal);
+        Assert.Contains("status", toolRepairInstructions, StringComparison.Ordinal);
+        Assert.Contains("summary", toolRepairInstructions, StringComparison.Ordinal);
+        Assert.Contains("evidenceRefs", toolRepairInstructions, StringComparison.Ordinal);
+        Assert.Contains("aliases such as `id`, `passed`, or `proofRefs`", toolRepairInstructions, StringComparison.Ordinal);
         Assert.Contains("Do not return a generic no-prior-evidence blocker", jsonRepairPrompt, StringComparison.Ordinal);
         Assert.Contains("workspace_read_file", jsonRepairPrompt, StringComparison.Ordinal);
         Assert.Contains("artifacts/process-runs/run-001/steps/implementation-approach.md", jsonRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("primary managed output alone was not written", jsonRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("process runtime will materialize the canonical managed artifact", jsonRepairPrompt, StringComparison.Ordinal);
+        Assert.Contains("never use this rule to waive product work", MafFinalizerDriver.BuildRequiredFinalizerJsonRepairInstructions(policy), StringComparison.Ordinal);
+        Assert.DoesNotContain("If completion is impossible because a required managed output was not written", toolRepairPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("If completion is impossible because a required managed output was not written", jsonRepairPrompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1610,6 +1801,22 @@ public sealed class AgentFinalizerPolicyTests
             CompletedAtUtc: timestamp,
             Succeeded: true,
             FailureMessage: string.Empty);
+    }
+
+    private static AgentToolInvocationTrace CreatePrimaryArtifactWriteTrace(
+        string primaryArtifactRef,
+        string toolName = ToolContractCatalog.WorkspaceWriteFile)
+    {
+        var timestamp = DateTimeOffset.UtcNow;
+        return CreateToolTrace(
+            toolName,
+            ToolInvocationClassification.Mutation,
+            sequence: 1,
+            timestamp: timestamp) with
+        {
+            Signature = $"{toolName}|path={primaryArtifactRef}",
+            TargetPath = primaryArtifactRef
+        };
     }
 
     private static void AssertBoundedRepairPrompt(string prompt)

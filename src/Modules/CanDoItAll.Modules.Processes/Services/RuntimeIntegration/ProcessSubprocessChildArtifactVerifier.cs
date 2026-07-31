@@ -1,57 +1,84 @@
-using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+using System.Text;
 using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Modules.Processes;
 
+internal sealed record ProcessSubprocessVerifiedChildArtifact(
+    string ArtifactRef,
+    string StepKey,
+    string ArtifactExpectationKey,
+    string ContentHash,
+    string Content);
+
 internal sealed class ProcessSubprocessChildArtifactVerifier(IWorkspaceFileService workspaceFiles)
 {
-    internal bool CanBridge(string candidateRef, string requiredBranchOutcomeKey)
+    internal bool CanBridge(
+        string candidateRef,
+        string childStepKey,
+        string childArtifactExpectationKey,
+        string requiredBranchOutcomeKey,
+        string expectedContentHash,
+        out ProcessSubprocessVerifiedChildArtifact verifiedArtifact)
     {
+        verifiedArtifact = null!;
         var stat = workspaceFiles.StatPath(candidateRef);
-        if (!stat.Exists)
-        {
-            return string.IsNullOrWhiteSpace(requiredBranchOutcomeKey);
-        }
-
-        var readResult = workspaceFiles.ReadTextFile(candidateRef, maxCharacters: 200000);
-        if (!readResult.Succeeded)
+        if (!stat.Succeeded ||
+            !stat.Exists ||
+            !string.Equals(stat.PathKind, "file", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(expectedContentHash))
         {
             return false;
         }
 
-        var isAccepted = !readResult.Content.Contains(
-                             ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading,
-                             StringComparison.Ordinal) ||
-                         readResult.Content.Contains(
-                             ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading,
-                             StringComparison.Ordinal);
-        return isAccepted &&
-               (string.IsNullOrWhiteSpace(requiredBranchOutcomeKey) ||
-                DeclaresBranchOutcome(readResult.Content, requiredBranchOutcomeKey));
+        var readResult = workspaceFiles.ReadTextFile(
+            candidateRef,
+            WorkspaceFileLimits.MaxTextReadCharacters);
+        if (!readResult.Succeeded ||
+            readResult.IsTruncated ||
+            !string.Equals(
+                ComputeContentHash(readResult.Content),
+                expectedContentHash.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!readResult.Content.Contains(
+                ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading,
+                StringComparison.Ordinal) ||
+            (!string.IsNullOrWhiteSpace(requiredBranchOutcomeKey) &&
+             !DeclaresExactlyOneBranchOutcome(readResult.Content, requiredBranchOutcomeKey)))
+        {
+            return false;
+        }
+
+        verifiedArtifact = new ProcessSubprocessVerifiedChildArtifact(
+            candidateRef,
+            childStepKey,
+            childArtifactExpectationKey,
+            expectedContentHash.Trim(),
+            readResult.Content);
+        return true;
     }
 
-    private static bool DeclaresBranchOutcome(string content, string requiredBranchOutcomeKey)
+    private static string ComputeContentHash(string content)
     {
-        if (ProcessBranchOutcomeResolver.ReadExplicitBranchOutcomeKeys(content)
-            .Contains(requiredBranchOutcomeKey, StringComparer.OrdinalIgnoreCase))
-        {
-            return true;
-        }
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
+        return "sha256:" + Convert.ToHexString(hash).ToLowerInvariant();
+    }
 
-        const string branchHeading = "### Branch Outcome";
-        var branchStart = content.IndexOf(branchHeading, StringComparison.OrdinalIgnoreCase);
-        if (branchStart < 0)
-        {
-            return false;
-        }
-
-        var branchEnd = content.IndexOf("### Summary", branchStart + branchHeading.Length, StringComparison.OrdinalIgnoreCase);
-        var branchSection = branchEnd < 0
-            ? content[branchStart..]
-            : content[branchStart..branchEnd];
-        return Regex.IsMatch(
-            branchSection,
-            $@"(?im)^\s*-\s*Key:\s*{Regex.Escape(requiredBranchOutcomeKey)}\s*$",
-            RegexOptions.CultureInvariant);
+    private static bool DeclaresExactlyOneBranchOutcome(
+        string content,
+        string requiredBranchOutcomeKey)
+    {
+        var declaredKeys = ProcessManagedArtifactBranchOutcomeReader.ReadKeys(content)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return declaredKeys.Length == 1 &&
+               string.Equals(
+                   declaredKeys[0],
+                   requiredBranchOutcomeKey,
+                   StringComparison.OrdinalIgnoreCase);
     }
 }

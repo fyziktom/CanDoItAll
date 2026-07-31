@@ -17,6 +17,15 @@ public enum ProviderSnapshotRevisionProbeOutcome
     Failed
 }
 
+public enum ProviderEmptyCompletionOutcome
+{
+    Retrying,
+    Recovered,
+    Exhausted,
+    SuppressedBackground,
+    SuppressedUnsafeTools
+}
+
 public static class AgentFrameworkTelemetry
 {
     public const string SourceName = "CanDoItAll.AgentFramework";
@@ -32,6 +41,8 @@ public static class AgentFrameworkTelemetry
     private static readonly Counter<long> ToolExecutionCounter = Meter.CreateCounter<long>("agentframework.tool.execution.count");
     private static readonly Counter<long> ArtifactCounter = Meter.CreateCounter<long>("agentframework.artifact.count");
     private static readonly Counter<long> ProviderErrorCounter = Meter.CreateCounter<long>("agentframework.provider.error.count");
+    private static readonly Counter<long> ProviderEmptyCompletionCounter =
+        Meter.CreateCounter<long>("agentframework.provider.empty_completion.count");
     private static readonly Counter<long> ProviderSnapshotRevisionProbeCounter =
         Meter.CreateCounter<long>(
             "agentframework.provider.snapshot_revision_probe.count");
@@ -157,6 +168,42 @@ public static class AgentFrameworkTelemetry
         tags.Add("agentframework.provider_name", provider.Name);
         tags.Add("agentframework.model", model);
         ProviderErrorCounter.Add(1, tags);
+    }
+
+    public static void RecordProviderEmptyCompletion(
+        ProviderProfile provider,
+        string model,
+        int attempt,
+        ProviderEmptyCompletionOutcome outcome)
+    {
+        var outcomeTag = outcome switch
+        {
+            ProviderEmptyCompletionOutcome.Retrying => "retrying",
+            ProviderEmptyCompletionOutcome.Recovered => "recovered",
+            ProviderEmptyCompletionOutcome.Exhausted => "exhausted",
+            ProviderEmptyCompletionOutcome.SuppressedBackground => "suppressed_background",
+            ProviderEmptyCompletionOutcome.SuppressedUnsafeTools => "suppressed_unsafe_tools",
+            _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown provider empty-completion outcome.")
+        };
+        var tags = CreateScopeTags();
+        tags.Add("agentframework.provider_name", provider.Name);
+        tags.Add("agentframework.model", model);
+        tags.Add("agentframework.transport", provider.Transport.ToString());
+        tags.Add("agentframework.provider_attempt", attempt);
+        tags.Add("agentframework.outcome", outcomeTag);
+        ProviderEmptyCompletionCounter.Add(1, tags);
+
+        using var activity = ActivitySource.StartActivity("provider.empty_completion", ActivityKind.Internal);
+        ApplyCurrentAuditScope(activity);
+        activity?.SetTag("agentframework.provider_name", provider.Name);
+        activity?.SetTag("agentframework.model", model);
+        activity?.SetTag("agentframework.transport", provider.Transport.ToString());
+        activity?.SetTag("agentframework.provider_attempt", attempt);
+        activity?.SetTag("agentframework.outcome", outcomeTag);
+        if (outcome == ProviderEmptyCompletionOutcome.Exhausted)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, "The bounded empty-completion retry was exhausted.");
+        }
     }
 
     public static void RecordProviderSnapshotRevisionProbe(

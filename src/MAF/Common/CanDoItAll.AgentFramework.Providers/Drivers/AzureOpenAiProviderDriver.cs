@@ -95,7 +95,12 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
             throw new InvalidOperationException(credential.FailureMessage);
         }
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildChatEndpoint(request.Provider, request.Model));
+        var endpoint = AzureOpenAiEndpoint.Parse(request.Provider);
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            endpoint.BuildDeploymentChatCompletionsEndpoint(
+                request.Model,
+                ReadApiVersion(request.Provider.ConfigurationJson)));
         httpRequest.Headers.Add("api-key", credential.ApiKey);
         httpRequest.Content = JsonContent.Create(
             new
@@ -123,13 +128,6 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
     private ProviderDriverCredential ResolveCredential(ProviderProfile provider)
     {
         return credentialResolver.Resolve(provider);
-    }
-
-    private static string BuildChatEndpoint(ProviderProfile provider, string model)
-    {
-        var baseUrl = provider.BaseUrl.Trim().TrimEnd('/');
-        var apiVersion = ReadApiVersion(provider.ConfigurationJson);
-        return $"{baseUrl}/openai/deployments/{Uri.EscapeDataString(model)}/chat/completions?api-version={Uri.EscapeDataString(apiVersion)}";
     }
 
     private static string ReadApiVersion(string? configurationJson)

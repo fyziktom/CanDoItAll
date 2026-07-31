@@ -29,6 +29,7 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
 using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
+using static CanDoItAll.Modules.Processes.ProcessRuntimeFailureClassifier;
 
 namespace CanDoItAll.Modules.Processes;
 

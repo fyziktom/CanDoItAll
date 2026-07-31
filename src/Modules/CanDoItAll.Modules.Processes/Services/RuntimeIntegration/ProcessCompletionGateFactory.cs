@@ -37,7 +37,8 @@ internal sealed class ProcessCompletionGateFactory(
     ProcessToolReceiptPolicyCatalog toolReceiptPolicies,
     ProcessToolReceiptEvidenceGate toolReceiptEvidenceGate,
     IEnumerable<IProcessCompletionGateContribution> gateContributions,
-    ProcessCompletionIssueResultFactory completionIssueResultFactory)
+    ProcessCompletionIssueResultFactory completionIssueResultFactory,
+    ProcessOutcomeGroundingValidator groundingValidator)
 {
     private readonly IReadOnlyList<IProcessCompletionGateContribution> completionGateContributions =
         CreateCompletionGateContributions(gateContributions);
@@ -52,12 +53,16 @@ internal sealed class ProcessCompletionGateFactory(
             .ToArray();
         var gates = new List<Func<ProcessCompletionGateContext, ProcessCompletionIssue?>>
         {
-            context => ValidateGroundedOutcomeReferences(
+            context => groundingValidator.ValidateGroundedOutcomeReferences(
                 context.Assignment,
                 context.Output,
                 context.ToolReceipts,
+                context.StepContract,
                 context.VerifiedSubprocessOutcome),
-            context => ValidateRequiredBranchOutcomeSelection(context.Assignment, context.Output),
+            context => ValidateRequiredBranchOutcomeSelection(
+                context.Assignment,
+                context.Output,
+                context.StepContract),
             context => ValidateRuntimeRoutedBranchWasNotSelectedDirectly(context.Assignment, context.Output),
             context => ProcessProductMutationEvidenceGate.Validate(context.Assignment, context.Output),
             context => ValidateProductMutationWriteReceipt(
@@ -108,7 +113,9 @@ internal sealed class ProcessCompletionGateFactory(
             context => ValidateAcceptanceCriteriaCompletion(context.Assignment, context.Output),
             context => ValidateCompletedOutcomeDoesNotDeclareBlockers(
                 context.Assignment,
-                context.Output),
+                context.Output,
+                context.ToolReceipts,
+                context.VerifiedSubprocessOutcome),
             context => ValidateManagedArtifactCompletion(context.Assignment, context.Output),
             context => ValidateManagedArtifactWriteReceipt(context.Assignment, context.ToolReceipts)
         ]);

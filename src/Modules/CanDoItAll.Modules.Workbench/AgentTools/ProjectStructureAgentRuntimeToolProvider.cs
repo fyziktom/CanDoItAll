@@ -400,9 +400,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_approval_request",
                     "Records an approval-request node in the project structure so blocked work is written back into the graph."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, ProjectStructureAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, ProjectStructureAgentAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create",
-                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. Use this for generated screenshots, downloaded PDFs, and binary media instead of writing loose files into project notes. Provide media base64 data, sourceWorkspacePath for a file inside the managed workspace, or sourceUrl for a public http/https file that should be downloaded and stored as a managed asset."),
+                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. Use title, subtitle, and notes for descriptive evidence; typed storage metadata is derived by the service and is not caller-controlled. Provide media base64 data, sourceWorkspacePath for a file inside the managed workspace, or sourceUrl for a public http/https file that should be downloaded and stored as a managed asset."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_get",
@@ -412,9 +412,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_asset_content_get",
                     "Returns readonly metadata and bounded base64 content for an existing managed asset node. Binary media and large assets omit Base64Data. For PDF or document assets, use the exact returned mediaRelativePath with workspace_convert_document. Use workspace_inspect_image or workspace_analyze_image only for image media."),
                 AIFunctionFactory.Create(
-                    (Guid projectId, string nodeId, ProjectStructureAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
+                    (Guid projectId, string nodeId, ProjectStructureAgentAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create_revision",
-                    "Creates a new revision asset node under an existing asset node instead of overwriting the original asset."),
+                    "Creates a new revision asset node under an existing asset node instead of overwriting the original asset. Use title, subtitle, and notes for descriptive evidence; typed storage metadata is derived by the service and is not caller-controlled."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureLinkCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_link_create",
@@ -1156,6 +1156,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
                     ProjectStructureNonTaskWritePolicy.EnsureNodeCreateAllowed(
                         accessState.RequiresNonTaskWriteGuard,
@@ -1199,6 +1200,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
@@ -1263,6 +1265,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
@@ -1879,6 +1882,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
+                    EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     return await agentService.CreateApprovalRequestAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1935,7 +1939,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
             Guid projectId,
-            ProjectStructureAssetCreateInput request,
+            ProjectStructureAgentAssetCreateInput request,
             int? estimatedMinutes,
             CancellationToken cancellationToken)
         {
@@ -1950,7 +1954,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
+                    var effectiveRequest = NormalizeGovernedProcessCreateParent(
+                        accessState,
+                        request.ToServiceRequest());
                     return await agentService.CreateAssetAsync(projectId, effectiveRequest, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1961,7 +1967,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             ProjectStructureAccessState accessState,
             Guid projectId,
             string nodeId,
-            ProjectStructureAssetRevisionRequest request,
+            ProjectStructureAgentAssetRevisionRequest request,
             int? estimatedMinutes,
             CancellationToken cancellationToken)
         {
@@ -1977,7 +1983,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
-                    return await agentService.CreateAssetRevisionAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
+                    return await agentService.CreateAssetRevisionAsync(
+                        projectId,
+                        nodeId,
+                        request.ToServiceRequest(),
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
                 },
                 cancellationToken);
         }
@@ -2394,11 +2405,12 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                                 FailureType = exception.GetType().Name
                             })),
                     cancellationToken);
-                throw new ProjectStructureAgentException(
+                throw ProjectStructureAgentException.CreateAgentVisible(
                     409,
                     errorCode,
                     message,
-                    new
+                    canRetryWithCorrectedInput: true,
+                    diagnosticDetails: new
                     {
                         FailureType = exception.GetType().Name
                     });
@@ -2423,6 +2435,38 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         ProjectStructureAnalyticsService.SerializeSummary(new { exception.Message })),
                     cancellationToken);
                 throw;
+            }
+        }
+
+        private static void EnsureAgentMetadataPayloadValid(string? metadataJson)
+        {
+            if (!ProjectWorkbenchObjectModeling.HasMeaningfulMetadata(metadataJson))
+            {
+                return;
+            }
+
+            try
+            {
+                _ = ProjectObjectMetadataSerializer.Parse(metadataJson);
+            }
+            catch (ProjectObjectMetadataPayloadException exception)
+            {
+                const string errorCode = "InvalidProjectObjectMetadata";
+                var jsonPath = string.IsNullOrWhiteSpace(exception.JsonPath)
+                    ? "$"
+                    : exception.JsonPath;
+                var message =
+                    $"request.metadataJson has an incompatible value at '{jsonPath}'. Omit metadataJson unless this tool explicitly documents a typed metadata envelope, then retry with the documented shape.";
+                throw ProjectStructureAgentException.CreateAgentVisible(
+                    400,
+                    errorCode,
+                    message,
+                    canRetryWithCorrectedInput: true,
+                    diagnosticDetails: new
+                    {
+                        exception.JsonPath,
+                        FailureType = exception.GetType().Name
+                    });
             }
         }
 

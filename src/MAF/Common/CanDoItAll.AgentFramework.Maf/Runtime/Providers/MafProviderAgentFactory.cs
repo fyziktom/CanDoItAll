@@ -1,4 +1,3 @@
-using Azure.AI.OpenAI;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
@@ -6,6 +5,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OllamaSharp.Models;
 using OpenAI;
@@ -33,6 +33,7 @@ internal interface IMafProviderAgentFactory
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
+        bool allowBackgroundResponses,
         IServiceProvider services);
 }
 
@@ -226,6 +227,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
+        bool allowBackgroundResponses,
         IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -234,9 +236,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
 
         return provider.Kind switch
         {
-            ProviderKind.OpenAi => CreateOpenAiAgent(provider, model, options, frameworkManagedHistory, services),
-            ProviderKind.AzureOpenAi => CreateAzureOpenAiAgent(provider, model, options, frameworkManagedHistory, services),
-            ProviderKind.Ollama => CreateOllamaAgent(provider, model, options),
+            ProviderKind.OpenAi => CreateOpenAiAgent(provider, model, options, frameworkManagedHistory, allowBackgroundResponses, services),
+            ProviderKind.AzureOpenAi => CreateAzureOpenAiAgent(provider, model, options, frameworkManagedHistory, allowBackgroundResponses, services),
+            ProviderKind.Ollama => CreateOllamaAgent(provider, model, options, allowBackgroundResponses, services),
             _ => throw new InvalidOperationException($"Unsupported provider kind '{provider.Kind}'.")
         };
     }
@@ -246,6 +248,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
+        bool allowBackgroundResponses,
         IServiceProvider services)
     {
         var credential = credentialService.Resolve(provider);
@@ -264,16 +267,28 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         {
             ProviderTransportKind.ChatCompletions => client
                 .GetChatClient(model)
-                .AsAIAgent(options: options, services: services),
-            ProviderTransportKind.Responses when frameworkManagedHistory => client
-                .GetResponsesClient()
-                .AsIChatClientWithStoredOutputDisabled(
-                    model: model,
-                    includeReasoningEncryptedContent: ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(provider, frameworkManagedHistory))
+                .AsAIAgent(
+                    options: options,
+                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    services: services),
+            ProviderTransportKind.Responses when frameworkManagedHistory => AddEmptyCompletionRecovery(
+                    client
+                        .GetResponsesClient()
+                        .AsIChatClientWithStoredOutputDisabled(
+                            model: model,
+                            includeReasoningEncryptedContent: ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(provider, frameworkManagedHistory)),
+                    provider,
+                    model,
+                    allowBackgroundResponses,
+                    services)
                 .AsAIAgent(options: options, services: services),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
-                .AsAIAgent(options: options, model: model, services: services),
+                .AsAIAgent(
+                    options: options,
+                    model: model,
+                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    services: services),
             _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
         };
     }
@@ -283,6 +298,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
+        bool allowBackgroundResponses,
         IServiceProvider services)
     {
         var credential = credentialService.Resolve(provider);
@@ -292,11 +308,11 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         }
 
         credentialService.PromoteProviderCredentialEnvironment(provider, credential);
-        var client = new AzureOpenAIClient(
-            new Uri(provider.BaseUrl, UriKind.Absolute),
-            new System.ClientModel.ApiKeyCredential(credential.ApiKey),
-            new AzureOpenAIClientOptions
+        var client = new OpenAIClient(
+            credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
+            options: new OpenAIClientOptions
             {
+                Endpoint = AzureOpenAiEndpoint.Parse(provider).V1Endpoint,
                 NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
             });
 
@@ -304,16 +320,28 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         {
             ProviderTransportKind.ChatCompletions => client
                 .GetChatClient(model)
-                .AsAIAgent(options: options, services: services),
-            ProviderTransportKind.Responses when frameworkManagedHistory => client
-                .GetResponsesClient()
-                .AsIChatClientWithStoredOutputDisabled(
-                    model: model,
-                    includeReasoningEncryptedContent: ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(provider, frameworkManagedHistory))
+                .AsAIAgent(
+                    options: options,
+                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    services: services),
+            ProviderTransportKind.Responses when frameworkManagedHistory => AddEmptyCompletionRecovery(
+                    client
+                        .GetResponsesClient()
+                        .AsIChatClientWithStoredOutputDisabled(
+                            model: model,
+                            includeReasoningEncryptedContent: ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(provider, frameworkManagedHistory)),
+                    provider,
+                    model,
+                    allowBackgroundResponses,
+                    services)
                 .AsAIAgent(options: options, services: services),
             ProviderTransportKind.Responses => client
                 .GetResponsesClient()
-                .AsAIAgent(options: options, model: model, services: services),
+                .AsAIAgent(
+                    options: options,
+                    model: model,
+                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    services: services),
             _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
         };
     }
@@ -321,7 +349,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
     private static AIAgent CreateOllamaAgent(
         ProviderProfile provider,
         string model,
-        ChatClientAgentOptions options)
+        ChatClientAgentOptions options,
+        bool allowBackgroundResponses,
+        IServiceProvider services)
     {
         var httpClient = new HttpClient
         {
@@ -332,7 +362,32 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
             new OllamaApiClient(httpClient, model, jsonSerializerContext: null),
             AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(provider.ConfigurationJson, string.Empty),
             AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(provider.ConfigurationJson, string.Empty));
-        return chatClient.AsAIAgent(options: options);
+        return AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services)
+            .AsAIAgent(options: options);
+    }
+
+    private static IChatClient AddEmptyCompletionRecovery(
+        IChatClient chatClient,
+        ProviderProfile provider,
+        string model,
+        bool allowBackgroundResponses,
+        IServiceProvider services)
+    {
+        if (chatClient.GetService<EmptyCompletionRetryChatClient>() is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' model '{model}' already contains empty-completion recovery.");
+        }
+
+        var logger = services
+            .GetService<Microsoft.Extensions.Logging.ILoggerFactory>()
+            ?.CreateLogger<EmptyCompletionRetryChatClient>();
+        return new EmptyCompletionRetryChatClient(
+            chatClient,
+            provider,
+            model,
+            allowBackgroundResponses,
+            logger);
     }
 
     private static OpenAIClientOptions CreateOpenAiClientOptions(ProviderProfile provider)

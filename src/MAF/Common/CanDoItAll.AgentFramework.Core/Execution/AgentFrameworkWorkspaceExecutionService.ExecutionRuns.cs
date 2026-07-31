@@ -275,6 +275,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 var existingResult = await LoadExistingExecutionRunResultAsync(
                     executionRunId,
                     cancellationToken);
+                await CleanupTerminalExecutionRunProcessesAsync(
+                    currentRun,
+                    terminalRunPersisted: true);
                 ReportAndTerminalizeExistingResult(activityOperation, existingResult);
                 return existingResult;
             }
@@ -333,6 +336,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var existingResult = await LoadExistingExecutionRunResultAsync(
                 executionRunId,
                 cancellationToken);
+            var finalizedRun = await LoadExecutionRunAsync(
+                executionRunId,
+                cancellationToken);
+            await CleanupTerminalExecutionRunProcessesAsync(
+                finalizedRun,
+                terminalRunPersisted: true);
             ReportAndTerminalizeExistingResult(activityOperation, existingResult);
             return existingResult;
         }
@@ -362,6 +371,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IAgentExecutionCancellationRegistration? executionCancellation = null;
         AgentProviderCredentialDispatchLease? credentialDispatch = null;
         IAgentProviderCredentialDispatchScope? credentialScope = null;
+        var terminalRunPersisted = false;
         try
         {
             activityOperation.Report(
@@ -627,6 +637,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             ToolReceipts: runtimeToolReceipts),
                         cancellationToken);
                 }
+                terminalRunPersisted =
+                    completionState is ExecutionState.Completed or ExecutionState.Failed;
 
                 if (approvalUpdate.Pending.Count > 0)
                 {
@@ -754,6 +766,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         UsageObservations: failureUsageObservations),
                     terminalPersistenceToken);
             }
+            terminalRunPersisted = true;
             AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
 
             await AppendExecutionLogAsync(
@@ -803,6 +816,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionCancellation?.Dispose();
             credentialScope?.Dispose();
             credentialDispatch?.Dispose();
+            await CleanupTerminalExecutionRunProcessesAsync(
+                run,
+                terminalRunPersisted);
         }
     }
 
@@ -820,6 +836,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             : TryGetExecutionRunStore() is { } executionRunStore
                 ? (await executionRunStore.ListExecutionRunsAsync(cancellationToken)).AsEnumerable()
                 : (await store.LoadExecutionAsync(cancellationToken)).ExecutionRuns.AsEnumerable();
+
+        if (query.ExecutionRunId.HasValue)
+        {
+            runs = runs.Where(item => item.Id == query.ExecutionRunId.Value);
+        }
 
         if (query.AgentId.HasValue)
         {
@@ -908,6 +929,21 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             runs = runs.Where(item => item.UpdatedAtUtc <= query.UpdatedToUtc.Value);
         }
 
+        if (query.MetadataStringEquals.Count > 0)
+        {
+            if (query.MetadataStringEquals.Any(filter => string.IsNullOrWhiteSpace(filter.Key)))
+            {
+                throw new ArgumentException(
+                    "Execution metadata string filters must use non-empty keys.",
+                    nameof(query));
+            }
+
+            runs = runs.Where(item =>
+                MatchesMetadataStringValues(
+                    item.MetadataJson,
+                    query.MetadataStringEquals));
+        }
+
         if (query.ApprovalStatus.HasValue)
         {
             executionState ??= await store.LoadExecutionAsync(cancellationToken);
@@ -918,6 +954,41 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .OrderByDescending(item => item.UpdatedAtUtc)
             .Take(query.Take <= 0 ? 50 : query.Take)
             .ToList();
+    }
+
+    internal static bool MatchesMetadataStringValues(
+        string? metadataJson,
+        IReadOnlyDictionary<string, string> expectedValues)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            foreach (var expected in expectedValues)
+            {
+                if (!document.RootElement.TryGetProperty(expected.Key, out var value) ||
+                    value.ValueKind != JsonValueKind.String ||
+                    !string.Equals(value.GetString(), expected.Value, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
@@ -1103,6 +1174,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IAgentExecutionCancellationRegistration? executionCancellation = null;
         AgentProviderCredentialDispatchLease? credentialDispatch = null;
         IAgentProviderCredentialDispatchScope? credentialScope = null;
+        var terminalRunPersisted = false;
         try
         {
             if (!run.ChatSessionId.HasValue)
@@ -1354,6 +1426,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             ToolReceipts: runtimeToolReceipts),
                         cancellationToken);
                 }
+                terminalRunPersisted =
+                    completionState is ExecutionState.Completed or ExecutionState.Failed;
 
                 if (approvalUpdate.Pending.Count > 0)
                 {
@@ -1480,6 +1554,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         UsageObservations: failureUsageObservations),
                     terminalPersistenceToken);
             }
+            terminalRunPersisted = true;
             AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
 
             await AppendExecutionLogAsync(
@@ -1529,6 +1604,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionCancellation?.Dispose();
             credentialScope?.Dispose();
             credentialDispatch?.Dispose();
+            await CleanupTerminalExecutionRunProcessesAsync(
+                run,
+                terminalRunPersisted);
         }
     }
 

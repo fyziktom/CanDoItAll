@@ -6,4 +6,4 @@ Pass the required `scope-boundary-packet` as authoritative child context. Preser
 
 This parent step does not diagnose the defect, mutate product files, run validation, launch the product, or capture browser proof. Those responsibilities belong to distinct child roles. Persist `ParentDeferredOutcomeJson` while the child is active, return the deferred outcome, and do not wait silently or create a duplicate child run.
 
-Accept only a child artifact from `quality-repair-handoff` or `quality-repair-handoff-after-bughunt`. Treat `quality-repair-no-go` as blocker evidence for manager escalation, never as a repaired change set. A completed child run without a mapped accepted handoff is not successful repair proof.
+Accept only a child artifact from `quality-repair-handoff`, `quality-repair-handoff-after-bughunt`, or `quality-repair-handoff-after-final-repair`. These represent acceptance after the first, second, or third bounded mutation opportunity respectively. Treat only `quality-repair-no-go` as blocker evidence for manager escalation, never as a repaired change set. A completed child run without a mapped accepted handoff is not successful repair proof.

@@ -133,12 +133,12 @@ internal static class ProcessExecutionResultFactory
     internal static IReadOnlyList<string> ResolveRuntimeReadinessRequiredToolNames(ProcessRuntimeStepAssignment assignment)
     {
         var launchContextToolNames = ProcessRequiredRuntimeToolNames
-            .FromProductCompletionRequiredToolReceipts(ResolveProductCompletionRequiredToolReceipts(
+            .FromProductCompletionRequiredToolReceipts(ResolveUnconditionalProductCompletionRequiredToolReceipts(
                 assignment.LaunchVariables,
                 assignment.StepKey))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return launchContextToolNames
-            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
+            .Concat(ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)

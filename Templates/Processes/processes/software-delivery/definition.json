@@ -608,7 +608,7 @@
       "Key": "peer-review",
       "Title": "Complete peer review and integration readiness",
       "Subtitle": "Design and implementation challenge",
-      "Notes": "Review the change set against the approved design, integration consequences, and release assumptions. Read the required upstream managed artifact refs before judging the implementation. Write or update artifacts/process-runs/<current-process-run-id>/steps/peer-review.md before returning. Use managed process refs, project-structure node ids, and current-run tool receipt refs as evidence. Do not put native absolute product paths, scoped storage paths, managed-files paths, project-media paths, tool-runs paths, SourceDocLink values, or ungrounded external-target child paths in the artifact body, reason, summary, next actions, or final evidenceRefs. If a review finding needs to discuss a product file, describe the component or behavior without a path-like string, or first create a current-run read/validation receipt that grounds the exact ref and cite that receipt. Final submit_process_step_outcome evidenceRefs must include the peer-review artifact ref plus exact current-run receipt refs for any validation tools run.",
+      "Notes": "Review the change set against the approved design, integration consequences, and release assumptions. This stage runs before browser, screenshot, runtime, and QA evidence is collected. Downstream QA owns browser and runtime evidence. Judge the source, design alignment, build/test evidence, and implementation handoff available now; do not require downstream browser, console, computed-style, changed-state, screenshot, runtime, release, or QA receipts. Record suspected visual/runtime acceptance gaps and repairable product or design discrepancies as explicit QA repair findings so QA can validate them and route confirmed defects through quality-repair. Return Completed when the review is finished and the package is safe to enter downstream validation, including when downstream proof is pending or a finding is repairable by the existing QA route. Return Blocked only for a concrete safety or execution boundary: a policy, access, tool, environment, or contradictory-contract condition that makes continued automated validation unsafe or impossible. Missing downstream evidence and repairable product findings are not blockers and must not be escalated from this stage. Read the required upstream managed artifact refs before judging the implementation. Write or update artifacts/process-runs/<current-process-run-id>/steps/peer-review.md before returning. Use managed process refs, project-structure node ids, and current-run tool receipt refs as evidence. Do not put native absolute product paths, scoped storage paths, managed-files paths, project-media paths, tool-runs paths, SourceDocLink values, or ungrounded external-target child paths in the artifact body, reason, summary, next actions, or final evidenceRefs. If a review finding needs to discuss a product file, describe the component or behavior without a path-like string, or first create a current-run read/validation receipt that grounds the exact ref and cite that receipt. Final submit_process_step_outcome evidenceRefs must include the peer-review artifact ref plus exact current-run receipt refs for any validation tools run.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -1096,8 +1096,8 @@
       "Order": 5,
       "Key": "quality-repair",
       "Title": "Run .NET quality repair subprocess",
-      "Subtitle": "Manager diagnosis, repair, independent QA, and bounded bughunt",
-      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the concrete QA findings. Only ProductAcceptanceCriteriaContract criteria with kind=ProductAcceptance and required=true are repair acceptance obligations. Preserve kind=DeliveryPlanning items as nonblocking context; they cannot produce no-go or human-confirmation escalation without a separate typed decision gate. The child owns evidence diagnosis, product mutation, independent validation, one bughunt handoff, bounded re-repair, and accepted or no-go handoff. This parent step records child evidence and does not mutate product files, launch the app, or capture browser proof directly. Use project_structure_process_subprocess_launch, persist ParentDeferredOutcomeJson while the child is active, and do not wait silently or create duplicate child runs.",
+      "Subtitle": "Manager diagnosis, three bounded repair lanes, and independent QA",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the concrete QA findings. Only ProductAcceptanceCriteriaContract criteria with kind=ProductAcceptance and required=true are repair acceptance obligations. Preserve kind=DeliveryPlanning items as nonblocking context; they cannot produce no-go or human-confirmation escalation without a separate typed decision gate. The child owns evidence diagnosis, exactly three bounded mutation opportunities with independent validation, and accepted or terminal no-go handoff. This parent step records child evidence and does not mutate product files, launch the app, or capture browser proof directly. Use project_structure_process_subprocess_launch, persist ParentDeferredOutcomeJson while the child is active, and do not wait silently or create duplicate child runs.",
       "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -1105,7 +1105,7 @@
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Authoritative scope boundary packet, architecture decision record, acceptance-driven validation plan, QA repair-required disposition, reviewed implementation package, and failing proof details. The generic ProductAcceptanceCriteriaContract remains authoritative for repair scope; the child may narrow the repair action but not the acceptance scope.",
       "OutputContractSummary": "Observed child repair with accepted diagnosis-guided change set and independent validation, or explicit no-go evidence.",
-      "EvidenceContractSummary": "Child run status, diagnosis mapped to the authoritative criterion-to-proof contract, change set, current-execution validation, bughunt evidence when used, and accepted or no-go handoff.",
+      "EvidenceContractSummary": "Child run status, diagnosis mapped to the authoritative criterion-to-proof contract, bounded change sets, current-execution validation after each used lane, and accepted or terminal no-go handoff.",
       "DecisionRightsSummary": "The child repair manager owns diagnosis and sequencing; implementation and QA remain separate roles.",
       "ExceptionPolicySummary": "Block when the child stops without accepted handoff evidence or returns quality-repair-no-go. Do not reinterpret a no-go packet as repaired proof.",
       "TargetLeadHours": 12,
@@ -1214,7 +1214,7 @@
       ],
       "OperationTargetScope": "ExternalActionControlled",
       "SubprocessProcessKey": "dotnet-quality-repair",
-      "SubprocessDefinitionSnapshotName": ".NET quality repair with diagnosis and bounded bughunt",
+      "SubprocessDefinitionSnapshotName": ".NET quality repair with three bounded repair lanes",
       "SubprocessContract": {
         "DefinitionKey": "dotnet-quality-repair",
         "LaunchMode": "RuntimeOwned",
@@ -1229,6 +1229,11 @@
             "StepKey": "quality-repair-handoff-after-bughunt",
             "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
             "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-final-repair",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-final-repair-packet",
+            "ArtifactTitle": ".NET quality repair handoff after final specialist repair"
           }
         ],
         "NoGoChildOutputs": [
@@ -1985,17 +1990,17 @@
       "Key": "release-approval",
       "Title": "Approve first-pass release readiness",
       "Subtitle": "Go / no-go board decision",
-      "Notes": "Approve or reject release using first-pass QA proof, shipped entrypoint/runtime consistency, security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required. When release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone.",
+      "Notes": "Approve or reject release using first-pass QA proof, shipped entrypoint/runtime consistency, security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required. When release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone. Return Completed with exactly one branch outcome: `release-approved` when the decision-ready evidence supports rollout, or `release-rejected` when the decision-ready evidence supports a governed no-go. A rejected release is a completed decision, not an execution failure. The decision record, output, and evidence must state the exact branch outcome; for `release-rejected`, they must also state the rejection rationale, accountable owner, and next admissible re-entry or replanning action. Return Blocked, not `release-rejected`, when critical evidence, decision authority, a required tool, or required access is missing or ambiguous enough that no accountable release decision can be made.",
       "StepKind": "Approval",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": true,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "QA evidence that names the shipped entrypoint and referenced runtime, security outcome, Run command nodes, UI screenshot or no-UI evidence with provider-backed image-analysis receipts for visual UI claims, rollback/removal plan, support ownership, and declared release boundary.",
-      "OutputContractSummary": "Approved or rejected release readiness with accountable rationale and boundary-applicable conditions only.",
-      "EvidenceContractSummary": "Approval note, residual risk register, rollback/removal ownership record, declared-boundary confirmation, Run command node references, Screenshots parent/image asset or no-UI evidence, provider-backed image-analysis receipts for visual approval claims, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.",
-      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
-      "ExceptionPolicySummary": "Reject release when security review, Run command nodes, UI screenshot/no-UI evidence, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete.",
+      "OutputContractSummary": "Completed decision with the exact `release-approved` or `release-rejected` branch outcome; rejection output must include rationale, accountable owner, and the next admissible re-entry or replanning action.",
+      "EvidenceContractSummary": "Decision record naming the exact branch outcome, residual risk register, rollback/removal ownership record, declared-boundary confirmation, Run command node references, Screenshots parent/image asset or no-UI evidence, provider-backed image-analysis receipts for visual approval claims, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts. A `release-rejected` record must also preserve the rejection rationale, accountable owner, and next admissible re-entry or replanning action.",
+      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently; a decision-ready no-go is completed as `release-rejected`.",
+      "ExceptionPolicySummary": "Return Blocked when boundary-critical evidence, decision authority, a required tool, or required access is missing or ambiguous enough to prevent an accountable decision. When the evidence is decision-ready but supports no-go, complete with `release-rejected` and its governed re-entry or replanning action.",
       "TargetLeadHours": 3,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -2057,7 +2062,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 1095,
           "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
-          "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback or removal trigger, declared release boundary, any boundary-applicable release timing conditions, and provider-backed image-analysis receipt references when visual UI evidence is part of the approval."
+          "ValidationRequirementSummary": "Must name the exact `release-approved` or `release-rejected` branch outcome, accountable decision owner, residual risk owner, rollback or removal trigger, declared release boundary, any boundary-applicable release timing conditions, and provider-backed image-analysis receipt references when visual UI evidence is part of the approval. A rejected record must also name its rationale and next admissible re-entry or replanning action."
         }
       ],
       "ArtifactInputs": [
@@ -2086,7 +2091,19 @@
           "SourceStepKey": "architecture-review"
         }
       ],
-      "BranchOutcomes": [],
+      "BranchOutcomes": [
+        {
+          "Key": "release-approved",
+          "Title": "Release approved",
+          "Description": "Decision-ready evidence supports rollout inside the declared release boundary."
+        },
+        {
+          "Key": "release-rejected",
+          "Title": "Release rejected",
+          "Description": "Decision-ready evidence supports a governed no-go with an accountable owner and explicit re-entry or replanning action.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
+        }
+      ],
       "ChecklistRefs": [
         "release-go-live-checklist"
       ],
@@ -2125,7 +2142,7 @@
       "ExceptionPolicySummary": "Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "release-approval",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "release-approved",
       "DecisionRoleKey": "",
       "CanvasX": 9980,
       "CanvasY": 0,
@@ -2134,7 +2151,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "release-approval",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "release-approved"
         }
       ],
       "RoleAssignments": [
@@ -2777,17 +2794,17 @@
       "Key": "release-approval-after-repair",
       "Title": "Approve repaired release readiness",
       "Subtitle": "Go / no-go board decision",
-      "Notes": "Approve or reject release using repaired QA proof, shipped entrypoint/runtime consistency, post-repair security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required. When repaired release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from repaired screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone.",
+      "Notes": "Approve or reject release using repaired QA proof, shipped entrypoint/runtime consistency, post-repair security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required. When repaired release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from repaired screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone. Return Completed with exactly one branch outcome: `release-approved` when the decision-ready repaired evidence supports rollout, or `release-rejected` when the decision-ready repaired evidence supports a governed no-go. A rejected release is a completed decision, not an execution failure. The decision record, output, and evidence must state the exact branch outcome; for `release-rejected`, they must also state the rejection rationale, accountable owner, and next admissible re-entry or replanning action. Return Blocked, not `release-rejected`, when critical evidence, decision authority, a required tool, or required access is missing or ambiguous enough that no accountable release decision can be made.",
       "StepKind": "Approval",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": true,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Repaired QA evidence that names the shipped entrypoint and referenced runtime, post-repair security outcome, Run command nodes, UI screenshot or no-UI evidence with provider-backed image-analysis receipts for visual UI claims, rollback/removal plan, support ownership, and declared release boundary.",
-      "OutputContractSummary": "Approved or rejected repaired release readiness with accountable rationale and boundary-applicable conditions only.",
-      "EvidenceContractSummary": "Approval note, residual risk register, rollback/removal ownership record, declared-boundary confirmation, repaired Run command node references, Screenshots parent/image asset or no-UI evidence, provider-backed image-analysis receipts for repaired visual approval claims, and confirmation that repaired QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.",
-      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
-      "ExceptionPolicySummary": "Reject release when post-repair security review, Run command nodes, UI screenshot/no-UI evidence, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete.",
+      "OutputContractSummary": "Completed repaired-release decision with the exact `release-approved` or `release-rejected` branch outcome; rejection output must include rationale, accountable owner, and the next admissible re-entry or replanning action.",
+      "EvidenceContractSummary": "Decision record naming the exact branch outcome, residual risk register, rollback/removal ownership record, declared-boundary confirmation, repaired Run command node references, Screenshots parent/image asset or no-UI evidence, provider-backed image-analysis receipts for repaired visual approval claims, and confirmation that repaired QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts. A `release-rejected` record must also preserve the rejection rationale, accountable owner, and next admissible re-entry or replanning action.",
+      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently; a decision-ready no-go is completed as `release-rejected`.",
+      "ExceptionPolicySummary": "Return Blocked when boundary-critical evidence, decision authority, a required tool, or required access is missing or ambiguous enough to prevent an accountable decision. When the repaired evidence is decision-ready but supports no-go, complete with `release-rejected` and its governed re-entry or replanning action.",
       "TargetLeadHours": 3,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -2849,7 +2866,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 1095,
           "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
-          "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback or removal trigger, declared release boundary, any boundary-applicable release timing conditions, and provider-backed image-analysis receipt references when repaired visual UI evidence is part of the approval."
+          "ValidationRequirementSummary": "Must name the exact `release-approved` or `release-rejected` branch outcome, accountable decision owner, residual risk owner, rollback or removal trigger, declared release boundary, any boundary-applicable release timing conditions, and provider-backed image-analysis receipt references when repaired visual UI evidence is part of the approval. A rejected record must also name its rationale and next admissible re-entry or replanning action."
         }
       ],
       "ArtifactInputs": [
@@ -2878,7 +2895,19 @@
           "SourceStepKey": "architecture-review"
         }
       ],
-      "BranchOutcomes": [],
+      "BranchOutcomes": [
+        {
+          "Key": "release-approved",
+          "Title": "Release approved",
+          "Description": "Decision-ready repaired evidence supports rollout inside the declared release boundary."
+        },
+        {
+          "Key": "release-rejected",
+          "Title": "Release rejected",
+          "Description": "Decision-ready repaired evidence supports a governed no-go with an accountable owner and explicit re-entry or replanning action.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
+        }
+      ],
       "ChecklistRefs": [
         "release-go-live-checklist"
       ],
@@ -2917,7 +2946,7 @@
       "ExceptionPolicySummary": "Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "release-approval-after-repair",
-      "DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "release-approved",
       "DecisionRoleKey": "",
       "CanvasX": 12140,
       "CanvasY": 2080,
@@ -2926,7 +2955,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "release-approval-after-repair",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "release-approved"
         }
       ],
       "RoleAssignments": [

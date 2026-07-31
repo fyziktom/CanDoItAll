@@ -30,6 +30,8 @@ public sealed record ProcessExecutionAdapterRequest(
     IReadOnlyList<ProcessExecutionContextFacet> ContextFacets)
 {
     public ProcessStepExecutionContract StepContract { get; init; } = ProcessStepExecutionContract.Empty;
+
+    public required ProcessDispatchClaimIdentity DispatchClaimIdentity { get; init; }
 }
 
 public sealed record ProcessExecutionContextFacet(

@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
@@ -23,6 +24,16 @@ internal sealed class ProcessExecutionMetadataComposer(
     private readonly IReadOnlyList<IProcessExecutionMetadataContribution> contributions = CreateContributions(contributions);
 
     internal string Compose(ProcessRuntimeStepAssignment assignment)
+        => Compose(assignment, dispatchClaimIdentity: null);
+
+    internal string ComposeClaimedExecution(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessDispatchClaimIdentity dispatchClaimIdentity)
+        => Compose(assignment, dispatchClaimIdentity);
+
+    private string Compose(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessDispatchClaimIdentity? dispatchClaimIdentity)
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
@@ -44,6 +55,11 @@ internal sealed class ProcessExecutionMetadataComposer(
                         $"Process execution metadata key '{item.Key}' is owned by more than one contribution.");
                 }
             }
+        }
+
+        if (dispatchClaimIdentity is { } claimIdentity)
+        {
+            ProcessDispatchClaimExecutionMetadata.Add(additions, claimIdentity);
         }
 
         return ProcessExecutionMetadataBuilder.BuildProcessExecutionMetadata(assignment, additions);

@@ -36,7 +36,6 @@ internal sealed class ParentSubprocessForwardedContextResolver(
     IWorkspaceFileService workspaceFiles) : IParentSubprocessForwardedContextResolver
 {
     private const int MaxForwardedContextArtifacts = 4;
-    private const int MaxForwardedContextArtifactCharacters = 16_000;
 
     public bool TryResolve(
         ProcessRunId childRunId,
@@ -120,7 +119,7 @@ internal sealed class ParentSubprocessForwardedContextResolver(
 
             var readResult = workspaceFiles.ReadTextFile(
                 descriptor.PrimaryManagedRef,
-                MaxForwardedContextArtifactCharacters);
+                WorkspaceFileLimits.MaxTextReadCharacters);
             if (!readResult.Succeeded ||
                 string.IsNullOrWhiteSpace(readResult.Content) ||
                 readResult.IsTruncated)
@@ -128,7 +127,7 @@ internal sealed class ParentSubprocessForwardedContextResolver(
                 var reason = !readResult.Succeeded
                     ? readResult.Message
                     : readResult.IsTruncated
-                        ? $"content exceeds {MaxForwardedContextArtifactCharacters} characters"
+                        ? $"content exceeds {WorkspaceFileLimits.MaxTextReadCharacters} characters"
                         : "content is empty";
                 issue = CreateIssue(
                     childRunId,
@@ -136,18 +135,6 @@ internal sealed class ParentSubprocessForwardedContextResolver(
                     "process.adapter.subprocess_forwarded_context_read_failed",
                     $"Forwarded binding '{contract.BindingKey}' could not be read as bounded child context: {reason}.",
                     $"{contract.BindingKey}:{descriptor.PrimaryManagedRef}:{reason}");
-                return false;
-            }
-
-            if (readResult.Content.Contains(ParentSubprocessForwardedContextEnvelope.BeginMarker, StringComparison.Ordinal) ||
-                readResult.Content.Contains(ParentSubprocessForwardedContextEnvelope.EndMarker, StringComparison.Ordinal))
-            {
-                issue = CreateIssue(
-                    childRunId,
-                    childOutputAssignment,
-                    "process.adapter.subprocess_forwarded_context_envelope_marker_denied",
-                    $"Forwarded binding '{contract.BindingKey}' contains a reserved runtime envelope marker and cannot be embedded safely.",
-                    $"{contract.BindingKey}:{descriptor.PrimaryManagedRef}");
                 return false;
             }
 
@@ -169,7 +156,7 @@ internal sealed class ParentSubprocessForwardedContextResolver(
                 contract.ArtifactExpectationKey.Trim(),
                 contract.PayloadSchema.Trim(),
                 descriptor.PrimaryManagedRef,
-                readResult.Content.Trim()));
+                readResult.Content));
         }
 
         forwardedArtifacts = resolvedArtifacts;
@@ -274,6 +261,13 @@ internal static class ParentSubprocessForwardedContextEnvelope
     internal const string BeginMarker = "<!-- candoitall:runtime-forwarded-child-context:begin -->";
     internal const string EndMarker = "<!-- candoitall:runtime-forwarded-child-context:end -->";
 
+    internal enum MatchResult
+    {
+        NotPresent,
+        Removed,
+        Invalid
+    }
+
     internal static string Format(IReadOnlyList<ParentSubprocessForwardedContextArtifact> forwardedContextArtifacts)
     {
         if (forwardedContextArtifacts.Count == 0)
@@ -307,6 +301,106 @@ internal static class ParentSubprocessForwardedContextEnvelope
             .ToString()
             .TrimEnd();
     }
+
+    internal static MatchResult TryRemoveSingleVerified(
+        string content,
+        string? verifiedEnvelope,
+        out string contentWithoutEnvelope)
+    {
+        return ParentSubprocessRuntimeEnvelopeFraming.TryRemoveSingleVerified(
+            content,
+            verifiedEnvelope,
+            BeginMarker,
+            EndMarker,
+            out contentWithoutEnvelope,
+            out var wasPresent)
+                ? wasPresent
+                    ? MatchResult.Removed
+                    : MatchResult.NotPresent
+                : MatchResult.Invalid;
+    }
+
+    internal static bool ContainsReservedMarker(string? content)
+        => !string.IsNullOrEmpty(content) &&
+           (content.Contains(BeginMarker, StringComparison.Ordinal) ||
+            content.Contains(EndMarker, StringComparison.Ordinal));
+
+    private static string SelectFence(string content)
+    {
+        var longestRun = 0;
+        var currentRun = 0;
+        foreach (var character in content)
+        {
+            if (character == '`')
+            {
+                currentRun++;
+                longestRun = Math.Max(longestRun, currentRun);
+                continue;
+            }
+
+            currentRun = 0;
+        }
+
+        return new string('`', Math.Max(3, longestRun + 1));
+    }
+}
+
+internal static class ParentSubprocessVerifiedChildOutputEnvelope
+{
+    internal const string BeginMarker = "<!-- candoitall:runtime-verified-child-output:begin -->";
+    internal const string EndMarker = "<!-- candoitall:runtime-verified-child-output:end -->";
+
+    internal enum MatchResult
+    {
+        NotPresent,
+        Removed,
+        Invalid
+    }
+
+    internal static string Format(ProcessSubprocessVerifiedChildArtifact artifact)
+    {
+        var fence = SelectFence(artifact.Content);
+        return new StringBuilder()
+            .AppendLine(BeginMarker)
+            .AppendLine("## Runtime-verified child output")
+            .AppendLine()
+            .AppendLine("The runtime copied the selected child output only after verifying its declared produced slot, accepted managed-artifact lifecycle, and ledger content hash. The child ref is trace-only; use the authenticated payload below and do not attempt an additional cross-run read.")
+            .AppendLine()
+            .AppendLine($"- Child output step: `{artifact.StepKey}`")
+            .AppendLine($"- Artifact expectation: `{artifact.ArtifactExpectationKey}`")
+            .AppendLine($"- Child artifact ref (trace only): `{artifact.ArtifactRef}`")
+            .AppendLine($"- Ledger content hash: `{artifact.ContentHash}`")
+            .AppendLine()
+            .AppendLine(fence)
+            .AppendLine(artifact.Content)
+            .AppendLine(fence)
+            .AppendLine(EndMarker)
+            .ToString()
+            .TrimEnd();
+    }
+
+    internal static MatchResult TryRemoveSingleVerified(
+        string content,
+        string? verifiedEnvelope,
+        out string contentWithoutEnvelope)
+    {
+        return ParentSubprocessRuntimeEnvelopeFraming.TryRemoveSingleVerified(
+            content,
+            verifiedEnvelope,
+            BeginMarker,
+            EndMarker,
+            out contentWithoutEnvelope,
+            out var wasPresent)
+                ? wasPresent
+                    ? MatchResult.Removed
+                    : MatchResult.NotPresent
+                : MatchResult.Invalid;
+    }
+
+    internal static bool ContainsReservedMarker(string? content)
+        => !string.IsNullOrEmpty(content) &&
+           (content.Contains(BeginMarker, StringComparison.Ordinal) ||
+            content.Contains(EndMarker, StringComparison.Ordinal));
 
     private static string SelectFence(string content)
     {

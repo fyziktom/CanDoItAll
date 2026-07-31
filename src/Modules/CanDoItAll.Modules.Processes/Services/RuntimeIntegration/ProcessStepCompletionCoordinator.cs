@@ -4,10 +4,9 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
+using Microsoft.Extensions.Logging;
 
 using static CanDoItAll.Modules.Processes.ProcessCompletionIssueResultFactory;
-using static CanDoItAll.Modules.Processes.ProcessBranchOutcomeResolver;
-using static CanDoItAll.Modules.Processes.ProcessCompletionRetryPolicy;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -16,23 +15,49 @@ internal sealed class ProcessStepCompletionCoordinator(
     ProcessManagedArtifactService managedArtifactService,
     ProcessOutcomeGroundingValidator groundingValidator,
     ProcessCompletionGateEvaluator completionGateEvaluator,
-    ProcessExecutionResultConverter resultConverter)
+    ProcessExecutionResultConverter resultConverter,
+    ILogger<ProcessStepCompletionCoordinator> logger)
 {
     internal ProcessManagedArtifactService.ManagedOutcomeArtifactMaterialization Materialize(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         Guid executionRunId,
-        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        ProcessStepExecutionContract? stepContract = null)
     {
         var normalizedOutput = ProcessOutcomeCitationSanitizer.RemoveNonCitableSourceMetadataFromOutcome(output);
-        normalizedOutput = managedArtifactService.RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
+        normalizedOutput = groundingValidator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
             assignment,
             normalizedOutput,
-            executionRunId,
-            toolReceipts);
-        if (ShouldRouteBlockedBranchOutcome(assignment, normalizedOutput))
+            toolReceipts,
+            stepContract ?? ProcessStepExecutionContract.Empty,
+            out var removedNonAuthoritativeCriterionEvidenceRefCount);
+        if (removedNonAuthoritativeCriterionEvidenceRefCount > 0)
         {
-            normalizedOutput = CopyAsCompletedBranchOutcome(normalizedOutput);
+            logger.LogWarning(
+                "Omitted {RemovedEvidenceRefCount} ungrounded evidence refs from typed NotVerified criterion entries before managed artifact materialization. ProcessRunId={RunId} StepInstanceId={StepInstanceId} StepKey={StepKey} ExecutionRunId={ExecutionRunId}",
+                removedNonAuthoritativeCriterionEvidenceRefCount,
+                assignment.RunId.Value,
+                assignment.StepInstanceId.Value,
+                assignment.StepKey,
+                executionRunId);
+        }
+
+        normalizedOutput = groundingValidator.RemoveUngroundedSupplementalEvidenceRefsFromGroundedDefectOutcome(
+            assignment,
+            normalizedOutput,
+            toolReceipts,
+            stepContract ?? ProcessStepExecutionContract.Empty,
+            out var removedSupplementalEvidenceRefCount);
+        if (removedSupplementalEvidenceRefCount > 0)
+        {
+            logger.LogWarning(
+                "Omitted {RemovedEvidenceRefCount} ungrounded supplemental top-level evidence refs from a grounded non-acceptance outcome before managed artifact materialization. ProcessRunId={RunId} StepInstanceId={StepInstanceId} StepKey={StepKey} ExecutionRunId={ExecutionRunId}",
+                removedSupplementalEvidenceRefCount,
+                assignment.RunId.Value,
+                assignment.StepInstanceId.Value,
+                assignment.StepKey,
+                executionRunId);
         }
 
         return managedArtifactService.MaterializeManagedOutcomeArtifactIfNeeded(
@@ -65,11 +90,25 @@ internal sealed class ProcessStepCompletionCoordinator(
         ProcessStepExecutionContract? stepContract = null,
         ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome = null)
     {
+        if (materialization.Output.Status != ProcessStepOutcomeStatus.Completed)
+        {
+            return resultConverter.ToAdapterResult(
+                assignment,
+                materialization.Output,
+                rawOutputHash,
+                completionToolReceipts,
+                executionRunId,
+                producedArtifactContentHashes: null,
+                stepContract: stepContract,
+                verifiedSubprocessOutcome: verifiedSubprocessOutcome);
+        }
+
         if (groundingValidator.ValidateManagedArtifactBodyReferences(
                 assignment,
                 materialization.Output,
                 completionToolReceipts,
-                verifiedSubprocessOutcome) is { } ungroundedArtifactReferenceIssue)
+                verifiedSubprocessOutcome,
+                stepContract ?? ProcessStepExecutionContract.Empty) is { } ungroundedArtifactReferenceIssue)
         {
             return NeedsManagerForCompletionIssue(
                 assignment,
@@ -126,7 +165,8 @@ internal sealed class ProcessStepCompletionCoordinator(
                 materialization,
                 executionRunId,
                 completionToolReceipts,
-                out var acceptedCompletionToolReceipts) is { } acceptanceIssue)
+                out var acceptedCompletionToolReceipts,
+                out var acceptedArtifactContentHashes) is { } acceptanceIssue)
         {
             return NeedsManagerForCompletionIssue(
                 assignment,
@@ -134,10 +174,16 @@ internal sealed class ProcessStepCompletionCoordinator(
                 acceptanceIssue);
         }
 
-        var producedArtifactContentHashes = managedArtifactService.BuildProducedArtifactContentHashes(
-            assignment,
-            materialization.Output,
-            out var producedArtifactReadbackIssue);
+        var producedArtifactReadbackIssue = default(ProcessCompletionIssue);
+        var producedArtifactContentHashes = acceptedArtifactContentHashes;
+        if (producedArtifactContentHashes is null)
+        {
+            producedArtifactContentHashes = managedArtifactService.BuildProducedArtifactContentHashes(
+                assignment,
+                materialization.Output,
+                out producedArtifactReadbackIssue);
+        }
+
         if (producedArtifactReadbackIssue is not null)
         {
             return NeedsManagerForCompletionIssue(

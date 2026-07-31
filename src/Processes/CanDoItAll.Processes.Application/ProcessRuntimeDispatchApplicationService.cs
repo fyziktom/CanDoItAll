@@ -19,11 +19,24 @@ public sealed record ProcessRuntimeDispatchResult(
 
 public sealed class ProcessRuntimeDispatchOptions
 {
-    public TimeSpan DispatchLease { get; init; } = TimeSpan.FromMinutes(25);
+    public const string ConfigurationSectionName = "Processes:RuntimeDispatch";
 
-    public TimeSpan StepExecutionTimeout { get; init; } = TimeSpan.FromMinutes(20);
+    public TimeSpan DispatchLease { get; init; } = TimeSpan.FromMinutes(75);
+
+    public TimeSpan StepExecutionTimeout { get; init; } = TimeSpan.FromMinutes(60);
 
     public TimeSpan PreRunningClaimStaleAfter { get; init; } = TimeSpan.FromMinutes(2);
+
+    public static bool IsValid(ProcessRuntimeDispatchOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return options.DispatchLease > TimeSpan.Zero &&
+               options.StepExecutionTimeout > TimeSpan.Zero &&
+               options.PreRunningClaimStaleAfter > TimeSpan.Zero &&
+               options.DispatchLease > options.StepExecutionTimeout &&
+               options.PreRunningClaimStaleAfter < options.DispatchLease;
+    }
 }
 
 public sealed class ProcessRuntimeDispatchApplicationService(
@@ -335,9 +348,13 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     var strategyFactory = await strategyFactoryResolver.ResolveAsync(
                         workItem.StrategyBinding,
                         cancellationToken).ConfigureAwait(false);
+                    var claimedWorkItem = workItem with
+                    {
+                        DispatchClaimIdentity = new ProcessDispatchClaimIdentity(claimToken.Value)
+                    };
                     var result = await InvokeStrategyWithTimeoutAsync(
                         dispatcher,
-                        workItem,
+                        claimedWorkItem,
                         plan,
                         strategyFactory,
                         dispatchOptions.StepExecutionTimeout,
@@ -649,354 +666,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
             ],
             [],
             []);
-    }
-
-    private async Task ApplyBranchSignalsWithConcurrencyRetryAsync(
-        ProcessRuntimeStateSnapshot initialState,
-        ProcessInstancePlan plan,
-        StrategyResultEnvelope result,
-        string requestedBy,
-        int iteration,
-        CancellationToken cancellationToken)
-    {
-        for (var attempt = 1; attempt <= MaximumClaimCleanupConcurrencyRetries; attempt++)
-        {
-            try
-            {
-                var state = initialState;
-                if (attempt > 1)
-                {
-                    state = await stateStore.LoadAsync(initialState.RunId, cancellationToken).ConfigureAwait(false)
-                        ?? throw new InvalidOperationException($"Process run '{initialState.RunId}' was not found.");
-                }
-
-                await ApplyBranchSignalsAsync(
-                    state,
-                    plan,
-                    result,
-                    requestedBy,
-                    iteration,
-                    attempt == 1 ? "branch" : $"branch-retry-{attempt}",
-                    cancellationToken).ConfigureAwait(false);
-                return;
-            }
-            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumClaimCleanupConcurrencyRetries)
-            {
-                await Task.Delay(ClaimCleanupConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        var latestState = await stateStore.LoadAsync(initialState.RunId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Process run '{initialState.RunId}' was not found.");
-        await ApplyBranchSignalsAsync(
-            latestState,
-            plan,
-            result,
-            requestedBy,
-            iteration,
-            "branch-final-retry",
-            cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task ApplyBranchSignalsAsync(
-        ProcessRuntimeStateSnapshot state,
-        ProcessInstancePlan plan,
-        StrategyResultEnvelope result,
-        string requestedBy,
-        int iteration,
-        string phase,
-        CancellationToken cancellationToken)
-    {
-        var selectedOutcome = result.ManagerSignals
-            .Select(signal => ProcessBranchSignalCodes.TryReadOutcome(signal, out var outcomeKey) ? outcomeKey : string.Empty)
-            .FirstOrDefault(outcomeKey => !string.IsNullOrWhiteSpace(outcomeKey));
-        if (string.IsNullOrWhiteSpace(selectedOutcome))
-        {
-            return;
-        }
-
-        var completedStep = state.Steps.FirstOrDefault(step =>
-            step.CompletedResultKey is not null &&
-            state.AppliedResults.Any(receipt =>
-                receipt.StepInstanceId == step.StepInstanceId &&
-                receipt.IdempotencyKey == step.CompletedResultKey &&
-                receipt.ResultHash == result.ResultHash));
-        if (completedStep is null)
-        {
-            return;
-        }
-
-        var completedPlanStep = plan.Steps.FirstOrDefault(step => step.StepInstanceId == completedStep.StepInstanceId);
-        if (completedPlanStep is null)
-        {
-            return;
-        }
-
-        var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
-        var changed = false;
-        var nextSteps = new List<ProcessRuntimeStepState>(state.Steps.Count);
-        var events = new List<ProcessRuntimeEventEnvelope>();
-        var context = CreateContext(requestedBy, iteration, phase);
-
-        foreach (var step in state.Steps)
-        {
-            var assignment = assignments.FirstOrDefault(candidate => candidate.StepInstanceId == step.StepInstanceId);
-            if (assignment?.BranchGate is null ||
-                !string.Equals(assignment.BranchGate.SourceStepKey, completedPlanStep.StepKey, StringComparison.OrdinalIgnoreCase) ||
-                ProcessRuntimeTerminalStates.IsStepTerminal(step.Status))
-            {
-                nextSteps.Add(step);
-                continue;
-            }
-
-            if (string.Equals(assignment.BranchGate.RequiredOutcomeKey, selectedOutcome, StringComparison.OrdinalIgnoreCase))
-            {
-                if (step.Status != ProcessRuntimeStepStatus.Blocked)
-                {
-                    nextSteps.Add(step);
-                    continue;
-                }
-
-                var unblocked = step with
-                {
-                    Status = ProcessRuntimeStepStatus.Pending
-                };
-                nextSteps.Add(unblocked);
-                changed = true;
-                continue;
-            }
-
-            var skipped = step with
-            {
-                Status = ProcessRuntimeStepStatus.Skipped,
-                ActiveClaimToken = null
-            };
-            nextSteps.Add(skipped);
-            changed = true;
-            events.Add(CreateEvent(
-                state,
-                context,
-                ProcessRuntimeEventTypes.StepSkipped,
-                ComputeHash($"{completedPlanStep.StepKey}:{selectedOutcome}:{assignment.StepKey}")));
-        }
-
-        if (PropagateSkippedBranchGates(state, assignments, nextSteps, events, context))
-        {
-            changed = true;
-        }
-
-        if (!changed)
-        {
-            return;
-        }
-
-        var next = CreateBranchStepMutationState(state, nextSteps, events, context);
-        var mutation = new ProcessRuntimeMutation(
-            ProcessRuntimeTransitionOutcome.Applied,
-            next,
-            events,
-            events.Select(runtimeEvent => new ProcessOutboxMessage(
-                RuntimeOutboxMessageId.New(),
-                runtimeEvent.EventId,
-                ProcessOutboxSubscriberKind.RuntimeProjection,
-                runtimeEvent.PayloadHash)).ToArray(),
-            [],
-            []);
-
-        await unitOfWork.CommitAsync(
-            new ProcessRuntimeCommitRequest(context.CommandId, state, mutation),
-            cancellationToken).ConfigureAwait(false);
-        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<ProcessRuntimeStateSnapshot> ApplySkippedBranchGatePropagationWithConcurrencyRetryAsync(
-        ProcessRuntimeStateSnapshot initialState,
-        string requestedBy,
-        int iteration,
-        CancellationToken cancellationToken)
-    {
-        for (var attempt = 1; attempt <= MaximumClaimCleanupConcurrencyRetries; attempt++)
-        {
-            try
-            {
-                var state = initialState;
-                if (attempt > 1)
-                {
-                    state = await stateStore.LoadAsync(initialState.RunId, cancellationToken).ConfigureAwait(false)
-                        ?? throw new InvalidOperationException($"Process run '{initialState.RunId}' was not found.");
-                }
-
-                return await ApplySkippedBranchGatePropagationAsync(
-                    state,
-                    requestedBy,
-                    iteration,
-                    attempt == 1 ? "branch-skip-propagation" : $"branch-skip-propagation-retry-{attempt}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumClaimCleanupConcurrencyRetries)
-            {
-                await Task.Delay(ClaimCleanupConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        var latestState = await stateStore.LoadAsync(initialState.RunId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Process run '{initialState.RunId}' was not found.");
-        return await ApplySkippedBranchGatePropagationAsync(
-            latestState,
-            requestedBy,
-            iteration,
-            "branch-skip-propagation-final-retry",
-            cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<ProcessRuntimeStateSnapshot> ApplySkippedBranchGatePropagationAsync(
-        ProcessRuntimeStateSnapshot state,
-        string requestedBy,
-        int iteration,
-        string phase,
-        CancellationToken cancellationToken)
-    {
-        if (state.Status != ProcessRuntimeStatus.Active)
-        {
-            return state;
-        }
-
-        var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
-        var nextSteps = state.Steps.ToList();
-        var events = new List<ProcessRuntimeEventEnvelope>();
-        var context = CreateContext(requestedBy, iteration, phase);
-
-        if (!PropagateSkippedBranchGates(state, assignments, nextSteps, events, context))
-        {
-            return state;
-        }
-
-        var next = CreateBranchStepMutationState(state, nextSteps, events, context);
-        var mutation = new ProcessRuntimeMutation(
-            ProcessRuntimeTransitionOutcome.Applied,
-            next,
-            events,
-            events.Select(runtimeEvent => new ProcessOutboxMessage(
-                RuntimeOutboxMessageId.New(),
-                runtimeEvent.EventId,
-                ProcessOutboxSubscriberKind.RuntimeProjection,
-                runtimeEvent.PayloadHash)).ToArray(),
-            [],
-            []);
-
-        var commit = await unitOfWork.CommitAsync(
-            new ProcessRuntimeCommitRequest(context.CommandId, state, mutation),
-            cancellationToken).ConfigureAwait(false);
-        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-
-        return commit.State;
-    }
-
-    private static bool PropagateSkippedBranchGates(
-        ProcessRuntimeStateSnapshot state,
-        IReadOnlyList<ProcessRuntimeStepAssignment> assignments,
-        IList<ProcessRuntimeStepState> steps,
-        IList<ProcessRuntimeEventEnvelope> events,
-        RuntimeCommandContext context)
-    {
-        var stepKeyById = assignments.ToDictionary(
-            assignment => assignment.StepInstanceId,
-            assignment => assignment.StepKey);
-        var skippedSourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var skippedStepIds = new HashSet<ProcessStepInstanceId>();
-        foreach (var step in steps)
-        {
-            if (step.Status == ProcessRuntimeStepStatus.Skipped &&
-                stepKeyById.TryGetValue(step.StepInstanceId, out var stepKey))
-            {
-                skippedSourceKeys.Add(stepKey);
-                skippedStepIds.Add(step.StepInstanceId);
-            }
-        }
-
-        var changed = false;
-        var changedInPass = true;
-        while (changedInPass)
-        {
-            changedInPass = false;
-            for (var index = 0; index < steps.Count; index++)
-            {
-                var step = steps[index];
-                if (ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) ||
-                    step.Status is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running)
-                {
-                    continue;
-                }
-
-                var assignment = assignments.FirstOrDefault(candidate => candidate.StepInstanceId == step.StepInstanceId);
-                var skipEvidence = string.Empty;
-                if (assignment?.BranchGate is not null &&
-                    skippedSourceKeys.Contains(assignment.BranchGate.SourceStepKey))
-                {
-                    skipEvidence = $"{assignment.BranchGate.SourceStepKey}:source-skipped:{assignment.StepKey}";
-                }
-                else
-                {
-                    var skippedDependency = step.DependencyStepIds.FirstOrDefault(skippedStepIds.Contains);
-                    if (skippedDependency != default)
-                    {
-                        skipEvidence = $"{skippedDependency}:dependency-skipped:{assignment?.StepKey ?? step.StepInstanceId.ToString()}";
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(skipEvidence))
-                {
-                    continue;
-                }
-
-                steps[index] = step with
-                {
-                    Status = ProcessRuntimeStepStatus.Skipped,
-                    ActiveClaimToken = null
-                };
-                skippedStepIds.Add(step.StepInstanceId);
-                if (assignment is not null)
-                {
-                    skippedSourceKeys.Add(assignment.StepKey);
-                }
-
-                changed = true;
-                changedInPass = true;
-                events.Add(CreateEvent(
-                    state,
-                    context,
-                    ProcessRuntimeEventTypes.StepSkipped,
-                    ComputeHash(skipEvidence)));
-            }
-        }
-
-        return changed;
-    }
-
-    private static ProcessRuntimeStateSnapshot CreateBranchStepMutationState(
-        ProcessRuntimeStateSnapshot state,
-        IReadOnlyList<ProcessRuntimeStepState> nextSteps,
-        IList<ProcessRuntimeEventEnvelope> events,
-        RuntimeCommandContext context)
-    {
-        var nextStatus = ResolveRunStatus(state.Status, nextSteps);
-        var next = state with
-        {
-            Steps = nextSteps,
-            Status = nextStatus,
-            UpdatedAtUtc = context.OccurredAtUtc
-        };
-
-        if (nextStatus != state.Status && ProcessRuntimeTerminalStates.IsRunTerminal(nextStatus))
-        {
-            events.Add(CreateEvent(
-                next,
-                context,
-                ToRunTerminalEvent(nextStatus),
-                next.PlanHash));
-        }
-
-        return next;
     }
 
     private async Task<string?> DeferClaimBestEffortAsync(
@@ -1639,8 +1308,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     resultHash,
                     summary,
                     RestrictedEvidenceReference: null,
-                    ProcessDiagnosticRetrySafety.SafeToRetry,
-                    ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Unknown)
             ],
             [
                 new ManagerSignal(

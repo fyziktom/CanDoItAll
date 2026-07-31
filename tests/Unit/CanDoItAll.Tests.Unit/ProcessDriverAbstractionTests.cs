@@ -109,7 +109,10 @@ public sealed class ProcessDriverAbstractionTests
             ProcessRunId.New(),
             ProcessStepInstanceId.New(),
             binding,
-            binding.Inputs));
+            binding.Inputs)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        });
 
         Assert.Equal(descriptor.StrategyId, result.StrategyId);
         Assert.Equal(StrategyOutcome.Succeeded, result.Outcome);

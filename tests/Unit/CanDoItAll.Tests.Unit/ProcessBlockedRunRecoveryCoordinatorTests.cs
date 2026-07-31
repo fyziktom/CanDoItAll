@@ -250,6 +250,84 @@ public sealed class ProcessBlockedRunRecoveryCoordinatorTests
     }
 
     [Fact]
+    public async Task Safe_idempotent_diagnostic_reworks_read_only_external_assignment()
+    {
+        var receipt = CreateReceipt(
+            ProcessFailureCategory.ProductCompletionGate,
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var executor = new RecordingCommandExecutor();
+        var coordinator = CreateCoordinator(
+            CreateState([receipt]),
+            CreatePlan(),
+            executor,
+            targetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            targetAllowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.ReadProjectStructure,
+                ProcessOperationContractNames.ReadUpstreamArtifacts,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]);
+
+        var result = await coordinator.TryRecoverAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.Recovered, result.Outcome);
+        var command = Assert.Single(executor.Commands);
+        Assert.Equal(ProcessBlockedRunRecoveryPolicy.SafeIdempotentRework, command.Policy);
+    }
+
+    [Fact]
+    public async Task Safe_idempotent_diagnostic_does_not_rework_read_only_validation_assignment()
+    {
+        var receipt = CreateReceipt(
+            ProcessFailureCategory.ProductCompletionGate,
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var executor = new RecordingCommandExecutor();
+        var coordinator = CreateCoordinator(
+            CreateState([receipt]),
+            CreatePlan(),
+            executor,
+            targetOperation: ProcessOperationContractNames.RunValidation,
+            targetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var result = await coordinator.TryRecoverAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.RequiresAttention, result.Outcome);
+        Assert.Empty(executor.Commands);
+    }
+
+    [Fact]
+    public async Task Safe_idempotent_diagnostic_does_not_rework_escalation_assignment()
+    {
+        var receipt = CreateReceipt(
+            ProcessFailureCategory.ProductCompletionGate,
+            ProcessCompletionDiagnosticCodes.ArtifactPayloadSchemaInvalid,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var executor = new RecordingCommandExecutor();
+        var coordinator = CreateCoordinator(
+            CreateState([receipt]),
+            CreatePlan(),
+            executor,
+            targetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            targetAllowedOperations:
+            [
+                ProcessOperationContractNames.ReadProcessContext,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                ProcessOperationContractNames.EscalateOrDecide
+            ]);
+
+        var result = await coordinator.TryRecoverAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessBlockedRunRecoveryOutcome.RequiresAttention, result.Outcome);
+        Assert.Empty(executor.Commands);
+    }
+
+    [Fact]
     public async Task Safe_idempotent_diagnostic_does_not_rework_external_side_effect_assignment()
     {
         var receipt = CreateReceipt(
@@ -818,7 +896,8 @@ public sealed class ProcessBlockedRunRecoveryCoordinatorTests
         IReadOnlyList<ProcessRuntimeStateSnapshot>? relatedStates = null,
         IReadOnlyList<ProcessRuntimeStepAssignment>? relatedAssignments = null,
         string targetOperation = ProcessOperationContractNames.WriteManagedProcessArtifacts,
-        string targetScope = ProcessOperationContractNames.ManagedProcessArtifactsOnly)
+        string targetScope = ProcessOperationContractNames.ManagedProcessArtifactsOnly,
+        IReadOnlyList<string>? targetAllowedOperations = null)
     {
         var states = new[] { state }
             .Concat(relatedStates ?? [])
@@ -827,7 +906,10 @@ public sealed class ProcessBlockedRunRecoveryCoordinatorTests
             .Select(step => CreateAssignment(
                 step.StepInstanceId,
                 targetOperation,
-                targetScope))
+                targetScope) with
+            {
+                AllowedOperations = targetAllowedOperations ?? [targetOperation]
+            })
             .Concat(relatedAssignments ?? [])
             .ToArray();
         return new ProcessBlockedRunRecoveryCoordinator(

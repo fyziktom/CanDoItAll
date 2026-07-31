@@ -55,7 +55,8 @@ The dispatch queue is bounded and process-local. PostgreSQL holds the run state;
 | `Processes:RuntimeDispatchQueue:EnableRecovery` | `true` |
 | `Processes:RuntimeDispatchQueue:ImmediateQueueCapacity` | `4096` |
 | `Processes:RuntimeDispatchQueue:RecoveryQueueCapacity` | `4096` |
-| `Processes:RuntimeDispatchQueue:ActiveClaimWithoutExecutionRunStaleAfter` | `00:02:00` |
+
+Dispatch-claim expiry is owned by the process engine. AgentFramework reconciliation never releases a claim merely because its durable execution run has not appeared yet; completed or failed AgentFramework runs created during the claim lease can still be reconciled immediately.
 
 The worker allows up to two immediate and two recovery dispatches concurrently, performs recovery discovery every 15 seconds, and deduplicates/defer-retries a run id. These worker timings are implementation constants, not configuration settings.
 

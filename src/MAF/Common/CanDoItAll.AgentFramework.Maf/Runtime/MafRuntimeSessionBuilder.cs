@@ -213,11 +213,6 @@ internal static class MafRuntimeSessionBuilder
             return "Restoring the serialized Microsoft Agent Framework session for this conversation.";
         }
 
-        if (ShouldReplayTranscriptAfterApproval(session))
-        {
-            return "This conversation contains prior approval turns, so the sandbox transcript will be replayed into a fresh session for the next prompt.";
-        }
-
         if (!string.IsNullOrWhiteSpace(session.Compatibility?.SerializedSessionStateJson))
         {
             return "Serialized Microsoft Agent Framework session state is incompatible with the current history mode, so the sandbox transcript will be replayed into a fresh session.";
@@ -263,11 +258,6 @@ internal static class MafRuntimeSessionBuilder
             return false;
         }
 
-        if (!isApprovalContinuation && ShouldReplayTranscriptAfterApproval(session))
-        {
-            return false;
-        }
-
         var containsProviderConversationId = SerializedSessionContainsProviderConversationId(compatibility.SerializedSessionStateJson);
 
         if (runtimeOptions.TransientContext is not null && !isApprovalContinuation)
@@ -286,11 +276,6 @@ internal static class MafRuntimeSessionBuilder
         }
 
         return !containsProviderConversationId;
-    }
-
-    private static bool ShouldReplayTranscriptAfterApproval(ChatSessionRecord session)
-    {
-        return false;
     }
 
     private static bool SerializedSessionContainsProviderConversationId(string serializedSessionStateJson)

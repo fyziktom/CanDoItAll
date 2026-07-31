@@ -20,6 +20,8 @@ public sealed class ProcessMafHardeningRegressionTests
     private static readonly ProcessStepDefinitionId ParentStepDefinitionId = new(new Guid("33333333-3333-3333-3333-333333333333"));
     private static readonly ArtifactSlotId ParentArtifactSlotId = new(new Guid("44444444-4444-4444-4444-444444444444"));
     private static readonly ArtifactSlotId ChildArtifactSlotId = new(new Guid("55555555-5555-5555-5555-555555555555"));
+    private const string DefaultAcceptedChildArtifactContent =
+        "## Runtime Accepted Completion Gates\nStatus: Completed";
 
     [Fact]
     public void Template_pack_loads_with_typed_subprocess_contracts()
@@ -29,6 +31,37 @@ public sealed class ProcessMafHardeningRegressionTests
 
         Assert.Contains(pack.Definitions, definition => definition.Key == "dotnet-development-slice");
         Assert.Contains(pack.Definitions, definition => definition.Key == "software-delivery");
+    }
+
+    [Fact]
+    public void Template_subprocess_contract_rejects_overlapping_accepted_and_no_go_outputs()
+    {
+        var contract = new ProcessSubprocessContract
+        {
+            AcceptedChildOutputs =
+            [
+                new ProcessSubprocessChildOutputContract
+                {
+                    StepKey = "handoff",
+                    ArtifactExpectationKey = "handoff-packet"
+                }
+            ],
+            NoGoChildOutputs =
+            [
+                new ProcessSubprocessChildOutputContract
+                {
+                    StepKey = "handoff",
+                    ArtifactExpectationKey = "handoff-packet"
+                }
+            ]
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => ProcessTemplatePackLoader.ValidateChildOutputDiscriminators(
+                contract,
+                "test-process.test-step"));
+
+        Assert.Contains("overlapping accepted/no-go child outputs", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -186,6 +219,14 @@ public sealed class ProcessMafHardeningRegressionTests
             ProducedArtifactSlotIds = [ChildArtifactSlotId]
         };
         var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var childInternalRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/implementation.md";
+        var acceptedContent = $"""
+            {DefaultAcceptedChildArtifactContent}
+
+            Opaque accepted child payload.
+            Internal child trace: `{childInternalRef}`.
+            SourceDocLink: managed-files/project-media/child-proof.md
+            """;
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
@@ -196,33 +237,62 @@ public sealed class ProcessMafHardeningRegressionTests
                     ProcessRuntimeStatus.Completed,
                     childAssignment,
                     ProcessRuntimeStepStatus.Completed,
-                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
-            new FakeWorkspaceFileService([acceptedRef]),
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId, acceptedContent)])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [acceptedRef] = acceptedContent
+            }),
             CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
         Assert.Equal(ParentSubprocessArtifactBridgeResultKind.AcceptedChildOutputBridged, result.Kind);
         Assert.Equal(childRunId, result.ChildRunId);
-        Assert.NotNull(result.BridgedOutcome);
-        Assert.Contains(acceptedRef, result.BridgedOutcome.EvidenceRefs);
-        Assert.Equal(ProcessStepOutcomeStatus.Completed, result.BridgedOutcome.Output.Status);
+        var bridgedOutcome = Assert.IsType<ParentSubprocessBridgedOutcome>(result.BridgedOutcome);
+        Assert.Contains(acceptedRef, bridgedOutcome.EvidenceRefs);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, bridgedOutcome.Output.Status);
+        Assert.Equal(ChildOutputDisposition.Accepted, bridgedOutcome.Disposition);
+        Assert.Equal("setup-handoff", bridgedOutcome.ChildStepKey);
+        Assert.Equal("setup-handoff-packet", bridgedOutcome.ChildArtifactExpectationKey);
+        Assert.Equal(acceptedContent, bridgedOutcome.VerifiedChildOutput.Content);
+        var summary = Assert.IsType<string>(bridgedOutcome.Output.HumanReadableSummaryMarkdown);
+        Assert.Contains("Opaque accepted child payload.", summary, StringComparison.Ordinal);
+        Assert.Contains(childInternalRef, summary, StringComparison.Ordinal);
+        Assert.Contains(
+            "SourceDocLink: managed-files/project-media/child-proof.md",
+            summary,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            1,
+            summary.Split(
+                ParentSubprocessVerifiedChildOutputEnvelope.BeginMarker,
+                StringSplitOptions.None).Length - 1);
     }
 
-    [Fact]
-    public async Task Parent_subprocess_bridge_forwards_only_hash_verified_declared_child_input()
+    [Theory]
+    [InlineData(16_000, "AcceptedChildOutputBridged", null)]
+    [InlineData(
+        50_000,
+        "ChildForwardedContextUnavailable",
+        "process.adapter.subprocess_handoff_size_limit_exceeded")]
+    [InlineData(
+        64_000,
+        "ChildForwardedContextUnavailable",
+        "process.adapter.subprocess_forwarded_context_read_failed")]
+    public async Task Parent_subprocess_bridge_enforces_shared_limits_for_hash_verified_declared_child_input(
+        int paddingCharacters,
+        string expectedKind,
+        string? expectedIssueCode)
     {
         var parentRunId = ProcessRunId.New();
         var childRunId = ProcessRunId.New();
         var forwardedSlotId = ArtifactSlotId.New();
         var forwardedArtifactId = ArtifactInstanceId.New();
-        const string forwardedContent = """
-            ## Bootstrap decision
-
-            ```json
-            { "schema": "opaque.example/v1", "value": "preserve exact content" }
-            ```
-            """;
+        var forwardedContent =
+            "  \r\n## Bootstrap decision\r\n\r\n```json\r\n" +
+            "{ \"schema\": \"opaque.example/v1\", \"value\": \"preserve exact content\" }\r\n" +
+            "```\r\n  " +
+            new string('x', paddingCharacters);
         var assignment = WithSubprocessContract(
             CreateParentAssignment(parentRunId),
             new ProcessSubprocessContract
@@ -276,21 +346,545 @@ public sealed class ProcessMafHardeningRegressionTests
                 childState),
             new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                [acceptedRef] = $"{ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}\nStatus: Completed",
+                [acceptedRef] = DefaultAcceptedChildArtifactContent,
                 [forwardedRef] = forwardedContent
             }),
             CreateSubprocessContractResolver());
 
         var result = await bridge.ResolveExistingAsync(assignment);
 
-        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.AcceptedChildOutputBridged, result.Kind);
+        Assert.True(forwardedContent.Length > 16_000);
+        Assert.Equal(expectedKind, result.Kind.ToString());
+        if (expectedIssueCode is not null)
+        {
+            Assert.Equal(expectedIssueCode, result.ForwardedContextIssue?.Code);
+            Assert.Null(result.BridgedOutcome);
+            return;
+        }
+
         var outcome = Assert.IsType<ParentSubprocessBridgedOutcome>(result.BridgedOutcome);
         var forwardedArtifact = Assert.Single(outcome.ForwardedContextArtifacts);
         Assert.Equal("opaque-bootstrap", forwardedArtifact.BindingKey);
-        Assert.Equal(forwardedContent.Trim(), forwardedArtifact.Content);
+        Assert.Equal(forwardedContent, forwardedArtifact.Content);
         Assert.Contains("Runtime-forwarded child context", outcome.Output.HumanReadableSummaryMarkdown, StringComparison.Ordinal);
         Assert.Contains(forwardedContent, outcome.Output.HumanReadableSummaryMarkdown, StringComparison.Ordinal);
         Assert.Contains("````", outcome.Output.HumanReadableSummaryMarkdown, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Outcome_grounding_accepts_one_sanitized_verified_forwarded_context_envelope()
+    {
+        var fixture = CreateForwardedContextGroundingFixture();
+
+        Assert.Equal(fixture.RawEnvelope, fixture.VerifiedEnvelope);
+        var issue = ProcessOutcomeGroundingValidator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.NormalizedOutput,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Grounding_accepts_path_from_hash_verified_required_artifact_content()
+    {
+        const string groundedPath =
+            "artifacts/process-runs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/steps/child-handoff.md";
+        var fixture = CreateRequiredArtifactGroundingFixture(groundedPath);
+        var validator = new ProcessOutcomeGroundingValidator(fixture.WorkspaceFiles);
+
+        var outcomeIssue = validator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            fixture.StepContract);
+        var bodyIssue = validator.ValidateManagedArtifactBodyReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            stepContract: fixture.StepContract);
+
+        Assert.Null(outcomeIssue);
+        Assert.Null(bodyIssue);
+    }
+
+    [Theory]
+    [InlineData("hash-mismatch")]
+    [InlineData("unavailable")]
+    public void Grounding_rejects_unverified_required_artifact_content(string scenario)
+    {
+        const string groundedPath =
+            "artifacts/process-runs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/steps/child-handoff.md";
+        var fixture = CreateRequiredArtifactGroundingFixture(
+            groundedPath,
+            availability: scenario == "unavailable"
+                ? ProcessArtifactInputAvailability.Missing
+                : ProcessArtifactInputAvailability.Available,
+            contentHashOverride: scenario == "hash-mismatch"
+                ? "sha256:" + new string('0', 64)
+                : null);
+        var validator = new ProcessOutcomeGroundingValidator(fixture.WorkspaceFiles);
+
+        var outcomeIssue = validator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            fixture.StepContract);
+        var bodyIssue = validator.ValidateManagedArtifactBodyReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            stepContract: fixture.StepContract);
+
+        Assert.NotNull(outcomeIssue);
+        Assert.Equal("process.adapter.ungrounded_outcome_reference", outcomeIssue.Code);
+        Assert.NotNull(bodyIssue);
+        Assert.Equal("process.adapter.ungrounded_managed_artifact_reference", bodyIssue.Code);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Grounding_rejects_ambiguous_required_artifact_descriptors(
+        bool duplicateIdenticalRef)
+    {
+        const string groundedPath =
+            "artifacts/process-runs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/steps/child-handoff.md";
+        var fixture = CreateRequiredArtifactGroundingFixture(groundedPath);
+        var descriptor = Assert.Single(fixture.StepContract.ArtifactDescriptors);
+        var duplicateDescriptor = descriptor with
+        {
+            SlotKey = "duplicate-upstream-evidence",
+            PrimaryManagedRef = duplicateIdenticalRef
+                ? descriptor.PrimaryManagedRef
+                : "managed-files/project-media/not-managed-process-evidence.png"
+        };
+        var stepContract = fixture.StepContract with
+        {
+            ArtifactDescriptors = [descriptor, duplicateDescriptor]
+        };
+        var validator = new ProcessOutcomeGroundingValidator(fixture.WorkspaceFiles);
+
+        var outcomeIssue = validator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            stepContract);
+        var bodyIssue = validator.ValidateManagedArtifactBodyReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            stepContract: stepContract);
+
+        Assert.NotNull(outcomeIssue);
+        Assert.Equal("process.adapter.ungrounded_outcome_reference", outcomeIssue.Code);
+        Assert.NotNull(bodyIssue);
+        Assert.Equal("process.adapter.ungrounded_managed_artifact_reference", bodyIssue.Code);
+    }
+
+    [Fact]
+    public void Grounding_does_not_trust_prompt_discovered_artifact_body_without_typed_contract()
+    {
+        const string groundedPath =
+            "artifacts/process-runs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/steps/child-handoff.md";
+        var fixture = CreateRequiredArtifactGroundingFixture(
+            groundedPath,
+            promptNamesUpstreamArtifact: true);
+        var validator = new ProcessOutcomeGroundingValidator(fixture.WorkspaceFiles);
+
+        var outcomeIssue = validator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            ProcessStepExecutionContract.Empty);
+        var bodyIssue = validator.ValidateManagedArtifactBodyReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            stepContract: ProcessStepExecutionContract.Empty);
+
+        Assert.NotNull(outcomeIssue);
+        Assert.NotNull(bodyIssue);
+    }
+
+    [Fact]
+    public void Grounding_rejects_mixed_run_reference_despite_verified_upstream_content()
+    {
+        const string groundedPath =
+            "artifacts/process-runs/640df2d5-6168-4a52-b1c3-c6418c3a66c8/steps/store-ui-screenshots.md";
+        const string mixedRunPath =
+            "artifacts/process-runs/640df2d5-2fea-4242-8d66-6ce6edea2ef9/steps/store-ui-screenshots.md";
+        var fixture = CreateRequiredArtifactGroundingFixture(
+            groundedPath,
+            candidatePath: mixedRunPath);
+        var validator = new ProcessOutcomeGroundingValidator(fixture.WorkspaceFiles);
+
+        var outcomeIssue = validator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            fixture.StepContract);
+        var bodyIssue = validator.ValidateManagedArtifactBodyReferences(
+            fixture.Assignment,
+            fixture.Output,
+            [],
+            stepContract: fixture.StepContract);
+
+        Assert.NotNull(outcomeIssue);
+        Assert.Equal("process.adapter.ungrounded_outcome_reference", outcomeIssue.Code);
+        Assert.NotNull(bodyIssue);
+        Assert.Equal("process.adapter.ungrounded_managed_artifact_reference", bodyIssue.Code);
+    }
+
+    [Fact]
+    public void Completion_blocker_gate_ignores_authenticated_child_defect_text()
+    {
+        const string childDefectText =
+            "Accepted image asset node ids: none. No current-run screenshot was accepted as target-aligned visual proof.";
+        var fixture = CreateForwardedContextGroundingFixture(
+            childOutputContent:
+                $"{DefaultAcceptedChildArtifactContent}{Environment.NewLine}{Environment.NewLine}{childDefectText}");
+
+        var issue = ProcessProductCompletionStateGate.ValidateCompletedOutcomeDoesNotDeclareBlockers(
+            fixture.Assignment,
+            fixture.NormalizedOutput,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.Null(issue);
+    }
+
+    [Fact]
+    public void Completion_blocker_gate_does_not_trust_child_defect_text_without_exact_bridge_receipt()
+    {
+        const string childDefectText =
+            "Accepted image asset node ids: none. No current-run screenshot was accepted as target-aligned visual proof.";
+        var fixture = CreateForwardedContextGroundingFixture(
+            childOutputContent:
+                $"{DefaultAcceptedChildArtifactContent}{Environment.NewLine}{Environment.NewLine}{childDefectText}");
+        var mismatchedReceipt = fixture.TrustedReceipt with
+        {
+            Id = Guid.NewGuid()
+        };
+
+        var issue = ProcessProductCompletionStateGate.ValidateCompletedOutcomeDoesNotDeclareBlockers(
+            fixture.Assignment,
+            fixture.NormalizedOutput,
+            [mismatchedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.NotNull(issue);
+        Assert.Equal("process.adapter.completed_outcome_declares_unresolved_blocker", issue.Code);
+    }
+
+    [Fact]
+    public void Completion_blocker_gate_still_rejects_parent_owned_defect_text()
+    {
+        const string parentDefectText =
+            "No current-run screenshot was accepted as target-aligned visual proof.";
+        var fixture = CreateForwardedContextGroundingFixture();
+        var output = CopyWithReason(fixture.NormalizedOutput, parentDefectText);
+
+        var issue = ProcessProductCompletionStateGate.ValidateCompletedOutcomeDoesNotDeclareBlockers(
+            fixture.Assignment,
+            output,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.NotNull(issue);
+        Assert.Equal("process.adapter.completed_outcome_declares_unresolved_blocker", issue.Code);
+    }
+
+    [Fact]
+    public void Outcome_grounding_requires_the_same_runtime_bridge_receipt_identity()
+    {
+        var fixture = CreateForwardedContextGroundingFixture();
+        var semanticallyEquivalentReceipt = fixture.TrustedReceipt with
+        {
+            Id = Guid.NewGuid()
+        };
+
+        var issue = ProcessOutcomeGroundingValidator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.NormalizedOutput,
+            [semanticallyEquivalentReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.NotNull(issue);
+        Assert.Equal("process.adapter.ungrounded_outcome_reference", issue.Code);
+        Assert.Contains("reserved runtime child-output or forwarded-context envelope", issue.Summary, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("duplicate")]
+    [InlineData("begin-only")]
+    [InlineData("end-only")]
+    [InlineData("reversed")]
+    [InlineData("mismatched")]
+    public void Forwarded_context_envelope_removal_rejects_noncanonical_structure(string scenario)
+    {
+        var fixture = CreateForwardedContextGroundingFixture();
+        var invalidContent = scenario switch
+        {
+            "duplicate" => $"{fixture.VerifiedEnvelope}{Environment.NewLine}{fixture.VerifiedEnvelope}",
+            "begin-only" => ParentSubprocessForwardedContextEnvelope.BeginMarker,
+            "end-only" => ParentSubprocessForwardedContextEnvelope.EndMarker,
+            "reversed" => $"{ParentSubprocessForwardedContextEnvelope.EndMarker}{Environment.NewLine}{ParentSubprocessForwardedContextEnvelope.BeginMarker}",
+            "mismatched" => fixture.VerifiedEnvelope.Replace(
+                "runtime-project/v1",
+                "runtime-project/v2",
+                StringComparison.Ordinal),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown envelope scenario.")
+        };
+
+        var result = ParentSubprocessForwardedContextEnvelope.TryRemoveSingleVerified(
+            invalidContent,
+            fixture.VerifiedEnvelope,
+            out var unchangedContent);
+
+        Assert.Equal(ParentSubprocessForwardedContextEnvelope.MatchResult.Invalid, result);
+        Assert.Equal(invalidContent, unchangedContent);
+    }
+
+    [Theory]
+    [InlineData("duplicate")]
+    [InlineData("begin-only")]
+    [InlineData("end-only")]
+    [InlineData("reversed")]
+    [InlineData("mismatched")]
+    public void Verified_child_output_envelope_removal_rejects_noncanonical_structure(string scenario)
+    {
+        var fixture = CreateForwardedContextGroundingFixture();
+        var invalidContent = scenario switch
+        {
+            "duplicate" => $"{fixture.VerifiedChildOutputEnvelope}{Environment.NewLine}{fixture.VerifiedChildOutputEnvelope}",
+            "begin-only" => ParentSubprocessVerifiedChildOutputEnvelope.BeginMarker,
+            "end-only" => ParentSubprocessVerifiedChildOutputEnvelope.EndMarker,
+            "reversed" => $"{ParentSubprocessVerifiedChildOutputEnvelope.EndMarker}{Environment.NewLine}{ParentSubprocessVerifiedChildOutputEnvelope.BeginMarker}",
+            "mismatched" => fixture.VerifiedChildOutputEnvelope.Replace(
+                "Status: Completed",
+                "Status: Tampered",
+                StringComparison.Ordinal),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown envelope scenario.")
+        };
+
+        var result = ParentSubprocessVerifiedChildOutputEnvelope.TryRemoveSingleVerified(
+            invalidContent,
+            fixture.VerifiedChildOutputEnvelope,
+            out var unchangedContent);
+
+        Assert.Equal(ParentSubprocessVerifiedChildOutputEnvelope.MatchResult.Invalid, result);
+        Assert.Equal(invalidContent, unchangedContent);
+    }
+
+    [Fact]
+    public void Verified_child_output_envelope_removal_rejects_payload_line_ending_tampering()
+    {
+        const string originalContent = "first payload line\r\nsecond payload line";
+        const string tamperedContent = "first payload line\nsecond payload line";
+        var verifiedEnvelope = ParentSubprocessVerifiedChildOutputEnvelope.Format(
+            new ProcessSubprocessVerifiedChildArtifact(
+                "artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/child.md",
+                "child-step",
+                "child-artifact",
+                "sha256:original-content",
+                originalContent));
+        var tamperedEnvelope = verifiedEnvelope.Replace(
+            originalContent,
+            tamperedContent,
+            StringComparison.Ordinal);
+
+        var result = ParentSubprocessVerifiedChildOutputEnvelope.TryRemoveSingleVerified(
+            tamperedEnvelope,
+            verifiedEnvelope,
+            out var unchangedContent);
+
+        Assert.NotEqual(verifiedEnvelope, tamperedEnvelope);
+        Assert.Equal(ParentSubprocessVerifiedChildOutputEnvelope.MatchResult.Invalid, result);
+        Assert.Equal(tamperedEnvelope, unchangedContent);
+    }
+
+    [Fact]
+    public void Managed_branch_reader_ignores_branch_keys_inside_commonmark_info_fences()
+    {
+        const string content = """
+            ```text
+            Branch outcome key: hidden-backtick-key
+            ```
+
+            ~~~json
+            Branch outcome key: hidden-tilde-key
+            ~~~
+            """;
+
+        var keys = ProcessManagedArtifactBranchOutcomeReader.ReadKeys(content);
+
+        Assert.Empty(keys);
+    }
+
+    [Fact]
+    public void Managed_branch_reader_reads_canonical_key_after_commonmark_fence()
+    {
+        const string content = """
+            ~~~json
+            Branch outcome key: hidden-key
+            ~~~~
+
+            ## Branch Outcome
+            - Key: expected-key
+            """;
+
+        var keys = ProcessManagedArtifactBranchOutcomeReader.ReadKeys(content);
+
+        Assert.Equal(["expected-key"], keys);
+    }
+
+    [Theory]
+    [InlineData("    ", "```")]
+    [InlineData("\t", "~~~")]
+    public void Managed_branch_reader_does_not_hide_keys_behind_over_indented_fence_lines(
+        string indentation,
+        string fence)
+    {
+        var content = string.Join(
+            "\n",
+            "Branch outcome key: accepted-key",
+            $"{indentation}{fence}text",
+            "Branch outcome key: conflicting-key",
+            $"{indentation}{fence}");
+
+        var keys = ProcessManagedArtifactBranchOutcomeReader.ReadKeys(content);
+
+        Assert.Equal(["accepted-key", "conflicting-key"], keys);
+    }
+
+    [Fact]
+    public void Outcome_grounding_rejects_tampered_verified_child_output_envelope()
+    {
+        var fixture = CreateForwardedContextGroundingFixture();
+        var tamperedSummary = Assert.IsType<string>(fixture.NormalizedOutput.HumanReadableSummaryMarkdown)
+            .Replace("Status: Completed", "Status: Tampered", StringComparison.Ordinal);
+        var output = CopyWithSummary(fixture.NormalizedOutput, tamperedSummary);
+
+        var issue = ProcessOutcomeGroundingValidator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            output,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.NotNull(issue);
+        Assert.Equal("process.adapter.ungrounded_outcome_reference", issue.Code);
+        Assert.Contains("reserved runtime child-output or forwarded-context envelope", issue.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Outcome_grounding_accepts_forwarded_envelope_nested_in_verified_child_payload()
+    {
+        var nestedForwardedEnvelope = ParentSubprocessForwardedContextEnvelope.Format(
+        [
+            new ParentSubprocessForwardedContextArtifact(
+                "nested-context",
+                "nested-source",
+                "nested-artifact",
+                "nested/v1",
+                "artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/nested.md",
+                "Nested runtime context.")
+        ]);
+        var fixture = CreateForwardedContextGroundingFixture(
+            childOutputContent:
+                $"{DefaultAcceptedChildArtifactContent}{Environment.NewLine}{nestedForwardedEnvelope}");
+
+        var issue = ProcessOutcomeGroundingValidator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.NormalizedOutput,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.Null(issue);
+        Assert.Contains(
+            nestedForwardedEnvelope,
+            fixture.NormalizedOutput.HumanReadableSummaryMarkdown,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Outcome_grounding_accepts_verified_child_envelope_nested_in_forwarded_context()
+    {
+        var nestedChildEnvelope = ParentSubprocessVerifiedChildOutputEnvelope.Format(
+            new ProcessSubprocessVerifiedChildArtifact(
+                "artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/nested.md",
+                "nested-step",
+                "nested-artifact",
+                "sha256:nested",
+                DefaultAcceptedChildArtifactContent));
+        var fixture = CreateForwardedContextGroundingFixture(
+            forwardedPayload:
+                $"Nested runtime context.{Environment.NewLine}{nestedChildEnvelope}");
+
+        var issue = ProcessOutcomeGroundingValidator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            fixture.NormalizedOutput,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.Null(issue);
+        Assert.Contains(
+            nestedChildEnvelope,
+            fixture.NormalizedOutput.HumanReadableSummaryMarkdown,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Outcome_grounding_does_not_hide_ungrounded_ref_outside_verified_envelope()
+    {
+        var fixture = CreateForwardedContextGroundingFixture();
+        const string outsideRef =
+            "artifacts/process-runs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/steps/untrusted.md";
+        var output = CopyWithSummary(
+            fixture.NormalizedOutput,
+            $"{fixture.NormalizedOutput.HumanReadableSummaryMarkdown}{Environment.NewLine}{Environment.NewLine}Outside ref: `{outsideRef}`");
+
+        var issue = ProcessOutcomeGroundingValidator.ValidateGroundedOutcomeReferences(
+            fixture.Assignment,
+            output,
+            [fixture.TrustedReceipt],
+            fixture.BridgedOutcome);
+
+        Assert.NotNull(issue);
+        Assert.Equal("process.adapter.ungrounded_outcome_reference", issue.Code);
+    }
+
+    [Fact]
+    public void Runtime_subprocess_envelope_budget_reserves_managed_artifact_readback_headroom()
+    {
+        var smallChildOutput = new ProcessSubprocessVerifiedChildArtifact(
+            "artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/handoff.md",
+            "handoff",
+            "handoff-packet",
+            "sha256:small",
+            DefaultAcceptedChildArtifactContent);
+        var oversizedChildOutput = smallChildOutput with
+        {
+            Content = new string(
+                'x',
+                ParentSubprocessRuntimeEnvelopeBudget.MaxCombinedEnvelopeCharacters)
+        };
+
+        Assert.True(ParentSubprocessRuntimeEnvelopeBudget.IsWithinLimit(
+            smallChildOutput,
+            [],
+            out var smallEnvelopeCharacters));
+        Assert.True(
+            smallEnvelopeCharacters <
+            ParentSubprocessRuntimeEnvelopeBudget.MaxCombinedEnvelopeCharacters);
+        Assert.False(ParentSubprocessRuntimeEnvelopeBudget.IsWithinLimit(
+            oversizedChildOutput,
+            [],
+            out var oversizedEnvelopeCharacters));
+        Assert.True(
+            oversizedEnvelopeCharacters >
+            ParentSubprocessRuntimeEnvelopeBudget.MaxCombinedEnvelopeCharacters);
     }
 
     [Fact]
@@ -353,7 +947,7 @@ public sealed class ProcessMafHardeningRegressionTests
                 childState),
             new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                [acceptedRef] = $"{ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}\nStatus: Completed",
+                [acceptedRef] = DefaultAcceptedChildArtifactContent,
                 [forwardedRef] = forwardedContent
             }),
             CreateSubprocessContractResolver());
@@ -392,7 +986,7 @@ public sealed class ProcessMafHardeningRegressionTests
     }
 
     [Fact]
-    public async Task Parent_subprocess_bridge_rejects_staged_child_output_without_gate_acceptance()
+    public async Task Parent_subprocess_bridge_rejects_child_output_with_mismatched_ledger_hash()
     {
         var parentRunId = ProcessRunId.New();
         var childRunId = ProcessRunId.New();
@@ -401,7 +995,7 @@ public sealed class ProcessMafHardeningRegressionTests
         {
             ProducedArtifactSlotIds = [ChildArtifactSlotId]
         };
-        var stagedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
@@ -412,16 +1006,144 @@ public sealed class ProcessMafHardeningRegressionTests
                     ProcessRuntimeStatus.Completed,
                     childAssignment,
                     ProcessRuntimeStepStatus.Completed,
-                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
+                    [CreateProducedArtifactReceipt(
+                        childAssignment,
+                        ChildArtifactSlotId,
+                        DefaultAcceptedChildArtifactContent + "\ntampered-after-ledger")])),
             new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                [stagedRef] = $"""
-                # setup-handoff Process Step Outcome
+                [acceptedRef] = DefaultAcceptedChildArtifactContent
+            }),
+            CreateSubprocessContractResolver());
 
-                {ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading}
+        var result = await bridge.ResolveExistingAsync(assignment);
 
-                Completion gates have not accepted this output yet.
-                """
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput, result.Kind);
+        Assert.Null(result.BridgedOutcome);
+    }
+
+    [Fact]
+    public async Task Parent_subprocess_bridge_uses_only_the_current_completed_result_receipt()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var staleReceipt = CreateProducedArtifactReceipt(
+            childAssignment,
+            ChildArtifactSlotId,
+            DefaultAcceptedChildArtifactContent);
+        var currentReceipt = CreateProducedArtifactReceipt(
+            childAssignment,
+            ChildArtifactSlotId,
+            DefaultAcceptedChildArtifactContent + "\ncurrent-result-content");
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [staleReceipt, currentReceipt])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [acceptedRef] = DefaultAcceptedChildArtifactContent
+            }),
+            CreateSubprocessContractResolver());
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput, result.Kind);
+        Assert.Null(result.BridgedOutcome);
+    }
+
+    [Fact]
+    public async Task Parent_subprocess_bridge_rejects_duplicate_current_slot_artifacts()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var receipt = CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId) with
+        {
+            ProducedArtifacts =
+            [
+                new StrategyResultArtifactReceipt(
+                    ChildArtifactSlotId,
+                    ArtifactInstanceId.New(),
+                    ComputeContentHash(DefaultAcceptedChildArtifactContent)),
+                new StrategyResultArtifactReceipt(
+                    ChildArtifactSlotId,
+                    ArtifactInstanceId.New(),
+                    ComputeContentHash(DefaultAcceptedChildArtifactContent))
+            ]
+        };
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [receipt])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [acceptedRef] = DefaultAcceptedChildArtifactContent
+            }),
+            CreateSubprocessContractResolver());
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput, result.Kind);
+        Assert.Null(result.BridgedOutcome);
+    }
+
+    [Fact]
+    public async Task Parent_subprocess_bridge_rejects_staged_child_output_without_gate_acceptance()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var stagedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var stagedContent = $"""
+            # setup-handoff Process Step Outcome
+
+            {ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading}
+
+            Completion gates have not accepted this output yet.
+            """;
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId, stagedContent)])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [stagedRef] = stagedContent
             }),
             CreateSubprocessContractResolver());
 
@@ -444,6 +1166,15 @@ public sealed class ProcessMafHardeningRegressionTests
             ProducedArtifactSlotIds = [ChildArtifactSlotId]
         };
         var noGoRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-repair-escalation.md";
+        var noGoContent = $"""
+            {ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}
+
+            ### Branch Outcome
+            - Key: setup-no-go
+
+            ### Summary
+            The child produced a bounded no-go packet.
+            """;
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
@@ -504,6 +1235,28 @@ public sealed class ProcessMafHardeningRegressionTests
             ProducedArtifactSlotIds = [ChildArtifactSlotId]
         };
         var noGoRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-repair-escalation.md";
+        var noGoOutput = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Manager-assisted repair is required.",
+            BranchOutcomeKey = "setup-no-go",
+            BranchOutcomeTitle = "Setup no-go",
+            EvidenceRefs = [],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = "Opaque routed no-go payload."
+        };
+        var childExecutionRunId = Guid.NewGuid();
+        var noGoContent =
+            ProcessManagedArtifactFormatter.BuildManagedOutcomeArtifactContent(
+                childAssignment,
+                noGoOutput,
+                childExecutionRunId,
+                noGoRef) +
+            ProcessManagedArtifactFormatter.BuildManagedOutcomeArtifactAcceptanceContent(
+                childAssignment,
+                noGoOutput,
+                childExecutionRunId,
+                noGoRef);
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
@@ -514,18 +1267,10 @@ public sealed class ProcessMafHardeningRegressionTests
                     ProcessRuntimeStatus.Completed,
                     childAssignment,
                     ProcessRuntimeStepStatus.Completed,
-                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId, noGoContent)])),
             new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                [noGoRef] = $"""
-                {ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}
-
-                ### Branch Outcome
-                - Key: setup-no-go
-
-                ### Summary
-                The child produced a bounded no-go packet.
-                """
+                [noGoRef] = noGoContent
             }),
             CreateSubprocessContractResolver());
 
@@ -537,6 +1282,77 @@ public sealed class ProcessMafHardeningRegressionTests
         Assert.Equal("manager-assisted-repair-required", bridgedOutcome.Output.BranchOutcomeKey);
         Assert.Contains("no-go", bridgedOutcome.Output.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(noGoRef, bridgedOutcome.EvidenceRefs);
+        Assert.Equal(noGoContent, bridgedOutcome.VerifiedChildOutput.Content);
+        Assert.Contains(
+            "Opaque routed no-go payload.",
+            bridgedOutcome.Output.HumanReadableSummaryMarkdown,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            1,
+            bridgedOutcome.Output.HumanReadableSummaryMarkdown!.Split(
+                ParentSubprocessVerifiedChildOutputEnvelope.BeginMarker,
+                StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public async Task Parent_subprocess_bridge_rejects_ambiguous_child_branch_keys()
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = WithSubprocessContract(
+            CreateParentAssignment(parentRunId),
+            new ProcessSubprocessContract
+            {
+                DefinitionKey = "dotnet-solution-setup",
+                ParentProducedArtifactExpectationKey = "solution-skeleton-evidence",
+                AcceptedChildOutputs =
+                [
+                    new ProcessSubprocessChildOutputContract
+                    {
+                        StepKey = "setup-handoff",
+                        ArtifactExpectationKey = "setup-handoff-packet",
+                        BranchOutcomeKey = "setup-ready"
+                    }
+                ]
+            });
+        var childAssignment = CreateChildAssignment(childRunId, assignment) with
+        {
+            ProducedArtifactSlotIds = [ChildArtifactSlotId]
+        };
+        var acceptedRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var ambiguousContent =
+            $"""
+            {ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}
+
+            ## Branch Outcome
+
+            - Key: setup-ready
+            - Key: setup-no-go
+            """;
+        var bridge = new ParentSubprocessArtifactBridge(
+            new InMemoryAssignmentStore(childAssignment),
+            new InMemoryStateStore(
+                NewRuntimeState(parentRunId, parentRunId, ProcessRuntimeStatus.Active),
+                NewRuntimeState(
+                    parentRunId,
+                    childRunId,
+                    ProcessRuntimeStatus.Completed,
+                    childAssignment,
+                    ProcessRuntimeStepStatus.Completed,
+                    [CreateProducedArtifactReceipt(
+                        childAssignment,
+                        ChildArtifactSlotId,
+                        ambiguousContent)])),
+            new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [acceptedRef] = ambiguousContent
+            }),
+            CreateSubprocessContractResolver());
+
+        var result = await bridge.ResolveExistingAsync(assignment);
+
+        Assert.Equal(ParentSubprocessArtifactBridgeResultKind.ChildCompletedWithoutAcceptedOutput, result.Kind);
+        Assert.Null(result.BridgedOutcome);
     }
 
     [Theory]
@@ -596,6 +1412,23 @@ public sealed class ProcessMafHardeningRegressionTests
             ProducedArtifactSlotIds = [ChildArtifactSlotId]
         };
         var artifactRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md";
+        var nestedEnvelope = ParentSubprocessVerifiedChildOutputEnvelope.Format(
+            new ProcessSubprocessVerifiedChildArtifact(
+                "artifacts/process-runs/11111111-2222-3333-4444-555555555555/steps/nested.md",
+                "nested",
+                "nested-packet",
+                "sha256:nested",
+                "Branch outcome key: nested-branch"));
+        var artifactContent = $"""
+            Status: Completed
+            Branch outcome key: {artifactBranchOutcomeKey}
+
+            {ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading}
+
+            {ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}
+
+            {nestedEnvelope}
+            """;
         var bridge = new ParentSubprocessArtifactBridge(
             new InMemoryAssignmentStore(childAssignment),
             new InMemoryStateStore(
@@ -606,17 +1439,10 @@ public sealed class ProcessMafHardeningRegressionTests
                     ProcessRuntimeStatus.Completed,
                     childAssignment,
                     ProcessRuntimeStepStatus.Completed,
-                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId)])),
+                    [CreateProducedArtifactReceipt(childAssignment, ChildArtifactSlotId, artifactContent)])),
             new FakeWorkspaceFileService(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                [artifactRef] = $"""
-                Status: Completed
-                Branch outcome key: {artifactBranchOutcomeKey}
-
-                {ProcessManagedArtifactService.ManagedOutcomeArtifactCapturedHeading}
-
-                {ProcessManagedArtifactService.ManagedOutcomeArtifactAcceptedHeading}
-                """
+                [artifactRef] = artifactContent
             }),
             CreateSubprocessContractResolver());
 
@@ -659,6 +1485,119 @@ public sealed class ProcessMafHardeningRegressionTests
         Assert.Contains("workspace_pwsh_run_script", diagnostic.SafeSummary, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(stoppedChild.RecoveryDecision);
     }
+
+    private static ForwardedContextGroundingFixture CreateForwardedContextGroundingFixture(
+        string? childOutputContent = null,
+        string? forwardedPayload = null)
+    {
+        var parentRunId = ProcessRunId.New();
+        var childRunId = ProcessRunId.New();
+        var assignment = CreateParentAssignment(parentRunId);
+        var childArtifactRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/architecture.md";
+        var childInternalRef = $"artifacts/process-runs/{childRunId.Value:D}/steps/intake.md";
+        var forwardedContent = forwardedPayload ?? string.Join(
+            Environment.NewLine,
+            "## Runtime project",
+            string.Empty,
+            string.Empty,
+            $"Internal child ref: `{childInternalRef}`");
+        var forwardedArtifact = new ParentSubprocessForwardedContextArtifact(
+            "runtime-project",
+            "architecture",
+            "runtime-project",
+            "runtime-project/v1",
+            childArtifactRef,
+            forwardedContent);
+        var resolvedChildOutputContent = childOutputContent ?? DefaultAcceptedChildArtifactContent;
+        var verifiedChildOutput = new ProcessSubprocessVerifiedChildArtifact(
+            $"artifacts/process-runs/{childRunId.Value:D}/steps/setup-handoff.md",
+            "setup-handoff",
+            "setup-handoff-packet",
+            ComputeContentHash(resolvedChildOutputContent),
+            resolvedChildOutputContent);
+        var rawChildOutputEnvelope = ParentSubprocessVerifiedChildOutputEnvelope.Format(
+            verifiedChildOutput);
+        var verifiedChildOutputEnvelope = rawChildOutputEnvelope;
+        var rawEnvelope = ParentSubprocessForwardedContextEnvelope.Format([forwardedArtifact]);
+        var verifiedEnvelope = rawEnvelope;
+        var rawOutput = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "The runtime bridged a verified child subprocess output.",
+            EvidenceRefs = [],
+            NextActions = [],
+            HumanReadableSummaryMarkdown =
+                $"{rawChildOutputEnvelope}{Environment.NewLine}{Environment.NewLine}{rawEnvelope}"
+        };
+        var normalizedOutput = ProcessOutcomeCitationSanitizer.RemoveNonCitableSourceMetadataFromOutcome(rawOutput);
+        var syntheticExecutionRunId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var trustedReceipt = new ToolExecutionReceiptRecord(
+            Guid.NewGuid(),
+            syntheticExecutionRunId,
+            "process-runtime",
+            ProcessSubprocessState.SubprocessLaunchToolName,
+            "ProcessRuntime",
+            "NotRequired",
+            "Runtime-owned subprocess bridge.",
+            $"parentRunId={parentRunId.Value:D}; childRunId={childRunId.Value:D}",
+            ".",
+            $"Succeeded: matching child run {childRunId.Value:D} completed with accepted typed evidence.",
+            now,
+            now);
+        var bridgedOutcome = new ParentSubprocessBridgedOutcome(
+            childRunId,
+            now,
+            ChildOutputDisposition.Accepted,
+            "setup-handoff",
+            "setup-handoff-packet",
+            string.Empty,
+            verifiedChildOutput,
+            rawOutput,
+            [],
+            [forwardedArtifact],
+            "sha256:verified-forwarded-context",
+            syntheticExecutionRunId,
+            [trustedReceipt]);
+        return new ForwardedContextGroundingFixture(
+            assignment,
+            normalizedOutput,
+            bridgedOutcome,
+            trustedReceipt,
+            rawEnvelope,
+            verifiedEnvelope,
+            verifiedChildOutputEnvelope);
+    }
+
+    private static ProcessStepOutcomeResult CopyWithSummary(
+        ProcessStepOutcomeResult output,
+        string summary)
+        => new()
+        {
+            Status = output.Status,
+            Reason = output.Reason,
+            BranchOutcomeKey = output.BranchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = output.EvidenceRefs,
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
+            NextActions = output.NextActions,
+            HumanReadableSummaryMarkdown = summary
+        };
+
+    private static ProcessStepOutcomeResult CopyWithReason(
+        ProcessStepOutcomeResult output,
+        string reason)
+        => new()
+        {
+            Status = output.Status,
+            Reason = reason,
+            BranchOutcomeKey = output.BranchOutcomeKey,
+            BranchOutcomeTitle = output.BranchOutcomeTitle,
+            EvidenceRefs = output.EvidenceRefs,
+            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
+            NextActions = output.NextActions,
+            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
+        };
 
     private static ProcessSubprocessContractResolver CreateSubprocessContractResolver()
         => new();
@@ -781,6 +1720,14 @@ public sealed class ProcessMafHardeningRegressionTests
                     $"artifacts/process-runs/{runId.Value:D}/steps/{outputStepKey}.md",
                     ProcessArtifactMaterializationMode.AgentWritten))
                 .ToArray();
+        var completedResultKey = stepStatus == ProcessRuntimeStepStatus.Completed
+            ? appliedResults?
+                .Where(receipt =>
+                    receipt.StepInstanceId == (stepAssignment?.StepInstanceId ?? ParentStepId) &&
+                    receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Completed)
+                .LastOrDefault()
+                ?.IdempotencyKey
+            : null;
         var step = new ProcessRuntimeStepState(
             stepAssignment?.StepInstanceId ?? ParentStepId,
             ParentStepDefinitionId,
@@ -790,7 +1737,7 @@ public sealed class ProcessMafHardeningRegressionTests
             DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
             RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
             ActiveClaimToken: null,
-            CompletedResultKey: null)
+            CompletedResultKey: completedResultKey)
         {
             ProducedArtifactSlots = producedArtifactSlots,
             ArtifactDescriptors = descriptors
@@ -814,7 +1761,8 @@ public sealed class ProcessMafHardeningRegressionTests
 
     private static StrategyResultReceipt CreateProducedArtifactReceipt(
         ProcessRuntimeStepAssignment assignment,
-        ArtifactSlotId slotId)
+        ArtifactSlotId slotId,
+        string content = DefaultAcceptedChildArtifactContent)
         => new(
             assignment.StepInstanceId,
             new StrategyId("strategy.adapter.workflow.execute"),
@@ -828,7 +1776,7 @@ public sealed class ProcessMafHardeningRegressionTests
                 new StrategyResultArtifactReceipt(
                     slotId,
                     ArtifactInstanceId.New(),
-                    "sha256:child-artifact")
+                    ComputeContentHash(content))
             ]);
 
     private static StrategyResultReceipt CreateBlockedDiagnosticReceipt(ProcessRuntimeStepAssignment assignment)
@@ -915,6 +1863,87 @@ public sealed class ProcessMafHardeningRegressionTests
     private static string ComputeContentHash(string value)
         => "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
+    private static RequiredArtifactGroundingFixture CreateRequiredArtifactGroundingFixture(
+        string groundedPath,
+        string? candidatePath = null,
+        ProcessArtifactInputAvailability availability = ProcessArtifactInputAvailability.Available,
+        string? contentHashOverride = null,
+        bool promptNamesUpstreamArtifact = false)
+    {
+        var runId = ProcessRunId.New();
+        var requiredSlotId = ArtifactSlotId.New();
+        var producedSlotId = ArtifactSlotId.New();
+        var upstreamRef =
+            $"artifacts/process-runs/{ProcessRunId.New().Value:D}/steps/upstream-evidence.md";
+        var upstreamContent = $"# Upstream evidence{Environment.NewLine}{Environment.NewLine}- `{groundedPath}`";
+        var assignment = CreateParentAssignment(runId) with
+        {
+            StepKey = "evidence-review",
+            Prompt = promptNamesUpstreamArtifact
+                ? $"Read required evidence at {upstreamRef}."
+                : "Review the authenticated required evidence.",
+            ProducedArtifactSlotIds = [producedSlotId],
+            RequiredArtifactSlotIds = [requiredSlotId],
+            AllowedOperations = [ProcessOperationContractNames.WriteManagedProcessArtifacts],
+            OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly
+        };
+        var primaryRef =
+            $"artifacts/process-runs/{runId.Value:D}/steps/{assignment.StepKey}.md";
+        var citedPath = candidatePath ?? groundedPath;
+        var primaryContent =
+            $"# Evidence review{Environment.NewLine}{Environment.NewLine}Status: Completed{Environment.NewLine}{Environment.NewLine}- `{citedPath}`";
+        var output = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = $"Reviewed evidence at {citedPath}.",
+            EvidenceRefs = [primaryRef, citedPath],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = "Authenticated evidence reviewed."
+        };
+        var requiredArtifact = new RequiredArtifactInputRef(
+            requiredSlotId,
+            availability,
+            ProducerStepId: availability == ProcessArtifactInputAvailability.Available
+                ? ProcessStepInstanceId.New()
+                : null,
+            ArtifactId: availability == ProcessArtifactInputAvailability.Available
+                ? ArtifactInstanceId.New()
+                : null,
+            ContentHash: contentHashOverride ?? ComputeContentHash(upstreamContent),
+            ConnectionHash: "sha256:required-artifact-connection");
+        var stepContract = new ProcessStepExecutionContract(
+            [requiredArtifact],
+            [new ExpectedProducedArtifactRef(producedSlotId)],
+            [],
+            "sha256:required-artifact-grounding-contract")
+        {
+            ArtifactDescriptors =
+            [
+                new ProcessArtifactSlotDescriptor(
+                    requiredSlotId,
+                    "upstream-evidence",
+                    "upstream",
+                    "upstream-evidence",
+                    "Upstream evidence",
+                    "ManagedMarkdown",
+                    upstreamRef,
+                    ProcessArtifactMaterializationMode.AgentWritten)
+            ]
+        };
+        var workspaceFiles = new FakeWorkspaceFileService(
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [upstreamRef] = upstreamContent,
+                [primaryRef] = primaryContent
+            });
+
+        return new RequiredArtifactGroundingFixture(
+            assignment,
+            output,
+            stepContract,
+            workspaceFiles);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -930,6 +1959,21 @@ public sealed class ProcessMafHardeningRegressionTests
 
         throw new InvalidOperationException("Repository root could not be located.");
     }
+
+    private sealed record ForwardedContextGroundingFixture(
+        ProcessRuntimeStepAssignment Assignment,
+        ProcessStepOutcomeResult NormalizedOutput,
+        ParentSubprocessBridgedOutcome BridgedOutcome,
+        ToolExecutionReceiptRecord TrustedReceipt,
+        string RawEnvelope,
+        string VerifiedEnvelope,
+        string VerifiedChildOutputEnvelope);
+
+    private sealed record RequiredArtifactGroundingFixture(
+        ProcessRuntimeStepAssignment Assignment,
+        ProcessStepOutcomeResult Output,
+        ProcessStepExecutionContract StepContract,
+        IWorkspaceFileService WorkspaceFiles);
 
     private sealed class InMemoryStateStore(params ProcessRuntimeStateSnapshot[] states) : IProcessRuntimeStateStore
     {
@@ -980,7 +2024,10 @@ public sealed class ProcessMafHardeningRegressionTests
         private readonly IReadOnlyDictionary<string, string> files;
 
         public FakeWorkspaceFileService(IReadOnlyList<string> existingPaths)
-            : this(existingPaths.ToDictionary(path => path, _ => string.Empty, StringComparer.OrdinalIgnoreCase))
+            : this(existingPaths.ToDictionary(
+                path => path,
+                _ => DefaultAcceptedChildArtifactContent,
+                StringComparer.OrdinalIgnoreCase))
         {
         }
 
@@ -1009,14 +2056,15 @@ public sealed class ProcessMafHardeningRegressionTests
                     IsTruncated: false);
             }
 
+            var isTruncated = content.Length > maxCharacters;
             return new WorkspaceTextFileReadResult(
                 Succeeded: true,
                 Message: "read",
                 Receipt: Receipt(),
                 Path: path,
-                Content: content,
+                Content: isTruncated ? content[..maxCharacters] : content,
                 TotalCharacters: content.Length,
-                IsTruncated: false);
+                IsTruncated: isTruncated);
         }
 
         public WorkspacePathStatResult StatPath(string path)

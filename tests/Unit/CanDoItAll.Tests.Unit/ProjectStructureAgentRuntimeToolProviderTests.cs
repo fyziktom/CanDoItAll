@@ -239,4 +239,40 @@ public sealed class ProjectStructureAgentRuntimeToolProviderTests
             sessionCreatedProjectIds,
             processProjectId));
     }
+
+    [Theory]
+    [InlineData(400)]
+    [InlineData(403)]
+    [InlineData(404)]
+    [InlineData(409)]
+    [InlineData(500)]
+    public void Project_structure_agent_exception_is_not_agent_visible_by_default(
+        int statusCode)
+    {
+        var exception = new ProjectStructureAgentException(
+            statusCode,
+            "ProjectStructureFailure",
+            "Safe agent-facing message.",
+            new { Secret = "must-not-be-projected" });
+
+        Assert.False(exception.IsSafeToExpose);
+        Assert.False(exception.CanRetryWithCorrectedInput);
+    }
+
+    [Fact]
+    public void Reviewed_project_structure_failure_can_opt_into_agent_visible_recovery()
+    {
+        var exception = ProjectStructureAgentException.CreateAgentVisible(
+            400,
+            "InvalidProjectObjectMetadata",
+            "request.metadataJson has an incompatible value at '$.workflow'.",
+            canRetryWithCorrectedInput: true,
+            diagnosticDetails: new { Secret = "must-not-be-projected" });
+
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(
+            "request.metadataJson has an incompatible value at '$.workflow'.",
+            exception.SafeMessage);
+    }
 }

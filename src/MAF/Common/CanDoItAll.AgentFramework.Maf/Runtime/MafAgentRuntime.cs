@@ -522,8 +522,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
         AgentResponseUpdate? lastTerminalResponseUpdate = null;
         var announcedStreaming = false;
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var repeatedToolInvocationGuard = new RepeatedToolInvocationGuard();
         var synthesizedFinalizerInvocations = new List<AgentFinalizerInvocation>();
         var streamedFinalizerRecorder = new MafFinalizerDriver.StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotEffectiveToolInvocationTraces = () =>
@@ -568,11 +566,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
             foreach (var toolCall in snapshot.Contents.OfType<ToolCallContent>())
             {
                 var toolKey = MafToolInvocationArgumentFormatter.ResolveToolCallKey(toolCall);
-                if (toolCall.CallId is null || guardedToolCallIds.Add(toolCall.CallId))
-                {
-                    repeatedToolInvocationGuard.Guard(toolCall);
-                }
-
                 streamedFinalizerRecorder.Record(toolCall);
                 if (!announcedToolCalls.Add(toolKey))
                 {
@@ -612,25 +605,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     out var finalizerPolicy))
             {
                 return null;
-            }
-
-            var recoveredArtifactResponse = await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
-                provider,
-                resolvedModel,
-                runtimeAgent,
-                runtimeSession,
-                runtimeSessionKey,
-                runtimeOptions,
-                finalizerPolicy,
-                updates,
-                ProviderUsageSourcePhases.FinalizerRecovery,
-                ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
-                progressCallback,
-                cancellationToken,
-                snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
-            if (recoveredArtifactResponse is not null)
-            {
-                return AttachContextDiagnostics(recoveredArtifactResponse);
             }
 
             await progressCallback(
@@ -693,9 +667,28 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     response,
                     repairContext,
                     toolInvocationTraceRecorder);
-                return jsonRepairResponse is null
+                if (jsonRepairResponse is not null)
+                {
+                    return AttachContextDiagnostics(jsonRepairResponse);
+                }
+
+                var recoveredArtifactResponse = await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
+                    provider,
+                    resolvedModel,
+                    runtimeAgent,
+                    runtimeSession,
+                    runtimeSessionKey,
+                    runtimeOptions,
+                    finalizerPolicy,
+                    updates,
+                    ProviderUsageSourcePhases.FinalizerRecovery,
+                    ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
+                    progressCallback,
+                    cancellationToken,
+                    snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
+                return recoveredArtifactResponse is null
                     ? null
-                    : AttachContextDiagnostics(jsonRepairResponse);
+                    : AttachContextDiagnostics(recoveredArtifactResponse);
             }
             catch (RequiredFinalizerCapturedException exception)
             {
@@ -1073,7 +1066,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
         var repairCapabilityState = new RuntimeCapabilityState();
         repairCapabilityState.Tools.Add(finalizerTool);
         return runtimeAgentFactory.CreateInstrumentedAgent(
-            providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services),
+            providerAgentFactory.CreateFrameworkAgent(
+                provider,
+                model,
+                repairOptions,
+                frameworkManagedHistory: false,
+                allowBackgroundResponses: false,
+                services),
             provider,
             agent,
             repairCapabilityState,
@@ -1118,7 +1117,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
         repairOptions.AIContextProviders = [];
         repairOptions.ChatHistoryProvider = null;
         repairOptions.RequirePerServiceCallChatHistoryPersistence = false;
-        return providerAgentFactory.CreateFrameworkAgent(provider, model, repairOptions, frameworkManagedHistory: false, services);
+        return providerAgentFactory.CreateFrameworkAgent(
+            provider,
+            model,
+            repairOptions,
+            frameworkManagedHistory: false,
+            allowBackgroundResponses: false,
+            services);
     }
 
     private static async ValueTask DisposeAgentAsync(AIAgent agent)
@@ -1157,7 +1162,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
             AgentToolInvocationPolicyMetadata.BuildSignature(
                 policy.ToolName,
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)),
-            runtimeToolOwnership: null);
+            runtimeToolOwnership: null,
+            ToolInvocationPathArgumentSet.Empty);
         synthesizedInvocations.Add(new AgentFinalizerInvocation(
             policy.ToolName,
             argumentsJson,
@@ -1165,7 +1171,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
         toolInvocationTraceRecorder.Complete(
             sequence,
             succeeded: true,
-            failureMessage: "Captured from a typed JSON required-finalizer repair response.");
+            failureMessage: "Captured from a typed JSON required-finalizer repair response.",
+            failureMessageSafeForPersistence: true);
         return true;
     }
 
@@ -1254,10 +1261,12 @@ public sealed class MafAgentRuntime : IAgentRuntime
 
         var finalizerInvocations = snapshotFinalizerInvocations();
         var finalizerValidation = new DefaultAgentFinalizerValidator().Validate(policy, finalizerInvocations);
-        if ((!finalizerValidation.Succeeded || finalizerValidation.Output is null) &&
-            finalizerInvocations.Count == 0)
+        if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
         {
-            if (IsProviderStreamingTimeout(exception))
+            if (MafFinalizerDriver.ShouldAttemptProviderFailureArtifactRecovery(
+                    policy,
+                    finalizerInvocations,
+                    exception))
             {
                 return await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
                     provider,
@@ -1275,11 +1284,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
                     snapshotToolInvocationTraces).ConfigureAwait(false);
             }
 
-            return null;
-        }
-
-        if (!finalizerValidation.Succeeded || finalizerValidation.Output is null)
-        {
             return null;
         }
 
@@ -1354,14 +1358,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
             return null;
         }
 
-        string artifactMarkdown;
-        try
-        {
-            var resolver = new WorkspacePathResolutionService(workspaceRoot, workspaceScope);
-            var resolvedArtifact = resolver.ResolveFilePath(primaryArtifactRef, allowMissing: false);
-            artifactMarkdown = await File.ReadAllTextAsync(resolvedArtifact.FullPath, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception readException) when (readException is IOException or UnauthorizedAccessException or InvalidOperationException)
+        var existingToolTraces = snapshotToolInvocationTraces();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!TryReadCompleteRecoveryArtifact(
+                workspaceRoot,
+                workspaceScope,
+                primaryArtifactRef,
+                out var artifactMarkdown))
         {
             return null;
         }
@@ -1371,6 +1374,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 primaryArtifactRef,
                 artifactMarkdown,
                 recoveryCause,
+                existingToolTraces,
                 out var outcome,
                 out _))
         {
@@ -1379,7 +1383,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
 
         var argumentsJson = JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions);
         var recoveryReason = ProcessArtifactRecoveryService.DescribeRecoveryCause(recoveryCause);
-        var existingToolTraces = snapshotToolInvocationTraces();
         var finalizerSequence = existingToolTraces.Count == 0
             ? 1
             : existingToolTraces.Max(trace => trace.Sequence) + 1;
@@ -1437,17 +1440,25 @@ public sealed class MafAgentRuntime : IAgentRuntime
         };
     }
 
-    private static bool IsProviderStreamingTimeout(Exception exception)
+    internal static bool TryReadCompleteRecoveryArtifact(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        string artifactRef,
+        out string artifactMarkdown)
     {
-        for (var current = exception; current is not null; current = current.InnerException)
+        var readResult = new WorkspaceFileService(workspaceRoot, workspaceScope)
+            .ReadTextFile(artifactRef, WorkspaceFileLimits.MaxTextReadCharacters);
+        if (!readResult.Succeeded ||
+            readResult.IsTruncated ||
+            readResult.TotalCharacters > WorkspaceFileLimits.MaxTextReadCharacters ||
+            readResult.TotalCharacters != readResult.Content.Length)
         {
-            if (current is TimeoutException)
-            {
-                return true;
-            }
+            artifactMarkdown = string.Empty;
+            return false;
         }
 
-        return false;
+        artifactMarkdown = readResult.Content;
+        return true;
     }
 
     private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(

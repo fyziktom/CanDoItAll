@@ -57,7 +57,10 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             runId,
             stepId,
             binding,
-            binding.Inputs));
+            binding.Inputs)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        });
 
         Assert.Equal(attestation, Assert.Single(result.Diagnostics).ExecutionSafetyAttestation);
         Assert.Equal(attestation.ExecutionRunId, result.ExecutionRunId);
@@ -104,6 +107,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             [new ExpectedProducedArtifactRef(producedSlotId)],
             ["workspace_pwsh_run_script"],
             "sha256:contract");
+        var dispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid());
 
         var strategy = await factory.CreateAsync(binding);
         var result = await strategy.ExecuteAsync(new ProcessStrategyExecutionContext(
@@ -111,11 +115,15 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             ProcessStepInstanceId.New(),
             binding,
             binding.Inputs,
-            stepContract));
+            stepContract)
+        {
+            DispatchClaimIdentity = dispatchClaimIdentity
+        });
 
         var request = Assert.Single(driver.Requests);
         Assert.Equal(ProcessExecutionAdapterKind.Workflow, request.Kind);
         Assert.Equal(stepContract, request.StepContract);
+        Assert.Equal(dispatchClaimIdentity, request.DispatchClaimIdentity);
         Assert.Contains(
             request.ContextFacets,
             facet => facet.Key == new ProcessExecutionContextFacetKey("process.step.contract") &&
@@ -148,7 +156,10 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             new ProcessExecutionAdapterOperationKey("adapter.workflow.standard.execute"),
             binding,
             binding.Inputs,
-            []);
+            [])
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
 
         var result = await driver.ExecuteStepAsync(request);
 

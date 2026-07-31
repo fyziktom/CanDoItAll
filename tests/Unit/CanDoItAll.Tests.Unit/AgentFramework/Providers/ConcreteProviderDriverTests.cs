@@ -280,8 +280,15 @@ public sealed class ConcreteProviderDriverTests
         Assert.Contains(detail, exception.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task AzureOpenAiProviderDriver_UsesDeploymentEndpointAndApiKey()
+    [Theory]
+    [InlineData("https://azure-openai.test")]
+    [InlineData("https://azure-openai.test/")]
+    [InlineData("https://azure-openai.test/openai")]
+    [InlineData("https://azure-openai.test/openai/")]
+    [InlineData("https://azure-openai.test/openai/v1")]
+    [InlineData("https://azure-openai.test/openai/v1/")]
+    public async Task AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(
+        string baseUrl)
     {
         var handler = new CapturingHandler((request, body) =>
             JsonResponse("""{"choices":[{"message":{"content":"azure response"}}],"usage":{"prompt_tokens":5,"completion_tokens":6}}"""));
@@ -289,17 +296,44 @@ public sealed class ConcreteProviderDriverTests
         var driver = new AzureOpenAiProviderDriver(httpClient, new FixedCredentialResolver("azure-key"));
         var provider = CreateProvider(
             ProviderKind.AzureOpenAi,
-            "https://azure-openai.test",
+            baseUrl,
             "gpt-4o",
             configurationJson: """{"apiVersion":"2025-01-01-preview"}""");
 
         var result = await driver.CompleteChatAsync(CreateChatRequest(provider, "gpt-4o"));
 
         Assert.Equal("azure response", result.ResponseText);
+        Assert.Equal(
+            "https://azure-openai.test/openai/v1/",
+            AzureOpenAiEndpoint.Parse(provider).V1Endpoint.AbsoluteUri);
         var request = Assert.Single(handler.Requests);
         Assert.Equal("/openai/deployments/gpt-4o/chat/completions?api-version=2025-01-01-preview", request.PathAndQuery);
         Assert.Equal("azure-key", request.Headers["api-key"]);
         Assert.Contains("\"messages\"", request.Body, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("https://azure-openai.test/openai/deployments/gpt-4o", "legacy deployment endpoint")]
+    [InlineData("https://azure-openai.test?api-version=preview", "query parameters or fragments")]
+    [InlineData("https://azure-openai.test#configuration", "query parameters or fragments")]
+    [InlineData("https://azure-openai.test/openai/v1/chat/completions", "must use the resource base URL")]
+    public async Task AzureOpenAiProviderDriver_RejectsUnsupportedBaseUrlsBeforeDispatch(
+        string baseUrl,
+        string expectedMessage)
+    {
+        var handler = new CapturingHandler((request, body) => JsonResponse("{}"));
+        using var httpClient = new HttpClient(handler);
+        var driver = new AzureOpenAiProviderDriver(httpClient, new FixedCredentialResolver("azure-key"));
+        var provider = CreateProvider(
+            ProviderKind.AzureOpenAi,
+            baseUrl,
+            "gpt-4o");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => driver.CompleteChatAsync(CreateChatRequest(provider, "gpt-4o")));
+
+        Assert.Contains(expectedMessage, exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]

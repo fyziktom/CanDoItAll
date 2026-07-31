@@ -923,6 +923,87 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_keeps_unconditional_receipts_and_ignores_branch_scoped_receipts_before_branch_selection()
+    {
+        var providerId = Guid.Parse("8b431ac3-88f5-4803-9069-57869fc8488d");
+        var agentWithoutUnconditionalTools = CreateAgent(
+            providerId,
+            Guid.Parse("f8fb741a-c67c-4676-b58c-e2a36afc4bcf"),
+            "A .NET QA Review Lead",
+            ".NET QA Review Lead",
+            "Captures UI screenshot proof and records validation evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["qa-lead", "dotnet", "screenshots", "validation"]);
+        var agentWithUnconditionalTools = CreateAgent(
+            providerId,
+            Guid.Parse("85736e79-687e-413d-ae1b-a4fe196f9e5d"),
+            "Z .NET QA Review Lead",
+            ".NET QA Review Lead",
+            "Captures UI screenshot proof and records validation evidence.",
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["qa-lead", "dotnet", "screenshots", "validation"],
+            [
+                CreateToolCapability("workspace-dotnet-build"),
+                CreateToolCapability("workspace-dotnet-test")
+            ]);
+        var workspace = new ResolverWorkspaceService(
+            [agentWithoutUnconditionalTools, agentWithUnconditionalTools],
+            [CreateProvider(providerId)]);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace));
+        var definition = CreateScreenshotSubprocessDefinition();
+        definition.Steps[0].CapabilityScope = new ProcessCapabilityScope
+        {
+            RequiredReceipts =
+            [
+                new ProcessRequiredToolReceipt
+                {
+                    Key = "unconditional-test",
+                    ToolName = "workspace_dotnet_test"
+                },
+                new ProcessRequiredToolReceipt
+                {
+                    Key = "accepted-branch-restore",
+                    ToolName = "workspace_dotnet_restore",
+                    ApplicableBranchOutcomeKeys = ["quality-accepted"]
+                }
+            ]
+        };
+        var requiredToolReceiptMap = JsonSerializer.Serialize(
+            new Dictionary<string, object[]>(StringComparer.Ordinal)
+            {
+                ["capture-ui-screenshots"] =
+                [
+                    new
+                    {
+                        ToolName = "workspace_dotnet_build"
+                    },
+                    new
+                    {
+                        ToolName = "workspace_dotnet_run",
+                        ApplicableBranchOutcomeKeys = new[] { "quality-accepted" }
+                    }
+                ]
+            });
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan("capture-ui-screenshots"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = requiredToolReceiptMap
+            }));
+
+        Assert.DoesNotContain(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(agentWithUnconditionalTools.Id.ToString("D"), binding.ExecutorId);
+        Assert.NotEqual(agentWithoutUnconditionalTools.Id.ToString("D"), binding.ExecutorId);
+    }
+
+    [Fact]
     public async Task ResolveAsync_rejects_required_project_structure_write_tool_when_agent_lacks_write_access()
     {
         var providerId = Guid.Parse("791c85f9-88ab-41d0-a093-a14bfd8ac1b6");
@@ -1038,6 +1119,93 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.Equal(architectAgent.Name, result.Assignment.ExecutorDisplayName);
         Assert.Contains("Reassigned step 'architecture-review'", result.Summary, StringComparison.Ordinal);
         Assert.Contains(architectAgent.Name, result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Runtime_assignment_repair_keeps_unconditional_receipts_and_ignores_branch_scoped_receipts_before_branch_selection()
+    {
+        var providerId = Guid.Parse("6f0b8b79-58e9-4b52-a991-0be90ea34b5e");
+        var qaReviewLead = CreateAgent(
+            providerId,
+            Guid.Parse("58e96050-c0da-4dd3-98dd-435d1843bd6d"),
+            ".NET QA Review Lead",
+            string.Empty,
+            string.Empty,
+            AgentWorkloadKind.Qa,
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            ["dotnet", "qa", "browser"]);
+        var architectWithoutUnconditionalTools = CreateAgent(
+            providerId,
+            Guid.Parse("63141ad3-66a9-46cb-b252-1e2d0f8cbdcc"),
+            "A .NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "blazor"]);
+        var architectWithUnconditionalTools = CreateAgent(
+            providerId,
+            Guid.Parse("c217dd86-134a-469d-bbd5-9ad63101f105"),
+            "Z .NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "blazor"],
+            [
+                CreateToolCapability("workspace-read-file"),
+                CreateToolCapability("workspace-stat-path")
+            ]);
+        var workspace = new ResolverWorkspaceService(
+            [qaReviewLead, architectWithoutUnconditionalTools, architectWithUnconditionalTools],
+            [CreateProvider(providerId)]);
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            CreateReferenceDataProvider(workspace),
+            new ProviderProfileService());
+        var assignment = CreateArchitectureReviewAssignment(qaReviewLead) with
+        {
+            LaunchVariables = new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] =
+                    JsonSerializer.Serialize(new object[]
+                    {
+                        new
+                        {
+                            ToolName = "workspace_read_file"
+                        },
+                        new
+                        {
+                            ToolName = "workspace_git_status",
+                            ApplicableBranchOutcomeKeys = new[] { "architecture-accepted" }
+                        }
+                    })
+            },
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "unconditional-stat",
+                        ToolName = "workspace_stat_path"
+                    },
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "accepted-branch-search",
+                        ToolName = "workspace_search",
+                        ApplicableBranchOutcomeKeys = ["architecture-accepted"]
+                    }
+                ]
+            }
+        };
+
+        var result = await repairService.RepairAsync(
+            assignment,
+            "Operator approved manager-guided rework.");
+
+        Assert.True(result.Repaired);
+        Assert.Equal(architectWithUnconditionalTools.Id.ToString("D"), result.Assignment.ExecutorId);
+        Assert.NotEqual(architectWithoutUnconditionalTools.Id.ToString("D"), result.Assignment.ExecutorId);
     }
 
     [Fact]

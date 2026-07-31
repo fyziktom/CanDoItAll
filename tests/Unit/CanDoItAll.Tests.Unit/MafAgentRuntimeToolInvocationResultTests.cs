@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
@@ -6,6 +7,36 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class MafAgentRuntimeToolInvocationResultTests
 {
+    [Fact]
+    public void Agent_visible_tool_failure_is_mapped_without_exposing_exception_details()
+    {
+        var exception = new TestAgentToolFailureException(
+            "InvalidMetadata",
+            "metadataJson contains an incompatible value at '$.workflow'.",
+            "Sensitive inner exception details.",
+            canRetryWithCorrectedInput: true);
+
+        var mapped = MafAgentToolFailureMapper.TryMap(exception, out var result);
+
+        Assert.True(mapped);
+        Assert.False(result.Succeeded);
+        Assert.Equal("InvalidMetadata", result.ErrorCode);
+        Assert.Equal("metadataJson contains an incompatible value at '$.workflow'.", result.Message);
+        Assert.True(result.CanRetryWithCorrectedInput);
+        Assert.DoesNotContain("Sensitive", result.Message, StringComparison.Ordinal);
+        Assert.False(MafRuntimeToolInvocationResultClassifier.IsSuccessful(result));
+    }
+
+    [Fact]
+    public void Non_agent_visible_exception_is_not_mapped()
+    {
+        var mapped = MafAgentToolFailureMapper.TryMap(
+            new InvalidOperationException("Sensitive runtime failure."),
+            out _);
+
+        Assert.False(mapped);
+    }
+
     [Fact]
     public void IsSuccessfulToolInvocationResult_reads_direct_workspace_result()
     {
@@ -112,5 +143,20 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
     private sealed class ToolResultEnvelope
     {
         public object? Result { get; init; }
+    }
+
+    private sealed class TestAgentToolFailureException(
+        string errorCode,
+        string safeMessage,
+        string exceptionMessage,
+        bool canRetryWithCorrectedInput) : Exception(exceptionMessage), IAgentToolFailure
+    {
+        public string ErrorCode { get; } = errorCode;
+
+        public string SafeMessage { get; } = safeMessage;
+
+        public bool IsSafeToExpose => true;
+
+        public bool CanRetryWithCorrectedInput { get; } = canRetryWithCorrectedInput;
     }
 }

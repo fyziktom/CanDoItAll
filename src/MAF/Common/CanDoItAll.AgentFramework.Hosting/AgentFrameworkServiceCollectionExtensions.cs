@@ -36,6 +36,8 @@ public static class AgentFrameworkServiceCollectionExtensions
 
         services.AddLogging();
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
+            (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddSingleton<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkspaceFileService>(_ => new WorkspaceFileService(normalizedWorkspaceRoot, resolvedScope));
@@ -47,6 +49,10 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
             resolvedScope,
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()));
+        services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
+            new WorkspaceExecutionRunProcessLeaseCleaner(
+                serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
+                serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>()));
         services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddSingleton<IWorkspaceImageOperationService>(_ => new WorkspaceImageOperationService(
             normalizedWorkspaceRoot,

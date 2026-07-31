@@ -83,20 +83,6 @@ internal sealed class MafScriptPolicyInspectionService(
         }
     }
 
-    public static IEnumerable<KeyValuePair<string, object?>> ResolveFunctionInvocationArguments(object context)
-    {
-        foreach (var propertyName in new[] { "Arguments", "FunctionArguments", "FunctionCallArguments" })
-        {
-            var property = context.GetType().GetProperty(propertyName);
-            if (property?.GetValue(context) is IEnumerable<KeyValuePair<string, object?>> pairs)
-            {
-                return pairs;
-            }
-        }
-
-        return [];
-    }
-
     private ScriptContentInspection ResolveDeclaredChildScriptInspection(
         GovernedScriptSideEffectManifest manifest,
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)

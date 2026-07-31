@@ -36,6 +36,16 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         []);
 
     [Fact]
+    public void Dispatch_defaults_keep_governed_attempt_inside_claim_lease()
+    {
+        var options = new ProcessRuntimeDispatchOptions();
+
+        Assert.Equal(TimeSpan.FromMinutes(60), options.StepExecutionTimeout);
+        Assert.Equal(TimeSpan.FromMinutes(75), options.DispatchLease);
+        Assert.True(options.DispatchLease > options.StepExecutionTimeout);
+    }
+
+    [Fact]
     public void Constructor_rejects_dispatch_lease_that_cannot_outlive_step_timeout()
     {
         var stepId = ProcessStepInstanceId.New();
@@ -397,12 +407,16 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         await router.ApplyForResultAsync(
             submitted.State,
-            NewPlan(
-            [
-                (ValidationStepId, "targeted-validation"),
-                (HandoffStepId, "feature-handoff"),
-                (HandoffAfterRepairStepId, "feature-handoff-after-repair")
-            ]),
+            WithBranchRoutes(
+                NewPlan(
+                [
+                    (ValidationStepId, "targeted-validation"),
+                    (HandoffStepId, "feature-handoff"),
+                    (HandoffAfterRepairStepId, "feature-handoff-after-repair")
+                ]),
+                ValidationStepId,
+                "feature-accepted",
+                "feature-repair"),
             result,
             "agent-execution-reconciliation");
 
@@ -411,6 +425,101 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessRuntimeStepStatus.Pending, FindStep(stateStore.State, HandoffStepId).Status);
         Assert.Equal(ProcessRuntimeStepStatus.Skipped, FindStep(stateStore.State, HandoffAfterRepairStepId).Status);
         Assert.Contains(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepSkipped);
+    }
+
+    [Theory]
+    [InlineData("feature-unknown")]
+    [InlineData("Feature-Accepted")]
+    public async Task BranchSignalRouter_blocks_without_mutating_gates_when_outcome_is_not_an_exact_plan_route(
+        string branchOutcomeKey)
+    {
+        var resultKey = StrategyResultIdempotencyKey.New();
+        var result = new StrategyResultEnvelope(
+            Binding.StrategyId,
+            Binding.StrategyVersion,
+            resultKey.Value,
+            StrategyOutcome.Succeeded,
+            [],
+            [],
+            [],
+            [
+                new ManagerSignal(
+                    ProcessBranchSignalCodes.Outcome(branchOutcomeKey),
+                    $"sha256:{branchOutcomeKey.ToLowerInvariant()}",
+                    $"Branch outcome selected: {branchOutcomeKey}")
+            ],
+            "sha256:invalid-branch-outcome");
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                NewStep(ValidationStepId, ProcessRuntimeStepStatus.Completed) with
+                {
+                    CompletedResultKey = resultKey
+                },
+                NewStep(HandoffStepId, ProcessRuntimeStepStatus.Blocked, dependencies: [ValidationStepId]),
+                NewStep(HandoffAfterRepairStepId, ProcessRuntimeStepStatus.Blocked, dependencies: [ValidationStepId])
+            ],
+            [],
+            [
+                new StrategyResultReceipt(
+                    ValidationStepId,
+                    Binding.StrategyId,
+                    resultKey,
+                    StrategyOutcome.Succeeded,
+                    ProcessRuntimeStepStatus.Completed,
+                    result.ResultHash)
+            ],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var router = new ProcessRuntimeBranchSignalApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            unitOfWork,
+            new InMemoryAssignmentStore(
+            [
+                NewAssignment(ValidationStepId, "targeted-validation"),
+                NewAssignment(HandoffStepId, "feature-handoff", new ProcessRuntimeBranchGate("targeted-validation", "feature-accepted")),
+                NewAssignment(HandoffAfterRepairStepId, "feature-handoff-after-repair", new ProcessRuntimeBranchGate("targeted-validation", "feature-repair"))
+            ]),
+            NewNoOpCatchupService());
+        var plan = WithBranchRoutes(
+            NewPlan(
+            [
+                (ValidationStepId, "targeted-validation"),
+                (HandoffStepId, "feature-handoff"),
+                (HandoffAfterRepairStepId, "feature-handoff-after-repair")
+            ]),
+            ValidationStepId,
+            "feature-accepted",
+            "feature-repair");
+
+        await router.ApplyForResultAsync(
+            initialState,
+            plan,
+            result,
+            "agent-execution-reconciliation");
+
+        Assert.Equal(ProcessRuntimeStatus.Blocked, stateStore.State.Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, ValidationStepId).Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, HandoffStepId).Status);
+        Assert.Equal(ProcessRuntimeStepStatus.Blocked, FindStep(stateStore.State, HandoffAfterRepairStepId).Status);
+        var receipt = Assert.Single(stateStore.State.AppliedResults);
+        Assert.Equal(StrategyOutcome.NeedsManager, receipt.Outcome);
+        Assert.Contains(receipt.Diagnostics, diagnostic =>
+            diagnostic.Code == ProcessRuntimeDiagnosticCodes.InvalidBranchOutcomeSignal &&
+            diagnostic.RetrySafety == ProcessDiagnosticRetrySafety.UnsafeToRetry);
+        Assert.Contains(
+            unitOfWork.Requests.SelectMany(request => request.Mutation.Diagnostics),
+            diagnostic => diagnostic.Code == ProcessRuntimeDiagnosticCodes.InvalidBranchOutcomeSignal);
+        Assert.DoesNotContain(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
             runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.StepSkipped);
     }
@@ -453,8 +562,15 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(ProcessLaunchStage.Completed, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Completed, result.Status);
         Assert.Equal(ProcessRuntimeStepStatus.Completed, FindStep(stateStore.State, stepId).Status);
-        Assert.Single(strategyResolver.ExecutionContexts);
-        Assert.Equal(stepId, strategyResolver.ExecutionContexts[0].StepId);
+        var executionContext = Assert.Single(strategyResolver.ExecutionContexts);
+        Assert.Equal(stepId, executionContext.StepId);
+        var completedClaim = Assert.Single(
+            stateStore.State.Claims,
+            claim => claim.StepInstanceId == stepId &&
+                     claim.Status == DispatchClaimStatus.Completed);
+        Assert.Equal(
+            completedClaim.ClaimToken.Value,
+            executionContext.DispatchClaimIdentity.Value);
         Assert.Contains(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimCompleted);
         Assert.DoesNotContain(unitOfWork.Requests.SelectMany(request => request.Mutation.Events), runtimeEvent => runtimeEvent.PayloadHash.Contains("Tetris", StringComparison.OrdinalIgnoreCase));
     }
@@ -1026,12 +1142,16 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     public async Task ExecuteReady_retries_branch_signal_application_when_runtime_state_changes()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
-        var plan = NewPlan(
-        [
-            (ValidationStepId, "targeted-validation"),
-            (HandoffStepId, "feature-handoff"),
-            (HandoffAfterRepairStepId, "feature-handoff-after-repair")
-        ]);
+        var plan = WithBranchRoutes(
+            NewPlan(
+            [
+                (ValidationStepId, "targeted-validation"),
+                (HandoffStepId, "feature-handoff"),
+                (HandoffAfterRepairStepId, "feature-handoff-after-repair")
+            ]),
+            ValidationStepId,
+            "feature-accepted",
+            "feature-repair");
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -1079,6 +1199,12 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(
             [ValidationStepId, HandoffStepId],
             strategyResolver.ExecutionContexts.Select(context => context.StepId!.Value).ToArray());
+        Assert.Equal(
+            strategyResolver.ExecutionContexts.Count,
+            strategyResolver.ExecutionContexts
+                .Select(context => context.DispatchClaimIdentity)
+                .Distinct()
+                .Count());
     }
 
     [Fact]
@@ -1491,6 +1617,11 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             stateStore.State.AppliedResults,
             receipt => receipt.Outcome == StrategyOutcome.Failed &&
                        receipt.ResultHash.StartsWith("sha256:", StringComparison.Ordinal));
+        var receipt = Assert.Single(stateStore.State.AppliedResults);
+        var diagnostic = Assert.Single(receipt.Diagnostics);
+        Assert.Equal("process.runtime.step_execution_timeout", diagnostic.Code);
+        Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Unknown, diagnostic.Idempotency);
     }
 
     private static ProcessRuntimeStepState NewStep(
@@ -1616,6 +1747,29 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new MonitoringPlan(true, "sha256:monitoring"),
             new SecurityPlan("sha256:security", []),
             "sha256:plan");
+    }
+
+    private static ProcessInstancePlan WithBranchRoutes(
+        ProcessInstancePlan plan,
+        ProcessStepInstanceId branchStepInstanceId,
+        params string[] outcomeKeys)
+    {
+        var branchStepId = plan.Steps
+            .Single(step => step.StepInstanceId == branchStepInstanceId)
+            .StepDefinitionId;
+        var familyId = new BranchFamilyId("test-branch");
+        return plan with
+        {
+            Branches = new BranchRouteTable(outcomeKeys
+                .Select(outcomeKey => new BranchRoutePlan(
+                    branchStepId,
+                    familyId,
+                    new BranchOutcomeId(outcomeKey),
+                    BranchOutcomeCategory.Continue,
+                    new ProcessRouteTarget(ProcessRouteTargetKind.NextStep),
+                    LoopBudget: null))
+                .ToArray())
+        };
     }
 
     private static ProcessInstancePlan NewSingleStepPlan(

@@ -34,6 +34,7 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
 using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
+using static CanDoItAll.Modules.Processes.ProcessRuntimeFailureClassifier;
 using static CanDoItAll.Modules.Processes.ProcessSubprocessState;
 
 namespace CanDoItAll.Modules.Processes;
@@ -116,7 +117,7 @@ internal static class ProcessSubprocessCompletionPolicy
         return ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(stepContract.RequiredRuntimeToolNames)
             .Concat(ProcessRequiredToolReceiptGate.ResolveRequiredRuntimeToolNames(assignment.CapabilityScope))
             .Concat(ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(
-                ResolveProductCompletionRequiredToolReceipts(
+                ResolveUnconditionalProductCompletionRequiredToolReceipts(
                     assignment.LaunchVariables,
                     assignment.StepKey)))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))

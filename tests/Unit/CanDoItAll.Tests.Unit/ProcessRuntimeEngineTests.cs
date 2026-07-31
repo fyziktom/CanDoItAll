@@ -1355,7 +1355,11 @@ public sealed class ProcessRuntimeEngineTests
     {
         var dispatcher = new ProcessStrategyDispatcher();
         var plan = NewPlan();
-        var workItem = new DispatchWorkItem(RunId, ActivityStepId, ActivityDefinitionId, Binding, 1);
+        var dispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid());
+        var workItem = new DispatchWorkItem(RunId, ActivityStepId, ActivityDefinitionId, Binding, 1)
+        {
+            DispatchClaimIdentity = dispatchClaimIdentity
+        };
         var strategy = new RecordingStrategy(SucceededResult());
         var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
 
@@ -1365,6 +1369,7 @@ public sealed class ProcessRuntimeEngineTests
         Assert.NotNull(strategy.Context);
         Assert.Equal(ActivityStepId, strategy.Context.StepId);
         Assert.Equal(Binding, strategy.Context.Binding);
+        Assert.Equal(dispatchClaimIdentity, strategy.Context.DispatchClaimIdentity);
     }
 
     private static RuntimeCommandContext Context(DateTimeOffset? now = null)

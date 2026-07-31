@@ -271,6 +271,7 @@ public sealed partial class ProcessRuntimeEngine
         var steps = new List<ProcessRuntimeStepState>(state.Steps);
         var events = new List<ProcessRuntimeEventEnvelope>();
         var changed = false;
+        var blockedIndeterminateStep = false;
 
         foreach (var claim in state.Claims)
         {
@@ -279,15 +280,30 @@ public sealed partial class ProcessRuntimeEngine
             {
                 var expired = claim with { Status = DispatchClaimStatus.Expired };
                 claims.Add(expired);
+                var step = steps.FirstOrDefault(candidate =>
+                    candidate.StepInstanceId == claim.StepInstanceId);
+                var wasPreExecutionClaim = step?.Status == ProcessRuntimeStepStatus.Claimed;
                 ReplaceStepInPlace(
                     steps,
                     claim.StepInstanceId,
-                    step => step with
+                    currentStep => currentStep with
                     {
-                        Status = ProcessRuntimeStepStatus.Ready,
+                        Status = wasPreExecutionClaim
+                            ? ProcessRuntimeStepStatus.Ready
+                            : ProcessRuntimeStepStatus.Blocked,
                         ActiveClaimToken = null
                     });
                 events.Add(CreateEvent(state, context, ProcessRuntimeEventTypes.DispatchClaimExpired, claim.ClaimToken.ToString()));
+                if (!wasPreExecutionClaim)
+                {
+                    events.Add(CreateEvent(
+                        state,
+                        context,
+                        ProcessRuntimeEventTypes.StepBlocked,
+                        ProcessRuntimeDiagnosticCodes.RunningClaimExpiredReplayUnsafe));
+                    blockedIndeterminateStep = true;
+                }
+
                 changed = true;
                 continue;
             }
@@ -302,10 +318,22 @@ public sealed partial class ProcessRuntimeEngine
 
         var next = state with
         {
+            Status = blockedIndeterminateStep
+                ? ProcessRuntimeStatus.Blocked
+                : state.Status,
             Steps = steps,
             Claims = claims,
             UpdatedAtUtc = context.OccurredAtUtc
         };
+
+        if (blockedIndeterminateStep)
+        {
+            events.Add(CreateEvent(
+                next,
+                context,
+                ProcessRuntimeEventTypes.ProcessRunBlocked,
+                ProcessRuntimeDiagnosticCodes.RunningClaimExpiredReplayUnsafe));
+        }
 
         return Applied(next, events);
     }

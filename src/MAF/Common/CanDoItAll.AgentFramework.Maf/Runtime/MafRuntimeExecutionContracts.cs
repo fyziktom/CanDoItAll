@@ -94,6 +94,8 @@ internal sealed record ScriptContentInspection(string Content, string FailureMes
 
 internal sealed class ToolInvocationTraceRecorder
 {
+    internal const string UnexposedFailureMessage = "Tool invocation failed.";
+
     private readonly object gate = new();
     private readonly List<AgentToolInvocationTrace> traces = [];
     private int nextSequence;
@@ -102,7 +104,8 @@ internal sealed class ToolInvocationTraceRecorder
         string toolName,
         ToolInvocationClassification classification,
         string signature,
-        AgentRuntimeToolOwnership? runtimeToolOwnership)
+        AgentRuntimeToolOwnership? runtimeToolOwnership,
+        ToolInvocationPathArgumentSet pathArguments)
     {
         lock (gate)
         {
@@ -118,16 +121,37 @@ internal sealed class ToolInvocationTraceRecorder
             {
                 RuntimeToolProviderKey = runtimeToolOwnership?.ProviderKey ?? string.Empty,
                 RuntimeToolProviderName = runtimeToolOwnership?.ProviderName ?? string.Empty,
-                Signature = signature
+                Signature = signature,
+                TargetPath = ResolveTargetPath(pathArguments)
             });
             return nextSequence;
         }
     }
 
+    private static string ResolveTargetPath(ToolInvocationPathArgumentSet pathArguments)
+    {
+        var targetPaths = pathArguments.Values
+            .Where(argument => argument.ElementIndex is null)
+            .Where(argument =>
+                string.Equals(argument.Name, "path", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(argument.Name, "relativePath", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(argument.Name, "filePath", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(argument.Name, "targetPath", StringComparison.OrdinalIgnoreCase))
+            .Select(argument => argument.Value)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(2)
+            .ToArray();
+        return targetPaths.Length == 1
+            ? targetPaths[0]
+            : string.Empty;
+    }
+
     public void Complete(
         int sequence,
         bool succeeded,
-        string failureMessage)
+        string failureMessage,
+        bool failureMessageSafeForPersistence)
     {
         lock (gate)
         {
@@ -141,7 +165,11 @@ internal sealed class ToolInvocationTraceRecorder
             {
                 CompletedAtUtc = DateTimeOffset.UtcNow,
                 Succeeded = succeeded,
-                FailureMessage = succeeded ? string.Empty : failureMessage
+                FailureMessage = succeeded
+                    ? string.Empty
+                    : failureMessageSafeForPersistence
+                        ? failureMessage
+                        : UnexposedFailureMessage
             };
         }
     }

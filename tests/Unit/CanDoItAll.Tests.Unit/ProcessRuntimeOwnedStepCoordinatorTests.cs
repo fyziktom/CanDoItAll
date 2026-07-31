@@ -99,7 +99,7 @@ public sealed class ProcessRuntimeOwnedStepCoordinatorTests
 
     private static ProcessRuntimeOwnedStepCoordinator CreateCoordinator(
         params IProcessRuntimeOwnedStepExecutor[] executors)
-        => new(executors, null!);
+        => new(executors, null!, new ProcessToolReceiptPolicyCatalog([]));
 
     private static ProcessRuntimeStepAssignment CreateAssignment(string? executorKey = null)
     {

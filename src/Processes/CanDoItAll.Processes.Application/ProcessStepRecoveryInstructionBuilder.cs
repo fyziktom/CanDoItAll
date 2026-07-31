@@ -273,25 +273,56 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
             return;
         }
 
-        var requiredReceipts = ResolveStepStringList(
+        var allProductReceipts = ResolveStepStringList(
                 assignment.LaunchVariables,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
                 ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
-                assignment.StepKey)
+                assignment.StepKey,
+                unconditionalOnly: false)
             .ToArray();
-        if (requiredReceipts.Length == 0)
+        var unconditionalProductReceipts = ResolveStepStringList(
+            assignment.LaunchVariables,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
+            ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep,
+            assignment.StepKey,
+            unconditionalOnly: true);
+        var unconditionalCapabilityReceipts = ProcessRequiredRuntimeToolNames
+            .FromUnconditionalCapabilityScope(assignment.CapabilityScope);
+        var requiredReceipts = unconditionalProductReceipts
+            .Concat(unconditionalCapabilityReceipts)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(receipt => receipt, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var hasBranchScopedReceipts =
+            allProductReceipts.Except(unconditionalProductReceipts, StringComparer.OrdinalIgnoreCase).Any() ||
+            ProcessCapabilityScope.Normalize(assignment.CapabilityScope)
+                .RequiredReceipts
+                .Any(receipt => receipt.ApplicableBranchOutcomeKeys.Count > 0);
+        if (requiredReceipts.Length == 0 && !hasBranchScopedReceipts)
         {
             lines.Add("Missing current-run receipt(s): the completion gate reported required receipt evidence, but the assignment did not expose exact receipt names.");
             return;
         }
 
-        lines.Add("Missing current-run receipt(s):");
-        foreach (var receipt in requiredReceipts)
+        if (requiredReceipts.Length > 0)
         {
-            lines.Add($"- {receipt}");
+            lines.Add("Missing current-run receipt(s):");
+            foreach (var receipt in requiredReceipts)
+            {
+                lines.Add($"- {receipt}");
+            }
+
+            lines.Add(hasBranchScopedReceipts
+                ? "Invoke each listed unconditional tool now in this exact execution attempt before finalizing."
+                : "Invoke each listed tool now in this exact execution attempt before finalizing.");
         }
 
-        lines.Add("Invoke each listed tool now in this exact execution attempt before finalizing. The gate accepts only receipts whose execution id belongs to this attempt; upstream receipts and receipts from prior attempts of this step do not count. Artifacts, summaries, planned actions, or text claiming verification are not current-execution tool receipts.");
+        if (hasBranchScopedReceipts)
+        {
+            lines.Add("Branch-scoped receipt rules are also configured. Re-run only the receipt tools applicable to the branch submitted in the rejected outcome; never invoke tools belonging exclusively to a mutually exclusive branch.");
+        }
+
+        lines.Add("The gate accepts only receipts whose execution id belongs to this attempt; upstream receipts and receipts from prior attempts of this step do not count. Artifacts, summaries, planned actions, or text claiming verification are not current-execution tool receipts.");
     }
 
     private static void AddArtifactPayloadSchemaGuidance(
@@ -468,11 +499,14 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
         IReadOnlyDictionary<string, string> launchVariables,
         string directKey,
         string byStepKey,
-        string stepKey)
+        string stepKey,
+        bool unconditionalOnly)
     {
         if (TryGetResolvedVariable(launchVariables, directKey) is { } direct)
         {
-            return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(direct);
+            return unconditionalOnly
+                ? ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(direct)
+                : ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(direct);
         }
 
         if (TryGetResolvedVariable(launchVariables, byStepKey) is not { } byStep)
@@ -492,7 +526,9 @@ public sealed class ProcessStepRecoveryInstructionBuilder : IProcessStepRecovery
             {
                 if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
                 {
-                    return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(property.Value);
+                    return unconditionalOnly
+                        ? ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(property.Value)
+                        : ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(property.Value);
                 }
             }
         }

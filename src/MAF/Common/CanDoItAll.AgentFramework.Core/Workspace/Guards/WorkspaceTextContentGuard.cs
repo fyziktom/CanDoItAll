@@ -31,7 +31,10 @@ internal sealed class WorkspaceTextContentGuard
             return loaded;
         }
 
-        var safeMaxCharacters = Math.Clamp(maxCharacters, 1, 64000);
+        var safeMaxCharacters = Math.Clamp(
+            maxCharacters,
+            1,
+            WorkspaceFileLimits.MaxTextReadCharacters);
         var isTruncated = loaded.Content.Length > safeMaxCharacters;
         var preview = isTruncated ? loaded.Content[..safeMaxCharacters] : loaded.Content;
         return new WorkspaceTextLoadResult(

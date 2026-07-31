@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
-using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
+using static CanDoItAll.Modules.Processes.ProcessOutcomeReferenceGroundingPolicy;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 
 namespace CanDoItAll.Modules.Processes;

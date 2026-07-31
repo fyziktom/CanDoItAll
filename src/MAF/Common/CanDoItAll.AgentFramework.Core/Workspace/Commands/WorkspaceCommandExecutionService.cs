@@ -2,12 +2,15 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutionService
+public sealed class WorkspaceCommandExecutionService :
+    IWorkspaceCommandExecutionService,
+    IWorkspaceExecutionRunProcessLeaseCleanupExecutor
 {
     private readonly WorkspaceCommandEnvironmentPolicy environmentPolicy;
     private readonly WorkspaceCommandPlanBuilder planBuilder;
     private readonly WorkspaceCommandProcessRunner processRunner;
     private readonly WorkspaceCommandReceiptWriter receiptWriter;
+    private readonly WorkspaceExecutionRunProcessLeaseStore processLeaseStore;
 
     public WorkspaceCommandExecutionService(
         string workspaceRoot,
@@ -17,6 +20,9 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
     {
         var pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
         environmentPolicy = new WorkspaceCommandEnvironmentPolicy();
+        processLeaseStore = new WorkspaceExecutionRunProcessLeaseStore(
+            pathPolicy.WorkspaceRoot,
+            pathPolicy.WorkspaceScope);
         receiptWriter = new WorkspaceCommandReceiptWriter(
             pathPolicy.WorkspaceRoot,
             pathPolicy.WorkspaceScope,
@@ -129,21 +135,338 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
-        => ExecutePlanAsync(
-            () => planBuilder.BuildDotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope),
-            "workspace_dotnet_run",
-            waitForHttp ? "dotnet_run_http_smoke" : "dotnet_run",
-            "LocalExecution",
-            approvalRequired: false);
+    public async Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun)
+    {
+        var auditScope = WorkspaceExecutionAuditContext.Current;
+        if (keepAlive &&
+            lifetimeScope == WorkspaceProcessLifetimeScope.ExecutionRun &&
+            auditScope is null)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_run",
+                waitForHttp ? "dotnet_run_http_smoke" : "dotnet_run",
+                "LocalExecution",
+                approvalRequired: false,
+                "A kept-alive ExecutionRun workspace process requires an active execution-run audit context.");
+        }
 
-    public Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30)
-        => ExecutePlanAsync(
+        var recipeId = waitForHttp ? "dotnet_run_http_smoke" : "dotnet_run";
+        WorkspaceCommandPlan plan;
+        try
+        {
+            plan = planBuilder.BuildDotnetRun(
+                targetPath,
+                url,
+                configuration,
+                noBuild,
+                waitForHttp,
+                workingDirectory,
+                startupTimeoutSeconds,
+                timeoutSeconds,
+                keepAlive,
+                lifetimeScope);
+        }
+        catch (Exception exception)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_run",
+                recipeId,
+                "LocalExecution",
+                approvalRequired: false,
+                exception.Message);
+        }
+
+        if (!keepAlive ||
+            lifetimeScope != WorkspaceProcessLifetimeScope.ExecutionRun)
+        {
+            return await ExecutePlanAsync(
+                () => plan,
+                "workspace_dotnet_run",
+                recipeId,
+                "LocalExecution",
+                approvalRequired: false);
+        }
+
+        try
+        {
+            WorkspaceExecutionRunProcessLeaseStore.ValidateAuditIdentity(auditScope!);
+        }
+        catch (Exception exception)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_run",
+                recipeId,
+                "LocalExecution",
+                approvalRequired: false,
+                exception.Message);
+        }
+
+        string startupReceiptPath;
+        var registeredAtUtc = DateTimeOffset.UtcNow;
+        try
+        {
+            startupReceiptPath = processLeaseStore.ResolveSingleStartupReceiptPath(
+                plan.TargetPaths,
+                "Kept-alive workspace_dotnet_run plan");
+            processLeaseStore.RegisterPending(
+                auditScope!.ExecutionRunId,
+                startupReceiptPath,
+                registeredAtUtc,
+                registeredAtUtc.AddSeconds(Math.Clamp(startupTimeoutSeconds, 1, 600)));
+        }
+        catch (Exception exception)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_run",
+                recipeId,
+                "LocalExecution",
+                approvalRequired: false,
+                $"The kept-alive process was not started because its pending ExecutionRun lease could not be persisted: {exception.Message}");
+        }
+
+        WorkspaceCommandExecutionResult result;
+        try
+        {
+            result = await processRunner
+                .ExecuteAsync(plan)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_run",
+                recipeId,
+                "LocalExecution",
+                approvalRequired: false,
+                $"The kept-alive launch terminated before its durable lease could be activated. The pending lease was retained for terminal recovery: {exception.Message}");
+        }
+
+        if (!result.Succeeded)
+        {
+            try
+            {
+                processLeaseStore.Remove(
+                    auditScope!.ExecutionRunId,
+                    startupReceiptPath);
+            }
+            catch (Exception exception)
+            {
+                return result with
+                {
+                    Message = $"{result.Message} The failed launch's pending ExecutionRun lease could not be removed and remains available for terminal recovery: {exception.Message}"
+                };
+            }
+
+            return result;
+        }
+
+        try
+        {
+            var resultStartupReceiptPath = ResolveSingleStartupReceiptPath(
+                result,
+                "Successful kept-alive workspace_dotnet_run");
+            if (!string.Equals(
+                startupReceiptPath,
+                resultStartupReceiptPath,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Successful launch receipt identity '{resultStartupReceiptPath}' does not match pending lease identity '{startupReceiptPath}'.");
+            }
+
+            processLeaseStore.Activate(
+                auditScope!.ExecutionRunId,
+                startupReceiptPath,
+                DateTimeOffset.UtcNow);
+            return result;
+        }
+        catch (Exception exception)
+        {
+            return result with
+            {
+                Succeeded = false,
+                Message = $"The kept-alive process started, but its pending ExecutionRun lease could not be activated. The pending lease was retained for terminal recovery: {exception.Message}"
+            };
+        }
+    }
+
+    public async Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30)
+        => await DotnetStopAndRemoveLeaseAsync(
+            startupReceiptPath,
+            timeoutSeconds,
+            ownerExecutionRunId: null)
+            .ConfigureAwait(false);
+
+    private async Task<WorkspaceCommandExecutionResult> DotnetStopAndRemoveLeaseAsync(
+        string startupReceiptPath,
+        int timeoutSeconds,
+        Guid? ownerExecutionRunId)
+    {
+        var result = await ExecutePlanAsync(
             () => planBuilder.BuildDotnetStop(startupReceiptPath, timeoutSeconds),
             "workspace_dotnet_stop",
             "dotnet_stop",
             "LocalExecution",
             approvalRequired: false);
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        try
+        {
+            var auditScope = WorkspaceExecutionAuditContext.Current;
+            var resolvedOwnerExecutionRunId = ownerExecutionRunId;
+            if (!resolvedOwnerExecutionRunId.HasValue &&
+                auditScope is not null)
+            {
+                WorkspaceExecutionRunProcessLeaseStore.ValidateAuditIdentity(auditScope);
+                resolvedOwnerExecutionRunId = auditScope.ExecutionRunId;
+            }
+
+            var canonicalStartupReceiptPath = ResolveSingleStartupReceiptPath(
+                result,
+                "Successful workspace_dotnet_stop");
+            if (resolvedOwnerExecutionRunId.HasValue)
+            {
+                processLeaseStore.Remove(
+                    resolvedOwnerExecutionRunId.Value,
+                    canonicalStartupReceiptPath);
+            }
+
+            return result;
+        }
+        catch (Exception exception)
+        {
+            return result with
+            {
+                Succeeded = false,
+                Message = $"The process stopped, but its durable ExecutionRun lease could not be removed: {exception.Message}"
+            };
+        }
+    }
+
+    async Task<WorkspaceExecutionRunProcessCleanupResult>
+        IWorkspaceExecutionRunProcessLeaseCleanupExecutor.CleanupAsync(
+            Guid executionRunId)
+        => await CleanupLeasesAsync(executionRunId).ConfigureAwait(false);
+
+    private async Task<WorkspaceExecutionRunProcessCleanupResult> CleanupLeasesAsync(
+        Guid executionRunId)
+    {
+        WorkspaceExecutionRunProcessLeaseLoadResult loaded;
+        try
+        {
+            loaded = processLeaseStore.Load(executionRunId);
+        }
+        catch (Exception exception)
+        {
+            return new WorkspaceExecutionRunProcessCleanupResult(
+                executionRunId,
+                [],
+                [new WorkspaceExecutionRunProcessCleanupFailure(
+                    string.Empty,
+                    $"Could not load durable workspace process leases: {exception.Message}")]);
+        }
+
+        var cleanedPaths = new List<string>();
+        var failures = loaded.Failures.ToList();
+        foreach (var lease in loaded.Leases)
+        {
+            var leaseIdentityPath = processLeaseStore.GetLeaseFilePath(
+                lease.ExecutionRunId,
+                lease.StartupReceiptPath);
+            using var cleanupLease = WorkspaceExecutionRunProcessLeaseCleanupCoordinator.Acquire(
+                leaseIdentityPath,
+                () => CleanupLeaseAsync(lease));
+            WorkspaceExecutionRunProcessLeaseCleanupAttempt attempt;
+            try
+            {
+                attempt = await cleanupLease.Task
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                attempt = new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
+                    Succeeded: false,
+                    lease.StartupReceiptPath,
+                    exception.Message);
+            }
+
+            if (attempt.Succeeded)
+            {
+                cleanedPaths.Add(attempt.StartupReceiptPath);
+            }
+            else
+            {
+                failures.Add(new WorkspaceExecutionRunProcessCleanupFailure(
+                    attempt.StartupReceiptPath,
+                    attempt.Message));
+            }
+        }
+
+        return new WorkspaceExecutionRunProcessCleanupResult(
+            executionRunId,
+            cleanedPaths,
+            failures);
+    }
+
+    private async Task<WorkspaceExecutionRunProcessLeaseCleanupAttempt> CleanupLeaseAsync(
+        WorkspaceExecutionRunProcessLease lease)
+    {
+        try
+        {
+            if (!processLeaseStore.HasLease(
+                lease.ExecutionRunId,
+                lease.StartupReceiptPath))
+            {
+                return new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
+                    Succeeded: true,
+                    lease.StartupReceiptPath,
+                    "The durable lease was already cleaned by another cleanup owner.");
+            }
+
+            using var durableClaim = await processLeaseStore
+                .AcquireCleanupClaimAsync(
+                    lease.ExecutionRunId,
+                    lease.StartupReceiptPath)
+                .ConfigureAwait(false);
+            if (durableClaim is null)
+            {
+                return new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
+                    Succeeded: true,
+                    lease.StartupReceiptPath,
+                    "The durable lease was already cleaned by another cleanup owner.");
+            }
+
+            if (!await processLeaseStore
+                .WaitForPendingStartupReceiptAsync(lease)
+                .ConfigureAwait(false))
+            {
+                return new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
+                    Succeeded: false,
+                    lease.StartupReceiptPath,
+                    $"Pending workspace process lease did not produce its startup receipt by the bounded recovery deadline '{lease.StartupReceiptDeadlineUtc:O}'. The durable lease was retained.");
+            }
+
+            var stopResult = await DotnetStopAndRemoveLeaseAsync(
+                lease.StartupReceiptPath,
+                timeoutSeconds: 30,
+                lease.ExecutionRunId)
+                .ConfigureAwait(false);
+            return new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
+                stopResult.Succeeded,
+                lease.StartupReceiptPath,
+                stopResult.Message);
+        }
+        catch (Exception exception)
+        {
+            return new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
+                Succeeded: false,
+                lease.StartupReceiptPath,
+                exception.Message);
+        }
+    }
 
     public Task<WorkspaceCommandExecutionResult> DotnetNew(
         string template,
@@ -289,6 +612,13 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             return processRunner.CreateDeniedResult(toolName, recipeId, riskClass, approvalRequired, exception.Message);
         }
     }
+
+    private string ResolveSingleStartupReceiptPath(
+        WorkspaceCommandExecutionResult result,
+        string operation)
+        => processLeaseStore.ResolveSingleStartupReceiptPath(
+            result.Receipt.TargetPaths,
+            operation);
 
     private WorkspaceLocalMcpLaunchDescriptor CreateDeniedLaunchDescriptor(
         string capabilityName,

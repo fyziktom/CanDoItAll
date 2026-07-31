@@ -164,6 +164,25 @@ public sealed class ProcessLaunchPromptTests
     }
 
     [Fact]
+    public void Generic_step_brief_requires_current_run_managed_browser_evidence()
+    {
+        var runId = ProcessRunId.New();
+
+        var prompt = BuildStepPrompt(
+            new GenericProcessStepBriefBuilder(),
+            runId);
+
+        Assert.Contains(
+            $"artifacts/process-runs/{runId.Value:D}/browser/<evidence-name>.<ext>",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "A bare filename is provider-native interaction state and cannot satisfy governed evidence.",
+            prompt,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Software_delivery_qa_execution_guidance_is_pack_resolved_and_hashed()
     {
         var loader = new ProcessTemplatePackLoader();
@@ -198,8 +217,12 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("AC-001", prompt, StringComparison.Ordinal);
         Assert.Contains("AC-020", prompt, StringComparison.Ordinal);
         Assert.Contains("acceptanceCriteriaEvidence", prompt, StringComparison.Ordinal);
-        Assert.Contains("Status: Passed", prompt, StringComparison.Ordinal);
-        Assert.Contains("Status: Failed", prompt, StringComparison.Ordinal);
+        Assert.Contains("criterionId", prompt, StringComparison.Ordinal);
+        Assert.Contains("status Passed", prompt, StringComparison.Ordinal);
+        Assert.Contains("status Failed", prompt, StringComparison.Ordinal);
+        Assert.Contains("summary", prompt, StringComparison.Ordinal);
+        Assert.Contains("evidenceRefs", prompt, StringComparison.Ordinal);
+        Assert.Contains("Do not substitute aliases such as id, passed, or proofRefs", prompt, StringComparison.Ordinal);
         Assert.Contains(
             "marked kind=ProductAcceptance and required=true",
             prompt,
@@ -1029,6 +1052,32 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("configured target alias, output root, or directory existence is not enough", prompt, StringComparison.Ordinal);
         Assert.Contains("When the requested deliverable is new and no authoritative baseline is identified, select greenfield", prompt, StringComparison.Ordinal);
         Assert.Contains("Select `existing` only when current-run project structure or an upstream artifact identifies the baseline", executionGuidance.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Slice_validation_prompt_uses_verified_child_payload_without_inventing_product_repair()
+    {
+        var definition = new ProcessTemplatePackLoader().LoadDefinition("dotnet-development-slice");
+        var step = definition.Steps.Single(candidate =>
+            string.Equals(candidate.Key, "add-tests-and-proof", StringComparison.Ordinal));
+        var executionGuidance = Assert.Single(step.ResolvedExecutionGuidance);
+
+        var prompt = BuildStepPrompt(
+            new AgentFrameworkProcessStepBriefBuilder(),
+            ProcessRunId.New(),
+            step,
+            definition);
+
+        Assert.Contains("hash-verified selected child payload", executionGuidance.Content, StringComparison.Ordinal);
+        Assert.Contains("runtime-authenticated child-output payload", prompt, StringComparison.Ordinal);
+        Assert.Contains(
+            "Do not re-decide the typed bridge from payload prose",
+            prompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "absent separate agent-authored restatement",
+            prompt,
+            StringComparison.Ordinal);
     }
 
     [Fact]

@@ -91,6 +91,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
             provider.DefaultModel,
             options,
             frameworkManagedHistory: false,
+            allowBackgroundResponses: false,
             services);
 
         Assert.NotNull(frameworkAgent);
@@ -122,6 +123,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
             workspaceIdentity,
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance,
             providerCredentialResolver: credentialResolver);
     }
 

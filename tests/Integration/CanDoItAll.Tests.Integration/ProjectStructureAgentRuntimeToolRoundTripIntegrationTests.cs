@@ -64,6 +64,21 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.DoesNotContain(tools, tool => tool.Name == "project_task_update");
         Assert.DoesNotContain(tools, tool => tool.Name.StartsWith("workspace_", StringComparison.Ordinal));
 
+        var assetCreate = Assert.IsAssignableFrom<AIFunction>(
+            FindTool(tools, "project_structure_asset_create"));
+        var assetCreateRequestSchema = assetCreate.JsonSchema
+            .GetProperty("properties")
+            .GetProperty("request")
+            .GetProperty("properties");
+        Assert.False(assetCreateRequestSchema.TryGetProperty("metadataJson", out _));
+        var assetRevision = Assert.IsAssignableFrom<AIFunction>(
+            FindTool(tools, "project_structure_asset_create_revision"));
+        var assetRevisionRequestSchema = assetRevision.JsonSchema
+            .GetProperty("properties")
+            .GetProperty("request")
+            .GetProperty("properties");
+        Assert.False(assetRevisionRequestSchema.TryGetProperty("metadataJson", out _));
+
         var selectedSubtree = await InvokeAsync<ProjectStructureReadToolData>(
             FindTool(tools, "project_structure_read"),
             new AIFunctionArguments
@@ -74,7 +89,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                     IncludeLinks: true,
                     IncludeMetadata: true,
                     IncludeNotes: true,
-                    IncludeAssets: true)
+                    IncludeAssets: true,
+                    Source: ProjectStructureReadSource.CanonicalCurrent)
             });
 
         Assert.Collection(
@@ -105,6 +121,29 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                     ["reason"] = "Validate selected project-structure agent operations",
                     ["durationMinutes"] = 5
                 });
+
+            var invalidMetadataException = await Assert.ThrowsAsync<ProjectStructureAgentException>(
+                async () => await Assert.IsAssignableFrom<AIFunction>(
+                        FindTool(tools, "project_structure_node_create"))
+                    .InvokeAsync(
+                        new AIFunctionArguments
+                        {
+                            ["projectId"] = projectId,
+                            ["request"] = new ProjectStructureNodeCreateInput(
+                                ProjectObjectType.ProjectBlock,
+                                "Invalid metadata probe",
+                                "Must not be persisted",
+                                "Exercises sanitized agent feedback.",
+                                selectedNode.Id,
+                                ObjectSubtype: "delivery",
+                                MetadataJson: """{"workflow":"delivery"}""",
+                                LeaseToken: lease.LeaseToken)
+                        }));
+
+            Assert.Equal("InvalidProjectObjectMetadata", invalidMetadataException.ErrorCode);
+            Assert.Contains("$.workflow", invalidMetadataException.SafeMessage, StringComparison.Ordinal);
+            Assert.True(invalidMetadataException.IsSafeToExpose);
+            Assert.True(invalidMetadataException.CanRetryWithCorrectedInput);
 
             var createdNode = await InvokeAsync<ProjectStructureNodeSummary>(
                 FindTool(tools, "project_structure_node_create"),
@@ -163,7 +202,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
-                    ["request"] = new ProjectStructureAssetCreateInput(
+                    ["request"] = new ProjectStructureAgentAssetCreateInput(
                         ProjectObjectType.File,
                         "Main architecture summary",
                         "Generated from the selected architecture subtree",
@@ -214,7 +253,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                         IncludeLinks: true,
                         IncludeMetadata: true,
                         IncludeNotes: true,
-                        IncludeAssets: true)
+                        IncludeAssets: true,
+                        Source: ProjectStructureReadSource.CanonicalCurrent)
                 });
 
             var readbackNode = Assert.Single(readback.Nodes, node => node.Id == updatedNode.Id);

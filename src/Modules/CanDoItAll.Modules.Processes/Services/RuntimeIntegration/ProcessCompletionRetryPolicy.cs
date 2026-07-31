@@ -137,24 +137,6 @@ internal static class ProcessCompletionRetryPolicy
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    internal static ProcessStepOutcomeResult CopyAsCompletedBranchOutcome(ProcessStepOutcomeResult output)
-    {
-        var originalReason = string.IsNullOrWhiteSpace(output.Reason)
-            ? "The agent returned Blocked while selecting a branch outcome."
-            : output.Reason.Trim();
-        return new ProcessStepOutcomeResult
-        {
-            Status = ProcessStepOutcomeStatus.Completed,
-            Reason = $"Runtime routed evidence-backed branch outcome '{output.BranchOutcomeKey.Trim()}' after the agent returned Blocked with a selected branch. Original reason: {originalReason}",
-            BranchOutcomeKey = output.BranchOutcomeKey,
-            BranchOutcomeTitle = output.BranchOutcomeTitle,
-            EvidenceRefs = output.EvidenceRefs,
-            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
-            NextActions = output.NextActions,
-            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
-        };
-    }
-
     internal static ProcessStepOutcomeResult CopyWithBranchOutcomeKey(
         ProcessStepOutcomeResult output,
         string branchOutcomeKey)

@@ -1,28 +1,9 @@
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.AgentFramework.Hosting;
-using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
-using CanDoItAll.Processes.Builder;
-using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
-using CanDoItAll.Processes.Drivers.Standard;
-using CanDoItAll.Processes.Persistence;
-using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
-using CanDoItAll.Processes.Templates;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using static CanDoItAll.Modules.Processes.ProcessAgentRightsDiagnosticPolicy;
 using static CanDoItAll.Modules.Processes.ProcessCompletionText;
@@ -38,6 +19,11 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
 {
     internal const string ManagedOutcomeArtifactCapturedHeading = "## Runtime Captured Structured Outcome";
     internal const string ManagedOutcomeArtifactAcceptedHeading = "## Runtime Accepted Completion Gates";
+    internal const string ManagedArtifactMaterializationTooLargeDiagnosticCode =
+        "process.adapter.managed_artifact_materialization_too_large";
+    internal const string ManagedArtifactAcceptanceTooLargeDiagnosticCode =
+        "process.adapter.managed_artifact_acceptance_too_large";
+    private static readonly object ManagedArtifactMutationGate = new();
 
     internal static async Task<IReadOnlyList<ToolExecutionReceiptRecord>> LoadStepCompletionToolReceiptsAsync(
         IAgentExecutionHistoryReader workspaceService,
@@ -101,18 +87,7 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
     {
-        var primaryRef = BuildManagedStepArtifactPath(assignment);
-        var acceptedCompletedPrimaryArtifact = false;
-        if (output.Status != ProcessStepOutcomeStatus.Completed &&
-            TryReadCompletedPrimaryManagedArtifactOutcome(assignment, output, primaryRef, out var completedOutput))
-        {
-            output = completedOutput;
-            acceptedCompletedPrimaryArtifact = true;
-        }
-
-        var isSelfEvidenceBlocker = IsPureManagedArtifactSelfEvidenceBlocker(assignment, output);
-        if (output.Status != ProcessStepOutcomeStatus.Completed &&
-            !isSelfEvidenceBlocker)
+        if (output.Status != ProcessStepOutcomeStatus.Completed)
         {
             return ManagedOutcomeArtifactMaterialization.Unchanged(output, toolReceipts);
         }
@@ -122,96 +97,146 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
             return ManagedOutcomeArtifactMaterialization.Unchanged(output, toolReceipts);
         }
 
+        var primaryRef = BuildManagedStepArtifactPath(assignment);
+        if (!NormalizeOperations(assignment.AllowedOperations).Contains(
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            return ManagedOutcomeArtifactMaterialization.Failed(
+                output,
+                toolReceipts,
+                primaryRef,
+                new ProcessCompletionIssue(
+                    "process.adapter.managed_artifact_materialization_not_authorized",
+                    $"Step '{assignment.StepKey}' produced a valid structured outcome, but its persisted assignment does not authorize runtime materialization of primary managed artifact '{primaryRef}'.",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-materialization-not-authorized:{primaryRef}",
+                    assignment.ProducedArtifactSlotIds,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
         var hasManagedEvidence = HasAllManagedArtifactEvidence(assignment, output.EvidenceRefs);
         var hasWriteReceipt = HasManagedArtifactWriteReceipt(assignment, toolReceipts);
         IReadOnlyList<ToolExecutionReceiptRecord> effectiveReceipts = toolReceipts;
-        if (!hasWriteReceipt && acceptedCompletedPrimaryArtifact)
+        var capturedMarker = BuildManagedOutcomeArtifactLifecycleMarker(
+            executionRunId,
+            ManagedOutcomeArtifactLifecyclePhase.Captured);
+        lock (ManagedArtifactMutationGate)
         {
-            var appendResult = workspaceFiles.AppendTextFile(
-                primaryRef,
-                BuildManagedOutcomeArtifactAppendixContent(assignment, output, primaryRef));
-            if (!appendResult.Succeeded)
+            if (ContainsLifecycleMarker(primaryRef, capturedMarker))
             {
-                return ManagedOutcomeArtifactMaterialization.Failed(
-                    output,
-                    toolReceipts,
-                    primaryRef,
-                    new ProcessCompletionIssue(
-                        "process.adapter.managed_artifact_outcome_append_failed",
-                        $"Step '{assignment.StepKey}' recovered a completed primary managed artifact, but the runtime could not append the staged structured outcome to '{primaryRef}': {appendResult.Message}",
-                        $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
-                        assignment.ProducedArtifactSlotIds,
-                        ProcessDiagnosticRetrySafety.SafeToRetry,
-                        ProcessDiagnosticIdempotencyClassification.Idempotent));
+                if (!hasWriteReceipt)
+                {
+                    effectiveReceipts = toolReceipts
+                        .Append(CreateManagedOutcomeArtifactReceipt(
+                            executionRunId,
+                            primaryRef,
+                            "Reused the managed artifact already staged for this execution run."))
+                        .ToArray();
+                }
             }
-
-            effectiveReceipts = toolReceipts
-                .Append(CreateManagedOutcomeArtifactReceipt(
+            else if (!hasWriteReceipt)
+            {
+                var artifactContent = BuildManagedOutcomeArtifactContent(
+                    assignment,
+                    output,
                     executionRunId,
-                    primaryRef,
-                    appendResult.Message,
-                    "workspace_append_file"))
-                .ToArray();
-        }
-        else if (!hasWriteReceipt)
-        {
-            var writeResult = workspaceFiles.WriteTextFile(
-                primaryRef,
-                BuildManagedOutcomeArtifactContent(assignment, output, primaryRef),
-                overwrite: true);
-            if (!writeResult.Succeeded)
-            {
-                return ManagedOutcomeArtifactMaterialization.Failed(
+                    primaryRef);
+                var acceptanceContent = BuildManagedOutcomeArtifactAcceptanceContent(
+                    assignment,
                     output,
-                    toolReceipts,
-                    primaryRef,
-                    new ProcessCompletionIssue(
-                        "process.adapter.managed_artifact_materialization_failed",
-                        $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not persist the primary managed artifact '{primaryRef}': {writeResult.Message}",
-                        $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-materialization-failed:{primaryRef}:{writeResult.Message}",
-                        assignment.ProducedArtifactSlotIds,
-                        ProcessDiagnosticRetrySafety.SafeToRetry,
-                        ProcessDiagnosticIdempotencyClassification.Idempotent));
-            }
-
-            effectiveReceipts = toolReceipts
-                .Append(CreateManagedOutcomeArtifactReceipt(executionRunId, primaryRef, writeResult.Message))
-                .ToArray();
-        }
-        else
-        {
-            var appendResult = workspaceFiles.AppendTextFile(
-                primaryRef,
-                BuildManagedOutcomeArtifactAppendixContent(assignment, output, primaryRef));
-            if (!appendResult.Succeeded)
-            {
-                return ManagedOutcomeArtifactMaterialization.Failed(
-                    output,
-                    toolReceipts,
-                    primaryRef,
-                    new ProcessCompletionIssue(
-                        "process.adapter.managed_artifact_outcome_append_failed",
-                        $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not append the staged structured outcome to primary managed artifact '{primaryRef}': {appendResult.Message}",
-                        $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
-                        assignment.ProducedArtifactSlotIds,
-                        ProcessDiagnosticRetrySafety.SafeToRetry,
-                        ProcessDiagnosticIdempotencyClassification.Idempotent));
-            }
-
-            effectiveReceipts = toolReceipts
-                .Append(CreateManagedOutcomeArtifactReceipt(
                     executionRunId,
+                    primaryRef);
+                if (artifactContent.Length + acceptanceContent.Length > WorkspaceFileLimits.MaxTextReadCharacters)
+                {
+                    return ManagedOutcomeArtifactMaterialization.Failed(
+                        output,
+                        toolReceipts,
+                        primaryRef,
+                        new ProcessCompletionIssue(
+                            ManagedArtifactMaterializationTooLargeDiagnosticCode,
+                            $"Step '{assignment.StepKey}' produced a valid structured outcome, but its runtime-managed artifact would exceed the complete-read limit of {WorkspaceFileLimits.MaxTextReadCharacters} characters.",
+                            $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-materialization-too-large:{primaryRef}:{artifactContent.Length}:{acceptanceContent.Length}",
+                            assignment.ProducedArtifactSlotIds,
+                            ProcessDiagnosticRetrySafety.SafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent));
+                }
+
+                var writeResult = workspaceFiles.WriteTextFile(
                     primaryRef,
-                    appendResult.Message,
-                    "workspace_append_file"))
-                .ToArray();
+                    artifactContent,
+                    overwrite: true);
+                if (!writeResult.Succeeded)
+                {
+                    return ManagedOutcomeArtifactMaterialization.Failed(
+                        output,
+                        toolReceipts,
+                        primaryRef,
+                        new ProcessCompletionIssue(
+                            "process.adapter.managed_artifact_materialization_failed",
+                            $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not persist the primary managed artifact '{primaryRef}': {writeResult.Message}",
+                            $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-materialization-failed:{primaryRef}:{writeResult.Message}",
+                            assignment.ProducedArtifactSlotIds,
+                            ProcessDiagnosticRetrySafety.SafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent));
+                }
+
+                effectiveReceipts = toolReceipts
+                    .Append(CreateManagedOutcomeArtifactReceipt(executionRunId, primaryRef, writeResult.Message))
+                    .ToArray();
+            }
+            else
+            {
+                var appendixContent = BuildManagedOutcomeArtifactAppendixContent(
+                    assignment,
+                    output,
+                    executionRunId,
+                    primaryRef);
+                if (ValidateManagedArtifactAppendBoundary(
+                        assignment,
+                        primaryRef,
+                        appendixContent,
+                        ManagedArtifactMaterializationTooLargeDiagnosticCode,
+                        "captured structured-outcome appendix") is { } appendBoundaryIssue)
+                {
+                    return ManagedOutcomeArtifactMaterialization.Failed(
+                        output,
+                        toolReceipts,
+                        primaryRef,
+                        appendBoundaryIssue);
+                }
+
+                var appendResult = workspaceFiles.AppendTextFile(
+                    primaryRef,
+                    appendixContent);
+                if (!appendResult.Succeeded)
+                {
+                    return ManagedOutcomeArtifactMaterialization.Failed(
+                        output,
+                        toolReceipts,
+                        primaryRef,
+                        new ProcessCompletionIssue(
+                            "process.adapter.managed_artifact_outcome_append_failed",
+                            $"Step '{assignment.StepKey}' produced a valid structured outcome, but the runtime could not append the staged structured outcome to primary managed artifact '{primaryRef}': {appendResult.Message}",
+                            $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-outcome-append-failed:{primaryRef}:{appendResult.Message}",
+                            assignment.ProducedArtifactSlotIds,
+                            ProcessDiagnosticRetrySafety.SafeToRetry,
+                            ProcessDiagnosticIdempotencyClassification.Idempotent));
+                }
+
+                effectiveReceipts = toolReceipts
+                    .Append(CreateManagedOutcomeArtifactReceipt(
+                        executionRunId,
+                        primaryRef,
+                        appendResult.Message,
+                        "workspace_append_file"))
+                    .ToArray();
+            }
         }
 
-        var effectiveOutput = isSelfEvidenceBlocker
-            ? CopyAsCompletedWithEvidenceRef(output, primaryRef)
-            : hasManagedEvidence
-                ? output
-                : CopyWithEvidenceRef(output, primaryRef);
+        var effectiveOutput = hasManagedEvidence
+            ? output
+            : CopyWithEvidenceRef(output, primaryRef);
         return ManagedOutcomeArtifactMaterialization.Staged(effectiveOutput, effectiveReceipts, primaryRef);
     }
 
@@ -220,9 +245,11 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
         ManagedOutcomeArtifactMaterialization materialization,
         Guid executionRunId,
         IReadOnlyList<ToolExecutionReceiptRecord> completionToolReceipts,
-        out IReadOnlyList<ToolExecutionReceiptRecord> acceptedToolReceipts)
+        out IReadOnlyList<ToolExecutionReceiptRecord> acceptedToolReceipts,
+        out IReadOnlyDictionary<ArtifactSlotId, string>? acceptedArtifactContentHashes)
     {
         acceptedToolReceipts = completionToolReceipts;
+        acceptedArtifactContentHashes = null;
         if (!materialization.Lifecycle.RequiresCompletionGateAcceptance ||
             string.IsNullOrWhiteSpace(materialization.Lifecycle.PrimaryRef))
         {
@@ -230,113 +257,128 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
         }
 
         var primaryRef = materialization.Lifecycle.PrimaryRef;
-        var appendResult = workspaceFiles.AppendTextFile(
-            primaryRef,
-            BuildManagedOutcomeArtifactAcceptanceContent(assignment, materialization.Output, primaryRef));
-        if (!appendResult.Succeeded)
+        var acceptedMarker = BuildManagedOutcomeArtifactLifecycleMarker(
+            executionRunId,
+            ManagedOutcomeArtifactLifecyclePhase.Accepted);
+        lock (ManagedArtifactMutationGate)
         {
-            return new ProcessCompletionIssue(
-                "process.adapter.managed_artifact_acceptance_append_failed",
-                $"Step '{assignment.StepKey}' passed completion gates, but the runtime could not append managed artifact acceptance proof to '{primaryRef}': {appendResult.Message}",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-acceptance-append-failed:{primaryRef}:{appendResult.Message}",
-                assignment.ProducedArtifactSlotIds,
-                ProcessDiagnosticRetrySafety.SafeToRetry,
-                ProcessDiagnosticIdempotencyClassification.Idempotent);
-        }
+            if (ContainsLifecycleMarker(primaryRef, acceptedMarker))
+            {
+                acceptedToolReceipts = completionToolReceipts
+                    .Append(CreateManagedOutcomeArtifactReceipt(
+                        executionRunId,
+                        primaryRef,
+                        "Reused the managed artifact acceptance already recorded for this execution run.",
+                        "workspace_append_file",
+                        "Process runtime reused idempotent managed artifact acceptance proof."))
+                    .ToArray();
+                return BuildAcceptedArtifactContentHashes(
+                    assignment,
+                    materialization.Output,
+                    out acceptedArtifactContentHashes);
+            }
 
-        acceptedToolReceipts = completionToolReceipts
-            .Append(CreateManagedOutcomeArtifactReceipt(
-                executionRunId,
-                primaryRef,
-                appendResult.Message,
-                "workspace_append_file",
-                "Process runtime accepted staged managed artifact after completion gates passed."))
-            .ToArray();
-        return null;
-    }
-
-    internal ProcessStepOutcomeResult RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
-        ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output,
-        Guid executionRunId,
-        IReadOnlyList<ToolExecutionReceiptRecord> currentToolReceipts)
-    {
-        if (output.Status != ProcessStepOutcomeStatus.Completed ||
-            !string.IsNullOrWhiteSpace(output.BranchOutcomeKey) ||
-            !currentToolReceipts.Any(receipt => receipt.ExecutionRunId == executionRunId) ||
-            !HasManagedArtifactWriteReceipt(
+            var acceptanceContent = BuildManagedOutcomeArtifactAcceptanceContent(
                 assignment,
-                currentToolReceipts.Where(receipt => receipt.ExecutionRunId == executionRunId).ToArray()))
-        {
-            return output;
-        }
+                materialization.Output,
+                executionRunId,
+                primaryRef);
+            if (ValidateManagedArtifactAppendBoundary(
+                    assignment,
+                    primaryRef,
+                    acceptanceContent,
+                    ManagedArtifactAcceptanceTooLargeDiagnosticCode,
+                    "completion-gate acceptance appendix") is { } appendBoundaryIssue)
+            {
+                return appendBoundaryIssue;
+            }
 
-        var primaryRef = BuildManagedStepArtifactPath(assignment);
-        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
-        if (!readResult.Succeeded)
-        {
-            return output;
-        }
+            var appendResult = workspaceFiles.AppendTextFile(
+                primaryRef,
+                acceptanceContent);
+            if (!appendResult.Succeeded)
+            {
+                return new ProcessCompletionIssue(
+                    "process.adapter.managed_artifact_acceptance_append_failed",
+                    $"Step '{assignment.StepKey}' passed completion gates, but the runtime could not append managed artifact acceptance proof to '{primaryRef}': {appendResult.Message}",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:managed-artifact-acceptance-append-failed:{primaryRef}:{appendResult.Message}",
+                    assignment.ProducedArtifactSlotIds,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent);
+            }
 
-        var parsedArtifactOutcome = ManagedProcessArtifactOutcomeReader.Read(readResult.Content);
-        if (!parsedArtifactOutcome.IsValid ||
-            parsedArtifactOutcome.Status != ProcessStepOutcomeStatus.Completed ||
-            !parsedArtifactOutcome.HasBranchOutcomeKey)
-        {
-            return output;
-        }
+            acceptedToolReceipts = completionToolReceipts
+                .Append(CreateManagedOutcomeArtifactReceipt(
+                    executionRunId,
+                    primaryRef,
+                    appendResult.Message,
+                    "workspace_append_file",
+                    "Process runtime accepted staged managed artifact after completion gates passed."))
+                .ToArray();
 
-        var matchingDeclaredOutcomes = ProcessBranchOutcomeResolver
-            .EnumerateAgentSelectableBranchOutcomes(assignment.Prompt)
-            .Where(outcome => string.Equals(
-                outcome.Key,
-                parsedArtifactOutcome.BranchOutcomeKey,
-                StringComparison.OrdinalIgnoreCase))
-            .DistinctBy(outcome => outcome.Key, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        if (matchingDeclaredOutcomes.Length != 1)
-        {
-            return output;
+            return BuildAcceptedArtifactContentHashes(
+                assignment,
+                materialization.Output,
+                out acceptedArtifactContentHashes);
         }
-
-        var declaredOutcome = matchingDeclaredOutcomes[0];
-        var recoveredOutput = new ProcessStepOutcomeResult
-        {
-            Status = output.Status,
-            Reason = output.Reason,
-            BranchOutcomeKey = declaredOutcome.Key,
-            BranchOutcomeTitle = string.IsNullOrWhiteSpace(output.BranchOutcomeTitle)
-                ? declaredOutcome.Title
-                : output.BranchOutcomeTitle,
-            EvidenceRefs = output.EvidenceRefs,
-            AcceptanceCriteriaEvidence = output.AcceptanceCriteriaEvidence,
-            NextActions = output.NextActions,
-            HumanReadableSummaryMarkdown = output.HumanReadableSummaryMarkdown
-        };
-        return ProcessAcceptanceCriteriaGate.ValidateAcceptanceCriteriaCompletion(assignment, recoveredOutput) is null
-            ? recoveredOutput
-            : output;
     }
 
-    private bool TryReadCompletedPrimaryManagedArtifactOutcome(
+    private ProcessCompletionIssue? ValidateManagedArtifactAppendBoundary(
         ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output,
         string primaryRef,
-        out ProcessStepOutcomeResult completedOutput)
+        string appendixContent,
+        string diagnosticCode,
+        string appendixDescription)
     {
-        completedOutput = default!;
-
-        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
-        if (!readResult.Succeeded ||
-            !TryReadManagedArtifactStatus(readResult.Content, out var artifactStatus) ||
-            artifactStatus != ProcessStepOutcomeStatus.Completed ||
-            !ManagedArtifactBelongsToStep(readResult.Content, assignment))
+        var readResult = workspaceFiles.ReadTextFile(
+            primaryRef,
+            WorkspaceFileLimits.MaxTextReadCharacters);
+        if (!readResult.Succeeded || readResult.IsTruncated)
         {
-            return false;
+            var readbackMessage = !readResult.Succeeded
+                ? readResult.Message
+                : $"content exceeds the complete-read limit of {WorkspaceFileLimits.MaxTextReadCharacters} characters";
+            return CreateManagedArtifactReadbackIssue(
+                assignment,
+                primaryRef,
+                readbackMessage);
         }
 
-        completedOutput = CopyAsCompletedFromPrimaryManagedArtifact(output, primaryRef);
-        return true;
+        var resultingCharacterCount = readResult.Content.Length + appendixContent.Length;
+        if (resultingCharacterCount <= WorkspaceFileLimits.MaxTextReadCharacters)
+        {
+            return null;
+        }
+
+        return new ProcessCompletionIssue(
+            diagnosticCode,
+            $"Step '{assignment.StepKey}' cannot append its {appendixDescription} to primary managed artifact '{primaryRef}' because the result would exceed the complete-read limit of {WorkspaceFileLimits.MaxTextReadCharacters} characters. The artifact was left unchanged.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:{diagnosticCode}:{primaryRef}:{resultingCharacterCount}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private ProcessCompletionIssue? BuildAcceptedArtifactContentHashes(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessStepOutcomeResult output,
+        out IReadOnlyDictionary<ArtifactSlotId, string> acceptedArtifactContentHashes)
+    {
+        acceptedArtifactContentHashes = BuildProducedArtifactContentHashes(
+            assignment,
+            output,
+            out var readbackIssue);
+        return readbackIssue;
+    }
+
+    private bool ContainsLifecycleMarker(string primaryRef, string marker)
+    {
+        var readResult = workspaceFiles.ReadTextFile(
+            primaryRef,
+            WorkspaceFileLimits.MaxTextReadCharacters);
+        return readResult.Succeeded &&
+               !readResult.IsTruncated &&
+               readResult.Content.Contains(marker, StringComparison.Ordinal);
     }
 
     internal IReadOnlyDictionary<ArtifactSlotId, string> BuildProducedArtifactContentHashes(
@@ -360,10 +402,18 @@ internal sealed class ProcessManagedArtifactService(IWorkspaceFileService worksp
             return new Dictionary<ArtifactSlotId, string>();
         }
 
-        var readResult = workspaceFiles.ReadTextFile(primaryRef, maxCharacters: 200000);
-        if (!readResult.Succeeded)
+        var readResult = workspaceFiles.ReadTextFile(
+            primaryRef,
+            WorkspaceFileLimits.MaxTextReadCharacters);
+        if (!readResult.Succeeded || readResult.IsTruncated)
         {
-            issue = CreateManagedArtifactReadbackIssue(assignment, primaryRef, readResult.Message);
+            var readbackMessage = !readResult.Succeeded
+                ? readResult.Message
+                : $"content exceeds the complete-read limit of {WorkspaceFileLimits.MaxTextReadCharacters} characters";
+            issue = CreateManagedArtifactReadbackIssue(
+                assignment,
+                primaryRef,
+                readbackMessage);
             return new Dictionary<ArtifactSlotId, string>();
         }
 

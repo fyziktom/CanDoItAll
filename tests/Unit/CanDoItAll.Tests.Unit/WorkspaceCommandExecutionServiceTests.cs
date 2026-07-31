@@ -530,15 +530,20 @@ public sealed class WorkspaceCommandExecutionServiceTests
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
         var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var run = CreateProcessStepExecutionRun("{}");
 
         try
         {
-            var result = await service.DotnetRun(
-                "apps/SampleWeb/SampleWeb.csproj",
-                url: "http://127.0.0.1:0/health",
-                startupTimeoutSeconds: 5,
-                timeoutSeconds: 20,
-                keepAlive: true);
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:0/health",
+                    startupTimeoutSeconds: 5,
+                    timeoutSeconds: 20,
+                    keepAlive: true);
+            }
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
@@ -569,15 +574,20 @@ public sealed class WorkspaceCommandExecutionServiceTests
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
         var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var run = CreateProcessStepExecutionRun("{}");
 
         try
         {
-            var result = await service.DotnetRun(
-                "apps/SampleWeb/SampleWeb.csproj",
-                url: "http://127.0.0.1:5125/",
-                startupTimeoutSeconds: 5,
-                timeoutSeconds: 20,
-                keepAlive: true);
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5125/",
+                    startupTimeoutSeconds: 5,
+                    timeoutSeconds: 20,
+                    keepAlive: true);
+            }
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
@@ -616,12 +626,17 @@ public sealed class WorkspaceCommandExecutionServiceTests
             """);
         var processHost = new FakeWorkspaceProcessHost();
         var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var run = CreateProcessStepExecutionRun("{}");
 
         try
         {
-            var result = await service.DotnetStop(
-                "artifacts/process-runs/dotnet-run/20260616-183000000/startup.json",
-                timeoutSeconds: 10);
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetStop(
+                    "artifacts/process-runs/dotnet-run/20260616-183000000/startup.json",
+                    timeoutSeconds: 10);
+            }
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
@@ -675,10 +690,15 @@ public sealed class WorkspaceCommandExecutionServiceTests
             """);
         var processHost = new FakeWorkspaceProcessHost();
         var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost, workspaceScope);
+        var run = CreateProcessStepExecutionRun("{}");
 
         try
         {
-            var result = await service.DotnetStop(startupReceiptPath, timeoutSeconds: 10);
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetStop(startupReceiptPath, timeoutSeconds: 10);
+            }
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
@@ -729,6 +749,713 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("stopTool = 'workspace_dotnet_stop'", script, StringComparison.Ordinal);
             Assert.Contains("stopToolStartupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
             Assert.DoesNotContain("stopCommand", script, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_kept_alive_execution_run_requires_active_audit_context()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/SampleWeb/SampleWeb.csproj",
+                url: "http://127.0.0.1:5127/",
+                keepAlive: true);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("active execution-run audit context", result.Message, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public void Workspace_process_identity_rejects_missing_or_ambiguous_startup_receipt_targets()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+
+        try
+        {
+            var missing = Assert.Throws<InvalidOperationException>(() =>
+                store.ResolveSingleStartupReceiptPath(
+                    ["artifacts/process-runs/dotnet-run/one/run.ps1"],
+                    "Test launch"));
+            var ambiguous = Assert.Throws<InvalidOperationException>(() =>
+                store.ResolveSingleStartupReceiptPath(
+                    [
+                        "artifacts/process-runs/dotnet-run/one/startup.json",
+                        "artifacts/process-runs/dotnet-run/two/startup.json"
+                    ],
+                    "Test launch"));
+
+            Assert.Contains("did not prove", missing.Message, StringComparison.Ordinal);
+            Assert.Contains("proved multiple", ambiguous.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_registers_normalized_durable_lease_for_cross_instance_cleanup()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var launchHost = new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest);
+        var launchService = new WorkspaceCommandExecutionService(workspaceRoot, launchHost);
+
+        try
+        {
+            WorkspaceCommandExecutionResult launchResult;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                launchResult = await launchService.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5128/",
+                    keepAlive: true);
+            }
+
+            Assert.True(launchResult.Succeeded);
+            var startupReceiptPath = Assert.Single(
+                launchResult.Receipt.TargetPaths,
+                path => path.EndsWith("/startup.json", StringComparison.OrdinalIgnoreCase));
+            var store = new WorkspaceExecutionRunProcessLeaseStore(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox);
+            store.Register(
+                run.Id,
+                Path.Combine(
+                    workspaceRoot,
+                    startupReceiptPath.Replace('/', Path.DirectorySeparatorChar)));
+            var registered = store.Load(run.Id);
+            var lease = Assert.Single(registered.Leases);
+            Assert.Empty(registered.Failures);
+            Assert.Equal(
+                WorkspaceExecutionRunProcessLeasePhase.Active,
+                lease.Phase);
+            Assert.NotNull(lease.ActivatedAtUtc);
+            Assert.Equal(
+                WorkspaceScopeDescriptor.NormalizeRelativePath(startupReceiptPath),
+                lease.StartupReceiptPath,
+                ignoreCase: true);
+
+            var cleanupHost = new FakeWorkspaceProcessHost();
+            var cleanupService = new WorkspaceCommandExecutionService(workspaceRoot, cleanupHost);
+            var cleanup = await GetCleanupExecutor(cleanupService).CleanupAsync(run.Id);
+
+            Assert.Equal(run.Id, cleanup.ExecutionRunId);
+            Assert.Equal([lease.StartupReceiptPath], cleanup.CleanedStartupReceiptPaths);
+            Assert.Empty(cleanup.Failures);
+            Assert.Single(cleanupHost.Requests);
+            Assert.Equal("workspace_dotnet_stop", cleanupHost.Requests[0].ToolName);
+            Assert.Empty(store.Load(run.Id).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_concurrent_kept_alive_launches_use_collision_safe_startup_receipt_identities()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var runs = new[]
+        {
+            CreateProcessStepExecutionRun("{}"),
+            CreateProcessStepExecutionRun("{}")
+        };
+        var launchService = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest));
+
+        try
+        {
+            var launchResults = await Task.WhenAll(runs.Select(async run =>
+            {
+                using var auditScope = WorkspaceExecutionAuditContext.BeginScope(run);
+                return await launchService.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:0/",
+                    keepAlive: true);
+            }));
+
+            Assert.All(launchResults, result => Assert.True(result.Succeeded, result.Message));
+            var startupReceiptPaths = launchResults
+                .Select(result => Assert.Single(
+                    result.Receipt.TargetPaths,
+                    path => path.EndsWith("/startup.json", StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+            Assert.Equal(
+                startupReceiptPaths.Length,
+                startupReceiptPaths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Assert.All(startupReceiptPaths, startupReceiptPath =>
+            {
+                var directoryName = Path.GetFileName(
+                    Path.GetDirectoryName(startupReceiptPath.Replace('/', Path.DirectorySeparatorChar)))
+                    ?? throw new InvalidOperationException("Startup receipt path must have a parent directory.");
+                var identitySeparatorIndex = directoryName.LastIndexOf('-');
+
+                Assert.True(identitySeparatorIndex > 0);
+                Assert.True(Guid.TryParseExact(
+                    directoryName[(identitySeparatorIndex + 1)..],
+                    "N",
+                    out _));
+            });
+
+            var leaseStore = new WorkspaceExecutionRunProcessLeaseStore(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox);
+            Assert.All(runs, run => Assert.Single(leaseStore.Load(run.Id).Leases));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_registers_only_successful_kept_alive_execution_run_processes()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var nonKeptAlive = await new WorkspaceCommandExecutionService(
+                        workspaceRoot,
+                        new FakeWorkspaceProcessHost())
+                    .DotnetRun(
+                        "apps/SampleWeb/SampleWeb.csproj",
+                        url: "http://127.0.0.1:5129/",
+                        keepAlive: false);
+                var failed = await new WorkspaceCommandExecutionService(
+                        workspaceRoot,
+                        new FakeWorkspaceProcessHost(exitCode: 1))
+                    .DotnetRun(
+                        "apps/SampleWeb/SampleWeb.csproj",
+                        url: "http://127.0.0.1:5130/",
+                        keepAlive: true);
+                var processRunLifetime = await new WorkspaceCommandExecutionService(
+                        workspaceRoot,
+                        new FakeWorkspaceProcessHost())
+                    .DotnetRun(
+                        "apps/SampleWeb/SampleWeb.csproj",
+                        url: "http://127.0.0.1:5131/",
+                        keepAlive: true,
+                        lifetimeScope: WorkspaceProcessLifetimeScope.ProcessRun);
+
+                Assert.True(nonKeptAlive.Succeeded);
+                Assert.False(failed.Succeeded);
+                Assert.True(processRunLifetime.Succeeded);
+            }
+
+            Assert.Empty(store.Load(run.Id).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_pending_lease_registration_failure_prevents_launch()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var leaseDirectory = Path.Combine(
+            WorkspaceExecutionAuditTrailWriter.GetRunAuditRoot(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox,
+                run.Id),
+            "process-leases");
+        Directory.CreateDirectory(Path.GetDirectoryName(leaseDirectory)!);
+        await File.WriteAllTextAsync(leaseDirectory, "blocks lease directory creation");
+        var processHost = new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest);
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5132/",
+                    keepAlive: true);
+            }
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("pending ExecutionRun lease could not be persisted", result.Message, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_host_termination_retains_pending_lease_for_recovery()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var launchHost = new FakeWorkspaceProcessHost(onExecute: request =>
+        {
+            WriteStartupReceiptForRunRequest(request);
+            throw new InvalidOperationException("synthetic host termination");
+        });
+        var launchService = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            launchHost);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+
+        try
+        {
+            WorkspaceCommandExecutionResult launchResult;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                launchResult = await launchService.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5132/",
+                    startupTimeoutSeconds: 1,
+                    keepAlive: true);
+            }
+
+            Assert.False(launchResult.Succeeded);
+            Assert.Contains("pending lease was retained", launchResult.Message, StringComparison.Ordinal);
+            var pendingLease = Assert.Single(store.Load(run.Id).Leases);
+            Assert.Equal(
+                WorkspaceExecutionRunProcessLeasePhase.Pending,
+                pendingLease.Phase);
+            Assert.Null(pendingLease.ActivatedAtUtc);
+            Assert.True(
+                pendingLease.StartupReceiptDeadlineUtc >= pendingLease.RegisteredAtUtc);
+
+            var recoveryHost = new FakeWorkspaceProcessHost();
+            var recoveryService = new WorkspaceCommandExecutionService(
+                workspaceRoot,
+                recoveryHost);
+            var recovery = await GetCleanupExecutor(recoveryService)
+                .CleanupAsync(run.Id);
+
+            Assert.Equal(
+                [pendingLease.StartupReceiptPath],
+                recovery.CleanedStartupReceiptPaths);
+            Assert.Empty(recovery.Failures);
+            Assert.Single(recoveryHost.Requests);
+            Assert.Empty(store.Load(run.Id).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetStop_removes_only_the_active_execution_run_lease_using_result_identity()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var workspaceScope = WorkspaceScopeDescriptor.Organization("lease-owner");
+        var run = CreateProcessStepExecutionRun("{}");
+        var canonicalStartupReceiptPath = workspaceScope.CombineArtifactPath(
+            "process-runs",
+            "dotnet-run",
+            "owner-proof",
+            "startup.json");
+        var startupReceiptFullPath = Path.Combine(
+            workspaceRoot,
+            canonicalStartupReceiptPath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(startupReceiptFullPath)!);
+        await File.WriteAllTextAsync(startupReceiptFullPath, """{"succeeded":true,"appProcessTreeIds":[12345]}""");
+        var store = new WorkspaceExecutionRunProcessLeaseStore(workspaceRoot, workspaceScope);
+        store.Register(run.Id, canonicalStartupReceiptPath);
+        var otherRunId = Guid.NewGuid();
+        store.Register(otherRunId, canonicalStartupReceiptPath);
+        var service = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            new FakeWorkspaceProcessHost(),
+            workspaceScope);
+
+        try
+        {
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetStop(
+                    "artifacts/process-runs/dotnet-run/owner-proof/startup.json");
+            }
+
+            Assert.True(result.Succeeded);
+            Assert.Empty(store.Load(run.Id).Leases);
+            Assert.Single(store.Load(otherRunId).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task CleanupAsync_attempts_every_lease_and_retains_failed_lease()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var firstPath = "artifacts/process-runs/dotnet-run/first/startup.json";
+        var secondPath = "artifacts/process-runs/dotnet-run/second/startup.json";
+        await WriteStartupReceiptAsync(workspaceRoot, firstPath);
+        await WriteStartupReceiptAsync(workspaceRoot, secondPath);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        store.Register(run.Id, firstPath);
+        store.Register(run.Id, secondPath);
+        var processHost = new FakeWorkspaceProcessHost(onExecute: request =>
+        {
+            if (request.ToolName == "workspace_dotnet_stop" &&
+                request.WorkingDirectory.EndsWith(
+                    $"{Path.DirectorySeparatorChar}first",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("synthetic stop failure");
+            }
+        });
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await GetCleanupExecutor(service).CleanupAsync(run.Id);
+
+            Assert.Equal([secondPath], result.CleanedStartupReceiptPaths);
+            var failure = Assert.Single(result.Failures);
+            Assert.Equal(firstPath, failure.StartupReceiptPath, ignoreCase: true);
+            Assert.Contains("synthetic stop failure", failure.Message, StringComparison.Ordinal);
+            Assert.Equal(2, processHost.Requests.Count);
+            var retained = store.Load(run.Id);
+            Assert.Equal(firstPath, Assert.Single(retained.Leases).StartupReceiptPath, ignoreCase: true);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task CleanupAsync_retains_pending_lease_when_startup_receipt_is_unavailable()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var startupReceiptPath = "artifacts/process-runs/dotnet-run/pending/startup.json";
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        var registeredAtUtc = DateTimeOffset.UtcNow.AddSeconds(-2);
+        store.RegisterPending(
+            run.Id,
+            startupReceiptPath,
+            registeredAtUtc,
+            registeredAtUtc.AddSeconds(1));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await GetCleanupExecutor(service).CleanupAsync(run.Id);
+
+            Assert.Empty(result.CleanedStartupReceiptPaths);
+            var failure = Assert.Single(result.Failures);
+            Assert.Equal(startupReceiptPath, failure.StartupReceiptPath, ignoreCase: true);
+            Assert.Contains("did not produce its startup receipt", failure.Message, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+            var retainedLease = Assert.Single(store.Load(run.Id).Leases);
+            Assert.Equal(
+                WorkspaceExecutionRunProcessLeasePhase.Pending,
+                retainedLease.Phase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task CleanupAsync_coordinates_concurrent_service_instances_per_lease()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var startupReceiptPath = "artifacts/process-runs/dotnet-run/concurrent/startup.json";
+        await WriteStartupReceiptAsync(workspaceRoot, startupReceiptPath);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        store.Register(run.Id, startupReceiptPath);
+        var stopEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseStop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var executionCount = 0;
+
+        async Task<WorkspaceProcessExecutionResult> ExecuteAsync(
+            WorkspaceProcessExecutionRequest request,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref executionCount);
+            stopEntered.TrySetResult();
+            await releaseStop.Task.WaitAsync(cancellationToken);
+            return CreateSuccessfulProcessExecutionResult();
+        }
+
+        var firstService = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            new FakeWorkspaceProcessHost(executeAsync: ExecuteAsync));
+        var secondService = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            new FakeWorkspaceProcessHost(executeAsync: ExecuteAsync));
+
+        try
+        {
+            var firstCleanup = GetCleanupExecutor(firstService).CleanupAsync(run.Id);
+            await stopEntered.Task;
+            var secondCleanup = GetCleanupExecutor(secondService).CleanupAsync(run.Id);
+            releaseStop.TrySetResult();
+            var results = await Task.WhenAll(firstCleanup, secondCleanup);
+
+            Assert.Equal(1, executionCount);
+            Assert.All(
+                results,
+                result =>
+                {
+                    Assert.Equal([startupReceiptPath], result.CleanedStartupReceiptPaths);
+                    Assert.Empty(result.Failures);
+                });
+            Assert.Empty(store.Load(run.Id).Leases);
+        }
+        finally
+        {
+            releaseStop.TrySetResult();
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task CleanupAsync_rejects_misnamed_or_mismatched_durable_lease_identity()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}");
+        var startupReceiptPath = "artifacts/process-runs/dotnet-run/corrupt/startup.json";
+        await WriteStartupReceiptAsync(workspaceRoot, startupReceiptPath);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        store.Register(run.Id, startupReceiptPath);
+        var leaseFile = store.GetLeaseFilePath(run.Id, startupReceiptPath);
+        var misnamedLeaseFile = Path.Combine(Path.GetDirectoryName(leaseFile)!, "misnamed.json");
+        File.Move(leaseFile, misnamedLeaseFile);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await GetCleanupExecutor(service).CleanupAsync(run.Id);
+
+            Assert.Empty(result.CleanedStartupReceiptPaths);
+            var failure = Assert.Single(result.Failures);
+            Assert.Equal(startupReceiptPath, failure.StartupReceiptPath, ignoreCase: true);
+            Assert.Contains("filename does not match", failure.Message, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+            Assert.True(File.Exists(misnamedLeaseFile));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData(ExecutionState.Running)]
+    [InlineData(ExecutionState.WaitingOnTool)]
+    public async Task Authorized_cleanup_rejects_nonterminal_execution_run(
+        ExecutionState executionState)
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}") with
+        {
+            State = executionState
+        };
+        var startupReceiptPath = "artifacts/process-runs/dotnet-run/authorization/startup.json";
+        await WriteStartupReceiptAsync(workspaceRoot, startupReceiptPath);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        store.Register(run.Id, startupReceiptPath);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            processHost);
+        var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
+            new FakeExecutionRunStore(run),
+            service);
+
+        try
+        {
+            var result = await cleaner.CleanupAsync(run.Id);
+
+            Assert.Empty(result.CleanedStartupReceiptPaths);
+            var failure = Assert.Single(result.Failures);
+            Assert.Contains("not a persisted terminal state", failure.Message, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+            Assert.Single(store.Load(run.Id).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Authorized_cleanup_rejects_nonexistent_execution_run()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var executionRunId = Guid.NewGuid();
+        var startupReceiptPath = "artifacts/process-runs/dotnet-run/nonexistent/startup.json";
+        await WriteStartupReceiptAsync(workspaceRoot, startupReceiptPath);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        store.Register(executionRunId, startupReceiptPath);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
+            new FakeExecutionRunStore(),
+            service);
+
+        try
+        {
+            var result = await cleaner.CleanupAsync(executionRunId);
+
+            Assert.Empty(result.CleanedStartupReceiptPaths);
+            var failure = Assert.Single(result.Failures);
+            Assert.Contains("does not exist", failure.Message, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+            Assert.Single(store.Load(executionRunId).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData(ExecutionState.Completed)]
+    [InlineData(ExecutionState.Failed)]
+    public async Task Authorized_cleanup_delegates_for_persisted_terminal_execution_run(
+        ExecutionState executionState)
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var run = CreateProcessStepExecutionRun("{}") with
+        {
+            State = executionState
+        };
+        var startupReceiptPath = "artifacts/process-runs/dotnet-run/terminal/startup.json";
+        await WriteStartupReceiptAsync(workspaceRoot, startupReceiptPath);
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        store.Register(run.Id, startupReceiptPath);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
+            new FakeExecutionRunStore(run),
+            service);
+
+        try
+        {
+            var result = await cleaner.CleanupAsync(run.Id);
+
+            Assert.Equal([startupReceiptPath], result.CleanedStartupReceiptPaths);
+            Assert.Empty(result.Failures);
+            Assert.Single(processHost.Requests);
+            Assert.Empty(store.Load(run.Id).Leases);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public void Workspace_command_contract_does_not_expose_authorized_process_cleanup()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+
+        try
+        {
+            IWorkspaceCommandExecutionService commandService =
+                new WorkspaceCommandExecutionService(
+                    workspaceRoot,
+                    new FakeWorkspaceProcessHost());
+
+            Assert.False(
+                commandService is IWorkspaceExecutionRunProcessLeaseCleaner);
+            Assert.IsAssignableFrom<IWorkspaceExecutionRunProcessLeaseCleanupExecutor>(
+                commandService);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetRun_keeps_storage_scope_distinct_from_project_authorization_scope()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var storageScope = WorkspaceScopeDescriptor.Organization("enterprise");
+        var metadata = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+            "{}",
+            WorkspaceScopeDescriptor.Project("calculator"));
+        var run = CreateProcessStepExecutionRun(metadata);
+        var service = new WorkspaceCommandExecutionService(
+            workspaceRoot,
+            new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest),
+            storageScope);
+
+        try
+        {
+            WorkspaceCommandExecutionResult result;
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                result = await service.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5133/",
+                    keepAlive: true);
+            }
+
+            Assert.True(result.Succeeded);
+            var store = new WorkspaceExecutionRunProcessLeaseStore(
+                workspaceRoot,
+                storageScope);
+            Assert.Single(store.Load(run.Id).Leases);
         }
         finally
         {
@@ -1285,6 +2012,83 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
     }
 
+    private static string CreateWorkspaceWithWebProject()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        File.WriteAllText(
+            Path.Combine(projectDirectory, "SampleWeb.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
+        return workspaceRoot;
+    }
+
+    private static void WriteStartupReceiptForRunRequest(
+        WorkspaceProcessExecutionRequest request)
+    {
+        if (request.ToolName != "workspace_dotnet_run")
+        {
+            return;
+        }
+
+        var fileIndex = request.Arguments.ToList().IndexOf("-File");
+        if (fileIndex < 0 ||
+            fileIndex + 1 >= request.Arguments.Count)
+        {
+            return;
+        }
+
+        var scriptDirectory = Path.GetDirectoryName(request.Arguments[fileIndex + 1])
+            ?? throw new InvalidOperationException("Generated workspace_dotnet_run script has no directory.");
+        File.WriteAllText(
+            Path.Combine(scriptDirectory, "startup.json"),
+            """{"succeeded":true,"appProcessTreeIds":[12345]}""");
+    }
+
+    private static async Task WriteStartupReceiptAsync(
+        string workspaceRoot,
+        string startupReceiptPath)
+    {
+        var fullPath = Path.Combine(
+            workspaceRoot,
+            startupReceiptPath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(
+            fullPath,
+            """{"succeeded":true,"appProcessTreeIds":[12345]}""");
+    }
+
+    private static WorkspaceProcessExecutionResult CreateSuccessfulProcessExecutionResult()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new WorkspaceProcessExecutionResult(
+            Started: true,
+            ExitCode: 0,
+            Stdout: "ok",
+            Stderr: string.Empty,
+            StdoutTruncated: false,
+            StderrTruncated: false,
+            StartedAtUtc: now,
+            CompletedAtUtc: now,
+            TimedOut: false,
+            Boundary: new ExecutionBoundaryDescriptor(
+                Mode: "Test",
+                FilesystemScope: "Workspace",
+                NetworkScope: "None",
+                CredentialScope: "None",
+                HostLabel: "Fake",
+                IsEnforcedByHost: false,
+                Notes: "Unit test host."),
+            FailureMessage: string.Empty);
+    }
+
+    private static IWorkspaceExecutionRunProcessLeaseCleanupExecutor GetCleanupExecutor(
+        WorkspaceCommandExecutionService service)
+        => Assert.IsAssignableFrom<IWorkspaceExecutionRunProcessLeaseCleanupExecutor>(
+            service);
+
     private static string CreateDeepWorkspaceRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), "CanDoItAll.WorkspaceCommandExecutionServiceTests", Guid.NewGuid().ToString("N"), "workspace");
@@ -1383,20 +2187,36 @@ public sealed class WorkspaceCommandExecutionServiceTests
         private readonly string stdout;
         private readonly string stderr;
         private readonly Action<WorkspaceProcessExecutionRequest>? onExecute;
+        private readonly Func<WorkspaceProcessExecutionRequest, CancellationToken, Task<WorkspaceProcessExecutionResult>>? executeAsync;
+        private readonly List<WorkspaceProcessExecutionRequest> requests = [];
+        private readonly object synchronization = new();
 
         public FakeWorkspaceProcessHost(
             int exitCode = 0,
             string stdout = "ok",
             string stderr = "",
-            Action<WorkspaceProcessExecutionRequest>? onExecute = null)
+            Action<WorkspaceProcessExecutionRequest>? onExecute = null,
+            Func<WorkspaceProcessExecutionRequest, CancellationToken, Task<WorkspaceProcessExecutionResult>>? executeAsync = null)
         {
             this.exitCode = exitCode;
             this.stdout = stdout;
             this.stderr = stderr;
             this.onExecute = onExecute;
+            this.executeAsync = executeAsync;
         }
 
         public WorkspaceProcessExecutionRequest? LastRequest { get; private set; }
+
+        public IReadOnlyList<WorkspaceProcessExecutionRequest> Requests
+        {
+            get
+            {
+                lock (synchronization)
+                {
+                    return requests.ToArray();
+                }
+            }
+        }
 
         public ExecutionBoundaryDescriptor DescribeBoundary()
         {
@@ -1412,8 +2232,18 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
         public Task<WorkspaceProcessExecutionResult> ExecuteAsync(WorkspaceProcessExecutionRequest request, CancellationToken cancellationToken = default)
         {
-            LastRequest = request;
+            lock (synchronization)
+            {
+                LastRequest = request;
+                requests.Add(request);
+            }
+
             onExecute?.Invoke(request);
+            if (executeAsync is not null)
+            {
+                return executeAsync(request, cancellationToken);
+            }
+
             var now = DateTimeOffset.UtcNow;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,
@@ -1427,6 +2257,45 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 TimedOut: false,
                 Boundary: DescribeBoundary(),
                 FailureMessage: string.Empty));
+        }
+    }
+
+    private sealed class FakeExecutionRunStore(
+        params ExecutionRunRecord[] executionRuns)
+        : ISandboxWorkspaceExecutionRunStore
+    {
+        private readonly Dictionary<Guid, ExecutionRunDetail> details =
+            executionRuns.ToDictionary(
+                run => run.Id,
+                run => new ExecutionRunDetail(run, null, [], []));
+
+        public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ExecutionRunRecord>>(
+                details.Values
+                    .Select(detail => detail.Run)
+                    .ToArray());
+
+        public Task<ExecutionRunRecord?> GetExecutionRunAsync(
+            Guid executionRunId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(
+                details.TryGetValue(executionRunId, out var detail)
+                    ? detail.Run
+                    : null);
+
+        public Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(
+            Guid executionRunId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(
+                details.GetValueOrDefault(executionRunId));
+
+        public Task<ExecutionRunDetail> SaveExecutionRunDetailAsync(
+            ExecutionRunDetail detail,
+            CancellationToken cancellationToken = default)
+        {
+            details[detail.Run.Id] = detail;
+            return Task.FromResult(detail);
         }
     }
 }

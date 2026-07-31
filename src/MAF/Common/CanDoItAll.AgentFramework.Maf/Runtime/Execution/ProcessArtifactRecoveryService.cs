@@ -18,9 +18,12 @@ internal static class ProcessArtifactRecoveryService
         string primaryArtifactRef,
         string artifactMarkdown,
         ProcessArtifactRecoveryCause recoveryCause,
+        IReadOnlyList<AgentToolInvocationTrace> currentExecutionToolTraces,
         out ProcessStepOutcomeResult outcome,
         out string failureMessage)
     {
+        ArgumentNullException.ThrowIfNull(currentExecutionToolTraces);
+
         outcome = default!;
         failureMessage = string.Empty;
 
@@ -39,6 +42,15 @@ internal static class ProcessArtifactRecoveryService
             return false;
         }
 
+        if (!HasSuccessfulCurrentExecutionPrimaryArtifactOverwrite(
+                currentExecutionToolTraces,
+                primaryArtifactRef))
+        {
+            failureMessage =
+                "The current execution did not record a successful overwrite of the exact primary process artifact.";
+            return false;
+        }
+
         var parsedArtifactOutcome = ManagedProcessArtifactOutcomeReader.Read(artifactMarkdown);
         if (!parsedArtifactOutcome.IsValid)
         {
@@ -46,17 +58,15 @@ internal static class ProcessArtifactRecoveryService
             return false;
         }
 
-        var statusWasDeclared = parsedArtifactOutcome.HasStatus;
-        var status = parsedArtifactOutcome.Status ?? default;
-        if (!statusWasDeclared &&
-            !TryInferProcessArtifactStatus(artifactMarkdown, out status))
+        if (!parsedArtifactOutcome.HasStatus ||
+            parsedArtifactOutcome.Status is not { } status)
         {
-            failureMessage = "The primary process artifact is empty or does not contain recoverable process outcome evidence.";
+            failureMessage =
+                "The primary process artifact does not declare the canonical Status required for recovery.";
             return false;
         }
 
-        if (statusWasDeclared &&
-            status == ProcessStepOutcomeStatus.Blocked &&
+        if (status == ProcessStepOutcomeStatus.Blocked &&
             IsStatusOnlyRecoveredBlockedArtifact(artifactMarkdown))
         {
             failureMessage = "The primary process artifact declares Blocked without concrete blocker evidence.";
@@ -65,14 +75,12 @@ internal static class ProcessArtifactRecoveryService
 
         var recoveryClause = ResolveRecoveryClause(recoveryCause);
         var reason =
-            statusWasDeclared
-                ? $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' {recoveryClause}. The artifact declares status '{status}'."
-                : $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' {recoveryClause}. The artifact did not declare a Status line, so the runtime inferred status '{status}' from the artifact text.";
+            $"Recovered governed process step outcome from primary managed artifact '{primaryArtifactRef}' {recoveryClause}. The artifact declares status '{status}'.";
         outcome = new ProcessStepOutcomeResult
         {
             Status = status,
             Reason = reason,
-            BranchOutcomeKey = parsedArtifactOutcome.BranchOutcomeKey,
+            BranchOutcomeKey = string.Empty,
             EvidenceRefs = [primaryArtifactRef],
             NextActions = CreateRecoveredProcessArtifactNextActions(status, primaryArtifactRef),
             HumanReadableSummaryMarkdown = BuildRecoveredProcessArtifactSummary(
@@ -122,59 +130,33 @@ internal static class ProcessArtifactRecoveryService
         return true;
     }
 
-    private static bool TryInferProcessArtifactStatus(
-        string artifactMarkdown,
-        out ProcessStepOutcomeStatus status)
+    private static bool HasSuccessfulCurrentExecutionPrimaryArtifactOverwrite(
+        IReadOnlyList<AgentToolInvocationTrace> currentExecutionToolTraces,
+        string primaryArtifactRef)
     {
-        status = default;
-        var text = artifactMarkdown.ReplaceLineEndings(" ").Trim();
-        if (string.IsNullOrWhiteSpace(text))
+        return currentExecutionToolTraces.Any(trace =>
+            trace.Succeeded &&
+            trace.CompletedAtUtc is not null &&
+            trace.ToolName == ToolContractCatalog.WorkspaceWriteFile &&
+            string.Equals(
+                NormalizeManagedPath(trace.TargetPath),
+                NormalizeManagedPath(primaryArtifactRef),
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeManagedPath(string value)
+    {
+        var normalized = value
+            .Replace('\\', '/')
+            .Trim()
+            .Trim('`', '"', '\'')
+            .TrimEnd('.', ',', ';', ':', ')', ']', '}');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
         {
-            return false;
+            normalized = normalized[2..];
         }
 
-        if (ContainsAny(
-            text,
-            "waiting approval",
-            "approval required",
-            "pending approval",
-            "human approval"))
-        {
-            status = ProcessStepOutcomeStatus.WaitingApproval;
-            return true;
-        }
-
-        if (ContainsAny(
-            text,
-            "blocked",
-            "cannot proceed",
-            "unable to proceed",
-            "missing required",
-            "requires manager",
-            "manager action required",
-            "policydenied",
-            "permission denied",
-            "access denied",
-            "not authorized"))
-        {
-            status = ProcessStepOutcomeStatus.Blocked;
-            return true;
-        }
-
-        if (ContainsAny(
-            text,
-            "unrecoverable failure",
-            "unrecoverable error",
-            "execution failed",
-            "validation failed",
-            "failed to complete"))
-        {
-            status = ProcessStepOutcomeStatus.Failed;
-            return true;
-        }
-
-        status = ProcessStepOutcomeStatus.Completed;
-        return true;
+        return normalized.TrimStart('/');
     }
 
     private static bool ContainsAny(string text, params string[] values)

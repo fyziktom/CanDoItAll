@@ -30,6 +30,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity,
         IAgentExecutionPreparationCache executionPreparationCache,
         IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
+        IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner,
         IProviderProfileService? providerProfileService = null,
         IProviderProfileRegistry? providerProfileRegistry = null,
         IAgentProviderCredentialResolver? providerCredentialResolver = null,
@@ -52,6 +53,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         ArgumentNullException.ThrowIfNull(activityWorkspaceIdentity);
         ArgumentNullException.ThrowIfNull(executionPreparationCache);
         ArgumentNullException.ThrowIfNull(executionProfileGenerationSource);
+        ArgumentNullException.ThrowIfNull(workspaceProcessLeaseCleaner);
         this.store = store;
         this.logger = logger;
         this.activityCoordinator = activityCoordinator;
@@ -111,6 +113,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
             logger,
             activityWorkspaceIdentity,
             executionPreparationService,
+            workspaceProcessLeaseCleaner,
             executionCancellationRegistry,
             outputRepairService,
             workspacePathResolutionService);

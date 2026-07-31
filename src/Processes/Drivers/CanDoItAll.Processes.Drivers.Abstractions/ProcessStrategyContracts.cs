@@ -57,6 +57,23 @@ public sealed record ProcessStrategyExecutionContext
     public IReadOnlyList<StrategyBindingInput> Inputs { get; init; }
 
     public ProcessStepExecutionContract StepContract { get; init; }
+
+    public required ProcessDispatchClaimIdentity DispatchClaimIdentity { get; init; }
+}
+
+public readonly record struct ProcessDispatchClaimIdentity
+{
+    public ProcessDispatchClaimIdentity(Guid value)
+    {
+        if (value == Guid.Empty)
+        {
+            throw new ArgumentException("A dispatch claim identity must be non-empty.", nameof(value));
+        }
+
+        Value = value;
+    }
+
+    public Guid Value { get; }
 }
 
 public sealed record ProcessStepExecutionContract(
@@ -70,6 +87,8 @@ public sealed record ProcessStepExecutionContract(
     public IReadOnlyList<ProcessArtifactSlotDescriptor> ArtifactDescriptors { get; init; } = [];
 
     public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
+
+    public IReadOnlyList<BranchOutcomeId> ConfiguredBranchOutcomeIds { get; init; } = [];
 }
 
 public sealed record RequiredArtifactInputRef(

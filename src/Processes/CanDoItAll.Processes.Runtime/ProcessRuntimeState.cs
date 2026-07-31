@@ -288,6 +288,8 @@ public sealed record DispatchWorkItem
     public int AttemptNumber { get; init; }
 
     public ProcessStepExecutionContract StepContract { get; init; }
+
+    public ProcessDispatchClaimIdentity? DispatchClaimIdentity { get; init; }
 }
 
 public sealed record ProcessRuntimeMutation(

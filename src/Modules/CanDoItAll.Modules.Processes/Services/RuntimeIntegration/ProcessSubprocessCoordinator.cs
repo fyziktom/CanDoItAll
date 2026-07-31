@@ -185,7 +185,8 @@ internal sealed class ProcessSubprocessCoordinator(
             assignment,
             validation.Output,
             subprocessLaunchReceipt.ExecutionRunId,
-            [subprocessLaunchReceipt]);
+            [subprocessLaunchReceipt],
+            stepContract);
         if (materialization.Issue is { } materializationIssue)
         {
             return NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue);
@@ -282,7 +283,8 @@ internal sealed class ProcessSubprocessCoordinator(
             assignment,
             completedChildOutcome.Output,
             completedChildOutcome.SyntheticExecutionRunId,
-            completedChildOutcome.ToolReceipts);
+            completedChildOutcome.ToolReceipts,
+            stepContract);
         if (materialization.Issue is { } materializationIssue)
         {
             return NeedsManagerForCompletionIssue(assignment, completedChildOutcome.RawOutputHash, materializationIssue);

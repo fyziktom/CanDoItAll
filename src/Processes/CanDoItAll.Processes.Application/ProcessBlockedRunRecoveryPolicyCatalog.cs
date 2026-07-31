@@ -76,7 +76,7 @@ public sealed class ProcessBlockedRunRecoveryPolicyCatalog : IProcessBlockedRunR
             (decision.ResponsibleStepInstanceId is null ||
              decision.ResponsibleStepInstanceId == blockedStep.StepInstanceId) &&
             targetAssignment.StepInstanceId == blockedStep.StepInstanceId &&
-            IsArtifactOnlyRecoveryTarget(targetAssignment) &&
+            IsSafeIdempotentRecoveryTarget(targetAssignment) &&
             HasOnlyNormalSafeIdempotentDiagnostics(receipt))
         {
             return ProcessBlockedRunRecoveryPolicy.SafeIdempotentRework;
@@ -132,6 +132,33 @@ public sealed class ProcessBlockedRunRecoveryPolicyCatalog : IProcessBlockedRunR
                ProcessRuntimeArtifactContracts.RequiredArtifactsAvailable(state, blockedStep)
             ? ProcessBlockedRunRecoveryPolicy.RestoredInputConsumerRework
             : ProcessBlockedRunRecoveryPolicy.MissingInputProducerRework;
+    }
+
+    private static bool IsSafeIdempotentRecoveryTarget(
+        ProcessRuntimeStepAssignment targetAssignment)
+    {
+        return Enum.TryParse<ProcessDefinitionStepTargetScopeKind>(
+                   targetAssignment.OperationTargetScope,
+                   ignoreCase: false,
+                   out var targetScope) &&
+               targetScope is
+                   ProcessDefinitionStepTargetScopeKind.ManagedProcessArtifactsOnly or
+                   ProcessDefinitionStepTargetScopeKind.ExternalProductTargetReadOnly &&
+               targetAssignment.AllowedOperations.Count > 0 &&
+               targetAssignment.AllowedOperations.All(operation =>
+                   Enum.TryParse<ProcessDefinitionStepOperationKind>(
+                       operation,
+                       ignoreCase: false,
+                       out var operationKind) &&
+                   ArtifactOnlyRecoveryOperations.Contains(operationKind)) &&
+               targetAssignment.AllowedOperations.Any(operation =>
+                   Enum.TryParse<ProcessDefinitionStepOperationKind>(
+                       operation,
+                       ignoreCase: false,
+                       out var operationKind) &&
+                   operationKind is
+                       ProcessDefinitionStepOperationKind.WriteManagedProcessArtifacts or
+                       ProcessDefinitionStepOperationKind.RecoverArtifactsOnly);
     }
 
     private static bool IsArtifactOnlyRecoveryTarget(

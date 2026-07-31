@@ -61,17 +61,66 @@ internal sealed class BrowserInteractiveAcceptanceCompletionGateContribution : I
                 "representative-browser-interaction");
         }
 
-        var hasPostInteractionState = currentReceipts
+        var postInteractionStateReceipts = currentReceipts
             .Skip(interactionReceiptIndex + 1)
-            .Any(receipt => StateEvidenceToolNames.Contains(receipt.ToolName) &&
-                            IsSuccessfulReceipt(receipt.ExitSummary));
-        return hasPostInteractionState
-            ? null
-            : CreateIssue(
+            .Where(receipt => StateEvidenceToolNames.Contains(receipt.ToolName) &&
+                              IsSuccessfulReceipt(receipt.ExitSummary))
+            .ToArray();
+        if (postInteractionStateReceipts.Length == 0)
+        {
+            return CreateIssue(
                 context.Assignment,
                 ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing,
                 $"Step '{context.Assignment.StepKey}' claimed browser-workflow acceptance without snapshot, evaluation, or screenshot evidence captured after the representative interaction.",
                 "post-interaction-state");
+        }
+
+        return postInteractionStateReceipts.Any(receipt =>
+                IsCurrentRunManagedBrowserEvidence(context.Assignment, receipt))
+            ? null
+            : CreateIssue(
+                context.Assignment,
+                ProcessCompletionDiagnosticCodes.UiPostInteractionStateEvidenceMissing,
+                $"Step '{context.Assignment.StepKey}' claimed browser-workflow acceptance without post-interaction state evidence persisted beneath its current process-run managed artifact root. Pass a filename under '{BuildManagedArtifactRoot(context.Assignment)}/browser/'.",
+                "post-interaction-managed-state");
+    }
+
+    private static bool IsCurrentRunManagedBrowserEvidence(
+        ProcessRuntimeStepAssignment assignment,
+        ToolExecutionReceiptRecord receipt)
+    {
+        if (!ProcessToolReceiptRequestArgumentReader.TryReadString(
+                receipt.RequestSummary,
+                "filename",
+                out var artifactPath))
+        {
+            return false;
+        }
+
+        var normalizedPath = NormalizeBrowserEvidencePath(artifactPath);
+        if (Path.IsPathRooted(normalizedPath) ||
+            normalizedPath.StartsWith("artifacts/scopes/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath
+                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(segment => string.Equals(segment, "..", StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        var currentRunBrowserRoot =
+            NormalizeManagedArtifactRef(BuildManagedArtifactRoot(assignment)) + "/browser/";
+        return normalizedPath.StartsWith(currentRunBrowserRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeBrowserEvidencePath(string value)
+    {
+        var normalized = value.Trim().Replace('\\', '/');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        return normalized.TrimEnd('/');
     }
 
     private static bool DeclaresInteractiveBrowserAcceptance(ProcessCompletionGateContext context)

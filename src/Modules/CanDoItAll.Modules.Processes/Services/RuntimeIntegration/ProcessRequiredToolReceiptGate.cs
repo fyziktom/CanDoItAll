@@ -41,7 +41,7 @@ internal static class ProcessRequiredToolReceiptGate
     }
 
     public static IReadOnlyList<string> ResolveRequiredRuntimeToolNames(ProcessCapabilityScope? capabilityScope)
-        => ProcessRequiredRuntimeToolNames.FromCapabilityScope(capabilityScope);
+        => ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(capabilityScope);
 
     private static int CountMatchingReceipts(
         IReadOnlyList<ToolExecutionReceiptRecord> observedReceipts,

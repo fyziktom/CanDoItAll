@@ -37,9 +37,13 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         {
             if (provisioningMode == DotNetSolutionProvisioningMode.VerifyExisting)
             {
-                return await this.existingSolutionVerifier
+                var verificationResult = await this.existingSolutionVerifier
                     .VerifyAsync(assignment, cancellationToken)
                     .ConfigureAwait(false);
+                return verificationResult with
+                {
+                    EffectiveCompletionScope = ProcessRuntimeOwnedCompletionScope.ReadOnlyProductVerification
+                };
             }
         }
         else if (!string.IsNullOrWhiteSpace(provisioningIssue))

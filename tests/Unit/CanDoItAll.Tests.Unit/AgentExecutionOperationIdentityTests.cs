@@ -2,6 +2,8 @@ using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Processes;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -51,6 +53,32 @@ public sealed class AgentExecutionOperationIdentityTests
                 SerializerOptions));
 
         Assert.Null(restored.InitialActivityOperationId);
+    }
+
+    [Fact]
+    public void Execution_run_json_round_trip_preserves_process_dispatch_claim_identity()
+    {
+        var dispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid());
+        var run = CreateRun() with
+        {
+            MetadataJson = JsonSerializer.Serialize(
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessDispatchClaimExecutionMetadata.MetadataKey] =
+                        dispatchClaimIdentity.Value.ToString("D")
+                },
+                SerializerOptions)
+        };
+
+        var json = JsonSerializer.Serialize(run, SerializerOptions);
+        var restored = Assert.IsType<ExecutionRunRecord>(
+            JsonSerializer.Deserialize<ExecutionRunRecord>(
+                json,
+                SerializerOptions));
+
+        Assert.True(ProcessDispatchClaimExecutionMetadata.Matches(
+            restored,
+            dispatchClaimIdentity));
     }
 
     [Fact]
@@ -182,7 +210,8 @@ public sealed class AgentExecutionOperationIdentityTests
             AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
                 WorkspaceScopeDescriptor.Sandbox),
             preparationCache,
-            new FixedAgentExecutionProfileGenerationSource(default));
+            new FixedAgentExecutionProfileGenerationSource(default),
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
         return new ServiceContext(
             service,
             preparationCache,
