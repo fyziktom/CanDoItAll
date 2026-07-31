@@ -90,7 +90,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                         authorizedToken => SaveAsync(request, context.RuntimeSessionKey, authorizedToken),
                         token),
                 AgentToolInvocationPolicyMetadata.CapabilityCuratorSave,
-                "Creates custom capabilities or updates custom capabilities using a mandatory editor fingerprint. Tool and MCP saves also require the one-time setup attestation returned for the exact candidate by the matching setup test. Built-in capabilities are seed-managed and cannot be edited. Typed Tool and MCP configuration accepts credential binding references only. This mutation requires host approval."));
+                "Creates custom capabilities or updates custom capabilities using a mandatory editor fingerprint. Inline Skill names are technical lowercase kebab-case identifiers and are normalized before persistence; use capability Name for the human-readable title. Tool and MCP saves also require the one-time setup attestation returned for the exact candidate by the matching setup test. Built-in capabilities are seed-managed and cannot be edited. Typed Tool and MCP configuration accepts credential binding references only. This mutation requires host approval."));
         AddToolIfAuthorized(
             tools,
             context,

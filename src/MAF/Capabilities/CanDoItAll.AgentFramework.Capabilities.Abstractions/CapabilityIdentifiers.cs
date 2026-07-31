@@ -14,6 +14,34 @@ public readonly record struct CapabilityKey(string Value)
         => Value;
 }
 
+public readonly record struct SkillName(string Value)
+{
+    public static bool TryCreate(string? value, out SkillName name)
+    {
+        if (CapabilityNameRules.TryCreateKebab(value, out CapabilityKey capabilityKey))
+        {
+            name = new SkillName(capabilityKey.Value);
+            return true;
+        }
+
+        name = default;
+        return false;
+    }
+
+    public static SkillName Create(string value)
+        => TryCreate(value, out var name)
+            ? name
+            : throw new ArgumentException(
+                $"Skill name '{value}' must use only lowercase ASCII letters, numbers, and hyphens, and must not start or end with a hyphen or contain consecutive hyphens.",
+                nameof(value));
+
+    public static SkillName Normalize(string value)
+        => Create(CapabilityNameRules.NormalizeLowerKebab(value));
+
+    public override string ToString()
+        => Value;
+}
+
 public readonly record struct RuntimeToolName(string Value)
 {
     public static bool TryCreate(string? value, out RuntimeToolName name)

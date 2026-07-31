@@ -130,6 +130,9 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         {
             Assert.Equal("inline", template.SkillSource);
             Assert.NotNull(template.InlineSkill);
+            Assert.True(
+                SkillName.TryCreate(template.InlineSkill!.Name, out _),
+                $"Template skill '{template.Key}' has invalid provider-facing name '{template.InlineSkill.Name}'.");
             Assert.StartsWith("skills/instructions/", template.InlineSkill!.InstructionsAssetKey, StringComparison.Ordinal);
             Assert.True(File.Exists(Path.Combine(pack.RootPath, template.InlineSkill.InstructionsAssetKey)));
             Assert.DoesNotContain("~/.codex", template.EndpointOrPath, StringComparison.OrdinalIgnoreCase);

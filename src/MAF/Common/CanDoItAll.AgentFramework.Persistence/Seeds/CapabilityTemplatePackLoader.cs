@@ -226,6 +226,18 @@ internal sealed class CapabilityTemplatePackLoader
             yield break;
         }
 
+        if (!SkillName.TryCreate(capability.InlineSkill.Name, out _))
+        {
+            yield return Issue(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                kind,
+                key,
+                capability.TemplatePath,
+                "$.inlineSkill.name",
+                "Inline skill names must use only lowercase ASCII letters, numbers, and single hyphens.",
+                "Use a lowercase kebab-case name without leading, trailing, or consecutive hyphens.");
+        }
+
         foreach (var issue in ValidateTemplateAssetPath(
                      capability,
                      packRoot,

@@ -26,14 +26,14 @@ public sealed class InlineSkillLoader : IInlineSkillLoader
                 "Enable or replace the inline skill before loading it."));
         }
 
-        if (string.IsNullOrWhiteSpace(descriptor.SkillName))
+        if (!SkillName.TryCreate(descriptor.SkillName, out _))
         {
             return Task.FromResult(ValidationFailure(
                 descriptor,
                 correlationId,
                 "$.inlineSkill.name",
-                "Inline skill name is required.",
-                "Provide a non-empty inline skill name."));
+                "Inline skill name must use only lowercase ASCII letters, numbers, and single hyphens.",
+                "Use a lowercase kebab-case name without leading, trailing, or consecutive hyphens."));
         }
 
         if (string.IsNullOrWhiteSpace(descriptor.Description) || descriptor.Description.Length > MaxDescriptionLength)

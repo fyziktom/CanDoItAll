@@ -215,9 +215,10 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
         Assert.Equal(HrAgentIdentity.AgentId, harness.Context.Agent.Id);
         Assert.Equal(AgentToolInvocationPolicyMetadata.CapabilityCuratorSave, save.Name);
         Assert.Equal("hr-authored-inline-skill", created.Key);
+        Assert.Equal("hr-authored-inline-skill", created.Configuration.Skill!.InlineName);
         Assert.Equal(
             "Apply this narrowly scoped HR-authored skill.",
-            created.Configuration.Skill!.InlineInstructions);
+            created.Configuration.Skill.InlineInstructions);
         Assert.False(created.IsBuiltIn);
         Assert.Equal(1, harness.Workspace.SaveCapabilityCallCount);
 
