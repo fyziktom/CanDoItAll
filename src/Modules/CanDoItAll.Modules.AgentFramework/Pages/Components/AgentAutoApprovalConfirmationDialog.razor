@@ -1,0 +1,49 @@
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="agents-auto-approval-confirmation-content">
+    <TextBlock TextStyle="TextStyle.Body1"
+               Value="Enable automatic approval for every new run of this agent?" />
+
+    <Alert AlertStyle="AlertStyle.Warning">
+        The agent may continue approval-required tool calls without asking for each call. Those tools can contact external services, run commands, or change data within the agent's configured scope.
+    </Alert>
+
+    <label class="cda-inline-option">
+        <input type="checkbox"
+               @bind="riskAcknowledged"
+               data-testid="agents-auto-approval-risk-acknowledgement" />
+        I understand the risks and want this agent to auto-approve approval-required tool calls by default.
+    </label>
+
+    <Cluster Gap="LayoutGap.Small"
+             Wrap="FlexWrap.Wrap"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                ButtonStyle="ButtonStyle.Light"
+                Click="CancelAsync"
+                data-testid="agents-auto-approval-cancel" />
+        <Button Text="Enable auto-approval"
+                Icon="warning"
+                ButtonStyle="ButtonStyle.Warning"
+                Disabled="@(!riskAcknowledged)"
+                Click="ConfirmAsync"
+                data-testid="agents-auto-approval-confirm" />
+    </Cluster>
+</Stack>
+
+@code {
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private bool riskAcknowledged;
+
+    private Task ConfirmAsync()
+    {
+        return riskAcknowledged
+            ? DialogReference?.CloseAsync(true) ?? Task.CompletedTask
+            : Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+        => DialogReference?.CloseAsync(false) ?? Task.CompletedTask;
+}

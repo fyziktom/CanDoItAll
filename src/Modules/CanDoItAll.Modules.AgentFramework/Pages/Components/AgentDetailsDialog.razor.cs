@@ -38,6 +38,9 @@ public partial class AgentDetailsDialog
     [Inject]
     public DialogService DialogService { get; set; } = default!;
 
+    [Inject]
+    public AgentAvatarGenerationService AvatarGenerationService { get; set; } = default!;
+
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
@@ -51,6 +54,8 @@ public partial class AgentDetailsDialog
     private string externalWorkspaceRootsText = string.Empty;
     private string allowedStorageCatalogIdsText = string.Empty;
     private string customAvatarFileName = string.Empty;
+    private string avatarGenerationPrompt = string.Empty;
+    private string? avatarGenerationErrorMessage;
     private string capabilitySearch = string.Empty;
     private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
     private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
@@ -59,6 +64,8 @@ public partial class AgentDetailsDialog
     private bool isBusy;
     private bool isOpeningCapabilityWizard;
     private bool isAvatarUploadBusy;
+    private bool isAvatarGenerationBusy;
+    private bool isConfirmingAutoApproval;
     private bool areProvidersLoaded;
     private bool areProjectStructureProjectsLoaded;
     private bool isLoadingProjectStructureProjects;
@@ -70,6 +77,7 @@ public partial class AgentDetailsDialog
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
     private int selectedTabIndex;
+    private int autoApprovalInputVersion;
     private bool avatarSelectorOpen;
 
     private static IReadOnlyList<string> AvatarOptions => AgentAvatarImageCatalog.BundledAvatarUrls;
@@ -92,7 +100,12 @@ public partial class AgentDetailsDialog
     private ProviderProfile? SelectedImageGenerationProvider
         => editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue
             ? providers.FirstOrDefault(item => item.Id == editorModel.ImageGenerationAccess.PreferredProviderProfileId.Value)
-            : ImageCapableRuntimeProvider;
+            : ImageGenerationProviderSelectionPolicy.ResolveDefault(providers, SelectedRuntimeProvider);
+
+    private ProviderProfile? DefaultAvatarImageProvider
+        => SelectedImageGenerationProvider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration } provider
+            ? provider
+            : null;
 
     private ProviderProfile? ImageCapableRuntimeProvider
         => SelectedRuntimeProvider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration } provider
@@ -357,6 +370,12 @@ public partial class AgentDetailsDialog
 
     private Task OpenAvatarSelectorAsync()
     {
+        if (string.IsNullOrWhiteSpace(avatarGenerationPrompt))
+        {
+            avatarGenerationPrompt = BuildDefaultAvatarGenerationPrompt();
+        }
+
+        avatarGenerationErrorMessage = null;
         avatarSelectorOpen = true;
         return Task.CompletedTask;
     }
@@ -371,6 +390,7 @@ public partial class AgentDetailsDialog
     {
         editorModel.AvatarImageUrl = string.Empty;
         customAvatarFileName = string.Empty;
+        avatarGenerationErrorMessage = null;
         return Task.CompletedTask;
     }
 
@@ -383,6 +403,7 @@ public partial class AgentDetailsDialog
         try
         {
             editorModel.AvatarImageUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(file);
+            avatarGenerationErrorMessage = null;
             NotificationService.Success("Custom avatar loaded", "Save the agent to persist the loaded avatar.");
         }
         catch (Exception exception)
@@ -400,7 +421,70 @@ public partial class AgentDetailsDialog
     {
         editorModel.AvatarImageUrl = avatarImageUrl.Trim();
         customAvatarFileName = string.Empty;
+        avatarGenerationErrorMessage = null;
     }
+
+    private async Task GenerateAvatarAsync()
+    {
+        if (isAvatarGenerationBusy)
+        {
+            return;
+        }
+
+        var provider = DefaultAvatarImageProvider;
+        if (provider is null)
+        {
+            const string message = "No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.";
+            avatarGenerationErrorMessage = message;
+            NotificationService.Warning("AI avatar unavailable", message);
+            return;
+        }
+
+        var model = ResolveAvatarImageModel(provider);
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            var message = $"Image-generation provider '{provider.Name}' does not define a default model.";
+            avatarGenerationErrorMessage = message;
+            NotificationService.Warning("AI avatar unavailable", message);
+            return;
+        }
+
+        isAvatarGenerationBusy = true;
+        avatarGenerationErrorMessage = null;
+        try
+        {
+            var result = await AvatarGenerationService.GenerateAsync(
+                provider,
+                model,
+                avatarGenerationPrompt);
+            editorModel.AvatarImageUrl = result.AvatarDataUrl;
+            customAvatarFileName = string.Empty;
+            NotificationService.Success("AI avatar created", "Save the agent to persist the generated avatar.");
+        }
+        catch (Exception exception)
+        {
+            avatarGenerationErrorMessage = exception.Message;
+            NotificationService.Error("AI avatar generation failed", exception.Message);
+        }
+        finally
+        {
+            isAvatarGenerationBusy = false;
+        }
+    }
+
+    private string BuildDefaultAvatarGenerationPrompt()
+    {
+        var name = FirstNonEmpty(editorModel.Name, "this software agent");
+        var role = string.IsNullOrWhiteSpace(editorModel.RoleTitle)
+            ? string.Empty
+            : $", whose role is {editorModel.RoleTitle.Trim()}";
+        return $"A distinctive, friendly illustrated avatar for {name}{role}, in a clean modern professional style.";
+    }
+
+    private string ResolveAvatarImageModel(ProviderProfile provider)
+        => string.IsNullOrWhiteSpace(editorModel.ImageGenerationAccess.DefaultModel)
+            ? provider.DefaultModel.Trim()
+            : editorModel.ImageGenerationAccess.DefaultModel.Trim();
 
     private bool IsSelectedAvatar(string avatarImageUrl)
         => string.Equals(editorModel.AvatarImageUrl?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
@@ -1134,6 +1218,68 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
+    private void ToggleExternalCallApprovalRequirement(object? rawValue)
+    {
+        editorModel.Permissions = editorModel.Permissions with
+        {
+            RequiresApprovalForExternalCalls = rawValue is bool value && value
+        };
+    }
+
+    private async Task HandleAutoApprovalChangedAsync(object? rawValue)
+    {
+        var shouldEnable = rawValue is bool value && value;
+        if (!shouldEnable)
+        {
+            editorModel.Permissions = editorModel.Permissions with
+            {
+                AutoApproveExternalCallsByDefault = false
+            };
+            return;
+        }
+
+        if (editorModel.Permissions.AutoApproveExternalCallsByDefault || isConfirmingAutoApproval)
+        {
+            return;
+        }
+
+        isConfirmingAutoApproval = true;
+        var confirmed = false;
+        try
+        {
+            confirmed = await DialogService.OpenAsync<AgentAutoApprovalConfirmationDialog>(
+                "Enable automatic approval?",
+                options: new DialogOptions
+                {
+                    Eyebrow = "Runtime approval policy",
+                    Subtitle = "Confirm that you understand the effect on future agent runs.",
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    AriaLabel = "Confirm automatic approval for agent tool calls",
+                    TestId = "agents-auto-approval-confirmation"
+                }) is true;
+            if (confirmed)
+            {
+                editorModel.Permissions = editorModel.Permissions with
+                {
+                    AutoApproveExternalCallsByDefault = true
+                };
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Auto-approval confirmation failed", exception.Message);
+        }
+        finally
+        {
+            isConfirmingAutoApproval = false;
+            if (!confirmed)
+            {
+                autoApprovalInputVersion++;
+            }
+        }
+    }
+
     private Task HandleImageGenerationProviderChangedAsync(Guid? providerId)
     {
         if (editorModel.ImageGenerationAccess.PreferredProviderProfileId != providerId)
@@ -1157,6 +1303,13 @@ public partial class AgentDetailsDialog
     private void ToggleImageGenerationAccess(object? rawValue)
     {
         editorModel.ImageGenerationAccess.CanGenerateImages = rawValue is bool value && value;
+        if (editorModel.ImageGenerationAccess.CanGenerateImages &&
+            !editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue &&
+            SelectedImageGenerationProvider is { } provider)
+        {
+            editorModel.ImageGenerationAccess.PreferredProviderProfileId = provider.Id;
+        }
+
         editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
     }
 
@@ -1178,6 +1331,13 @@ public partial class AgentDetailsDialog
     private void NormalizeImageGenerationAccessForSave()
     {
         var access = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
+        if (access.CanGenerateImages &&
+            !access.PreferredProviderProfileId.HasValue &&
+            SelectedImageGenerationProvider is { } selectedProvider)
+        {
+            access.PreferredProviderProfileId = selectedProvider.Id;
+        }
+
         access.DefaultModel = SelectedImageGenerationProvider is { } provider
             ? ProviderModelSelector.NormalizeProviderDefaultModel(access.DefaultModel, provider)
             : string.IsNullOrWhiteSpace(access.DefaultModel)
@@ -1200,9 +1360,9 @@ public partial class AgentDetailsDialog
                 : "The selected image-generation provider is not available.";
         }
 
-        return ImageCapableRuntimeProvider is { } runtimeProvider
-            ? $"Image requests use the runtime provider '{runtimeProvider.Name}'."
-            : "Image requests use the first enabled image-generation provider unless a provider is selected here.";
+        return SelectedImageGenerationProvider is { } recommendedProvider
+            ? $"Image requests use the recommended provider '{recommendedProvider.Name}'; saving makes that choice explicit."
+            : "No enabled image-generation provider is available.";
     }
 
     private string ResolveImageGenerationWarning()
@@ -1330,6 +1490,7 @@ public partial class AgentDetailsDialog
     {
         editorModel = AgentEditorModel.FromDefinition(definition);
         ApplyEditorTextState();
+        ResetAvatarGenerationState();
         linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
     }
 
@@ -1346,7 +1507,16 @@ public partial class AgentDetailsDialog
         tagValues = [];
         externalWorkspaceRootsText = string.Empty;
         allowedStorageCatalogIdsText = string.Empty;
+        ResetAvatarGenerationState();
         linkedPartyId = null;
+    }
+
+    private void ResetAvatarGenerationState()
+    {
+        avatarGenerationPrompt = string.Empty;
+        avatarGenerationErrorMessage = null;
+        isAvatarGenerationBusy = false;
+        avatarSelectorOpen = false;
     }
 
     private enum CapabilityDialogAssignmentFilter

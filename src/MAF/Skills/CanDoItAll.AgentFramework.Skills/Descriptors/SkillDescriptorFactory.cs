@@ -57,7 +57,7 @@ public static class SkillDescriptorFactory
             NormalizeClassifications(operationClassifications ?? []),
             new CapabilitySideEffectProfile(CapabilitySideEffectKind.None, false, false),
             availabilityState,
-            RequireText(skillName, nameof(skillName)),
+            SkillName.Create(skillName).Value,
             instructions,
             resources);
     }

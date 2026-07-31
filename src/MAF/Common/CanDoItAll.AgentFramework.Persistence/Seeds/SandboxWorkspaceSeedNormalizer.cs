@@ -123,7 +123,7 @@ internal static class SandboxWorkspaceSeedNormalizer
                     ? seededProvider.SuggestedModels.Concat(match.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
                     : match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 ModelPrices = isManagedSeedOpenAiProvider
-                    ? ProviderPricingDefaults.MergeKnownDefaultPrices(
+                    ? ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
                         match.Kind,
                         seededProvider.DefaultModel,
                         match.ModelPrices)

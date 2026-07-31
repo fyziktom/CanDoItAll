@@ -83,6 +83,19 @@ else
                                 </Stack>
                             </SurfaceCard>
 
+                            <FormField Text="Tags"
+                                       Class="agent-details-dialog__full-field"
+                                       data-testid="agents-catalog-tags-section">
+                                <TagEditor Value="@tagValues"
+                                           ValueChanged="HandleTagsChangedAsync"
+                                           Suggestions="@VisibleTagSuggestions"
+                                           Placeholder="Add agent tag"
+                                           Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
+                                           MaxTags="12"
+                                           TestId="agents-catalog-tags"
+                                           InputTestId="agents-catalog-tags-input" />
+                            </FormField>
+
                             <div class="agent-details-dialog__full-field">
                                 <label class="cda-field-label">Summary</label>
                                 <InputTextArea @bind-Value="editorModel.Summary"
@@ -174,6 +187,38 @@ else
                                     <p class="mt-1">@DescribeRuntimeParameterPolicy(runtimeProvider)</p>
                                 </Alert>
                             }
+
+                            <SurfaceCard Soft="true" data-testid="agents-catalog-approval-policy">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approval policy" />
+                                    <label class="cda-inline-option">
+                                        <input type="checkbox"
+                                               checked="@editorModel.Permissions.RequiresApprovalForExternalCalls"
+                                               @onchange="args => ToggleExternalCallApprovalRequirement(args.Value)"
+                                               data-testid="agents-catalog-require-external-approval" />
+                                        Require approval for external calls
+                                    </label>
+                                    <label class="cda-inline-option">
+                                        <input @key="autoApprovalInputVersion"
+                                               type="checkbox"
+                                               checked="@editorModel.Permissions.AutoApproveExternalCallsByDefault"
+                                               disabled="@isConfirmingAutoApproval"
+                                               @onchange="args => HandleAutoApprovalChangedAsync(args.Value)"
+                                               data-testid="agents-catalog-auto-approval" />
+                                        Auto-approve approval-required tool calls by default
+                                    </label>
+                                    <TextBlock TextStyle="TextStyle.Body2"
+                                               Value="Per-run approval choices remain available in chat. This setting changes the default for every new run of this agent." />
+
+                                    @if (editorModel.Permissions.AutoApproveExternalCallsByDefault)
+                                    {
+                                        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-auto-approval-warning">
+                                            <p class="font-semibold">Automatic approval is enabled</p>
+                                            <p class="mt-1">This agent can continue approval-required tool calls without asking for each call. Scope and runtime policy checks still apply.</p>
+                                        </Alert>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
                         </FormSection>
                     </TabsItem>
 
@@ -214,7 +259,7 @@ else
                                                          class="cda-input"
                                                          disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || !areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
                                                          data-testid="agents-catalog-image-generation-provider">
-                                                <option value="">Use runtime/default image provider</option>
+                                                <option value="">Choose recommended image provider on save</option>
                                                 @foreach (var provider in ImageGenerationProviderOptions)
                                                 {
                                                     <option value="@provider.Id">@($"{provider.Name}{(provider.IsEnabled ? string.Empty : " (disabled)")}")</option>
@@ -800,18 +845,6 @@ else
                         </FormSection>
                     </TabsItem>
 
-                    <TabsItem Text="Tags">
-                        <FormSection Title="Tags" Description="Tags keep ownership and routing visible without introducing a second registry.">
-                            <TagEditor Value="@tagValues"
-                                       ValueChanged="HandleTagsChangedAsync"
-                                       Suggestions="@VisibleTagSuggestions"
-                                       Placeholder="Add agent tag"
-                                       Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
-                                       MaxTags="12"
-                                       TestId="agents-catalog-tags"
-                                       InputTestId="agents-catalog-tags-input" />
-                        </FormSection>
-                    </TabsItem>
                 </TabItems>
             </Tabs>
 
@@ -889,6 +922,48 @@ else
                             }
                         </Stack>
                     </Grid>
+                </SurfaceCard>
+                <SurfaceCard Soft="true" data-testid="agents-catalog-avatar-ai">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Create with AI" />
+                        @if (DefaultAvatarImageProvider is { } avatarProvider)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2"
+                                       Value="@($"Uses the default image provider '{avatarProvider.Name}' and model '{ResolveAvatarImageModel(avatarProvider)}'.")" />
+                            <FormField Text="Creative direction">
+                                <TextArea Value="@avatarGenerationPrompt"
+                                          ValueChanged="@(value => avatarGenerationPrompt = value ?? string.Empty)"
+                                          Size="TextAreaSize.Compact"
+                                          Immediate="true"
+                                          Disabled="@isAvatarGenerationBusy"
+                                          maxlength="@AgentAvatarGenerationService.MaximumVisualBriefLength"
+                                          data-testid="agents-catalog-avatar-ai-prompt" />
+                            </FormField>
+                            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                                <Button Text="Create avatar with AI"
+                                        Icon="auto_awesome"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Small"
+                                        IsBusy="@isAvatarGenerationBusy"
+                                        Disabled="@(isAvatarGenerationBusy || string.IsNullOrWhiteSpace(avatarGenerationPrompt))"
+                                        Click="GenerateAvatarAsync"
+                                        data-testid="agents-catalog-avatar-ai-generate" />
+                            </Cluster>
+                        }
+                        else
+                        {
+                            <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-avatar-ai-unavailable">
+                                No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.
+                            </Alert>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(avatarGenerationErrorMessage))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-catalog-avatar-ai-error">
+                                @avatarGenerationErrorMessage
+                            </Alert>
+                        }
+                    </Stack>
                 </SurfaceCard>
                 <Grid Gap="LayoutGap.Medium"
                       ColumnTemplate="repeat(4,minmax(0,1fr))"

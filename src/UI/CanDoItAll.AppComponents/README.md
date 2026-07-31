@@ -4,7 +4,7 @@
 
 Facade and application-owned component layer for shell and tab behavior, tuning
 boundaries, record browsers and pickers, cards and filters, and FileTools host-action
-adapters.
+and renderer adapters.
 
 ## Project Type
 
@@ -25,8 +25,10 @@ The authoritative project and package dependency list is in [CanDoItAll.AppCompo
 Keep application-shell UI typed and focused. Reusable component behavior belongs in
 the sibling `CanDoItAll.Components` repository. This facade consumes its BaseLib,
 CanvasLib, and Common packages while owning app-specific pickers and cards plus adapters
-that connect FileTools actions to local launch and browser download behavior. Add another
-dependency only when an application-owned surface has a real need for it.
+that connect FileTools to shared components and host behavior. Image and sandboxed SVG
+viewers adapt FileTools' object-URL targets to BaseLib's reusable zoom-pan frame; the SVG
+target remains an inert sandboxed iframe. Add another dependency only when an
+application-owned surface has a real need for it.
 
 ## Related Docs
 

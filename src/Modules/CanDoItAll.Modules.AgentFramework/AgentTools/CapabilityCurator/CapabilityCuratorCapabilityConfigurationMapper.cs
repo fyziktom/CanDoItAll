@@ -104,7 +104,8 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
 
                 model.InlineSkill = new InlineSkillModel
                 {
-                    Name = NormalizeOptional(configuration.InlineName) ?? NormalizeKey(input.Key),
+                    Name = SkillName.Normalize(
+                        NormalizeOptional(configuration.InlineName) ?? NormalizeKey(input.Key)).Value,
                     Description = NormalizeOptional(configuration.InlineDescription) ?? input.Description?.Trim() ?? string.Empty,
                     Instructions = configuration.InlineInstructions.Trim(),
                     Resources = configuration.InlineResources?

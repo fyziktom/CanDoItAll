@@ -391,7 +391,9 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
         if (request.Media is not null)
         {
             EnsureValidMediaPayload(request.Media);
-            return MapMedia(request.Media)!;
+            var media = MapMedia(request.Media)!;
+            ProjectStructureSvgAssetValidator.Validate(media);
+            return media;
         }
 
         if (string.IsNullOrWhiteSpace(request.SourceWorkspacePath))
@@ -406,10 +408,12 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
         var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
         var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
         var contentType = ResolveSourceAssetContentType(request.SourceContentType, fileName);
-        return new ProjectObjectMediaPayload(
+        var resolvedMedia = new ProjectObjectMediaPayload(
             fileName,
             contentType,
             Convert.ToBase64String(bytes));
+        ProjectStructureSvgAssetValidator.Validate(resolvedMedia);
+        return resolvedMedia;
     }
 
     private static void EnsureValidMediaPayload(ProjectStructureRuntimeMediaPayload media)

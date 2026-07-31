@@ -145,7 +145,8 @@ internal static class CapabilityConfigurationEditorSupport
             configuration.RegisteredSkillServiceType = null;
             configuration.InlineSkill = new InlineSkillConfigurationModel
             {
-                Name = NormalizeOptionalText(state.InlineName) ?? NormalizeKey(editor.Key),
+                Name = SkillName.Normalize(
+                    NormalizeOptionalText(state.InlineName) ?? NormalizeKey(editor.Key)).Value,
                 Description = NormalizeOptionalText(state.InlineDescription) ?? editor.Description,
                 Instructions = state.InlineInstructions.Trim(),
                 Resources = configuration.InlineSkill?.Resources

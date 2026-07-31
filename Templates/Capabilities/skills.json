@@ -2,6 +2,26 @@
   "capabilities": [
     {
       "kind": "skill",
+      "key": "svg-authoring-skill",
+      "displayName": "SVG Authoring Skill",
+      "description": "Author and verify well-formed, safe SVG XML before registering project assets or rasterizing layouts.",
+      "stableId": "skill:svg-authoring:v1",
+      "stableGuidKey": "capabilities/svg-authoring-skill",
+      "endpointOrPath": "inline://svg-authoring-skill",
+      "skillSource": "inline",
+      "operationClassifications": [
+        "read",
+        "validation"
+      ],
+      "proofNotes": "Template-owned SVG XML authoring and asset-readback guidance for agents producing vector graphics.",
+      "inlineSkill": {
+        "name": "svg-authoring",
+        "description": "Author and verify well-formed, safe SVG XML before registering project assets or rasterizing layouts.",
+        "instructionsAssetKey": "skills/instructions/svg-authoring.md"
+      }
+    },
+    {
+      "kind": "skill",
       "key": "aspnet-core-skill",
       "displayName": "ASP.NET Core Skill",
       "description": "Framework guidance for web, API, Blazor, hosting, and ASP.NET Core debugging tasks.",

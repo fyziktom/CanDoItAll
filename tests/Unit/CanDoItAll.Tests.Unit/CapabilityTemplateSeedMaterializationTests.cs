@@ -83,6 +83,12 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal("aspnet-core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
         Assert.Contains("ASP.NET Core", aspNetSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(), StringComparison.Ordinal);
 
+        using var svgSkillJson = JsonDocument.Parse(capabilities["svg-authoring-skill"].ConfigurationJson);
+        Assert.Equal("svg-authoring", svgSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("name").GetString());
+        var svgInstructions = svgSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString();
+        Assert.Contains("&amp;", svgInstructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", svgInstructions, StringComparison.Ordinal);
+
         using var concreteDeliverySkillJson = JsonDocument.Parse(
             capabilities["concrete-deliverable-delivery-inline-skill"].ConfigurationJson);
         var concreteDeliveryInstructions = concreteDeliverySkillJson.RootElement
@@ -130,6 +136,9 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         {
             Assert.Equal("inline", template.SkillSource);
             Assert.NotNull(template.InlineSkill);
+            Assert.True(
+                SkillName.TryCreate(template.InlineSkill!.Name, out _),
+                $"Template skill '{template.Key}' has invalid provider-facing name '{template.InlineSkill.Name}'.");
             Assert.StartsWith("skills/instructions/", template.InlineSkill!.InstructionsAssetKey, StringComparison.Ordinal);
             Assert.True(File.Exists(Path.Combine(pack.RootPath, template.InlineSkill.InstructionsAssetKey)));
             Assert.DoesNotContain("~/.codex", template.EndpointOrPath, StringComparison.OrdinalIgnoreCase);
@@ -411,6 +420,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "scheduler-workflow-schedules-search",
         "scheduler-workflow-targets-search",
         "spreadsheet-skill",
+        "svg-authoring-skill",
         "workspace-analyze-image",
         "workspace-analyze-images",
         "workspace-append-file",

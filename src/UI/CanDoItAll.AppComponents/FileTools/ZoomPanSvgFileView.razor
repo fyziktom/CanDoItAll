@@ -1,0 +1,26 @@
+@namespace CanDoItAll.AppComponents.FileTools
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.FileTools.FileInteraction.Components
+@implements IFileInteractionRendererComponent
+
+<FileObjectView Context="Context" Kind="FileObjectViewKind.Browser">
+    <TargetFrame Context="targetFrame">
+        <ZoomPanFrame AriaLabel="@($"Zoom and pan {Context.Request.FileName}")"
+                      ResetKey="@ViewResetKey"
+                      Style="inline-size: 100%; block-size: 100%; place-self: stretch;"
+                      SuppressContentInteraction>
+            @targetFrame.TargetContent
+        </ZoomPanFrame>
+    </TargetFrame>
+</FileObjectView>
+
+@code {
+    [Parameter, EditorRequired]
+    public FileInteractionRenderContext Context { get; set; } = default!;
+
+    private FileInteractionZoomPanResetKey ViewResetKey => new(
+        Context.Request.File,
+        Context.Request.ContentRevision,
+        Context.EditRevision,
+        Context.Content);
+}

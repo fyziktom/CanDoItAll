@@ -284,11 +284,10 @@ public sealed class HrAgentCompositionTests
 
         var oversizedGenerator = new StubImageGenerationService(
             new byte[AgentAvatarImagePolicy.MaxAvatarBytes + 1]);
-        var oversizedAvatarService = new HrAgentAvatarGenerationService(
+        var oversizedAvatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
-            oversizedGenerator,
-            NullLogger<HrAgentAvatarGenerationService>.Instance);
+            oversizedGenerator);
         await Assert.ThrowsAsync<InvalidOperationException>(() => oversizedAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
@@ -301,11 +300,10 @@ public sealed class HrAgentCompositionTests
             candidate => candidate.Id == createdAgent.Id);
         Assert.True(string.IsNullOrWhiteSpace(afterFailedAvatar.AvatarImageUrl));
 
-        var corruptAvatarService = new HrAgentAvatarGenerationService(
+        var corruptAvatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
-            new StubImageGenerationService([0xff, 0xd8, 0xff, 0xd9]),
-            NullLogger<HrAgentAvatarGenerationService>.Instance);
+            new StubImageGenerationService([0xff, 0xd8, 0xff, 0xd9]));
         await Assert.ThrowsAsync<InvalidOperationException>(() => corruptAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
@@ -315,11 +313,10 @@ public sealed class HrAgentCompositionTests
             CancellationToken.None));
 
         var validSquareJpeg = Convert.FromBase64String(ValidSquareJpegBase64);
-        var mimeMismatchAvatarService = new HrAgentAvatarGenerationService(
+        var mimeMismatchAvatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
-            new StubImageGenerationService(validSquareJpeg, "image/png"),
-            NullLogger<HrAgentAvatarGenerationService>.Instance);
+            new StubImageGenerationService(validSquareJpeg, "image/png"));
         await Assert.ThrowsAsync<InvalidOperationException>(() => mimeMismatchAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
@@ -328,12 +325,11 @@ public sealed class HrAgentCompositionTests
                 "Abstract blue validation compass"),
             CancellationToken.None));
 
-        var nonSquareAvatarService = new HrAgentAvatarGenerationService(
+        var nonSquareAvatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
             new StubImageGenerationService(
-                Convert.FromBase64String(NonSquareJpegBase64)),
-            NullLogger<HrAgentAvatarGenerationService>.Instance);
+                Convert.FromBase64String(NonSquareJpegBase64)));
         await Assert.ThrowsAsync<InvalidOperationException>(() => nonSquareAvatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
@@ -343,11 +339,10 @@ public sealed class HrAgentCompositionTests
             CancellationToken.None));
 
         var validGenerator = new StubImageGenerationService(validSquareJpeg);
-        var avatarService = new HrAgentAvatarGenerationService(
+        var avatarService = CreateAvatarService(
             workspace,
             canonicalProviderSource,
-            validGenerator,
-            NullLogger<HrAgentAvatarGenerationService>.Instance);
+            validGenerator);
         var avatarResult = await avatarService.GenerateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentAvatarGenerateInput(
@@ -508,6 +503,21 @@ public sealed class HrAgentCompositionTests
             RuntimeSessionKey: "hr-composition-test",
             AgentRuntimeContextIntent.Empty,
             Tags: new Dictionary<string, string>());
+    }
+
+    private static HrAgentAvatarGenerationService CreateAvatarService(
+        IAgentFrameworkWorkspaceService workspaceService,
+        IProviderRuntimeProfileSource providerSource,
+        IAgentImageGenerationService imageGenerationService)
+    {
+        var avatarGenerationService = new AgentAvatarGenerationService(
+            imageGenerationService,
+            NullLogger<AgentAvatarGenerationService>.Instance);
+        return new HrAgentAvatarGenerationService(
+            workspaceService,
+            providerSource,
+            avatarGenerationService,
+            NullLogger<HrAgentAvatarGenerationService>.Instance);
     }
 
     private const string ValidSquareJpegBase64 =

@@ -117,16 +117,28 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var outputFormat = NormalizeOption(request.OutputFormat, providerConfiguration.DefaultOutputFormat, "png", ValidImageOutputFormats, "image output format");
             var outputPath = owner.ResolveImageGenerationOutputPath(request.OutputWorkspacePath, outputFormat);
             var sourceImages = await ResolveSourceImagesAsync(agent, request, cancellationToken);
-            var generated = await owner.imageGenerationService.GenerateAsync(
-                new AgentImageGenerationRequest(
-                    provider,
-                    model,
-                    request.Prompt.Trim(),
-                    size,
-                    quality,
-                    ParseOutputFormat(outputFormat),
-                    sourceImages),
-                cancellationToken);
+            AgentImageGenerationResult generated;
+            try
+            {
+                generated = await owner.imageGenerationService.GenerateAsync(
+                    new AgentImageGenerationRequest(
+                        provider,
+                        model,
+                        request.Prompt.Trim(),
+                        size,
+                        quality,
+                        ParseOutputFormat(outputFormat),
+                        sourceImages),
+                    cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                throw new ImageGenerationToolException(
+                    "ImageGenerationProviderFailed",
+                    $"Image-generation provider '{provider.Name}' could not complete the request. Verify that the provider is reachable or select a different enabled image provider, then retry.",
+                    canRetryWithCorrectedInput: true,
+                    exception);
+            }
             var generatedImage = generated.Images.FirstOrDefault()
                 ?? throw new InvalidOperationException("Image generation completed without image data.");
             var imageBytes = generatedImage.Bytes;
@@ -166,7 +178,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var providerId = requestedProviderId ?? access.PreferredProviderProfileId;
             var provider = providerId.HasValue
                 ? providers.FirstOrDefault(item => item.Id == providerId.Value)
-                : ResolveDefaultImageProvider(providers, runtimeProvider);
+                : ImageGenerationProviderSelectionPolicy.ResolveDefault(providers, runtimeProvider);
 
             if (provider is null)
             {
@@ -188,28 +200,6 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
             return provider;
         }
-
-        private static ProviderProfile? ResolveDefaultImageProvider(
-            IReadOnlyList<ProviderProfile> providers,
-            ProviderProfile runtimeProvider)
-        {
-            var registryRuntimeProvider = providers.FirstOrDefault(item => item.Id == runtimeProvider.Id);
-            if (IsEnabledImageProvider(registryRuntimeProvider))
-            {
-                return registryRuntimeProvider;
-            }
-
-            var normalizedRuntimeProvider = ProviderFeatureService.NormalizeImportedProfile(runtimeProvider);
-            if (IsEnabledImageProvider(normalizedRuntimeProvider))
-            {
-                return normalizedRuntimeProvider;
-            }
-
-            return providers.FirstOrDefault(IsEnabledImageProvider);
-        }
-
-        private static bool IsEnabledImageProvider(ProviderProfile? provider)
-            => provider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration };
 
         private async Task<IReadOnlyList<AgentImageGenerationSource>> ResolveSourceImagesAsync(
             AgentDefinition agent,
@@ -431,6 +421,21 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 _ => AgentGeneratedImageFormat.Png
             };
         }
+    }
+
+    private sealed class ImageGenerationToolException(
+        string errorCode,
+        string message,
+        bool canRetryWithCorrectedInput,
+        Exception innerException) : InvalidOperationException(message, innerException), IAgentToolFailure
+    {
+        public string ErrorCode { get; } = errorCode;
+
+        public string SafeMessage => Message;
+
+        public bool IsSafeToExpose => true;
+
+        public bool CanRetryWithCorrectedInput { get; } = canRetryWithCorrectedInput;
     }
 
     private WorkspaceImagePathResolution ResolveWorkspaceImagePath(string path)

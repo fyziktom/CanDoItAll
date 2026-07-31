@@ -68,11 +68,14 @@ internal sealed class RuntimeCapabilityDescriptorCatalog
         if (inlineSkill is not null && !string.IsNullOrWhiteSpace(inlineSkill.Instructions))
         {
             var classifications = ToClassificationSet();
+            var skillName = SkillName.TryCreate(inlineSkill.Name, out var configuredSkillName)
+                ? configuredSkillName.Value
+                : SkillName.Normalize(capability.Key).Value;
             var descriptor = SkillDescriptorFactory.Inline(
                 CapabilityKey.Create(capability.Key),
                 ResolveCapabilityDisplayName(capability),
                 ResolveCapabilityDescription(capability),
-                string.IsNullOrWhiteSpace(inlineSkill.Name) ? capability.Key : inlineSkill.Name,
+                skillName,
                 inlineSkill.Instructions,
                 ResolveInlineSkillResources(inlineSkill),
                 ResolveCatalogTags(capability, null, classifications),

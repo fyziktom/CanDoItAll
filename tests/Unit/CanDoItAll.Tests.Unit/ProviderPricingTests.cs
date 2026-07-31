@@ -43,23 +43,23 @@ public sealed class ProviderPricingTests
                 LongContextCacheWritePerMillionTokensUsd = 12.50m,
                 LongContextOutputPerMillionTokensUsd = 45.00m
             },
-            new(OpenAiModelIds.Gpt56Luna, 1.00m, 0.10m, 6.00m)
+            new(OpenAiModelIds.Gpt56Luna, 0.20m, 0.02m, 1.20m)
             {
-                CacheWritePerMillionTokensUsd = 1.25m,
+                CacheWritePerMillionTokensUsd = 0.25m,
                 LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
-                LongContextInputPerMillionTokensUsd = 2.00m,
-                LongContextCachedInputPerMillionTokensUsd = 0.20m,
-                LongContextCacheWritePerMillionTokensUsd = 2.50m,
-                LongContextOutputPerMillionTokensUsd = 9.00m
+                LongContextInputPerMillionTokensUsd = 0.40m,
+                LongContextCachedInputPerMillionTokensUsd = 0.04m,
+                LongContextCacheWritePerMillionTokensUsd = 0.50m,
+                LongContextOutputPerMillionTokensUsd = 1.80m
             },
-            new(OpenAiModelIds.Gpt56Terra, 2.50m, 0.25m, 15.00m)
+            new(OpenAiModelIds.Gpt56Terra, 2.00m, 0.20m, 12.00m)
             {
-                CacheWritePerMillionTokensUsd = 3.125m,
+                CacheWritePerMillionTokensUsd = 2.50m,
                 LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
-                LongContextInputPerMillionTokensUsd = 5.00m,
-                LongContextCachedInputPerMillionTokensUsd = 0.50m,
-                LongContextCacheWritePerMillionTokensUsd = 6.25m,
-                LongContextOutputPerMillionTokensUsd = 22.50m
+                LongContextInputPerMillionTokensUsd = 4.00m,
+                LongContextCachedInputPerMillionTokensUsd = 0.40m,
+                LongContextCacheWritePerMillionTokensUsd = 5.00m,
+                LongContextOutputPerMillionTokensUsd = 18.00m
             },
             new(OpenAiModelIds.Gpt56Sol, 5.00m, 0.50m, 30.00m)
             {
@@ -130,10 +130,10 @@ public sealed class ProviderPricingTests
             out var cost);
 
         Assert.True(calculated);
-        Assert.Equal(1.00m, cost.InputCostUsd);
-        Assert.Equal(0.05m, cost.CachedInputCostUsd);
-        Assert.Equal(0.45m, cost.OutputCostUsd);
-        Assert.Equal(1.50m, cost.TotalUsd);
+        Assert.Equal(0.80m, cost.InputCostUsd);
+        Assert.Equal(0.04m, cost.CachedInputCostUsd);
+        Assert.Equal(0.36m, cost.OutputCostUsd);
+        Assert.Equal(1.20m, cost.TotalUsd);
     }
 
     [Fact]
@@ -154,10 +154,10 @@ public sealed class ProviderPricingTests
         Assert.True(calculated);
         Assert.Equal(130_000, cost.InputTokens - cost.CachedInputTokens - cost.CacheWriteTokens);
         Assert.Equal(20_000, cost.CacheWriteTokens);
-        Assert.Equal(0.325m, cost.InputCostUsd);
-        Assert.Equal(0.0125m, cost.CachedInputCostUsd);
-        Assert.Equal(0.0625m, cost.CacheWriteCostUsd);
-        Assert.Equal(0.40m, cost.TotalUsd);
+        Assert.Equal(0.26m, cost.InputCostUsd);
+        Assert.Equal(0.01m, cost.CachedInputCostUsd);
+        Assert.Equal(0.05m, cost.CacheWriteCostUsd);
+        Assert.Equal(0.32m, cost.TotalUsd);
     }
 
     [Fact]
@@ -176,11 +176,11 @@ public sealed class ProviderPricingTests
             out var cost);
 
         Assert.True(calculated);
-        Assert.Equal(1.25m, cost.InputCostUsd);
-        Assert.Equal(0.05m, cost.CachedInputCostUsd);
-        Assert.Equal(0.3125m, cost.CacheWriteCostUsd);
-        Assert.Equal(0.45m, cost.OutputCostUsd);
-        Assert.Equal(2.0625m, cost.TotalUsd);
+        Assert.Equal(1.00m, cost.InputCostUsd);
+        Assert.Equal(0.04m, cost.CachedInputCostUsd);
+        Assert.Equal(0.25m, cost.CacheWriteCostUsd);
+        Assert.Equal(0.36m, cost.OutputCostUsd);
+        Assert.Equal(1.65m, cost.TotalUsd);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public sealed class ProviderPricingTests
         var summary = ProviderPricingCalculator.SummarizeUsage([firstRequest, secondRequest], [provider]);
 
         Assert.Equal(400_000, summary.InputTokens);
-        Assert.Equal(1.00m, summary.KnownCostUsd);
+        Assert.Equal(0.80m, summary.KnownCostUsd);
     }
 
     [Fact]
@@ -429,12 +429,50 @@ public sealed class ProviderPricingTests
         Assert.Equal(9.00m, terra.InputPerMillionTokensUsd);
         Assert.Equal(0.90m, terra.CachedInputPerMillionTokensUsd);
         Assert.Equal(18.00m, terra.OutputPerMillionTokensUsd);
-        Assert.Equal(3.125m, terra.CacheWritePerMillionTokensUsd);
+        Assert.Equal(2.50m, terra.CacheWritePerMillionTokensUsd);
         Assert.Equal(OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens, terra.LongContextThresholdTokens);
-        Assert.Equal(5.00m, terra.LongContextInputPerMillionTokensUsd);
-        Assert.Equal(0.50m, terra.LongContextCachedInputPerMillionTokensUsd);
-        Assert.Equal(6.25m, terra.LongContextCacheWritePerMillionTokensUsd);
-        Assert.Equal(22.50m, terra.LongContextOutputPerMillionTokensUsd);
+        Assert.Equal(4.00m, terra.LongContextInputPerMillionTokensUsd);
+        Assert.Equal(0.40m, terra.LongContextCachedInputPerMillionTokensUsd);
+        Assert.Equal(5.00m, terra.LongContextCacheWritePerMillionTokensUsd);
+        Assert.Equal(18.00m, terra.LongContextOutputPerMillionTokensUsd);
+    }
+
+    [Fact]
+    public void Authoritative_known_defaults_replace_stale_known_rows_and_preserve_custom_models()
+    {
+        var configuredPrices = new[]
+        {
+            new ProviderModelTokenPrice(OpenAiModelIds.Gpt56Luna, 9.00m, 0.90m, 18.00m)
+            {
+                CacheWritePerMillionTokensUsd = 4.00m,
+                LongContextThresholdTokens = 300_000,
+                LongContextInputPerMillionTokensUsd = 8.00m,
+                LongContextCachedInputPerMillionTokensUsd = 0.80m,
+                LongContextCacheWritePerMillionTokensUsd = 10.00m,
+                LongContextOutputPerMillionTokensUsd = 24.00m
+            },
+            new ProviderModelTokenPrice("custom-model", 7.00m, 0.70m, 14.00m)
+        };
+
+        var merged = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
+            ProviderKind.OpenAi,
+            OpenAiModelIds.Gpt56Luna,
+            configuredPrices);
+
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged, OpenAiModelIds.Gpt56Luna, out var luna));
+        Assert.Equal(0.20m, luna.InputPerMillionTokensUsd);
+        Assert.Equal(0.02m, luna.CachedInputPerMillionTokensUsd);
+        Assert.Equal(0.25m, luna.CacheWritePerMillionTokensUsd);
+        Assert.Equal(1.20m, luna.OutputPerMillionTokensUsd);
+        Assert.Equal(OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens, luna.LongContextThresholdTokens);
+        Assert.Equal(0.40m, luna.LongContextInputPerMillionTokensUsd);
+        Assert.Equal(0.04m, luna.LongContextCachedInputPerMillionTokensUsd);
+        Assert.Equal(0.50m, luna.LongContextCacheWritePerMillionTokensUsd);
+        Assert.Equal(1.80m, luna.LongContextOutputPerMillionTokensUsd);
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged, "custom-model", out var custom));
+        Assert.Equal(7.00m, custom.InputPerMillionTokensUsd);
+        Assert.Equal(0.70m, custom.CachedInputPerMillionTokensUsd);
+        Assert.Equal(14.00m, custom.OutputPerMillionTokensUsd);
     }
 
     [Fact]
@@ -495,7 +533,7 @@ public sealed class ProviderPricingTests
             discoveredPrices);
 
         Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, OpenAiModelIds.Gpt56Terra, out var terra));
-        Assert.Equal(2.50m, terra.InputPerMillionTokensUsd);
+        Assert.Equal(2.00m, terra.InputPerMillionTokensUsd);
         Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "legacy-model", out _));
         Assert.False(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "unknown-model", out _));
         Assert.DoesNotContain(

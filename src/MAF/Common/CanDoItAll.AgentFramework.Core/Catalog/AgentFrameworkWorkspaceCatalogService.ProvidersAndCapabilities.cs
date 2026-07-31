@@ -147,14 +147,18 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 }
             }
 
+            var normalizedKey = WorkspaceCatalogIdentityNormalizer.NormalizeCapabilityKey(model.Key);
             var capability = new CapabilityCatalogItem(
                 Id: model.Id ?? Guid.NewGuid(),
                 Kind: model.Kind,
-                Key: WorkspaceCatalogIdentityNormalizer.NormalizeCapabilityKey(model.Key),
+                Key: normalizedKey,
                 Name: model.Name.Trim(),
                 Description: model.Description.Trim(),
                 EndpointOrPath: model.EndpointOrPath.Trim(),
-                ConfigurationJson: model.ConfigurationJson.Trim(),
+                ConfigurationJson: InlineSkillConfigurationNormalizer.Normalize(
+                    model.Kind,
+                    normalizedKey,
+                    model.ConfigurationJson),
                 ProofStatus: current?.ProofStatus ?? CapabilityProofStatus.NotRun,
                 ProofNotes: current?.ProofNotes ?? string.Empty,
                 LastVerifiedAtUtc: current?.LastVerifiedAtUtc,

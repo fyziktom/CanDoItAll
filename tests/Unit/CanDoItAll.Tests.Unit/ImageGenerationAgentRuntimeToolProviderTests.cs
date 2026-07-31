@@ -145,6 +145,91 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         Assert.Contains("not enabled", result.ProjectAssetStorageInstruction, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Image_generation_tool_prefers_enabled_non_private_provider_when_no_preference_is_set()
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var imageService = new FakeAgentImageGenerationService();
+        var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
+        var localProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration) with
+        {
+            Name = "Local ComfyUI",
+            IsPrivateProvider = true
+        };
+        var cloudProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration) with
+        {
+            Name = "OpenAI image generation",
+            IsPrivateProvider = false
+        };
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([localProvider, cloudProvider, chatProvider]),
+            new StaticWorkspacePathResolver(CreateTempWorkspaceRoot()),
+            imageService,
+            services);
+        var agent = CreateAgent(
+            chatProvider.Id,
+            AgentImageGenerationAccessMetadata.Write(
+                "{}",
+                new AgentImageGenerationAccessSettings { CanGenerateImages = true }));
+
+        var tools = await toolProvider.CreateToolsAsync(
+            CreateContext(agent, chatProvider),
+            CancellationToken.None);
+
+        var result = await InvokeImageGenerationToolAsync(
+            Assert.Single(tools),
+            new ImageGenerationCreateInput(
+                "A clean garden layout.",
+                "generated/recommended-provider",
+                OutputFormat: "png"));
+
+        Assert.Equal(cloudProvider.Id, result.ProviderProfileId);
+        Assert.Equal(cloudProvider.Id, Assert.Single(imageService.Requests).Provider.Id);
+    }
+
+    [Fact]
+    public async Task Image_generation_tool_exposes_safe_actionable_provider_failure()
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration) with { Name = "Offline image provider" };
+        var imageService = new FakeAgentImageGenerationService
+        {
+            Failure = new HttpRequestException("Connection refused at a private endpoint.")
+        };
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            new StaticWorkspacePathResolver(CreateTempWorkspaceRoot()),
+            imageService,
+            services);
+        var agent = CreateAgent(
+            imageProvider.Id,
+            AgentImageGenerationAccessMetadata.Write(
+                "{}",
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = true,
+                    PreferredProviderProfileId = imageProvider.Id
+                }));
+        var tools = await toolProvider.CreateToolsAsync(
+            CreateContext(agent, imageProvider),
+            CancellationToken.None);
+
+        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            () => InvokeImageGenerationToolAsync(
+                Assert.Single(tools),
+                new ImageGenerationCreateInput(
+                    "A clean garden layout.",
+                    "generated/provider-failure",
+                    OutputFormat: "png")));
+
+        var failure = Assert.IsAssignableFrom<IAgentToolFailure>(exception);
+        Assert.True(failure.IsSafeToExpose);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        Assert.Equal("ImageGenerationProviderFailed", failure.ErrorCode);
+        Assert.Contains("Offline image provider", failure.SafeMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("private endpoint", failure.SafeMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static AgentRuntimeToolProviderContext CreateContext(
         AgentDefinition agent,
         ProviderProfile provider)
@@ -348,12 +433,19 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
     {
         public List<AgentImageGenerationRequest> Requests { get; } = [];
 
+        public Exception? Failure { get; init; }
+
         public Task<AgentImageGenerationResult> GenerateAsync(
             AgentImageGenerationRequest request,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Requests.Add(request);
+            if (Failure is not null)
+            {
+                throw Failure;
+            }
+
             return Task.FromResult(new AgentImageGenerationResult(
                 request.Model,
                 request.Format,

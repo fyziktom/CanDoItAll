@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -22,5 +23,42 @@ public static class CapabilityNameRules
 
         key = default;
         return false;
+    }
+
+    internal static string NormalizeLowerKebab(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        var builder = new StringBuilder(value.Length);
+        var pendingSeparator = false;
+        foreach (var character in value.Trim())
+        {
+            if (character is >= 'a' and <= 'z' or >= '0' and <= '9')
+            {
+                if (pendingSeparator && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(character);
+                pendingSeparator = false;
+            }
+            else if (character is >= 'A' and <= 'Z')
+            {
+                if (pendingSeparator && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(char.ToLowerInvariant(character));
+                pendingSeparator = false;
+            }
+            else if (builder.Length > 0)
+            {
+                pendingSeparator = true;
+            }
+        }
+
+        return builder.ToString();
     }
 }

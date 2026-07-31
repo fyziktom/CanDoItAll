@@ -207,7 +207,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 .Concat(openAiProvider.SuggestedModels)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList(),
-            ModelPrices = ProviderPricingDefaults.MergeKnownDefaultPrices(
+            ModelPrices = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
                 openAiProvider.Kind,
                 ManagedSeedProviderFallbacks.OpenAiDefaultModel,
                 openAiProvider.ModelPrices)
@@ -232,8 +232,18 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                    StringComparison.Ordinal) ||
                ManagedSeedProviderFallbacks.OpenAiSuggestedModels.Any(model =>
                    !provider.SuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase)) ||
-               OpenAiModelIds.Gpt56Models.Any(model =>
-                   !ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, model, out _));
+               OpenAiModelIds.Gpt56Models.Any(model => !HasCurrentManagedOpenAiPrice(provider, model));
+    }
+
+    private static bool HasCurrentManagedOpenAiPrice(ProviderProfile provider, string model)
+    {
+        var defaultPrices = ProviderPricingDefaults.CreateDefaultPrices(
+            provider.Kind,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+
+        return ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, model, out var configuredPrice) &&
+               ProviderPricingDefaults.TryFindPrice(defaultPrices, model, out var currentPrice) &&
+               configuredPrice == currentPrice;
     }
 
     private static AgentDefinition CreateRepairedOpenAiAgent(
