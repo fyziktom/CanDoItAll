@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.FileTools.FileInteraction.Components;
@@ -25,6 +26,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
     {
         services.AddFileInteractionComponents(builder => builder
             .AddBuiltIns()
+            .AddZoomPanRenderers()
             .AddMarkdown()
             .AddWorkbenchMermaid());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<

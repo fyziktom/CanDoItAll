@@ -22,7 +22,7 @@ This repository owns:
 - module-specific UI that does not yet have a real cross-module consumer;
 - composition of the packaged libraries in the web host.
 
-`CanDoItAll.AppComponents` currently consumes BaseLib, CanvasLib, and Common `0.1.17`,
+`CanDoItAll.AppComponents` currently consumes BaseLib, CanvasLib, and Common `0.1.18`,
 `Microsoft.AspNetCore.Components.Web` `10.0.10`, and the FileTools component contracts.
 Its adjacent
 [project file](../../src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj)
