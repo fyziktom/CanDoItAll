@@ -275,6 +275,9 @@
   .left-3 {
     left: calc(var(--spacing) * 3);
   }
+  .isolate {
+    isolation: isolate;
+  }
   .z-\[3\] {
     z-index: 3;
   }
@@ -3126,6 +3129,11 @@
     @media (width >= 96rem) {
       padding: calc(var(--spacing) * 6);
     }
+  }
+  .cda-shell-body-surface--standard {
+    min-height: calc(var(--spacing) * 0);
+    overflow-y: auto;
+    flex: 1 1 0%;
   }
   .cda-shell-rail {
     display: none;

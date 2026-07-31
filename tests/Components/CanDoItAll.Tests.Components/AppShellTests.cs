@@ -91,4 +91,32 @@ public sealed class AppShellTests : BunitContext
         Assert.Equal("apps", blankCut.Find(".cda-shell-brand-mark").TextContent.Trim());
         Assert.Equal("rocket_launch", customCut.Find(".cda-shell-brand-mark").TextContent.Trim());
     }
+
+    [Fact]
+    public void Standard_page_is_viewport_bounded_and_body_surface_fills_the_available_shell_height()
+    {
+        var cut = Render<AppShell>(parameters => parameters
+            .Add(component => component.Mode, AppShellMode.StandardPage)
+            .Add(component => component.ShowRightRail, false)
+            .Add(component => component.Body, (RenderFragment)(builder =>
+                builder.AddMarkupContent(0, "<div>Standard page content</div>"))));
+
+        var root = cut.Find(".cda-shell-root");
+        var frame = cut.Find(".cda-shell-frame");
+        var surface = cut.Find(".cda-shell-body-surface");
+        var bodyRegion = surface.ParentElement;
+
+        Assert.NotNull(bodyRegion);
+        Assert.Equal(
+            "height:100vh;height:100dvh;min-height:0;overflow:hidden;",
+            root.GetAttribute("style"));
+        Assert.Equal(
+            "height:100%;min-height:0;overflow:hidden;",
+            frame.GetAttribute("style"));
+        Assert.Contains("cda-shell-body-surface--standard", surface.ClassList);
+        Assert.Contains("flex", bodyRegion.ClassList);
+        Assert.Contains("min-h-0", bodyRegion.ClassList);
+        Assert.Contains("flex-1", bodyRegion.ClassList);
+        Assert.Contains("flex-col", bodyRegion.ClassList);
+    }
 }

@@ -131,7 +131,8 @@ public sealed class PagedRecordBrowserTests : BunitContext
         var defaultCut = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
         var boundedCut = RenderBrowser(
             LoaderWith(Option(AlphaId, "Alpha")),
-            resultsScrollMode: PagedRecordResultsScrollMode.Bounded);
+            resultsScrollMode: PagedRecordResultsScrollMode.Bounded,
+            fillHeight: true);
 
         Assert.DoesNotContain(
             "paged-record-browser__results--bounded",
@@ -142,9 +143,18 @@ public sealed class PagedRecordBrowserTests : BunitContext
         Assert.DoesNotContain(
             "paged-record-browser__results--bounded",
             boundedCut.Find("[data-testid='records-pager']").ClassList);
-        Assert.Contains(
-            "w-full",
-            boundedCut.Find("[data-testid='records']").ClassList);
+        var boundedRoot = boundedCut.Find("[data-testid='records']");
+        Assert.Contains("w-full", boundedRoot.ClassList);
+        Assert.Contains("paged-record-browser--fill-height", boundedRoot.ClassList);
+        Assert.Contains("min-h-0", boundedRoot.ClassList);
+        Assert.Contains("flex-1", boundedRoot.ClassList);
+        Assert.Contains("overflow-hidden", boundedRoot.ClassList);
+        var boundedRootStyle = boundedRoot.GetAttribute("style")!.Replace(" ", string.Empty);
+        Assert.Contains(";height:100%", boundedRootStyle);
+        Assert.Contains(";min-height:0", boundedRootStyle);
+        var boundedPager = boundedCut.Find("[data-testid='records-pager']");
+        Assert.Contains("paged-record-browser__pager", boundedPager.ClassList);
+        Assert.Contains("shrink-0", boundedPager.ClassList);
     }
 
     [Fact]
@@ -430,7 +440,8 @@ public sealed class PagedRecordBrowserTests : BunitContext
         Action<Guid>? selectionChanged = null,
         Action<Exception>? loadFailed = null,
         PagedRecordResultsScrollMode resultsScrollMode = PagedRecordResultsScrollMode.Page,
-        PagedRecordGridMode gridMode = PagedRecordGridMode.Fluid)
+        PagedRecordGridMode gridMode = PagedRecordGridMode.Fluid,
+        bool fillHeight = false)
     {
         return Render<PagedRecordBrowser<Guid, RecordScope>>(parameters =>
         {
@@ -442,6 +453,7 @@ public sealed class PagedRecordBrowserTests : BunitContext
                 .Add(component => component.PageSize, 2)
                 .Add(component => component.ResultsScrollMode, resultsScrollMode)
                 .Add(component => component.GridMode, gridMode)
+                .Add(component => component.FillHeight, fillHeight)
                 .Add(component => component.DataTestId, "records");
 
             if (selectionChanged is not null)

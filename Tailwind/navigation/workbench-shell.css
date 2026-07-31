@@ -578,6 +578,11 @@
     @apply min-w-0 rounded-[1.75rem] border border-white/80 bg-white/92 p-4 shadow-xl shadow-slate-200/60 xl:p-5 2xl:p-6;
   }
 
+  .cda-shell-body-surface--standard {
+    @apply min-h-0 overflow-y-auto;
+    flex: 1 1 0%;
+  }
+
   .cda-shell-rail {
     @apply hidden rounded-[1.75rem] border border-white/80 bg-white/88 p-4 shadow-lg shadow-slate-200/50 backdrop-blur 2xl:block 2xl:p-5;
   }

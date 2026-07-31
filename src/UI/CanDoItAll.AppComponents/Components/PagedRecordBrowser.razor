@@ -7,7 +7,8 @@
 
 <Stack GapScale="LayoutGap.Medium"
        AlignItems="AlignItems.Stretch"
-       Class="paged-record-browser w-full"
+       FillHeight="@FillHeight"
+       Class="@RootClass"
        data-testid="@DataTestId">
     <FilterBar ResultText="@ResultText">
         <div class="paged-record-browser__filters"
@@ -71,7 +72,8 @@
 
     @if (isLoading)
     {
-        <div data-testid="@($"{DataTestId}-loading")">
+        <div class="@ResultsClass"
+             data-testid="@($"{DataTestId}-loading")">
             <LoadingState Eyebrow="@LoadingEyebrow"
                           Title="@LoadingTitle"
                           Description="@LoadingDescription" />
@@ -79,7 +81,8 @@
     }
     else if (loadError is not null)
     {
-        <div data-testid="@($"{DataTestId}-error")">
+        <div class="@ResultsClass"
+             data-testid="@($"{DataTestId}-error")">
             <EmptyState Eyebrow="@ErrorEyebrow"
                         Title="@ErrorTitle"
                         Description="@ErrorDescription">
@@ -94,7 +97,8 @@
     }
     else if (page.Items.Count == 0)
     {
-        <div data-testid="@($"{DataTestId}-empty")">
+        <div class="@ResultsClass"
+             data-testid="@($"{DataTestId}-empty")">
             <EmptyState Eyebrow="@EmptyEyebrow"
                         Title="@EmptyTitle"
                         Description="@EmptyDescription" />
@@ -297,7 +301,7 @@
            AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.SpaceBetween"
            Wrap="FlexWrap.Wrap"
-           Class="paged-record-browser__pager"
+           Class="@PagerClass"
            data-testid="@($"{DataTestId}-pager")">
         <StatusBadge Tone="neutral"
                      Text="@PageText" />
@@ -379,6 +383,9 @@
     public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } = PagedRecordResultsScrollMode.Page;
 
     [Parameter]
+    public bool FillHeight { get; set; }
+
+    [Parameter]
     public string SearchPlaceholder { get; set; } = "Search records";
 
     [Parameter]
@@ -440,6 +447,14 @@
         loadError is null &&
         page.TotalPages > 0 &&
         page.PageIndex + 1 < page.TotalPages;
+
+    private string RootClass => CssClassBuilder.Join(
+        "paged-record-browser w-full",
+        FillHeight ? "paged-record-browser--fill-height min-h-0 flex-1 overflow-hidden" : null);
+
+    private string PagerClass => CssClassBuilder.Join(
+        "paged-record-browser__pager",
+        FillHeight ? "shrink-0" : null);
 
     private string ResultsClass => ResultsScrollMode switch
     {

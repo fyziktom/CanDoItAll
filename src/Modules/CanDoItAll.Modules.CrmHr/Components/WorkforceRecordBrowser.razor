@@ -12,6 +12,7 @@
                     PageSize="@PageSize"
                     ResultsScrollMode="@ResultsScrollMode"
                     GridMode="@GridMode"
+                    FillHeight="@FillHeight"
                     SearchPlaceholder="@SearchPlaceholder"
                     FilterAriaLabel="Workforce affiliation"
                     LoadingEyebrow="Workforce"
@@ -46,6 +47,9 @@
 
     [Parameter]
     public PagedRecordGridMode GridMode { get; set; } = PagedRecordGridMode.Fluid;
+
+    [Parameter]
+    public bool FillHeight { get; set; }
 
     [Parameter]
     public string SearchPlaceholder { get; set; } =
