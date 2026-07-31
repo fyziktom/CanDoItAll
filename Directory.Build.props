@@ -14,6 +14,7 @@
       $(DefaultItemExcludes);
       .mcp-state/**;
       .artifacts/**;
+      artifacts/**;
       playwright-report/**;
       test-results/**;
       TestResults/**;
