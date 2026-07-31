@@ -251,6 +251,91 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
     }
 
     [Fact]
+    public async Task SubmitRecoveredExecutionResultAsync_rejects_execution_completed_after_claim_expiry_without_mutating_runtime_state()
+    {
+        var now = new DateTimeOffset(2026, 7, 29, 13, 0, 0, TimeSpan.Zero);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var slotId = ArtifactSlotId.New();
+        var claimToken = DispatchClaimToken.New();
+        var ownerId = new DispatcherOwnerId("claim-recovery-expiry-test");
+        var assignment = CreateAssignment(runId, planId, stepId, slotId, now);
+        var state = CreateClaimedState(
+            runId,
+            planId,
+            stepId,
+            slotId,
+            claimToken,
+            ownerId,
+            now);
+        var completedAfterClaimExpiry = now.AddMinutes(10).AddTicks(1);
+        var executionRun = CreateCompletedExecutionRun(
+            runId,
+            stepId,
+            claimToken,
+            now.AddSeconds(1)) with
+        {
+            UpdatedAtUtc = completedAfterClaimExpiry,
+            CompletedAtUtc = completedAfterClaimExpiry
+        };
+        var workspaceFactory = new TestWorkspaceFactory(
+            CreateWorkspaceService(executionRun));
+        var runtimeStore = new RecordingRuntimeStore(state);
+        var assignmentStore = new SingleAssignmentStore(assignment);
+        var planStore = new SinglePlanStore(CreatePlan(planId, now));
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ClaimRecoveryExpired.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+
+        try
+        {
+            await using var projectionDbContext = CreateProjectionDbContext();
+            var clock = new FixedProcessProjectionClock(completedAfterClaimExpiry);
+            var coordinator = CreateCoordinator(
+                workspaceFactory,
+                clock,
+                runtimeStore,
+                planStore,
+                assignmentStore,
+                CreateProjectionCatchupService(projectionDbContext, clock),
+                CreateCompletionCoordinator(new WorkspaceFileService(workspaceRoot)));
+            var stateBeforeAttempt = runtimeStore.State;
+
+            var recovered = await coordinator.SubmitRecoveredExecutionResultAsync(
+                executionRun,
+                runId,
+                stepId,
+                "claim-recovery-expiry-test");
+
+            Assert.False(recovered);
+            Assert.Same(stateBeforeAttempt, runtimeStore.State);
+            Assert.Empty(runtimeStore.State.AppliedResults);
+            var retainedClaim = Assert.Single(runtimeStore.State.Claims);
+            Assert.Equal(claimToken, retainedClaim.ClaimToken);
+            Assert.Equal(DispatchClaimStatus.Claimed, retainedClaim.Status);
+            var retainedStep = Assert.Single(runtimeStore.State.Steps);
+            Assert.Equal(ProcessRuntimeStepStatus.Running, retainedStep.Status);
+            Assert.Equal(claimToken, retainedStep.ActiveClaimToken);
+            Assert.False(File.Exists(Path.Combine(
+                workspaceRoot,
+                "artifacts",
+                "process-runs",
+                runId.Value.ToString("D"),
+                "steps",
+                "artifact-producer.md")));
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Recovery_rejects_execution_bound_to_different_claim_without_mutating_runtime_state()
     {
         var now = new DateTimeOffset(2026, 7, 30, 13, 0, 0, TimeSpan.Zero);

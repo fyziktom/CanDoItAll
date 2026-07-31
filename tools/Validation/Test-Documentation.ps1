@@ -287,8 +287,8 @@ if (Test-Path -LiteralPath $packageJsonPath -PathType Leaf) {
         $errors.Add("package.json must declare private=true because this repository is not an npm package.")
     }
 
-    if ($packageJson.license -ne "MIT") {
-        $errors.Add("package.json license metadata must use the SPDX MIT identifier.")
+    if ($packageJson.license -ne "SEE LICENSE IN LICENSE") {
+        $errors.Add("package.json license metadata does not point to the repository LICENSE.")
     }
 }
 

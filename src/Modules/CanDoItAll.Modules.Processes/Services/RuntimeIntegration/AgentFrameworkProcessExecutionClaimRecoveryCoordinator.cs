@@ -340,9 +340,22 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             return false;
         }
 
-        var context = CreateContext(
-            requestedBy,
-            NormalizeRecoveredResultTimestamp(executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc, claim.ExpiresAtUtc));
+        var completedAtUtc = NormalizeUtc(
+            executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc);
+        if (completedAtUtc >= NormalizeUtc(claim.ExpiresAtUtc))
+        {
+            logger.LogWarning(
+                "Completed AgentFramework execution run {ExecutionRunId} could not submit process result because its canonical completion timestamp is outside claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ExecutionCompletedAtUtc={ExecutionCompletedAtUtc} ClaimExpiresAtUtc={ClaimExpiresAtUtc}",
+                executionRun.Id,
+                claim.ClaimToken,
+                runId.Value,
+                stepInstanceId.Value,
+                completedAtUtc,
+                claim.ExpiresAtUtc);
+            return false;
+        }
+
+        var context = CreateContext(requestedBy, completedAtUtc);
         var toolReceipts = await LoadRecoveredExecutionToolReceiptsAsync(
                 executionRun,
                 cancellationToken)
@@ -484,17 +497,6 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             UserSafeSummary = adapterResult.UserSafeSummary,
             ExecutionRunId = adapterResult.ExecutionRunId
         };
-    }
-
-    private static DateTimeOffset NormalizeRecoveredResultTimestamp(
-        DateTimeOffset executionCompletedAtUtc,
-        DateTimeOffset claimExpiresAtUtc)
-    {
-        var completedAtUtc = NormalizeUtc(executionCompletedAtUtc);
-        var expiresAtUtc = NormalizeUtc(claimExpiresAtUtc);
-        return completedAtUtc < expiresAtUtc
-            ? completedAtUtc
-            : expiresAtUtc.AddTicks(-1);
     }
 
     private RuntimeCommandContext CreateContext(

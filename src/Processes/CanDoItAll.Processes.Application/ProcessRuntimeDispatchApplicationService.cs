@@ -1169,7 +1169,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         TimeSpan stepExecutionTimeout,
         CancellationToken cancellationToken)
     {
-        var stepExecution = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var stepExecution = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         stepExecution.CancelAfter(stepExecutionTimeout);
         var invocationTask = Task.Run(
             async () => await dispatcher
@@ -1179,26 +1179,42 @@ public sealed class ProcessRuntimeDispatchApplicationService(
 
         try
         {
-            var result = await invocationTask.WaitAsync(stepExecutionTimeout, cancellationToken).ConfigureAwait(false);
-            stepExecution.Dispose();
-            return result;
+            return await invocationTask.WaitAsync(stepExecutionTimeout, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            ObserveLateStrategyCompletion(invocationTask, stepExecution);
+            await CancelAndAwaitStrategyQuiescenceAsync(invocationTask, stepExecution).ConfigureAwait(false);
             return CreateExecutionTimeoutResult(workItem, stepExecutionTimeout);
         }
         catch (TimeoutException)
         {
-            await stepExecution.CancelAsync().ConfigureAwait(false);
-            ObserveLateStrategyCompletion(invocationTask, stepExecution);
+            await CancelAndAwaitStrategyQuiescenceAsync(invocationTask, stepExecution).ConfigureAwait(false);
             return CreateExecutionTimeoutResult(workItem, stepExecutionTimeout);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await stepExecution.CancelAsync().ConfigureAwait(false);
-            ObserveLateStrategyCompletion(invocationTask, stepExecution);
+            await CancelAndAwaitStrategyQuiescenceAsync(invocationTask, stepExecution).ConfigureAwait(false);
             throw;
+        }
+    }
+
+    private static async Task CancelAndAwaitStrategyQuiescenceAsync(
+        Task<StrategyResultEnvelope> invocationTask,
+        CancellationTokenSource stepExecution)
+    {
+        try
+        {
+            await stepExecution.CancelAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await invocationTask
+                .ContinueWith(
+                    static task => _ = task.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default)
+                .ConfigureAwait(false);
         }
     }
 
@@ -1321,22 +1337,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         {
             UserSafeSummary = summary
         };
-    }
-
-    private static void ObserveLateStrategyCompletion(
-        Task<StrategyResultEnvelope> invocationTask,
-        CancellationTokenSource stepExecution)
-    {
-        _ = invocationTask.ContinueWith(
-            static (task, state) =>
-            {
-                ((CancellationTokenSource)state!).Dispose();
-                _ = task.Exception;
-            },
-            stepExecution,
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
     }
 
     private static ProcessRuntimeDispatchOptions NormalizeOptions(ProcessRuntimeDispatchOptions? options)

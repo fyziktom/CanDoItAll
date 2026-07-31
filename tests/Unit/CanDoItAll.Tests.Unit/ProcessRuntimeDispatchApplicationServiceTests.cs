@@ -1573,7 +1573,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
-    public async Task ExecuteReady_times_out_strategy_that_blocks_before_returning_task()
+    public async Task ExecuteReady_does_not_terminalize_timed_out_strategy_until_ignored_cancellation_execution_stops()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
@@ -1591,13 +1591,14 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             observedAtUtc);
         var stateStore = new InMemoryRuntimeStateStore(initialState);
         var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new IgnoringCancellationStrategyFactoryResolver();
         var service = new ProcessRuntimeDispatchApplicationService(
             new TestProcessProjectionClock(observedAtUtc),
             stateStore,
             unitOfWork,
             new InMemoryPlanStore(plan),
             new InMemoryAssignmentStore([]),
-            new BlockingStrategyFactoryResolver(TimeSpan.FromSeconds(5)),
+            strategyResolver,
             NewNoOpCatchupService(),
             new ProcessRuntimeDispatchOptions
             {
@@ -1605,10 +1606,26 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 StepExecutionTimeout = TimeSpan.FromMilliseconds(100)
             });
 
-        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+        var dispatchTask = service.ExecuteReadyAsync(RunId, "unit-test");
+        await strategyResolver.Started.WaitAsync(TimeSpan.FromSeconds(5));
+        await strategyResolver.CancellationRequested.WaitAsync(TimeSpan.FromSeconds(5));
+        try
+        {
+            Assert.False(dispatchTask.IsCompleted);
+            Assert.Equal(ProcessRuntimeStatus.Active, stateStore.State.Status);
+            Assert.Equal(ProcessRuntimeStepStatus.Running, FindStep(stateStore.State, stepId).Status);
+            Assert.Empty(stateStore.State.AppliedResults);
+        }
+        finally
+        {
+            strategyResolver.AllowCompletion();
+        }
+
+        var result = await dispatchTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(ProcessLaunchStage.Failed, result.Stage);
         Assert.Equal(ProcessRuntimeStatus.Failed, result.Status);
+        Assert.True(strategyResolver.SideEffectCompleted);
         Assert.Equal(ProcessRuntimeStepStatus.Failed, FindStep(stateStore.State, stepId).Status);
         Assert.Contains(
             unitOfWork.Requests.SelectMany(request => request.Mutation.Events),
@@ -2088,14 +2105,33 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
-    private sealed class BlockingStrategyFactoryResolver(TimeSpan blockDuration) : IProcessRuntimeStrategyFactoryResolver
+    private sealed class IgnoringCancellationStrategyFactoryResolver : IProcessRuntimeStrategyFactoryResolver
     {
+        private readonly TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource cancellationRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource completionAllowed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int sideEffectCompleted;
+
+        public Task Started => started.Task;
+
+        public Task CancellationRequested => cancellationRequested.Task;
+
+        public bool SideEffectCompleted => Volatile.Read(ref sideEffectCompleted) != 0;
+
+        public void AllowCompletion()
+            => completionAllowed.TrySetResult();
+
         public ValueTask<IProcessStrategyFactory> ResolveAsync(
             ProcessStrategyBindingSnapshot binding,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<IProcessStrategyFactory>(new BlockingStrategyFactory(binding, blockDuration));
+            return ValueTask.FromResult<IProcessStrategyFactory>(new IgnoringCancellationStrategyFactory(
+                binding,
+                started,
+                cancellationRequested,
+                completionAllowed,
+                () => Interlocked.Exchange(ref sideEffectCompleted, 1)));
         }
     }
 
@@ -2204,9 +2240,12 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
-    private sealed class BlockingStrategyFactory(
+    private sealed class IgnoringCancellationStrategyFactory(
         ProcessStrategyBindingSnapshot binding,
-        TimeSpan blockDuration) : IProcessStrategyFactory
+        TaskCompletionSource started,
+        TaskCompletionSource cancellationRequested,
+        TaskCompletionSource completionAllowed,
+        Action recordSideEffect) : IProcessStrategyFactory
     {
         public ProcessStrategyDescriptor Descriptor { get; } = new(
             binding.StrategyId,
@@ -2219,7 +2258,11 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<IProcessStrategy>(new BlockingStrategy(blockDuration));
+            return ValueTask.FromResult<IProcessStrategy>(new IgnoringCancellationStrategy(
+                started,
+                cancellationRequested,
+                completionAllowed,
+                recordSideEffect));
         }
     }
 
@@ -2326,15 +2369,22 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
-    private sealed class BlockingStrategy(TimeSpan blockDuration) : IProcessStrategy
+    private sealed class IgnoringCancellationStrategy(
+        TaskCompletionSource started,
+        TaskCompletionSource cancellationRequested,
+        TaskCompletionSource completionAllowed,
+        Action recordSideEffect) : IProcessStrategy
     {
         public async ValueTask<StrategyResultEnvelope> ExecuteAsync(
             ProcessStrategyExecutionContext context,
             CancellationToken cancellationToken = default)
         {
-            Thread.Sleep(blockDuration);
-            await Task.Yield();
-            cancellationToken.ThrowIfCancellationRequested();
+            using var cancellationRegistration = cancellationToken.Register(
+                static state => ((TaskCompletionSource)state!).TrySetResult(),
+                cancellationRequested);
+            started.TrySetResult();
+            await completionAllowed.Task.ConfigureAwait(false);
+            recordSideEffect();
             return new StrategyResultEnvelope(
                 context.Binding.StrategyId,
                 context.Binding.StrategyVersion,
@@ -2344,7 +2394,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [],
                 [],
                 [],
-                "sha256:blocking");
+                "sha256:ignored-cancellation");
         }
     }
 
