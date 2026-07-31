@@ -316,6 +316,8 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
         AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreateRevision,
         AgentToolInvocationPolicyMetadata.ProjectStructureLinkCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureLinkUnlink,

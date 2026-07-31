@@ -2,13 +2,17 @@ using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectStructureFileScopeResolver(
-    IDbContextFactory<AppDbContext> dbContextFactory)
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ProjectStructureAssemblyService assemblyService,
+    IStorageCatalogService storageCatalog)
     : IFileToolsStorageBindingSource, IProjectStructureNodeFileScopeProvider
 {
     private static readonly FileToolsBrowseWorkLimits WorkLimits = new(
@@ -25,9 +29,15 @@ internal sealed class ProjectStructureFileScopeResolver(
         string nodeId,
         CancellationToken cancellationToken = default)
     {
-        ProjectObjectRecord node = await ResolveNodeAsync(projectId, nodeId, cancellationToken);
-        ProjectNodeBindingRecord binding = await ResolveBindingAsync(node.Id, cancellationToken);
-        return ResolveKnownFile(node, binding);
+        ResolvedKnownFileNode target = await ResolveKnownFileNodeAsync(
+            projectId,
+            nodeId,
+            cancellationToken);
+        return await ResolveKnownFileAsync(
+            target.Node,
+            target.Binding,
+            target.ScopeKey,
+            cancellationToken);
     }
 
     public async ValueTask<FileToolsSemanticScope> ResolveNodeCollectionAsync(
@@ -35,7 +45,7 @@ internal sealed class ProjectStructureFileScopeResolver(
         string nodeId,
         CancellationToken cancellationToken = default)
     {
-        ProjectObjectRecord node = await ResolveNodeAsync(projectId, nodeId, cancellationToken);
+        ProjectObjectRecord node = await ResolvePersistedNodeAsync(projectId, nodeId, cancellationToken);
         NodeCollectionBinding collection = await ResolveNodeCollectionBindingAsync(node, cancellationToken);
         return collection.Scope;
     }
@@ -51,26 +61,79 @@ internal sealed class ProjectStructureFileScopeResolver(
             throw ProviderError(FileBrowserErrorCode.InvalidOperation, "The project-node file scope identifier is invalid.");
         }
 
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        ProjectObjectRecord? node = await dbContext.Set<ProjectObjectRecord>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == key.ProjectObjectId, cancellationToken);
-        if (node is null)
+        if (key.IsProjected)
         {
-            throw ProviderError(FileBrowserErrorCode.NotFound, "The project-node file scope no longer exists.");
+            return await ResolveProjectedBindingsAsync(key, cancellationToken);
         }
 
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        ProjectObjectRecord node = await ResolvePersistedScopeNodeAsync(
+            dbContext,
+            key.ProjectObjectId,
+            cancellationToken);
         return key.Mode switch
         {
             ProjectStructureNodeFileScopeMode.KnownFile =>
-            [await ResolveKnownFileBindingAsync(node, cancellationToken)],
+            [await ResolveKnownFileBindingAsync(
+                node,
+                await ResolveBindingAsync(dbContext, node.Id, cancellationToken),
+                key,
+                cancellationToken)],
             ProjectStructureNodeFileScopeMode.Collection =>
             [ToStorageBinding(await ResolveNodeCollectionBindingAsync(node, cancellationToken))],
             _ => throw ProviderError(FileBrowserErrorCode.InvalidOperation, "The project-node file scope mode is invalid.")
         };
     }
 
-    private async ValueTask<ProjectObjectRecord> ResolveNodeAsync(
+    private async ValueTask<ResolvedKnownFileNode> ResolveKnownFileNodeAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken)
+    {
+        if (projectId == Guid.Empty || string.IsNullOrWhiteSpace(nodeId))
+        {
+            throw ProviderError(FileBrowserErrorCode.InvalidOperation, "The project-node file target is invalid.");
+        }
+
+        string normalizedNodeId = nodeId.Trim();
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        ProjectObjectRecord? node = await dbContext.Set<ProjectObjectRecord>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.ProjectId == projectId && item.NodeKey == normalizedNodeId,
+                cancellationToken);
+        if (node is not null)
+        {
+            return new ResolvedKnownFileNode(
+                node,
+                await ResolveBindingAsync(dbContext, node.Id, cancellationToken),
+                ProjectStructureNodeFileScopeKey.CreatePersisted(
+                    ProjectStructureNodeFileScopeMode.KnownFile,
+                    node.Id));
+        }
+
+        ProjectObjectRecord? projectedNode = await assemblyService.FindNodeAsync(
+            dbContext,
+            projectId,
+            normalizedNodeId,
+            cancellationToken);
+        if (projectedNode is null || !projectedNode.IsSystemManaged)
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.NotFound,
+                "The project-node file target no longer exists.");
+        }
+
+        return new ResolvedKnownFileNode(
+            projectedNode,
+            projectedNode.Binding,
+            ProjectStructureNodeFileScopeKey.CreateProjected(
+                ProjectStructureNodeFileScopeMode.KnownFile,
+                projectId,
+                projectedNode.NodeKey));
+    }
+
+    private async ValueTask<ProjectObjectRecord> ResolvePersistedNodeAsync(
         Guid projectId,
         string nodeId,
         CancellationToken cancellationToken)
@@ -84,32 +147,49 @@ internal sealed class ProjectStructureFileScopeResolver(
         ProjectObjectRecord? node = await dbContext.Set<ProjectObjectRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(
-                item => item.ProjectId == projectId && item.NodeKey == nodeId,
+                item => item.ProjectId == projectId && item.NodeKey == nodeId.Trim(),
                 cancellationToken);
         return node ?? throw ProviderError(
             FileBrowserErrorCode.NotFound,
             "The project-node file target no longer exists.");
     }
 
-    private async ValueTask<ProjectNodeBindingRecord> ResolveBindingAsync(
+    private static async ValueTask<ProjectNodeBindingState> ResolveBindingAsync(
+        AppDbContext dbContext,
         Guid projectObjectId,
         CancellationToken cancellationToken)
     {
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         ProjectNodeBindingRecord? binding = await dbContext.Set<ProjectNodeBindingRecord>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.ProjectObjectId == projectObjectId, cancellationToken);
-        return binding ?? throw ProviderError(
-            FileBrowserErrorCode.NotFound,
-            "The project-node file binding no longer exists.");
+        if (binding is null)
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.NotFound,
+                "The project-node file binding no longer exists.");
+        }
+
+        return new ProjectNodeBindingState(
+            binding.Route,
+            binding.ExternalArtifactKind,
+            binding.ExternalArtifactId,
+            binding.MediaRelativePath,
+            binding.MediaContentType,
+            binding.MediaOriginalFileName,
+            binding.StorageObjectReferenceJson);
     }
 
     private async ValueTask<FileToolsStorageBinding> ResolveKnownFileBindingAsync(
         ProjectObjectRecord node,
+        ProjectNodeBindingState binding,
+        ProjectStructureNodeFileScopeKey scopeKey,
         CancellationToken cancellationToken)
     {
-        ProjectNodeBindingRecord binding = await ResolveBindingAsync(node.Id, cancellationToken);
-        FileToolsKnownFileScope knownFile = ResolveKnownFile(node, binding);
+        FileToolsKnownFileScope knownFile = await ResolveKnownFileAsync(
+            node,
+            binding,
+            scopeKey,
+            cancellationToken);
         return new FileToolsStorageBinding(
             knownFile.Occurrence.StorageId,
             $"{node.Title} file",
@@ -118,13 +198,14 @@ internal sealed class ProjectStructureFileScopeResolver(
             FileToolsHostBrowseCacheMode.Disabled);
     }
 
-    private static FileToolsKnownFileScope ResolveKnownFile(
+    private async ValueTask<FileToolsKnownFileScope> ResolveKnownFileAsync(
         ProjectObjectRecord node,
-        ProjectNodeBindingRecord binding)
+        ProjectNodeBindingState binding,
+        ProjectStructureNodeFileScopeKey scopeKey,
+        CancellationToken cancellationToken)
     {
         if (!StorageJson.TryParseReference(binding.StorageObjectReferenceJson, out StorageObjectReference? reference) ||
-            reference?.StorageId is not Guid storageId ||
-            storageId == Guid.Empty)
+            reference is null)
         {
             throw ProviderError(FileBrowserErrorCode.Unsupported, "The node does not identify a supported stored file.");
         }
@@ -138,6 +219,13 @@ internal sealed class ProjectStructureFileScopeResolver(
             _ => throw ProviderError(FileBrowserErrorCode.Unsupported, "The node storage locator is not supported for file interaction.")
         };
         string occurrenceId = NormalizeStorageRelativeValue(reference.Locator, occurrenceKind);
+        Guid storageId = await ResolveStorageIdAsync(
+            node,
+            binding,
+            reference,
+            scopeKey,
+            occurrenceId,
+            cancellationToken);
         string fileName = ResolveFileName(binding, reference, occurrenceId);
         string? mediaType = ResolveMediaType(binding, reference);
         var occurrence = new FileToolsKnownFileOccurrence(
@@ -147,14 +235,138 @@ internal sealed class ProjectStructureFileScopeResolver(
             fileName,
             mediaType,
             reference.ContentLength);
-        var key = new ProjectStructureNodeFileScopeKey(
-            ProjectStructureNodeFileScopeMode.KnownFile,
-            node.Id);
         var scope = new FileToolsSemanticScope(
             FileToolsSemanticScopeKind.ProjectNode,
-            key.ToScopeId(),
+            scopeKey.ToScopeId(),
             node.Title);
         return new FileToolsKnownFileScope(scope, occurrence);
+    }
+
+    private async ValueTask<IReadOnlyList<FileToolsStorageBinding>> ResolveProjectedBindingsAsync(
+        ProjectStructureNodeFileScopeKey key,
+        CancellationToken cancellationToken)
+    {
+        if (key.Mode != ProjectStructureNodeFileScopeMode.KnownFile ||
+            key.ProjectId == Guid.Empty ||
+            string.IsNullOrWhiteSpace(key.NodeKey))
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.InvalidOperation,
+                "The projected project-node file scope identifier is invalid.");
+        }
+
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        ProjectObjectRecord? node = await assemblyService.FindNodeAsync(
+            dbContext,
+            key.ProjectId,
+            key.NodeKey,
+            cancellationToken);
+        if (node is null || !node.IsSystemManaged)
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.Conflict,
+                "The projected project-node file scope is no longer current.");
+        }
+
+        return
+        [
+            await ResolveKnownFileBindingAsync(
+                node,
+                node.Binding,
+                key,
+                cancellationToken)
+        ];
+    }
+
+    private static async ValueTask<ProjectObjectRecord> ResolvePersistedScopeNodeAsync(
+        AppDbContext dbContext,
+        Guid projectObjectId,
+        CancellationToken cancellationToken)
+    {
+        ProjectObjectRecord? node = await dbContext.Set<ProjectObjectRecord>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == projectObjectId, cancellationToken);
+        return node ?? throw ProviderError(
+            FileBrowserErrorCode.NotFound,
+            "The project-node file scope no longer exists.");
+    }
+
+    private async ValueTask<Guid> ResolveStorageIdAsync(
+        ProjectObjectRecord node,
+        ProjectNodeBindingState binding,
+        StorageObjectReference reference,
+        ProjectStructureNodeFileScopeKey scopeKey,
+        string occurrenceId,
+        CancellationToken cancellationToken)
+    {
+        if (reference.StorageId is Guid storageId && storageId != Guid.Empty)
+        {
+            return storageId;
+        }
+
+        if (reference.ProviderKind != StorageProviderKind.FileSystem ||
+            reference.LocatorKind != StorageLocatorKind.RelativePath ||
+            !IsProjectedProcessScreenshot(
+                node,
+                binding,
+                scopeKey,
+                occurrenceId))
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.Unsupported,
+                "The node does not identify a supported stored file.");
+        }
+
+        StorageCatalogRecord workspaceStorage = await storageCatalog
+            .EnsureBootstrapFileSystemStorageAsync(cancellationToken);
+        if (workspaceStorage.Id == Guid.Empty ||
+            !workspaceStorage.IsEnabled ||
+            workspaceStorage.ProviderKind != StorageProviderKind.FileSystem)
+        {
+            throw ProviderError(
+                FileBrowserErrorCode.CorruptProviderResponse,
+                "The workspace storage catalog is not a usable filesystem source.");
+        }
+
+        return workspaceStorage.Id;
+    }
+
+    private static bool IsProjectedProcessScreenshot(
+        ProjectObjectRecord node,
+        ProjectNodeBindingState binding,
+        ProjectStructureNodeFileScopeKey scopeKey,
+        string occurrenceId)
+    {
+        if (!scopeKey.IsProjected ||
+            scopeKey.ProjectId != node.ProjectId ||
+            !string.Equals(scopeKey.NodeKey, node.NodeKey, StringComparison.Ordinal) ||
+            !node.IsSystemManaged ||
+            node.ObjectType != ProjectObjectType.ImageAsset ||
+            !string.Equals(
+                binding.ExternalArtifactKind,
+                ProjectStructureProcessNodeKeys.ProcessRunScreenshotArtifactKind,
+                StringComparison.Ordinal) ||
+            !ProjectStructureProcessNodeKeys.TryParseProcessRunScreenshotNodeKey(node.NodeKey, out Guid runId) ||
+            binding.ExternalArtifactId != runId ||
+            !string.Equals(
+                node.NodeKey,
+                ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId, occurrenceId),
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                NormalizeStorageRelativeValue(
+                    binding.MediaRelativePath,
+                    FileToolsKnownFileOccurrenceKind.RelativePath),
+                occurrenceId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string managedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(
+            new ProcessRunId(runId));
+        return occurrenceId.StartsWith(
+            $"{managedArtifactRoot}/",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private async ValueTask<NodeCollectionBinding> ResolveNodeCollectionBindingAsync(
@@ -193,7 +405,7 @@ internal sealed class ProjectStructureFileScopeResolver(
         }
 
         string prefix = NormalizeCollectionPrefix(metadata.Infrastructure?.StoragePathPrefix);
-        var key = new ProjectStructureNodeFileScopeKey(
+        var key = ProjectStructureNodeFileScopeKey.CreatePersisted(
             ProjectStructureNodeFileScopeMode.Collection,
             node.Id);
         var scope = new FileToolsSemanticScope(
@@ -253,7 +465,7 @@ internal sealed class ProjectStructureFileScopeResolver(
     }
 
     private static string ResolveFileName(
-        ProjectNodeBindingRecord binding,
+        ProjectNodeBindingState binding,
         StorageObjectReference reference,
         string occurrenceId)
     {
@@ -271,7 +483,7 @@ internal sealed class ProjectStructureFileScopeResolver(
     }
 
     private static string? ResolveMediaType(
-        ProjectNodeBindingRecord binding,
+        ProjectNodeBindingState binding,
         StorageObjectReference reference)
         => !string.IsNullOrWhiteSpace(binding.MediaContentType)
             ? binding.MediaContentType
@@ -292,4 +504,9 @@ internal sealed class ProjectStructureFileScopeResolver(
         Guid StorageId,
         string DisplayName,
         string Prefix);
+
+    private sealed record ResolvedKnownFileNode(
+        ProjectObjectRecord Node,
+        ProjectNodeBindingState Binding,
+        ProjectStructureNodeFileScopeKey ScopeKey);
 }

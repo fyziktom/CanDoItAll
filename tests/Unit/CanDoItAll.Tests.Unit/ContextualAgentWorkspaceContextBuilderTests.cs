@@ -117,6 +117,11 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.Contains($"Selected project id: {projectId:D}", baseFragment.Content);
         Assert.Contains("project_structure_asset_content_get", baseFragment.Content);
         Assert.Contains("workspace_convert_document", baseFragment.Content);
+        Assert.Contains("workspace_write_spreadsheet", baseFragment.Content);
+        Assert.Contains("workspace_spreadsheet_summary", baseFragment.Content);
+        Assert.Contains("workspace_read_spreadsheet_range", baseFragment.Content);
+        Assert.Contains(".xlsx", baseFragment.Content);
+        Assert.Contains("authorized project-structure writer", baseFragment.Content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("node:alpha", baseFragment.Content);
         Assert.Contains("structure canvas", canvasViewFragment.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Gantt schedule", ganttViewFragment.Content);

@@ -118,7 +118,9 @@ Context:
 - Use project-structure operations for structure reads or mutations.
 - Use the project-structure node catalog before creating or reclassifying unfamiliar node kinds.
 - Start asset work with project_structure_read for the selected project or selected node ids; do not search the workspace root to discover project assets.
-- For File, ImageAsset, and VideoAsset nodes, call project_structure_asset_get or project_structure_asset_content_get by node id. Use the exact returned mediaRelativePath if a workspace artifact tool is needed.
+- For File, ImageAsset, and VideoAsset nodes, call project_structure_asset_get or project_structure_asset_content_get by node id.
+- For PNG, JPEG, GIF, or WebP assets, use project_structure_asset_image_analyze by node id when visual analysis is needed. For SVG or another textual asset, use project_structure_asset_text_get. Never pass a projected process asset path to a workspace image tool.
+- Use an exact returned mediaRelativePath with a workspace artifact tool only when project_structure_asset_content_get explicitly directs that follow-up and the current workspace scope authorizes it.
 - For PDF or document File assets, call workspace_convert_document with the exact mediaRelativePath and analyze the returned markdown preview or output path.
 - workspace_list_files searchPattern uses glob syntax, not regex; examples: *quotation*.pdf and **/*.pdf. Avoid broad workspace_search or root list calls unless project-structure reads do not identify the asset.
 - When task ordering matters, create DependsOn dependency links so Gantt and readiness views stay correct.

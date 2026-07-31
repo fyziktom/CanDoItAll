@@ -121,9 +121,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectMemoryIngestionService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
-        services.AddSingleton<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();
+        services.AddScoped<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();
         services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IFileToolsStorageBindingSource, ProjectStructureFileScopeResolver>());
+            ServiceDescriptor.Scoped<IFileToolsStorageBindingSource, ProjectStructureFileScopeResolver>());
         services.AddScoped<ProjectStructureKnownFileInteractionCoordinator>();
         services.AddScoped<IProjectStructureCurrentNodeResolver, ProjectStructureCurrentNodeResolver>();
         services.AddScoped<ProjectStructureLocalFileActionCoordinator>();
@@ -136,5 +136,4 @@ public static class WorkbenchModuleServiceCollectionExtensions
 }
 
 public static class WorkbenchModuleAssemblyMarker;
-
 

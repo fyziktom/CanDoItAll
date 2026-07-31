@@ -28,7 +28,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private const string ExternalTargetRootVariableName = "ExternalTargetRoot";
     private const string ProcessRunOutputFolderArtifactKind = "process-run-output-folder";
     private const string ProcessRunSummaryArtifactKind = "process-run-summary";
-    private const string ProcessRunScreenshotArtifactKind = "process-run-screenshot";
     private const string ProcessRunRuntimeArtifactKind = "process-run-runtime";
     private const int MaxProjectedScreenshotCount = 6;
     private const int MaxProjectedRuntimeProjectCount = 3;
@@ -558,7 +557,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 MetadataJson = BuildScreenshotMetadataJson(screenshot),
                 Binding = new ProjectNodeBindingState(
                     StorageJson.BuildPreviewUrl(storageReference),
-                    ProcessRunScreenshotArtifactKind,
+                    ProjectStructureProcessNodeKeys.ProcessRunScreenshotArtifactKind,
                     state.RunId,
                     screenshot.RelativePath,
                     screenshot.ContentType,
@@ -1100,7 +1099,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                     {
                         RecurseSubdirectories = true,
                         IgnoreInaccessible = true,
-                        AttributesToSkip = 0
+                        AttributesToSkip = FileAttributes.ReparsePoint
                     })
                 .Where(path => ScreenshotExtensions.Contains(Path.GetExtension(path)))
                 .Select(path => CreateProjectedProcessRunFile(workspaceRoot, path))

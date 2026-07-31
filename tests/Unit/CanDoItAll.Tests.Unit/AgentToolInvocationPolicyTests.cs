@@ -3726,6 +3726,8 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProjectPlanSummaryGet,
             AgentToolInvocationPolicyMetadata.ProjectStructureAssetGet,
             AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowAddOptions,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
             AgentToolInvocationPolicyMetadata.ProjectStructureKnowledgeQuery,

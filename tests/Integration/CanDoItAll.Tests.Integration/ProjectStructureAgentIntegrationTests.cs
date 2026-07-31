@@ -4,13 +4,17 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -23,6 +27,7 @@ using CanDoItAll.Processes.Templates;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -495,11 +500,27 @@ public sealed class ProjectStructureAgentIntegrationTests
     [Fact]
     public async Task ProcessLaunchApplicationService_LaunchAsync_projects_run_evidence_and_runtime_nodes_without_seed_link()
     {
-        await using var application = await TestApplication.CreateAsync();
+        var imageAnalysisService = new RecordingImageAnalysisService();
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<IAgentImageAnalysisService>();
+                services.AddSingleton<IAgentImageAnalysisService>(imageAnalysisService);
+            }
+        });
         await using var scope = application.Services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var fileInteractionCoordinator = scope.ServiceProvider
+            .GetRequiredService<ProjectStructureKnownFileInteractionCoordinator>();
+        var runtimeToolProvider = scope.ServiceProvider
+            .GetServices<IAgentRuntimeToolProvider>()
+            .OfType<ProjectStructureAgentRuntimeToolProvider>()
+            .Single();
 
         var projectId = await CreateProjectAsync(projects, "Direct project scoped process projection");
         var productRoot = Path.Combine(application.ActiveProfile.WorkspaceRootPath, "external-output", Guid.NewGuid().ToString("N"));
@@ -563,9 +584,46 @@ public sealed class ProjectStructureAgentIntegrationTests
         var screenshotRelativePath = $"{managedArtifactRoot}/browser/desktop.png";
         var screenshotFullPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, screenshotRelativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(screenshotFullPath)!);
-        await File.WriteAllBytesAsync(
-            screenshotFullPath,
-            Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="));
+        byte[] screenshotBytes = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
+        await File.WriteAllBytesAsync(screenshotFullPath, screenshotBytes);
+        string oversizedScreenshotRelativePath = $"{managedArtifactRoot}/browser/oversized.png";
+        string oversizedScreenshotPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            oversizedScreenshotRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        await using (var oversizedScreenshot = new FileStream(
+                         oversizedScreenshotPath,
+                         FileMode.CreateNew,
+                         FileAccess.Write,
+                         FileShare.None))
+        {
+            oversizedScreenshot.SetLength(ProjectStructureAssetUploadLimits.MaximumFileBytes + 1);
+        }
+
+        string externalRoot = TestFileSystem.CreateTemporaryRoot("process-screenshot-link-target");
+        string externalScreenshotPath = Path.Combine(externalRoot, "escaped.png");
+        string linkedScreenshotRelativePath = $"{managedArtifactRoot}/browser/escaped.png";
+        string linkedScreenshotPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            linkedScreenshotRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        try
+        {
+            await File.WriteAllBytesAsync(externalScreenshotPath, screenshotBytes);
+            File.CreateSymbolicLink(linkedScreenshotPath, externalScreenshotPath);
+
+            ProjectStructureSurface reparseSurface = await workbench.GetStructureAsync(projectId);
+            Assert.DoesNotContain(
+                reparseSurface.Nodes,
+                node => string.Equals(
+                    node.MediaRelativePath,
+                    linkedScreenshotRelativePath,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            File.Delete(linkedScreenshotPath);
+            TestFileSystem.DeleteDirectoryWithRetry(externalRoot);
+        }
 
         var surface = await workbench.GetStructureAsync(projectId);
         var runNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
@@ -596,6 +654,64 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(screenshotRelativePath, screenshotNode.MediaRelativePath);
         Assert.Equal("image/png", screenshotNode.MediaContentType);
         Assert.False(string.IsNullOrWhiteSpace(screenshotNode.StorageObjectReferenceJson));
+        string oversizedScreenshotNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(
+            runId.Value,
+            oversizedScreenshotRelativePath);
+        Assert.Contains(
+            surface.Nodes,
+            node => string.Equals(node.Id, oversizedScreenshotNodeId, StringComparison.Ordinal));
+        ProjectStructureAgentException oversizedException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.GetAssetContentAsync(projectId, oversizedScreenshotNodeId));
+        Assert.Equal(413, oversizedException.StatusCode);
+        Assert.Equal("AssetContentTooLarge", oversizedException.ErrorCode);
+        ProjectStructureAssetContentDescriptor assetContent = await agentService.GetAssetContentAsync(
+            projectId,
+            screenshotNodeId);
+        Assert.Equal(screenshotBytes, Convert.FromBase64String(assetContent.Base64Data));
+        AgentDefinition runtimeAgent = CreateProjectStructureRuntimeAgent(projectId);
+        IReadOnlyList<AITool> runtimeTools = await runtimeToolProvider.CreateToolsAsync(
+            CreateProjectStructureRuntimeContext(runtimeAgent, projectId),
+            CancellationToken.None);
+        AIFunction analyzeImage = Assert.IsAssignableFrom<AIFunction>(Assert.Single(
+            runtimeTools,
+            tool => string.Equals(
+                tool.Name,
+                AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze,
+                StringComparison.Ordinal)));
+        object? analysisResult = await analyzeImage.InvokeAsync(new AIFunctionArguments
+        {
+            ["projectId"] = projectId,
+            ["nodeId"] = screenshotNodeId,
+            ["prompt"] = "Describe the visible screenshot."
+        });
+        var resultJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        resultJsonOptions.Converters.Add(new JsonStringEnumConverter());
+        var analysis = analysisResult switch
+        {
+            ProjectStructureAssetImageAnalysisDescriptor descriptor => descriptor,
+            JsonElement json => JsonSerializer.Deserialize<ProjectStructureAssetImageAnalysisDescriptor>(
+                json.GetRawText(),
+                resultJsonOptions) ?? throw new InvalidOperationException("Image analysis tool returned null JSON."),
+            _ => throw new InvalidOperationException(
+                $"Image analysis tool returned unexpected type '{analysisResult?.GetType().FullName ?? "<null>"}'.")
+        };
+        AgentImageAnalysisRequest imageRequest = Assert.Single(imageAnalysisService.Requests);
+        AgentImageAnalysisSource imageSource = Assert.Single(imageRequest.Sources);
+        Assert.Equal("vision-model", analysis.Model);
+        Assert.Equal("Visible calculator screenshot", analysis.Analysis);
+        Assert.Equal("desktop.png", imageSource.Name);
+        Assert.Equal("image/png", imageSource.ContentType);
+        Assert.Equal(screenshotBytes, imageSource.Bytes);
+        await using ProjectStructureKnownFileInteraction interaction =
+            await fileInteractionCoordinator.OpenAsync(projectId, screenshotNodeId);
+        await using FileContentLease content = await interaction.Session.ContentSource.OpenReadAsync(
+            new FileContentReadRequest(interaction.Session.File));
+        using var reopenedScreenshot = new MemoryStream();
+        await content.Stream.CopyToAsync(reopenedScreenshot);
+        Assert.Equal(screenshotBytes, reopenedScreenshot.ToArray());
+        Assert.Equal("desktop.png", interaction.Request.FileName);
+        Assert.Equal("image/png", interaction.Request.MediaType);
+        Assert.False(interaction.CanEdit);
         var runtimeNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunRuntimeNodeKey(runId.Value, appProjectPath);
         var runtimeNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, runtimeNodeId, StringComparison.Ordinal));
         Assert.Equal(ProjectObjectType.Environment, runtimeNode.ObjectType);
@@ -622,6 +738,16 @@ public sealed class ProjectStructureAgentIntegrationTests
             Assert.Equal(projectedNode.X, refreshedNode.X);
             Assert.Equal(projectedNode.Y, refreshedNode.Y);
         }
+
+        string ordinaryAssetNodeId = await CreatePersistedAssetReferencingPathAsync(
+            dbContextFactory,
+            projectId,
+            runId.Value,
+            screenshotRelativePath,
+            screenshotBytes.LongLength);
+        ProjectStructureAgentException exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.GetAssetContentAsync(projectId, ordinaryAssetNodeId));
+        Assert.Equal("AssetContentNotFound", exception.ErrorCode);
     }
 
     [Fact]
@@ -3231,6 +3357,46 @@ public sealed class ProjectStructureAgentIntegrationTests
         return result.Value;
     }
 
+    private static async Task<string> CreatePersistedAssetReferencingPathAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid projectId,
+        Guid runId,
+        string relativePath,
+        long contentLength)
+    {
+        string nodeKey = $"image:{Guid.NewGuid():N}";
+        var node = new ProjectObjectRecord
+        {
+            ProjectId = projectId,
+            NodeKey = nodeKey,
+            ObjectType = ProjectObjectType.ImageAsset,
+            ObjectSubtype = "screenshot",
+            Title = "Ordinary persisted screenshot",
+            MetadataJson = "{}",
+            IsSystemManaged = false
+        };
+        var reference = StorageJson.CreateLegacyManagedFileReference(
+            relativePath,
+            "image/png",
+            "desktop.png",
+            contentLength);
+
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync();
+        dbContext.Set<ProjectObjectRecord>().Add(node);
+        dbContext.Set<ProjectNodeBindingRecord>().Add(new ProjectNodeBindingRecord
+        {
+            ProjectObjectId = node.Id,
+            ExternalArtifactKind = ProjectStructureProcessNodeKeys.ProcessRunScreenshotArtifactKind,
+            ExternalArtifactId = runId,
+            MediaRelativePath = relativePath,
+            MediaContentType = "image/png",
+            MediaOriginalFileName = "desktop.png",
+            StorageObjectReferenceJson = StorageJson.SerializeReference(reference)
+        });
+        await dbContext.SaveChangesAsync();
+        return nodeKey;
+    }
+
     private static async Task ReplacePersistedAssignmentLaunchVariablesAsync(
         IServiceProvider serviceProvider,
         ProcessRuntimeStepAssignment assignment)
@@ -3624,6 +3790,103 @@ public sealed class ProjectStructureAgentIntegrationTests
         }
 
         return stream.ToArray();
+    }
+
+    private static AgentDefinition CreateProjectStructureRuntimeAgent(Guid projectId)
+    {
+        string configurationJson = AgentWorkspaceToolAccessMetadata.Write(
+            "{}",
+            AgentWorkspaceToolAccessProfiles.CreateSettings(
+                AgentWorkspaceToolProfileKind.ArchitectureReview));
+        configurationJson = AgentProjectStructureAccessMetadata.Write(
+            configurationJson,
+            new AgentProjectStructureAccessSettings
+            {
+                CanRead = true,
+                AllowAllProjects = false,
+                AllowedProjectIds = [projectId]
+            });
+        var now = DateTimeOffset.UtcNow;
+        return new AgentDefinition(
+            Guid.NewGuid(),
+            "Projected Screenshot Reader",
+            "Project structure vision agent",
+            "Reads project-authorized screenshots by node id.",
+            "Analyze only the selected project screenshot.",
+            AgentLifecycleStatus.Active,
+            Guid.NewGuid(),
+            "gpt-5-mini",
+            AgentWorkloadKind.General,
+            AgentChatHistoryMode.ProviderDefault,
+            0.2,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            configurationJson,
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            AgentPermissionsPolicy.Default,
+            [],
+            [],
+            now,
+            now);
+    }
+
+    private static AgentRuntimeToolProviderContext CreateProjectStructureRuntimeContext(
+        AgentDefinition agent,
+        Guid projectId)
+    {
+        var provider = new ProviderProfile(
+            agent.ProviderProfileId!.Value,
+            "Integration vision provider",
+            ProviderKind.OpenAi,
+            "https://api.openai.com",
+            "OPENAI_API_KEY",
+            agent.Model,
+            ProviderTransportKind.ChatCompletions,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: true,
+            SupportsBackgroundResponses: false,
+            ConfigurationJson: string.Empty,
+            Notes: string.Empty,
+            HealthStatus: string.Empty,
+            LastCheckedAtUtc: null,
+            SuggestedModels: []);
+        var intent = AgentRuntimeContextIntent.Empty with
+        {
+            SourceKind = ProjectStructureAgentChatContextBuilder.SourceKind,
+            SourceId = projectId.ToString("D"),
+            WorkspaceScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+        };
+
+        return new AgentRuntimeToolProviderContext(
+            agent,
+            provider,
+            [],
+            SuppressApprovalRequirements: false,
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            RuntimeSessionKey: $"project-structure-projected-image:{projectId:D}",
+            intent,
+            Tags: new Dictionary<string, string>());
+    }
+
+    private sealed class RecordingImageAnalysisService : IAgentImageAnalysisService
+    {
+        public List<AgentImageAnalysisRequest> Requests { get; } = [];
+
+        public Task<AgentImageAnalysisResult> AnalyzeAsync(
+            AgentImageAnalysisRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Requests.Add(request);
+            return Task.FromResult(new AgentImageAnalysisResult(
+                "vision-model",
+                "Visible calculator screenshot",
+                12,
+                4));
+        }
     }
 
     private static bool IsLiveComfyUiFluxProofEnabled()
