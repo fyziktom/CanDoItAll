@@ -154,7 +154,7 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return launchContextToolNames
-            .Concat(ProcessRequiredRuntimeToolNames.FromCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
+            .Concat(ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
@@ -168,7 +168,7 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
         var direct = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
         if (!string.IsNullOrWhiteSpace(direct))
         {
-            return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(direct);
+            return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(direct);
         }
 
         var byStep = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep);
@@ -190,7 +190,7 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             {
                 if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
                 {
-                    return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(property.Value);
+                    return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(property.Value);
                 }
             }
         }

@@ -672,6 +672,12 @@ public static class ProjectObjectMetadataSerializer
             return JsonSerializer.Deserialize<ProjectObjectMetadataEnvelope>(json, SerializerOptions)
                 ?? new ProjectObjectMetadataEnvelope();
         }
+        catch (JsonException exception)
+        {
+            throw new ProjectObjectMetadataPayloadException(
+                exception.Path,
+                exception);
+        }
         catch (Exception ex)
         {
             throw new InvalidOperationException("Invalid project object metadata payload.", ex);
@@ -1093,4 +1099,12 @@ public static class ProjectObjectMetadataSerializer
             ? ProjectNodeKindFamily.Workflow
             : ProjectNodeKindFamily.None;
     }
+}
+
+internal sealed class ProjectObjectMetadataPayloadException(
+    string? jsonPath,
+    JsonException innerException)
+    : InvalidOperationException("Invalid project object metadata payload.", innerException)
+{
+    public string JsonPath { get; } = jsonPath ?? string.Empty;
 }

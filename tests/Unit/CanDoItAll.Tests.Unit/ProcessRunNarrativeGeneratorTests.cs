@@ -619,7 +619,8 @@ public sealed class ProcessRunNarrativeGeneratorTests
             AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
                 WorkspaceScopeDescriptor.Sandbox),
             preparationCache,
-            new FixedAgentExecutionProfileGenerationSource(default));
+            new FixedAgentExecutionProfileGenerationSource(default),
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
     }
 
     private static IAgentFrameworkWorkspaceService CreateAdversarialWorkspaceService(

@@ -141,6 +141,10 @@ public sealed class ProcessLaunchAtomicCommitTests
         Assert.Equal("simple-app-delivery", result.LaunchPlan.DefinitionKey);
         Assert.Equal(9, result.LaunchPlan.Steps.Count);
         Assert.False(string.IsNullOrWhiteSpace(result.LaunchPlan.PlanHash));
+        var validationStep = Assert.Single(
+            result.LaunchPlan.Steps,
+            step => string.Equals(step.StepKey, "validate-application", StringComparison.Ordinal));
+        Assert.Empty(validationStep.RequiredRuntimeToolNames);
         var resolutionRequest = Assert.IsType<ProcessLaunchExecutorResolutionRequest>(
             executorResolver.LastRequest);
         Assert.Equal(

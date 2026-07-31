@@ -76,9 +76,12 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
                 "1",
                 "1",
                 "sha256:binding",
-                []),
+            []),
             [],
-            []);
+            [])
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
         using var cancellation = new CancellationTokenSource();
 
         var result = await adapter.ExecuteAsync(request, cancellation.Token);
@@ -134,6 +137,7 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             "ProcessManagedArtifactService.cs",
             "ProcessOutcomeCitationSanitizer.cs",
             "ProcessOutcomeGroundingValidator.cs",
+            "ProcessOutcomeReferenceGroundingPolicy.cs",
             "ProcessRequiredReceiptMatcher.cs",
             "ProcessRequiredReceiptRetryPolicy.cs",
             "ProcessSubprocessCompletionPolicy.cs",

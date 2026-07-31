@@ -58,6 +58,11 @@ internal sealed record ParentSubprocessArtifactBridgeResult(
 internal sealed record ParentSubprocessBridgedOutcome(
     ProcessRunId ChildRunId,
     DateTimeOffset ChildCompletedAtUtc,
+    ChildOutputDisposition Disposition,
+    string ChildStepKey,
+    string ChildArtifactExpectationKey,
+    string ParentBranchOutcomeKey,
+    ProcessSubprocessVerifiedChildArtifact VerifiedChildOutput,
     ProcessStepOutcomeResult Output,
     IReadOnlyList<string> EvidenceRefs,
     IReadOnlyList<ParentSubprocessForwardedContextArtifact> ForwardedContextArtifacts,
@@ -166,6 +171,7 @@ internal sealed class ParentSubprocessArtifactBridge(
                     contract.ForwardedChildContextArtifacts,
                     out var noGoOutput,
                     out var noGoEvidenceRefs,
+                    out var noGoVerifiedChildOutput,
                     out var noGoForwardedContextArtifacts,
                     out var noGoForwardedContextIssue))
             {
@@ -187,6 +193,7 @@ internal sealed class ParentSubprocessArtifactBridge(
                         childState.UpdatedAtUtc,
                         noGoOutput,
                         noGoEvidenceRefs,
+                        noGoVerifiedChildOutput,
                         noGoForwardedContextArtifacts,
                         ChildOutputDisposition.NoGo);
                     return new ParentSubprocessArtifactBridgeResult(
@@ -212,6 +219,7 @@ internal sealed class ParentSubprocessArtifactBridge(
                     contract.ForwardedChildContextArtifacts,
                     out var acceptedOutput,
                     out var acceptedEvidenceRefs,
+                    out var acceptedVerifiedChildOutput,
                     out var acceptedForwardedContextArtifacts,
                     out var acceptedForwardedContextIssue))
             {
@@ -237,6 +245,7 @@ internal sealed class ParentSubprocessArtifactBridge(
                 childState.UpdatedAtUtc,
                 acceptedOutput,
                 acceptedEvidenceRefs,
+                acceptedVerifiedChildOutput,
                 acceptedForwardedContextArtifacts,
                 ChildOutputDisposition.Accepted);
             return new ParentSubprocessArtifactBridgeResult(
@@ -390,6 +399,7 @@ internal sealed class ParentSubprocessArtifactBridge(
         DateTimeOffset childCompletedAtUtc,
         ProcessSubprocessChildOutputContract childOutput,
         IReadOnlyList<string> evidenceRefs,
+        ProcessSubprocessVerifiedChildArtifact verifiedChildOutput,
         IReadOnlyList<ParentSubprocessForwardedContextArtifact> forwardedContextArtifacts,
         ChildOutputDisposition disposition)
     {
@@ -399,17 +409,23 @@ internal sealed class ParentSubprocessArtifactBridge(
             childCompletedAtUtc,
             childOutput.ParentBranchOutcomeKey);
         var rawOutputHash = ComputeHash(
-            $"{assignment.RunId}:{assignment.StepInstanceId}:completed-child:{childRunId}:{childCompletedAtUtc:O}:{disposition}:{childOutput.StepKey}:{childOutput.BranchOutcomeKey}:{childOutput.ParentBranchOutcomeKey}:{string.Join("|", evidenceRefs)}:{string.Join("|", forwardedContextArtifacts.Select(artifact => $"{artifact.BindingKey}:{artifact.ChildArtifactRef}"))}");
+            $"{assignment.RunId}:{assignment.StepInstanceId}:completed-child:{childRunId}:{childCompletedAtUtc:O}:{disposition}:{childOutput.StepKey}:{childOutput.BranchOutcomeKey}:{childOutput.ParentBranchOutcomeKey}:{verifiedChildOutput.ArtifactRef}:{verifiedChildOutput.ContentHash}:{string.Join("|", evidenceRefs)}:{string.Join("|", forwardedContextArtifacts.Select(artifact => $"{artifact.BindingKey}:{artifact.ChildArtifactRef}"))}");
         return new ParentSubprocessBridgedOutcome(
             childRunId,
             childCompletedAtUtc,
+            disposition,
+            childOutput.StepKey,
+            childOutput.ArtifactExpectationKey,
+            childOutput.ParentBranchOutcomeKey,
+            verifiedChildOutput,
             BuildCompletedSubprocessProcessStepOutcome(
                 assignment,
                 childRunId,
                 childCompletedAtUtc,
                 evidenceRefs,
+                verifiedChildOutput,
                 forwardedContextArtifacts,
-                childOutput.ParentBranchOutcomeKey,
+                childOutput,
                 disposition),
             evidenceRefs,
             forwardedContextArtifacts,
@@ -475,11 +491,13 @@ internal sealed class ParentSubprocessArtifactBridge(
         IReadOnlyList<ProcessSubprocessForwardedChildContextArtifactContract> forwardedContextArtifactContracts,
         out ProcessSubprocessChildOutputContract matchedOutput,
         out IReadOnlyList<string> evidenceRefs,
+        out ProcessSubprocessVerifiedChildArtifact verifiedChildOutput,
         out IReadOnlyList<ParentSubprocessForwardedContextArtifact> forwardedContextArtifacts,
         out ParentSubprocessForwardedContextIssue? forwardedContextIssue)
     {
         matchedOutput = new ProcessSubprocessChildOutputContract();
         evidenceRefs = [];
+        verifiedChildOutput = null!;
         forwardedContextArtifacts = [];
         forwardedContextIssue = null;
         var childManagedArtifactRoot = $"artifacts/process-runs/{childRunId.Value:D}";
@@ -495,13 +513,23 @@ internal sealed class ParentSubprocessArtifactBridge(
             }
 
             if (!assignmentsByStepKey.TryGetValue(childOutput.StepKey, out var childAssignment) ||
-                !HasAcceptedChildOutputLedger(childAssignment, childState, childOutput))
+                !TryResolveAcceptedChildOutputReceipt(
+                    childAssignment,
+                    childState,
+                    childOutput,
+                    out var childOutputReceipt))
             {
                 continue;
             }
 
             var candidateRef = $"{childManagedArtifactRoot}/steps/{SanitizeManagedArtifactPathSegment(childOutput.StepKey)}.md";
-            if (childArtifactVerifier.CanBridge(candidateRef, childOutput.BranchOutcomeKey))
+            if (childArtifactVerifier.CanBridge(
+                    candidateRef,
+                    childOutput.StepKey,
+                    childOutput.ArtifactExpectationKey,
+                    childOutput.BranchOutcomeKey,
+                    childOutputReceipt.ContentHash,
+                    out verifiedChildOutput))
             {
                 matchedOutput = childOutput;
                 evidenceRefs = [candidateRef];
@@ -516,6 +544,17 @@ internal sealed class ParentSubprocessArtifactBridge(
                     return true;
                 }
 
+                if (!ParentSubprocessRuntimeEnvelopeBudget.IsWithinLimit(
+                        verifiedChildOutput,
+                        forwardedContextArtifacts,
+                        out var combinedEnvelopeCharacters))
+                {
+                    forwardedContextIssue = new ParentSubprocessForwardedContextIssue(
+                        "process.adapter.subprocess_handoff_size_limit_exceeded",
+                        $"The verified child output and forwarded context require {combinedEnvelopeCharacters} characters, which exceeds the runtime subprocess handoff limit {ParentSubprocessRuntimeEnvelopeBudget.MaxCombinedEnvelopeCharacters}.",
+                        $"{childRunId.Value:D}:{childAssignment.StepInstanceId.Value:D}:{combinedEnvelopeCharacters}");
+                }
+
                 return true;
             }
         }
@@ -523,14 +562,24 @@ internal sealed class ParentSubprocessArtifactBridge(
         return false;
     }
 
-    private static bool HasAcceptedChildOutputLedger(
+    private static bool TryResolveAcceptedChildOutputReceipt(
         ProcessRuntimeStepAssignment childAssignment,
         ProcessRuntimeStateSnapshot childState,
-        ProcessSubprocessChildOutputContract childOutput)
+        ProcessSubprocessChildOutputContract childOutput,
+        out StrategyResultArtifactReceipt childOutputReceipt)
     {
-        var childOutputStep = childState.Steps.FirstOrDefault(step =>
-            step.StepInstanceId == childAssignment.StepInstanceId);
-        if (childOutputStep is null)
+        childOutputReceipt = null!;
+        var childOutputSteps = childState.Steps
+            .Where(step => step.StepInstanceId == childAssignment.StepInstanceId)
+            .ToArray();
+        if (childOutputSteps.Length != 1)
+        {
+            return false;
+        }
+
+        var childOutputStep = childOutputSteps[0];
+        if (childOutputStep.Status != ProcessRuntimeStepStatus.Completed ||
+            childOutputStep.CompletedResultKey is null)
         {
             return false;
         }
@@ -552,9 +601,29 @@ internal sealed class ParentSubprocessArtifactBridge(
             return false;
         }
 
-        return childState.AppliedResults.Any(receipt =>
-            receipt.StepInstanceId == childAssignment.StepInstanceId &&
-            receipt.ProducedArtifacts.Any(artifact => expectedOutputSlotIds.Contains(artifact.SlotId)));
+        var matchingReceipts = childState.AppliedResults
+            .Where(receipt =>
+                receipt.StepInstanceId == childAssignment.StepInstanceId &&
+                receipt.IdempotencyKey == childOutputStep.CompletedResultKey &&
+                receipt.AppliedStepStatus == ProcessRuntimeStepStatus.Completed)
+            .ToArray();
+        if (matchingReceipts.Length != 1)
+        {
+            return false;
+        }
+
+        var matchingArtifacts = matchingReceipts[0].ProducedArtifacts
+            .Where(artifact =>
+                expectedOutputSlotIds.Contains(artifact.SlotId) &&
+                !string.IsNullOrWhiteSpace(artifact.ContentHash))
+            .ToArray();
+        if (matchingArtifacts.Length != 1)
+        {
+            return false;
+        }
+
+        childOutputReceipt = matchingArtifacts[0];
+        return true;
     }
 
     private static ProcessStepOutcomeResult BuildCompletedSubprocessProcessStepOutcome(
@@ -562,13 +631,15 @@ internal sealed class ParentSubprocessArtifactBridge(
         ProcessRunId childRunId,
         DateTimeOffset childCompletedAtUtc,
         IReadOnlyList<string> evidenceRefs,
+        ProcessSubprocessVerifiedChildArtifact verifiedChildOutput,
         IReadOnlyList<ParentSubprocessForwardedContextArtifact> forwardedContextArtifacts,
-        string parentBranchOutcomeKey,
+        ProcessSubprocessChildOutputContract childOutput,
         ChildOutputDisposition disposition)
     {
         var childRunValue = childRunId.Value.ToString("D");
         var childCompletedAt = childCompletedAtUtc.UtcDateTime.ToString("u", CultureInfo.InvariantCulture);
         var isNoGo = disposition == ChildOutputDisposition.NoGo;
+        var parentBranchOutcomeKey = childOutput.ParentBranchOutcomeKey;
         var branchRouteSummary = string.IsNullOrWhiteSpace(parentBranchOutcomeKey)
             ? "without a parent branch route"
             : $"on configured parent branch '{parentBranchOutcomeKey}'";
@@ -590,11 +661,15 @@ internal sealed class ParentSubprocessArtifactBridge(
             The process runtime completed parent step `{assignment.StepKey}` from matching completed child process run `{childRunValue}`.
 
             Child output disposition: `{(isNoGo ? "no-go" : "accepted")}`.
+            Child output step: `{childOutput.StepKey}`.
+            Child artifact expectation: `{childOutput.ArtifactExpectationKey}`.
             Parent branch route: `{(string.IsNullOrWhiteSpace(parentBranchOutcomeKey) ? "none" : parentBranchOutcomeKey)}`.
 
             ## Child evidence
 
             {FormatMarkdownEvidenceList(evidenceRefs)}
+
+            {ParentSubprocessVerifiedChildOutputEnvelope.Format(verifiedChildOutput)}
 
             {ParentSubprocessForwardedContextEnvelope.Format(forwardedContextArtifacts)}
             """

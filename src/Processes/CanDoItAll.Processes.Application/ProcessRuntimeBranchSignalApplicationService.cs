@@ -138,14 +138,16 @@ public sealed class ProcessRuntimeBranchSignalApplicationService(
             return;
         }
 
-        var selectedOutcome = result.ManagerSignals
+        var selectedOutcomes = result.ManagerSignals
             .Select(signal => ProcessBranchSignalCodes.TryReadOutcome(signal, out var outcomeKey) ? outcomeKey : string.Empty)
-            .FirstOrDefault(outcomeKey => !string.IsNullOrWhiteSpace(outcomeKey));
-        if (string.IsNullOrWhiteSpace(selectedOutcome))
+            .Where(outcomeKey => !string.IsNullOrWhiteSpace(outcomeKey))
+            .ToArray();
+        if (selectedOutcomes.Length == 0)
         {
             return;
         }
 
+        var selectedOutcome = selectedOutcomes[0];
         var completedStep = state.Steps.FirstOrDefault(step =>
             step.CompletedResultKey is not null &&
             state.AppliedResults.Any(receipt =>
@@ -163,11 +165,31 @@ public sealed class ProcessRuntimeBranchSignalApplicationService(
             return;
         }
 
+        var context = CreateContext(requestedBy, phase);
+        var matchingRoutes = plan.Branches.Routes
+            .Where(route =>
+                route.BranchStepId == completedPlanStep.StepDefinitionId &&
+                string.Equals(route.OutcomeId.Value, selectedOutcome, StringComparison.Ordinal))
+            .ToArray();
+        if (selectedOutcomes.Length != 1 || matchingRoutes.Length != 1)
+        {
+            var safeSummary = selectedOutcomes.Length != 1
+                ? $"Step '{completedPlanStep.StepKey}' returned {selectedOutcomes.Length} branch outcome signals; exactly one is required."
+                : $"Step '{completedPlanStep.StepKey}' returned branch outcome '{selectedOutcome}', but the instance plan did not contain exactly one ordinal route for that outcome.";
+            await BlockInvalidBranchSignalAsync(
+                state,
+                completedStep,
+                result,
+                safeSummary,
+                context,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
         var changed = false;
         var nextSteps = new List<ProcessRuntimeStepState>(state.Steps.Count);
         var events = new List<ProcessRuntimeEventEnvelope>();
-        var context = CreateContext(requestedBy, phase);
 
         foreach (var step in state.Steps)
         {
@@ -180,7 +202,7 @@ public sealed class ProcessRuntimeBranchSignalApplicationService(
                 continue;
             }
 
-            if (string.Equals(assignment.BranchGate.RequiredOutcomeKey, selectedOutcome, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(assignment.BranchGate.RequiredOutcomeKey, selectedOutcome, StringComparison.Ordinal))
             {
                 if (step.Status != ProcessRuntimeStepStatus.Blocked)
                 {
@@ -220,6 +242,89 @@ public sealed class ProcessRuntimeBranchSignalApplicationService(
         }
 
         await CommitBranchStepMutationAsync(state, nextSteps, events, context, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task BlockInvalidBranchSignalAsync(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStepState completedStep,
+        StrategyResultEnvelope result,
+        string safeSummary,
+        RuntimeCommandContext context,
+        CancellationToken cancellationToken)
+    {
+        var evidenceHash = ComputeHash(
+            $"{ProcessRuntimeDiagnosticCodes.InvalidBranchOutcomeSignal}:{completedStep.StepInstanceId}:{result.ResultHash}");
+        var diagnostic = new StrategyResultDiagnosticReceipt(
+            ProcessRuntimeDiagnosticCodes.InvalidBranchOutcomeSignal,
+            StrategyDiagnosticSensitivity.Normal,
+            evidenceHash,
+            safeSummary,
+            RestrictedEvidenceReference: null,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+        var nextSteps = state.Steps
+            .Select(step => step.StepInstanceId == completedStep.StepInstanceId
+                ? step with
+                {
+                    Status = ProcessRuntimeStepStatus.Blocked,
+                    ActiveClaimToken = null
+                }
+                : step)
+            .ToArray();
+        var nextResults = state.AppliedResults
+            .Select(receipt =>
+                receipt.StepInstanceId == completedStep.StepInstanceId &&
+                receipt.IdempotencyKey == completedStep.CompletedResultKey &&
+                string.Equals(receipt.ResultHash, result.ResultHash, StringComparison.Ordinal)
+                    ? receipt with
+                    {
+                        Outcome = StrategyOutcome.NeedsManager,
+                        AppliedStepStatus = ProcessRuntimeStepStatus.Blocked,
+                        UserSafeSummary = safeSummary,
+                        Diagnostics = receipt.Diagnostics
+                            .Concat([diagnostic])
+                            .ToArray()
+                    }
+                    : receipt)
+            .ToArray();
+        var next = state with
+        {
+            Status = ProcessRuntimeStatus.Blocked,
+            Steps = nextSteps,
+            AppliedResults = nextResults,
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+        var events = new[]
+        {
+            CreateEvent(
+                next,
+                context,
+                ProcessRuntimeEventTypes.StepBlocked,
+                evidenceHash),
+            CreateEvent(
+                next,
+                context,
+                ProcessRuntimeEventTypes.ProcessRunBlocked,
+                evidenceHash)
+        };
+        var mutation = new ProcessRuntimeMutation(
+            ProcessRuntimeTransitionOutcome.Applied,
+            next,
+            events,
+            events.Select(runtimeEvent => new ProcessOutboxMessage(
+                RuntimeOutboxMessageId.New(),
+                runtimeEvent.EventId,
+                ProcessOutboxSubscriberKind.RuntimeProjection,
+                runtimeEvent.PayloadHash)).ToArray(),
+            [],
+            [new ProcessValidationFailure(
+                ProcessRuntimeDiagnosticCodes.InvalidBranchOutcomeSignal,
+                safeSummary)]);
+
+        await unitOfWork.CommitAsync(
+            new ProcessRuntimeCommitRequest(context.CommandId, state, mutation),
+            cancellationToken).ConfigureAwait(false);
+        await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<ProcessRuntimeStateSnapshot> PropagateSkippedBranchGatesCoreAsync(

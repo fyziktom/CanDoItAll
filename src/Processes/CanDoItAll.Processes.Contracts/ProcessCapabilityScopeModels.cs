@@ -203,10 +203,31 @@ public static class ProcessRequiredRuntimeToolNames
     public static IReadOnlyList<string> FromCapabilityScope(
         ProcessCapabilityScope? capabilityScope,
         IReadOnlySet<string>? activeLaunchContextToolNames)
+        => FromCapabilityScope(
+            capabilityScope,
+            activeLaunchContextToolNames,
+            includeBranchScopedReceipts: true);
+
+    public static IReadOnlyList<string> FromUnconditionalCapabilityScope(ProcessCapabilityScope? capabilityScope)
+        => FromUnconditionalCapabilityScope(capabilityScope, activeLaunchContextToolNames: null);
+
+    public static IReadOnlyList<string> FromUnconditionalCapabilityScope(
+        ProcessCapabilityScope? capabilityScope,
+        IReadOnlySet<string>? activeLaunchContextToolNames)
+        => FromCapabilityScope(
+            capabilityScope,
+            activeLaunchContextToolNames,
+            includeBranchScopedReceipts: false);
+
+    private static IReadOnlyList<string> FromCapabilityScope(
+        ProcessCapabilityScope? capabilityScope,
+        IReadOnlySet<string>? activeLaunchContextToolNames,
+        bool includeBranchScopedReceipts)
     {
         var normalized = ProcessCapabilityScope.Normalize(capabilityScope);
         return normalized.RequiredReceipts
             .Where(receipt => IsActive(receipt, activeLaunchContextToolNames))
+            .Where(receipt => includeBranchScopedReceipts || receipt.ApplicableBranchOutcomeKeys.Count == 0)
             .Select(ResolveRuntimeToolName)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -233,6 +254,25 @@ public static class ProcessRequiredRuntimeToolNames
         }
     }
 
+    public static IReadOnlyList<string> FromUnconditionalProductCompletionRequiredToolReceipts(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return FromUnconditionalProductCompletionRequiredToolReceipts(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return NormalizeRuntimeToolNameCandidates(
+                value.Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+    }
+
     public static IReadOnlyList<string> FromProductCompletionRequiredToolReceipts(JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.String)
@@ -246,6 +286,31 @@ public static class ProcessRequiredRuntimeToolNames
         }
 
         return NormalizeRuntimeToolNameCandidates(element.EnumerateArray()
+            .Select(ReadProductCompletionRequiredToolReceiptCandidate));
+    }
+
+    public static IReadOnlyList<string> FromUnconditionalProductCompletionRequiredToolReceipts(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return FromUnconditionalProductCompletionRequiredToolReceipts(element.GetString());
+        }
+
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            return HasBranchCondition(element)
+                ? []
+                : NormalizeRuntimeToolNameCandidates([ReadProductCompletionRequiredToolReceiptCandidate(element)]);
+        }
+
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return NormalizeRuntimeToolNameCandidates(element
+            .EnumerateArray()
+            .Where(item => item.ValueKind != JsonValueKind.Object || !HasBranchCondition(item))
             .Select(ReadProductCompletionRequiredToolReceiptCandidate));
     }
 
@@ -381,7 +446,7 @@ public static class ProcessRequiredRuntimeToolNames
             return string.Empty;
         }
 
-        foreach (var propertyName in new[] { "toolName", "tool", "receipt", "requiredToolReceipt", "name", "selector" })
+        foreach (var propertyName in new[] { "toolName", "tool", "toolReceipt", "receipt", "requiredToolReceipt", "name", "selector" })
         {
             if (TryGetPropertyCaseInsensitive(element, propertyName, out var property) &&
                 property.ValueKind == JsonValueKind.String)
@@ -391,6 +456,44 @@ public static class ProcessRequiredRuntimeToolNames
         }
 
         return string.Empty;
+    }
+
+    private static bool HasBranchCondition(JsonElement element)
+    {
+        foreach (var propertyName in new[]
+                 {
+                     "applicableBranchOutcomeKeys",
+                     "appliesToBranchOutcomeKeys",
+                     "branchOutcomeKeys",
+                     "whenBranchOutcomeKeys",
+                     "requiredForBranchOutcomeKeys",
+                     "enforceBranchOutcomeKeys",
+                     "skipBranchOutcomeKeys",
+                     "skippedBranchOutcomeKeys",
+                     "excludedBranchOutcomeKeys"
+                 })
+        {
+            if (!TryGetPropertyCaseInsensitive(element, propertyName, out var property))
+            {
+                continue;
+            }
+
+            if (property.ValueKind == JsonValueKind.Array &&
+                property.EnumerateArray().Any(item =>
+                    item.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(item.GetString())))
+            {
+                return true;
+            }
+
+            if (property.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(property.GetString()))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool TryGetPropertyCaseInsensitive(

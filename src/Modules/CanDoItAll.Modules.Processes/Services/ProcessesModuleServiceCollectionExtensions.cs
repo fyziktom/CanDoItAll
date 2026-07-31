@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -37,6 +38,19 @@ public static class ProcessesModuleServiceCollectionExtensions
             ServiceLifetime.Scoped);
 
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
+        {
+            var executionRunStore =
+                serviceProvider.GetService<ISandboxWorkspaceExecutionRunStore>();
+            var commandExecutionService =
+                serviceProvider.GetService<IWorkspaceCommandExecutionService>();
+            return executionRunStore is not null &&
+                   commandExecutionService is not null
+                ? new WorkspaceExecutionRunProcessLeaseCleaner(
+                    executionRunStore,
+                    commandExecutionService)
+                : UnavailableWorkspaceExecutionRunProcessLeaseCleaner.Instance;
+        });
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
@@ -141,6 +155,14 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, ProcessRuntimeMemorySourceGatewayAdapter>());
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
+        services.AddOptions<ProcessRuntimeDispatchOptions>()
+            .Bind(configuration.GetSection(ProcessRuntimeDispatchOptions.ConfigurationSectionName))
+            .Validate(
+                ProcessRuntimeDispatchOptions.IsValid,
+                "Process runtime dispatch options are invalid.")
+            .ValidateOnStart();
+        services.TryAddSingleton<ProcessRuntimeDispatchOptions>(serviceProvider =>
+            serviceProvider.GetRequiredService<IOptions<ProcessRuntimeDispatchOptions>>().Value);
         services.AddOptions<ProcessRunRecordProcessingOptions>()
             .Bind(configuration.GetSection(ProcessRunRecordProcessingOptions.ConfigurationSectionName))
             .Validate(
@@ -214,3 +236,23 @@ public sealed record ProcessModuleRewriteState(bool IsEnabled)
 }
 
 public static class ProcessesModuleAssemblyMarker;
+
+internal sealed class UnavailableWorkspaceExecutionRunProcessLeaseCleaner
+    : IWorkspaceExecutionRunProcessLeaseCleaner
+{
+    public static UnavailableWorkspaceExecutionRunProcessLeaseCleaner Instance { get; } = new();
+
+    private UnavailableWorkspaceExecutionRunProcessLeaseCleaner()
+    {
+    }
+
+    public Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(Guid executionRunId)
+        => Task.FromResult(new WorkspaceExecutionRunProcessCleanupResult(
+            executionRunId,
+            [],
+            [
+                new WorkspaceExecutionRunProcessCleanupFailure(
+                    string.Empty,
+                    "ExecutionRun workspace process cleanup is unavailable because no workspace command execution service is registered.")
+            ]));
+}

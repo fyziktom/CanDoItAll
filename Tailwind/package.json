@@ -1,7 +1,6 @@
 {
   "name": "candoitall-main-tailwind",
   "private": true,
-  "license": "MIT",
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.7",
     "tailwindcss": "^4.1.7"

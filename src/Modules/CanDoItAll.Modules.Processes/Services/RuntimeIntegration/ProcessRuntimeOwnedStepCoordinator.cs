@@ -27,6 +27,7 @@ using Microsoft.Extensions.Options;
 using static CanDoItAll.Modules.Processes.ProcessCompletionIssueResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultConverter;
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
+using static CanDoItAll.Modules.Processes.ProcessExecutionMetadataBuilder;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
@@ -36,7 +37,8 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessRuntimeOwnedStepCoordinator(
     IEnumerable<IProcessRuntimeOwnedStepExecutor> runtimeOwnedStepExecutors,
-    ProcessStepCompletionCoordinator completionCoordinator)
+    ProcessStepCompletionCoordinator completionCoordinator,
+    ProcessToolReceiptPolicyCatalog toolReceiptPolicies)
 {
     private readonly IReadOnlyDictionary<string, IProcessRuntimeOwnedStepExecutor> runtimeOwnedStepExecutorsByKey = CreateExecutorMap(runtimeOwnedStepExecutors);
 
@@ -129,23 +131,111 @@ internal sealed class ProcessRuntimeOwnedStepCoordinator(
         }
 
         var rawOutputHash = ComputeHash(runtimeResult.Evidence);
+        if (!TryResolveEffectiveCompletionAssignment(
+                assignment,
+                runtimeResult,
+                out var completionAssignment,
+                out var completionContractIssue))
+        {
+            return NeedsManagerForCompletionIssue(
+                assignment,
+                rawOutputHash,
+                new ProcessCompletionIssue(
+                    "process.adapter.runtime_owned_completion_contract_invalid",
+                    $"Runtime-owned executor for step '{assignment.StepKey}' returned an invalid effective completion scope: {completionContractIssue}",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-owned-completion-contract-invalid:{completionContractIssue}",
+                    assignment.ProducedArtifactSlotIds,
+                    ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
         var materialization = completionCoordinator.Materialize(
-            assignment,
+            completionAssignment,
             runtimeResult.Output,
             runtimeResult.ExecutionRunId,
-            runtimeResult.ToolReceipts);
+            runtimeResult.ToolReceipts,
+            stepContract);
         if (materialization.Issue is { } materializationIssue)
         {
             return NeedsManagerForCompletionIssue(assignment, rawOutputHash, materializationIssue);
         }
 
         return completionCoordinator.Complete(
-            assignment,
+            completionAssignment,
             materialization,
             rawOutputHash,
             runtimeResult.ExecutionRunId,
             materialization.ToolReceipts,
             stepContract: stepContract);
+    }
+
+    private bool TryResolveEffectiveCompletionAssignment(
+        ProcessRuntimeStepAssignment assignment,
+        ProcessRuntimeOwnedStepExecutionResult runtimeResult,
+        out ProcessRuntimeStepAssignment effectiveAssignment,
+        out string issue)
+    {
+        effectiveAssignment = assignment;
+        issue = string.Empty;
+        var completionScope = runtimeResult.EffectiveCompletionScope;
+        if (completionScope is null)
+        {
+            return true;
+        }
+
+        if (completionScope != ProcessRuntimeOwnedCompletionScope.ReadOnlyProductVerification)
+        {
+            issue = $"completion scope '{completionScope}' is not supported";
+            return false;
+        }
+
+        var declaredOperations = NormalizeOperations(assignment.AllowedOperations);
+        if (!declaredOperations.Contains(
+                ProcessOperationContractNames.MutateProductTarget,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            issue = "read-only product verification requires MutateProductTarget in the persisted assignment";
+            return false;
+        }
+
+        if (!string.Equals(
+                assignment.OperationTargetScope,
+                ProcessOperationContractNames.ExternalProductTargetMutable,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            issue =
+                $"read-only product verification cannot narrow target scope '{assignment.OperationTargetScope}'";
+            return false;
+        }
+
+        if (assignment.ProducedArtifactSlotIds.Count > 0 &&
+            !declaredOperations.Contains(
+                ProcessOperationContractNames.WriteManagedProcessArtifacts,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            issue =
+                "the persisted assignment must include WriteManagedProcessArtifacts while produced artifact slots exist";
+            return false;
+        }
+
+        if (runtimeResult.ToolReceipts.Any(toolReceiptPolicies.IsProductMutationReceipt))
+        {
+            issue = "read-only product verification cannot contain a product-mutation receipt";
+            return false;
+        }
+
+        var effectiveOperations = declaredOperations
+            .Where(operation => !string.Equals(
+                operation,
+                ProcessOperationContractNames.MutateProductTarget,
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        effectiveAssignment = assignment with
+        {
+            AllowedOperations = effectiveOperations,
+            OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly
+        };
+        return true;
     }
 
     private static string BuildFailureSummary(ProcessRuntimeOwnedStepExecutionResult result)

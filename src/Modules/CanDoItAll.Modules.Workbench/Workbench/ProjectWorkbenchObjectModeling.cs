@@ -131,9 +131,11 @@ internal static class ProjectWorkbenchObjectModeling
                 metadata.ProjectBlock = projectBlock;
             }
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
-            throw new InvalidOperationException("Invalid project object metadata payload.");
+            throw new ProjectObjectMetadataPayloadException(
+                exception.Path,
+                exception);
         }
     }
 

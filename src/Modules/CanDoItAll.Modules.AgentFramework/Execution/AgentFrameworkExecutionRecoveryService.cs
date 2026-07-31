@@ -8,6 +8,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 internal sealed class AgentFrameworkExecutionRecoveryService(
     ISandboxWorkspaceExecutionRunStore executionRunStore,
+    IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner,
     IEnumerable<IAgentExecutionRecoveryObserver> recoveryObservers,
     ILogger<AgentFrameworkExecutionRecoveryService> logger)
 {
@@ -22,6 +23,12 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         CancellationToken cancellationToken = default)
     {
         var executionRuns = await executionRunStore.ListExecutionRunsAsync(cancellationToken);
+        foreach (var terminalRun in executionRuns.Where(IsTerminalRun))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await CleanupRetainedProcessLeasesAsync(terminalRun);
+        }
+
         var strandedRunIds = executionRuns
             .Where(run => IsInterruptedRun(run, startupCutoffUtc))
             .Select(item => item.Id)
@@ -77,6 +84,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
             };
 
             await executionRunStore.SaveExecutionRunDetailAsync(repairedDetail, cancellationToken);
+            await CleanupRetainedProcessLeasesAsync(repairedRun);
             await NotifyRecoveryObserversAsync(repairedRun, repairedAtUtc, cancellationToken);
             repairedCount++;
 
@@ -87,6 +95,42 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
         }
 
         return repairedCount;
+    }
+
+    private async Task CleanupRetainedProcessLeasesAsync(ExecutionRunRecord run)
+    {
+        try
+        {
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(run);
+            var result = await workspaceProcessLeaseCleaner
+                .CleanupAsync(run.Id)
+                .ConfigureAwait(false);
+
+            if (result.CleanedStartupReceiptPaths.Count > 0)
+            {
+                logger.LogInformation(
+                    "Startup recovery cleaned {WorkspaceProcessLeaseCount} retained ExecutionRun workspace process lease(s) for execution run {ExecutionRunId}. Startup receipts: {StartupReceiptPaths}.",
+                    result.CleanedStartupReceiptPaths.Count,
+                    run.Id,
+                    result.CleanedStartupReceiptPaths);
+            }
+
+            foreach (var failure in result.Failures)
+            {
+                logger.LogError(
+                    "Startup recovery could not clean the retained ExecutionRun workspace process lease for execution run {ExecutionRunId} and startup receipt {StartupReceiptPath}. The durable lease remains available for a later retry. Failure: {CleanupFailure}.",
+                    run.Id,
+                    failure.StartupReceiptPath,
+                    failure.Message);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Startup recovery failed unexpectedly while reconciling retained ExecutionRun workspace process leases for execution run {ExecutionRunId}.",
+                run.Id);
+        }
     }
 
     private async Task NotifyRecoveryObserversAsync(
@@ -131,6 +175,9 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
                and not ExecutionState.Failed
                && run.CreatedAtUtc <= startupCutoffUtc;
     }
+
+    private static bool IsTerminalRun(ExecutionRunRecord run)
+        => run.State is ExecutionState.Completed or ExecutionState.Failed;
 
     private static bool HasResumableApprovals(ExecutionRunDetail detail)
     {

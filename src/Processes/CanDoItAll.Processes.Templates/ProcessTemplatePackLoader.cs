@@ -514,6 +514,7 @@ public sealed class ProcessTemplatePackLoader
 
         ValidateChildOutputs(contract.AcceptedChildOutputs, step, stepPath, "accepted child output");
         ValidateChildOutputs(contract.NoGoChildOutputs, step, stepPath, "no-go child output");
+        ValidateChildOutputDiscriminators(contract, stepPath);
         if (contract.AlreadySatisfiedOutput is not null)
         {
             ValidateChildOutput(contract.AlreadySatisfiedOutput, step, stepPath, "already-satisfied output");
@@ -651,12 +652,10 @@ public sealed class ProcessTemplatePackLoader
         string outputKind)
     {
         Require(output.StepKey, $"{outputKind} step key", stepPath);
-        if (string.IsNullOrWhiteSpace(output.ArtifactExpectationKey) &&
-            string.IsNullOrWhiteSpace(output.ArtifactTitle))
-        {
-            throw new InvalidOperationException(
-                $"Process template subprocess step '{stepPath}' {outputKind} must define ArtifactExpectationKey or ArtifactTitle.");
-        }
+        Require(
+            output.ArtifactExpectationKey,
+            $"{outputKind} artifact expectation key",
+            stepPath);
 
         if (!string.IsNullOrWhiteSpace(output.ParentBranchOutcomeKey) &&
             parentStep.BranchOutcomes.All(parentOutcome =>
@@ -668,6 +667,53 @@ public sealed class ProcessTemplatePackLoader
             throw new InvalidOperationException(
                 $"Process template subprocess step '{stepPath}' {outputKind} routes to unknown parent branch '{output.ParentBranchOutcomeKey}'.");
         }
+    }
+
+    internal static void ValidateChildOutputDiscriminators(
+        ProcessSubprocessContract contract,
+        string stepPath)
+    {
+        var outputs = contract.AcceptedChildOutputs
+            .Select(output => (Kind: "accepted", Output: output))
+            .Concat(contract.NoGoChildOutputs.Select(output => (Kind: "no-go", Output: output)))
+            .ToArray();
+        var groups = outputs.GroupBy(
+            item => (
+                StepKey: item.Output.StepKey.Trim(),
+                ArtifactExpectationKey: item.Output.ArtifactExpectationKey.Trim()),
+            ChildOutputDiscriminatorComparer.Instance);
+        foreach (var group in groups.Where(group => group.Count() > 1))
+        {
+            var branchKeys = group
+                .Select(item => item.Output.BranchOutcomeKey?.Trim() ?? string.Empty)
+                .ToArray();
+            if (branchKeys.Any(string.IsNullOrWhiteSpace) ||
+                branchKeys.Distinct(StringComparer.OrdinalIgnoreCase).Count() != branchKeys.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Process template subprocess step '{stepPath}' declares overlapping accepted/no-go child outputs for '{group.Key.StepKey}/{group.Key.ArtifactExpectationKey}'. Repeated child output mappings must each define a distinct BranchOutcomeKey.");
+            }
+        }
+    }
+
+    private sealed class ChildOutputDiscriminatorComparer :
+        IEqualityComparer<(string StepKey, string ArtifactExpectationKey)>
+    {
+        internal static ChildOutputDiscriminatorComparer Instance { get; } = new();
+
+        public bool Equals(
+            (string StepKey, string ArtifactExpectationKey) left,
+            (string StepKey, string ArtifactExpectationKey) right)
+            => string.Equals(left.StepKey, right.StepKey, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(
+                   left.ArtifactExpectationKey,
+                   right.ArtifactExpectationKey,
+                   StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string StepKey, string ArtifactExpectationKey) value)
+            => HashCode.Combine(
+                StringComparer.OrdinalIgnoreCase.GetHashCode(value.StepKey),
+                StringComparer.OrdinalIgnoreCase.GetHashCode(value.ArtifactExpectationKey));
     }
 
     private static ProcessTemplateDefinitionRoleSummary CreateRoleSummary(

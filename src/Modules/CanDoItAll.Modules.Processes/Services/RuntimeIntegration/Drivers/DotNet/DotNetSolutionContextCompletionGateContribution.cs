@@ -4,6 +4,7 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 using static CanDoItAll.Modules.Processes.ProcessOutcomeGroundingValidator;
+using static CanDoItAll.Modules.Processes.ProcessRuntimeFailureClassifier;
 
 namespace CanDoItAll.Modules.Processes;
 

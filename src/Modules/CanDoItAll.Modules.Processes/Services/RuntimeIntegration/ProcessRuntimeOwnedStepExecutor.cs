@@ -22,7 +22,13 @@ internal sealed record ProcessRuntimeOwnedStepExecutionResult(
     Guid ExecutionRunId,
     string Summary,
     string Evidence,
-    ProcessRuntimeOwnedStepFailure? Failure = null);
+    ProcessRuntimeOwnedStepFailure? Failure = null,
+    ProcessRuntimeOwnedCompletionScope? EffectiveCompletionScope = null);
+
+internal enum ProcessRuntimeOwnedCompletionScope
+{
+    ReadOnlyProductVerification
+}
 
 internal sealed record ProcessRuntimeOwnedStepFailure(
     StrategyDiagnosticCode Code,

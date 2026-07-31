@@ -62,6 +62,8 @@ public sealed record AgentToolInvocationTrace(
     public string RuntimeToolProviderName { get; init; } = string.Empty;
 
     public string Signature { get; init; } = string.Empty;
+
+    public string TargetPath { get; init; } = string.Empty;
 }
 
 public sealed record AgentToolPolicyMetadata(
@@ -103,6 +105,8 @@ public sealed record ToolInvocationPolicyContext(
     public string SourceId { get; init; } = string.Empty;
 
     public IReadOnlyList<string> AllowedManagedArtifactReadRefs { get; init; } = [];
+
+    public required ToolInvocationPathArgumentSet PathArguments { get; init; }
 
     public IReadOnlyList<AgentToolInvocationTrace> RecentToolInvocationTraces { get; } = ToolInvocationTraces ?? [];
 
@@ -512,18 +516,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile,
         AgentToolInvocationPolicyMetadata.RunSkillScript
     };
-    private static readonly string[] ManagedWorkspacePathArgumentFragments =
-    [
-        "directory",
-        "file",
-        "folder",
-        "path",
-        "root",
-        "script",
-        "source",
-        "target",
-        "working"
-    ];
     private static readonly string[] AllowedExternalRunManagedRoots =
     [
         ".playwright-mcp",
@@ -601,6 +593,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(ToolInvocationPolicyDecision.Deny(
                 signature,
                 $"Tool '{context.ToolName}' has no registered invocation policy classification."));
+        }
+
+        var pathArgumentDecision = EvaluatePathArgumentResolution(context, signature);
+        if (pathArgumentDecision is not null)
+        {
+            return ValueTask.FromResult(pathArgumentDecision);
         }
 
         var operationDecision = EvaluateGovernedProcessOperationAuthorization(context, signature);
@@ -722,6 +720,22 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static IReadOnlyList<OperationRequirement> ResolveOperationRequirements(ToolInvocationPolicyContext context)
         => operationRequirementResolver.Resolve(context);
 
+    private static ToolInvocationPolicyDecision? EvaluatePathArgumentResolution(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !ExternalTargetManagedWorkspaceIsolationTools.Contains(context.ToolName) ||
+            context.PathArguments is not { IsComplete: false } pathArguments)
+        {
+            return null;
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"Governed process tool '{context.ToolName}' supplied unsupported path argument shape(s): {string.Join(", ", pathArguments.UnsupportedArgumentNames)}. Path arguments must be scalar strings, while plural path arguments must be arrays containing only strings.");
+    }
+
     private static ToolInvocationPolicyDecision? EvaluateGovernedCurrentStepOwnOutputRead(
         ToolInvocationPolicyContext context,
         string signature)
@@ -735,7 +749,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var matchedPath = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+        var matchedPath = ResolveManagedWorkspacePathArguments(context)
             .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
             .FirstOrDefault(path => IsCurrentStepPrimaryManagedArtifactPath(context, path));
         if (string.IsNullOrWhiteSpace(matchedPath))
@@ -772,7 +786,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var matchedPath = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+        var matchedPath = ResolveManagedWorkspacePathArguments(context)
             .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
             .FirstOrDefault(path => IsCurrentStepPrimaryManagedArtifactPath(context, path));
         if (string.IsNullOrWhiteSpace(matchedPath) ||
@@ -815,7 +829,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var writesPrimaryManagedOutput = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+        var writesPrimaryManagedOutput = ResolveManagedWorkspacePathArguments(context)
             .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
             .Any(path => IsCurrentStepPrimaryManagedArtifactPath(context, path));
         if (!writesPrimaryManagedOutput ||
@@ -1031,7 +1045,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static OperationRequirement ResolveWorkspaceFileMutationRequirement(ToolInvocationPolicyContext context)
     {
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context);
         if (referencedAliases.Count > 0)
         {
             var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
@@ -1049,7 +1063,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return OperationRequirement.Any(OperationMutateProductTarget);
         }
 
-        var normalizedPaths = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+        var normalizedPaths = ResolveManagedWorkspacePathArguments(context)
             .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .ToArray();
@@ -1109,7 +1123,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return OperationRequirement.Any(OperationWriteManagedProcessArtifacts);
         }
 
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context)
             .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
             .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1127,7 +1141,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         if (referencedAliases.Any(IsExternalArtifactDestinationPath) ||
-            ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+            ResolveScriptDeclaredOutputPaths(context)
                 .Select(NormalizeManagedWorkspacePath)
                 .Any(path => IsExternalTargetAliasPath(path) && IsExternalArtifactDestinationPath(NormalizeExternalTargetAlias(path))))
         {
@@ -1136,7 +1150,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         var analysis = ProcessScriptSideEffectAnalyzer.Analyze(context.ToolName, context.InspectedScriptContent);
         if (analysis.HasWriteSignal ||
-            ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+            ResolveScriptDeclaredOutputPaths(context)
                 .Select(NormalizeManagedWorkspacePath)
                 .Any(path => IsAllowedExternalRunManagedPath(path) && !IsManagedOutputPath(path)))
         {
@@ -1169,7 +1183,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static OperationRequirement ResolveProcessArtifactWriteRequirement(ToolInvocationPolicyContext context)
     {
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context);
         if (referencedAliases.Any(IsExternalArtifactDestinationPath))
         {
             return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
@@ -1236,7 +1250,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        foreach (var pathArgument in ResolveManagedWorkspacePathArguments(context.RedactedArguments))
+        foreach (var pathArgument in ResolveManagedWorkspacePathArguments(context))
         {
             var normalizedPath = NormalizeManagedWorkspacePath(pathArgument.Value);
             if (string.IsNullOrWhiteSpace(normalizedPath))
@@ -1384,7 +1398,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return declaredOutputDecision;
         }
 
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context)
             .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
             .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1436,7 +1450,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         GovernedScriptSideEffectManifest manifest,
         ProcessScriptSideEffectAnalysis analysis)
     {
-        var declaredWritePaths = ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+        var declaredWritePaths = ResolveScriptDeclaredOutputPaths(context)
             .Concat(manifest.DeclaredWritePaths)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -1519,7 +1533,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         GovernedScriptSideEffectManifest manifest)
     {
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        foreach (var outputPath in ResolveScriptDeclaredOutputPaths(context.RedactedArguments).Concat(manifest.DeclaredWritePaths))
+        foreach (var outputPath in ResolveScriptDeclaredOutputPaths(context).Concat(manifest.DeclaredWritePaths))
         {
             var normalizedPath = NormalizeManagedWorkspacePath(outputPath);
             if (string.IsNullOrWhiteSpace(normalizedPath))
@@ -1554,32 +1568,30 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     }
 
     private static IReadOnlyList<string> ResolveScriptDeclaredOutputPaths(
-        IReadOnlyDictionary<string, string> arguments)
+        ToolInvocationPolicyContext context)
     {
-        return arguments
-            .Where(argument => argument.Key.Contains("output", StringComparison.OrdinalIgnoreCase) &&
-                               IsPathLikeArgumentName(argument.Key))
-            .SelectMany(argument => EnumerateArgumentTextValues(argument.Value))
+        return ResolveManagedWorkspacePathArguments(context)
+            .Where(argument => argument.Name.Contains("output", StringComparison.OrdinalIgnoreCase))
+            .Select(argument => argument.Value)
             .ToArray();
     }
 
     private static string ResolveScriptProductWorkingContext(ToolInvocationPolicyContext context)
     {
-        foreach (var key in new[] { "workingDirectory", "path", "scriptPath" })
+        foreach (var argument in ResolveManagedWorkspacePathArguments(context))
         {
-            if (!context.RedactedArguments.TryGetValue(key, out var value))
+            if (!string.Equals(argument.Name, "workingDirectory", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(argument.Name, "path", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(argument.Name, "scriptPath", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            foreach (var argumentValue in EnumerateArgumentTextValues(value))
+            var productAlias = ResolveExternalTargetAliasesFromText(argument.Value)
+                .FirstOrDefault(alias => !IsExternalArtifactDestinationPath(alias));
+            if (!string.IsNullOrWhiteSpace(productAlias))
             {
-                var productAlias = ResolveExternalTargetAliasesFromText(argumentValue)
-                    .FirstOrDefault(alias => !IsExternalArtifactDestinationPath(alias));
-                if (!string.IsNullOrWhiteSpace(productAlias))
-                {
-                    return productAlias;
-                }
+                return productAlias;
             }
         }
 
@@ -1779,19 +1791,25 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private sealed class RepeatInvocationGuard
     {
         private readonly Dictionary<string, int> invocationCounts = new(StringComparer.OrdinalIgnoreCase);
-        private int mutationGeneration;
+        private int validationEpoch;
 
         public ToolInvocationPolicyDecision? Evaluate(
             ToolInvocationPolicyContext context,
             string signature)
         {
+            if (StartsBrowserInteractionEpoch(context.ToolName))
+            {
+                validationEpoch++;
+                return null;
+            }
+
             if (context.Classification is not (ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation))
             {
                 return null;
             }
 
             var countedSignature = context.Classification == ToolInvocationClassification.Validation
-                ? $"{signature}|mutationGeneration={mutationGeneration}"
+                ? $"{signature}|validationEpoch={validationEpoch}"
                 : signature;
             var invocationCount = invocationCounts.TryGetValue(countedSignature, out var currentCount)
                 ? currentCount + 1
@@ -1810,7 +1828,17 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         public void RecordMutationDecision()
         {
-            mutationGeneration++;
+            validationEpoch++;
+        }
+
+        private static bool StartsBrowserInteractionEpoch(string toolName)
+        {
+            if (!ToolCapabilityRegistry.TryResolve(toolName, out var capability))
+            {
+                return false;
+            }
+
+            return capability.BrowserProofRole == ToolCapabilityBrowserProofRole.Interaction;
         }
     }
 
@@ -1823,7 +1851,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var pathArguments = ResolveManagedWorkspacePathArguments(context.RedactedArguments);
+        var pathArguments = ResolveManagedWorkspacePathArguments(context);
         if (pathArguments.Count == 0)
         {
             return null;
@@ -1891,7 +1919,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var archivedAlias = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+        var archivedAlias = ResolveReferencedExternalTargetAliases(context)
             .FirstOrDefault(alias =>
                 IsAllowedExternalTargetAlias(alias, allowedAliases) &&
                 IsExternalProductArchiveSourceAlias(alias));
@@ -1929,7 +1957,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var sourceAliases = ResolveExternalTargetAliasesFromArguments(
-            context.RedactedArguments,
+            context,
             IsCopySourceArgumentName);
         if (sourceAliases.Count == 0 ||
             !sourceAliases.Any(IsExternalProductArchiveSourceAlias))
@@ -1938,7 +1966,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var destinationAliases = ResolveExternalTargetAliasesFromArguments(
-            context.RedactedArguments,
+            context,
             IsCopyDestinationArgumentName);
         if (!destinationAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
         {
@@ -1990,7 +2018,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var pathArguments = ResolveManagedWorkspacePathArguments(context.RedactedArguments);
+        var pathArguments = ResolveManagedWorkspacePathArguments(context);
         if (pathArguments.Count == 0)
         {
             return BroadManagedWorkspaceDiscoveryTools.Contains(context.ToolName)
@@ -2210,7 +2238,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return null;
         }
 
-        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context);
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
         var matchedAlias = referencedAliases.FirstOrDefault(referencedAlias =>
             !IsAllowedExternalTargetAlias(referencedAlias, allowedAliases) &&
@@ -2271,17 +2299,19 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     }
 
     private static IReadOnlyList<string> ResolveReferencedExternalTargetAliases(
-        IReadOnlyDictionary<string, string> arguments)
+        ToolInvocationPolicyContext context)
     {
-        return ResolveExternalTargetAliasesFromArguments(arguments, IsPathLikeArgumentName);
+        return ResolveExternalTargetAliasesFromArguments(
+            context,
+            ToolInvocationPathArgumentResolver.IsPathLikeArgumentName);
     }
 
     private static IReadOnlyList<string> ResolveExternalTargetAliasesFromArguments(
-        IReadOnlyDictionary<string, string> arguments,
+        ToolInvocationPolicyContext context,
         Func<string, bool> argumentNamePredicate)
     {
-        return arguments
-            .Where(argument => argumentNamePredicate(argument.Key))
+        return ResolveManagedWorkspacePathArguments(context)
+            .Where(argument => argumentNamePredicate(argument.Name))
             .SelectMany(argument => ExternalTargetAliasRegex
                 .Matches(argument.Value ?? string.Empty)
                 .Select(match => NormalizeExternalTargetAlias(match.Value)))
@@ -2322,20 +2352,17 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             : value.Trim().Trim('`', '"', '\'');
     }
 
-    private static IReadOnlyList<KeyValuePair<string, string>> ResolveManagedWorkspacePathArguments(
-        IReadOnlyDictionary<string, string> arguments)
+    private static IReadOnlyList<ToolInvocationPathArgument> ResolveManagedWorkspacePathArguments(
+        ToolInvocationPolicyContext context)
     {
-        return arguments
-            .Where(argument => IsPathLikeArgumentName(argument.Key))
+        return context.PathArguments.Values
             .Where(argument => !string.IsNullOrWhiteSpace(argument.Value))
             .ToArray();
     }
 
     private static bool IsPathLikeArgumentName(string argumentName)
     {
-        return !string.IsNullOrWhiteSpace(argumentName) &&
-               ManagedWorkspacePathArgumentFragments.Any(fragment =>
-                   argumentName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+        return ToolInvocationPathArgumentResolver.IsPathLikeArgumentName(argumentName);
     }
 
     private static bool IsCopySourceArgumentName(string argumentName)

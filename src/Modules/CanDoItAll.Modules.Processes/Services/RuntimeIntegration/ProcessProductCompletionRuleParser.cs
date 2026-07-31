@@ -51,6 +51,18 @@ internal static class ProcessProductCompletionRuleParser
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+    internal static IReadOnlyList<string> ResolveUnconditionalProductCompletionRequiredToolReceipts(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string stepKey)
+        => ResolveProductCompletionRequiredToolReceiptRules(launchVariables, stepKey)
+            .Where(rule =>
+                rule.ApplicableBranchOutcomeKeys.Count == 0 &&
+                rule.SkippedBranchOutcomeKeys.Count == 0)
+            .Select(rule => rule.ToolReceipt)
+            .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
     internal static IReadOnlyList<string> ResolveProductMutationRequiredBranchOutcomeKeys(
         IReadOnlyDictionary<string, string> launchVariables,
         string stepKey)
@@ -229,16 +241,33 @@ internal static class ProcessProductCompletionRuleParser
             .EnumerateArray()
             .SelectMany(ParseProductCompletionRequiredToolReceiptRuleElement)
             .Where(rule => !string.IsNullOrWhiteSpace(rule.ToolReceipt))
-            .GroupBy(rule => string.IsNullOrWhiteSpace(rule.Key) ? rule.ToolReceipt : rule.Key, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(BuildProductCompletionRequiredToolReceiptRuleIdentity, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToArray();
+    }
+
+    private static string BuildProductCompletionRequiredToolReceiptRuleIdentity(
+        ProductCompletionRequiredToolReceiptRule rule)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.Key))
+        {
+            return $"key:{rule.Key.Trim()}";
+        }
+
+        var applicableBranches = string.Join(
+            ",",
+            rule.ApplicableBranchOutcomeKeys.OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+        var skippedBranches = string.Join(
+            ",",
+            rule.SkippedBranchOutcomeKeys.OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+        return $"receipt:{rule.ToolReceipt}|applicable:{applicableBranches}|skipped:{skippedBranches}|allow-failed:{rule.AllowFailedExecutionReceipt}";
     }
 
     internal static bool TryReadProductCompletionRequiredToolReceiptRule(
         JsonElement element,
         out ProductCompletionRequiredToolReceiptRule rule)
     {
-        var toolReceipt = ReadFirstStringProperty(element, "toolName", "tool", "receipt", "requiredToolReceipt", "name", "selector");
+        var toolReceipt = ReadFirstStringProperty(element, "toolName", "tool", "toolReceipt", "receipt", "requiredToolReceipt", "name", "selector");
         if (string.IsNullOrWhiteSpace(toolReceipt))
         {
             rule = new ProductCompletionRequiredToolReceiptRule(string.Empty, [], [], string.Empty, string.Empty, string.Empty);

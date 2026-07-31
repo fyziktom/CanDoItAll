@@ -6,14 +6,22 @@ internal sealed class WorkspacePathAliasSession : IDisposable
 {
     private const int WindowsPathBudget = 240;
     private const int RelativePathSafetyAllowance = 120;
+    private static readonly object DriveLetterReservationGate = new();
+    private static readonly HashSet<char> ReservedDriveLetters = [];
 
     private readonly string aliasRootPath;
+    private readonly char driveLetter;
     private readonly string workspaceRootPath;
+    private int disposeState;
 
-    private WorkspacePathAliasSession(string workspaceRootPath, string aliasRootPath)
+    private WorkspacePathAliasSession(
+        string workspaceRootPath,
+        string aliasRootPath,
+        char driveLetter)
     {
         this.workspaceRootPath = Path.GetFullPath(workspaceRootPath);
         this.aliasRootPath = aliasRootPath;
+        this.driveLetter = driveLetter;
     }
 
     public static WorkspacePathAliasSession? TryCreate(
@@ -32,14 +40,18 @@ internal sealed class WorkspacePathAliasSession : IDisposable
             return null;
         }
 
-        var driveLetter = FindAvailableDriveLetter();
+        var driveLetter = ReserveAvailableDriveLetter();
         if (!TryRunSubst($"{driveLetter}: {normalizedWorkspaceRoot}", out var failureMessage))
         {
+            ReleaseDriveLetter(driveLetter);
             throw new InvalidOperationException(
                 $"Failed to create temporary workspace drive alias for '{normalizedWorkspaceRoot}'. {failureMessage}");
         }
 
-        return new WorkspacePathAliasSession(normalizedWorkspaceRoot, $"{driveLetter}:\\");
+        return new WorkspacePathAliasSession(
+            normalizedWorkspaceRoot,
+            $"{driveLetter}:\\",
+            driveLetter);
     }
 
     public string RewritePath(string path)
@@ -75,7 +87,19 @@ internal sealed class WorkspacePathAliasSession : IDisposable
 
     public void Dispose()
     {
-        TryRunSubst($"{aliasRootPath[..2]} /d", out _);
+        if (Interlocked.Exchange(ref disposeState, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            TryRunSubst($"{driveLetter}: /d", out _);
+        }
+        finally
+        {
+            ReleaseDriveLetter(driveLetter);
+        }
     }
 
     private string RewriteArgument(string argument)
@@ -150,21 +174,36 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         return extension.Length > 0;
     }
 
-    private static char FindAvailableDriveLetter()
+    private static char ReserveAvailableDriveLetter()
     {
-        var usedLetters = DriveInfo.GetDrives()
-            .Select(drive => char.ToUpperInvariant(drive.Name[0]))
-            .ToHashSet();
-
-        for (var candidate = 'Z'; candidate >= 'P'; candidate--)
+        lock (DriveLetterReservationGate)
         {
-            if (!usedLetters.Contains(candidate))
+            var usedLetters = DriveInfo.GetDrives()
+                .Select(drive => char.ToUpperInvariant(drive.Name[0]))
+                .Concat(ReservedDriveLetters)
+                .ToHashSet();
+
+            for (var candidate = 'Z'; candidate >= 'P'; candidate--)
             {
+                if (usedLetters.Contains(candidate))
+                {
+                    continue;
+                }
+
+                ReservedDriveLetters.Add(candidate);
                 return candidate;
             }
         }
 
         throw new InvalidOperationException("No free drive letter is available for temporary workspace path aliasing.");
+    }
+
+    private static void ReleaseDriveLetter(char driveLetter)
+    {
+        lock (DriveLetterReservationGate)
+        {
+            ReservedDriveLetters.Remove(driveLetter);
+        }
     }
 
     private static bool TryRunSubst(string arguments, out string failureMessage)

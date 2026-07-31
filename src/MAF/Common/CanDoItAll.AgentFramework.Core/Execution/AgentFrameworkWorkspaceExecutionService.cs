@@ -15,6 +15,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     ILogger logger,
     AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity,
     IAgentExecutionPreparationService executionPreparationService,
+    IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner,
     IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
     IAgentOutputRepairService? outputRepairService = null,
     IWorkspacePathResolutionService? workspacePathResolutionService = null) :
@@ -34,6 +35,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
         providerCredentialDispatchScopeFactory =
         new(providerCredentialResolver);
     private readonly IWorkspacePathResolutionService? workspacePathResolutionService = workspacePathResolutionService;
+    private readonly IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner =
+        workspaceProcessLeaseCleaner
+        ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
     private readonly ILogger logger = logger;
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);

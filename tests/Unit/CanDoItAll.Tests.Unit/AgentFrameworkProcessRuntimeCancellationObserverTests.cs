@@ -16,10 +16,12 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
         var run = CreateRun(processRunId);
         var store = new RecordingExecutionRunStore(new ExecutionRunDetail(run, null, [], []));
         var registry = new AgentExecutionCancellationRegistry();
+        var processLeaseCleaner = new RecordingProcessLeaseCleaner();
         using var registration = registry.Register(run, CancellationToken.None);
         var observer = new AgentFrameworkProcessRuntimeCancellationObserver(
             registry,
             store,
+            processLeaseCleaner,
             NullLogger<AgentFrameworkProcessRuntimeCancellationObserver>.Instance);
 
         var result = await observer.OnRunsCancelledAsync(new ProcessRuntimeRunCancellationObservation(
@@ -37,9 +39,43 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
         Assert.Equal(string.Empty, saved.Run.RuntimeSessionKey);
         Assert.Null(saved.Run.SerializedSessionStateJson);
         Assert.Empty(saved.Run.PendingApprovals);
+        Assert.Equal([run.Id], processLeaseCleaner.CleanedExecutionRunIds);
         Assert.Contains(saved.ExecutionLog, entry => entry.Phase == "process-cancellation");
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains("Signaled cancellation", StringComparison.Ordinal));
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Contains("Marked 1 AgentFramework execution run", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task OnRunsCancelled_preserves_terminal_cancellation_when_process_cleanup_throws()
+    {
+        var processRunId = ProcessRunId.New();
+        var run = CreateRun(processRunId);
+        var store = new RecordingExecutionRunStore(new ExecutionRunDetail(run, null, [], []));
+        var registry = new AgentExecutionCancellationRegistry();
+        var processLeaseCleaner = new RecordingProcessLeaseCleaner(throwOnCleanup: true);
+        var observer = new AgentFrameworkProcessRuntimeCancellationObserver(
+            registry,
+            store,
+            processLeaseCleaner,
+            NullLogger<AgentFrameworkProcessRuntimeCancellationObserver>.Instance);
+
+        var result = await observer.OnRunsCancelledAsync(new ProcessRuntimeRunCancellationObservation(
+            processRunId,
+            [processRunId],
+            "unit-test",
+            "Stop process run.",
+            DateTimeOffset.UtcNow));
+
+        var saved = await store.GetExecutionRunDetailAsync(run.Id);
+        Assert.NotNull(saved);
+        Assert.Equal(ExecutionState.Failed, saved.Run.State);
+        Assert.Equal(RunOutcome.Cancelled, saved.Run.Outcome);
+        Assert.Equal([run.Id], processLeaseCleaner.CleanedExecutionRunIds);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Contains(
+                "Marked 1 AgentFramework execution run",
+                StringComparison.Ordinal));
     }
 
     private static ExecutionRunRecord CreateRun(ProcessRunId processRunId)
@@ -72,6 +108,24 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
             PendingApprovals: [],
             ProcessRunId: processRunId.Value.ToString("D"),
             ProcessStepId: Guid.NewGuid().ToString("D"));
+    }
+
+    private sealed class RecordingProcessLeaseCleaner(bool throwOnCleanup = false)
+        : IWorkspaceExecutionRunProcessLeaseCleaner
+    {
+        public List<Guid> CleanedExecutionRunIds { get; } = [];
+
+        public Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(Guid executionRunId)
+        {
+            CleanedExecutionRunIds.Add(executionRunId);
+            if (throwOnCleanup)
+            {
+                throw new InvalidOperationException("simulated cleanup failure");
+            }
+
+            return Task.FromResult(
+                WorkspaceExecutionRunProcessCleanupResult.Empty(executionRunId));
+        }
     }
 
     private sealed class RecordingExecutionRunStore(ExecutionRunDetail detail) : ISandboxWorkspaceExecutionRunStore

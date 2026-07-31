@@ -1,8 +1,10 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
@@ -1682,13 +1684,15 @@ public sealed class ProcessRuntimeDispatchQueueTests
             stepId,
             now.AddMinutes(-3),
             ExecutionState.Failed,
-            RunOutcome.Cancelled);
+            RunOutcome.Cancelled,
+            candidate.ClaimToken);
         var recoveredExecution = CreateExecutionRun(
             runId,
             stepId,
             now.AddSeconds(2),
             ExecutionState.Failed,
-            RunOutcome.Cancelled);
+            RunOutcome.Cancelled,
+            candidate.ClaimToken);
 
         var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
             [oldFailedExecution, recoveredExecution],
@@ -1701,7 +1705,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             stepId,
             now.AddSeconds(3),
             ExecutionState.Running,
-            null);
+            null,
+            candidate.ClaimToken);
 
         selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
             [oldFailedExecution, recoveredExecution, newerRunningExecution],
@@ -1728,19 +1733,22 @@ public sealed class ProcessRuntimeDispatchQueueTests
             stepId,
             now.AddSeconds(-10),
             ExecutionState.Completed,
-            RunOutcome.Succeeded);
+            RunOutcome.Succeeded,
+            Guid.NewGuid());
         var oldCompletedExecution = CreateExecutionRun(
             runId,
             stepId,
             now.AddMinutes(-3),
             ExecutionState.Completed,
-            RunOutcome.Succeeded);
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
         var completedExecution = CreateExecutionRun(
             runId,
             stepId,
             now.AddSeconds(2),
             ExecutionState.Completed,
-            RunOutcome.Succeeded);
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
 
         var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
             [oldCompletedExecution, previousClaimCompletedExecution, completedExecution],
@@ -1753,13 +1761,322 @@ public sealed class ProcessRuntimeDispatchQueueTests
             stepId,
             now.AddSeconds(3),
             ExecutionState.Running,
-            null);
+            null,
+            candidate.ClaimToken);
 
         selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
             [oldCompletedExecution, completedExecution, newerRunningExecution],
             candidate);
 
         Assert.Null(selected);
+    }
+
+    [Fact]
+    public void Claim_recovery_selects_exact_claim_identity_when_another_claim_execution_is_newer()
+    {
+        var now = new DateTimeOffset(2026, 7, 30, 14, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            now,
+            now.AddMinutes(25));
+        var exactExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddSeconds(1),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
+        var newerOtherClaimExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now.AddSeconds(2),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            Guid.NewGuid());
+
+        var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [newerOtherClaimExecution, exactExecution],
+            candidate);
+
+        Assert.Equal(exactExecution.Id, selected?.Id);
+    }
+
+    [Fact]
+    public void Claim_recovery_query_filters_exact_identity_before_bounded_take()
+    {
+        var now = new DateTimeOffset(2026, 7, 30, 14, 30, 0, TimeSpan.Zero);
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "dispatcher",
+            now,
+            now.AddMinutes(25));
+        var exactExecution = CreateExecutionRun(
+            candidate.RunId,
+            candidate.StepInstanceId,
+            now.AddSeconds(1),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
+        var unrelatedExecutions = Enumerable
+            .Range(1, 20)
+            .Select(index => CreateExecutionRun(
+                candidate.RunId,
+                candidate.StepInstanceId,
+                now.AddSeconds(index + 1),
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                Guid.NewGuid()))
+            .ToArray();
+        var query = AgentFrameworkProcessExecutionClaimRecoveryReconciler
+            .CreateExecutionRunQuery(candidate);
+
+        var matchingExecutions = unrelatedExecutions
+            .Append(exactExecution)
+            .Where(executionRun =>
+                AgentFrameworkWorkspaceExecutionService.MatchesMetadataStringValues(
+                    executionRun.MetadataJson,
+                    query.MetadataStringEquals))
+            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc)
+            .Take(query.Take)
+            .ToArray();
+
+        Assert.Equal(
+            candidate.ClaimToken.ToString("D"),
+            Assert.Single(query.MetadataStringEquals).Value);
+        Assert.Equal(exactExecution.Id, Assert.Single(matchingExecutions).Id);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{not-json")]
+    [InlineData("""{"agentProcessDispatchClaimIdentity":"not-a-guid"}""")]
+    public void Claim_recovery_rejects_missing_or_malformed_dispatch_claim_metadata(
+        string metadataJson)
+    {
+        var executionRun = CreateExecutionRun(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            Guid.NewGuid()) with
+        {
+            MetadataJson = metadataJson
+        };
+
+        Assert.False(
+            AgentFrameworkProcessExecutionClaimRecoveryCoordinator.IsExecutionBoundToClaim(
+                executionRun,
+                Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Claim_recovery_selects_terminal_execution_created_more_than_two_minutes_into_claim_lease()
+    {
+        var claimCreatedAtUtc = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            claimCreatedAtUtc,
+            claimCreatedAtUtc.AddMinutes(25));
+        var completedExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            claimCreatedAtUtc.AddMinutes(3),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
+
+        var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [completedExecution],
+            candidate);
+
+        Assert.Equal(completedExecution.Id, selected?.Id);
+    }
+
+    [Fact]
+    public void Claim_recovery_rejects_terminal_execution_outside_half_open_claim_lease()
+    {
+        var claimCreatedAtUtc = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var claimExpiresAtUtc = claimCreatedAtUtc.AddMinutes(25);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            claimCreatedAtUtc,
+            claimExpiresAtUtc);
+        var beforeClaim = CreateExecutionRun(
+            runId,
+            stepId,
+            claimCreatedAtUtc.AddTicks(-1),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
+        var atExpiry = CreateExecutionRun(
+            runId,
+            stepId,
+            claimExpiresAtUtc,
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
+        var afterExpiry = CreateExecutionRun(
+            runId,
+            stepId,
+            claimExpiresAtUtc.AddTicks(1),
+            ExecutionState.Completed,
+            RunOutcome.Succeeded,
+            candidate.ClaimToken);
+
+        Assert.Null(AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [beforeClaim],
+            candidate));
+        Assert.Null(AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [atExpiry],
+            candidate));
+        Assert.Null(AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [afterExpiry],
+            candidate));
+    }
+
+    [Theory]
+    [InlineData(ExecutionState.Preparing)]
+    [InlineData(ExecutionState.Running)]
+    [InlineData(ExecutionState.WaitingOnTool)]
+    [InlineData(ExecutionState.Persisting)]
+    public void Claim_recovery_does_not_treat_active_matching_execution_as_terminal(
+        ExecutionState activeState)
+    {
+        var claimCreatedAtUtc = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var runId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId,
+            stepId,
+            Guid.NewGuid(),
+            "dispatcher",
+            claimCreatedAtUtc,
+            claimCreatedAtUtc.AddMinutes(25));
+        var activeExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            claimCreatedAtUtc.AddMinutes(3),
+            activeState,
+            null,
+            candidate.ClaimToken);
+
+        var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [activeExecution],
+            candidate);
+
+        Assert.Null(selected);
+    }
+
+    [Fact]
+    public async Task Expired_running_claim_without_execution_blocks_instead_of_replaying()
+    {
+        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
+        var runId = ProcessRunId.New();
+        var planId = ProcessInstancePlanId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var claimToken = DispatchClaimToken.New();
+        var ownerId = new DispatcherOwnerId("dispatcher");
+        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
+            runId.Value,
+            stepId.Value,
+            claimToken.Value,
+            ownerId.Value,
+            now.AddMinutes(-25),
+            now.AddTicks(-1));
+
+        Assert.Null(AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
+            [],
+            candidate));
+
+        var state = new ProcessRuntimeStateSnapshot(
+            runId,
+            runId,
+            planId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [
+                new ProcessRuntimeStepState(
+                    stepId,
+                    ProcessStepDefinitionId.New(),
+                    ProcessRuntimeStepStatus.Running,
+                    IsExecutable: true,
+                    AttemptNumber: 1,
+                    DependencyStepIds: new HashSet<ProcessStepInstanceId>(),
+                    RequiredArtifactSlots: new HashSet<ArtifactSlotId>(),
+                    ActiveClaimToken: claimToken,
+                    CompletedResultKey: null)
+            ],
+            [
+                new DispatchClaimState(
+                    claimToken,
+                    stepId,
+                    ownerId,
+                    DispatchClaimStatus.Claimed,
+                    AttemptNumber: 1,
+                    candidate.CreatedAtUtc,
+                    candidate.ExpiresAtUtc,
+                    RenewedAtUtc: null,
+                    ResultIdempotencyKey: null)
+            ],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            candidate.CreatedAtUtc);
+        var engine = new ProcessRuntimeEngine(new RecordingRuntimeUnitOfWork());
+        var context = new RuntimeCommandContext(
+            RuntimeCommandId.New(),
+            new ProcessEventActor(
+                ProcessEventActorKind.System,
+                new ProcessActorId("claim-expiration-test")),
+            new ProcessCorrelationId("claim-expiration-test"),
+            now);
+
+        var expired = await engine.ExpireClaimsAsync(
+            state,
+            context,
+            new ExpireDispatchClaimsCommand(now));
+
+        Assert.True(expired.Succeeded);
+        Assert.Equal(
+            DispatchClaimStatus.Expired,
+            Assert.Single(expired.State.Claims).Status);
+        Assert.Equal(
+            ProcessRuntimeStepStatus.Blocked,
+            Assert.Single(expired.State.Steps).Status);
+        Assert.Equal(ProcessRuntimeStatus.Blocked, expired.State.Status);
+        Assert.Contains(
+            expired.Events,
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimExpired);
+        Assert.Contains(
+            expired.Events,
+            runtimeEvent =>
+                runtimeEvent.EventType == ProcessRuntimeEventTypes.StepBlocked &&
+                runtimeEvent.PayloadHash == ProcessRuntimeDiagnosticCodes.RunningClaimExpiredReplayUnsafe);
+        Assert.Contains(
+            expired.Events,
+            runtimeEvent =>
+                runtimeEvent.EventType == ProcessRuntimeEventTypes.ProcessRunBlocked &&
+                runtimeEvent.PayloadHash == ProcessRuntimeDiagnosticCodes.RunningClaimExpiredReplayUnsafe);
+        Assert.DoesNotContain(
+            expired.Events,
+            runtimeEvent => runtimeEvent.EventType == ProcessRuntimeEventTypes.DispatchClaimReleased);
     }
 
     [Fact]
@@ -1778,9 +2095,10 @@ public sealed class ProcessRuntimeDispatchQueueTests
         var previousClaimCompletedExecution = CreateExecutionRun(
             runId,
             stepId,
-            now.AddSeconds(-10),
+            now.AddSeconds(2),
             ExecutionState.Completed,
-            RunOutcome.Succeeded);
+            RunOutcome.Succeeded,
+            Guid.NewGuid());
 
         var selected = AgentFrameworkProcessExecutionClaimRecoveryReconciler.SelectRecoverableExecution(
             [previousClaimCompletedExecution],
@@ -1790,79 +2108,40 @@ public sealed class ProcessRuntimeDispatchQueueTests
     }
 
     [Fact]
-    public void Claim_recovery_releases_only_stale_claim_without_matching_execution()
-    {
-        var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
-        var runId = Guid.NewGuid();
-        var stepId = Guid.NewGuid();
-        var staleAfter = TimeSpan.FromMinutes(2);
-        var candidate = new AgentFrameworkProcessExecutionClaimRecoveryReconciler.ActiveProcessClaimCandidate(
-            runId,
-            stepId,
-            Guid.NewGuid(),
-            "dispatcher",
-            now.AddMinutes(-3),
-            now.AddMinutes(22));
-
-        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
-            [],
-            candidate,
-            now,
-            staleAfter));
-
-        var freshCandidate = candidate with { CreatedAtUtc = now.AddSeconds(-30) };
-        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
-            [],
-            freshCandidate,
-            now,
-            staleAfter));
-
-        var matchingRunningExecution = CreateExecutionRun(
-            runId,
-            stepId,
-            now.AddMinutes(-2),
-            ExecutionState.Running,
-            null);
-        Assert.False(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
-            [matchingRunningExecution],
-            candidate,
-            now,
-            staleAfter));
-
-        var mismatchedExecution = CreateExecutionRun(
-            Guid.NewGuid(),
-            stepId,
-            now.AddMinutes(-2),
-            ExecutionState.Running,
-            null);
-        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryReconciler.ShouldReleaseClaimWithoutExecution(
-            [mismatchedExecution],
-            candidate,
-            now,
-            staleAfter));
-    }
-
-    [Fact]
     public void Execution_recovery_observer_skips_old_recovered_run_when_newer_active_execution_exists()
     {
         var now = new DateTimeOffset(2026, 6, 17, 18, 0, 0, TimeSpan.Zero);
         var runId = Guid.NewGuid();
         var stepId = Guid.NewGuid();
+        var claimToken = Guid.NewGuid();
         var recoveredExecution = CreateExecutionRun(
             runId,
             stepId,
             now.AddMinutes(-5),
             ExecutionState.Failed,
-            RunOutcome.Cancelled);
+            RunOutcome.Cancelled,
+            claimToken);
         var newerActiveExecution = CreateExecutionRun(
             runId,
             stepId,
             now.AddMinutes(-1),
             ExecutionState.Running,
-            null);
+            null,
+            claimToken);
 
         Assert.True(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
             [recoveredExecution, newerActiveExecution],
+            recoveredExecution));
+
+        var newerActiveDifferentClaimExecution = CreateExecutionRun(
+            runId,
+            stepId,
+            now,
+            ExecutionState.Running,
+            null,
+            Guid.NewGuid());
+        Assert.False(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
+            [recoveredExecution, newerActiveDifferentClaimExecution],
             recoveredExecution));
 
         var newerCompletedExecution = CreateExecutionRun(
@@ -1870,7 +2149,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
             stepId,
             now,
             ExecutionState.Completed,
-            RunOutcome.Succeeded);
+            RunOutcome.Succeeded,
+            claimToken);
         Assert.False(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
             [recoveredExecution, newerCompletedExecution],
             recoveredExecution));
@@ -1880,31 +2160,43 @@ public sealed class ProcessRuntimeDispatchQueueTests
             stepId,
             now,
             ExecutionState.Running,
-            null);
+            null,
+            claimToken);
         Assert.False(AgentFrameworkProcessExecutionRecoveryObserver.HasNewerActiveExecutionRun(
             [recoveredExecution, newerMismatchedExecution],
             recoveredExecution));
     }
 
     [Fact]
-    public void Claim_recovery_associates_only_claims_near_recovered_execution_creation()
+    public void Claim_recovery_associates_execution_created_within_claim_lease()
     {
         var executionCreatedAtUtc = new DateTimeOffset(2026, 6, 17, 18, 10, 0, TimeSpan.Zero);
+        var claimCreatedAtUtc = executionCreatedAtUtc.AddMinutes(-10);
+        var claimExpiresAtUtc = executionCreatedAtUtc.AddMinutes(15);
 
         Assert.True(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
-            executionCreatedAtUtc.AddSeconds(-45),
+            claimCreatedAtUtc,
+            claimExpiresAtUtc,
             executionCreatedAtUtc));
         Assert.True(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
             executionCreatedAtUtc,
+            claimExpiresAtUtc,
             executionCreatedAtUtc));
         Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
             executionCreatedAtUtc.AddTicks(1),
+            claimExpiresAtUtc,
+            executionCreatedAtUtc));
+        Assert.True(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
+            executionCreatedAtUtc.AddMinutes(-3),
+            executionCreatedAtUtc.AddMinutes(2),
             executionCreatedAtUtc));
         Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
             executionCreatedAtUtc.AddMinutes(-3),
+            executionCreatedAtUtc.AddTicks(-1),
             executionCreatedAtUtc));
         Assert.False(AgentFrameworkProcessExecutionClaimRecoveryCoordinator.CanAssociateClaimWithRecoveredExecution(
-            executionCreatedAtUtc.AddMinutes(3),
+            executionCreatedAtUtc.AddMinutes(-3),
+            executionCreatedAtUtc,
             executionCreatedAtUtc));
     }
 
@@ -2090,7 +2382,8 @@ public sealed class ProcessRuntimeDispatchQueueTests
         Guid stepId,
         DateTimeOffset createdAtUtc,
         ExecutionState state,
-        RunOutcome? outcome)
+        RunOutcome? outcome,
+        Guid dispatchClaimToken)
     {
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),
@@ -2103,7 +2396,12 @@ public sealed class ProcessRuntimeDispatchQueueTests
             CausationId: Guid.NewGuid().ToString("N"),
             RequestedBy: "unit-test",
             RequestedByKind: "test",
-            MetadataJson: "{}",
+            MetadataJson: JsonSerializer.Serialize(
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessDispatchClaimExecutionMetadata.MetadataKey] =
+                        dispatchClaimToken.ToString("D")
+                }),
             InputSummary: string.Empty,
             ResultSummary: string.Empty,
             ProviderName: "provider",
@@ -2119,5 +2417,15 @@ public sealed class ProcessRuntimeDispatchQueueTests
             PendingApprovals: [],
             ProcessRunId: runId.ToString("D"),
             ProcessStepId: stepId.ToString("D"));
+    }
+
+    private sealed class RecordingRuntimeUnitOfWork : IProcessRuntimeUnitOfWork
+    {
+        public Task<ProcessRuntimeCommitResult> CommitAsync(
+            ProcessRuntimeCommitRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ProcessRuntimeCommitResult.FromMutation(request.Mutation));
+        }
     }
 }

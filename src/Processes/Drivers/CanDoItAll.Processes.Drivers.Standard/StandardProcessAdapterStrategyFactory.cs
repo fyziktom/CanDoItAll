@@ -43,7 +43,8 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
                 context.Inputs,
                 CreateContextFacets(context))
             {
-                StepContract = context.StepContract
+                StepContract = context.StepContract,
+                DispatchClaimIdentity = context.DispatchClaimIdentity
             },
             cancellationToken);
 

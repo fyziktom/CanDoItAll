@@ -192,7 +192,13 @@ internal sealed class MafRuntimeAgentFactory
         options.RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence;
 
         var runtimeAgent = CreateInstrumentedAgent(
-            providerAgentFactory.CreateFrameworkAgent(effectiveProvider, model, options, frameworkManagedHistory, services),
+            providerAgentFactory.CreateFrameworkAgent(
+                effectiveProvider,
+                model,
+                options,
+                frameworkManagedHistory,
+                agent.EnableBackgroundResponses && MafRuntimeSessionBuilder.SupportsBackgroundResponses(effectiveProvider),
+                services),
             effectiveProvider,
             agent,
             capabilityState,
@@ -369,8 +375,9 @@ internal sealed class MafRuntimeAgentFactory
         builder.Use(async (innerAgent, context, next, cancellationToken) =>
         {
             var functionName = context.Function?.Name ?? "unknown";
-            var invocationArguments = MafScriptPolicyInspectionService.ResolveFunctionInvocationArguments(context).ToArray();
+            var invocationArguments = context.Arguments.ToArray();
             var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(functionName, invocationArguments);
+            var pathArguments = ToolInvocationPathArgumentResolver.Resolve(invocationArguments);
             var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
             var classification = isRequiredFinalizerTool
                 ? ToolInvocationClassification.Read
@@ -426,7 +433,8 @@ internal sealed class MafRuntimeAgentFactory
                 ToolInvocationTraces: toolInvocationTraceRecorder.Snapshot())
             {
                 SourceId = auditScope?.SourceId ?? string.Empty,
-                AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? []
+                AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? [],
+                PathArguments = pathArguments
             };
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
@@ -460,9 +468,15 @@ internal sealed class MafRuntimeAgentFactory
                 runtimeToolOwnership?.ProviderKey ?? string.Empty,
                 policyDecision.Signature);
 
-            var traceSequence = toolInvocationTraceRecorder.Start(functionName, classification, policyDecision.Signature, runtimeToolOwnership);
+            var traceSequence = toolInvocationTraceRecorder.Start(
+                functionName,
+                classification,
+                policyDecision.Signature,
+                runtimeToolOwnership,
+                pathArguments);
             var succeeded = false;
             var failureMessage = string.Empty;
+            var failureMessageSafeForPersistence = false;
             using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
             try
             {
@@ -473,6 +487,7 @@ internal sealed class MafRuntimeAgentFactory
                         out var policyDeniedResult))
                 {
                     failureMessage = policyDeniedResult;
+                    failureMessageSafeForPersistence = true;
                     activity?.SetTag("agentframework.tool_policy_recoverable_denial", true);
                     activity?.SetStatus(ActivityStatusCode.Ok);
                     logger?.LogInformation(
@@ -505,7 +520,16 @@ internal sealed class MafRuntimeAgentFactory
                 else
                 {
                     failureMessage = MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(result);
+                    failureMessageSafeForPersistence = true;
                     activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
+                    if (isRequiredFinalizerTool)
+                    {
+                        logger?.LogWarning(
+                            "Required finalizer tool {ToolName} rejected a typed payload for agent {AgentId}. Failure={FailureMessage}",
+                            functionName,
+                            agentDefinition.Id,
+                            failureMessage);
+                    }
                 }
 
                 return result;
@@ -515,14 +539,35 @@ internal sealed class MafRuntimeAgentFactory
                 throw;
             }
             catch (Exception exception)
+                when (MafAgentToolFailureMapper.TryMap(exception, out var toolFailure))
+            {
+                failureMessage = $"{toolFailure.ErrorCode}: {toolFailure.Message}";
+                failureMessageSafeForPersistence = true;
+                activity?.SetStatus(ActivityStatusCode.Error, failureMessage);
+                logger?.LogInformation(
+                    "Returning sanitized tool failure {ErrorCode} for tool {ToolName} on governed run {ProcessRunId}, step {ProcessStepId}. CanRetryWithCorrectedInput={CanRetryWithCorrectedInput}",
+                    toolFailure.ErrorCode,
+                    functionName,
+                    policyContext.ProcessRunId,
+                    policyContext.ProcessStepId,
+                    toolFailure.CanRetryWithCorrectedInput);
+                return toolFailure;
+            }
+            catch (Exception exception)
             {
                 failureMessage = exception.Message;
-                activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+                activity?.SetStatus(
+                    ActivityStatusCode.Error,
+                    ToolInvocationTraceRecorder.UnexposedFailureMessage);
                 throw;
             }
             finally
             {
-                toolInvocationTraceRecorder.Complete(traceSequence, succeeded, failureMessage);
+                toolInvocationTraceRecorder.Complete(
+                    traceSequence,
+                    succeeded,
+                    failureMessage,
+                    failureMessageSafeForPersistence);
             }
         });
         builder.UseOpenTelemetry(

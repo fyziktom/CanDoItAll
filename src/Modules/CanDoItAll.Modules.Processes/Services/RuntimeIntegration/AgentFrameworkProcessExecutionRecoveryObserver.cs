@@ -32,7 +32,6 @@ internal sealed class AgentFrameworkProcessExecutionRecoveryObserver(
     ILogger<AgentFrameworkProcessExecutionRecoveryObserver> logger) : IAgentExecutionRecoveryObserver
 {
     private const string RecoveryRequestedBy = "agent-execution-recovery";
-    private const int ProcessStepExecutionTake = 25;
 
     public async Task OnExecutionRecoveredAsync(
         AgentExecutionRecoveryObservation observation,
@@ -47,14 +46,16 @@ internal sealed class AgentFrameworkProcessExecutionRecoveryObserver(
             return;
         }
 
-        var processStepExecutions = await workspaceService.ListExecutionRunsAsync(
+        var recoveredExecutions = await workspaceService.ListExecutionRunsAsync(
             new ExecutionRunQuery(
-                Take: ProcessStepExecutionTake,
+                Take: 1,
                 ProcessRunId: observation.ProcessRunId,
-                ProcessStepId: observation.ProcessStepId),
+                ProcessStepId: observation.ProcessStepId)
+            {
+                ExecutionRunId = observation.ExecutionRunId
+            },
             cancellationToken).ConfigureAwait(false);
-        var recoveredExecution = processStepExecutions
-            .FirstOrDefault(run => run.Id == observation.ExecutionRunId);
+        var recoveredExecution = recoveredExecutions.SingleOrDefault();
         if (recoveredExecution is null)
         {
             logger.LogWarning(
@@ -65,6 +66,31 @@ internal sealed class AgentFrameworkProcessExecutionRecoveryObserver(
             return;
         }
 
+        if (!ProcessDispatchClaimExecutionMetadata.TryRead(
+                recoveredExecution,
+                out var recoveredClaimIdentity))
+        {
+            logger.LogWarning(
+                "Skipping process claim release for recovered AgentFramework execution {ExecutionRunId} because its durable dispatch claim identity is missing or malformed. ProcessRunId={ProcessRunId} ProcessStepId={ProcessStepId}",
+                observation.ExecutionRunId,
+                observation.ProcessRunId,
+                observation.ProcessStepId);
+            return;
+        }
+
+        var processStepExecutions = await workspaceService.ListExecutionRunsAsync(
+            new ExecutionRunQuery(
+                Take: int.MaxValue,
+                ProcessRunId: observation.ProcessRunId,
+                ProcessStepId: observation.ProcessStepId)
+            {
+                MetadataStringEquals = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessDispatchClaimExecutionMetadata.MetadataKey] =
+                        recoveredClaimIdentity.Value.ToString("D")
+                }
+            },
+            cancellationToken).ConfigureAwait(false);
         if (HasNewerActiveExecutionRun(processStepExecutions, recoveredExecution))
         {
             logger.LogInformation(
@@ -75,13 +101,12 @@ internal sealed class AgentFrameworkProcessExecutionRecoveryObserver(
             return;
         }
 
-        await recoveryCoordinator.ReleaseRecoveredExecutionClaimAsync(
-            observation.ExecutionRunId,
+        await recoveryCoordinator.BlockRecoveredExecutionClaimAsync(
+            recoveredExecution,
             new ProcessRunId(processRunGuid),
             new ProcessStepInstanceId(processStepGuid),
             RecoveryRequestedBy,
-            cancellationToken,
-            recoveredExecutionCreatedAtUtc: recoveredExecution.CreatedAtUtc).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false);
     }
 
     internal static bool HasNewerActiveExecutionRun(
@@ -91,11 +116,19 @@ internal sealed class AgentFrameworkProcessExecutionRecoveryObserver(
         ArgumentNullException.ThrowIfNull(processStepExecutions);
         ArgumentNullException.ThrowIfNull(recoveredExecution);
 
+        if (!ProcessDispatchClaimExecutionMetadata.TryRead(
+                recoveredExecution,
+                out var recoveredClaimIdentity))
+        {
+            return false;
+        }
+
         var recoveredCreatedAtUtc = NormalizeUtc(recoveredExecution.CreatedAtUtc);
         return processStepExecutions.Any(run =>
             run.Id != recoveredExecution.Id &&
             run.State is not ExecutionState.Completed and not ExecutionState.Failed &&
             NormalizeUtc(run.CreatedAtUtc) > recoveredCreatedAtUtc &&
+            ProcessDispatchClaimExecutionMetadata.Matches(run, recoveredClaimIdentity) &&
             string.Equals(run.ProcessRunId, recoveredExecution.ProcessRunId, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(run.ProcessStepId, recoveredExecution.ProcessStepId, StringComparison.OrdinalIgnoreCase));
     }

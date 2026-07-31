@@ -56,7 +56,9 @@ public sealed class HrAgentProcessReviewServiceTests
             executionPreparationCache: scope.ServiceProvider
                 .GetRequiredService<IAgentExecutionPreparationCache>(),
             executionProfileGenerationSource: scope.ServiceProvider
-                .GetRequiredService<IAgentExecutionProfileGenerationSource>());
+                .GetRequiredService<IAgentExecutionProfileGenerationSource>(),
+            workspaceProcessLeaseCleaner: scope.ServiceProvider
+                .GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleaner>());
         var provider = Assert.Single(
             await workspace.ListProvidersAsync(),
             item => item.IsEnabled &&

@@ -246,6 +246,51 @@ public sealed class ProcessStepRecoveryInstructionBuilderTests
     }
 
     [Fact]
+    public void RecoveryInstructionBuilder_does_not_command_tools_from_mutually_exclusive_branches()
+    {
+        var launchVariables = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = JsonSerializer.Serialize(new object[]
+            {
+                new
+                {
+                    ToolName = "workspace_dotnet_restore",
+                    ApplicableBranchOutcomeKeys = new[] { "quality-accepted" }
+                },
+                new
+                {
+                    ToolName = "browser_take_screenshot",
+                    ApplicableBranchOutcomeKeys = new[] { "repair-required" }
+                },
+                new
+                {
+                    ToolName = "workspace_read_file"
+                }
+            })
+        };
+        var assignment = CreatePeerReviewAssignment() with
+        {
+            LaunchVariables = launchVariables
+        };
+        var result = CreateIncidentResult();
+
+        var instruction = CreateBuilder().Build(new ProcessStepRecoveryInstructionBuildRequest(
+            RunId,
+            StepId,
+            assignment.StepKey,
+            assignment,
+            result,
+            CreateReceipt(result, CreateSafeRetryDecision()),
+            OperatorReason: string.Empty));
+
+        Assert.Contains("workspace_read_file", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_dotnet_restore", instruction.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser_take_screenshot", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("Branch-scoped receipt rules", instruction.Text, StringComparison.Ordinal);
+        Assert.Contains("mutually exclusive branch", instruction.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RecoveryInstructionBuilder_ungrounded_reference_packet_does_not_use_dotnet_setup_guidance()
     {
         var assignment = CreatePeerReviewAssignment();

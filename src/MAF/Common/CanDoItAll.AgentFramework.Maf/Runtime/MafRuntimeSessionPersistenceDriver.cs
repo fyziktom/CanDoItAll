@@ -141,6 +141,11 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
                 cancellationToken);
             return JsonSerializer.Serialize(serializedSession, SerializerOptions);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await serializationCancellation.CancelAsync();
+            throw;
+        }
         catch (TimeoutException)
         {
             await serializationCancellation.CancelAsync();

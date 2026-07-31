@@ -85,6 +85,10 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 scope,
                 serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
         });
+        services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
+            new WorkspaceExecutionRunProcessLeaseCleaner(
+                serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
+                serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>()));
         services.TryAddScoped<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddScoped<IWorkspaceImageOperationService>(serviceProvider =>
         {

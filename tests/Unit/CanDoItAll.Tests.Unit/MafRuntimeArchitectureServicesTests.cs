@@ -204,7 +204,6 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(RequestScopedSessionContentScrubber),
             typeof(ProcessArtifactRecoveryService),
             typeof(ProviderRuntimeDiagnostics),
-            typeof(RepeatedToolInvocationGuard),
             typeof(RequiredFinalizerCapturedException)
         };
 
@@ -636,7 +635,7 @@ public sealed class MafRuntimeArchitectureServicesTests
         await cancellation.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => serialization);
-        await agent.SerializationCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.True(agent.SerializationToken.IsCancellationRequested);
     }
 
     [Fact]
@@ -660,7 +659,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             CancellationToken.None);
 
         Assert.Null(serialized);
-        await agent.SerializationCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.True(agent.SerializationToken.IsCancellationRequested);
         Assert.Contains(
             progress,
             message => message.Contains("bounded timeout", StringComparison.Ordinal));
@@ -853,8 +852,13 @@ public sealed class MafRuntimeArchitectureServicesTests
             "workspace_write_file",
             ToolInvocationClassification.Mutation,
             "signature",
-            new AgentRuntimeToolOwnership("provider.key", "Provider", "workspace_write_file"));
-        recorder.Complete(sequence, succeeded: false, "denied");
+            new AgentRuntimeToolOwnership("provider.key", "Provider", "workspace_write_file"),
+            ToolInvocationPathArgumentSet.Empty);
+        recorder.Complete(
+            sequence,
+            succeeded: false,
+            "denied",
+            failureMessageSafeForPersistence: true);
 
         var trace = Assert.Single(recorder.Snapshot());
         Assert.Equal("workspace_write_file", trace.ToolName);
@@ -862,6 +866,137 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.False(trace.Succeeded);
         Assert.Equal("denied", trace.FailureMessage);
         Assert.Equal("provider.key", trace.RuntimeToolProviderKey);
+    }
+
+    [Fact]
+    public void ToolInvocationTraceRecorder_redacts_unexposed_failure_details()
+    {
+        var recorder = new ToolInvocationTraceRecorder();
+        var sequence = recorder.Start(
+            "project_structure_read",
+            ToolInvocationClassification.Read,
+            "signature",
+            new AgentRuntimeToolOwnership(
+                "provider.key",
+                "Provider",
+                "project_structure_read"),
+            ToolInvocationPathArgumentSet.Empty);
+
+        recorder.Complete(
+            sequence,
+            succeeded: false,
+            "Database failure at C:\\private\\workspace with credential secret-value.",
+            failureMessageSafeForPersistence: false);
+
+        var trace = Assert.Single(recorder.Snapshot());
+        Assert.Equal(
+            ToolInvocationTraceRecorder.UnexposedFailureMessage,
+            trace.FailureMessage);
+        Assert.DoesNotContain("private", trace.FailureMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-value", trace.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ToolInvocationTraceRecorder_preserves_structured_target_path_for_primary_artifact_recovery()
+    {
+        var processRunId = Guid.NewGuid();
+        var context = new AgentRuntimeContextIntent(
+            SourceKind: "process-step",
+            SourceId: "code-change",
+            ProcessRunId: processRunId.ToString("D"),
+            ProcessStepId: Guid.NewGuid().ToString("D"),
+            TargetScope: ProcessOperationContractNames.ExternalProductTargetMutable,
+            IsGovernedProcessStep: true,
+            BrowserToolsAllowed: false,
+            AllowsProductMutation: true,
+            WorkspaceToolProfile: null,
+            WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+            AllowedOperations:
+            [
+                ProcessOperationContractNames.MutateProductTarget,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ]);
+        Assert.True(
+            ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
+                context,
+                out var primaryArtifactRef,
+                out var pathFailure),
+            pathFailure);
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceWriteFile,
+            new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["PaTh"] = primaryArtifactRef,
+                ["content"] = "Status: Completed"
+            });
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(
+        [
+            new KeyValuePair<string, object?>("PaTh", primaryArtifactRef),
+            new KeyValuePair<string, object?>("content", "Status: Completed")
+        ]);
+        var recorder = new ToolInvocationTraceRecorder();
+
+        var sequence = recorder.Start(
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolInvocationClassification.Mutation,
+            AgentToolInvocationPolicyMetadata.BuildSignature(
+                ToolContractCatalog.WorkspaceWriteFile,
+                redactedArguments),
+            runtimeToolOwnership: null,
+            pathArguments);
+        recorder.Complete(
+            sequence,
+            succeeded: true,
+            failureMessage: string.Empty,
+            failureMessageSafeForPersistence: false);
+
+        var trace = Assert.Single(recorder.Snapshot());
+        Assert.Equal(primaryArtifactRef, trace.TargetPath);
+        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
+            context,
+            primaryArtifactRef,
+            """
+            # Feature implementation change set
+
+            Status: Completed
+            """,
+            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
+            [trace],
+            out var outcome,
+            out var recoveryFailure);
+        Assert.True(recovered, recoveryFailure);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
+        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+    }
+
+    [Fact]
+    public void ToolInvocationTraceRecorder_does_not_project_path_collection_into_scalar_recovery_target()
+    {
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(
+        [
+            new KeyValuePair<string, object?>(
+                "paths",
+                new[]
+                {
+                    "managed-files/project-media/images/project/source.png",
+                    "artifacts/process-runs/run/evidence/current.png"
+                })
+        ]);
+        var recorder = new ToolInvocationTraceRecorder();
+
+        var sequence = recorder.Start(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            ToolInvocationClassification.Read,
+            "signature",
+            runtimeToolOwnership: null,
+            pathArguments);
+        recorder.Complete(
+            sequence,
+            succeeded: true,
+            failureMessage: string.Empty,
+            failureMessageSafeForPersistence: false);
+
+        Assert.Empty(Assert.Single(recorder.Snapshot()).TargetPath);
     }
 
     [Fact]
@@ -1231,8 +1366,7 @@ public sealed class MafRuntimeArchitectureServicesTests
         public TaskCompletionSource SerializationStarted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public TaskCompletionSource SerializationCancellationObserved { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationToken SerializationToken { get; private set; }
 
         protected override ValueTask<AgentSession> CreateSessionCoreAsync(
             CancellationToken cancellationToken = default)
@@ -1246,6 +1380,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
+            SerializationToken = cancellationToken;
             SerializationStarted.TrySetResult();
             return new ValueTask<JsonElement>(WaitForCancellationAsync(cancellationToken));
         }
@@ -1285,7 +1420,6 @@ public sealed class MafRuntimeArchitectureServicesTests
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                SerializationCancellationObserved.TrySetResult();
                 throw;
             }
         }

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -625,6 +626,39 @@ public sealed record ProjectStructureAssetCreateInput(
     string? SourceContentType = null,
     string? SourceUrl = null);
 
+public sealed record ProjectStructureAgentAssetCreateInput(
+    ProjectObjectType ObjectType,
+    string Title,
+    string Subtitle,
+    string Notes,
+    ProjectObjectMediaPayload? Media,
+    string? ParentNodeKey = null,
+    string? ObjectSubtype = null,
+    string? LeaseToken = null,
+    string? SourceWorkspacePath = null,
+    string? SourceFileName = null,
+    string? SourceContentType = null,
+    string? SourceUrl = null)
+{
+    public ProjectStructureAssetCreateInput ToServiceRequest()
+    {
+        return new ProjectStructureAssetCreateInput(
+            ObjectType,
+            Title,
+            Subtitle,
+            Notes,
+            Media,
+            ParentNodeKey,
+            ObjectSubtype,
+            MetadataJson: null,
+            LeaseToken,
+            SourceWorkspacePath,
+            SourceFileName,
+            SourceContentType,
+            SourceUrl);
+    }
+}
+
 public sealed record ProjectStructureApprovalRequestCreateInput(
     string Title,
     string Subtitle,
@@ -668,6 +702,27 @@ public sealed record ProjectStructureAssetRevisionRequest(
     string? ObjectSubtype = null,
     string? MetadataJson = null,
     string? LeaseToken = null);
+
+public sealed record ProjectStructureAgentAssetRevisionRequest(
+    string Title,
+    string Subtitle,
+    string Notes,
+    ProjectObjectMediaPayload Media,
+    string? ObjectSubtype = null,
+    string? LeaseToken = null)
+{
+    public ProjectStructureAssetRevisionRequest ToServiceRequest()
+    {
+        return new ProjectStructureAssetRevisionRequest(
+            Title,
+            Subtitle,
+            Notes,
+            Media,
+            ObjectSubtype,
+            MetadataJson: null,
+            LeaseToken);
+    }
+}
 
 public sealed record ProjectStructureChecklistRequest(
     int? MaxPriority = null,
@@ -887,14 +942,52 @@ public sealed record ProjectManagementGuidanceEntry(
 public sealed record ProjectManagementGuidanceResponse(
     IReadOnlyList<ProjectManagementGuidanceEntry> Entries);
 
-public class ProjectStructureAgentException : Exception
+public class ProjectStructureAgentException : Exception, IAgentToolFailure
 {
+    private readonly bool isSafeToExpose;
+    private readonly bool canRetryWithCorrectedInput;
+
     public ProjectStructureAgentException(int statusCode, string errorCode, string message, object? details = null)
+        : this(
+            statusCode,
+            errorCode,
+            message,
+            details,
+            isSafeToExpose: false,
+            canRetryWithCorrectedInput: false)
+    {
+    }
+
+    private ProjectStructureAgentException(
+        int statusCode,
+        string errorCode,
+        string message,
+        object? details,
+        bool isSafeToExpose,
+        bool canRetryWithCorrectedInput)
         : base(message)
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;
         Details = details;
+        this.isSafeToExpose = isSafeToExpose;
+        this.canRetryWithCorrectedInput = canRetryWithCorrectedInput;
+    }
+
+    public static ProjectStructureAgentException CreateAgentVisible(
+        int statusCode,
+        string errorCode,
+        string safeMessage,
+        bool canRetryWithCorrectedInput,
+        object? diagnosticDetails = null)
+    {
+        return new ProjectStructureAgentException(
+            statusCode,
+            errorCode,
+            safeMessage,
+            diagnosticDetails,
+            isSafeToExpose: true,
+            canRetryWithCorrectedInput);
     }
 
     public int StatusCode { get; }
@@ -902,6 +995,12 @@ public class ProjectStructureAgentException : Exception
     public string ErrorCode { get; }
 
     public object? Details { get; }
+
+    public string SafeMessage => Message;
+
+    public bool IsSafeToExpose => isSafeToExpose;
+
+    public bool CanRetryWithCorrectedInput => canRetryWithCorrectedInput;
 }
 
 public sealed class ProjectStructureProjectCreationRejectedException(string message, object? details = null)

@@ -29,6 +29,7 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class AgentFrameworkProcessRuntimeCancellationObserver(
     IAgentExecutionCancellationRegistry cancellationRegistry,
     ISandboxWorkspaceExecutionRunStore executionRunStore,
+    IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner,
     ILogger<AgentFrameworkProcessRuntimeCancellationObserver> logger) : IProcessRuntimeRunCancellationObserver
 {
     private const string CancellationPhase = "process-cancellation";
@@ -140,10 +141,47 @@ internal sealed class AgentFrameworkProcessRuntimeCancellationObserver(
             };
 
             await executionRunStore.SaveExecutionRunDetailAsync(cancelledDetail, cancellationToken).ConfigureAwait(false);
+            await CleanupExecutionRunProcessLeasesAsync(cancelledRun).ConfigureAwait(false);
             repairedCount++;
         }
 
         return repairedCount;
+    }
+
+    private async Task CleanupExecutionRunProcessLeasesAsync(ExecutionRunRecord run)
+    {
+        try
+        {
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(run);
+            var result = await workspaceProcessLeaseCleaner
+                .CleanupAsync(run.Id)
+                .ConfigureAwait(false);
+
+            if (result.CleanedStartupReceiptPaths.Count > 0)
+            {
+                logger.LogInformation(
+                    "Cleaned {WorkspaceProcessLeaseCount} ExecutionRun workspace process lease(s) after process cancellation terminalized execution run {ExecutionRunId}. Startup receipts: {StartupReceiptPaths}.",
+                    result.CleanedStartupReceiptPaths.Count,
+                    run.Id,
+                    result.CleanedStartupReceiptPaths);
+            }
+
+            foreach (var failure in result.Failures)
+            {
+                logger.LogError(
+                    "Could not clean the ExecutionRun workspace process lease for cancelled execution run {ExecutionRunId} and startup receipt {StartupReceiptPath}. The durable lease remains available for startup recovery. Failure: {CleanupFailure}.",
+                    run.Id,
+                    failure.StartupReceiptPath,
+                    failure.Message);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "ExecutionRun workspace process lease cleanup failed unexpectedly after process cancellation terminalized execution run {ExecutionRunId}.",
+                run.Id);
+        }
     }
 
     private static bool IsActiveExecutionRun(ExecutionRunRecord run)

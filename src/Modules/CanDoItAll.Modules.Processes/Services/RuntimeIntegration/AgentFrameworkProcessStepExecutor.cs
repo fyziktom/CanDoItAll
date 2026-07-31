@@ -91,6 +91,14 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.DispatchClaimIdentity.Value == Guid.Empty)
+        {
+            return Failed(
+                "process.adapter.dispatch_claim_missing",
+                "The process execution adapter requires a concrete dispatch claim identity.",
+                "dispatch-claim-missing");
+        }
+
         if (request.StepId is not { } stepId)
         {
             return Failed("process.adapter.step_missing", "The process execution adapter requires a concrete step id.", "step-missing");
@@ -186,7 +194,9 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         try
         {
             workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-            var metadataJson = executionMetadataComposer.Compose(assignment);
+            var metadataJson = executionMetadataComposer.ComposeClaimedExecution(
+                assignment,
+                request.DispatchClaimIdentity);
             var parentArtifactContext = parentArtifactContextHydrator.Hydrate(assignment);
             if (parentArtifactContext.Issue is { } parentArtifactContextIssue)
             {
@@ -295,7 +305,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 assignment,
                 validation.Output,
                 result.ExecutionRunId,
-                executionDetail.ToolReceipts);
+                executionDetail.ToolReceipts,
+                request.StepContract);
             if (materialization.Issue is { } materializationIssue)
             {
                 return NeedsManagerForCompletionIssue(assignment, validation.RawOutputHash, materializationIssue);

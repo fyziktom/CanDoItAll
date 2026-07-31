@@ -823,9 +823,14 @@ public sealed record ExecutionRunQuery(
     DateTimeOffset? UpdatedFromUtc = null,
     DateTimeOffset? UpdatedToUtc = null)
 {
+    public Guid? ExecutionRunId { get; init; }
+
     public IReadOnlyList<string> ProcessRunIds { get; init; } = [];
 
     public IReadOnlyList<string> ProcessStepIds { get; init; } = [];
+
+    public IReadOnlyDictionary<string, string> MetadataStringEquals { get; init; } =
+        new Dictionary<string, string>(StringComparer.Ordinal);
 }
 
 public sealed record ExecutionRunDetail(

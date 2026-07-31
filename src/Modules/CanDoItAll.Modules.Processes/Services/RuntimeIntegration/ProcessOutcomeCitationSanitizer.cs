@@ -9,18 +9,55 @@ internal static class ProcessOutcomeCitationSanitizer
         string content,
         out string sanitizedContent)
     {
-        sanitizedContent = Regex.Replace(
+        var protectedEnvelopes = new List<ProtectedEnvelope>();
+        if (!TryProtectCompleteEnvelopes(
             content,
+            ParentSubprocessVerifiedChildOutputEnvelope.BeginMarker,
+            ParentSubprocessVerifiedChildOutputEnvelope.EndMarker,
+            protectedEnvelopes,
+            out var contentForSanitization) ||
+            !TryProtectCompleteEnvelopes(
+            contentForSanitization,
+            ParentSubprocessForwardedContextEnvelope.BeginMarker,
+            ParentSubprocessForwardedContextEnvelope.EndMarker,
+            protectedEnvelopes,
+            out contentForSanitization))
+        {
+            sanitizedContent = content;
+            return false;
+        }
+
+        if (ParentSubprocessVerifiedChildOutputEnvelope.ContainsReservedMarker(contentForSanitization) ||
+            ParentSubprocessForwardedContextEnvelope.ContainsReservedMarker(contentForSanitization))
+        {
+            sanitizedContent = content;
+            return false;
+        }
+
+        sanitizedContent = Regex.Replace(
+            contentForSanitization,
             @"(?im)^\s*(?:[-*]\s*)?SourceDoc(?:Name|Link)\s*:\s*.*(?:\r?\n|$)",
             string.Empty);
         sanitizedContent = Regex.Replace(
             sanitizedContent,
             @"(?im)^.*(?:[A-Za-z]:\\[^\r\n]*\\CanDoItAll\\workspace\\|artifacts/scopes[\\/]|managed-files[\\/]|project-media[\\/]|tool-runs[\\/]).*(?:\r?\n|$)",
             string.Empty);
-        sanitizedContent = Regex.Replace(
-            sanitizedContent,
-            @"(\r?\n){3,}",
-            $"{Environment.NewLine}{Environment.NewLine}");
+        if (!string.Equals(contentForSanitization, sanitizedContent, StringComparison.Ordinal))
+        {
+            sanitizedContent = Regex.Replace(
+                sanitizedContent,
+                @"(\r?\n){3,}",
+                $"{Environment.NewLine}{Environment.NewLine}");
+        }
+        for (var index = protectedEnvelopes.Count - 1; index >= 0; index--)
+        {
+            var protectedEnvelope = protectedEnvelopes[index];
+            sanitizedContent = sanitizedContent.Replace(
+                protectedEnvelope.Placeholder,
+                protectedEnvelope.Content,
+                StringComparison.Ordinal);
+        }
+
         return !string.Equals(content, sanitizedContent, StringComparison.Ordinal);
     }
 
@@ -131,4 +168,51 @@ internal static class ProcessOutcomeCitationSanitizer
                     .ToArray()
             })
             .ToArray();
+
+    private static bool TryProtectCompleteEnvelopes(
+        string content,
+        string beginMarker,
+        string endMarker,
+        ICollection<ProtectedEnvelope> protectedEnvelopes,
+        out string protectedContent)
+    {
+        protectedContent = content;
+        if (!ParentSubprocessRuntimeEnvelopeFraming.TryFindTopLevelSpans(
+                content,
+                beginMarker,
+                endMarker,
+                out var spans))
+        {
+            return false;
+        }
+
+        foreach (var span in spans.OrderByDescending(span => span.Start))
+        {
+            var envelope = protectedContent.Substring(span.Start, span.Length);
+            var placeholder = BuildUniquePlaceholder(content, protectedEnvelopes.Count);
+            protectedEnvelopes.Add(new ProtectedEnvelope(placeholder, envelope));
+            protectedContent = protectedContent
+                .Remove(span.Start, span.Length)
+                .Insert(span.Start, placeholder);
+        }
+
+        return true;
+    }
+
+    private static string BuildUniquePlaceholder(string content, int index)
+    {
+        var candidateIndex = index;
+        while (true)
+        {
+            var placeholder = $"\u001Ecandoitall-runtime-envelope-{candidateIndex}\u001E";
+            if (!content.Contains(placeholder, StringComparison.Ordinal))
+            {
+                return placeholder;
+            }
+
+            candidateIndex++;
+        }
+    }
+
+    private sealed record ProtectedEnvelope(string Placeholder, string Content);
 }

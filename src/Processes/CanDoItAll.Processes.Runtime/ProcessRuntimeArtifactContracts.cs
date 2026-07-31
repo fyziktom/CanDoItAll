@@ -117,7 +117,8 @@ public static class ProcessRuntimeArtifactContracts
 
     public static ProcessStepExecutionContract BuildStepContract(
         ProcessRuntimeStateSnapshot state,
-        ProcessRuntimeStepState step)
+        ProcessRuntimeStepState step,
+        BranchRouteTable? branchRoutes = null)
     {
         var requiredArtifacts = new List<RequiredArtifactInputRef>();
         foreach (var slotId in step.RequiredArtifactSlots.OrderBy(item => item.Value))
@@ -163,12 +164,19 @@ public static class ProcessRuntimeArtifactContracts
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var configuredBranchOutcomeIds = branchRoutes?.Routes
+            .Where(route => route.BranchStepId == step.StepDefinitionId)
+            .OrderBy(route => route.FamilyId.Value, StringComparer.Ordinal)
+            .ThenBy(route => route.OutcomeId.Value, StringComparer.Ordinal)
+            .Select(route => route.OutcomeId)
+            .ToArray() ?? [];
         var contractHash = ComputeStepContractHash(
             requiredArtifacts,
             expectedProducedArtifacts,
             requiredToolNames,
             artifactDescriptors,
-            subprocessArtifactMappings);
+            subprocessArtifactMappings,
+            configuredBranchOutcomeIds);
 
         return new ProcessStepExecutionContract(
             requiredArtifacts,
@@ -177,7 +185,8 @@ public static class ProcessRuntimeArtifactContracts
             contractHash)
         {
             ArtifactDescriptors = artifactDescriptors,
-            SubprocessArtifactMappings = subprocessArtifactMappings
+            SubprocessArtifactMappings = subprocessArtifactMappings,
+            ConfiguredBranchOutcomeIds = configuredBranchOutcomeIds
         };
     }
 
@@ -357,7 +366,8 @@ public static class ProcessRuntimeArtifactContracts
         IReadOnlyList<ExpectedProducedArtifactRef> expectedProducedArtifacts,
         IReadOnlyList<string> requiredToolNames,
         IReadOnlyList<ProcessArtifactSlotDescriptor> artifactDescriptors,
-        IReadOnlyList<SubprocessArtifactMappingDescriptor> subprocessArtifactMappings)
+        IReadOnlyList<SubprocessArtifactMappingDescriptor> subprocessArtifactMappings,
+        IReadOnlyList<BranchOutcomeId> configuredBranchOutcomeIds)
     {
         var builder = new StringBuilder("step-contract");
         foreach (var artifact in requiredArtifacts)
@@ -389,6 +399,13 @@ public static class ProcessRuntimeArtifactContracts
             builder
                 .Append("|tool:")
                 .Append(toolName);
+        }
+
+        foreach (var outcomeId in configuredBranchOutcomeIds)
+        {
+            builder
+                .Append("|branch-outcome:")
+                .Append(outcomeId.Value);
         }
 
         foreach (var descriptor in artifactDescriptors)

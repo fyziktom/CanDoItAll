@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT--derived%20with%20website%20link-blue.svg)](LICENSE)
 
 CanDoItAll is a local-first .NET 10 Blazor application for governed project delivery,
 durable process execution, workforce coordination, and AI-agent automation. Product
@@ -132,7 +132,10 @@ The root npm package is private and exists only to run Tailwind commands.
 
 ## License And Contributions
 
-This repository uses the [MIT License](LICENSE). The
+This repository uses the
+[MIT-Derived License with CanDoItAll Website Link Requirement](LICENSE). Redistributions
+of the software or a substantial portion of it in source or binary form must include at
+least one link to [aicandoitall.com](https://aicandoitall.com). The
 [third-party notices](THIRD-PARTY-NOTICES.md) preserve the copyright and license terms
 for external material redistributed by the application.
 

@@ -38,9 +38,21 @@ internal static class MafFinalizerDriver
             return false;
         }
 
-        var toolName = policy.ToolName;
-        return !finalizerInvocations.Any(invocation =>
-            string.Equals(invocation.ToolName, toolName, StringComparison.OrdinalIgnoreCase));
+        return !HasValidRequiredFinalizerInvocation(policy, finalizerInvocations);
+    }
+
+    public static bool ShouldAttemptProviderFailureArtifactRecovery(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations,
+        Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(finalizerInvocations);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        return policy.IsRequired &&
+               !HasValidRequiredFinalizerInvocation(policy, finalizerInvocations) &&
+               ContainsTimeoutException(exception);
     }
 
     public static AITool ResolveRequiredFinalizerTool(
@@ -173,7 +185,7 @@ internal static class MafFinalizerDriver
             $"The previous repair turn could not submit `{policy.ToolName}` through provider tool calling." + Environment.NewLine +
             $"Return exactly one JSON object for `{policy.OutputContract.ContractKey}` now." + Environment.NewLine +
             "Use only the prior response text, session context, tool results, and process artifacts already available in the conversation. If evidence is insufficient, return the contract's blocking or failure state with actionable next actions where the contract supports them." + Environment.NewLine +
-            "Do not return a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. If completion is impossible because a required managed output was not written, name that missing primary write ref and the next tool action that must create it." + Environment.NewLine +
+            "Do not return a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. When all non-artifact work and required current-run proof are complete but the configured primary managed output alone was not written, submit Completed with the applicable declared branch and exact existing evidence refs; the process runtime will materialize the canonical managed artifact before evaluating completion gates. Do not cite the absent primary ref as already-written evidence or use runtime materialization to waive product work, validation, or another required receipt." + Environment.NewLine +
             previousTextSummary + Environment.NewLine +
             repairContextSummary;
     }
@@ -215,7 +227,7 @@ internal static class MafFinalizerDriver
             $"The previous turn ended without the required `{policy.ToolName}` finalizer tool call.{Environment.NewLine}" +
             $"Call `{policy.ToolName}` exactly once now to submit the final governed `{policy.OutputContract.ContractKey}` outcome.{Environment.NewLine}" +
             "Use only the current session context, prior tool results, and process artifacts. If the available evidence is insufficient for a successful outcome, submit the contract's failure or blocking state with actionable next actions where the contract supports them." + Environment.NewLine +
-            "Do not submit a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. If completion is impossible because a required managed output was not written, name that missing primary write ref and the next tool action that must create it." + Environment.NewLine +
+            "Do not submit a generic no-prior-evidence blocker when the repair context below lists current-run tool calls, observed artifact refs, or primary managed output refs. When all non-artifact work and required current-run proof are complete but the configured primary managed output alone was not written, submit Completed with the applicable declared branch and exact existing evidence refs; the process runtime will materialize the canonical managed artifact before evaluating completion gates. Do not cite the absent primary ref as already-written evidence or use runtime materialization to waive product work, validation, or another required receipt." + Environment.NewLine +
             "Do not call any other tool. Do not emit Markdown, prose, or machine JSON outside the finalizer tool call." + Environment.NewLine +
             previousTextSummary + Environment.NewLine +
             repairContextSummary;
@@ -313,9 +325,11 @@ internal static class MafFinalizerDriver
 
         return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
                "- The `result` object must include `status`, `reason`, `branchOutcomeKey`, `branchOutcomeTitle`, `evidenceRefs`, `nextActions`, and `humanReadableSummaryMarkdown`. Use `Completed`, `Blocked`, `Failed`, `WaitingApproval`, or `Refused` for `status`." + Environment.NewLine +
+               "- Always include `acceptanceCriteriaEvidence` as an array. Every entry must use the exact property names `criterionId`, `status`, `summary`, and `evidenceRefs`; use `Passed`, `Failed`, or `NotVerified` for the entry `status`. Do not substitute aliases such as `id`, `passed`, or `proofRefs`." + Environment.NewLine +
                "- `branchOutcomeTitle` requires a non-empty stable `branchOutcomeKey`, and the key must be an exact branch declared by the current process brief. If this step does not select a branch, both `branchOutcomeKey` and `branchOutcomeTitle` must be empty strings; do not use placeholders such as `none`, `n/a`, or `completed`." + Environment.NewLine +
                "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +
-               "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine;
+               "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine +
+               "- In this bounded repair turn, a missing configured primary managed output alone is not a blocker after all non-artifact work and required current-run proof succeeded. Submit the evidence-backed Completed outcome and let the process runtime materialize that canonical artifact before its completion gates; never use this rule to waive product work, validation, or required receipts." + Environment.NewLine;
     }
 
     public static bool TryNormalizeFinalizerJsonRepairText(
@@ -434,6 +448,32 @@ internal static class MafFinalizerDriver
         }
 
         return streamedInvocations;
+    }
+
+    private static bool HasValidRequiredFinalizerInvocation(
+        AgentFinalizerPolicy policy,
+        IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations)
+    {
+        var normalizedInvocations = AgentFinalizerInvocationNormalizer.NormalizeRequired(
+            policy,
+            finalizerInvocations);
+        var validation = new DefaultAgentFinalizerValidator().Validate(
+            policy,
+            normalizedInvocations);
+        return validation.Succeeded && validation.Output is not null;
+    }
+
+    private static bool ContainsTimeoutException(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is TimeoutException)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static IReadOnlyList<AgentToolInvocationTrace> CreateEffectiveToolInvocationTraces(

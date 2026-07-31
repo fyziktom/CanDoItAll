@@ -9,11 +9,56 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessesModuleHostedWorkerRegistrationTests
 {
+    [Fact]
+    public void Add_processes_module_binds_runtime_dispatch_options()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{ProcessRuntimeDispatchOptions.ConfigurationSectionName}:DispatchLease"] = "02:30:00",
+                [$"{ProcessRuntimeDispatchOptions.ConfigurationSectionName}:StepExecutionTimeout"] = "02:00:00",
+                [$"{ProcessRuntimeDispatchOptions.ConfigurationSectionName}:PreRunningClaimStaleAfter"] = "00:03:00"
+            })
+            .Build();
+
+        services.AddProcessesModule(configuration);
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<ProcessRuntimeDispatchOptions>();
+
+        Assert.Equal(TimeSpan.FromMinutes(150), options.DispatchLease);
+        Assert.Equal(TimeSpan.FromHours(2), options.StepExecutionTimeout);
+        Assert.Equal(TimeSpan.FromMinutes(3), options.PreRunningClaimStaleAfter);
+    }
+
+    [Fact]
+    public void Add_processes_module_rejects_invalid_runtime_dispatch_options()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{ProcessRuntimeDispatchOptions.ConfigurationSectionName}:DispatchLease"] = "00:30:00",
+                [$"{ProcessRuntimeDispatchOptions.ConfigurationSectionName}:StepExecutionTimeout"] = "01:00:00"
+            })
+            .Build();
+
+        services.AddProcessesModule(configuration);
+
+        using var provider = services.BuildServiceProvider();
+        var exception = Assert.Throws<OptionsValidationException>(
+            provider.GetRequiredService<ProcessRuntimeDispatchOptions>);
+
+        Assert.Contains("Process runtime dispatch options are invalid.", exception.Message);
+    }
+
     [Fact]
     public void Add_processes_module_registers_run_record_backfill_services()
     {

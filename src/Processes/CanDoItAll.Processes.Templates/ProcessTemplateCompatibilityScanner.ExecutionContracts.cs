@@ -429,6 +429,7 @@ public static partial class ProcessTemplateCompatibilityScanner
 
         ValidateChildOutputs(processKey, stepKey, step, childDefinition, contract, "acceptedChildOutputs", diagnostics);
         ValidateChildOutputs(processKey, stepKey, step, childDefinition, contract, "noGoChildOutputs", diagnostics);
+        ValidateChildOutputDiscriminators(processKey, stepKey, contract, diagnostics);
     }
 
     private static void ValidateChildOutputs(
@@ -465,8 +466,16 @@ public static partial class ProcessTemplateCompatibilityScanner
                 continue;
             }
 
-            if (TryGetString(output, "artifactExpectationKey", out var artifactExpectationKey) &&
-                !StepHasArtifactExpectation(childStep, artifactExpectationKey))
+            if (!TryGetString(output, "artifactExpectationKey", out var artifactExpectationKey))
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    parentStepKey,
+                    ProcessTemplateContractDiagnosticKind.UnknownSubprocessChildArtifactExpectation,
+                    $"{propertyName} child step '{childStepKey}' must declare a typed artifactExpectationKey.");
+            }
+            else if (!StepHasArtifactExpectation(childStep, artifactExpectationKey))
             {
                 AddDiagnostic(
                     diagnostics,
@@ -485,6 +494,56 @@ public static partial class ProcessTemplateCompatibilityScanner
                     parentStepKey,
                     ProcessTemplateContractDiagnosticKind.InvalidBranchOutcomeKey,
                     $"{propertyName} routes to unknown parent branch outcome '{parentBranchOutcomeKey}'.");
+            }
+        }
+    }
+
+    private static void ValidateChildOutputDiscriminators(
+        string processKey,
+        string parentStepKey,
+        JsonElement subprocessContract,
+        List<ProcessTemplateContractDiagnostic> diagnostics)
+    {
+        var outputs = new List<(string StepKey, string ArtifactExpectationKey, string BranchOutcomeKey)>();
+        foreach (var propertyName in new[] { "acceptedChildOutputs", "noGoChildOutputs" })
+        {
+            if (!TryGetProperty(subprocessContract, propertyName, out var values) ||
+                values.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var value in values.EnumerateArray())
+            {
+                if (value.ValueKind != JsonValueKind.Object ||
+                    !TryGetString(value, "stepKey", out var childStepKey) ||
+                    !TryGetString(value, "artifactExpectationKey", out var artifactExpectationKey))
+                {
+                    continue;
+                }
+
+                TryGetString(value, "branchOutcomeKey", out var branchOutcomeKey);
+                outputs.Add((childStepKey, artifactExpectationKey, branchOutcomeKey));
+            }
+        }
+
+        var groups = outputs.GroupBy(
+            output => $"{output.StepKey.Trim()}\u001F{output.ArtifactExpectationKey.Trim()}",
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groups.Where(group => group.Count() > 1))
+        {
+            var branchKeys = group
+                .Select(output => output.BranchOutcomeKey.Trim())
+                .ToArray();
+            if (branchKeys.Any(string.IsNullOrWhiteSpace) ||
+                branchKeys.Distinct(StringComparer.OrdinalIgnoreCase).Count() != branchKeys.Length)
+            {
+                AddDiagnostic(
+                    diagnostics,
+                    processKey,
+                    parentStepKey,
+                    ProcessTemplateContractDiagnosticKind.InvalidBranchOutcomeKey,
+                    $"Repeated child output mapping '{group.Key.Replace('\u001F', '/')}' must use distinct typed branchOutcomeKey discriminators.");
             }
         }
     }

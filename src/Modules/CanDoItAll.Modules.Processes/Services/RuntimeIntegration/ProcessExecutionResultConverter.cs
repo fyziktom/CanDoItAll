@@ -153,17 +153,22 @@ internal sealed class ProcessExecutionResultConverter(
                 CreateProductMutationEvidenceRetryIssue(assignment, output, toolReceipts!));
         }
 
-        if ((outcome == StrategyOutcome.NeedsManager || outcome == StrategyOutcome.Succeeded) &&
-            TryInferEvidenceBackedBranchOutcome(assignment, output, out var inferredBranchOutcomeKey))
+        var effectiveStepContract = stepContract ?? ProcessStepExecutionContract.Empty;
+        BranchOutcomeId? selectedBranchOutcomeId = null;
+        if (!string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
         {
-            output = CopyWithBranchOutcomeKey(output, inferredBranchOutcomeKey);
-        }
+            if (!TryResolveExactConfiguredBranchOutcome(
+                    output,
+                    effectiveStepContract,
+                    out var resolvedBranchOutcomeId))
+            {
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    rawOutputHash,
+                    CreateInvalidBranchOutcomeIssue(assignment));
+            }
 
-        if (outcome == StrategyOutcome.NeedsManager &&
-            ShouldRouteBlockedBranchOutcome(assignment, output))
-        {
-            output = CopyAsCompletedBranchOutcome(output);
-            outcome = StrategyOutcome.Succeeded;
+            selectedBranchOutcomeId = resolvedBranchOutcomeId;
         }
 
         if (outcome == StrategyOutcome.Succeeded &&
@@ -183,7 +188,7 @@ internal sealed class ProcessExecutionResultConverter(
                 toolReceipts,
                 currentExecutionRunId)
             {
-                StepContract = stepContract ?? ProcessStepExecutionContract.Empty,
+                StepContract = effectiveStepContract,
                 VerifiedSubprocessOutcome = verifiedSubprocessOutcome
             });
             if (!completionGateEvaluation.IsSatisfied)
@@ -227,13 +232,13 @@ internal sealed class ProcessExecutionResultConverter(
         var diagnostics = new List<ProcessExecutionAdapterDiagnostic>();
         var managerSignals = new List<ManagerSignal>();
         var userSafeSummary = output.Reason;
-        if (!string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
+        if (selectedBranchOutcomeId is { } branchOutcomeId)
         {
             managerSignals.Add(new ManagerSignal(
-                ProcessBranchSignalCodes.Outcome(output.BranchOutcomeKey),
-                ComputeHash(output.BranchOutcomeKey),
+                ProcessBranchSignalCodes.Outcome(branchOutcomeId.Value),
+                ComputeHash(branchOutcomeId.Value),
                 string.IsNullOrWhiteSpace(output.BranchOutcomeTitle)
-                    ? $"Branch outcome selected: {output.BranchOutcomeKey}"
+                    ? $"Branch outcome selected: {branchOutcomeId.Value}"
                     : output.BranchOutcomeTitle));
         }
 
@@ -289,6 +294,16 @@ internal sealed class ProcessExecutionResultConverter(
             userSafeSummary,
             rawOutputHash);
     }
+
+    private static ProcessCompletionIssue CreateInvalidBranchOutcomeIssue(
+        ProcessRuntimeStepAssignment assignment)
+        => new(
+            ProcessCompletionDiagnosticCodes.RequiredBranchOutcomeMissing,
+            $"Step '{assignment.StepKey}' returned a branch outcome key that did not exactly match one configured branch outcome for the current step. Select exactly one configured key through the required finalizer.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:branch-outcome-key-invalid",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
 
     internal static string BuildGenericBlockedDiagnosticSummary(
         ProcessRuntimeStepAssignment assignment,

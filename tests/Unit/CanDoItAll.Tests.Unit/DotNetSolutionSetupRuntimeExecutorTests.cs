@@ -43,6 +43,7 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.True(result!.Succeeded, result.Summary);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, result.Output!.Status);
+        Assert.Null(result.EffectiveCompletionScope);
         Assert.Contains(result.ToolReceipts, receipt => receipt.ToolName == "workspace_dotnet_new" && receipt.RequestSummary.StartsWith("new sln ", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.ToolReceipts, receipt => receipt.ToolName == "workspace_dotnet_new" && receipt.RequestSummary.StartsWith("new blazorwasm ", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.ToolReceipts, receipt =>
@@ -377,6 +378,9 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.True(result!.Succeeded, result.Summary);
         Assert.Equal(ProcessStepOutcomeStatus.Completed, result.Output!.Status);
+        Assert.Equal(
+            ProcessRuntimeOwnedCompletionScope.ReadOnlyProductVerification,
+            result.EffectiveCompletionScope);
         Assert.Empty(processHost.Requests);
         Assert.DoesNotContain(result.ToolReceipts, receipt => receipt.ToolName is "workspace_dotnet_new" or "workspace_write_file" or "workspace_pwsh_run_script");
         Assert.Contains(result.ToolReceipts, receipt => receipt.ToolName == "workspace_stat_path");
@@ -1042,7 +1046,10 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             "Resolved from role fit.",
             [ArtifactSlotId.New()],
             [],
-            [ProcessOperationContractNames.MutateProductTarget],
+            [
+                ProcessOperationContractNames.MutateProductTarget,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
             ProcessOperationContractNames.ExternalProductTargetMutable,
             launchVariables ?? CreateLaunchVariables(productRoot),
             BranchGate: null,

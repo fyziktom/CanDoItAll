@@ -66,7 +66,7 @@ public sealed class ProcessRuntimeScheduler
                 step.StepDefinitionId,
                 planStep.ExecutionStrategyBinding,
                 step.AttemptNumber + 1,
-                ProcessRuntimeArtifactContracts.BuildStepContract(state, step)));
+                ProcessRuntimeArtifactContracts.BuildStepContract(state, step, plan.Branches)));
         }
 
         return readyWork;

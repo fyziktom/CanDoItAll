@@ -16,6 +16,12 @@ public sealed class ProcessStrategyDispatcher
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(strategyFactory);
 
+        if (workItem.DispatchClaimIdentity is not { } dispatchClaimIdentity)
+        {
+            throw new InvalidOperationException(
+                "Dispatch work item must be bound to an active claim before strategy invocation.");
+        }
+
         var planStep = FindPlanStep(plan, workItem.StepInstanceId);
         if (planStep?.ExecutionStrategyBinding is null)
         {
@@ -34,7 +40,10 @@ public sealed class ProcessStrategyDispatcher
             workItem.StepInstanceId,
             workItem.StrategyBinding,
             workItem.StrategyBinding.Inputs,
-            workItem.StepContract);
+            workItem.StepContract)
+        {
+            DispatchClaimIdentity = dispatchClaimIdentity
+        };
 
         return await strategy.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
     }

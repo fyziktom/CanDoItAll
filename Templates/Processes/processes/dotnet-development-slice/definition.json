@@ -307,8 +307,7 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "WriteManagedProcessArtifacts",
-        "EscalateOrDecide"
+        "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
@@ -520,7 +519,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by tests, peer review, and parent QA.",
-          "ValidationRequirementSummary": "Must point to the observed child implementation run and include changed files, behavioral intent, touched-surface inventory, validation proof summary, and accepted handoff evidence from feature-handoff or feature-handoff-after-repair. A feature-repair-escalation packet is blocker evidence, not accepted implementation proof.",
+          "ValidationRequirementSummary": "Must record the observed child implementation run, runtime-accepted child disposition, selected parent branch, and exact typed handoff ref from feature-handoff or feature-handoff-after-repair, and must preserve the exact selected child artifact payload inside the runtime-owned hash-verified envelope. The typed accepted/no-go disposition and parent branch remain canonical; consumers must not re-decide them from prose or require a separate agent-authored restatement of the preserved payload. Detailed product and validation claims remain subject to independent downstream readback and proof. A feature-repair-escalation packet is blocker evidence, not accepted implementation proof.",
           "SubprocessChildStepKey": "code-change",
           "SubprocessChildArtifactTitle": "Feature implementation change set"
         }
@@ -576,7 +575,7 @@
       "Key": "add-tests-and-proof",
       "Title": "Validate tests and targeted proof",
       "Subtitle": "Validation commands before handoff",
-      "Notes": "Validate the declared product behavior with current-run restore, build, and test evidence. Read the required typed dotnet-solution-context artifact first for the declared solution and test targets; its declared paths are authoritative. If it is unavailable, use grounded product-root discovery without constructing conventional names or layouts. Never treat a missing guessed target as a product defect. Run restore before build or test when assets are stale. Do not mutate code or tests in this QA step; route a concrete failed criterion to the repair branch.",
+      "Notes": "Validate the declared product behavior with current-run restore, build, and test evidence. Read the required typed dotnet-solution-context artifact first for the declared solution and test targets; its declared paths are authoritative. If it is unavailable, use grounded product-root discovery without constructing conventional names or layouts. Never treat a missing guessed target as a product defect. The runtime-synthesized implementation-ready coordinator outcome is the canonical accepted-child provenance and carries the exact hash-verified selected child payload; use that authenticated payload as context, but do not re-decide the typed bridge from prose or require a separate agent-authored restatement. Run restore before build or test when assets are stale. Do not mutate code or tests in this QA step; route only a concrete product, test, or focused-proof criterion to the repair branch.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -584,9 +583,9 @@
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Authoritative slice scope packet, implementation change set, and slice architecture decision; every named core criterion remains in scope until directly proved.",
       "OutputContractSummary": "Test and validation evidence review tied to the implemented behavior, with explicit slice-accepted or slice-repair-required branch.",
-      "EvidenceContractSummary": "Current-run restore/build/test commands, exit codes, warnings, executed tests, explicit assessment of whether current-run coordinator evidence and product proof satisfy acceptance criteria, and a concrete repair target packet whenever repair is selected. Live runtime screenshots are owned by root runtime-command and screenshot writeback steps.",
+      "EvidenceContractSummary": "Current-run restore/build/test commands, exit codes, warnings, executed tests, typed runtime-synthesized coordinator provenance, explicit assessment of whether product proof satisfies acceptance criteria, and a concrete product/test/proof repair target packet whenever repair is selected. Live runtime screenshots are owned by root runtime-command and screenshot writeback steps.",
       "DecisionRightsSummary": "Validation owner can accept evidence or require focused implementation rework when proof or tests do not match acceptance criteria, but cannot mutate product files.",
-      "ExceptionPolicySummary": "Select slice-repair-required on missing tests, failing build, failing focused validation, validation too broad to diagnose failures, missing accepted child proof in the current-run coordinator artifact, or invalid evidence that still has a repair route. Block only when the environment, permissions, validation tooling, or process contract prevents validation or repair routing.",
+      "ExceptionPolicySummary": "Select slice-repair-required on missing tests, failing build, failing focused validation, validation too broad to diagnose failures, or invalid product evidence that still has a repair route. A runtime-synthesized implementation-ready coordinator with accepted disposition, an exact typed child evidence ref, and the hash-verified selected child payload already proves the child bridge; absence of a separate agent-authored restatement is not a product repair target. Block only when the environment, permissions, validation tooling, or process contract prevents validation or repair routing.",
       "TargetLeadHours": 6,
       "DependsOnStepKey": "implement-code-change",
       "DependsOnBranchOutcomeKey": "implementation-ready",
@@ -625,7 +624,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent QA and release approval.",
-          "ValidationRequirementSummary": "Must include current-run restore/build/test commands, exit codes, executed-test counts when a test project exists or tests are expected, proof tied to acceptance criteria, and review of current-run coordinator evidence plus product readback. If tests, accepted child handoff in the coordinator artifact, or other acceptance evidence are missing or inadequate, the artifact must route repair to implementation with an exact repair target packet instead of recording QA-authored product changes or generic residual risk. Live browser proof belongs to root runtime-command and screenshot writeback steps."
+          "ValidationRequirementSummary": "Must include current-run restore/build/test commands, exit codes, executed-test counts when a test project exists or tests are expected, proof tied to acceptance criteria, and review of typed runtime-synthesized coordinator provenance, its exact hash-verified selected child payload, plus product readback. If tests or product acceptance evidence are missing or inadequate, the artifact must route repair to implementation with an exact product/test/proof repair target packet instead of recording QA-authored product changes or generic residual risk. Do not route product repair because a separate agent-authored restatement is absent from an accepted runtime coordinator artifact. Live browser proof belongs to root runtime-command and screenshot writeback steps."
         }
       ],
       "ArtifactInputs": [
@@ -655,7 +654,7 @@
         {
           "Key": "slice-repair-required",
           "Title": "Slice repair required",
-          "Description": "Slice validation found missing tests, failed proof, missing accepted child handoff, or another concrete issue requiring bounded implementation repair."
+          "Description": "Slice validation found missing tests, failed product proof, or another concrete product issue requiring bounded implementation repair."
         }
       ],
       "ChecklistRefs": [],
@@ -803,7 +802,7 @@
       "Key": "initial-manager-assisted-repair",
       "Title": "Run manager-assisted repair for child no-go",
       "Subtitle": "Diagnose before repeating implementation",
-      "Notes": "Launch and observe the dotnet-quality-repair subprocess when the initial feature child returned typed no-go evidence. This is not a blind retry: the child no-go packet, scope, architecture decision, and setup evidence define the repair target. First call project_structure_process_subprocess_launch with definitionKey dotnet-quality-repair. If the launch response includes ParentDeferredOutcomeJson, submit that parent outcome exactly so the runtime resumes this coordinator from the child result. The repair child owns diagnosis, targeted mutation, independent validation, and its bounded specialist-guided re-repair. This parent step only preserves the no-go evidence and materializes accepted repair handoff; it must not mutate the product or reinterpret quality-repair-no-go as success.",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess when the initial feature child returned typed no-go evidence. This is not a blind retry: the child no-go packet, scope, architecture decision, and setup evidence define the repair target. First call project_structure_process_subprocess_launch with definitionKey dotnet-quality-repair. If the launch response includes ParentDeferredOutcomeJson, submit that parent outcome exactly so the runtime resumes this coordinator from the child result. The repair child owns diagnosis, exactly three bounded mutation opportunities, and independent validation after each opportunity. This parent step only preserves the no-go evidence and materializes accepted repair handoff; it must not mutate the product or reinterpret quality-repair-no-go as success.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-quality-repair",
       "SubprocessDefinitionSnapshotName": ".NET quality repair for initial feature child no-go",
@@ -821,6 +820,11 @@
             "StepKey": "quality-repair-handoff-after-bughunt",
             "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
             "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-final-repair",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-final-repair-packet",
+            "ArtifactTitle": ".NET quality repair handoff after final specialist repair"
           }
         ],
         "NoGoChildOutputs": [
@@ -840,8 +844,8 @@
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Authoritative slice scope, architecture decision, setup evidence, and typed initial feature-child no-go evidence.",
       "OutputContractSummary": "Accepted manager-assisted repair change set with independent validation, or an explicit quality-repair no-go for manager attention.",
-      "EvidenceContractSummary": "Child no-go packet, diagnosis, product mutation, current validation, and accepted or no-go quality-repair handoff.",
-      "DecisionRightsSummary": "The delivery manager sequences a bounded diagnosis-guided repair; the quality-repair child retains mutation and final-validation separation.",
+      "EvidenceContractSummary": "Child no-go packet, diagnosis and mutation chain, current independent validation, and accepted or terminal no-go quality-repair handoff.",
+      "DecisionRightsSummary": "The delivery manager sequences the bounded repair child; the child retains mutation and independent-validation separation across all three opportunities.",
       "ExceptionPolicySummary": "Block only when the quality-repair child blocks, fails, or returns quality-repair-no-go. Do not restart the same feature strategy without the child diagnosis changing the repair plan.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "implement-code-change",
@@ -1504,11 +1508,11 @@
       "Order": 10,
       "Key": "slice-manager-assisted-repair",
       "Title": "Run manager-assisted quality repair",
-      "Subtitle": "Diagnosis, implementation, independent validation, and bounded bughunt",
-      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the unresolved slice findings. First call project_structure_process_subprocess_launch with definitionKey dotnet-quality-repair. Do not wait silently, write a progress artifact, or create another child while one is active. If the launch response includes ParentDeferredOutcomeJson, submit that parent outcome exactly so the runtime resumes this step from the child result. The child receives the authoritative slice scope, both validation packets, the failed repair evidence, and the manager diagnosis. It owns diagnosis, product mutation, independent validation, and one specialist-guided re-repair before an explicit no-go. This parent step only coordinates the child and materializes accepted handoff evidence; it must not mutate the product or reinterpret a quality-repair-no-go packet as success.",
+      "Subtitle": "Diagnosis, three bounded repair lanes, and independent validation",
+      "Notes": "Launch and observe the dotnet-quality-repair subprocess for the unresolved slice findings. First call project_structure_process_subprocess_launch with definitionKey dotnet-quality-repair. Do not wait silently, write a progress artifact, or create another child while one is active. If the launch response includes ParentDeferredOutcomeJson, submit that parent outcome exactly so the runtime resumes this step from the child result. The child receives the authoritative slice scope, both validation packets, the failed repair evidence, and the manager diagnosis. It owns diagnosis, exactly three bounded mutation opportunities with independent validation, and accepted or terminal no-go handoff. This parent step only coordinates the child and materializes accepted handoff evidence; it must not mutate the product or reinterpret a quality-repair-no-go packet as success.",
       "StepKind": "Subprocess",
       "SubprocessProcessKey": "dotnet-quality-repair",
-      "SubprocessDefinitionSnapshotName": ".NET quality repair with diagnosis and bounded bughunt",
+      "SubprocessDefinitionSnapshotName": ".NET quality repair with three bounded repair lanes",
       "SubprocessContract": {
         "DefinitionKey": "dotnet-quality-repair",
         "LaunchMode": "RuntimeOwned",
@@ -1523,6 +1527,11 @@
             "StepKey": "quality-repair-handoff-after-bughunt",
             "ArtifactExpectationKey": "quality-repair-handoff-after-bughunt-packet",
             "ArtifactTitle": ".NET quality repair handoff after bughunt"
+          },
+          {
+            "StepKey": "quality-repair-handoff-after-final-repair",
+            "ArtifactExpectationKey": "quality-repair-handoff-after-final-repair-packet",
+            "ArtifactTitle": ".NET quality repair handoff after final specialist repair"
           }
         ],
         "NoGoChildOutputs": [
@@ -1541,10 +1550,10 @@
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Authoritative slice scope, original and repaired validation failures, failed child repair evidence, and manager diagnosis; repair action may narrow but acceptance scope may not.",
-      "OutputContractSummary": "Accepted manager-assisted repair change set with independent validation and optional bughunt evidence, or explicit bounded child no-go.",
-      "EvidenceContractSummary": "Child status, diagnosis, product mutation, restore/build/test proof, owning-source readback, optional runtime/browser proof, bughunt evidence when used, and accepted or no-go handoff.",
+      "OutputContractSummary": "Accepted manager-assisted repair change set after any bounded child lane, or explicit terminal child no-go.",
+      "EvidenceContractSummary": "Child status, diagnosis and mutation chain, restore/build/test proof, owning-source readback, conditional runtime proof, and accepted or terminal no-go handoff.",
       "DecisionRightsSummary": "Delivery manager owns repair sequencing; implementation and independent validation remain separate child roles.",
-      "ExceptionPolicySummary": "Block only when the child blocks, fails, or returns quality-repair-no-go after its bounded diagnosis and bughunt lanes. Do not relaunch the same failed feature-repair strategy.",
+      "ExceptionPolicySummary": "Block only when the child blocks, fails, or returns quality-repair-no-go after all three bounded mutation opportunities. Do not relaunch the same failed feature-repair strategy.",
       "TargetLeadHours": 12,
       "DependsOnStepKey": "slice-repair-escalation",
       "DependsOnBranchOutcomeKey": "",

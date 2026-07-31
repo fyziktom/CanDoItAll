@@ -11,3 +11,5 @@ Do not spend this attempt on unrelated cleanup or claim final acceptance; indepe
 Never write `product-repair-applied` or describe changed/deleted files unless this execution has a successful product-target mutation receipt and current product readback proving those exact changes. A diagnosis artifact, intended change list, or green build/test receipt is not evidence that a repair occurred.
 
 For a visible UI error with no matching console exception, diagnose the rendered state, style/loading path, and owning source before changing code. Preserve useful failure visibility while repairing the actual product defect; do not hide an observed failure merely to make proof look clean.
+
+When focused proof uses browser tools, pass a full managed current-run filename to every persisted snapshot, screenshot, evaluation, and console capture: `artifacts/process-runs/<current-process-run-id>/browser/<evidence-name>.<ext>`. Bare filenames are provider-native interaction state and cannot satisfy governed repair evidence.

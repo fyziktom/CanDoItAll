@@ -369,6 +369,456 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_allows_analyze_image_for_typed_scalar_path()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string imagePath =
+            "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png";
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("path", imagePath)
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImage,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImage,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImage),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        var pathArgument = Assert.Single(pathArguments.Values);
+        Assert.Equal(imagePath, pathArgument.Value);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_does_not_treat_max_files_as_a_path_for_governed_hash()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productPath = "external-target/C/programovani/dotnet/calculator-output";
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("path", productPath),
+            new("maxFiles", 200)
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceHashPath,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceHashPath,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceHashPath),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: [productPath],
+            processStepAllowedOperations: [ProcessOperationContractNames.ReadProcessContext],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        var pathArgument = Assert.Single(pathArguments.Values);
+        Assert.Equal("path", pathArgument.Name);
+        Assert.True(pathArguments.IsComplete);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_does_not_treat_target_framework_as_a_path_for_governed_dotnet_new()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productPath = "external-target/C/workspace/AllowedProduct";
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("parentDirectory", $"{productPath}/modules"),
+            new("name", "CreatedProduct"),
+            new("template", "console"),
+            new("targetFramework", "net10.0")
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceDotNetNew,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceDotNetNew,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetNew),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: [productPath],
+            processStepAllowedOperations: [ProcessOperationContractNames.MutateProductTarget],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetMutable);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        var pathArgument = Assert.Single(pathArguments.Values);
+        Assert.Equal("parentDirectory", pathArgument.Name);
+        Assert.True(pathArguments.IsComplete);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public void Path_argument_resolver_rejects_scalar_values_for_exact_plural_names()
+    {
+        const string path = "external-target/C/workspace/Product/file.txt";
+        using var jsonString = JsonDocument.Parse($"\"{path}\"");
+        object?[] scalarValues =
+        [
+            path,
+            jsonString.RootElement.Clone()
+        ];
+
+        foreach (var scalarValue in scalarValues)
+        {
+            var result = ToolInvocationPathArgumentResolver.Resolve(
+            [
+                new("files", scalarValue)
+            ]);
+
+            Assert.False(result.IsComplete);
+            Assert.Empty(result.Values);
+            Assert.Equal(["files"], result.UnsupportedArgumentNames);
+        }
+    }
+
+    [Fact]
+    public void Path_argument_resolver_rejects_collection_values_for_singular_names()
+    {
+        const string path = "external-target/C/workspace/Product/file.txt";
+        using var jsonArray = JsonDocument.Parse($"[\"{path}\"]");
+        object?[] collectionValues =
+        [
+            new[] { path },
+            jsonArray.RootElement.Clone()
+        ];
+
+        foreach (var collectionValue in collectionValues)
+        {
+            var result = ToolInvocationPathArgumentResolver.Resolve(
+            [
+                new("path", collectionValue)
+            ]);
+
+            Assert.False(result.IsComplete);
+            Assert.Empty(result.Values);
+            Assert.Equal(["path"], result.UnsupportedArgumentNames);
+        }
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_analyze_images_for_matching_project_media_and_current_run_artifact_from_typed_paths()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        string[] paths =
+        [
+            "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png",
+            $"artifacts/process-runs/{currentRunId:D}/screenshots/runtime-proof-with-a-descriptive-file-name.png"
+        ];
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("paths", paths)
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            processRunId: currentRunId.ToString("D"),
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.True(JsonSerializer.Serialize(paths).Length > 160);
+        Assert.Contains("...#", redactedArguments["paths"], StringComparison.Ordinal);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_analyze_images_when_typed_paths_include_different_project_media()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        const string differentProjectPath =
+            "managed-files/project-media/images/ee266fad590440ff9b30d96804aadcb2/unrelated-ui.png";
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new(
+                "paths",
+                new[]
+                {
+                    "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png",
+                    differentProjectPath
+                })
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            processRunId: currentRunId.ToString("D"),
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(differentProjectPath, decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_analyze_images_when_typed_paths_include_stale_process_run_artifact()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        var staleRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b5c1e8d6f3");
+        var staleRunPath = $"artifacts/process-runs/{staleRunId:D}/screenshots/stale-runtime-proof.png";
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new(
+                "paths",
+                new[]
+                {
+                    "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png",
+                    staleRunPath
+                })
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            processRunId: currentRunId.ToString("D"),
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(staleRunId.ToString("D"), decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("\"managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png\"")]
+    [InlineData("{\"path\":\"managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png\"}")]
+    public async Task EvaluateAsync_denies_analyze_images_for_malformed_json_paths_root(string pathsJson)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        using var document = JsonDocument.Parse(pathsJson);
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("paths", document.RootElement.Clone())
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_analyze_images_for_serialized_array_in_raw_string_argument()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new(
+                "paths",
+                "[\"managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png\"]")
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+    }
+
+    [Theory]
+    [InlineData("[\"managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png\",42]")]
+    [InlineData("[\"managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png\",{\"path\":\"unrelated.png\"}]")]
+    public async Task EvaluateAsync_denies_analyze_images_atomically_for_non_string_json_array_member(
+        string pathsJson)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        using var document = JsonDocument.Parse(pathsJson);
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("paths", document.RootElement.Clone())
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_analyze_images_json_array_has_typed_collection_parity()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var currentRunId = Guid.Parse("2a4b7a65-93fe-42b9-b613-14b87b669f76");
+        string[] paths =
+        [
+            "managed-files/project-media/images/3324868f66e2478abb8f14f32a5db1e9/ui-proposal.png",
+            $"artifacts/process-runs/{currentRunId:D}/screenshots/runtime-proof.png"
+        ];
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(paths));
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("paths", document.RootElement.Clone())
+        ];
+        var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            rawArguments);
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(rawArguments);
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceAnalyzeImages,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceAnalyzeImages),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: redactedArguments,
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/calculator-output"],
+            processStepAllowedOperations:
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.ReadProjectStructure
+            ],
+            processStepTargetScope: ProcessOperationContractNames.ExternalProductTargetReadOnly,
+            processRunId: currentRunId.ToString("D"),
+            contextWorkspaceScopeKind: "Project",
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_shallow_shared_scope_artifact_for_governed_external_target_run()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2020,6 +2470,136 @@ public sealed class AgentToolInvocationPolicyTests
             {
                 ["path"] = "artifacts/result.md"
             });
+
+        ToolInvocationPolicyDecision? decision = null;
+        for (var index = 0; index < DefaultAgentToolInvocationPolicy.MaxRepeatedMutationOrValidationInvocations + 1; index++)
+        {
+            decision = await policy.EvaluateAsync(context, CancellationToken.None);
+        }
+
+        Assert.NotNull(decision);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("repeated the same mutation or validation signature", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_every_registered_browser_interaction_to_start_repeated_validation_epochs()
+    {
+        var interactionToolNames = ToolCapabilityRegistry.Capabilities
+            .Where(capability => capability.BrowserProofRole == ToolCapabilityBrowserProofRole.Interaction)
+            .Select(capability => capability.Name)
+            .OrderBy(toolName => toolName, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.NotEmpty(interactionToolNames);
+        Assert.Contains(ToolContractCatalog.BrowserClick, interactionToolNames);
+        Assert.Contains(ToolContractCatalog.BrowserPressKey, interactionToolNames);
+
+        foreach (var toolName in interactionToolNames)
+        {
+            var policy = new DefaultAgentToolInvocationPolicy();
+            var context = CreateContext(
+                toolName,
+                AgentToolInvocationPolicyMetadata.Classify(toolName),
+                isKnownTool: true,
+                autoApprovalAllowed: true,
+                approvalWrapperAvailable: false,
+                processAllowsProductMutation: false,
+                arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["target"] = "e29",
+                    ["element"] = "runtime control"
+                },
+                processStepAllowedOperations:
+                [
+                    "ReadProcessContext",
+                    "CaptureRuntimeProof"
+                ],
+                processStepTargetScope: "ExternalProductTargetReadOnly");
+
+            for (var index = 0; index < DefaultAgentToolInvocationPolicy.MaxRepeatedMutationOrValidationInvocations + 2; index++)
+            {
+                var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+                Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_scopes_repeated_browser_observations_to_validation_epoch()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var snapshotContext = CreateContext(
+            ToolContractCatalog.BrowserSnapshot,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserSnapshot),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["depth"] = "4"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        ToolInvocationPolicyDecision? repeatedObservationDecision = null;
+        for (var index = 0; index < DefaultAgentToolInvocationPolicy.MaxRepeatedMutationOrValidationInvocations + 1; index++)
+        {
+            repeatedObservationDecision = await policy.EvaluateAsync(snapshotContext, CancellationToken.None);
+        }
+
+        Assert.NotNull(repeatedObservationDecision);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, repeatedObservationDecision.Kind);
+
+        var clickContext = CreateContext(
+            ToolContractCatalog.BrowserClick,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserClick),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["target"] = "e29",
+                ["element"] = "runtime control"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var interactionDecision = await policy.EvaluateAsync(clickContext, CancellationToken.None);
+        var observationAfterInteractionDecision = await policy.EvaluateAsync(snapshotContext, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, interactionDecision.Kind);
+        Assert.Equal(ToolInvocationDecisionKind.Allow, observationAfterInteractionDecision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_fourth_identical_workspace_validation_invocation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceDotNetTest,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceDotNetTest),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
 
         ToolInvocationPolicyDecision? decision = null;
         for (var index = 0; index < DefaultAgentToolInvocationPolicy.MaxRepeatedMutationOrValidationInvocations + 1; index++)
@@ -3998,6 +4578,7 @@ public sealed class AgentToolInvocationPolicyTests
         bool approvalWrapperEffectiveForProvider = false,
         bool applicationApprovalAvailable = false,
         IReadOnlyDictionary<string, string>? arguments = null,
+        ToolInvocationPathArgumentSet? pathArguments = null,
         IReadOnlyList<string>? allowedExternalTargetAliases = null,
         IReadOnlyList<string>? readOnlyExternalTargetAliases = null,
         IReadOnlyList<string>? allowedManagedArtifactReadRefs = null,
@@ -4018,11 +4599,17 @@ public sealed class AgentToolInvocationPolicyTests
         string sourceKind = "process-step",
         string processStepId = "step-001")
     {
+        var redactedArguments = arguments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var resolvedPathArguments = pathArguments ??
+                                    ToolInvocationPathArgumentResolver.Resolve(
+                                        redactedArguments.Select(argument =>
+                                            new KeyValuePair<string, object?>(argument.Key, argument.Value)));
+
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
             AgentName: "Implementation Agent",
             ToolName: toolName,
-            RedactedArguments: arguments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            RedactedArguments: redactedArguments,
             Classification: classification,
             IsKnownTool: isKnownTool,
             AutoApprovalAllowed: autoApprovalAllowed,
@@ -4049,7 +4636,8 @@ public sealed class AgentToolInvocationPolicyTests
             ProcessProductMutationRequiredBranchOutcomeKeys: processProductMutationRequiredBranchOutcomeKeys)
         {
             SourceId = sourceId,
-            AllowedManagedArtifactReadRefs = allowedManagedArtifactReadRefs ?? []
+            AllowedManagedArtifactReadRefs = allowedManagedArtifactReadRefs ?? [],
+            PathArguments = resolvedPathArguments
         };
     }
 

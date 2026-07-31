@@ -34,15 +34,25 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessManagedArtifactFormatter
 {
+    internal enum ManagedOutcomeArtifactLifecyclePhase
+    {
+        Captured,
+        Accepted
+    }
+
     internal static string BuildManagedOutcomeArtifactContent(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
+        Guid executionRunId,
         string primaryRef)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"# {assignment.StepKey} Process Step Outcome");
         builder.AppendLine();
         builder.AppendLine(ManagedOutcomeArtifactCapturedHeading);
+        builder.AppendLine(BuildManagedOutcomeArtifactLifecycleMarker(
+            executionRunId,
+            ManagedOutcomeArtifactLifecyclePhase.Captured));
         builder.AppendLine();
         builder.AppendLine("The process runtime captured this managed artifact from a schema-valid structured process step outcome. Completion gates have not accepted this output yet.");
         builder.AppendLine();
@@ -93,6 +103,7 @@ internal static class ProcessManagedArtifactFormatter
     internal static string BuildManagedOutcomeArtifactAppendixContent(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
+        Guid executionRunId,
         string primaryRef)
     {
         var builder = new StringBuilder();
@@ -100,6 +111,9 @@ internal static class ProcessManagedArtifactFormatter
         builder.AppendLine("---");
         builder.AppendLine();
         builder.AppendLine(ManagedOutcomeArtifactCapturedHeading);
+        builder.AppendLine(BuildManagedOutcomeArtifactLifecycleMarker(
+            executionRunId,
+            ManagedOutcomeArtifactLifecyclePhase.Captured));
         builder.AppendLine();
         builder.AppendLine("The process runtime appended this section after capturing a schema-valid structured process step outcome. Completion gates must pass before this artifact is accepted as a produced slot.");
         builder.AppendLine();
@@ -151,13 +165,16 @@ internal static class ProcessManagedArtifactFormatter
     internal static string BuildManagedOutcomeArtifactAcceptanceContent(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
+        Guid executionRunId,
         string primaryRef)
     {
         var builder = new StringBuilder();
-        builder.AppendLine();
         builder.AppendLine("---");
         builder.AppendLine();
         builder.AppendLine(ManagedOutcomeArtifactAcceptedHeading);
+        builder.AppendLine(BuildManagedOutcomeArtifactLifecycleMarker(
+            executionRunId,
+            ManagedOutcomeArtifactLifecyclePhase.Accepted));
         builder.AppendLine();
         builder.AppendLine("The process runtime appended this section after all completion gates accepted the staged structured outcome. Produced artifact slots may now be promoted to parent and consumer contexts.");
         builder.AppendLine();
@@ -170,6 +187,14 @@ internal static class ProcessManagedArtifactFormatter
         builder.AppendLine();
         AppendList(builder, "Accepted Produced Artifact Slots", assignment.ProducedArtifactSlotIds.Select(slotId => slotId.Value.ToString("D")).ToArray());
         return builder.ToString();
+    }
+
+    internal static string BuildManagedOutcomeArtifactLifecycleMarker(
+        Guid executionRunId,
+        ManagedOutcomeArtifactLifecyclePhase phase)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(executionRunId, Guid.Empty);
+        return $"<!-- CanDoItAll.Processes.ManagedOutcome:{executionRunId:D}:{phase} -->";
     }
 
     internal static void AppendList(

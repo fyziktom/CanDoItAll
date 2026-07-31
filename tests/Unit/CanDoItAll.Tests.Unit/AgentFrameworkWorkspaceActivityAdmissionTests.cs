@@ -97,7 +97,8 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
             coordinator,
             serviceIdentity,
             preparationCache,
-            new FixedAgentExecutionProfileGenerationSource(default));
+            new FixedAgentExecutionProfileGenerationSource(default),
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
         var agentId = Guid.NewGuid();
         var operationId = AgentExecutionOperationId.New();
         using var operation = Assert.IsType<AgentExecutionActivityAdmitted>(
@@ -142,7 +143,8 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
             coordinator,
             workspaceIdentity,
             preparationCache,
-            new FixedAgentExecutionProfileGenerationSource(default));
+            new FixedAgentExecutionProfileGenerationSource(default),
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
     }
 
     private static AgentExecutionActivityCoordinator CreateCoordinator()

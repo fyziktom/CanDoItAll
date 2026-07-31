@@ -37,7 +37,10 @@ internal sealed class ProcessToolReceiptEvidenceGate(
             var matchedArtifactReceipt = false;
             foreach (var receipt in receipts)
             {
-                if (!TryReadArgument(receipt.RequestSummary, rule.ArtifactPathArgumentName, out var artifactPath))
+                if (!ProcessToolReceiptRequestArgumentReader.TryReadString(
+                        receipt.RequestSummary,
+                        rule.ArtifactPathArgumentName,
+                        out var artifactPath))
                 {
                     return CreateIssue(
                         context.Assignment,
@@ -125,48 +128,4 @@ internal sealed class ProcessToolReceiptEvidenceGate(
         return normalizedPath.Contains(expectedRunSegment, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool TryReadArgument(
-        string requestSummary,
-        string argumentName,
-        out string value)
-    {
-        value = string.Empty;
-        if (string.IsNullOrWhiteSpace(requestSummary) || string.IsNullOrWhiteSpace(argumentName))
-        {
-            return false;
-        }
-
-        var marker = $"{argumentName}=";
-        var markerIndex = requestSummary.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0)
-        {
-            value = requestSummary.Trim().Trim('"', '\'');
-            return value.Length > 0;
-        }
-
-        var valueStart = markerIndex + marker.Length;
-        while (valueStart < requestSummary.Length && char.IsWhiteSpace(requestSummary[valueStart]))
-        {
-            valueStart++;
-        }
-
-        if (valueStart >= requestSummary.Length)
-        {
-            return false;
-        }
-
-        var quote = requestSummary[valueStart] is '"' or '\''
-            ? requestSummary[valueStart++]
-            : '\0';
-        var valueEnd = quote == '\0'
-            ? requestSummary.IndexOf(',', valueStart)
-            : requestSummary.IndexOf(quote, valueStart);
-        if (valueEnd < 0)
-        {
-            valueEnd = requestSummary.Length;
-        }
-
-        value = requestSummary[valueStart..valueEnd].Trim();
-        return value.Length > 0;
-    }
 }

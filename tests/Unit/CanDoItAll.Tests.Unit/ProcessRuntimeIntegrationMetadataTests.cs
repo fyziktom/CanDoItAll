@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Capabilities = CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -50,6 +51,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Equal(
             ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
             metadataRoot.GetProperty(ExecutionInvocationMetadata.MaxStructuredOutputRepairAttemptsMetadataKey).GetInt32());
+        Assert.Equal(1, ExecutionInvocationMetadata.DefaultGovernedRepairAttempts);
         Assert.True(metadataRoot.GetProperty(ExecutionInvocationMetadata.RequireStructuredOutputValidationMetadataKey).GetBoolean());
 
         using (WorkspaceExecutionAuditContext.BeginScope(run))
@@ -275,6 +277,25 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             exception.Message,
             StringComparison.Ordinal);
         Assert.Contains("conflicts with a generic process metadata key", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_execution_metadata_round_trips_dispatch_claim_identity()
+    {
+        var assignment = CreateAssignment(Guid.NewGuid());
+        var dispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid());
+        var metadataJson = new ProcessExecutionMetadataComposer(
+        [
+            new BrowserExecutionMetadataContribution()
+        ]).ComposeClaimedExecution(assignment, dispatchClaimIdentity);
+        var executionRun = CreateTrustedProcessRun(metadataJson);
+
+        Assert.True(ProcessDispatchClaimExecutionMetadata.Matches(
+            executionRun,
+            dispatchClaimIdentity));
+        Assert.False(ProcessDispatchClaimExecutionMetadata.Matches(
+            executionRun,
+            new ProcessDispatchClaimIdentity(Guid.NewGuid())));
     }
 
     [Fact]

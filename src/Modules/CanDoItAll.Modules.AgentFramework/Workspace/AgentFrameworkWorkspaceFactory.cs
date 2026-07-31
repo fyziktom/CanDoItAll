@@ -147,6 +147,9 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             workspaceIdentity,
             executionPreparationCache,
             executionProfileGenerationSource,
+            new WorkspaceExecutionRunProcessLeaseCleaner(
+                store,
+                commandExecutionService),
             providerProfileService,
             providerProfileRegistry,
             providerCredentialResolver,

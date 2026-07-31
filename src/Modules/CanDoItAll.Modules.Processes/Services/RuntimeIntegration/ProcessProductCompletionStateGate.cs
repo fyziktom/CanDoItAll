@@ -35,7 +35,8 @@ internal static class ProcessProductCompletionStateGate
 {
     internal static ProcessCompletionIssue? ValidateRequiredBranchOutcomeSelection(
         ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
+        ProcessStepOutcomeResult output,
+        ProcessStepExecutionContract stepContract)
     {
         if (output.Status != ProcessStepOutcomeStatus.Completed ||
             !string.IsNullOrWhiteSpace(output.BranchOutcomeKey))
@@ -43,10 +44,15 @@ internal static class ProcessProductCompletionStateGate
             return null;
         }
 
-        var availableBranchOutcomeKeys = ProcessBranchOutcomeResolver
-            .EnumerateAgentSelectableBranchOutcomes(assignment.Prompt)
-            .Select(outcome => outcome.Key)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var runtimeRoutedBranchOutcomeKeys = ResolveRuntimeRoutedBranchOutcomeKeys(
+            assignment.LaunchVariables,
+            assignment.StepKey);
+        var availableBranchOutcomeKeys = stepContract.ConfiguredBranchOutcomeIds
+            .Select(outcome => outcome.Value)
+            .Where(key => !runtimeRoutedBranchOutcomeKeys.Contains(
+                key,
+                StringComparer.OrdinalIgnoreCase))
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
         if (availableBranchOutcomeKeys.Length == 0)
         {
@@ -93,7 +99,9 @@ internal static class ProcessProductCompletionStateGate
 
     internal static ProcessCompletionIssue? ValidateCompletedOutcomeDoesNotDeclareBlockers(
         ProcessRuntimeStepAssignment assignment,
-        ProcessStepOutcomeResult output)
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome)
     {
         if (output.Status != ProcessStepOutcomeStatus.Completed)
         {
@@ -109,7 +117,10 @@ internal static class ProcessProductCompletionStateGate
         }
 
         var requiresCurrentRunProof = RequiresCurrentRunProof(assignment);
-        var blockerLines = EnumerateOutcomeText(output)
+        var blockerLines = EnumerateOutcomeTextOutsideVerifiedSubprocessEnvelopes(
+                output,
+                toolReceipts,
+                verifiedSubprocessOutcome)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .SelectMany(value => SplitOutcomeLines(value!))
             .Where(line => DeclaresUnresolvedBlocker(line, requiresCurrentRunProof))
@@ -129,6 +140,41 @@ internal static class ProcessProductCompletionStateGate
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static IEnumerable<string?> EnumerateOutcomeTextOutsideVerifiedSubprocessEnvelopes(
+        ProcessStepOutcomeResult output,
+        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        ParentSubprocessBridgedOutcome? verifiedSubprocessOutcome)
+    {
+        yield return output.Reason;
+        yield return output.BranchOutcomeKey;
+        yield return output.BranchOutcomeTitle;
+
+        var summary = output.HumanReadableSummaryMarkdown;
+        var verifiedEnvelopes = ProcessRuntimeSubprocessEnvelopeValidator.Resolve(
+            verifiedSubprocessOutcome,
+            toolReceipts);
+        if (!string.IsNullOrWhiteSpace(summary) &&
+            ProcessRuntimeSubprocessEnvelopeValidator.TryRemoveVerified(
+                summary,
+                verifiedEnvelopes,
+                out var summaryWithoutVerifiedEnvelopes))
+        {
+            summary = summaryWithoutVerifiedEnvelopes;
+        }
+
+        yield return summary;
+
+        foreach (var evidenceRef in output.EvidenceRefs)
+        {
+            yield return evidenceRef;
+        }
+
+        foreach (var nextAction in output.NextActions)
+        {
+            yield return nextAction;
+        }
     }
 
     private static bool IsConfiguredCompletionIssueRouteTarget(

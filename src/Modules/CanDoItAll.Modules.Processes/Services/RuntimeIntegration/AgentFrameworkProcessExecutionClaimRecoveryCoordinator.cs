@@ -23,6 +23,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using static CanDoItAll.Modules.Processes.ProcessCompletionIssueResultFactory;
+
 namespace CanDoItAll.Modules.Processes;
 
 
@@ -36,33 +38,38 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeBranchSignalApplicationService branchSignalRouter,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
-    ProcessManagedArtifactService managedArtifactService,
-    ProcessExecutionResultConverter resultConverter,
+    ProcessStepCompletionCoordinator completionCoordinator,
     ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator> logger)
 {
     private const int MaximumConcurrencyRetries = 3;
     private static readonly TimeSpan ConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
-    private static readonly TimeSpan RecoveredExecutionClaimAssociationWindow = TimeSpan.FromMinutes(2);
 
-    public async Task<bool> ReleaseRecoveredExecutionClaimAsync(
-        Guid executionRunId,
+    public async Task<bool> BlockRecoveredExecutionClaimAsync(
+        ExecutionRunRecord executionRun,
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,
         string requestedBy,
-        CancellationToken cancellationToken = default,
-        DateTimeOffset? recoveredExecutionCreatedAtUtc = null)
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(executionRun);
+
+        if (executionRun.Id == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A concrete recovered AgentFramework execution run id is required.",
+                nameof(executionRun));
+        }
+
         var normalizedRequestedBy = NormalizeRequestedBy(requestedBy);
         for (var attempt = 1; attempt <= MaximumConcurrencyRetries; attempt++)
         {
             try
             {
-                return await TryReleaseRecoveredExecutionClaimAsync(
-                    executionRunId,
+                return await TryBlockRecoveredExecutionClaimAsync(
+                    executionRun,
                     runId,
                     stepInstanceId,
                     normalizedRequestedBy,
-                    recoveredExecutionCreatedAtUtc,
                     cancellationToken).ConfigureAwait(false);
             }
             catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumConcurrencyRetries)
@@ -112,14 +119,28 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         return false;
     }
 
-    private async Task<bool> TryReleaseRecoveredExecutionClaimAsync(
-        Guid executionRunId,
+    private async Task<bool> TryBlockRecoveredExecutionClaimAsync(
+        ExecutionRunRecord executionRun,
         ProcessRunId runId,
         ProcessStepInstanceId stepInstanceId,
         string requestedBy,
-        DateTimeOffset? recoveredExecutionCreatedAtUtc,
         CancellationToken cancellationToken)
     {
+        if (!IsExecutionForProcessStep(executionRun, runId, stepInstanceId))
+        {
+            logger.LogInformation(
+                "Skipping interrupted process execution recovery for execution run {ExecutionRunId} because its recorded process run or step identity does not match {RunId}/{StepInstanceId}.",
+                executionRun.Id,
+                runId.Value,
+                stepInstanceId.Value);
+            return false;
+        }
+
+        if (!IsRecoverableExecutionFailure(executionRun.State, executionRun.Outcome))
+        {
+            return false;
+        }
+
         var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false);
         if (state is null || ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
         {
@@ -143,51 +164,94 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             return false;
         }
 
-        if (recoveredExecutionCreatedAtUtc is { } executionCreatedAtUtc &&
-            !CanAssociateClaimWithRecoveredExecution(claim.CreatedAtUtc, executionCreatedAtUtc))
+        if (!CanAssociateClaimWithRecoveredExecution(
+                claim.CreatedAtUtc,
+                claim.ExpiresAtUtc,
+                executionRun.CreatedAtUtc) ||
+            !IsExecutionBoundToClaim(executionRun, claim.ClaimToken.Value))
         {
             logger.LogInformation(
-                "Skipping process claim recovery release for execution run {ExecutionRunId} because the execution does not belong to active claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
-                executionRunId,
+                "Skipping interrupted process execution recovery for execution run {ExecutionRunId} because the execution does not belong to active claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
+                executionRun.Id,
                 claim.ClaimToken,
                 runId.Value,
                 stepInstanceId.Value,
                 claim.CreatedAtUtc,
-                executionCreatedAtUtc);
+                executionRun.CreatedAtUtc);
             return false;
         }
 
-        var engine = new ProcessRuntimeEngine(unitOfWork);
-        var releaseCommit = await engine.ReleaseClaimAsync(
-            state,
-            CreateContext(requestedBy),
-            new ReleaseDispatchClaimCommand(stepInstanceId, claim.OwnerId, claim.ClaimToken),
-            cancellationToken).ConfigureAwait(false);
-        if (!releaseCommit.Succeeded)
+        var assignment = await assignmentStore
+            .LoadAsync(runId, stepInstanceId, cancellationToken)
+            .ConfigureAwait(false);
+        if (assignment is null)
         {
             logger.LogWarning(
-                "Process execution recovery could not release claim {ClaimToken} for run {RunId}, step {StepInstanceId}. Diagnostics={Diagnostics}",
+                "Interrupted AgentFramework execution run {ExecutionRunId} could not be reconciled because process assignment {RunId}/{StepInstanceId} was not found.",
+                executionRun.Id,
+                runId.Value,
+                stepInstanceId.Value);
+            return false;
+        }
+
+        var adapterResult = CreateInterruptedExecutionReplayUnsafeResult(
+            assignment,
+            executionRun);
+        var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var commit = await engine.SubmitStrategyResultAsync(
+            state,
+            CreateContext(requestedBy),
+            new SubmitStrategyResultCommand(
+                stepInstanceId,
+                claim.OwnerId,
+                claim.ClaimToken,
+                new StrategyResultIdempotencyKey(result.IdempotencyKey),
+                result),
+            cancellationToken).ConfigureAwait(false);
+        if (!commit.Succeeded)
+        {
+            logger.LogWarning(
+                "Interrupted process execution recovery could not block claim {ClaimToken} for run {RunId}, step {StepInstanceId}. Diagnostics={Diagnostics}",
                 claim.ClaimToken,
                 runId.Value,
                 stepInstanceId.Value,
-                string.Join("; ", releaseCommit.Diagnostics.Select(diagnostic => diagnostic.Message)));
+                string.Join("; ", commit.Diagnostics.Select(diagnostic => diagnostic.Message)));
             return false;
         }
 
         await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-        dispatchQueue.EnqueueOrDefer(
-            new ProcessRuntimeDispatchQueueRequest(runId, requestedBy));
 
-        var recoverySource = executionRunId == Guid.Empty
-            ? "missing AgentFramework execution run"
-            : $"interrupted execution run {executionRunId:D}";
-        logger.LogInformation(
-            "Process execution recovery released claim {ClaimToken} for {RecoverySource}. ProcessRunId={RunId} StepInstanceId={StepInstanceId}",
+        logger.LogWarning(
+            "Interrupted process execution recovery blocked claim {ClaimToken} for execution run {ExecutionRunId} because side-effect completion is indeterminate and automatic replay is unsafe. ProcessRunId={RunId} StepInstanceId={StepInstanceId}",
             claim.ClaimToken,
-            recoverySource,
+            executionRun.Id,
             runId.Value,
             stepInstanceId.Value);
         return true;
+    }
+
+    private static ProcessExecutionAdapterResult CreateInterruptedExecutionReplayUnsafeResult(
+        ProcessRuntimeStepAssignment assignment,
+        ExecutionRunRecord executionRun)
+    {
+        var summary =
+            $"Agent execution '{executionRun.Id:D}' for step '{assignment.StepKey}' was interrupted before the process runtime received a terminal result. Durable execution identity cannot prove whether external side effects completed, so automatic replay is forbidden and operator review is required.";
+        var evidence =
+            $"{assignment.RunId}:{assignment.StepInstanceId}:{executionRun.Id:D}:{executionRun.State}:{executionRun.Outcome}:side-effects-indeterminate";
+        return NeedsManagerForCompletionIssue(
+            assignment,
+            ComputeHash(evidence),
+            new ProcessCompletionIssue(
+                ProcessExecutionAdapterDiagnosticCodes.AgentInterruptedExecutionReplayUnsafe,
+                summary,
+                evidence,
+                assignment.ProducedArtifactSlotIds,
+                ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Unknown)) with
+        {
+            ExecutionRunId = new ProcessExecutionRunId(executionRun.Id)
+        };
     }
 
     private async Task<bool> TrySubmitRecoveredExecutionResultAsync(
@@ -199,6 +263,16 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     {
         if (!IsRecoverableExecutionCompletion(executionRun.State, executionRun.Outcome))
         {
+            return false;
+        }
+
+        if (!IsExecutionForProcessStep(executionRun, runId, stepInstanceId))
+        {
+            logger.LogInformation(
+                "Skipping recovered AgentFramework execution result {ExecutionRunId} because its recorded process run or step identity does not match {RunId}/{StepInstanceId}.",
+                executionRun.Id,
+                runId.Value,
+                stepInstanceId.Value);
             return false;
         }
 
@@ -249,7 +323,11 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             return false;
         }
 
-        if (!CanAssociateClaimWithRecoveredExecution(claim.CreatedAtUtc, executionRun.CreatedAtUtc))
+        if (!CanAssociateClaimWithRecoveredExecution(
+                claim.CreatedAtUtc,
+                claim.ExpiresAtUtc,
+                executionRun.CreatedAtUtc) ||
+            !IsExecutionBoundToClaim(executionRun, claim.ClaimToken.Value))
         {
             logger.LogInformation(
                 "Skipping recovered AgentFramework execution result {ExecutionRunId} because the execution does not belong to active claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ClaimCreatedAtUtc={ClaimCreatedAtUtc} ExecutionCreatedAtUtc={ExecutionCreatedAtUtc}",
@@ -262,25 +340,66 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             return false;
         }
 
-        var context = CreateContext(
-            requestedBy,
-            NormalizeRecoveredResultTimestamp(executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc, claim.ExpiresAtUtc));
+        var completedAtUtc = NormalizeUtc(
+            executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc);
+        if (completedAtUtc >= NormalizeUtc(claim.ExpiresAtUtc))
+        {
+            logger.LogWarning(
+                "Completed AgentFramework execution run {ExecutionRunId} could not submit process result because its canonical completion timestamp is outside claim {ClaimToken}. ProcessRunId={RunId} StepInstanceId={StepInstanceId} ExecutionCompletedAtUtc={ExecutionCompletedAtUtc} ClaimExpiresAtUtc={ClaimExpiresAtUtc}",
+                executionRun.Id,
+                claim.ClaimToken,
+                runId.Value,
+                stepInstanceId.Value,
+                completedAtUtc,
+                claim.ExpiresAtUtc);
+            return false;
+        }
+
+        var context = CreateContext(requestedBy, completedAtUtc);
         var toolReceipts = await LoadRecoveredExecutionToolReceiptsAsync(
                 executionRun,
                 cancellationToken)
             .ConfigureAwait(false);
-        var normalizedOutput = managedArtifactService.RecoverUnambiguousBranchOutcomeFromCurrentPrimaryArtifact(
+        var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Process run '{runId}' references missing plan '{state.PlanId}'.");
+        var stepContract = ProcessRuntimeArtifactContracts.BuildStepContract(
+            state,
+            step,
+            plan.Branches);
+        var materialization = completionCoordinator.Materialize(
             assignment,
             validation.Output,
             executionRun.Id,
-            toolReceipts);
-        var adapterResult = resultConverter.ToAdapterResult(
-            assignment,
-            normalizedOutput,
-            validation.RawOutputHash,
             toolReceipts,
-            executionRun.Id,
-            stepContract: ProcessRuntimeArtifactContracts.BuildStepContract(state, step));
+            stepContract);
+        ProcessExecutionAdapterResult adapterResult;
+        if (materialization.Issue is { } materializationIssue)
+        {
+            adapterResult = NeedsManagerForCompletionIssue(
+                assignment,
+                validation.RawOutputHash,
+                materializationIssue);
+        }
+        else
+        {
+            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+            var completionToolReceipts = await completionCoordinator.LoadCompletionToolReceiptsAsync(
+                    workspaceService,
+                    assignment,
+                    executionRun.Id,
+                    materialization.ToolReceipts,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            adapterResult = completionCoordinator.Complete(
+                assignment,
+                materialization,
+                validation.RawOutputHash,
+                executionRun.Id,
+                completionToolReceipts,
+                appendRuntimeGateFindings: true,
+                stepContract: stepContract);
+        }
+
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var commit = await engine.SubmitStrategyResultAsync(
@@ -305,8 +424,6 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         }
 
         await projectionCatchupService.CatchUpAsync(cancellationToken).ConfigureAwait(false);
-        var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Process run '{runId}' references missing plan '{state.PlanId}'.");
         await branchSignalRouter.ApplyForResultAsync(
             commit.State,
             plan,
@@ -382,17 +499,6 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         };
     }
 
-    private static DateTimeOffset NormalizeRecoveredResultTimestamp(
-        DateTimeOffset executionCompletedAtUtc,
-        DateTimeOffset claimExpiresAtUtc)
-    {
-        var completedAtUtc = NormalizeUtc(executionCompletedAtUtc);
-        var expiresAtUtc = NormalizeUtc(claimExpiresAtUtc);
-        return completedAtUtc < expiresAtUtc
-            ? completedAtUtc
-            : expiresAtUtc.AddTicks(-1);
-    }
-
     private RuntimeCommandContext CreateContext(
         string requestedBy,
         DateTimeOffset occurredAtUtc)
@@ -419,6 +525,11 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         return new Guid(bytes);
     }
 
+    private static string ComputeHash(string value)
+        => "sha256:" +
+           Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))
+               .ToLowerInvariant();
+
     private static string NormalizeRequestedBy(string requestedBy)
         => string.IsNullOrWhiteSpace(requestedBy)
             ? "agent-execution-recovery"
@@ -426,12 +537,39 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
 
     internal static bool CanAssociateClaimWithRecoveredExecution(
         DateTimeOffset claimCreatedAtUtc,
+        DateTimeOffset claimExpiresAtUtc,
         DateTimeOffset executionCreatedAtUtc)
     {
         var normalizedClaimCreatedAtUtc = NormalizeUtc(claimCreatedAtUtc);
+        var normalizedClaimExpiresAtUtc = NormalizeUtc(claimExpiresAtUtc);
         var normalizedExecutionCreatedAtUtc = NormalizeUtc(executionCreatedAtUtc);
         return normalizedExecutionCreatedAtUtc >= normalizedClaimCreatedAtUtc &&
-               normalizedExecutionCreatedAtUtc - normalizedClaimCreatedAtUtc <= RecoveredExecutionClaimAssociationWindow;
+               normalizedExecutionCreatedAtUtc < normalizedClaimExpiresAtUtc;
+    }
+
+    internal static bool IsExecutionBoundToClaim(
+        ExecutionRunRecord executionRun,
+        Guid claimToken)
+    {
+        ArgumentNullException.ThrowIfNull(executionRun);
+
+        return claimToken != Guid.Empty &&
+               ProcessDispatchClaimExecutionMetadata.Matches(
+                   executionRun,
+                   new ProcessDispatchClaimIdentity(claimToken));
+    }
+
+    internal static bool IsExecutionForProcessStep(
+        ExecutionRunRecord executionRun,
+        ProcessRunId runId,
+        ProcessStepInstanceId stepInstanceId)
+    {
+        ArgumentNullException.ThrowIfNull(executionRun);
+
+        return Guid.TryParse(executionRun.ProcessRunId, out var recordedRunId) &&
+               recordedRunId == runId.Value &&
+               Guid.TryParse(executionRun.ProcessStepId, out var recordedStepInstanceId) &&
+               recordedStepInstanceId == stepInstanceId.Value;
     }
 
     private static DateTimeOffset NormalizeUtc(DateTimeOffset value)
