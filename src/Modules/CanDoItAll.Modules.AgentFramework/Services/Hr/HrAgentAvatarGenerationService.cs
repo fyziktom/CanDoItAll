@@ -7,11 +7,9 @@ namespace CanDoItAll.Modules.AgentFramework;
 public sealed class HrAgentAvatarGenerationService(
     IAgentFrameworkWorkspaceService workspaceService,
     IProviderRuntimeProfileSource providerSource,
-    IAgentImageGenerationService imageGenerationService,
+    AgentAvatarGenerationService avatarGenerationService,
     ILogger<HrAgentAvatarGenerationService> logger)
 {
-    private const int MaximumVisualBriefLength = 2_000;
-
     public async Task<HrAgentAvatarGenerateResult> GenerateAsync(
         Guid actorAgentId,
         HrAgentAvatarGenerateInput input,
@@ -31,18 +29,6 @@ public sealed class HrAgentAvatarGenerationService(
         if (input.ExpectedUpdatedAtUtc == default)
         {
             throw new InvalidOperationException("ExpectedUpdatedAtUtc is required for optimistic concurrency.");
-        }
-
-        if (string.IsNullOrWhiteSpace(input.VisualBrief) ||
-            input.VisualBrief.Trim().Length > MaximumVisualBriefLength)
-        {
-            throw new InvalidOperationException(
-                $"VisualBrief is required and cannot exceed {MaximumVisualBriefLength} characters.");
-        }
-
-        if (input.OutputCompression is < 0 or > 100)
-        {
-            throw new InvalidOperationException("OutputCompression must be between 0 and 100.");
         }
 
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: true, cancellationToken);
@@ -87,48 +73,16 @@ public sealed class HrAgentAvatarGenerationService(
                 cancellationToken)
             ?? throw new InvalidOperationException(
                 $"Image-generation provider '{imageAccess.PreferredProviderProfileId.Value:D}' was not found.");
-        if (!provider.IsEnabled)
-        {
-            throw new InvalidOperationException($"Image-generation provider '{provider.Name}' is disabled.");
-        }
-
-        if (provider.Purpose != ProviderProfilePurpose.ImageGeneration)
-        {
-            throw new InvalidOperationException($"Provider '{provider.Name}' is not an image-generation provider.");
-        }
-
-        var generated = await imageGenerationService.GenerateAsync(
-            new AgentImageGenerationRequest(
-                provider,
-                imageAccess.DefaultModel,
-                BuildPrompt(input.VisualBrief),
-                "1024x1024",
-                "low",
-                AgentGeneratedImageFormat.Jpeg,
-                [])
-            {
-                OutputCompression = input.OutputCompression
-            },
+        var generated = await avatarGenerationService.GenerateAsync(
+            provider,
+            imageAccess.DefaultModel,
+            input.VisualBrief,
+            input.OutputCompression,
             cancellationToken);
-        if (generated.Format != AgentGeneratedImageFormat.Jpeg)
-        {
-            throw new InvalidOperationException(
-                "Avatar generation returned a format that does not match the requested JPEG avatar format.");
-        }
-
-        if (generated.Images.Count != 1)
-        {
-            throw new InvalidOperationException(
-                "Avatar generation must return exactly one image.");
-        }
-
-        var image = generated.Images[0];
-        var imageInfo = AgentAvatarImagePolicy.InspectGeneratedJpeg(image.ContentType, image.Bytes);
-        var avatarDataUrl = AgentAvatarImagePolicy.BuildDataUrl(imageInfo.ContentType, image.Bytes);
 
         var editor = await workspaceService.GetAgentEditorAsync(target.Id, cancellationToken);
         editor.ExpectedUpdatedAtUtc = input.ExpectedUpdatedAtUtc;
-        editor.AvatarImageUrl = avatarDataUrl;
+        editor.AvatarImageUrl = generated.AvatarDataUrl;
         var warnings = new List<string>();
         try
         {
@@ -154,28 +108,16 @@ public sealed class HrAgentAvatarGenerationService(
             actorAgentId,
             target.Id,
             provider.Id,
-            imageAccess.DefaultModel,
-            image.Bytes.Length);
+            generated.Model,
+            generated.ContentLength);
 
         return new HrAgentAvatarGenerateResult(
             target.Id,
-            provider.Name,
+            generated.ProviderName,
             generated.Model,
-            imageInfo.ContentType,
-            image.Bytes.Length,
+            generated.ContentType,
+            generated.ContentLength,
             updated.UpdatedAtUtc,
             warnings);
-    }
-
-    private static string BuildPrompt(string visualBrief)
-    {
-        return $"""
-            Create a square professional avatar for a software agent.
-            Use an abstract or illustrated identity. Do not depict a real identifiable person.
-            Keep the composition readable at small sizes. Do not include text, logos, badges, or watermarks.
-
-            Visual brief:
-            {visualBrief.Trim()}
-            """;
     }
 }

@@ -131,23 +131,23 @@ public static class ProviderPricingDefaults
     private static readonly IReadOnlyList<ProviderModelTokenPrice> OpenAiModelPrices =
     [
         OpenAiGpt56SolPrice with { Model = OpenAiModelIds.Gpt56 },
-        new(OpenAiModelIds.Gpt56Luna, 1.00m, 0.10m, 6.00m)
+        new(OpenAiModelIds.Gpt56Luna, 0.20m, 0.02m, 1.20m)
         {
-            CacheWritePerMillionTokensUsd = 1.25m,
+            CacheWritePerMillionTokensUsd = 0.25m,
             LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
-            LongContextInputPerMillionTokensUsd = 2.00m,
-            LongContextCachedInputPerMillionTokensUsd = 0.20m,
-            LongContextCacheWritePerMillionTokensUsd = 2.50m,
-            LongContextOutputPerMillionTokensUsd = 9.00m
+            LongContextInputPerMillionTokensUsd = 0.40m,
+            LongContextCachedInputPerMillionTokensUsd = 0.04m,
+            LongContextCacheWritePerMillionTokensUsd = 0.50m,
+            LongContextOutputPerMillionTokensUsd = 1.80m
         },
-        new(OpenAiModelIds.Gpt56Terra, 2.50m, 0.25m, 15.00m)
+        new(OpenAiModelIds.Gpt56Terra, 2.00m, 0.20m, 12.00m)
         {
-            CacheWritePerMillionTokensUsd = 3.125m,
+            CacheWritePerMillionTokensUsd = 2.50m,
             LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
-            LongContextInputPerMillionTokensUsd = 5.00m,
-            LongContextCachedInputPerMillionTokensUsd = 0.50m,
-            LongContextCacheWritePerMillionTokensUsd = 6.25m,
-            LongContextOutputPerMillionTokensUsd = 22.50m
+            LongContextInputPerMillionTokensUsd = 4.00m,
+            LongContextCachedInputPerMillionTokensUsd = 0.40m,
+            LongContextCacheWritePerMillionTokensUsd = 5.00m,
+            LongContextOutputPerMillionTokensUsd = 18.00m
         },
         OpenAiGpt56SolPrice,
         new("gpt-5.5", 5.00m, 0.50m, 30.00m),
@@ -234,6 +234,29 @@ public static class ProviderPricingDefaults
             configured[defaultPrice.Model] = configured.TryGetValue(defaultPrice.Model, out var configuredPrice)
                 ? EnrichKnownPrice(configuredPrice, defaultPrice)
                 : defaultPrice;
+        }
+
+        return NormalizeModelPrices(kind, defaultModel, configured.Values);
+    }
+
+    public static IReadOnlyList<ProviderModelTokenPrice> MergeAuthoritativeKnownDefaultPrices(
+        ProviderKind kind,
+        string? defaultModel,
+        IEnumerable<ProviderModelTokenPrice>? configuredPrices)
+    {
+        var configured = (configuredPrices ?? [])
+            .Select(NormalizePrice)
+            .Where(price => !string.IsNullOrWhiteSpace(price.Model))
+            .GroupBy(price => price.Model, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var defaultPrice in CreateDefaultPrices(kind, defaultModel))
+        {
+            if (TryFindKnownDefaultPrice(kind, defaultPrice.Model, out _))
+            {
+                configured[defaultPrice.Model] = defaultPrice;
+            }
         }
 
         return NormalizeModelPrices(kind, defaultModel, configured.Values);

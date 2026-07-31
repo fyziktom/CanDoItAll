@@ -208,6 +208,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentChatAttachmentStagingService, AgentChatAttachmentStagingService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
+        services.TryAddScoped<AgentAvatarGenerationService>();
         services.TryAddScoped<HrAgentAdministrationService>();
         services.TryAddScoped<HrAgentAvatarGenerationService>();
         services.TryAddScoped<HrAgentUsageAnalyticsService>();
