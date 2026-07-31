@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
 {
     [Fact]
-    public void BoundForAgentRuntime_omits_image_base64_and_points_to_image_tools()
+    public void BoundForAgentRuntime_omits_image_base64_and_points_to_project_authorized_image_tool()
     {
         var content = new ProjectStructureAssetContentDescriptor(
             CreateAsset(ProjectObjectType.ImageAsset, "image/png", "managed-files/project-media/images/calculator/proposal.png"),
@@ -20,9 +20,11 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
         Assert.True(bounded.Base64DataOmitted);
         Assert.Empty(bounded.Base64Data);
         Assert.Contains("image/png", bounded.ContentSummary, StringComparison.Ordinal);
-        Assert.Contains("workspace_inspect_image", bounded.ContentSummary, StringComparison.Ordinal);
-        Assert.Contains("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
-        Assert.Contains("managed-files/project-media/images/calculator/proposal.png", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_image_analyze", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains(content.Asset.ProjectId.ToString("D"), bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains(content.Asset.NodeId, bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain(content.Asset.MediaRelativePath, bounded.ContentSummary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -58,6 +60,70 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
         Assert.Contains("workspace_convert_document", bounded.ContentSummary, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
         Assert.Contains("managed-files/project-media/files/calculator/quote.pdf", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BoundForAgentRuntime_routes_svg_to_project_authorized_text_tool()
+    {
+        var content = new ProjectStructureAssetContentDescriptor(
+            CreateAsset(ProjectObjectType.ImageAsset, "image/svg+xml", "managed-files/project-media/images/calculator/proposal.svg"),
+            ContentLength: 7_159,
+            Base64Data: Convert.ToBase64String(Encoding.UTF8.GetBytes("<svg/>")));
+
+        var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(content);
+
+        Assert.True(bounded.Base64DataOmitted);
+        Assert.Contains("project_structure_asset_text_get", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains("inert text", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BoundForAgentRuntime_reports_image_analysis_permission_boundary()
+    {
+        var content = new ProjectStructureAssetContentDescriptor(
+            CreateAsset(ProjectObjectType.ImageAsset, "image/png", "artifacts/process-runs/run/browser/calculator.png"),
+            ContentLength: 250_000,
+            Base64Data: Convert.ToBase64String(new byte[512]));
+
+        var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(
+            content,
+            canAnalyzeImages: false);
+
+        Assert.Contains("lacks artifact-transformation access", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain(content.Asset.MediaRelativePath, bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AssetTextReader_reads_svg_as_bounded_utf8_text()
+    {
+        const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"><text>Calculator</text></svg>";
+        var bytes = Encoding.UTF8.GetBytes(svg);
+        var content = new ProjectStructureAssetBinaryContent(
+            CreateAsset(ProjectObjectType.ImageAsset, "image/svg+xml", "managed-files/project-media/images/calculator/proposal.svg"),
+            bytes);
+
+        var result = ProjectStructureAgentRuntimeAssetTextReader.Read(content);
+
+        Assert.Equal(svg, result.TextContent);
+        Assert.Equal(svg.Length, result.CharacterCount);
+        Assert.False(result.IsTruncated);
+    }
+
+    [Fact]
+    public void ImageAssetPolicy_accepts_png_bytes_without_a_workspace_path()
+    {
+        byte[] bytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x01];
+        var content = new ProjectStructureAssetBinaryContent(
+            CreateAsset(ProjectObjectType.ImageAsset, "image/png", "artifacts/process-runs/run/browser/calculator.png"),
+            bytes);
+
+        var source = ProjectStructureAgentRuntimeImageAssetPolicy.CreateAnalysisSource(content);
+
+        Assert.Equal("image/png", source.ContentType);
+        Assert.Equal("calculator.png", source.Name);
+        Assert.Same(bytes, source.Bytes);
     }
 
     private static ProjectStructureAssetDescriptor CreateAsset(

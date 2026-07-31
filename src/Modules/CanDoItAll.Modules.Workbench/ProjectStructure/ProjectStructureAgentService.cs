@@ -1,5 +1,7 @@
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 using System.Net;
 using System.Text.Json;
@@ -15,12 +17,14 @@ public sealed class ProjectStructureAgentService(
     IProjectStructureRuntimeLauncher runtimeLauncher,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathAccessGuard pathAccessGuard,
+    FileSystemStoragePathPolicy fileSystemPathPolicy,
     IHttpClientFactory httpClientFactory,
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService)
 {
     private const long MaxExternalAssetSourceBytes = ProjectStructureAssetUploadLimits.MaximumFileBytes;
+    private const long MaxAssetContentBytes = ProjectStructureAssetUploadLimits.MaximumFileBytes;
 
     private static readonly ProjectStructureReadRequest FullNodeReadRequest = new(
         IncludeLinks: true,
@@ -1428,8 +1432,24 @@ public sealed class ProjectStructureAgentService(
 
     public async Task<ProjectStructureAssetContentDescriptor> GetAssetContentAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default)
     {
-        var asset = await GetAssetAsync(projectId, nodeId, cancellationToken);
-        var resolution = pathAccessGuard.ResolveManagedFilePath(asset.MediaRelativePath);
+        ProjectStructureAssetBinaryContent content = await GetAssetBinaryContentAsync(
+            projectId,
+            nodeId,
+            cancellationToken);
+        return new ProjectStructureAssetContentDescriptor(
+            content.Asset,
+            content.Bytes.LongLength,
+            Convert.ToBase64String(content.Bytes));
+    }
+
+    internal async Task<ProjectStructureAssetBinaryContent> GetAssetBinaryContentAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken = default)
+    {
+        ProjectStructureNode node = await GetNodeAsync(projectId, nodeId, cancellationToken);
+        ProjectStructureAssetDescriptor asset = MapAsset(node, projectId);
+        WorkspacePathAccessResult resolution = ResolveAssetContentPath(node);
         if (!resolution.IsSuccess)
         {
             throw new ProjectStructureAgentException(
@@ -1448,11 +1468,144 @@ public sealed class ProjectStructureAgentService(
                 new { asset.MediaRelativePath });
         }
 
-        var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
-        return new ProjectStructureAssetContentDescriptor(
-            asset,
-            bytes.LongLength,
-            Convert.ToBase64String(bytes));
+        byte[] bytes = await ReadAssetContentBytesAsync(resolution.FullPath, cancellationToken);
+        return new ProjectStructureAssetBinaryContent(asset, bytes);
+    }
+
+    private async Task<byte[]> ReadAssetContentBytesAsync(
+        string fullPath,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 80 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        EnsureAssetContentPathRemainsTrusted(fullPath);
+        long initialLength = stream.Length;
+        if (initialLength > MaxAssetContentBytes)
+        {
+            throw AssetContentTooLarge();
+        }
+
+        using var memory = new MemoryStream((int)initialLength);
+        var buffer = new byte[80 * 1024];
+        long totalBytes = 0;
+        while (true)
+        {
+            int read = await stream.ReadAsync(buffer, cancellationToken);
+            if (read == 0)
+            {
+                break;
+            }
+
+            if (read > MaxAssetContentBytes - totalBytes)
+            {
+                throw AssetContentTooLarge();
+            }
+
+            totalBytes += read;
+            memory.Write(buffer, 0, read);
+        }
+
+        return memory.ToArray();
+    }
+
+    private static ProjectStructureAgentException AssetContentTooLarge()
+        => new(
+            413,
+            "AssetContentTooLarge",
+            $"Asset content exceeds the {MaxAssetContentBytes} byte limit.");
+
+    private void EnsureAssetContentPathRemainsTrusted(string fullPath)
+    {
+        if (!TryResolveTrustedAssetContentPath(fullPath, out _))
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "AssetContentPathInvalid",
+                "The asset path traverses an unsupported filesystem link.");
+        }
+    }
+
+    private WorkspacePathAccessResult ResolveAssetContentPath(ProjectStructureNode node)
+    {
+        WorkspacePathAccessResult resolution = TryResolveProjectedProcessScreenshotPath(
+            node,
+            out string screenshotPath)
+            ? pathAccessGuard.ResolveWorkspacePath(screenshotPath)
+            : pathAccessGuard.ResolveManagedFilePath(node.MediaRelativePath);
+        if (!resolution.IsSuccess)
+        {
+            return resolution;
+        }
+
+        return TryResolveTrustedAssetContentPath(resolution.FullPath, out string trustedPath)
+            ? WorkspacePathAccessResult.Success(trustedPath)
+            : WorkspacePathAccessResult.Failure(
+                "The asset path traverses an unsupported filesystem link.");
+    }
+
+    private bool TryResolveTrustedAssetContentPath(string fullPath, out string trustedPath)
+    {
+        trustedPath = string.Empty;
+        try
+        {
+            trustedPath = fileSystemPathPolicy.ResolveTrustedWorkspacePath(fullPath);
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException
+                or IOException
+                or NotSupportedException
+                or StorageBrowseException
+                or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryResolveProjectedProcessScreenshotPath(
+        ProjectStructureNode node,
+        out string normalizedPath)
+    {
+        normalizedPath = node.MediaRelativePath.Trim().Replace('\\', '/');
+        string[] segments = normalizedPath.Split(
+            '/',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!node.IsSystemManaged ||
+            node.ObjectType != ProjectObjectType.ImageAsset ||
+            !string.Equals(
+                node.ArtifactKind,
+                ProjectStructureProcessNodeKeys.ProcessRunScreenshotArtifactKind,
+                StringComparison.Ordinal) ||
+            Path.IsPathRooted(node.MediaRelativePath) ||
+            segments.Any(segment => segment is "." or "..") ||
+            !ProjectStructureProcessNodeKeys.TryParseProcessRunScreenshotNodeKey(node.Id, out Guid runId) ||
+            node.ArtifactId != runId ||
+            !string.Equals(
+                node.Id,
+                ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId, normalizedPath),
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        ProcessRunArtifactRootResolution runRoot = ProcessRunArtifactRootPolicy.Resolve(
+            normalizedPath,
+            runId);
+        string managedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(
+            new ProcessRunId(runId));
+        return runRoot.Kind == ProcessRunArtifactRootKind.ManagedArtifactRunRoot &&
+               string.Equals(
+                   runRoot.DirectoryPath,
+                   managedArtifactRoot,
+                   StringComparison.OrdinalIgnoreCase) &&
+               normalizedPath.StartsWith(
+                   $"{managedArtifactRoot}/",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<ProjectStructureNodeSummary> CreateAssetAsync(

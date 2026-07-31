@@ -2991,6 +2991,8 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureAssetCreate = "project_structure_asset_create";
     public const string ProjectStructureAssetGet = "project_structure_asset_get";
     public const string ProjectStructureAssetContentGet = "project_structure_asset_content_get";
+    public const string ProjectStructureAssetTextGet = "project_structure_asset_text_get";
+    public const string ProjectStructureAssetImageAnalyze = "project_structure_asset_image_analyze";
     public const string ProjectStructureAssetCreateRevision = "project_structure_asset_create_revision";
     public const string ProjectStructureLinkCreate = "project_structure_link_create";
     public const string ProjectStructureLinkUnlink = "project_structure_link_unlink";
@@ -3014,6 +3016,8 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectPlanSummaryGet,
         ProjectStructureAssetGet,
         ProjectStructureAssetContentGet,
+        ProjectStructureAssetTextGet,
+        ProjectStructureAssetImageAnalyze,
         ProjectStructureNodeWorkflowAddOptions,
         ProjectStructureNodeWorkflowStatusGet,
         ProjectStructureKnowledgeQuery,

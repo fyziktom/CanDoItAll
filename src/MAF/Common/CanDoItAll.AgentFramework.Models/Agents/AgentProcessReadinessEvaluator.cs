@@ -1339,6 +1339,8 @@ public static class AgentProcessReadinessEvaluator
         "project_plan_summary_get",
         "project_structure_asset_get",
         "project_structure_asset_content_get",
+        "project_structure_asset_text_get",
+        "project_structure_asset_image_analyze",
         "project_structure_node_workflow_add_options",
         "project_structure_node_workflow_status_get",
         "project_structure_knowledge_query",

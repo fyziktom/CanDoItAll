@@ -694,6 +694,24 @@ public sealed record ProjectStructureAssetContentDescriptor(
     public string ContentSummary { get; init; } = string.Empty;
 }
 
+internal sealed record ProjectStructureAssetBinaryContent(
+    ProjectStructureAssetDescriptor Asset,
+    byte[] Bytes);
+
+public sealed record ProjectStructureAssetTextDescriptor(
+    ProjectStructureAssetDescriptor Asset,
+    long ContentLength,
+    int CharacterCount,
+    string TextContent,
+    bool IsTruncated);
+
+public sealed record ProjectStructureAssetImageAnalysisDescriptor(
+    ProjectStructureAssetDescriptor Asset,
+    string Model,
+    string Analysis,
+    int InputTokens,
+    int OutputTokens);
+
 public sealed record ProjectStructureAssetRevisionRequest(
     string Title,
     string Subtitle,

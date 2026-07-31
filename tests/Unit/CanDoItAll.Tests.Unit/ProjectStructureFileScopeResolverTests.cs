@@ -252,7 +252,7 @@ public sealed class ProjectStructureFileScopeResolverTests
     public async Task ResolveAsync_rejects_a_stale_scope_before_a_provider()
     {
         await using var fixture = await ResolverFixture.CreateAsync(ProjectObjectType.File, reference: null);
-        var key = new ProjectStructureNodeFileScopeKey(
+        var key = ProjectStructureNodeFileScopeKey.CreatePersisted(
             ProjectStructureNodeFileScopeMode.KnownFile,
             Guid.NewGuid());
         var scope = new FileToolsSemanticScope(
@@ -279,7 +279,10 @@ public sealed class ProjectStructureFileScopeResolverTests
             this.options = options;
             ProjectId = projectId;
             NodeKey = nodeKey;
-            Sut = new ProjectStructureFileScopeResolver(new TestDbContextFactory(options));
+            Sut = new ProjectStructureFileScopeResolver(
+                new TestDbContextFactory(options),
+                new ProjectStructureAssemblyService([], new SystemClock()),
+                new StaticStorageCatalog(CreateStorage(isReadOnly: false)));
         }
 
         public Guid ProjectId { get; }

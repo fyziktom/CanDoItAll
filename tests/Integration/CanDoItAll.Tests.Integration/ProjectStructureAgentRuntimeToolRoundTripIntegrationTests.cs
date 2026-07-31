@@ -60,6 +60,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.Contains(tools, tool => tool.Name == "project_structure_asset_create");
         Assert.Contains(tools, tool => tool.Name == "project_structure_asset_get");
         Assert.Contains(tools, tool => tool.Name == "project_structure_asset_content_get");
+        Assert.Contains(tools, tool => tool.Name == "project_structure_asset_text_get");
         Assert.DoesNotContain(tools, tool => tool.Name == "project_task_create");
         Assert.DoesNotContain(tools, tool => tool.Name == "project_task_update");
         Assert.DoesNotContain(tools, tool => tool.Name.StartsWith("workspace_", StringComparison.Ordinal));
@@ -242,6 +243,37 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             Assert.Equal(
                 markdown,
                 Encoding.UTF8.GetString(Convert.FromBase64String(assetContent.Base64Data)));
+
+            const string svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"><text>Calculator layout</text></svg>";
+            var svgNode = await InvokeAsync<ProjectStructureNodeSummary>(
+                FindTool(tools, "project_structure_asset_create"),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["request"] = new ProjectStructureAgentAssetCreateInput(
+                        ProjectObjectType.ImageAsset,
+                        "Calculator layout proposal",
+                        "Generated SVG",
+                        "Safe textual image asset.",
+                        new ProjectObjectMediaPayload(
+                            "calculator-layout-proposal.svg",
+                            "image/svg+xml",
+                            Convert.ToBase64String(Encoding.UTF8.GetBytes(svg))),
+                        ParentNodeKey: selectedNode.Id,
+                        ObjectSubtype: "svg",
+                        LeaseToken: lease.LeaseToken)
+                });
+            var svgText = await InvokeAsync<ProjectStructureAssetTextDescriptor>(
+                FindTool(tools, "project_structure_asset_text_get"),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["nodeId"] = svgNode.Id
+                });
+
+            Assert.Equal(svg, svgText.TextContent);
+            Assert.Equal("image/svg+xml", svgText.Asset.MediaContentType);
+            Assert.False(svgText.IsTruncated);
 
             var readback = await InvokeAsync<ProjectStructureReadToolData>(
                 FindTool(tools, "project_structure_read"),

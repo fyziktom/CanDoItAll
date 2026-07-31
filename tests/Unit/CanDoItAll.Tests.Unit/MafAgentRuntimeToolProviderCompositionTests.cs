@@ -836,6 +836,30 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeProjectStructureContext_business_analysis_agent_attaches_workspace_spreadsheet_writer()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.BusinessAnalysis)));
+        var projectId = Guid.NewGuid();
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [],
+            AgentRuntimeContextIntent.Empty with
+            {
+                SourceKind = "project-structure",
+                SourceId = projectId.ToString("D"),
+                WorkspaceScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+            });
+
+        Assert.Contains(ReadTools(state), tool => tool.Name == "workspace_write_spreadsheet");
+        Assert.Contains(ReadEffectiveCapabilities(state).AllowedCapabilities, capability =>
+            capability.RuntimeToolName?.Value == "workspace_write_spreadsheet");
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_skips_configured_tools_when_context_disables_them()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
