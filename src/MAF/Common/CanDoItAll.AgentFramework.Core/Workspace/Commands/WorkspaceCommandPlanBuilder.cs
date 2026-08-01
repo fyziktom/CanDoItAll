@@ -650,7 +650,7 @@ internal sealed class WorkspaceCommandPlanBuilder
                 {
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = true,
-                    AttributesToSkip = 0
+                    AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
 
@@ -1795,33 +1795,27 @@ internal sealed class WorkspaceCommandPlanBuilder
 
     private string NormalizeScriptArgument(string argument)
     {
-        if (!LooksLikeScriptPathArgument(argument) ||
-            !pathPolicy.TryResolveWorkspacePath(argument, allowWorkspaceRoot: false, out var resolution, out _))
+        if (!WorkspaceScriptArgumentPathParser.TryParse(argument, out var candidate))
         {
             return argument;
         }
 
-        return resolution.FullPath;
-    }
-
-    private static bool LooksLikeScriptPathArgument(string argument)
-    {
-        if (string.IsNullOrWhiteSpace(argument) ||
-            argument.StartsWith("-", StringComparison.Ordinal))
+        if (WorkspaceScriptArgumentPathParser.ContainsParentTraversal(candidate.Path))
         {
-            return false;
+            throw new InvalidOperationException(
+                "Script argument paths cannot contain parent traversal segments ('..'). Use a canonical workspace or external-target path.");
         }
 
-        if (Uri.TryCreate(argument, UriKind.Absolute, out var uri) && !uri.IsFile)
+        if (!pathPolicy.TryResolveWorkspacePath(
+                candidate.Path,
+                allowWorkspaceRoot: false,
+                out var resolution,
+                out var validationMessage))
         {
-            return false;
+            throw new InvalidOperationException($"Script argument path is not allowed. {validationMessage}");
         }
 
-        var expandedArgument = WorkspacePathPolicy.ExpandPortablePath(argument);
-        return WorkspacePathPolicy.IsExternalTargetAliasPath(argument) ||
-               Path.IsPathRooted(expandedArgument) ||
-               argument.Contains(Path.DirectorySeparatorChar) ||
-               argument.Contains(Path.AltDirectorySeparatorChar);
+        return candidate.ReplacePath(resolution.FullPath);
     }
 
     private static string[] NormalizeStructuredArguments(string[]? arguments)

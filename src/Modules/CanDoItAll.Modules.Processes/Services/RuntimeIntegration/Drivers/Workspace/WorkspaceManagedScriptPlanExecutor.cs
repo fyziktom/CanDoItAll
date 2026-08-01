@@ -239,6 +239,11 @@ internal sealed class WorkspaceManagedScriptPlanExecutor(
 
                 var statResult = workspaceFiles.StatPath(alias);
                 receipts.Add(From(executionRunId, statResult));
+                if (statResult.IsKnownMissing())
+                {
+                    continue;
+                }
+
                 if (!statResult.Succeeded)
                 {
                     foundUnavailableCandidate = true;

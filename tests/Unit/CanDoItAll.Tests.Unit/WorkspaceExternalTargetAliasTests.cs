@@ -41,6 +41,47 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         Assert.Contains("specific grounded path", validationMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("external-target/C/repositories/demo/../secret")]
+    [InlineData("external-target/C/repositories/demo/./src")]
+    [InlineData("external-target/C/repositories/demo/..")]
+    [InlineData("external-target/C/repositories/demo/.")]
+    [InlineData(@"external-target\C\repositories\demo\..\secret")]
+    public void TryResolveWorkspacePath_rejects_external_target_dot_segments(string aliasPath)
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+
+        var succeeded = policy.TryResolveWorkspacePath(
+            aliasPath,
+            allowWorkspaceRoot: false,
+            out _,
+            out var validationMessage);
+
+        Assert.False(succeeded);
+        Assert.Contains("traversal segments", validationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TryResolveWorkspacePath_rejects_reparse_point_traversal()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var outsideRoot = CreateDirectory("outside");
+        File.WriteAllText(Path.Combine(outsideRoot, "secret.txt"), "secret");
+        var linkedRoot = Path.Combine(workspaceRoot, "linked");
+        Directory.CreateSymbolicLink(linkedRoot, outsideRoot);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+
+        var succeeded = policy.TryResolveWorkspacePath(
+            "linked/secret.txt",
+            allowWorkspaceRoot: false,
+            out _,
+            out var validationMessage);
+
+        Assert.False(succeeded);
+        Assert.Contains("reparse-point traversal", validationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void WriteTextFile_writes_to_real_external_target_for_alias_path()
     {

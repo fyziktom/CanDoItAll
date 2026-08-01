@@ -83,7 +83,7 @@ internal sealed class WorkspaceFileQueryService
                      {
                          RecurseSubdirectories = false,
                          IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             if (ShouldIgnorePath(path))
@@ -107,6 +107,10 @@ internal sealed class WorkspaceFileQueryService
         var listMessage = entries.Count == 0
             ? $"No workspace paths exist directly under '{resolution.RelativePath}'."
             : $"Listed {entries.Count} direct workspace path(s) under '{resolution.RelativePath}'.";
+        if (truncated)
+        {
+            listMessage += " Results are incomplete because the listing budget was reached. Narrow relativePath or increase maxResults up to 400.";
+        }
 
         return new WorkspaceFileListResult(
             Succeeded: true,
@@ -188,7 +192,7 @@ internal sealed class WorkspaceFileQueryService
                      {
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             if (ShouldIgnorePath(path))
@@ -217,6 +221,10 @@ internal sealed class WorkspaceFileQueryService
         var listMessage = entries.Count == 0
             ? $"No workspace paths matched '{normalizedSearchPattern}' under '{resolution.RelativePath}'."
             : $"Listed {entries.Count} workspace path(s) under '{resolution.RelativePath}'.";
+        if (truncated)
+        {
+            listMessage += " Results are incomplete because the listing budget was reached. Narrow relativePath or searchPattern, or increase maxResults up to 400.";
+        }
 
         return new WorkspaceFileListResult(
             Succeeded: true,
@@ -341,9 +349,18 @@ internal sealed class WorkspaceFileQueryService
             matches = matches.Take(limit).ToList();
         }
 
-        var resultMessage = matches.Count == 0
-            ? $"No matches found for '{query}'."
-            : $"Found {matches.Count} workspace match(es) for '{query}'.";
+        var resultMessage = matches.Count switch
+        {
+            0 when fileLimitReached =>
+                $"No matches were found for '{query}' within the first {MaxSearchFiles} searchable workspace files. The search is incomplete; narrow relativePath and retry before concluding that no match exists.",
+            0 => $"No matches found for '{query}'.",
+            _ => $"Found {matches.Count} workspace match(es) for '{query}'."
+        };
+
+        if (truncated && matches.Count > 0)
+        {
+            resultMessage += " Results are incomplete because the file-scan or result budget was reached. Narrow relativePath or increase maxResults up to 50.";
+        }
 
         if (skippedGuardedFiles > 0)
         {
@@ -459,7 +476,7 @@ internal sealed class WorkspaceFileQueryService
             {
                 RecurseSubdirectories = false,
                 IgnoreInaccessible = true,
-                AttributesToSkip = 0
+                AttributesToSkip = FileAttributes.ReparsePoint
             }).Count();
             var message = $"'{resolution.RelativePath}' is a workspace directory.";
             return new WorkspacePathStatResult(
@@ -478,9 +495,9 @@ internal sealed class WorkspaceFileQueryService
             ? aliasCorrectionMessage
             : $"Workspace path '{resolution.RelativePath}' does not exist.";
         return new WorkspacePathStatResult(
-            Succeeded: true,
+            Succeeded: false,
             Message: missingMessage,
-            Receipt: receiptWriter.CreateReceipt("workspace_stat_path", false, "Succeeded", missingMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
+            Receipt: receiptWriter.CreateReceipt("workspace_stat_path", false, "Failed", missingMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
             Path: resolution.RelativePath,
             Exists: false,
             PathKind: "missing",
@@ -642,7 +659,7 @@ internal sealed class WorkspaceFileQueryService
                      {
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             if (ShouldIgnoreSearchPath(rootPath, filePath))

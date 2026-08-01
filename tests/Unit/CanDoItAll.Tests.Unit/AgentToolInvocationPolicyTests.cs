@@ -175,6 +175,44 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_denies_ungrounded_external_target_in_script_arguments()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("path", "artifacts/process-runs/process-run-001/helpers/read.ps1"),
+            new("arguments", new[]
+            {
+                "--input=external-target/C/programovani/csharp/LegacyWeatherLog/secrets.json",
+                "--mode=validate"
+            })
+        ];
+        var pathArguments = ToolInvocationPathArgumentResolver.Resolve(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            rawArguments);
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/read.ps1"
+            },
+            pathArguments: pathArguments,
+            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/PocketMeetingCostPlanner"],
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(GovernedScriptSideEffectMode.NoMutation),
+            inspectedScriptContent: "Get-Content -LiteralPath $args[0]");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("outside the current run boundary", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denial_guidance_prefers_writable_product_root_over_read_only_aliases()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -523,6 +561,114 @@ public sealed class AgentToolInvocationPolicyTests
             Assert.Empty(result.Values);
             Assert.Equal(["path"], result.UnsupportedArgumentNames);
         }
+    }
+
+    [Fact]
+    public void Path_argument_resolver_extracts_only_script_argument_path_candidates()
+    {
+        var result = ToolInvocationPathArgumentResolver.Resolve(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            [
+                new("arguments", new[]
+                {
+                    "-StepKey",
+                    "qa-validation",
+                    "--input=external-target/C/workspace/Product/request.json",
+                    "https://example.test/status",
+                    "./inputs/local-request.json",
+                    "--mode=validate"
+                })
+            ]);
+
+        Assert.True(result.IsComplete);
+        Assert.Collection(
+            result.Values,
+            value =>
+            {
+                Assert.Equal("arguments", value.Name);
+                Assert.Equal("external-target/C/workspace/Product/request.json", value.Value);
+                Assert.Equal(2, value.ElementIndex);
+            },
+            value =>
+            {
+                Assert.Equal("arguments", value.Name);
+                Assert.Equal("./inputs/local-request.json", value.Value);
+                Assert.Equal(4, value.ElementIndex);
+            });
+    }
+
+    [Fact]
+    public void Path_argument_resolver_ignores_non_path_script_arguments_without_marking_incomplete()
+    {
+        using var arguments = JsonDocument.Parse(
+            """["-StepKey","qa-validation","--mode=validate","https://example.test/status"]""");
+
+        var result = ToolInvocationPathArgumentResolver.Resolve(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            [
+                new("arguments", arguments.RootElement.Clone())
+            ]);
+
+        Assert.True(result.IsComplete);
+        Assert.Empty(result.Values);
+    }
+
+    [Fact]
+    public void Path_argument_resolver_does_not_interpret_non_script_arguments_collection()
+    {
+        var result = ToolInvocationPathArgumentResolver.Resolve(
+            ToolContractCatalog.WorkspaceReadFile,
+            [
+                new("arguments", new[]
+                {
+                    "external-target/C/workspace/Product/request.json"
+                })
+            ]);
+
+        Assert.True(result.IsComplete);
+        Assert.Empty(result.Values);
+    }
+
+    [Fact]
+    public void Path_argument_resolver_ignores_slash_only_script_literals()
+    {
+        var result = ToolInvocationPathArgumentResolver.Resolve(
+            AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile,
+            [
+                new("arguments", new[]
+                {
+                    "--content-type=application/json",
+                    "--payload={\"route\":\"api/v1/items\"}",
+                    "--regex=^api/v[0-9]+$",
+                    "--route=api/v1/items"
+                })
+            ]);
+
+        Assert.True(result.IsComplete);
+        Assert.Empty(result.Values);
+    }
+
+    [Fact]
+    public void Path_argument_resolver_supports_path_named_and_attached_script_options()
+    {
+        var result = ToolInvocationPathArgumentResolver.Resolve(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            [
+                new("arguments", new[]
+                {
+                    "--input=inputs/request.json",
+                    @"-Path:C:\outside\request.json",
+                    @"-i..\secret.json",
+                    "-Endpoint:https://example.test/api/v1/items"
+                })
+            ]);
+
+        Assert.True(result.IsComplete);
+        Assert.Collection(
+            result.Values,
+            value => Assert.Equal("inputs/request.json", value.Value),
+            value => Assert.Equal(@"C:\outside\request.json", value.Value),
+            value => Assert.Equal(@"..\secret.json", value.Value));
     }
 
     [Fact]
@@ -1242,6 +1388,77 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_read_only_script_with_product_alias_argument_on_validation_step()
+    {
+        const string productAlias = "external-target/C/programovani/todo-summary/product";
+        var policy = new DefaultAgentToolInvocationPolicy();
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("path", "artifacts/process-runs/process-run-001/helpers/inspect.ps1"),
+            new("arguments", new[] { $"--input={productAlias}/src/Program.cs" })
+        ];
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/inspect.ps1"
+            },
+            pathArguments: ToolInvocationPathArgumentResolver.Resolve(
+                AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+                rawArguments),
+            readOnlyExternalTargetAliases: [productAlias],
+            processAllowsProductMutation: false,
+            processStepAllowedOperations: [ProcessOperationContractNames.RunValidation],
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.NoMutation,
+                declaredReadPaths: ["C:\\programovani\\todo-summary\\product\\src\\Program.cs"]),
+            inspectedScriptContent: "Get-Content -LiteralPath $args[0]");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_requires_product_mutation_for_write_script_using_product_alias_argument()
+    {
+        const string productAlias = "external-target/C/programovani/todo-summary/product";
+        var policy = new DefaultAgentToolInvocationPolicy();
+        KeyValuePair<string, object?>[] rawArguments =
+        [
+            new("path", "artifacts/process-runs/process-run-001/helpers/write.ps1"),
+            new("arguments", new[] { $"--output={productAlias}/src/Program.cs" })
+        ];
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/write.ps1"
+            },
+            pathArguments: ToolInvocationPathArgumentResolver.Resolve(
+                AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+                rawArguments),
+            readOnlyExternalTargetAliases: [productAlias],
+            processAllowsProductMutation: false,
+            processStepAllowedOperations: [ProcessOperationContractNames.RunValidation],
+            scriptSideEffectManifestJson: CreateSideEffectManifest(GovernedScriptSideEffectMode.NoMutation),
+            inspectedScriptContent: "Set-Content -LiteralPath $args[0] -Value 'changed'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(ProcessOperationContractNames.MutateProductTarget, decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2681,6 +2898,29 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_readonly_child_overrides_writable_parent_alias()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "external-target/C/work/apps/Inventory/Program.cs"
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/apps"],
+            readOnlyExternalTargetAliases: ["external-target/C/work/apps/Inventory"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("read-only access to product target", decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4603,9 +4843,10 @@ public sealed class AgentToolInvocationPolicyTests
     {
         var redactedArguments = arguments ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var resolvedPathArguments = pathArguments ??
-                                    ToolInvocationPathArgumentResolver.Resolve(
-                                        redactedArguments.Select(argument =>
-                                            new KeyValuePair<string, object?>(argument.Key, argument.Value)));
+                                     ToolInvocationPathArgumentResolver.Resolve(
+                                         toolName,
+                                         redactedArguments.Select(argument =>
+                                             new KeyValuePair<string, object?>(argument.Key, argument.Value)));
 
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),

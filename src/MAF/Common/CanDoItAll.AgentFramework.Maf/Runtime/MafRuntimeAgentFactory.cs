@@ -377,21 +377,16 @@ internal sealed class MafRuntimeAgentFactory
             var functionName = context.Function?.Name ?? "unknown";
             var invocationArguments = context.Arguments.ToArray();
             var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(functionName, invocationArguments);
-            var pathArguments = ToolInvocationPathArgumentResolver.Resolve(invocationArguments);
+            var pathArguments = ToolInvocationPathArgumentResolver.Resolve(functionName, invocationArguments);
             var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
             var classification = isRequiredFinalizerTool
                 ? ToolInvocationClassification.Read
                 : AgentToolInvocationPolicyMetadata.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
-            var hasRunScopedExternalTargets = auditScope is not null &&
-                                              (auditScope.AllowedExternalTargetAliases.Count > 0 ||
-                                               auditScope.ReadOnlyExternalTargetAliases.Count > 0);
-            var allowedExternalTargetAliases = hasRunScopedExternalTargets
-                ? auditScope!.AllowedExternalTargetAliases
-                : configuredWorkspaceAccess.AllowedExternalTargetAliases;
-            var readOnlyExternalTargetAliases = hasRunScopedExternalTargets
-                ? auditScope!.ReadOnlyExternalTargetAliases
-                : [];
+            var externalTargetAccess = EffectiveExternalTargetAccessResolver.Resolve(
+                configuredWorkspaceAccess,
+                auditScope?.AllowedExternalTargetAliases,
+                auditScope?.ReadOnlyExternalTargetAliases);
             var scriptSideEffectManifestJson = MafScriptPolicyInspectionService.TryGetStringArgument(
                 invocationArguments,
                 GovernedScriptSideEffectManifest.ArgumentName) ?? string.Empty;
@@ -413,8 +408,8 @@ internal sealed class MafRuntimeAgentFactory
                 SourceKind: auditScope?.SourceKind ?? string.Empty,
                 ProcessRunId: auditScope?.ProcessRunId ?? string.Empty,
                 ProcessStepId: auditScope?.ProcessStepId ?? string.Empty,
-                AllowedExternalTargetAliases: allowedExternalTargetAliases,
-                ReadOnlyExternalTargetAliases: readOnlyExternalTargetAliases,
+                AllowedExternalTargetAliases: externalTargetAccess.WritableAliases,
+                ReadOnlyExternalTargetAliases: externalTargetAccess.ReadOnlyAliases,
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
                 ApplicationApprovalAvailable: false,
                 ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,

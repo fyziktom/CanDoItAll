@@ -24,6 +24,14 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.Contains("project_structure_asset_content_get", prompt);
         Assert.Contains("workspace_convert_document", prompt);
         Assert.Contains("searchPattern uses glob syntax, not regex", prompt);
+        Assert.Contains("not a recursive filesystem index", prompt, StringComparison.Ordinal);
+        Assert.Contains("not proof that the file is absent from the filesystem", prompt, StringComparison.Ordinal);
+        Assert.Contains("runtime context independently supplies an exact authorized", prompt, StringComparison.Ordinal);
+        Assert.Contains("workspace_list_directory", prompt, StringComparison.Ordinal);
+        Assert.Contains("searchPattern=\"**/*.csproj\"", prompt, StringComparison.Ordinal);
+        Assert.Contains("**/*.sln", prompt, StringComparison.Ordinal);
+        Assert.Contains("**/*.slnx", prompt, StringComparison.Ordinal);
+        Assert.Contains("Never derive an external-target alias", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -122,6 +130,13 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.Contains("workspace_read_spreadsheet_range", baseFragment.Content);
         Assert.Contains(".xlsx", baseFragment.Content);
         Assert.Contains("authorized project-structure writer", baseFragment.Content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("missing project-file nodes as unknown filesystem state", baseFragment.Content, StringComparison.Ordinal);
+        Assert.Contains("runtime-owned context independently supplies an exact authorized", baseFragment.Content, StringComparison.Ordinal);
+        Assert.Contains("workspace_list_directory", baseFragment.Content, StringComparison.Ordinal);
+        Assert.Contains("**/*.csproj", baseFragment.Content, StringComparison.Ordinal);
+        Assert.Contains("**/*.sln", baseFragment.Content, StringComparison.Ordinal);
+        Assert.Contains("**/*.slnx", baseFragment.Content, StringComparison.Ordinal);
+        Assert.Contains("Never derive authorization from those values", baseFragment.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("node:alpha", baseFragment.Content);
         Assert.Contains("structure canvas", canvasViewFragment.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Gantt schedule", ganttViewFragment.Content);

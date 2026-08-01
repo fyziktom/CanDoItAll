@@ -86,11 +86,9 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
         string route,
         CancellationToken cancellationToken)
     {
-        Uri uri = string.IsNullOrWhiteSpace(route)
-            ? BuildApiUri(storage, "cat", locator)
-            : new Uri(route, UriKind.Absolute);
+        var (method, uri) = ResolveReadRequest(storage, locator, route);
         HttpResponseMessage response = await SendAsync(
-            HttpMethod.Get,
+            method,
             uri,
             bearerToken,
             content: null,
@@ -113,6 +111,42 @@ public sealed class IpfsHttpStorageTransport(HttpClient httpClient) : IIpfsStora
             response.Dispose();
             throw;
         }
+    }
+
+    private static (HttpMethod Method, Uri Uri) ResolveReadRequest(
+        StorageCatalogRecord storage,
+        string locator,
+        string route)
+    {
+        if (!string.IsNullOrWhiteSpace(route))
+        {
+            return (HttpMethod.Get, new Uri(route, UriKind.Absolute));
+        }
+
+        if (locator.StartsWith("mfs:", StringComparison.Ordinal))
+        {
+            var mutablePath = locator["mfs:".Length..];
+            if (string.IsNullOrWhiteSpace(mutablePath))
+            {
+                throw new StorageBrowseException(new StorageBrowseError(
+                    StorageBrowseErrorCode.InvalidRequest,
+                    "An IPFS mutable-file path is required after 'mfs:'."));
+            }
+
+            return (HttpMethod.Post, BuildApiUri(storage, "files/read", mutablePath));
+        }
+
+        var contentAddress = locator.StartsWith("cid:", StringComparison.Ordinal)
+            ? locator["cid:".Length..]
+            : locator;
+        if (string.IsNullOrWhiteSpace(contentAddress))
+        {
+            throw new StorageBrowseException(new StorageBrowseError(
+                StorageBrowseErrorCode.InvalidRequest,
+                "An IPFS content address is required."));
+        }
+
+        return (HttpMethod.Get, BuildApiUri(storage, "cat", contentAddress));
     }
 
     public async Task<RemoteBrowseTransportPage> BrowseAsync(

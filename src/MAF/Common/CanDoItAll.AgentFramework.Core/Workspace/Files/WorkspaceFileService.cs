@@ -93,7 +93,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 {
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = true,
-                    AttributesToSkip = 0
+                    AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -275,6 +275,11 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 return CreateArchiveFailure(operationName, $"Archive entry '{entry.FullName}' escapes the destination directory.", source.RelativePath, destination.RelativePath, startedAtUtc);
             }
 
+            if (!WorkspacePathPolicy.TryValidateNoReparseTraversal(targetPath, out var reparseValidationMessage))
+            {
+                return CreateArchiveFailure(operationName, reparseValidationMessage, source.RelativePath, destination.RelativePath, startedAtUtc);
+            }
+
             if (!targetPaths.Add(targetPath))
             {
                 return CreateArchiveFailure(operationName, $"Archive contains duplicate target '{entry.FullName}'.", source.RelativePath, destination.RelativePath, startedAtUtc);
@@ -300,6 +305,11 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             if (!string.IsNullOrWhiteSpace(targetDirectory))
             {
                 Directory.CreateDirectory(targetDirectory);
+            }
+
+            if (!WorkspacePathPolicy.TryValidateNoReparseTraversal(targetPath, out var reparseValidationMessage))
+            {
+                return CreateArchiveFailure(operationName, reparseValidationMessage, source.RelativePath, destination.RelativePath, startedAtUtc);
             }
 
             entry.ExtractToFile(targetPath, overwrite);
@@ -378,7 +388,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 {
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = true,
-                    AttributesToSkip = 0
+                    AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
             .ToArray();

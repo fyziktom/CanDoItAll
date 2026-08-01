@@ -344,6 +344,51 @@ public sealed class WorkspaceFileServiceTests
         }
     }
 
+    [Fact]
+    public void UnzipArchive_rejects_existing_reparse_point_in_destination_tree()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        var sourceDirectory = Path.Combine(workspaceRoot, "source", "linked");
+        var destinationDirectory = Path.Combine(workspaceRoot, "expanded");
+        var outsideDirectory = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceOutside.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sourceDirectory);
+        Directory.CreateDirectory(destinationDirectory);
+        Directory.CreateDirectory(outsideDirectory);
+        File.WriteAllText(Path.Combine(sourceDirectory, "escaped.txt"), "must stay contained");
+        ZipFile.CreateFromDirectory(Path.Combine(workspaceRoot, "source"), Path.Combine(workspaceRoot, "archive.zip"));
+        Directory.CreateSymbolicLink(Path.Combine(destinationDirectory, "linked"), outsideDirectory);
+
+        try
+        {
+            var service = new WorkspaceFileService(workspaceRoot);
+
+            var result = service.UnzipArchive("archive.zip", "expanded", overwrite: true);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("reparse-point traversal", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.False(File.Exists(Path.Combine(outsideDirectory, "escaped.txt")));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(Path.Combine(destinationDirectory, "linked"));
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                Directory.Delete(outsideDirectory, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
     private static ExecutionRunRecord CreateRun()
     {
         var now = DateTimeOffset.UtcNow;

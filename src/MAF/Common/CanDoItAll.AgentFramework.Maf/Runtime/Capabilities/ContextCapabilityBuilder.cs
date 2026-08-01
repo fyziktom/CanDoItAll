@@ -159,6 +159,7 @@ internal sealed class StaticMessageContextProvider : MessageAIContextProvider
 {
     private const string StateKeyPrefix = "CanDoItAll.StaticContext.";
     public const string TransientAgentChatStateKey = $"{StateKeyPrefix}TransientAgentChat";
+    public const string EffectiveExternalTargetsStateKey = $"{StateKeyPrefix}EffectiveExternalTargets";
     private readonly ChatMessage message;
     private readonly string stateKey;
 

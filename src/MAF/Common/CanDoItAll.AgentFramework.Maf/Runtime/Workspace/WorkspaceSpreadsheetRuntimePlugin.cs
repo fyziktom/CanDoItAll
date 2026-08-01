@@ -358,29 +358,25 @@ internal sealed class WorkspaceSpreadsheetRuntimePathAccess(
             return;
         }
 
-        var readOnlyAliases = ResolveReadOnlyExternalTargetAliases();
-        if (requireWrite &&
-            IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases))
+        var externalAccess = ResolveExternalTargetAccess();
+        if (requireWrite && externalAccess.CanWrite(normalizedAlias))
+        {
+            return;
+        }
+
+        if (!requireWrite && externalAccess.CanRead(normalizedAlias))
+        {
+            return;
+        }
+
+        if (requireWrite && externalAccess.CanRead(normalizedAlias))
         {
             throw new InvalidOperationException(
                 $"External workspace path '{normalizedAlias}' is read-only for this run.");
         }
 
-        var allowedAliases = ResolveAllowedExternalTargetAliases();
-        var isAllowedForRead = IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases) ||
-                               IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases);
-        if (!isAllowedForRead)
-        {
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
-        }
-
-        if (requireWrite &&
-            !IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases))
-        {
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is read-only for this run.");
-        }
+        throw new InvalidOperationException(
+            $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
     }
 
     private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
@@ -416,37 +412,13 @@ internal sealed class WorkspaceSpreadsheetRuntimePathAccess(
             : path;
     }
 
-    private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
+    private EffectiveExternalTargetAccessScope ResolveExternalTargetAccess()
     {
         var auditScope = WorkspaceExecutionAuditContext.Current;
-        if (auditScope is not null &&
-            (auditScope.AllowedExternalTargetAliases.Count > 0 ||
-             auditScope.ReadOnlyExternalTargetAliases.Count > 0))
-        {
-            return auditScope.AllowedExternalTargetAliases
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-
-        return accessSettings.AllowedExternalTargetAliases
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases()
-    {
-        return WorkspaceExecutionAuditContext.Current?.ReadOnlyExternalTargetAliases
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray() ?? [];
-    }
-
-    private static bool IsExternalTargetAliasAllowed(
-        string normalizedAlias,
-        IReadOnlyList<string> allowedAliases)
-    {
-        return AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
-            normalizedAlias,
-            allowedAliases);
+        return EffectiveExternalTargetAccessResolver.Resolve(
+            accessSettings,
+            auditScope?.AllowedExternalTargetAliases,
+            auditScope?.ReadOnlyExternalTargetAliases);
     }
 
     private bool IsManagedWorkspaceAbsolutePath(string path)

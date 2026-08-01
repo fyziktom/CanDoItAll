@@ -704,7 +704,7 @@ internal sealed class WorkspaceFileMutationService
                      {
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             var relativePath = Path.GetRelativePath(sourcePath, directory);
@@ -718,7 +718,7 @@ internal sealed class WorkspaceFileMutationService
                      {
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             var relativePath = Path.GetRelativePath(sourcePath, file);
@@ -729,11 +729,7 @@ internal sealed class WorkspaceFileMutationService
     }
 
     private static bool IsNestedPath(string parentPath, string candidatePath)
-    {
-        var normalizedParent = EnsureTrailingSeparator(Path.GetFullPath(parentPath));
-        var normalizedCandidate = EnsureTrailingSeparator(Path.GetFullPath(candidatePath));
-        return normalizedCandidate.StartsWith(normalizedParent, StringComparison.OrdinalIgnoreCase);
-    }
+        => WorkspacePathPolicy.IsPathWithinRoot(candidatePath, parentPath);
 
     private static bool ContainsProjectFile(string directory)
         => Directory.EnumerateFiles(
@@ -743,7 +739,7 @@ internal sealed class WorkspaceFileMutationService
                 {
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = true,
-                    AttributesToSkip = 0
+                    AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path)));
 
@@ -887,7 +883,7 @@ internal sealed class WorkspaceFileMutationService
                      {
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             if (!ProjectFileExtensions.Contains(Path.GetExtension(candidate)))
@@ -955,10 +951,4 @@ internal sealed class WorkspaceFileMutationService
             .Replace(Path.DirectorySeparatorChar, '/')
             .Replace(Path.AltDirectorySeparatorChar, '/');
 
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
 }

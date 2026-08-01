@@ -98,8 +98,8 @@ internal sealed class ToolCapabilityBuilder(
                 "workspace-inspect-image" or "workspace_inspect_image" => [AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", capability.Description)],
                 "workspace-analyze-image" or "workspace_analyze_image" => [AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", capability.Description)],
                 "workspace-analyze-images" or "workspace_analyze_images" => [AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", capability.Description)],
-                "provider-health" or "provider_health" => [AIFunctionFactory.Create(() => DescribeProviderHealth(provider), "provider_health", capability.Description)],
-                "agent-package-export" or "agent_package_export" => [AIFunctionFactory.Create(ListExportPackages, "agent_package_export", capability.Description)],
+                "provider-health" or "provider_health" => [AIFunctionFactory.Create(() => DescribeProviderHealth(provider), ToolContractCatalog.ProviderHealth, capability.Description)],
+                "agent-package-export" or "agent_package_export" => [AIFunctionFactory.Create(ListExportPackages, ToolContractCatalog.AgentPackageExport, capability.Description)],
                 _ => []
             };
 

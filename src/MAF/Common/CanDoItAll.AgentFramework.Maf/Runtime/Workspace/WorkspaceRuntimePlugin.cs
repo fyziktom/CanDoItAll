@@ -143,7 +143,8 @@ internal sealed class WorkspaceRuntimePlugin(
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
-            return commandExecutionService.PythonRunFile(allowedPath, arguments, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
+            var allowedArguments = PrepareLocalScriptArguments(arguments);
+            return commandExecutionService.PythonRunFile(allowedPath, allowedArguments, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
         }
 
         public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, object? sideEffectManifest = null)
@@ -153,8 +154,9 @@ internal sealed class WorkspaceRuntimePlugin(
             var allowedOutputPaths = (outputPaths ?? [])
                 .Select(outputPath => PrepareFileWritePath(outputPath) ?? outputPath)
                 .ToArray();
+            var allowedArguments = PrepareLocalScriptArguments(arguments);
 
-            return commandExecutionService.PowerShellRunScript(allowedPath, arguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
+            return commandExecutionService.PowerShellRunScript(allowedPath, allowedArguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, NormalizeScriptSideEffectManifest(sideEffectManifest));
         }
 
         public Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(string path, string? outputPath = null, int previewCharacters = 4000)
@@ -369,6 +371,39 @@ internal sealed class WorkspaceRuntimePlugin(
             return NormalizeAllowedExternalPathForWorkspaceTools(path);
         }
 
+        private string[]? PrepareLocalScriptArguments(string[]? arguments)
+        {
+            return arguments?
+                .Select(PrepareLocalScriptArgument)
+                .ToArray();
+        }
+
+        private string PrepareLocalScriptArgument(string argument)
+        {
+            if (!WorkspaceScriptArgumentPathParser.TryParse(argument, out var candidate))
+            {
+                return argument;
+            }
+
+            if (WorkspaceScriptArgumentPathParser.ContainsParentTraversal(candidate.Path))
+            {
+                throw new InvalidOperationException(
+                    "Script argument paths cannot contain parent traversal segments ('..'). Use a canonical workspace or external-target path.");
+            }
+
+            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(candidate.Path);
+            if (WorkspaceScriptArgumentPathParser.IsExternalTargetAliasPath(candidate.Path) &&
+                string.IsNullOrWhiteSpace(normalizedAlias))
+            {
+                throw new InvalidOperationException(
+                    "Script argument uses an invalid external-target path. Use a canonical alias without traversal segments.");
+            }
+
+            EnsureExternalAliasAllowed(candidate.Path, requireWrite: false);
+            var normalizedPath = NormalizeAllowedExternalPathForWorkspaceTools(candidate.Path) ?? candidate.Path;
+            return candidate.ReplacePath(normalizedPath);
+        }
+
         private string? PrepareArtifactTransformationReadPath(string? path)
         {
             EnsureArtifactTransformationAllowed(path);
@@ -568,29 +603,25 @@ internal sealed class WorkspaceRuntimePlugin(
                 return;
             }
 
-            var readOnlyAliases = ResolveReadOnlyExternalTargetAliases();
-            if (requireWrite &&
-                IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases))
+            var externalAccess = ResolveExternalTargetAccess();
+            if (requireWrite && externalAccess.CanWrite(normalizedAlias))
+            {
+                return;
+            }
+
+            if (!requireWrite && externalAccess.CanRead(normalizedAlias))
+            {
+                return;
+            }
+
+            if (requireWrite && externalAccess.CanRead(normalizedAlias))
             {
                 throw new InvalidOperationException(
                     $"External workspace path '{normalizedAlias}' is read-only for this run.");
             }
 
-            var allowedAliases = ResolveAllowedExternalTargetAliases();
-            var isAllowedForRead = IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases) ||
-                                   IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases);
-            if (!isAllowedForRead)
-            {
-                throw new InvalidOperationException(
-                    $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
-            }
-
-            if (requireWrite &&
-                !IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases))
-            {
-                throw new InvalidOperationException(
-                    $"External workspace path '{normalizedAlias}' is read-only for this run.");
-            }
+            throw new InvalidOperationException(
+                $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
         }
 
         private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
@@ -626,37 +657,13 @@ internal sealed class WorkspaceRuntimePlugin(
                 : path;
         }
 
-        private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
+        private EffectiveExternalTargetAccessScope ResolveExternalTargetAccess()
         {
             var auditScope = WorkspaceExecutionAuditContext.Current;
-            if (auditScope is not null &&
-                (auditScope.AllowedExternalTargetAliases.Count > 0 ||
-                 auditScope.ReadOnlyExternalTargetAliases.Count > 0))
-            {
-                return auditScope.AllowedExternalTargetAliases
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-            }
-
-            return accessSettings.AllowedExternalTargetAliases
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-
-        private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases()
-        {
-            return WorkspaceExecutionAuditContext.Current?.ReadOnlyExternalTargetAliases
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray() ?? [];
-        }
-
-        private static bool IsExternalTargetAliasAllowed(
-            string normalizedAlias,
-            IReadOnlyList<string> allowedAliases)
-        {
-            return AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
-                normalizedAlias,
-                allowedAliases);
+            return EffectiveExternalTargetAccessResolver.Resolve(
+                accessSettings,
+                auditScope?.AllowedExternalTargetAliases,
+                auditScope?.ReadOnlyExternalTargetAliases);
         }
 
         private static string? NormalizeScriptSideEffectManifest(object? sideEffectManifest)

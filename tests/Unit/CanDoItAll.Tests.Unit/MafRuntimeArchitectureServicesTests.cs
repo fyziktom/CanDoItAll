@@ -780,11 +780,11 @@ public sealed class MafRuntimeArchitectureServicesTests
         var allowedProvider = new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.allowed-provider"),
-            "allowed_runtime_tool");
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList);
         var deniedProvider = new TestRuntimeToolProvider(
             20,
             CreateDescriptor("tests.denied-provider"),
-            "denied_runtime_tool");
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList);
         var registrations = composer.ComposeRegistrations([allowedProvider, deniedProvider]);
         var allowedProviderTag = RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("tests.allowed-provider");
         var allowOnlyPolicy = new CapabilityAccessPolicy(
@@ -811,13 +811,13 @@ public sealed class MafRuntimeArchitectureServicesTests
             CancellationToken.None);
 
         Assert.Equal(1, result.AttachedToolCount);
-        Assert.Equal(["allowed_runtime_tool"], state.Tools.Select(tool => tool.Name));
+        Assert.Equal([AgentToolInvocationPolicyMetadata.ProcessesRunsList], state.Tools.Select(tool => tool.Name));
         Assert.Equal("tests.allowed-provider", Assert.Single(state.RuntimeToolProviderDescriptors).ProviderKey);
         Assert.Contains(state.EffectiveCapabilityDescriptors, descriptor =>
-            descriptor.RuntimeToolName?.Value == "allowed_runtime_tool" &&
+            descriptor.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProcessesRunsList &&
             descriptor.Tags.Contains(allowedProviderTag));
         Assert.Contains(state.CapabilityAccessDiagnostics, diagnostic =>
-            diagnostic.Identity.Key.Value == "denied-runtime-tool" &&
+            diagnostic.Identity.Key.Value == AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList.Replace('_', '-') &&
             diagnostic.Category == CapabilityDiagnosticCategory.AccessPolicy);
     }
 

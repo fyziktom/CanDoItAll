@@ -248,6 +248,18 @@ internal sealed class RuntimeToolProviderComposer(
                 $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' declared metadata for unknown tool name(s): {string.Join(", ", unknownMetadataNames)}.");
         }
 
+        var unregisteredInternalToolNames = tools
+            .Select(tool => tool.Name)
+            .Where(toolName => AgentToolInvocationPolicyMetadata.Classify(toolName) == ToolInvocationClassification.Unknown)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (unregisteredInternalToolNames.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Runtime tool provider '{DescribeRuntimeToolProvider(registration.Provider)}' returned internal tool name(s) without a registered invocation policy classification: {string.Join(", ", unregisteredInternalToolNames)}. Register each internal tool in ToolCapabilityRegistry; only recognized provider-native and MCP tool families may use dynamic names.");
+        }
+
         var metadataByToolName = declaredMetadata.ToDictionary(
             metadata => metadata.ToolName,
             StringComparer.OrdinalIgnoreCase);

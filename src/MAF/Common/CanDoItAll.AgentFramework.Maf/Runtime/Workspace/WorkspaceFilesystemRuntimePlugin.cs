@@ -89,6 +89,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
+        EnsureNoReadOnlyDescendantMutation(allowedDestinationPath, "copy or replace");
         return fileService.CopyPath(allowedSourcePath, allowedDestinationPath, overwrite);
     }
 
@@ -96,6 +97,8 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var allowedSourcePath = PrepareFileWritePath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
+        EnsureNoReadOnlyDescendantMutation(allowedSourcePath, "move");
+        EnsureNoReadOnlyDescendantMutation(allowedDestinationPath, "move or replace");
         return fileService.MovePath(allowedSourcePath, allowedDestinationPath, overwrite);
     }
 
@@ -127,6 +130,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
+        EnsureNoReadOnlyDescendantMutation(allowedDestinationPath, "extract into");
         return fileService.UnzipArchive(allowedSourcePath, allowedDestinationPath, overwrite, maxFiles, maxBytes);
     }
 
@@ -187,29 +191,25 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             return;
         }
 
-        var readOnlyAliases = ResolveReadOnlyExternalTargetAliases();
-        if (requireWrite &&
-            IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases))
+        var externalAccess = ResolveExternalTargetAccess();
+        if (requireWrite && externalAccess.CanWrite(normalizedAlias))
+        {
+            return;
+        }
+
+        if (!requireWrite && externalAccess.CanRead(normalizedAlias))
+        {
+            return;
+        }
+
+        if (requireWrite && externalAccess.CanRead(normalizedAlias))
         {
             throw new InvalidOperationException(
                 $"External workspace path '{normalizedAlias}' is read-only for this run.");
         }
 
-        var allowedAliases = ResolveAllowedExternalTargetAliases();
-        var isAllowedForRead = IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases) ||
-                               IsExternalTargetAliasAllowed(normalizedAlias, readOnlyAliases);
-        if (!isAllowedForRead)
-        {
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
-        }
-
-        if (requireWrite &&
-            !IsExternalTargetAliasAllowed(normalizedAlias, allowedAliases))
-        {
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is read-only for this run.");
-        }
+        throw new InvalidOperationException(
+            $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
     }
 
     private void EnsureDeleteAllowed(string path, bool recursive)
@@ -220,7 +220,14 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             return;
         }
 
-        var allowedAliases = ResolveAllowedExternalTargetAliases()
+        var externalAccess = ResolveExternalTargetAccess();
+        if (recursive && externalAccess.HasEffectiveReadOnlyDescendant(normalizedAlias))
+        {
+            throw new InvalidOperationException(
+                $"Refusing to recursively delete external workspace path '{normalizedAlias}' because it is an ancestor of a read-only external target for this run.");
+        }
+
+        var allowedAliases = externalAccess.WritableAliases
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Select(alias => TrimExternalTargetAlias(alias!))
@@ -242,6 +249,19 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
                     $"Refusing to recursively delete protected external product directory '{normalizedDeleteAlias}'. Repair source and test files in place instead.");
             }
         }
+    }
+
+    private void EnsureNoReadOnlyDescendantMutation(string path, string operation)
+    {
+        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
+        if (string.IsNullOrWhiteSpace(normalizedAlias) ||
+            !ResolveExternalTargetAccess().HasEffectiveReadOnlyDescendant(normalizedAlias))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Refusing to {operation} external workspace path '{normalizedAlias}' because it is an ancestor of a read-only external target for this run.");
     }
 
     private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
@@ -277,37 +297,13 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             : path;
     }
 
-    private IReadOnlyList<string> ResolveAllowedExternalTargetAliases()
+    private EffectiveExternalTargetAccessScope ResolveExternalTargetAccess()
     {
         var auditScope = WorkspaceExecutionAuditContext.Current;
-        if (auditScope is not null &&
-            (auditScope.AllowedExternalTargetAliases.Count > 0 ||
-             auditScope.ReadOnlyExternalTargetAliases.Count > 0))
-        {
-            return auditScope.AllowedExternalTargetAliases
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-
-        return accessSettings.AllowedExternalTargetAliases
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ResolveReadOnlyExternalTargetAliases()
-    {
-        return WorkspaceExecutionAuditContext.Current?.ReadOnlyExternalTargetAliases
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray() ?? [];
-    }
-
-    private static bool IsExternalTargetAliasAllowed(
-        string normalizedAlias,
-        IReadOnlyList<string> allowedAliases)
-    {
-        return AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
-            normalizedAlias,
-            allowedAliases);
+        return EffectiveExternalTargetAccessResolver.Resolve(
+            accessSettings,
+            auditScope?.AllowedExternalTargetAliases,
+            auditScope?.ReadOnlyExternalTargetAliases);
     }
 
     private static bool IsProtectedExternalTargetDirectoryDelete(string normalizedDeleteAlias, string allowedAlias)

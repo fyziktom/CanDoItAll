@@ -327,6 +327,48 @@ public sealed class ToolImplementationContractsTests
         Assert.Empty(failures);
     }
 
+    [Fact]
+    public void INV_PARITY_002_tool_contract_catalog_and_policy_registry_are_bidirectionally_complete()
+    {
+        var registeredNames = ToolCapabilityRegistry.Capabilities
+            .Select(metadata => metadata.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var knownNames = ToolContractCatalog.KnownToolNames
+            .Select(ToolContractCatalog.NormalizeToolName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Empty(knownNames.Except(registeredNames, StringComparer.OrdinalIgnoreCase));
+        Assert.Empty(registeredNames.Except(knownNames, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void INV_PARITY_003_runtime_utility_and_storage_tools_have_explicit_policy_semantics()
+    {
+        AssertReadTool(ToolContractCatalog.ProviderHealth);
+        AssertReadTool(ToolContractCatalog.AgentPackageExport);
+        AssertReadTool(ToolContractCatalog.StorageCatalogList);
+        AssertReadTool(ToolContractCatalog.StorageBrowse);
+        AssertReadTool(ToolContractCatalog.StorageReadTextFile);
+        AssertMutationTool(ToolContractCatalog.StorageWriteTextFile);
+        AssertMutationTool(ToolContractCatalog.StorageDeleteObject);
+
+        static void AssertReadTool(string toolName)
+        {
+            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.Equal(ToolInvocationClassification.Read, metadata.Classification);
+            Assert.False(metadata.RequiresApprovalByDefault);
+            Assert.False(metadata.IsStateChanging);
+        }
+
+        static void AssertMutationTool(string toolName)
+        {
+            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var metadata));
+            Assert.Equal(ToolInvocationClassification.Mutation, metadata.Classification);
+            Assert.True(metadata.RequiresApprovalByDefault);
+            Assert.True(metadata.IsStateChanging);
+        }
+    }
+
     private sealed class FakeProcessRunner : IExternalProcessRunner
     {
         private readonly ExternalProcessRunResult? result;

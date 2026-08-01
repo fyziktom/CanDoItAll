@@ -56,6 +56,33 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
         Assert.Contains("not allowed to write workspace files", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Tree_mutations_deny_writable_ancestor_of_invocation_read_only_target()
+    {
+        var configuredRoot = $"external-target/C/candoitall-tests/{Guid.NewGuid():N}/product";
+        var mutationAncestor = $"{configuredRoot}/packages";
+        var readOnlyTarget = $"{mutationAncestor}/Inventory";
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadFiles = true,
+            CanWriteFiles = true,
+            AllowedExternalTargetAliases = [configuredRoot]
+        };
+        var plugin = CreatePlugin(access);
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(CreateExecutionRun(readOnlyTarget));
+
+        var deleteException = Assert.Throws<InvalidOperationException>(() =>
+            plugin.DeleteWorkspacePath(mutationAncestor, recursive: true));
+        var replaceException = Assert.Throws<InvalidOperationException>(() =>
+            plugin.CopyWorkspacePath("staging/package", mutationAncestor, overwrite: true));
+        var moveException = Assert.Throws<InvalidOperationException>(() =>
+            plugin.MoveWorkspacePath(mutationAncestor, "staging/moved-package", overwrite: true));
+
+        Assert.Contains("ancestor of a read-only external target", deleteException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ancestor of a read-only external target", replaceException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ancestor of a read-only external target", moveException.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     public void Dispose()
     {
         try
@@ -78,5 +105,43 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
             workspaceRoot,
             WorkspaceScopeDescriptor.Sandbox,
             access);
+    }
+
+    private static ExecutionRunRecord CreateExecutionRun(string readOnlyExternalTargetAlias)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var metadataJson = System.Text.Json.JsonSerializer.Serialize(
+            new Dictionary<string, string[]>
+            {
+                [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
+                [
+                    readOnlyExternalTargetAlias
+                ]
+            });
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "External target guard test",
+            SourceKind: "test",
+            SourceId: "workspace-filesystem-runtime-plugin",
+            CorrelationId: Guid.NewGuid().ToString("D"),
+            CausationId: string.Empty,
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: metadataJson,
+            InputSummary: string.Empty,
+            ResultSummary: string.Empty,
+            ProviderName: "test",
+            Model: "test",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
     }
 }

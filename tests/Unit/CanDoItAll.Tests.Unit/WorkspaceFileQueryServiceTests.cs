@@ -64,6 +64,99 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
     }
 
     [Fact]
+    public void ListFiles_does_not_traverse_reparse_point_directories()
+    {
+        var appRoot = CreateDirectory("apps", "LinkedTree");
+        WriteFile(appRoot, "Program.cs", "Console.WriteLine(\"ok\");");
+        var outsideRoot = CreateExternalDirectory("outside");
+        WriteFile(outsideRoot, "Secret.cs", "internal sealed class Secret {}");
+        Directory.CreateSymbolicLink(Path.Combine(appRoot, "linked"), outsideRoot);
+        var service = CreateService();
+
+        var result = service.ListFiles("apps/LinkedTree", "**/*.cs", 20);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Contains(result.Entries, item => item.RelativePath.EndsWith("Program.cs", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Entries, item => item.RelativePath.Contains("Secret.cs", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            result.Entries,
+            item => item.RelativePath.Replace('\\', '/').Contains("/linked/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ListFiles_truncated_result_reports_incomplete_discovery_and_retry_guidance()
+    {
+        var appRoot = CreateDirectory("apps", "BoundedList");
+        WriteFile(appRoot, "First.cs", "public sealed class First {}");
+        WriteFile(appRoot, "Second.cs", "public sealed class Second {}");
+        var service = CreateService();
+
+        var result = service.ListFiles("apps/BoundedList", "**/*.cs", 1);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.True(result.IsTruncated);
+        Assert.Single(result.Entries);
+        Assert.Contains("incomplete", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Narrow relativePath or searchPattern", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchText_zero_matches_after_file_budget_reports_inconclusive_result_and_retry_guidance()
+    {
+        var appRoot = CreateDirectory("apps", "BoundedSearch");
+        for (var index = 0; index <= 512; index++)
+        {
+            WriteFile(appRoot, $"File{index:D3}.txt", "irrelevant content");
+        }
+
+        var service = CreateService();
+
+        var result = service.SearchText("needle", "apps/BoundedSearch", 20);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.True(result.IsTruncated);
+        Assert.Empty(result.Matches);
+        Assert.Contains("first 512", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("incomplete", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("narrow relativePath and retry", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("No matches found for", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StatPath_missing_path_returns_failed_result_and_receipt()
+    {
+        var service = CreateService();
+
+        var result = service.StatPath("missing/project.csproj");
+
+        Assert.False(result.Succeeded);
+        Assert.False(result.Exists);
+        Assert.Equal("missing", result.PathKind);
+        Assert.Equal("Failed", result.Receipt.Outcome);
+        Assert.Contains("does not exist", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void StatPath_existing_file_and_directory_remain_successful()
+    {
+        var directory = CreateDirectory("apps", "ExistingProject");
+        WriteFile(directory, "ExistingProject.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var service = CreateService();
+
+        var directoryResult = service.StatPath("apps/ExistingProject");
+        var fileResult = service.StatPath("apps/ExistingProject/ExistingProject.csproj");
+
+        Assert.True(directoryResult.Succeeded, directoryResult.Message);
+        Assert.True(directoryResult.Exists);
+        Assert.Equal("directory", directoryResult.PathKind);
+        Assert.Equal("Succeeded", directoryResult.Receipt.Outcome);
+        Assert.True(fileResult.Succeeded, fileResult.Message);
+        Assert.True(fileResult.Exists);
+        Assert.Equal("file", fileResult.PathKind);
+        Assert.Equal("Succeeded", fileResult.Receipt.Outcome);
+    }
+
+    [Fact]
     public void ListFiles_rejects_regex_like_search_pattern_without_enumerating()
     {
         var projectMediaRoot = CreateDirectory("managed-files", "project-media", "files", "quote");
