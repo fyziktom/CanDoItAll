@@ -1,0 +1,31 @@
+{
+  "Kind": "process-prompt-template",
+  "Key": "prompt-business-plan",
+  "DisplayName": "Business plan prompt",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "AudienceRoleKey": "business-strategist",
+  "Phase": "Business plan draft",
+  "Summary": "Creates a concise business plan from the strategy brief, product evidence assessment, and source materials.",
+  "RequiredInputs": [
+    "Strategy brief",
+    "Product evidence assessment",
+    "Source materials",
+    "Known constraints"
+  ],
+  "OutputSchema": [
+    "Customer segment",
+    "Problem",
+    "Offer",
+    "Differentiation",
+    "Operating model",
+    "Product evidence implications",
+    "Risks",
+    "Validation plan"
+  ],
+  "RefusalConditions": [
+    "Refuse to present unsourced claims as facts.",
+    "Refuse to skip assumption labeling."
+  ],
+  "DocPath": "processes/business-plan-development/prompts/prompt-business-plan.md"
+}

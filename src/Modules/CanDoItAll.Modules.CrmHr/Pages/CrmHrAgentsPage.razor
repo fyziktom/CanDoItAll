@@ -1,0 +1,430 @@
+@page "/crm-hr/agents"
+@implements IAsyncDisposable
+@inject AiAgentService AiAgentService
+@inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
+@inject NavigationManager Navigation
+
+<PageTitle>CRM Agents</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="CRM / HR"
+                    Title="Agent directory projection"
+                    Description="CRM-HR displays the business-facing projection of AgentFramework-owned AI agents. The shared catalog snapshot supplies technical identity and card data; CRM-HR adds governance, ownership, and directory context."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="projected agents"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.TotalCount.ToString())"
+                             TooltipText="AgentFramework agents in the current CRM-HR projection." />
+                <CompactStat Label="page providers"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Provider is not null).ToString())"
+                             TooltipText="Agents on this page linked to a provider profile."
+                             Tone="info" />
+                <CompactStat Label="page review"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Governance.ValidationStatus == AiValidationStatus.ReviewRequired).ToString())"
+                             TooltipText="Agents on this page awaiting CRM-HR governance review."
+                             Tone="warning" />
+                <CompactStat Label="page capabilities"
+                             Value="@(ShouldShowListLoadingState ? "..." : agentPage.Items.Count(item => item.Agent.Capabilities.Count > 0).ToString())"
+                             TooltipText="Agents on this page that expose technical capabilities."
+                             Tone="success" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="smart_toy"
+                                        Label="Open technical catalog"
+                                        TooltipText="Open the AgentFramework technical catalog."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenTechnicalCatalog"
+                                        data-testid="crmhr-agent-open-catalog" />
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the linked directory record."
+                                        Click="OpenDirectoryRecord" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Agents" />
+
+            <section class="crmhr-agent-catalog" data-testid="crmhr-agent-catalog">
+                <div class="crmhr-agent-catalog__hero">
+                    <div class="min-w-0">
+                        <p class="cda-eyebrow">Projected technical agents</p>
+                        <h2 class="cda-title-xl">Agent cards</h2>
+                    </div>
+                    <StatusBadge Tone="info"
+                                 Text="@(ShouldShowListLoadingState ? "Loading..." : $"{agentPage.Items.Count} of {agentPage.TotalCount} agent(s)")" />
+                </div>
+
+                <PagedRecordBrowser TKey="Guid"
+                                    TFilter="AiAgentValidationFilter"
+                                    Loader="LoadAgentPageAsync"
+                                    InitialFilter="AiAgentValidationFilter.All"
+                                    FilterOptions="@ValidationFilters"
+                                    Selection="@AgentSelection"
+                                    SelectionChanged="@SelectPartyAsync"
+                                    LoadFailed="@HandleAgentDirectoryLoadFailed"
+                                    PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
+                                    ShowTagFilter="false"
+                                    ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
+                                    GridMode="PagedRecordGridMode.BoundedCatalog"
+                                    SearchPlaceholder="Search name, role, owner, model, or tags"
+                                    FilterAriaLabel="CRM-HR validation status"
+                                    LoadingEyebrow="Agent projection"
+                                    LoadingTitle="Loading projected agent cards"
+                                    LoadingDescription="CRM-HR is joining its governance snapshot to the shared AgentFramework catalog."
+                                    EmptyEyebrow="No projected AI agents"
+                                    EmptyTitle="No agents match these filters"
+                                    EmptyDescription="Change the search or validation filter, or create a technical agent in AgentFramework."
+                                    DataTestId="crmhr-agent">
+                    <ItemTemplate Context="recordContext">
+                        @{
+                            var item = GetCurrentPageItem(recordContext.Option.Key);
+                        }
+                        <AgentSelectionCard Agent="@item.Agent"
+                                            IsSelected="@recordContext.IsSelected"
+                                            IsPrivateProvider="@item.IsPrivateProvider"
+                                            SelectedLabel="Selected"
+                                            CenterContent="true"
+                                            EnterpriseLayout="true"
+                                            ShowStatusRibbon="true"
+                                            ShowKindBadge="true"
+                                            MaxVisibleTags="2"
+                                            ShowWorkload="false"
+                                            ShellTestId="crmhr-agent-item-shell"
+                                            SelectTestId="crmhr-agent-item"
+                                            OnSelect="@(() => recordContext.SelectAsync())" />
+                    </ItemTemplate>
+                </PagedRecordBrowser>
+            </section>
+
+            <CrmHrAgentRecordDialog IsOpen="@isRecordDialogOpen"
+                                    IsLoading="@isWorkspaceLoading"
+                                    Item="@selectedDirectoryItem"
+                                    Workspace="@selectedWorkspace"
+                                    Close="CloseRecordDialogAsync"
+                                    OpenTechnicalRecord="OpenTechnicalRecord"
+                                    OpenDirectoryRecord="OpenDirectoryRecord" />
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private static readonly IReadOnlyList<PagedRecordFilterOption<AiAgentValidationFilter>> ValidationFilters =
+    [
+        new(AiAgentValidationFilter.All, "All", "crmhr-agent-validation-all"),
+        new(AiAgentValidationFilter.Draft, "Draft", "crmhr-agent-validation-draft"),
+        new(AiAgentValidationFilter.ReviewRequired, "Review required", "crmhr-agent-validation-review"),
+        new(AiAgentValidationFilter.Approved, "Approved", "crmhr-agent-validation-approved"),
+        new(AiAgentValidationFilter.Suspended, "Suspended", "crmhr-agent-validation-suspended")
+    ];
+
+    [SupplyParameterFromQuery(Name = "partyId")]
+    public Guid? PartyIdQuery { get; set; }
+
+    private AiAgentDirectoryPage agentPage = new(
+        [],
+        0,
+        AiAgentDirectoryQueryLimits.DefaultPageSize,
+        0);
+    private IReadOnlyDictionary<Guid, AiAgentDirectoryItemModel> currentPageItems =
+        new Dictionary<Guid, AiAgentDirectoryItemModel>();
+    private AiAgentDirectoryItemModel? selectedDirectoryItem;
+    private AiAgentWorkspaceModel? selectedWorkspace;
+    private bool isListLoading = true;
+    private bool isWorkspaceLoading;
+    private bool isRecordDialogOpen;
+    private bool isDisposed;
+    private long loadGeneration;
+    private long directoryLoadGeneration;
+    private CancellationTokenSource? loadCancellation;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+
+    private AgentChatContextSurface AgentChatSurface => selectedWorkspace is { } workspace
+        ? CrmHrAgentChatSurfaceBuilder.BuildAgentsSurface(
+            workspace.PartyId,
+            workspace.DisplayName,
+            workspace.LifecycleStatus,
+            workspace.BindingStatus,
+            workspace.Profile.ValidationStatus)
+        : CrmHrAgentChatSurfaceBuilder.BuildAgentsSurface();
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [new("partyId", PartyIdQuery?.ToString("D"))]);
+
+    private PagedRecordSelection<Guid>? AgentSelection => PartyIdQuery is Guid partyId
+        ? new PagedRecordSelection<Guid>(partyId)
+        : null;
+
+    private bool ShouldShowListLoadingState => isListLoading;
+
+    protected override Task OnParametersSetAsync()
+        => LoadAsync(PartyIdQuery);
+
+    private async Task LoadAsync(Guid? requestedPartyId)
+    {
+        var expectedQueryPartyId = requestedPartyId;
+        var currentGeneration = Interlocked.Increment(ref loadGeneration);
+        var cancellation = new CancellationTokenSource();
+        var supersededLoad = Interlocked.Exchange(ref loadCancellation, cancellation);
+        supersededLoad?.Cancel();
+
+        selectedDirectoryItem = null;
+        selectedWorkspace = null;
+        isRecordDialogOpen = requestedPartyId.HasValue;
+        isWorkspaceLoading = requestedPartyId.HasValue;
+        agentChatContextAccessState = requestedPartyId.HasValue
+            ? AgentChatContextAccessState.Loading
+            : AgentChatContextAccessState.Ready;
+
+        if (!requestedPartyId.HasValue)
+        {
+            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+            cancellation.Dispose();
+            return;
+        }
+
+        try
+        {
+            var workspaceTask = GetAgentWorkspaceAsync(requestedPartyId.Value, cancellation.Token);
+            var directoryItemTask = GetAgentDirectoryItemAsync(requestedPartyId.Value, cancellation.Token);
+            var loadedWorkspace = await workspaceTask;
+            var loadedDirectoryItem = await directoryItemTask;
+
+            if (!IsCurrentLoad(currentGeneration, expectedQueryPartyId))
+            {
+                return;
+            }
+
+            if (loadedWorkspace is not null && loadedWorkspace.PartyId != requestedPartyId.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Agent workspace '{loadedWorkspace.PartyId:D}' did not match requested party '{requestedPartyId.Value:D}'.");
+            }
+
+            if (loadedDirectoryItem is not null && loadedDirectoryItem.PartyId != requestedPartyId.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Agent directory item '{loadedDirectoryItem.PartyId:D}' did not match requested party '{requestedPartyId.Value:D}'.");
+            }
+
+            if (loadedWorkspace is not null &&
+                loadedDirectoryItem is not null &&
+                loadedWorkspace.TechnicalAgentId != loadedDirectoryItem.Agent.Id)
+            {
+                throw new InvalidOperationException(
+                    $"CRM-HR party '{requestedPartyId.Value:D}' resolved conflicting technical agents: " +
+                    $"workspace '{loadedWorkspace.TechnicalAgentId?.ToString("D") ?? "none"}' and " +
+                    $"catalog '{loadedDirectoryItem.Agent.Id:D}'.");
+            }
+
+            selectedWorkspace = loadedWorkspace;
+            selectedDirectoryItem = loadedDirectoryItem;
+            isRecordDialogOpen = loadedWorkspace is not null && loadedDirectoryItem is not null;
+            agentChatContextAccessState = isRecordDialogOpen
+                ? AgentChatContextAccessState.Ready
+                : AgentChatContextAccessState.Failed;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+            if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
+            {
+                isRecordDialogOpen = false;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                throw;
+            }
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
+            if (IsCurrentLoad(currentGeneration, expectedQueryPartyId))
+            {
+                isWorkspaceLoading = false;
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    protected virtual Task RefreshAgentDirectoryProjectionAsync(
+        CancellationToken cancellationToken)
+        => AiAgentDirectoryQueryService.RefreshProjectionAsync(cancellationToken);
+
+    protected virtual Task<AiAgentDirectoryPage> QueryAgentDirectoryAsync(
+        AiAgentDirectoryQuery query,
+        CancellationToken cancellationToken)
+        => AiAgentDirectoryQueryService.SearchAsync(query, cancellationToken);
+
+    protected virtual Task<AiAgentDirectoryItemModel?> GetAgentDirectoryItemAsync(
+        Guid partyId,
+        CancellationToken cancellationToken)
+        => AiAgentDirectoryQueryService.GetByPartyIdAsync(partyId, cancellationToken);
+
+    protected virtual Task<AiAgentWorkspaceModel?> GetAgentWorkspaceAsync(
+        Guid partyId,
+        CancellationToken cancellationToken)
+        => AiAgentService.GetAgentWorkspaceAsync(partyId, cancellationToken);
+
+    private bool IsCurrentLoad(long generation, Guid? expectedQueryPartyId)
+        => !isDisposed &&
+           generation == Volatile.Read(ref loadGeneration) &&
+           PartyIdQuery == expectedQueryPartyId;
+
+    private async Task<PagedRecordPage<Guid>> LoadAgentPageAsync(
+        PagedRecordRequest<AiAgentValidationFilter> request,
+        CancellationToken cancellationToken)
+    {
+        var generation = Interlocked.Increment(ref directoryLoadGeneration);
+        isListLoading = true;
+        try
+        {
+            var result = await QueryAgentDirectoryAsync(
+                new AiAgentDirectoryQuery(
+                    request.SearchText,
+                    MapValidationFilter(request.Filter),
+                    request.PageIndex,
+                    request.PageSize),
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (generation != Volatile.Read(ref directoryLoadGeneration) || isDisposed)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            agentPage = result;
+            currentPageItems = result.Items.ToDictionary(item => item.PartyId);
+            return new PagedRecordPage<Guid>(
+                result.Items.Select(ToPagedRecordOption).ToArray(),
+                result.PageIndex,
+                result.PageSize,
+                result.TotalCount);
+        }
+        finally
+        {
+            if (generation == Volatile.Read(ref directoryLoadGeneration))
+            {
+                isListLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void HandleAgentDirectoryLoadFailed(Exception _)
+    {
+        isListLoading = false;
+        if (!PartyIdQuery.HasValue)
+        {
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+        }
+    }
+
+    private AiAgentDirectoryItemModel GetCurrentPageItem(Guid partyId)
+        => currentPageItems.TryGetValue(partyId, out var item)
+            ? item
+            : throw new InvalidOperationException(
+                $"The rendered CRM-HR agent page does not contain party '{partyId:D}'.");
+
+    private Task SelectPartyAsync(Guid partyId)
+    {
+        selectedDirectoryItem = GetCurrentPageItem(partyId);
+        selectedWorkspace = null;
+        isWorkspaceLoading = true;
+        isRecordDialogOpen = true;
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        Navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRecordDialogAsync()
+    {
+        if (!isRecordDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        isRecordDialogOpen = false;
+        Navigation.NavigateTo("/crm-hr/agents");
+        return Task.CompletedTask;
+    }
+
+    private void OpenTechnicalCatalog()
+    {
+        Navigation.NavigateTo("/agents?tab=agents");
+    }
+
+    private void OpenTechnicalRecord()
+    {
+        if (selectedWorkspace is null)
+        {
+            OpenTechnicalCatalog();
+            return;
+        }
+
+        Navigation.NavigateTo(selectedWorkspace.AgentsRoute);
+    }
+
+    private void OpenDirectoryRecord()
+    {
+        if (selectedWorkspace is null)
+        {
+            Navigation.NavigateTo("/crm-hr/directory");
+            return;
+        }
+
+        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId:D}");
+    }
+
+    private static AiValidationStatus? MapValidationFilter(AiAgentValidationFilter filter)
+        => filter switch
+        {
+            AiAgentValidationFilter.All => null,
+            AiAgentValidationFilter.Draft => AiValidationStatus.Draft,
+            AiAgentValidationFilter.ReviewRequired => AiValidationStatus.ReviewRequired,
+            AiAgentValidationFilter.Approved => AiValidationStatus.Approved,
+            AiAgentValidationFilter.Suspended => AiValidationStatus.Suspended,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(filter),
+                filter,
+                "Validation filter is not supported.")
+        };
+
+    private static PagedRecordOption<Guid> ToPagedRecordOption(AiAgentDirectoryItemModel item)
+        => new(item.PartyId, item.Agent.Name, "AI agent")
+        {
+            Subtitle = item.Agent.RoleTitle,
+            Description = item.Agent.Summary,
+            TestId = "crmhr-agent-item"
+        };
+
+    public ValueTask DisposeAsync()
+    {
+        isDisposed = true;
+        Interlocked.Increment(ref loadGeneration);
+        Interlocked.Increment(ref directoryLoadGeneration);
+        var cancellation = Interlocked.Exchange(ref loadCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    private enum AiAgentValidationFilter
+    {
+        All,
+        Draft,
+        ReviewRequired,
+        Approved,
+        Suspended
+    }
+}

@@ -1,0 +1,218 @@
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Core;
+using CanDoItAll.Processes.Drivers.Abstractions;
+
+namespace CanDoItAll.Processes.Runtime;
+
+public sealed partial class ProcessRuntimeEngine
+{
+    private static ProcessRuntimeMutation SubmitStrategyResult(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context,
+        SubmitStrategyResultCommand command)
+    {
+        ValidateArguments(state, context);
+
+        var existing = FindReceipt(state, command.StepInstanceId, command.Result.StrategyId, command.IdempotencyKey);
+        if (existing is not null)
+        {
+            return Duplicate(state);
+        }
+
+        var step = FindStep(state, command.StepInstanceId);
+        var claim = FindClaim(state, command.ClaimToken);
+        if (step is null || claim is null || step.ActiveClaimToken != command.ClaimToken)
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.LostLease", "Strategy result was rejected because the active claim token no longer matches.");
+        }
+
+        if (claim.OwnerId != command.OwnerId)
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.ClaimOwnerMismatch", "Strategy result owner does not match the active claim.");
+        }
+
+        if (claim.ExpiresAtUtc <= context.OccurredAtUtc)
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.ClaimExpired", "Strategy result was rejected because the dispatch claim expired.");
+        }
+
+        if (step.Status != ProcessRuntimeStepStatus.Running)
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.StepNotRunning", "Strategy result requires a running step.");
+        }
+
+        var appliedResult = EnforceStepFinalizationContract(state, step, command.Result);
+        var resultStepStatus = ToStepStatus(appliedResult);
+        var diagnosticReceipts = BuildDiagnosticReceipts(appliedResult, resultStepStatus);
+        var recoveryDecision = BuildRecoveryDecision(appliedResult, resultStepStatus, state, step, diagnosticReceipts);
+        var nextStepStatus = ResolveStepStatusForRecoveryDecision(resultStepStatus, recoveryDecision);
+        var receipt = new StrategyResultReceipt(
+            step.StepInstanceId,
+            appliedResult.StrategyId,
+            command.IdempotencyKey,
+            appliedResult.Outcome,
+            nextStepStatus,
+            appliedResult.ResultHash,
+            diagnosticReceipts,
+            BuildProducedArtifactReceipts(appliedResult),
+            recoveryDecision)
+        {
+            UserSafeSummary = string.IsNullOrWhiteSpace(appliedResult.UserSafeSummary)
+                ? string.Empty
+                : appliedResult.UserSafeSummary.Trim(),
+            AppliedSequence = NextAppliedResultSequence(state.AppliedResults),
+            ExecutionRunId = ResolveExecutionRunId(appliedResult)
+        };
+        var nextClaims = ReplaceClaim(
+            state,
+            claim with
+            {
+                Status = appliedResult.Outcome == StrategyOutcome.Canceled
+                    ? DispatchClaimStatus.Cancelled
+                    : DispatchClaimStatus.Completed,
+                ResultIdempotencyKey = command.IdempotencyKey
+            });
+        var nextSteps = ReplaceStep(
+            state,
+            step with
+            {
+                Status = nextStepStatus,
+                ActiveClaimToken = null,
+                CompletedResultKey = nextStepStatus == ProcessRuntimeStepStatus.Completed
+                    ? command.IdempotencyKey
+                    : null
+            });
+        var next = state with
+        {
+            Steps = nextSteps,
+            Claims = nextClaims,
+            AppliedResults = Append(state.AppliedResults, receipt),
+            AvailableArtifactSlots = AddProducedSlots(state.AvailableArtifactSlots, appliedResult),
+            ConnectedInputArtifacts = ProcessRuntimeArtifactContracts.ApplyProducedArtifacts(state, step.StepInstanceId, appliedResult),
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+        next = CompleteRunIfTerminal(next, context.OccurredAtUtc);
+
+        var events = BuildResultEvents(next, context, command, appliedResult, nextStepStatus);
+        var resultEventId = events[1].EventId;
+
+        return Applied(
+            next,
+            events,
+            BuildArtifactLedgerEvents(resultEventId, appliedResult));
+    }
+
+    private static long NextAppliedResultSequence(IReadOnlyList<StrategyResultReceipt> receipts)
+    {
+        return Math.Max(
+            receipts.Count + 1L,
+            receipts.Count == 0
+                ? 1L
+                : receipts.Max(receipt => receipt.AppliedSequence) + 1L);
+    }
+
+    private static ProcessRuntimeMutation RequestCancellation(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
+        }
+
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.Cancelled, context.OccurredAtUtc);
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeMutation BeginRootCancellation(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (state.RunId != state.RootRunId)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationRequiresRootRun",
+                "The root cancellation barrier can only be started on the root process run.");
+        }
+
+        if (state.Status == ProcessRuntimeStatus.CancelRequested)
+        {
+            return Duplicate(state);
+        }
+
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
+        {
+            return ProcessRuntimeMutation.Rejected(state, "Runtime.TerminalRunImmutable", "Terminal runs cannot be cancelled again.");
+        }
+
+        var next = CancelOpenWork(state, ProcessRuntimeStatus.CancelRequested, context.OccurredAtUtc);
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelRequested, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeMutation FinalizeRootCancellation(
+        ProcessRuntimeStateSnapshot state,
+        RuntimeCommandContext context)
+    {
+        ValidateArguments(state, context);
+
+        if (state.RunId != state.RootRunId)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationRequiresRootRun",
+                "The root cancellation barrier can only be finalized on the root process run.");
+        }
+
+        if (state.Status != ProcessRuntimeStatus.CancelRequested)
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.RootCancellationBarrierMissing",
+                "Root cancellation can only be finalized after the cancellation barrier was committed.");
+        }
+
+        var next = state with
+        {
+            Status = ProcessRuntimeStatus.Cancelled,
+            UpdatedAtUtc = context.OccurredAtUtc
+        };
+        return Applied(next, context, ProcessRuntimeEventTypes.ProcessRunCancelled, state.RunId.ToString());
+    }
+
+    private static ProcessRuntimeStateSnapshot CancelOpenWork(
+        ProcessRuntimeStateSnapshot state,
+        ProcessRuntimeStatus status,
+        DateTimeOffset occurredAtUtc)
+    {
+        var steps = new List<ProcessRuntimeStepState>(state.Steps.Count);
+        foreach (var step in state.Steps)
+        {
+            steps.Add(ProcessRuntimeTerminalStates.IsStepTerminal(step.Status)
+                ? step
+                : step with
+                {
+                    Status = ProcessRuntimeStepStatus.Cancelled,
+                    ActiveClaimToken = null
+                });
+        }
+
+        var claims = new List<DispatchClaimState>(state.Claims.Count);
+        foreach (var claim in state.Claims)
+        {
+            claims.Add(claim.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed
+                ? claim with { Status = DispatchClaimStatus.Cancelled }
+                : claim);
+        }
+
+        return state with
+        {
+            Status = status,
+            Steps = steps,
+            Claims = claims,
+            UpdatedAtUtc = occurredAtUtc
+        };
+    }
+}

@@ -1,0 +1,111 @@
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.SharedKernel.Configuration
+@inject ISettingsRendererRegistry RendererRegistry
+
+@{
+    var rendererResolution = ResolveRenderer();
+}
+
+@if (rendererResolution.IsResolved && rendererResolution.Descriptor is { } renderer)
+{
+    <DynamicComponent Type="@renderer.ComponentType"
+                      Parameters="@BuildRendererParameters()" />
+}
+else if (rendererResolution.Status != SettingsRendererResolutionStatus.NotRequested)
+{
+    <Alert AlertStyle="AlertStyle.Danger"
+           data-settings-renderer-resolution="@rendererResolution.Status">
+        @BuildRendererResolutionMessage(rendererResolution.Status)
+    </Alert>
+}
+else
+{
+    <ConfigurationSchemaFallbackRenderer Schema="@Schema"
+                                         State="@State"
+                                         Secrets="@Secrets"
+                                         Validation="@Validation"
+                                         StateChanged="@StateChanged"
+                                         TestIdPrefix="@TestIdPrefix" />
+}
+
+@code {
+    [Parameter]
+    public string? RendererKey { get; set; }
+
+    [Parameter]
+    public string RendererOwnerId { get; set; } = string.Empty;
+
+    [Parameter]
+    public SettingsRendererTrustLevel? RendererTrustLevel { get; set; }
+
+    [Parameter]
+    public required ConfigurationSchema Schema { get; set; }
+
+    [Parameter]
+    public required ConfigurationState State { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
+
+    [Parameter]
+    public ConfigurationValidationResult? Validation { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationState> StateChanged { get; set; }
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "settings-renderer";
+
+    private SettingsRendererResolution ResolveRenderer()
+    {
+        var hasRendererKey = !string.IsNullOrWhiteSpace(RendererKey);
+        var hasOwner = !string.IsNullOrWhiteSpace(RendererOwnerId);
+        var hasTrustLevel = RendererTrustLevel.HasValue;
+        if (!hasRendererKey && !hasOwner && !hasTrustLevel)
+        {
+            return new(SettingsRendererResolutionStatus.NotRequested, Descriptor: null);
+        }
+
+        if (!hasRendererKey || !hasOwner || !hasTrustLevel)
+        {
+            return new(SettingsRendererResolutionStatus.IncompleteRequest, Descriptor: null);
+        }
+
+        var trustLevel = RendererTrustLevel!.Value;
+
+        return RendererRegistry.ResolveRenderer(new SettingsRendererResolutionRequest(
+            RendererKey!,
+            trustLevel,
+            RendererOwnerId,
+            Schema.Version));
+    }
+
+    private static string BuildRendererResolutionMessage(SettingsRendererResolutionStatus status)
+        => status switch
+        {
+            SettingsRendererResolutionStatus.IncompleteRequest =>
+                "The requested settings renderer is missing its key, owner, or trust metadata. Repair the executor contribution before editing these settings.",
+            SettingsRendererResolutionStatus.NotRegistered =>
+                "The requested settings renderer is not registered. Install or repair the trusted renderer contribution before editing these settings.",
+            SettingsRendererResolutionStatus.TrustMismatch =>
+                "The requested settings renderer does not match the executor trust level. Repair the trusted renderer contribution before editing these settings.",
+            SettingsRendererResolutionStatus.OwnerMismatch =>
+                "The requested settings renderer is registered for a different owner. Repair the executor contribution before editing these settings.",
+            SettingsRendererResolutionStatus.SchemaVersionMismatch =>
+                "The requested settings renderer does not support this schema version. Update the renderer or executor contribution before editing these settings.",
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Settings renderer resolution status is not a visible failure.")
+        };
+
+    private IDictionary<string, object> BuildRendererParameters()
+    {
+        return new Dictionary<string, object>
+        {
+            [nameof(Schema)] = Schema,
+            [nameof(State)] = State,
+            [nameof(Secrets)] = Secrets,
+            [nameof(Validation)] = Validation ?? ConfigurationValidationResult.Success,
+            [nameof(StateChanged)] = StateChanged,
+            [nameof(TestIdPrefix)] = TestIdPrefix
+        };
+    }
+}

@@ -1,0 +1,1896 @@
+[
+  {
+    "Key": "baseline-software-delivery",
+    "ProcessTemplateKey": "software-delivery",
+    "RunName": "Multi-team software delivery and release governance / reference delivery capability",
+    "Summary": "Baseline governed software delivery run aligned with the current module architecture, including explicit release-approval dependencies and artifact inputs.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a cross-team reference delivery capability.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "product-owner",
+        "DisplayName": "Jana Product",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns the value boundary and commercial acceptance criteria.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "",
+        "RoleKey": "delivery-manager",
+        "DisplayName": "Martin Delivery",
+        "ExecutorKind": "person",
+        "BindingReason": "Coordinates cross-team sequencing and evidence depth.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "architecture-review",
+        "RoleKey": "solution-architect",
+        "DisplayName": "Eva Architect",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns canonical-model and boundary review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "implementation",
+        "RoleKey": "lead-engineer",
+        "DisplayName": "Ondřej Lead Engineer",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Owns bounded implementation, tests, and migration notes.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "qa-validation",
+        "RoleKey": "qa-lead",
+        "DisplayName": "Klára QA",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns regression depth and browser proof.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "security-review",
+        "RoleKey": "security-reviewer",
+        "DisplayName": "Ivana Security",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns data-handling review and residual-risk challenge.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "execute-release-rollout",
+        "RoleKey": "release-manager",
+        "DisplayName": "Marek Release",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns controlled rollout and rollback readiness.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "feature-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Structured intake packet captured with explicit acceptance boundary.",
+        "DecidedBy": "Jana Product"
+      },
+      {
+        "StepKey": "architecture-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Architecture path and source-of-truth choice approved.",
+        "DecidedBy": "Eva Architect"
+      },
+      {
+        "StepKey": "implementation",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Implementation and migration notes completed with review-ready evidence.",
+        "DecidedBy": "Ondřej Lead Engineer"
+      },
+      {
+        "StepKey": "peer-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Peer review closed with no blocking integration findings.",
+        "DecidedBy": "Martin Delivery"
+      },
+      {
+        "StepKey": "qa-validation",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "quality-accepted",
+        "Reason": "Regression and browser proof accepted for changed surfaces.",
+        "DecidedBy": "Klára QA"
+      },
+      {
+        "StepKey": "security-review",
+        "TargetStatus": "Blocked",
+        "SelectedBranchOutcomeKey": "",
+        "BlockCause": "PolicyDenied",
+        "Reason": "Blocked until an explicit security exception owner and residual-risk containment are recorded.",
+        "DecidedBy": "Ivana Security"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "feature-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Reference delivery scope boundary packet",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Created from stakeholder intake and acceptance workshop.",
+        "AllowedFutureUsageSummary": "Reusable for architecture review and implementation planning.",
+        "ReviewSummary": "Reviewed by product and delivery."
+      },
+      {
+        "StepKey": "architecture-review",
+        "ArtifactKind": "Brief",
+        "Title": "Project structure context brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded from repository structure review and touched-module analysis for the reference delivery capability.",
+        "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, and release decisions tied to the same project node.",
+        "ReviewSummary": "Originating project node, working directory, touched modules, and downstream artifact expectations are explicit."
+      },
+      {
+        "StepKey": "architecture-review",
+        "ArtifactKind": "Decision",
+        "Title": "Reference delivery architecture decision record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded after the canonical-model and source-of-truth review for the reference delivery capability.",
+        "AllowedFutureUsageSummary": "Reusable for implementation, peer review, and release governance.",
+        "ReviewSummary": "Selected option, rejected alternatives, and migration ownership are explicit."
+      },
+      {
+        "StepKey": "implementation",
+        "ArtifactKind": "Deliverable",
+        "Title": "Reference delivery implementation change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Generated from current branch and linked tests.",
+        "AllowedFutureUsageSummary": "Reusable for review, QA, and release governance.",
+        "ReviewSummary": "Linked to migration notes and touched-surface inventory."
+      },
+      {
+        "StepKey": "implementation",
+        "ArtifactKind": "Checklist",
+        "Title": "Reference delivery migration and rollout preparation checklist",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared by implementation owner alongside the change set and rollout notes.",
+        "AllowedFutureUsageSummary": "Reusable for release readiness, rollback planning, and audit.",
+        "ReviewSummary": "Migration ordering, rollback hooks, and rollout constraints are explicit."
+      },
+      {
+        "StepKey": "peer-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Reference delivery peer review note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded during peer review of the governed delivery package.",
+        "AllowedFutureUsageSummary": "Reusable for QA, release governance, and later forensic review.",
+        "ReviewSummary": "Residual issues, approved follow-ups, and no-blocker conclusion captured."
+      },
+      {
+        "StepKey": "qa-validation",
+        "ArtifactKind": "Evidence",
+        "Title": "Reference delivery regression evidence pack",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from targeted regression, process-visible browser proof, and acceptance checks for the reference delivery capability.",
+        "AllowedFutureUsageSummary": "Reusable for release approval, support readiness, and audit.",
+        "ReviewSummary": "QA lead approved the evidence pack after reviewing changed-surface coverage and current-run browser artifact handoff."
+      },
+      {
+        "StepKey": "security-review",
+        "ArtifactKind": "Decision",
+        "Title": "Open security exception assessment for sensitive-data delivery capability",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Recorded by the security reviewer when the release lane was blocked on unresolved exception posture.",
+        "AllowedFutureUsageSummary": "Reusable for release governance, remediation planning, and audit.",
+        "ReviewSummary": "Residual risk owner and containment obligations remain open."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-branching-code-review",
+    "ProcessTemplateKey": "branching-code-review",
+    "RunName": "Branching code review and merge governance / reviewed UI change",
+    "Summary": "Baseline branching review run that exercises the explicit review router, QA lane validation, and merge approval path.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a customer-visible UI change.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "author",
+        "DisplayName": "Veronika Author",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Authorship remains attached to the implementation owner.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "route-review-disposition",
+        "RoleKey": "review-lead",
+        "DisplayName": "Pavel Review Lead",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns explicit route selection.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "validate-qa-lane",
+        "RoleKey": "qa-lead",
+        "DisplayName": "Klára QA",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns targeted QA lane proof.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "approve-merge-after-qa",
+        "RoleKey": "merge-approver",
+        "DisplayName": "Milan Merge",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns final merge-governance decision.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "prepare-pull-request",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Review packet prepared with screenshots and rollback notes.",
+        "DecidedBy": "Veronika Author"
+      },
+      {
+        "StepKey": "route-review-disposition",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "qa-validation",
+        "Reason": "Router selected the QA validation lane explicitly.",
+        "DecidedBy": "Pavel Review Lead"
+      },
+      {
+        "StepKey": "validate-qa-lane",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "QA lane closed after targeted regression and browser proof.",
+        "DecidedBy": "Klára QA"
+      },
+      {
+        "StepKey": "approve-merge-after-qa",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Merge approved after QA lane completion and explicit route provenance review.",
+        "DecidedBy": "Milan Merge"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "prepare-pull-request",
+        "ArtifactKind": "Deliverable",
+        "Title": "Account settings pull request readiness packet",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from the authored diff and screenshots.",
+        "AllowedFutureUsageSummary": "Reusable for review routing and later defect analysis.",
+        "ReviewSummary": "Includes touched modules, reviewer asks, and rollback notes."
+      },
+      {
+        "StepKey": "route-review-disposition",
+        "ArtifactKind": "Decision",
+        "Title": "Account settings review routing decision record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded by review lead on the governed router step.",
+        "AllowedFutureUsageSummary": "Reusable for workflow audit.",
+        "ReviewSummary": "Route selected: QA validation."
+      },
+      {
+        "StepKey": "validate-qa-lane",
+        "ArtifactKind": "Evidence",
+        "Title": "Account settings QA lane validation note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from targeted QA lane validation, browser proof, and reviewer notes.",
+        "AllowedFutureUsageSummary": "Reusable for merge approval and later regression analysis.",
+        "ReviewSummary": "Validation scope, observed behavior, and residual concerns are explicit."
+      },
+      {
+        "StepKey": "approve-merge-after-qa",
+        "ArtifactKind": "Decision",
+        "Title": "Account settings QA merge readiness note",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved after QA lane completion and explicit route review.",
+        "AllowedFutureUsageSummary": "Reusable for release readiness and audit.",
+        "ReviewSummary": "Residual risk declared low after QA validation."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-hotfix-rollout",
+    "ProcessTemplateKey": "hotfix-rollout",
+    "RunName": "Emergency hotfix rollout with shard-risk governance / critical endpoint latency",
+    "Summary": "Baseline emergency hotfix run aligned with explicit blast-radius review, emergency validation, and emergency-release approval inputs.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a critical endpoint latency incident requiring urgent remediation.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "incident-commander",
+        "DisplayName": "Daniel Commander",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns emergency bridge and severity posture.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "assess-blast-radius",
+        "RoleKey": "database-engineer",
+        "DisplayName": "Petra Database",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns shard-risk framing and rollback-trigger review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "package-hotfix",
+        "RoleKey": "platform-engineer",
+        "DisplayName": "Roman Platform",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns bounded hotfix packaging and rollback notes.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "validate-hotfix",
+        "RoleKey": "qa-lead",
+        "DisplayName": "Klára QA",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns emergency validation evidence.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "approve-emergency-release",
+        "RoleKey": "release-approver",
+        "DisplayName": "Milan Approver",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns emergency window approval.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "execute-emergency-rollout",
+        "RoleKey": "platform-engineer",
+        "DisplayName": "Roman Platform",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns controlled emergency rollout and rollback readiness.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "activate-emergency-bridge",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Emergency bridge activated with named responders and severity.",
+        "DecidedBy": "Daniel Commander"
+      },
+      {
+        "StepKey": "assess-blast-radius",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Blast radius assessed and bounded to impacted service partitions.",
+        "DecidedBy": "Petra Database"
+      },
+      {
+        "StepKey": "package-hotfix",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Hotfix package and rollback notes produced.",
+        "DecidedBy": "Roman Platform"
+      },
+      {
+        "StepKey": "validate-hotfix",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Emergency validation evidence accepted for the urgent lane.",
+        "DecidedBy": "Klára QA"
+      },
+      {
+        "StepKey": "approve-emergency-release",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Emergency release window approved after blast-radius and validation inputs.",
+        "DecidedBy": "Milan Approver"
+      },
+      {
+        "StepKey": "execute-emergency-rollout",
+        "TargetStatus": "Failed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Rollout failed after telemetry drift crossed the declared rollback trigger.",
+        "DecidedBy": "Roman Platform"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "activate-emergency-bridge",
+        "ArtifactKind": "Transcript",
+        "Title": "Critical endpoint latency emergency bridge activation log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded from emergency bridge activation.",
+        "AllowedFutureUsageSummary": "Reusable for incident timeline and post-incident review.",
+        "ReviewSummary": "Participants and initial constraints captured."
+      },
+      {
+        "StepKey": "assess-blast-radius",
+        "ArtifactKind": "Decision",
+        "Title": "Critical endpoint latency blast-radius assessment",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Prepared during emergency shard-risk review and rollback-trigger evaluation.",
+        "AllowedFutureUsageSummary": "Reusable for emergency approval, post-incident review, and audit.",
+        "ReviewSummary": "Impacted shards, rollback trigger, and safe boundary are explicit."
+      },
+      {
+        "StepKey": "package-hotfix",
+        "ArtifactKind": "Deliverable",
+        "Title": "Critical endpoint latency emergency patch and rollback bundle",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Built from emergency fix branch with rollback notes.",
+        "AllowedFutureUsageSummary": "Reusable for rollout and incident replay.",
+        "ReviewSummary": "Bounded change set only."
+      },
+      {
+        "StepKey": "validate-hotfix",
+        "ArtifactKind": "Evidence",
+        "Title": "Critical endpoint latency emergency validation evidence pack",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from urgent regression checks, smoke coverage, and emergency browser proof.",
+        "AllowedFutureUsageSummary": "Reusable for emergency approval, incident review, and audit.",
+        "ReviewSummary": "QA lead approved the emergency validation evidence."
+      },
+      {
+        "StepKey": "approve-emergency-release",
+        "ArtifactKind": "Decision",
+        "Title": "Critical endpoint latency emergency release approval record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved by release approver after review of blast radius and validation evidence.",
+        "AllowedFutureUsageSummary": "Reusable for audit.",
+        "ReviewSummary": "Rollback trigger and watch window declared."
+      },
+      {
+        "StepKey": "execute-emergency-rollout",
+        "ArtifactKind": "Transcript",
+        "Title": "Critical endpoint latency emergency rollout and telemetry log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from the failed production rollout and immediate rollback watch.",
+        "AllowedFutureUsageSummary": "Reusable for post-incident review and emergency policy tuning.",
+        "ReviewSummary": "Telemetry breach, rollback trigger, rollback decision, and operator notes captured."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-customer-onboarding",
+    "ProcessTemplateKey": "customer-onboarding",
+    "RunName": "Customer onboarding orchestration / enterprise rollout",
+    "Summary": "Baseline onboarding run that keeps intake, staffing review, and kickoff approval explicit.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a new enterprise customer onboarding.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "account-owner",
+        "DisplayName": "Lucie Account",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns customer context and success criteria.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "staffing-review",
+        "RoleKey": "staffing-manager",
+        "DisplayName": "Tomáš Staffing",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns staffing feasibility review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "RoleKey": "kickoff-lead",
+        "DisplayName": "Alice Kickoff",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns kickoff closure and action tracking.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Customer goals, stakeholders, and constraints captured.",
+        "DecidedBy": "Lucie Account"
+      },
+      {
+        "StepKey": "staffing-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "staffing-ready",
+        "Reason": "Staffing readiness accepted for kickoff.",
+        "DecidedBy": "Tomáš Staffing"
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Kickoff closed with owners, milestones, and next actions.",
+        "DecidedBy": "Alice Kickoff"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "intake",
+        "ArtifactKind": "Brief",
+        "Title": "Enterprise customer onboarding brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from signed scope and discovery notes.",
+        "AllowedFutureUsageSummary": "Reusable for staffing and kickoff preparation.",
+        "ReviewSummary": "Success criteria and stakeholders named."
+      },
+      {
+        "StepKey": "staffing-review",
+        "ArtifactKind": "Decision",
+        "Title": "Enterprise customer staffing recommendation",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded during staffing feasibility review for the enterprise rollout.",
+        "AllowedFutureUsageSummary": "Reusable for kickoff planning, delivery sequencing, and governance review.",
+        "ReviewSummary": "Staffing commitments, dependencies, and risks are explicit."
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "ArtifactKind": "Decision",
+        "Title": "Enterprise customer kickoff approval record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded when kickoff was approved with named owners, milestones, and next actions.",
+        "AllowedFutureUsageSummary": "Reusable for execution governance, customer reporting, and audit.",
+        "ReviewSummary": "Approval scope, accountable owners, and immediate next actions are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "intake",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Intake may create managed onboarding artifacts but cannot mutate external systems."
+      },
+      {
+        "StepKey": "kickoff-approval",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Kickoff approval is an explicit process decision over upstream staffing evidence."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "staffing-review",
+        "BlockCause": "UpstreamInput",
+        "ExpectedRecoveryOptions": [
+          "WaitForArtifactMaterialization",
+          "RecoverArtifactsOnly",
+          "HumanEscalation"
+        ],
+        "Diagnostic": "Missing upstream artifact: customer onboarding brief was not materialized before staffing review."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-incident-response",
+    "ProcessTemplateKey": "incident-response",
+    "RunName": "Incident response and escalation / user access disruption",
+    "Summary": "Baseline incident run that exercises explicit triage, diagnosis, and approval escalation.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for a user access disruption incident.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "triage-lead",
+        "DisplayName": "Barbora Triage",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns initial triage and responder mobilization.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "diagnose",
+        "RoleKey": "resolver",
+        "DisplayName": "Karel Resolver",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns diagnosis and mitigation framing.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "escalate",
+        "RoleKey": "approver",
+        "DisplayName": "Radek Approver",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns approval on escalated mitigation.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "respond",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Severity and responders declared explicitly in triage note.",
+        "DecidedBy": "Barbora Triage"
+      },
+      {
+        "StepKey": "diagnose",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "mitigation-ready",
+        "Reason": "Diagnosis evidence assembled and mitigation options framed.",
+        "DecidedBy": "Karel Resolver"
+      },
+      {
+        "StepKey": "escalate",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "High-risk mitigation approved with rollback conditions.",
+        "DecidedBy": "Radek Approver"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "respond",
+        "ArtifactKind": "Decision",
+        "Title": "User access incident triage note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from alert, service desk reports, and first telemetry.",
+        "AllowedFutureUsageSummary": "Reusable for diagnosis and timeline reconstruction.",
+        "ReviewSummary": "Severity and responders explicit."
+      },
+      {
+        "StepKey": "diagnose",
+        "ArtifactKind": "Evidence",
+        "Title": "User access diagnosis evidence pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Collected from logs, traces, and hypothesis tracking.",
+        "AllowedFutureUsageSummary": "Reusable for mitigation choice and post-incident review.",
+        "ReviewSummary": "Hypotheses and evidence clearly separated."
+      },
+      {
+        "StepKey": "escalate",
+        "ArtifactKind": "Decision",
+        "Title": "User access escalation approval record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved by escalation authority after risk review.",
+        "AllowedFutureUsageSummary": "Reusable for incident audit.",
+        "ReviewSummary": "Rollback trigger and accountable owner recorded."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "respond",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Response triage records managed incident evidence before diagnosis."
+      },
+      {
+        "StepKey": "escalate",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Escalation approval can decide or escalate but cannot silently mutate the product."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "diagnose",
+        "BlockCause": "RuntimeEvidence",
+        "ExpectedRecoveryOptions": [
+          "RerunValidation",
+          "RepairImplementation"
+        ],
+        "Diagnostic": "Validation failed: diagnosis evidence conflicts with current telemetry and must be repaired before escalation."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-business-plan-development",
+    "ProcessTemplateKey": "business-plan-development",
+    "RunName": "Business plan development / AI-assisted field-service product",
+    "Summary": "Baseline non-code strategy run that exercises business, finance, and marketing specialist handoffs.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for preparing a business plan from mixed planning inputs.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "business-strategist",
+        "DisplayName": "Business Strategist Agent",
+        "ExecutorKind": "AI agent",
+        "BindingReason": "Owns strategy intake, business-plan spine, and integrated review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "financial-modeling",
+        "RoleKey": "financial-strategist",
+        "DisplayName": "Financial Strategist Agent",
+        "ExecutorKind": "AI agent",
+        "BindingReason": "Owns assumptions, model logic, unit economics, and sensitivity ranges.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "marketing-plan",
+        "RoleKey": "marketing-specialist",
+        "DisplayName": "Marketing Specialist Agent",
+        "ExecutorKind": "AI agent",
+        "BindingReason": "Owns positioning, channels, campaign brief, and validation experiments.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "strategy-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Strategy brief captured facts, assumptions, open questions, and artifact folder.",
+        "DecidedBy": "Business Strategist Agent"
+      },
+      {
+        "StepKey": "product-evidence-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Product evidence review captured observed capabilities, limitations, and business-case implications.",
+        "DecidedBy": "Business Strategist Agent"
+      },
+      {
+        "StepKey": "business-plan-draft",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Business plan drafted with product evidence implications, target segment, offer, operating model, risks, and validation plan.",
+        "DecidedBy": "Business Strategist Agent"
+      },
+      {
+        "StepKey": "financial-modeling",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Financial model produced with drivers, assumptions, ranges, and missing data.",
+        "DecidedBy": "Financial Strategist Agent"
+      },
+      {
+        "StepKey": "marketing-plan",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Go-to-market plan produced with audience, channels, metrics, and experiments.",
+        "DecidedBy": "Marketing Specialist Agent"
+      },
+      {
+        "StepKey": "integrated-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "approved",
+        "Reason": "Integrated review reconciled assumptions and approved next actions.",
+        "DecidedBy": "Business Strategist Agent"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "strategy-intake",
+        "ArtifactKind": "Brief",
+        "Title": "AI-assisted field-service strategy brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from stakeholder idea, source notes, and open assumptions.",
+        "AllowedFutureUsageSummary": "Reusable by business, finance, and marketing specialists.",
+        "ReviewSummary": "Facts, assumptions, and open questions separated."
+      },
+      {
+        "StepKey": "product-evidence-review",
+        "ArtifactKind": "Evidence",
+        "Title": "AI-assisted field-service product evidence assessment",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from app notes, workflow observations, and source product assumptions.",
+        "AllowedFutureUsageSummary": "Reusable by business, finance, and marketing specialists.",
+        "ReviewSummary": "Observed product behavior, limitations, and inferred claims separated."
+      },
+      {
+        "StepKey": "business-plan-draft",
+        "ArtifactKind": "Deliverable",
+        "Title": "AI-assisted field-service business plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from strategy brief, product evidence assessment, and planning assumptions.",
+        "AllowedFutureUsageSummary": "Reusable for finance, marketing, and execution planning.",
+        "ReviewSummary": "Offer, audience, model, risks, and validation plan captured."
+      },
+      {
+        "StepKey": "financial-modeling",
+        "ArtifactKind": "Dataset",
+        "Title": "AI-assisted field-service financial model",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Prepared from business plan assumptions and sample cost drivers.",
+        "AllowedFutureUsageSummary": "Reusable for budget and pricing review.",
+        "ReviewSummary": "Drivers, ranges, and missing data explicit."
+      },
+      {
+        "StepKey": "marketing-plan",
+        "ArtifactKind": "Deliverable",
+        "Title": "AI-assisted field-service go-to-market plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from business plan and finance constraints.",
+        "AllowedFutureUsageSummary": "Reusable for launch and campaign planning.",
+        "ReviewSummary": "Audience, promise, channels, metrics, and experiments captured."
+      },
+      {
+        "StepKey": "integrated-review",
+        "ArtifactKind": "Decision",
+        "Title": "AI-assisted field-service integrated business plan review",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Approved from strategy, finance, and marketing artifacts.",
+        "AllowedFutureUsageSummary": "Reusable for portfolio decision and execution planning.",
+        "ReviewSummary": "Approved with explicit risks and next actions."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "strategy-intake",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Strategy intake creates managed planning artifacts from mixed business inputs."
+      },
+      {
+        "StepKey": "integrated-review",
+        "ExpectedTargetScope": "ManagedProcessArtifactsOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Integrated review selects the branch outcome from explicit business, finance, and marketing artifacts."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "integrated-review",
+        "BlockCause": "OwnOutput",
+        "ExpectedRecoveryOptions": [
+          "RecoverArtifactsOnly",
+          "RetryAgent",
+          "HumanEscalation"
+        ],
+        "Diagnostic": "Artifact contract unsatisfied: integrated business plan review is missing required risk and next-action evidence."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-release-readiness-and-deployment",
+    "ProcessTemplateKey": "release-readiness-and-deployment",
+    "RunName": "Release readiness and deployment control / customer-visible maintenance window",
+    "Summary": "Baseline release governance run that exercises scope freeze, readiness synthesis, cutover rehearsal, go/no-go branching, controlled cutover, and closure evidence.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReason": "Seeded baseline scenario for a customer-visible release that must prove evidence, approval, rollback readiness, and deployment-event ownership before cutover.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "change-manager",
+        "DisplayName": "Nora Change",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns release boundary, cutover choreography, and event-level discipline.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "RoleKey": "delivery-manager",
+        "DisplayName": "Martin Delivery",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns integrated readiness evidence and open-risk synthesis.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "RoleKey": "platform-engineer",
+        "DisplayName": "Roman Platform",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Owns rollback, deployment mechanics, and live observability review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "RoleKey": "release-approver",
+        "DisplayName": "Milan Release",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns final go/no-go decision from explicit evidence.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "RoleKey": "service-owner",
+        "DisplayName": "Sofia Service",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns post-release stability and closure signals.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "scope-freeze",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Release scope, deployment boundary, and excluded items captured.",
+        "DecidedBy": "Nora Change"
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Readiness evidence and open risks synthesized into one release view.",
+        "DecidedBy": "Martin Delivery"
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Cutover rehearsal and rollback readiness accepted for go/no-go review.",
+        "DecidedBy": "Roman Platform"
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "go",
+        "Reason": "Release approved after evidence, security posture, rollback plan, and watch coverage review.",
+        "DecidedBy": "Milan Release"
+      },
+      {
+        "StepKey": "execute-cutover",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Cutover executed within the approved release window and rollback triggers.",
+        "DecidedBy": "Roman Platform"
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Post-release stability window closed with follow-up improvements recorded.",
+        "DecidedBy": "Sofia Service"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "scope-freeze",
+        "ArtifactKind": "Brief",
+        "Title": "Release scope freeze note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from release candidate scope, deployment boundary, and excluded items.",
+        "AllowedFutureUsageSummary": "Reusable for readiness synthesis, approval, cutover execution, and audit.",
+        "ReviewSummary": "Scope boundary, environment, rollout strategy, and exclusions are explicit."
+      },
+      {
+        "StepKey": "scope-freeze",
+        "ArtifactKind": "Brief",
+        "Title": "Deployment strategy outline",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from deployment boundary, rollout sequencing, and release ownership decisions.",
+        "AllowedFutureUsageSummary": "Reusable for readiness synthesis, cutover rehearsal, approval, and audit.",
+        "ReviewSummary": "Deployment strategy, environment boundary, rollout method, and rollback assumptions are explicit."
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "ArtifactKind": "Evidence",
+        "Title": "Release readiness report",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from scope freeze, QA proof, security notes, platform status, and open exceptions.",
+        "AllowedFutureUsageSummary": "Reusable for cutover rehearsal, go/no-go approval, and future release comparison.",
+        "ReviewSummary": "Evidence links, open risks, and readiness gaps are separated."
+      },
+      {
+        "StepKey": "readiness-synthesis",
+        "ArtifactKind": "Evidence",
+        "Title": "Test evidence pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from release validation, regression proof, and unresolved quality exceptions.",
+        "AllowedFutureUsageSummary": "Reusable for readiness synthesis, go/no-go approval, and future regression comparison.",
+        "ReviewSummary": "Passed checks, skipped checks, known defects, and evidence links are explicit."
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "ArtifactKind": "Brief",
+        "Title": "Cutover watch roster",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared during cutover rehearsal with named watchers and escalation paths.",
+        "AllowedFutureUsageSummary": "Reusable for live cutover, incident response, and release retrospective.",
+        "ReviewSummary": "Watch timing, owners, and escalation paths are explicit."
+      },
+      {
+        "StepKey": "cutover-rehearsal",
+        "ArtifactKind": "Brief",
+        "Title": "Rollback plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared during cutover rehearsal from rollback triggers, owner assignments, and restoration checks.",
+        "AllowedFutureUsageSummary": "Reusable for final approval, live cutover, rollback execution, and audit.",
+        "ReviewSummary": "Rollback trigger, owner, expected timing, and verification method are explicit."
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "ArtifactKind": "Evidence",
+        "Title": "Security review note",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Prepared from security posture, exception review, residual risk, and control-owner signoff.",
+        "AllowedFutureUsageSummary": "Reusable for release audit, rollback review, and future exception governance.",
+        "ReviewSummary": "Security posture, accepted exceptions, control gaps, and approving owner are explicit."
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "ArtifactKind": "Decision",
+        "Title": "Final go/no-go decision",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Approved from release evidence, security posture, rollback plan, and watch coverage.",
+        "AllowedFutureUsageSummary": "Reusable for audit, rollback review, and release governance tuning.",
+        "ReviewSummary": "Go decision, conditions, residual risks, and accountable approver are explicit."
+      },
+      {
+        "StepKey": "execute-cutover",
+        "ArtifactKind": "Brief",
+        "Title": "Rollback plan",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Confirmed during live cutover against rollback triggers, watch ownership, and observed telemetry.",
+        "AllowedFutureUsageSummary": "Reusable for rollback decisioning, incident replay, and release retrospective.",
+        "ReviewSummary": "Live rollback thresholds, owners, commands, and verification signals are explicit."
+      },
+      {
+        "StepKey": "execute-cutover",
+        "ArtifactKind": "Evidence",
+        "Title": "Release execution provenance note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from deployment execution, hold points, and observed rollout telemetry.",
+        "AllowedFutureUsageSummary": "Reusable for stability review, incident replay, and audit.",
+        "ReviewSummary": "Cutover timing, commands, observations, and deviations are explicit."
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "ArtifactKind": "Brief",
+        "Title": "Retrospective improvement log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from stability watch, support handoff, and release-retrospective findings.",
+        "AllowedFutureUsageSummary": "Reusable for future release planning, operational improvement, and audit.",
+        "ReviewSummary": "Improvement items, owners, triggers, and due dates are explicit."
+      },
+      {
+        "StepKey": "stabilize-and-close",
+        "ArtifactKind": "Brief",
+        "Title": "Release closure note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after stability watch with support, telemetry, and retrospective inputs.",
+        "AllowedFutureUsageSummary": "Reusable for future release planning and operational improvement.",
+        "ReviewSummary": "Stability result, support handoff, and improvement actions are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "scope-freeze",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Scope freeze can inspect project state and write release artifacts without mutating product targets."
+      },
+      {
+        "StepKey": "security-and-go-no-go",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Go/no-go approval branches release flow from explicit managed evidence."
+      },
+      {
+        "StepKey": "execute-cutover",
+        "ExpectedTargetScope": "ExternalActionControlled",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "ExecuteExternalAction"
+        ],
+        "Purpose": "Cutover is the controlled external action step, not an unbounded product mutation step."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "security-and-go-no-go",
+        "BlockCause": "PolicyDenied",
+        "ExpectedRecoveryOptions": [
+          "HumanEscalation",
+          "ReworkContinuation"
+        ],
+        "Diagnostic": "Policy denied external path: release cannot proceed until security exception ownership and containment are approved."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-architecture-decision-governance",
+    "ProcessTemplateKey": "architecture-decision-governance",
+    "RunName": "Architecture decision governance / integration boundary decision",
+    "Summary": "Baseline architecture governance run that exercises decision intake, option comparison, security/compliance review, approval branching, and rollout guidance.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for selecting an integration boundary with explicit project context, provenance, review, approval, and implementation guidance.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "governance-facilitator",
+        "DisplayName": "Eva Governance",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns decision process hygiene and evidence index.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "context-and-options",
+        "RoleKey": "solution-architect",
+        "DisplayName": "Alex Architect",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns context synthesis and option comparison.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "RoleKey": "security-reviewer",
+        "DisplayName": "Ivana Security",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns security and compliance posture review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "board-decision",
+        "RoleKey": "domain-owner",
+        "DisplayName": "Dana Domain",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns accountable architecture decision approval.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "RoleKey": "service-owner",
+        "DisplayName": "Sofia Service",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns implementation guidance and revisit trigger handoff.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "decision-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Decision demand, project context, constraints, and stakeholders captured.",
+        "DecidedBy": "Eva Governance"
+      },
+      {
+        "StepKey": "context-and-options",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Options compared with source context, constraints, and rejected alternatives.",
+        "DecidedBy": "Alex Architect"
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Security, compliance, and provenance implications reviewed.",
+        "DecidedBy": "Ivana Security"
+      },
+      {
+        "StepKey": "board-decision",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "approved",
+        "Reason": "Architecture board approved the integration boundary with explicit conditions.",
+        "DecidedBy": "Dana Domain"
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Implementation guidance and revisit triggers published for the approved decision.",
+        "DecidedBy": "Sofia Service"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "decision-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Architecture demand intake",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from project context, stakeholder request, constraints, and decision deadline.",
+        "AllowedFutureUsageSummary": "Reusable for option comparison, review, board approval, and future revisit.",
+        "ReviewSummary": "Decision question, scope, constraints, and affected systems are explicit."
+      },
+      {
+        "StepKey": "decision-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Decision brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from decision demand, stakeholder constraints, affected domains, and deadline.",
+        "AllowedFutureUsageSummary": "Reusable for option comparison, security review, board approval, and future revisit.",
+        "ReviewSummary": "Decision question, owner, affected systems, constraints, and timing are explicit."
+      },
+      {
+        "StepKey": "context-and-options",
+        "ArtifactKind": "Decision",
+        "Title": "Architecture decision record",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from context assembly, option analysis, trade-offs, and known constraints.",
+        "AllowedFutureUsageSummary": "Reusable for security review, board decision, rollout guidance, and audit.",
+        "ReviewSummary": "Context, candidate decision, alternatives, consequences, and unresolved evidence are explicit."
+      },
+      {
+        "StepKey": "context-and-options",
+        "ArtifactKind": "Decision",
+        "Title": "Option comparison brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from repository context, architecture constraints, and option analysis.",
+        "AllowedFutureUsageSummary": "Reusable for security review, board decision, and rollout guidance.",
+        "ReviewSummary": "Selected option candidates, rejected alternatives, trade-offs, and unknowns are explicit."
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Security review note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured during security and compliance review of the proposed architecture direction.",
+        "AllowedFutureUsageSummary": "Reusable for board decision, implementation guardrails, compliance audit, and revisit.",
+        "ReviewSummary": "Security obligations, compliance impact, required controls, and residual risks are explicit."
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Dependency and provenance impact note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured during security and compliance review of the integration boundary options.",
+        "AllowedFutureUsageSummary": "Reusable for board decision, implementation guardrails, and audit.",
+        "ReviewSummary": "Security, compliance, dependency, and provenance impacts are separated."
+      },
+      {
+        "StepKey": "board-decision",
+        "ArtifactKind": "Decision",
+        "Title": "Approved architecture decision record",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Approved from decision intake, option comparison, and security/compliance review.",
+        "AllowedFutureUsageSummary": "Reusable for implementation, governance audit, and revisit decisions.",
+        "ReviewSummary": "Decision, conditions, owner, rejected alternatives, and revisit trigger are explicit."
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "ArtifactKind": "Brief",
+        "Title": "Architecture rollout guidance",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after board approval for implementation owners and service handoff.",
+        "AllowedFutureUsageSummary": "Reusable for implementation planning, review, and future decision audit.",
+        "ReviewSummary": "Rollout constraints, handoff owner, implementation guardrails, and revisit triggers are explicit."
+      },
+      {
+        "StepKey": "rollout-guidance",
+        "ArtifactKind": "Brief",
+        "Title": "Architecture revisit trigger log",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after board approval from adoption conditions, review dates, and risk triggers.",
+        "AllowedFutureUsageSummary": "Reusable for implementation governance, revisit scheduling, and future audit.",
+        "ReviewSummary": "Revisit triggers, owners, due dates, and decision-update conditions are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "decision-intake",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Decision intake can inspect project context and upstream material without changing the product."
+      },
+      {
+        "StepKey": "security-compliance-review",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Security/compliance review can decide or escalate from evidence but cannot mutate product targets."
+      },
+      {
+        "StepKey": "board-decision",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Board decision selects the approved or deferred branch from explicit architecture evidence."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "context-and-options",
+        "BlockCause": "UpstreamInput",
+        "ExpectedRecoveryOptions": [
+          "WaitForArtifactMaterialization",
+          "RecoverArtifactsOnly",
+          "HumanEscalation"
+        ],
+        "Diagnostic": "Missing upstream artifact: architecture demand intake is absent or not materialized before option comparison."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-agent-training-and-improvement",
+    "ProcessTemplateKey": "ai-assisted-change-delivery",
+    "RunName": "Agent training and improvement / delegation policy refinement",
+    "Summary": "Baseline agent-improvement run that exercises bounded delegation, trace capture, evaluation, safety review, and rework routing without assuming a software-only delivery path.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for improving an agent delegation policy and training prompt pack from evaluation evidence and safety review.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "product-owner",
+        "DisplayName": "Pat Outcome Owner",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns the improvement goal and acceptance boundary for agent behavior.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "delegation-design",
+        "RoleKey": "solution-architect",
+        "DisplayName": "Rina Delegation Architect",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns delegation boundaries, permitted tools, and refusal conditions.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "agent-execution",
+        "RoleKey": "software-engineer",
+        "DisplayName": "Atlas Agent Runner",
+        "ExecutorKind": "agent",
+        "BindingReason": "Executes the bounded training-pack improvement and captures trace evidence.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "RoleKey": "ai-evaluation-lead",
+        "DisplayName": "Evan Evaluation",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Owns benchmark selection and evidence adequacy for the improved agent behavior.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "RoleKey": "ai-safety-reviewer",
+        "DisplayName": "Sam Safety",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns safety, refusal-boundary, and residual-risk review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "RoleKey": "model-risk-approver",
+        "DisplayName": "Morgan Risk",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns the rework decision when evaluation exposes unsafe agent behavior.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "task-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Improvement goal and human acceptance boundary captured for the agent training pack.",
+        "DecidedBy": "Pat Outcome Owner"
+      },
+      {
+        "StepKey": "delegation-design",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "delegate",
+        "Reason": "Delegation boundary approved for a bounded training-pack update with explicit refusal criteria.",
+        "DecidedBy": "Rina Delegation Architect"
+      },
+      {
+        "StepKey": "agent-execution",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Agent runner produced the training-pack update and captured full execution trace.",
+        "DecidedBy": "Atlas Agent Runner"
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Evaluation compared before and after agent behavior against the approved benchmark cases.",
+        "DecidedBy": "Evan Evaluation"
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "rework",
+        "Reason": "Safety review routed the improvement to rework because refusal-boundary evidence remained incomplete.",
+        "DecidedBy": "Morgan Risk"
+      },
+      {
+        "StepKey": "capture-rework-decision",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Rework decision recorded with the missing safety evidence and next benchmark owner.",
+        "DecidedBy": "Sam Safety"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "task-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Intake brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from agent evaluation findings and operator feedback.",
+        "AllowedFutureUsageSummary": "Reusable for delegation design, evaluation, and safety review.",
+        "ReviewSummary": "Improvement goal, current behavior gap, and acceptance boundary are explicit."
+      },
+      {
+        "StepKey": "task-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Acceptance criteria pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from desired agent behavior, refusal requirements, and benchmark examples.",
+        "AllowedFutureUsageSummary": "Reusable by delegation, execution, evaluation, and rework steps.",
+        "ReviewSummary": "Desired behaviors, prohibited behaviors, and benchmark pass criteria are separated."
+      },
+      {
+        "StepKey": "delegation-design",
+        "ArtifactKind": "Prompt",
+        "Title": "Delegation contract and prompt package",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from intake criteria, permitted tools, and training-pack boundaries.",
+        "AllowedFutureUsageSummary": "Reusable by agent execution and evaluation.",
+        "ReviewSummary": "Tool limits, refusal criteria, and allowed training-pack changes are explicit."
+      },
+      {
+        "StepKey": "delegation-design",
+        "ArtifactKind": "Brief",
+        "Title": "Delegation configuration snapshot",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from approved execution settings and tool permissions.",
+        "AllowedFutureUsageSummary": "Reusable for trace replay, evaluation, and safety review.",
+        "ReviewSummary": "Allowed operations and prohibited escalation paths are explicit."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ArtifactKind": "Evidence",
+        "Title": "Execution trace pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured from the bounded agent training-pack update run.",
+        "AllowedFutureUsageSummary": "Reusable for evaluation, safety review, and rework planning.",
+        "ReviewSummary": "Inputs, tool use, outputs, and boundary decisions are traceable."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ArtifactKind": "Deliverable",
+        "Title": "Delegated change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Produced by the agent runner within the approved training-pack scope.",
+        "AllowedFutureUsageSummary": "Reusable for benchmark evaluation and follow-up rework.",
+        "ReviewSummary": "Changed training prompts, expected behavior deltas, and known limits are explicit."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ArtifactKind": "Evidence",
+        "Title": "Agent execution provenance summary",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Summarized from execution trace, prompt package, and generated update.",
+        "AllowedFutureUsageSummary": "Reusable for audit and safety review.",
+        "ReviewSummary": "Agent identity, prompt version, tool boundaries, and generated artifacts are explicit."
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "ArtifactKind": "Evidence",
+        "Title": "Evaluation benchmark report",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from benchmark cases comparing original and improved agent behavior.",
+        "AllowedFutureUsageSummary": "Reusable for safety review and future training regressions.",
+        "ReviewSummary": "Pass/fail cases, regression findings, and confidence limits are explicit."
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "ArtifactKind": "Evidence",
+        "Title": "Test evidence pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from repeatable agent behavior checks and refusal-boundary probes.",
+        "AllowedFutureUsageSummary": "Reusable for safety review and rework validation.",
+        "ReviewSummary": "Benchmark prompts, expected outcomes, observed outcomes, and failures are explicit."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Security review note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured during safety and security review of the improved agent behavior.",
+        "AllowedFutureUsageSummary": "Reusable for rework planning and future model-risk review.",
+        "ReviewSummary": "Residual safety gaps, data boundaries, and refusal-risk concerns are explicit."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "ArtifactKind": "Decision",
+        "Title": "AI-assisted merge approval note",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Recorded by model-risk approver after reviewing evaluation and safety evidence.",
+        "AllowedFutureUsageSummary": "Reusable for rework routing and audit.",
+        "ReviewSummary": "Merge withheld; rework owner, missing evidence, and next benchmark scope are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "delegation-design",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Delegation design can read context and decide whether bounded agent execution is allowed without mutating the target."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ExpectedTargetScope": "ExternalProductTargetMutable",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "MutateProductTarget",
+          "RunValidation",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Agent execution is the only delegated mutation lane for the training-pack improvement."
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "CaptureRuntimeProof",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Evaluation can run validation and capture proof without changing the improved training pack."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Safety review can approve, reject, or route rework from evidence without mutating the target."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "BlockCause": "RuntimeEvidence",
+        "ExpectedRecoveryOptions": [
+          "RerunValidation",
+          "RepairImplementation"
+        ],
+        "Diagnostic": "Validation failed: refusal-boundary benchmark did not prove the improved agent behavior."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "BlockCause": "PolicyDenied",
+        "ExpectedRecoveryOptions": [
+          "HumanEscalation",
+          "ReworkContinuation"
+        ],
+        "Diagnostic": "Policy denied: agent training update lacks a documented safety owner for the new behavior."
+      }
+    ]
+  },
+  {
+    "Key": "baseline-blazor-wasm-pwa-app",
+    "ProcessTemplateKey": "blazor-app-delivery",
+    "RunName": "Blazor WASM PWA delivery / generic application",
+    "Summary": "Baseline Blazor app delivery run for a generic WASM PWA, with interactive workflow, PWA/offline, build, browser, console, screenshot, and project-structure writeback acceptance criteria kept in scenario data.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReason": "Deliver a Blazor WebAssembly PWA application from the approved project-structure node. Acceptance criteria: implement the requested app topic, provide responsive route-level UI, complete the core interactive workflow, preserve explicit state where relevant, include PWA manifest/service-worker offline readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "blazor-delivery-manager",
+        "DisplayName": "Blazor PWA delivery manager",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns process flow, acceptance scope, evidence index, and project-structure writeback for the Blazor WASM PWA run.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "resolve-blazor-contract",
+        "RoleKey": "blazor-solution-architect",
+        "DisplayName": "Blazor PWA solution architect",
+        "ExecutorKind": "agent",
+        "BindingReason": "Resolves architecture, Blazor WASM PWA mode, routes, output root, and evidence targets without implementing code.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "RoleKey": "blazor-engineer",
+        "DisplayName": "Blazor PWA engineer",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns scoped implementation of the requested Blazor WASM PWA and build/test proof.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "RoleKey": "blazor-qa-lead",
+        "DisplayName": "Blazor PWA QA and browser proof lead",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns non-mutating runtime validation, screenshot capture, console inspection, interactive workflow assertions, and PWA/offline readiness proof.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "resolve-blazor-contract",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "default",
+        "Reason": "Architecture and acceptance contract resolved without implementation.",
+        "DecidedBy": "Blazor PWA solution architect"
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "default",
+        "Reason": "Requested WASM PWA implementation completed with build/test proof.",
+        "DecidedBy": "Blazor PWA engineer"
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "quality-accepted",
+        "Reason": "Browser screenshot, console proof, interactive workflow assertions, and PWA/offline readiness evidence accepted.",
+        "DecidedBy": "Blazor PWA QA and browser proof lead"
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Run evidence index and project-structure writeback recorded.",
+        "DecidedBy": "Blazor PWA delivery manager"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "resolve-blazor-contract",
+        "ArtifactKind": "Brief",
+        "Title": "Blazor WASM PWA delivery contract",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from the scenario trigger and project-structure source-of-truth node.",
+        "AllowedFutureUsageSummary": "Reusable by implementation, validation, repair, and run-evidence writeback steps.",
+        "ReviewSummary": "Names Blazor WASM PWA mode, route, product root, output root, acceptance criteria, evidence paths, and non-mutating validation boundary."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ArtifactKind": "Deliverable",
+        "Title": "Blazor WASM PWA implementation change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Generated by the implementation step inside the approved product root.",
+        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for interactive workflow and PWA readiness checks.",
+        "ReviewSummary": "Includes requested app routes, interactive state, responsive layout, build/test output, and PWA files."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ArtifactKind": "Deliverable",
+        "Title": "Blazor implementation change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Generated by the implementation step inside the approved Blazor product root.",
+        "AllowedFutureUsageSummary": "Reusable by validation and repair steps for workflow, PWA readiness, and regression checks.",
+        "ReviewSummary": "Implementation files, affected routes, acceptance criteria coverage, and PWA assets are explicit."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ArtifactKind": "Brief",
+        "Title": "Implementation self-review summary",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after implementation from changed files, acceptance criteria, and known risks.",
+        "AllowedFutureUsageSummary": "Reusable by validation, repair, and final run-evidence steps.",
+        "ReviewSummary": "Self-review checks, known limitations, affected files, and unresolved concerns are explicit."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ArtifactKind": "Evidence",
+        "Title": "Blazor browser and PWA validation evidence",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from the non-mutating validation step using runtime, browser, screenshot, and console tools.",
+        "AllowedFutureUsageSummary": "Reusable for acceptance, repair routing, and future regression comparison.",
+        "ReviewSummary": "Contains screenshot path, console proof with no active JavaScript/runtime errors, interactive workflow assertions, build/test proof, PWA manifest/service-worker/offline readiness findings, and any feasible-limit notes."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ArtifactKind": "Evidence",
+        "Title": "Blazor runtime evidence pack",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from runtime, browser, screenshot, console, and PWA validation checks.",
+        "AllowedFutureUsageSummary": "Reusable for acceptance, repair routing, and future regression comparison.",
+        "ReviewSummary": "Runtime URL, screenshot, console proof, workflow checks, manifest status, and offline readiness findings are explicit."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ArtifactKind": "Brief",
+        "Title": "Validation self-review summary",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared after validation from browser evidence, build/test output, and acceptance decisions.",
+        "AllowedFutureUsageSummary": "Reusable for final result recording, repair routing, and future validation planning.",
+        "ReviewSummary": "Accepted checks, rejected checks, screenshot evidence references, rerun conditions, and validation confidence are explicit."
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "ArtifactKind": "Evidence",
+        "Title": "Run evidence index",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded from implementation and validation artifacts after the run was accepted.",
+        "AllowedFutureUsageSummary": "Reusable for project history, reruns, governance audit, and downstream writeback.",
+        "ReviewSummary": "Evidence paths, validation state, acceptance outcome, and known follow-up items are explicit."
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "ArtifactKind": "Brief",
+        "Title": "Project-structure result writeback summary",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from the final result writeback target, evidence index, and accepted run state.",
+        "AllowedFutureUsageSummary": "Reusable for project-structure traceability, reruns, and process governance audit.",
+        "ReviewSummary": "Writeback target, screenshot evidence links, accepted status, and ownership are explicit."
+      },
+      {
+        "StepKey": "record-blazor-results",
+        "ArtifactKind": "Evidence",
+        "Title": "Blazor project-structure writeback receipt",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Recorded by the result step after validation accepted the run.",
+        "AllowedFutureUsageSummary": "Reusable for project timeline, reruns, and process governance audit.",
+        "ReviewSummary": "Links the run evidence index, screenshot, console proof, build/test proof, acceptance state, and project-structure writeback target."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "resolve-blazor-contract",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Contract resolution may inspect project structure and write process artifacts without implementing code."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "ExpectedTargetScope": "ExternalProductTargetMutable",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "MutateProductTarget",
+          "RunValidation",
+          "LaunchRuntime",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Implementation is the owned mutation step for the requested Blazor WASM PWA product target."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "LaunchRuntime",
+          "CaptureRuntimeProof",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Validation captures browser/runtime proof without mutating product code."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "validate-blazor-runtime",
+        "BlockCause": "RuntimeEvidence",
+        "ExpectedRecoveryOptions": [
+          "RerunValidation",
+          "RepairImplementation"
+        ],
+        "Diagnostic": "Validation failed: browser console proof or interactive workflow assertion failed during Blazor WASM PWA validation."
+      }
+    ]
+  }
+]
+

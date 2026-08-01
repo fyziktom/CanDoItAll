@@ -1,0 +1,234 @@
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
+
+namespace CanDoItAll.Modules.Workbench.Pages;
+
+public partial class ProjectStructurePage
+{
+    private const string ProjectChildNodePrefix = "project-child:";
+
+    private ProjectStructureProjectHierarchyDialogState? projectHierarchyDialog;
+
+    private async Task OpenAddSubprojectDialogAsync(ProjectStructureNode node)
+        => await OpenProjectHierarchyDialogAsync(node, ProjectStructureProjectHierarchyDialogMode.AddSubproject);
+
+    private async Task OpenReconnectSubprojectDialogAsync(ProjectStructureNode node)
+        => await OpenProjectHierarchyDialogAsync(node, ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject);
+
+    private void CloseProjectHierarchyDialog()
+        => projectHierarchyDialog = null;
+
+    private void HandleProjectHierarchySelectionChanged(ChangeEventArgs args)
+    {
+        if (projectHierarchyDialog is null)
+        {
+            return;
+        }
+
+        var selectedProjectId = Guid.TryParse(args.Value?.ToString(), out var parsedProjectId)
+            ? parsedProjectId
+            : (Guid?)null;
+        projectHierarchyDialog = projectHierarchyDialog with
+        {
+            SelectedProjectId = selectedProjectId,
+            Error = string.Empty
+        };
+    }
+
+    private async Task ExecuteProjectHierarchyCommandAsync()
+    {
+        if (projectHierarchyDialog is null)
+        {
+            return;
+        }
+
+        if (!projectHierarchyDialog.SelectedProjectId.HasValue)
+        {
+            projectHierarchyDialog = projectHierarchyDialog with { Error = "Select a project before continuing." };
+            return;
+        }
+
+        var selectedProject = projectHierarchyDialog.AvailableProjects
+            .FirstOrDefault(project => project.Id == projectHierarchyDialog.SelectedProjectId.Value);
+        var result = projectHierarchyDialog.Mode switch
+        {
+            ProjectStructureProjectHierarchyDialogMode.AddSubproject => await ProjectsService.AddSubprojectAsync(
+                projectHierarchyDialog.SubjectProjectId,
+                projectHierarchyDialog.SelectedProjectId.Value),
+            ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject when projectHierarchyDialog.CurrentParentProjectId.HasValue =>
+                await ProjectsService.ReconnectSubprojectAsync(
+                    projectHierarchyDialog.SubjectProjectId,
+                    projectHierarchyDialog.CurrentParentProjectId.Value,
+                    projectHierarchyDialog.SelectedProjectId.Value),
+            _ => Result.Failure(Error.Validation("The selected hierarchy action is no longer valid."))
+        };
+        if (result.IsFailure)
+        {
+            projectHierarchyDialog = projectHierarchyDialog with
+            {
+                Error = result.Errors.FirstOrDefault()?.Message ?? "The project hierarchy could not be updated."
+            };
+            return;
+        }
+
+        var selectionNodeId = projectHierarchyDialog.Mode == ProjectStructureProjectHierarchyDialogMode.AddSubproject
+            ? BuildProjectChildNodeKey(projectHierarchyDialog.SelectedProjectId.Value)
+            : BuildProjectChildNodeKey(projectHierarchyDialog.SubjectProjectId);
+        var successMessage = projectHierarchyDialog.Mode switch
+        {
+            ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
+                $"{selectedProject?.Name ?? "The selected project"} is now visible under {projectHierarchyDialog.SubjectProjectTitle}.",
+            _ =>
+                $"{projectHierarchyDialog.SubjectProjectTitle} now belongs to {selectedProject?.Name ?? "the selected parent project"}."
+        };
+
+        projectHierarchyDialog = null;
+        await ReloadSurfaceAsync(selectionNodeId);
+        workflowFeedback = successMessage;
+        workflowFeedbackTone = "mint";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OpenProjectStructureInNewTabAsync(ProjectStructureNode node)
+    {
+        if (!node.RelatedProjectId.HasValue || node.ProjectRole == ProjectStructureProjectRole.ActiveProject)
+        {
+            workflowFeedback = "The selected node does not point to another project structure.";
+            workflowFeedbackTone = "warn";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await OpenArtifactInNewTabAsync($"/projects/{node.RelatedProjectId.Value}/structure");
+    }
+
+    private async Task OpenProjectHierarchyDialogAsync(
+        ProjectStructureNode node,
+        ProjectStructureProjectHierarchyDialogMode mode)
+    {
+        CloseQuickActionDialog();
+        var subjectProjectId = node.RelatedProjectId ?? ProjectId;
+        Guid? currentParentProjectId = null;
+        var currentParentProjectTitle = string.Empty;
+
+        if (mode == ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject)
+        {
+            currentParentProjectId = ResolveVisibleProjectParentId(node);
+            if (!currentParentProjectId.HasValue)
+            {
+                workflowFeedback = "The selected project does not expose a visible parent to reconnect from this canvas.";
+                workflowFeedbackTone = "warn";
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            currentParentProjectTitle = ResolveProjectTitle(currentParentProjectId.Value);
+        }
+
+        projectHierarchyDialog = await BuildProjectHierarchyDialogStateAsync(
+            mode,
+            subjectProjectId,
+            node.Title,
+            currentParentProjectId,
+            currentParentProjectTitle,
+            null);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<ProjectStructureProjectHierarchyDialogState> BuildProjectHierarchyDialogStateAsync(
+        ProjectStructureProjectHierarchyDialogMode mode,
+        Guid subjectProjectId,
+        string subjectProjectTitle,
+        Guid? currentParentProjectId,
+        string currentParentProjectTitle,
+        Guid? selectedProjectId)
+    {
+        var availableProjects = await LoadProjectHierarchyAvailableProjectsAsync(mode, subjectProjectId, currentParentProjectId);
+        if (selectedProjectId.HasValue &&
+            availableProjects.All(project => project.Id != selectedProjectId.Value))
+        {
+            selectedProjectId = null;
+        }
+
+        return new ProjectStructureProjectHierarchyDialogState(
+            mode,
+            subjectProjectId,
+            subjectProjectTitle,
+            currentParentProjectId,
+            currentParentProjectTitle,
+            availableProjects,
+            selectedProjectId,
+            string.Empty);
+    }
+
+    private async Task<ProjectStructureProjectHierarchyDialogState> RefreshProjectHierarchyDialogAsync(
+        ProjectStructureProjectHierarchyDialogState dialogState,
+        Guid? selectedProjectId = null)
+        => await BuildProjectHierarchyDialogStateAsync(
+            dialogState.Mode,
+            dialogState.SubjectProjectId,
+            dialogState.SubjectProjectTitle,
+            dialogState.CurrentParentProjectId,
+            dialogState.CurrentParentProjectTitle,
+            selectedProjectId ?? dialogState.SelectedProjectId);
+
+    private async Task<IReadOnlyList<ProjectSummary>> LoadProjectHierarchyAvailableProjectsAsync(
+        ProjectStructureProjectHierarchyDialogMode mode,
+        Guid subjectProjectId,
+        Guid? currentParentProjectId)
+    {
+        var projects = await ProjectsService.ListAsync();
+        var hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+
+        return projects
+            .Where(project => CanSelectHierarchyProject(project.Id, mode, subjectProjectId, currentParentProjectId, hierarchyLinks))
+            .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(project => project.Id)
+            .ToList();
+    }
+
+    private static bool CanSelectHierarchyProject(
+        Guid candidateProjectId,
+        ProjectStructureProjectHierarchyDialogMode mode,
+        Guid subjectProjectId,
+        Guid? currentParentProjectId,
+        IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks)
+    {
+        return mode switch
+        {
+            ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
+                ProjectStructureProjectHierarchySelectionPolicy.CanAttachProjectAsSubproject(
+                    subjectProjectId,
+                    candidateProjectId,
+                    hierarchyLinks),
+            ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject =>
+                ProjectStructureProjectHierarchySelectionPolicy.CanReconnectProjectToParent(
+                    subjectProjectId,
+                    candidateProjectId,
+                    currentParentProjectId,
+                    hierarchyLinks),
+            _ => false
+        };
+    }
+
+    private Guid? ResolveVisibleProjectParentId(ProjectStructureNode node)
+    {
+        if (surface is null || string.IsNullOrWhiteSpace(node.ParentId))
+        {
+            return null;
+        }
+
+        return surface.Nodes
+            .FirstOrDefault(candidate => string.Equals(candidate.Id, node.ParentId, StringComparison.Ordinal))
+            ?.RelatedProjectId;
+    }
+
+    private string ResolveProjectTitle(Guid projectId)
+        => projectHierarchyDialog?.AvailableProjects.FirstOrDefault(project => project.Id == projectId)?.Name ??
+           surface?.Nodes.FirstOrDefault(node => node.RelatedProjectId == projectId)?.Title ??
+           "Selected project";
+
+    private static string BuildProjectChildNodeKey(Guid projectId)
+        => $"{ProjectChildNodePrefix}{projectId}";
+}

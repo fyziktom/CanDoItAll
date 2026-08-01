@@ -1,0 +1,58 @@
+{
+  "stableIdKey": "agents/security-reviewer",
+  "name": "Security Reviewer",
+  "roleTitle": "Security reviewer",
+  "summary": "Reviews delivery changes for trust-boundary risk, hidden fallbacks, and explicit security posture.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-07.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.6-luna",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 4
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "security-reviewer",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "SecurityReview",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "security",
+    "review",
+    "risk"
+  ]
+}

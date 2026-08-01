@@ -1,0 +1,125 @@
+@if (Opportunities.Count > 0)
+{
+    <Grid Gap="LayoutGap.Medium"
+          ColumnsLg="2"
+          data-testid="crmhr-opportunity-board">
+        @foreach (var opportunity in Opportunities)
+        {
+            <Stack GapScale="LayoutGap.XSmall"
+                   @key="opportunity.Id"
+                   data-testid="@($"crmhr-opportunity-column-{opportunity.Stage.ToString().ToLowerInvariant()}")">
+                <button type="button"
+                        class="w-full text-left"
+                        aria-label="@($"Open {opportunity.Title}")"
+                        @onclick="@(() => SelectOpportunity.InvokeAsync(opportunity.Id))"
+                        data-testid="@($"crmhr-opportunity-card-{opportunity.Id:N}")">
+                    <PanelCard Soft="@(SelectedOpportunityId == opportunity.Id)"
+                               Class="h-full">
+                        <Stack GapScale="LayoutGap.Small">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween">
+                                <Stack GapScale="LayoutGap.XSmall"
+                                       Class="min-w-0">
+                                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                                               Value="@opportunity.Title" />
+                                    <SmallText Text="@($"{opportunity.Source} · {opportunity.OwnerDisplayName}")" />
+                                </Stack>
+                                <StatusBadge Tone="@ResolveStageTone(opportunity.Stage)"
+                                             Text="@opportunity.Stage.ToString()" />
+                            </Split>
+
+                            <Cluster Gap="LayoutGap.XSmall"
+                                     Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="neutral"
+                                             Text="@ResolveValueLabel(opportunity)" />
+                                <StatusBadge Tone="info"
+                                             Text="@($"{opportunity.ProbabilityPercent}% probability")" />
+                                @if (opportunity.ExpectedCloseOn.HasValue)
+                                {
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@($"Close {opportunity.ExpectedCloseOn:yyyy-MM-dd}")" />
+                                }
+                            </Cluster>
+
+                            @if (!string.IsNullOrWhiteSpace(opportunity.DeliveryUnitDisplayName))
+                            {
+                                <SmallText Text="@($"Delivery: {opportunity.DeliveryUnitDisplayName}")" />
+                            }
+
+                            <SmallText Text="@($"Updated {opportunity.UpdatedAtUtc.LocalDateTime:g}")" />
+                        </Stack>
+                    </PanelCard>
+                </button>
+
+                @if (CanAdvance(opportunity.Stage))
+                {
+                    <Button Text="@($"Advance to {ResolveNextStage(opportunity.Stage)}")"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="@(() => AdvanceOpportunityStage.InvokeAsync(opportunity.Id))"
+                            data-testid="@($"crmhr-opportunity-advance-{opportunity.Id:N}")" />
+                }
+            </Stack>
+        }
+    </Grid>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<OpportunityPipelineItem> Opportunities { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedOpportunityId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> SelectOpportunity { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> AdvanceOpportunityStage { get; set; }
+
+    private static bool CanAdvance(OpportunityStage stage)
+    {
+        return stage is not OpportunityStage.Won and not OpportunityStage.Lost;
+    }
+
+    private static OpportunityStage ResolveNextStage(OpportunityStage stage)
+    {
+        return stage switch
+        {
+            OpportunityStage.Identified => OpportunityStage.Qualified,
+            OpportunityStage.Qualified => OpportunityStage.Proposal,
+            OpportunityStage.Proposal => OpportunityStage.Negotiation,
+            OpportunityStage.Negotiation => OpportunityStage.Won,
+            _ => stage
+        };
+    }
+
+    private static string ResolveStageTone(OpportunityStage stage)
+    {
+        return stage switch
+        {
+            OpportunityStage.Identified => "neutral",
+            OpportunityStage.Qualified => "info",
+            OpportunityStage.Proposal => "warning",
+            OpportunityStage.Negotiation => "warning",
+            OpportunityStage.Won => "success",
+            OpportunityStage.Lost => "danger",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveValueLabel(OpportunityPipelineItem opportunity)
+    {
+        if (!opportunity.Amount.HasValue)
+        {
+            return "Value not set";
+        }
+
+        var currencyCode = string.IsNullOrWhiteSpace(opportunity.CurrencyCode)
+            ? "Currency missing"
+            : opportunity.CurrencyCode.Trim().ToUpperInvariant();
+        return $"{currencyCode} {opportunity.Amount.Value:N2}";
+    }
+}

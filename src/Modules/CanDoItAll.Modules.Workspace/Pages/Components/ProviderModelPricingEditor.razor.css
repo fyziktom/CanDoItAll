@@ -1,0 +1,52 @@
+@media (min-width: 1200px) {
+    .provider-model-pricing-editor {
+        width: 100%;
+    }
+
+    .provider-pricing-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.22fr);
+        gap: 1rem;
+        align-items: start;
+        width: 100%;
+    }
+
+    .provider-pricing-main,
+    .provider-pricing-table,
+    .provider-pricing-table table {
+        width: 100%;
+    }
+
+    .provider-pricing-summary {
+        border: 1px solid var(--cda-border-subtle, #dbe3ef);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        background: color-mix(in srgb, var(--cda-surface, #fff) 92%, var(--cda-info, #0ea5e9));
+    }
+
+    .provider-pricing-summary dl {
+        display: grid;
+        gap: 0.85rem;
+        margin: 0.9rem 0 0;
+    }
+
+    .provider-pricing-summary div {
+        display: grid;
+        gap: 0.15rem;
+    }
+
+    .provider-pricing-summary dt {
+        color: var(--cda-text-muted, #475569);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+    }
+
+    .provider-pricing-summary dd {
+        margin: 0;
+        color: var(--cda-text, #0f172a);
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+}

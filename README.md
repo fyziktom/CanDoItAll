@@ -1,101 +1,176 @@
 # CanDoItAll
 
-CanDoItAll is a modular .NET 10 Blazor Web App for managing project delivery work in one local workspace: projects, resources, prompts, validation runs, test evidence, workbench tabs, activity history, automation visibility, and a development-sidecar manager for watch readiness, capsule coverage, and tuning requests.
+[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![License](https://img.shields.io/badge/license-MIT--derived%20with%20website%20link-blue.svg)](LICENSE)
+
+CanDoItAll is a local-first .NET 10 Blazor application for governed project delivery,
+durable process execution, workforce coordination, and AI-agent automation. Product
+information is available at [aicandoitall.com](https://aicandoitall.com); this repository
+focuses on the implementation and its engineering contracts.
+
+## Ownership
+
+This repository owns:
+
+- the Blazor host, HTTP API, application composition, and product modules
+- project, workflow, process, CRM/HR, plugin, Memory, and automation behavior
+- provider-neutral AgentFramework contracts and Microsoft Agent Framework adapters
+- PostgreSQL persistence, migrations, runtime templates, tests, and repository tooling
+
+This repository does not own:
+
+- development MCP servers from [CanDoItAll.Mcp](https://github.com/fyziktom/CanDoItAll.Mcp)
+- shared Blazor components from [CanDoItAll.Components](https://github.com/fyziktom/CanDoItAll.Components)
+- family standards and reusable Codex assets from [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo)
+- native Cognitive Memory from [CanDoItAll.CognitiveMemory](https://github.com/fyziktom/CanDoItAll.CognitiveMemory)
+
+## Entry Points
+
+| Entry point | Responsibility |
+|---|---|
+| [`CanDoItAll.Web`](src/App/CanDoItAll.Web/README.md) | Blazor host, HTTP API, OpenAPI, and runtime endpoints |
+| [`CanDoItAll.Composition`](src/App/CanDoItAll.Composition/README.md) | Dependency injection and application runtime composition |
+| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules |
+| [`src/Processes`](src/Processes/README.md) | Durable process model, execution, projections, and persistence |
+| [`src/Memory`](src/Memory/README.md) | Provider-neutral Memory contracts, drivers, and persistence |
+| [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
+| [`Templates`](Templates/README.md) | Repository-owned runtime seed and template packs |
+
+`CanDoItAll.slnx` is the canonical solution.
 
 ## Requirements
 
-- .NET 10 SDK
-- Windows PowerShell for the Playwright browser install script
-- `git` if you want to install the portable Codex skill pack including public sibling skills from `dotnet/skills`
+- the .NET SDK selected by [`global.json`](global.json)
+- PostgreSQL 16 or a compatible supported server
+- Docker Desktop or another Compose v2 runtime when using the development database service
+- Node.js and npm when rebuilding application Tailwind output
+- PowerShell 7 for repository automation; the Windows installer and generated launcher
+  remain compatible with Windows PowerShell 5.1
 
-## Codex Skills
+## Install The Windows Web App
 
-This repo contains a portable Codex skill pack under [codex/README.md](C:/repositories/CanDoItAll/codex/README.md).
-
-Install or refresh the CanDoItAll custom skills plus the required public sibling skills with:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
-```
-
-## Run the Web App
-
-From the repo root:
+The Windows installer publishes a self-contained web app and prepares a dedicated
+PostgreSQL database for that installation:
 
 ```powershell
-dotnet run --project src/CanDoItAll.Web
+& .\tools\install\Install-CanDoItAllWebApp.ps1 -StartAfterInstall
 ```
 
-Notes:
+When a working Linux Docker engine is available, database setup uses the isolated
+`candoitall-webapp-db` container and `candoitall-webapp-db-data` volume on
+`127.0.0.1:55432`. This is one installer-managed container/volume resource set, not a
+second Compose project. If Docker is unavailable, the installer downloads the pinned
+Windows x64 PostgreSQL 16 archive from EDB and runs a per-user native cluster beneath a
+short local, non-UNC install root. Both paths create the same `candoitall` database and
+non-superuser application role; the launcher starts the selected backend and supplies the
+exact connection settings to the app. Generated passwords are protected for the current
+Windows user and are not stored in the repository or install manifest.
 
-- The app uses Interactive Server rendering.
-- In development it exposes the runtime readiness probe at `/_dev/runtime`.
-- If no explicit `Database:Provider` / `Database:ConnectionString` override is supplied, the app resolves its active database through a control plane rooted at `%LOCALAPPDATA%\CanDoItAll\control-plane` by default.
-- On first run the app onboards a legacy SQLite database from [src/CanDoItAll.Web/.artifacts/workspace/candoitall.db](C:/repositories/CanDoItAll/src/CanDoItAll.Web/.artifacts/workspace/candoitall.db) when present; otherwise it provisions a managed SQLite profile under the control-plane root.
-
-## Run the Development Manager
-
-From the repo root:
+Database setup can also be repaired or rerun independently:
 
 ```powershell
-dotnet run --project tools/CanDoItAll.Manager
+& .\tools\install\Install-CanDoItAllWebAppDatabase.ps1
 ```
 
-Notes:
+The legacy `tools\Install-CanDoItAllWebApp.ps1` entry point remains as a compatibility
+wrapper. See [installed web app operations](docs/operations/installed-web-app.md) for
+paths, engine selection, lifecycle, and recovery details.
 
-- The manager listens on `http://127.0.0.1:6407` by default.
-- It supervises `dotnet watch` for the web app, starts it with the web app `https` launch profile, confirms readiness through `/_dev/runtime`, and exposes loopback-only watch, capsule, and tuning endpoints.
-- Capsule artifacts are written under `.artifacts/codex-capsules` at the repo root.
+## Development Quick Start
 
-## Test Commands
-
-Run the full build:
+Run from the repository root:
 
 ```powershell
-dotnet build CanDoItAll.slnx
+Copy-Item .env.example .env
+docker compose up -d --wait db
+dotnet restore .\CanDoItAll.slnx
+dotnet run --project .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
 ```
 
-Run the test layers individually:
+Open `http://localhost:5032`. The checked-in database credential is a loopback-only local
+development default; replace it before using a shared host.
+
+## Build And Test
 
 ```powershell
-dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj
-dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
-dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj
-dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj
+dotnet restore .\CanDoItAll.slnx
+dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
+dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+& .\tools\Validation\Test-Documentation.ps1
+& .\tools\install\tests\Test-CanDoItAllWebAppInstallScripts.ps1
 ```
 
-Playwright needs Chromium installed once per machine:
+The filtered command is the routine repository gate. Environment-dependent and extended
+test lanes are documented in [Testing](docs/testing.md).
+
+## Containers
+
+The base Compose model owns only the local **development** PostgreSQL dependency. It is
+not the installed web app database. It publishes PostgreSQL on loopback, stores
+authoritative development data in a named volume, and preserves that volume on normal
+shutdown.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\playwright.ps1 install chromium
+docker compose --env-file .env.example config --quiet
+docker compose up -d --wait db
+docker compose down
 ```
 
-## DotNet Watch MCP Notes
+See [container operations](docs/operations/containers.md) and
+[backup and restore](docs/operations/backup-and-restore.md).
 
-- The `CanDoItAll.Mcp.DotNetWatch` server now exposes a dedicated `watch` block on app status and wait results so an agent can see watcher PID vs runtime PID, pending generation state, and confirmed watch iteration.
-- Use `candoitall_app_wait` with `condition=WatchSettled` when you want a strong "safe to refresh" contract after a live edit instead of relying on raw log quiet periods alone.
-- Managed `build` and `test` operations now use isolated artifacts under `.mcp-state/artifacts/<operationId>/` so the live MCP server can validate its own projects without locking the default `bin/obj` graph.
+## Architecture
 
-## Local Data and Restore
+The main dependency direction is:
 
-- Workbench tab state is stored in browser local storage under `candoitall.workbench.session`.
-- The web app auto-creates its SQLite database on startup.
-- Database-profile metadata and DataProtection keys live in the control-plane root instead of the selected app database.
-- Search, activity, validation, test lab, and prompt factory data are persisted through the shared app database.
+```mermaid
+flowchart LR
+    Web["Web host and API"] --> Composition["Composition root"]
+    Composition --> Modules["Product modules"]
+    Modules --> Application["Application services"]
+    Application --> Domain["Domain contracts and runtime"]
+    Composition --> Adapters["MAF, providers, plugins, and integration adapters"]
+    Adapters --> Application
+    Composition --> Infrastructure["Infrastructure and PostgreSQL"]
+    Infrastructure --> Domain
+```
 
-## Configuration
+Start with:
 
-Useful defaults:
+- [Architecture overview](docs/architecture/overview.md)
+- [Internal communication](docs/architecture/internal-communication.md)
+- [Module map](docs/architecture/modules.md)
+- [Documentation index](docs/README.md)
 
-- Web app development manager base URL: `http://127.0.0.1:6407`
-- Development tuning mode is enabled in [src/CanDoItAll.Web/appsettings.Development.json](C:/repositories/CanDoItAll/src/CanDoItAll.Web/appsettings.Development.json)
-- Control-plane root defaults to `%LOCALAPPDATA%\CanDoItAll\control-plane` unless `ControlPlane:RootPath` is overridden
-- Explicit `Database:Provider` and `Database:ConnectionString` values still force a locked startup override for test and headless scenarios
+## Styling
 
-## Current Scope
+Application-specific Tailwind assets live under [`Tailwind`](Tailwind/README.md).
 
-The repo is internally beta-ready for the architecture package scope:
+```powershell
+npm install --prefix .\Tailwind
+npm run tailwind:build
+```
 
-- Workspace, providers, projects, resources, prompt gallery, prompt factory, validation center, test lab, activity, automation, and workbench surfaces are implemented.
-- The local manager covers watch supervision, readiness confirmation, capsule coverage, and development-only tuning requests.
-- Unit, integration, component, and Playwright smoke tests are in place.
+Shared component structure and styling belong to `CanDoItAll.Components`.
+
+## Packaging
+
+NuGet packaging and publishing are disabled for this repository. `Directory.Build.props`
+sets `IsPackable` to `false` for every project. Package metadata and release tooling will
+be introduced only with an explicit package contract and validation gate.
+
+The root npm package is private and exists only to run Tailwind commands.
+
+## License And Contributions
+
+This repository uses the
+[MIT-Derived License with CanDoItAll Website Link Requirement](LICENSE). Redistributions
+of the software or a substantial portion of it in source or binary form must include at
+least one link to [aicandoitall.com](https://aicandoitall.com). The
+[third-party notices](THIRD-PARTY-NOTICES.md) preserve the copyright and license terms
+for external material redistributed by the application.
+
+Code contributions are limited to partners approved by the maintainer. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and contact the `fyziktom` account on LinkedIn before
+opening a pull request.

@@ -1,0 +1,940 @@
+using Microsoft.Playwright;
+
+namespace CanDoItAll.Tests.Playwright;
+
+public sealed partial class AppSmokeTests
+{
+    [Fact]
+    public async Task Project_structure_canvas_feedback_palette_and_catalog_are_validated_in_browser()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback-bundle-visuals");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        await CreateProjectAsync(page, "Playwright Canvas Feedback Visuals", "Validation");
+        var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
+
+        await EnsureStructureToolboxWindowExpandedAsync(page);
+        await AssertToolboxSearchResultAsync(page, "computer", "Computer block");
+        await AssertToolboxSearchResultAsync(page, "router", "Router block");
+        await AssertToolboxSearchResultAsync(page, "wifi", "WiFi block");
+        await CaptureLocatorAsync(
+            page.GetByTestId("project-structure-toolbox-window"),
+            Path.Combine(artifactsDir, "01-toolbox-common-network-blocks.png"));
+
+        var pdfId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-file-pdf",
+            projectRootId,
+            projectRootId,
+            "Architecture proof PDF",
+            "docs/architecture",
+            "Validate the PDF palette mapping.",
+            uploadedFile: BuildUploadedFile(
+                "architecture-proof.pdf",
+                "application/pdf",
+                "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"));
+        var excelId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-file-excel",
+            projectRootId,
+            projectRootId,
+            "Validation workbook",
+            "reports",
+            "Validate the Excel palette mapping.",
+            uploadedFile: BuildUploadedFile(
+                "validation-workbook.csv",
+                "text/csv",
+                "name,status\nexports,ready"));
+        var deploymentId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-deployment",
+            projectRootId,
+            projectRootId,
+            "Blue rollout lane",
+            "Docker topology",
+            "Deployment blocks should stay blue-toned.");
+        var computerId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-computer",
+            projectRootId,
+            projectRootId,
+            "Operator workstation",
+            "Endpoint",
+            "Computer blocks should keep a neutral machine tone.");
+        var routerId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-router",
+            projectRootId,
+            projectRootId,
+            "Edge router",
+            "Gateway",
+            "Router blocks should use the shared network palette.");
+        var wifiId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-wifi",
+            projectRootId,
+            projectRootId,
+            "Warehouse WiFi",
+            "Coverage",
+            "WiFi blocks should be available in the common catalog.");
+
+        var pdfState = await ReadWorkbenchNodeStateAsync(page, pdfId);
+        var excelState = await ReadWorkbenchNodeStateAsync(page, excelId);
+        var deploymentState = await ReadWorkbenchNodeStateAsync(page, deploymentId);
+        var computerState = await ReadWorkbenchNodeStateAsync(page, computerId);
+        var routerState = await ReadWorkbenchNodeStateAsync(page, routerId);
+        var wifiState = await ReadWorkbenchNodeStateAsync(page, wifiId);
+
+        Assert.Equal("danger", pdfState.PaletteKey);
+        Assert.Equal("success", excelState.PaletteKey);
+        Assert.Equal("info", deploymentState.PaletteKey);
+        Assert.Equal("neutral", computerState.PaletteKey);
+        Assert.Equal("info", routerState.PaletteKey);
+        Assert.Equal("info", wifiState.PaletteKey);
+
+        var pdfAccent = await ReadNodeAccentColorAsync(page, pdfId);
+        var excelAccent = await ReadNodeAccentColorAsync(page, excelId);
+        var deploymentAccent = await ReadNodeAccentColorAsync(page, deploymentId);
+        var computerAccent = await ReadNodeAccentColorAsync(page, computerId);
+        var routerAccent = await ReadNodeAccentColorAsync(page, routerId);
+        var wifiAccent = await ReadNodeAccentColorAsync(page, wifiId);
+
+        Assert.NotEqual(pdfAccent, excelAccent);
+        Assert.NotEqual(pdfAccent, deploymentAccent);
+        Assert.NotEqual(pdfAccent, computerAccent);
+        Assert.NotEqual(excelAccent, computerAccent);
+        Assert.NotEqual(excelAccent, deploymentAccent);
+        Assert.Equal(deploymentAccent, routerAccent);
+        Assert.NotEqual(routerAccent, computerAccent);
+        Assert.NotEqual(wifiAccent, computerAccent);
+
+        await FocusCanvasNodeAsync(page, pdfId, 90);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "02-pdf-palette-surface.png"));
+
+        await FocusCanvasNodeAsync(page, excelId, 90);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "03-excel-palette-surface.png"));
+
+        await FocusCanvasNodeAsync(page, deploymentId, 90);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "04-deployment-palette-surface.png"));
+
+        await FocusCanvasNodeAsync(page, computerId, 90);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "05-computer-palette-surface.png"));
+
+        await FocusCanvasNodeAsync(page, routerId, 90);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "06-router-palette-surface.png"));
+
+        await FocusCanvasNodeAsync(page, wifiId, 90);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "07-wifi-palette-surface.png"));
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    public async Task Project_structure_canvas_feedback_note_copy_and_mutation_flows_are_validated_in_browser()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback-bundle-mutations");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        await CreateProjectAsync(page, "Playwright Canvas Feedback Mutations", "Validation");
+        await InstallCanvasClipboardStubAsync(page);
+        var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
+
+        var copyRootId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-router",
+            projectRootId,
+            projectRootId,
+            "Network hub",
+            "Gateway",
+            "Parent block for clipboard proofs.");
+        var copyChildId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-wifi",
+            copyRootId,
+            copyRootId,
+            "Office WiFi",
+            "Coverage",
+            "Wireless child block.");
+        var copyGrandchildId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-work-task",
+            copyChildId,
+            copyChildId,
+            "Survey AP layout",
+            "Networking",
+            "Capture the wireless layout proof.");
+
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(copyRootId));
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-selection-window");
+        var copyRootState = await ReadWorkbenchNodeStateAsync(page, copyRootId);
+        Assert.Contains("copy-id", copyRootState.AnnotationActionIds);
+        Assert.Contains("copy-subtree-ids", copyRootState.AnnotationActionIds);
+        await CaptureLocatorAsync(
+            page.GetByTestId("project-structure-selection-window"),
+            Path.Combine(artifactsDir, "01-selection-copy-actions.png"));
+
+        await ClickSelectionWindowActionAsync(page, "Copy id");
+        await WaitForCanvasClipboardTextAsync(page, copyRootId);
+
+        await ClickSelectionWindowActionAsync(page, "Copy tree ids");
+        await WaitForCanvasClipboardTextAsync(
+            page,
+            $"{BuildClipboardTreeEntry("router", "Network hub", copyRootId)}\n  {BuildClipboardTreeEntry("wifi", "Office WiFi", copyChildId)}\n    {BuildClipboardTreeEntry("task", "Survey AP layout", copyGrandchildId)}");
+
+        var mutableBlockId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-computer",
+            projectRootId,
+            projectRootId,
+            "Mutable delivery block",
+            "Release lane",
+            "This block will change type in the browser.");
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(mutableBlockId));
+        await ClickSelectionWindowActionAsync(page, "Change block");
+
+        var blockMutationDialog = page.GetByTestId("project-structure-block-mutation-dialog");
+        await blockMutationDialog.WaitForAsync();
+        await CaptureLocatorAsync(blockMutationDialog, Path.Combine(artifactsDir, "02-change-block-dialog.png"));
+        var blockMutationSelect = blockMutationDialog.Locator("[data-testid='project-structure-block-mutation-select']");
+        await blockMutationSelect.SelectOptionAsync("add-block-router");
+        Assert.Equal("add-block-router", await blockMutationSelect.InputValueAsync());
+        await blockMutationDialog
+            .GetByTestId("project-structure-block-mutation-submit")
+            .EvaluateAsync("button => button.click()");
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-testid=\"project-structure-block-mutation-dialog\"]')");
+
+        var changedBlock = await WaitForWorkbenchNodeStateAsync(
+            page,
+            mutableBlockId,
+            node => string.Equals(node.PaletteKey, "info", StringComparison.Ordinal) &&
+                string.Equals(node.Title, "Mutable delivery block", StringComparison.Ordinal),
+            "block changed to router");
+        await page.GetByTestId("project-structure-selection-badge-router-block")
+            .WaitForAsync();
+        Assert.Equal("info", changedBlock.PaletteKey);
+
+        await FocusCanvasRootAsync(page);
+        var noteEditor = await OpenInlineNoteEditorAsync(page);
+        await page.WaitForTimeoutAsync(120);
+        await noteEditor.ClickAsync();
+        const string noteTitle = "Site survey requires AP placement review across warehouse aisles";
+        const string noteBody = $"{noteTitle}\nCheck AP placement and cable drops";
+        await page.Keyboard.TypeAsync(noteTitle);
+        await page.Keyboard.PressAsync("Shift+Enter");
+        await page.Keyboard.TypeAsync("Check AP placement and cable drops");
+
+        var editorValue = NormalizeLineEndings(await noteEditor.InputValueAsync());
+        Assert.Equal(noteBody, editorValue);
+        await CaptureLocatorAsync(noteEditor, Path.Combine(artifactsDir, "03-multiline-note-editor.png"));
+
+        await noteEditor.PressAsync("Enter");
+        await page.WaitForFunctionAsync("() => !document.querySelector('.cw-note-editor__input')");
+
+        var noteId = (await WaitForCanvasFocusStateAsync(
+            page,
+            state => !string.IsNullOrWhiteSpace(state.SelectedId) &&
+                !state.SelectedId.StartsWith("project:", StringComparison.Ordinal),
+            "selected multiline note")).SelectedId!;
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            noteId,
+            node => node.IsInlineTextNode &&
+                string.Equals(node.Title, noteTitle, StringComparison.Ordinal) &&
+                string.Equals(NormalizeLineEndings(node.InlineText), noteBody, StringComparison.Ordinal),
+            "multiline note stored");
+
+        await FocusCanvasNodeAsync(page, noteId);
+        var noteBounds = await WaitForCanvasRenderedNodeBoundsAsync(page, noteId);
+        Assert.NotNull(noteBounds);
+        Assert.InRange(noteBounds!.Width, 300, 380);
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "04-inline-note-width.png"));
+
+        await ClickSelectionWindowActionAsync(page, "Convert");
+        blockMutationDialog = page.GetByTestId("project-structure-block-mutation-dialog");
+        await blockMutationDialog.WaitForAsync();
+        blockMutationSelect = blockMutationDialog.Locator("[data-testid='project-structure-block-mutation-select']");
+        await blockMutationSelect.SelectOptionAsync("add-work-task");
+        Assert.Equal("add-work-task", await blockMutationSelect.InputValueAsync());
+        await CaptureLocatorAsync(blockMutationDialog, Path.Combine(artifactsDir, "05-convert-note-dialog.png"));
+        await blockMutationDialog
+            .GetByTestId("project-structure-block-mutation-submit")
+            .EvaluateAsync("button => button.click()");
+        await page.WaitForFunctionAsync("() => !document.querySelector('[data-testid=\"project-structure-block-mutation-dialog\"]')");
+
+        var convertedNote = await WaitForWorkbenchNodeStateAsync(
+            page,
+            noteId,
+            node => !node.IsInlineTextNode &&
+                string.Equals(node.PaletteKey, "warning", StringComparison.Ordinal) &&
+                string.Equals(node.Title, noteTitle, StringComparison.Ordinal),
+            "note converted to task");
+        await page.GetByTestId("project-structure-selection-badge-task")
+            .WaitForAsync();
+        Assert.Equal("warning", convertedNote.PaletteKey);
+
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "06-mutation-results.png"));
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    public async Task Project_structure_canvas_copy_cut_paste_and_subproject_transfer_are_validated_in_browser()
+    {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "feedback-bundle-transfer");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        await CreateProjectAsync(page, "Playwright Canvas Feedback Transfer", "Validation");
+        await InstallCanvasClipboardStubAsync(page);
+        var projectRootId = await ReadNodeIdAsync(page, ".cw-node[data-node-id^='project:']");
+
+        var destinationBlockId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-task-flow",
+            projectRootId,
+            projectRootId,
+            "Clipboard destination",
+            "Delivery container",
+            "Copied and cut roots must become children of this node.");
+        var sourceBlockId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-block-task-flow",
+            projectRootId,
+            projectRootId,
+            "Network orchestration",
+            "Delivery flow",
+            "Parent subtree node for cut and paste.");
+        var movedTaskId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-work-task",
+            sourceBlockId,
+            sourceBlockId,
+            "Inventory network dependencies",
+            "Networking",
+            "Task child that should move with the subtree.");
+        var movedEvidenceId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-test-evidence",
+            movedTaskId,
+            movedTaskId,
+            "Store rack photo",
+            "Validation",
+            "Grandchild evidence node that should follow the subtree.");
+        var secondSourceId = await InvokeStructureCreateActionAsync(
+            page,
+            "add-work-task",
+            projectRootId,
+            projectRootId,
+            "Review rollback plan",
+            "Networking",
+            "Second selected root for the multi-node cut proof.");
+
+        await FocusCanvasRootAsync(page);
+        await SetCanvasZoomPercentAsync(page, 72);
+        await page.WaitForTimeoutAsync(250);
+
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(sourceBlockId));
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "01-before-copy-paste.png"));
+
+        await PressCanvasShortcutAsync(page, "Control+C");
+        Assert.Equal(string.Empty, await ReadCanvasClipboardTextAsync(page));
+        await AssertNativeDocumentCopyIsNotCapturedAsync(page);
+
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(destinationBlockId));
+        await PressCanvasShortcutAsync(page, "Control+V");
+
+        var copiedSourceBlockId = await FindDifferentNodeIdByTitleAsync(
+            page,
+            "Network orchestration",
+            sourceBlockId);
+        var copiedTaskId = await FindDifferentNodeIdByTitleAsync(
+            page,
+            "Inventory network dependencies",
+            movedTaskId);
+        var copiedEvidenceId = await FindDifferentNodeIdByTitleAsync(
+            page,
+            "Store rack photo",
+            movedEvidenceId);
+
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            copiedSourceBlockId,
+            node => string.Equals(node.ParentId, destinationBlockId, StringComparison.Ordinal),
+            "copied subtree root parented under the selected destination",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            copiedTaskId,
+            node => string.Equals(node.ParentId, copiedSourceBlockId, StringComparison.Ordinal),
+            "copied child parent remapped to the copied root",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            copiedEvidenceId,
+            node => string.Equals(node.ParentId, copiedTaskId, StringComparison.Ordinal),
+            "copied grandchild parent remapped to the copied child",
+            timeoutMs: 10_000);
+
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "02-after-copy-paste.png"));
+
+        await SelectCanvasNodesAsync(page, [sourceBlockId, secondSourceId], sourceBlockId);
+        await PressCanvasShortcutAsync(page, "Control+X");
+        Assert.Equal(string.Empty, await ReadCanvasClipboardTextAsync(page));
+
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(destinationBlockId));
+        await PressCanvasShortcutAsync(page, "Control+V");
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            sourceBlockId,
+            node => string.Equals(node.ParentId, destinationBlockId, StringComparison.Ordinal),
+            "first cut root parented under the selected destination",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            secondSourceId,
+            node => string.Equals(node.ParentId, destinationBlockId, StringComparison.Ordinal),
+            "second cut root parented under the selected destination",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            movedTaskId,
+            node => string.Equals(node.ParentId, sourceBlockId, StringComparison.Ordinal),
+            "cut descendant retained its existing parent",
+            timeoutMs: 10_000);
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            movedEvidenceId,
+            node => string.Equals(node.ParentId, movedTaskId, StringComparison.Ordinal),
+            "cut grandchild retained its existing parent",
+            timeoutMs: 10_000);
+
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "03-after-multi-cut-paste.png"));
+
+        await EnsureCanvasSelectionAsync(page, SelectorForNodeId(sourceBlockId));
+        await ClickSelectionWindowActionAsync(page, "To subproject");
+
+        var subprojectTransferDialog = page.GetByTestId("project-structure-subproject-transfer-dialog");
+        await subprojectTransferDialog.WaitForAsync();
+        const string subprojectName = "Network extraction subproject";
+        await subprojectTransferDialog
+            .GetByTestId("project-structure-subproject-transfer-name")
+            .FillAsync(subprojectName);
+        await CaptureLocatorAsync(subprojectTransferDialog, Path.Combine(artifactsDir, "04-subproject-transfer-dialog.png"));
+        await subprojectTransferDialog
+            .GetByTestId("project-structure-subproject-transfer-submit")
+            .EvaluateAsync("button => button.click()");
+
+        await WaitForSceneSnapshotAsync(
+            page,
+            snapshot => snapshot.Nodes.Any(node => string.Equals(node.Title, subprojectName, StringComparison.Ordinal)),
+            "subproject node appears after descendant transfer",
+            timeoutMs: 10_000);
+
+        await WaitForWorkbenchNodeMissingAsync(page, movedTaskId);
+        await WaitForWorkbenchNodeMissingAsync(page, movedEvidenceId);
+
+        var subprojectNodeId = await FindNodeIdByTitleAsync(page, subprojectName);
+        Assert.StartsWith("project-child:", subprojectNodeId, StringComparison.Ordinal);
+        var subprojectId = subprojectNodeId["project-child:".Length..];
+
+        await page.GotoAsync(ToAbsoluteRoute($"/projects/{subprojectId}/structure"));
+        await page.WaitForURLAsync("**/projects/*/structure");
+        await page.WaitForSelectorAsync("[data-testid='project-structure-canvas-loaded']");
+
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            movedTaskId,
+            node => string.Equals(node.Title, "Inventory network dependencies", StringComparison.Ordinal),
+            "moved task is present in the new subproject");
+        await WaitForWorkbenchNodeStateAsync(
+            page,
+            movedEvidenceId,
+            node => string.Equals(node.Title, "Store rack photo", StringComparison.Ordinal),
+            "moved evidence is present in the new subproject");
+        await WaitForWorkbenchNodeMissingAsync(page, sourceBlockId);
+
+        await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "05-subproject-route.png"));
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    private async Task AssertToolboxSearchResultAsync(IPage page, string query, string label)
+    {
+        await EnsureStructureToolboxWindowExpandedAsync(page);
+        var search = page.Locator("[data-testid='project-structure-standard-blocks-toolbox'] .project-structure-toolbox__search");
+        await search.WaitForAsync();
+        await search.FillAsync(query);
+        await page.GetByTestId("project-structure-toolbox-window")
+            .GetByText(label, new LocatorGetByTextOptions { Exact = true })
+            .WaitForAsync();
+    }
+
+    private async Task ClickSelectionWindowActionAsync(IPage page, string label)
+    {
+        await EnsureFloatingWindowExpandedAsync(page, "project-structure-selection-window");
+        var button = page.GetByTestId("project-structure-selection-window")
+            .GetByRole(AriaRole.Button, new() { Name = label, Exact = true });
+        await button.WaitForAsync();
+        await button.EvaluateAsync("button => button.click()");
+    }
+
+    private async Task PressCanvasShortcutAsync(IPage page, string shortcut)
+    {
+        await page.EvaluateAsync(
+            @"() => {
+                const host = document.querySelector('.cw-canvas-host');
+                if (host instanceof HTMLElement) {
+                    host.focus();
+                }
+            }");
+        await page.Keyboard.PressAsync(shortcut);
+        await page.WaitForTimeoutAsync(280);
+    }
+
+    private static async Task FocusCanvasNodeAsync(IPage page, string nodeId, int zoomPercent = 100)
+    {
+        await page.EvaluateAsync(
+            @"args => {
+                const host = document.querySelector('.cw-canvas-host');
+                const runtime = window.CanDoItAll?.canvasWorkbench;
+                if (!host || !runtime?.focusNode || !runtime?.setZoomPercent) {
+                    return;
+                }
+
+                runtime.focusNode(host, args.nodeId);
+                runtime.setZoomPercent(host, args.zoomPercent);
+            }",
+            new
+            {
+                nodeId,
+                zoomPercent
+            });
+        await page.WaitForTimeoutAsync(250);
+    }
+
+    private static async Task<string> FindDifferentNodeIdByTitleAsync(
+        IPage page,
+        string title,
+        string excludedNodeId,
+        int timeoutMs = 10_000)
+    {
+        var attempts = Math.Max(1, timeoutMs / 120);
+        string? nodeId = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            nodeId = await page.EvaluateAsync<string?>(
+                @"request => {
+                const host = document.querySelector('.cw-canvas-host');
+                const nodes = host?.__canvasWorkbenchState?.surface?.nodes || [];
+                const match = nodes.find(node =>
+                    node?.id !== request.excludedNodeId &&
+                    [node?.title, node?.inlineText, node?.leadText].some(candidate => candidate === request.title));
+                return match?.id || null;
+            }",
+                new
+                {
+                    title,
+                    excludedNodeId
+                });
+            if (!string.IsNullOrWhiteSpace(nodeId))
+            {
+                return nodeId;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException(
+            $"Timed out waiting for a second node titled '{title}' that differs from '{excludedNodeId}'.");
+    }
+
+    private static async Task AssertNativeDocumentCopyIsNotCapturedAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            @"() => {
+                document.querySelector('[data-native-copy-probe]')?.remove();
+                const probe = document.createElement('span');
+                probe.dataset.nativeCopyProbe = 'true';
+                probe.textContent = 'native document selection';
+                document.body.appendChild(probe);
+
+                const range = document.createRange();
+                range.selectNodeContents(probe);
+                const selection = window.getSelection();
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+
+                window.__nativeDocumentCopyObserved = false;
+                document.addEventListener('copy', event => {
+                    window.__nativeDocumentCopyObserved = !event.defaultPrevented;
+                }, { once: true });
+                document.body.tabIndex = -1;
+                document.body.focus();
+            }");
+
+        await page.Keyboard.PressAsync("Control+C");
+        var nativeCopyObserved = await page.EvaluateAsync<bool>(
+            "() => window.__nativeDocumentCopyObserved === true");
+        Assert.True(nativeCopyObserved, "Expected Ctrl+C outside the focused canvas to retain native browser copy behavior.");
+        await page.EvaluateAsync(
+            @"() => {
+                window.getSelection()?.removeAllRanges();
+                document.querySelector('[data-native-copy-probe]')?.remove();
+                document.body.removeAttribute('tabindex');
+            }");
+    }
+
+    private static async Task InstallCanvasClipboardStubAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            @"() => {
+                window.__feedbackBundleClipboard = '';
+                window.__canvasClipboardWrite = async value => {
+                    window.__feedbackBundleClipboard = value;
+                };
+                window.__canvasClipboardRead = async () => window.__feedbackBundleClipboard || '';
+
+                const clipboard = {
+                    writeText: async value => {
+                        window.__feedbackBundleClipboard = value;
+                    },
+                    readText: async () => window.__feedbackBundleClipboard || ''
+                };
+
+                try {
+                    Object.defineProperty(navigator, 'clipboard', {
+                        configurable: true,
+                        value: clipboard
+                    });
+                } catch {
+                    navigator.clipboard = clipboard;
+                }
+            }");
+    }
+
+    private static async Task<string> ReadCanvasClipboardTextAsync(IPage page)
+    {
+        var value = await page.EvaluateAsync<string?>("() => window.__feedbackBundleClipboard || ''");
+        return NormalizeLineEndings(value ?? string.Empty);
+    }
+
+    private static async Task<string> WaitForCanvasClipboardTextAsync(IPage page, string expected, int timeoutMs = 4_000)
+    {
+        var normalizedExpected = NormalizeLineEndings(expected);
+        var attempts = Math.Max(1, timeoutMs / 120);
+        string? lastValue = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            lastValue = await ReadCanvasClipboardTextAsync(page);
+            if (string.Equals(lastValue, normalizedExpected, StringComparison.Ordinal))
+            {
+                return lastValue;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException(
+            $"Timed out waiting for clipboard text '{normalizedExpected}'. Last value was '{lastValue ?? string.Empty}'.");
+    }
+
+    private static string BuildClipboardTreeEntry(string typeToken, string title, string nodeId)
+    {
+        return $"{typeToken}_{SanitizeClipboardTitle(title)}:{ExtractClipboardNodeHash(nodeId)}";
+    }
+
+    private static string SanitizeClipboardTitle(string title)
+    {
+        var builder = new System.Text.StringBuilder(title.Length);
+        var previousWasSeparator = false;
+        foreach (var character in title.Trim())
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(character);
+                previousWasSeparator = false;
+                continue;
+            }
+
+            if (builder.Length == 0 || previousWasSeparator)
+            {
+                continue;
+            }
+
+            builder.Append('-');
+            previousWasSeparator = true;
+        }
+
+        while (builder.Length > 0 && builder[^1] == '-')
+        {
+            builder.Length--;
+        }
+
+        return builder.Length == 0
+            ? "Untitled"
+            : builder.ToString();
+    }
+
+    private static string ExtractClipboardNodeHash(string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return string.Empty;
+        }
+
+        var separatorIndex = nodeId.LastIndexOf(':');
+        return separatorIndex >= 0 && separatorIndex < nodeId.Length - 1
+            ? nodeId[(separatorIndex + 1)..]
+            : nodeId;
+    }
+
+    private static async Task<string> ReadNodeAccentColorAsync(IPage page, string nodeId)
+    {
+        var accentColor = await page.EvaluateAsync<string?>(
+            @"requestedNodeId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const node = host?.__canvasWorkbenchState?.lookups?.byId?.get(requestedNodeId);
+                const resolveAccentColor = window.CanDoItAll?.canvasWorkbenchModule?.resolveNodeAccentColor;
+                if (!node || typeof resolveAccentColor !== 'function') {
+                    return null;
+                }
+
+                return resolveAccentColor(node) || null;
+            }",
+            nodeId);
+        Assert.False(string.IsNullOrWhiteSpace(accentColor), $"Expected an accent color for node '{nodeId}'.");
+        return accentColor!;
+    }
+
+    private static async Task<CanvasNodeDomPaletteSnapshot> ReadNodeDomPaletteAsync(IPage page, string nodeId)
+    {
+        await page.Locator(SelectorForNodeId(nodeId)).First.WaitForAsync();
+        var snapshot = await page.EvaluateAsync<CanvasNodeDomPaletteSnapshot?>(
+            @"requestedNodeId => {
+                const node = Array.from(document.querySelectorAll('.cw-node'))
+                    .find(candidate => candidate instanceof HTMLElement && candidate.dataset.nodeId === requestedNodeId);
+                if (!(node instanceof HTMLElement)) {
+                    return null;
+                }
+
+                const styles = getComputedStyle(node);
+                return {
+                    paletteKey: node.dataset.palette || '',
+                    surfaceBackground: styles.getPropertyValue('--cw-node-surface-bg') || '',
+                    surfaceBorder: styles.getPropertyValue('--cw-node-surface-border') || ''
+                };
+            }",
+            nodeId);
+        Assert.NotNull(snapshot);
+        return snapshot!;
+    }
+
+    private static async Task<CanvasWorkbenchNodeRuntimeSnapshot?> TryReadWorkbenchNodeStateAsync(IPage page, string nodeId)
+        => await page.EvaluateAsync<CanvasWorkbenchNodeRuntimeSnapshot?>(
+            @"requestedNodeId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const node = host?.__canvasWorkbenchState?.lookups?.byId?.get(requestedNodeId);
+                if (!node) {
+                    return null;
+                }
+
+                return {
+                    id: node.id || '',
+                    parentId: node.parentId || null,
+                    title: node.title || '',
+                    notes: node.notes || '',
+                    inlineText: node.inlineText || '',
+                    objectSubtype: node.objectSubtype || '',
+                    paletteKey: node.paletteKey || '',
+                    route: node.route || '',
+                    x: typeof node.x === 'number' ? node.x : 0,
+                    y: typeof node.y === 'number' ? node.y : 0,
+                    isInlineTextNode: !!node.isInlineTextNode,
+                    annotationActionIds: Array.isArray(node.annotations) ? node.annotations.map(annotation => annotation.actionId || '') : []
+                };
+            }",
+            nodeId);
+
+    private static async Task<CanvasWorkbenchNodeRuntimeSnapshot> ReadWorkbenchNodeStateAsync(IPage page, string nodeId)
+    {
+        var snapshot = await TryReadWorkbenchNodeStateAsync(page, nodeId);
+        Assert.NotNull(snapshot);
+        return snapshot!;
+    }
+
+    private static async Task<CanvasNodeRenderedBoundsSnapshot?> TryReadCanvasRenderedNodeBoundsAsync(IPage page, string nodeId)
+        => await page.EvaluateAsync<CanvasNodeRenderedBoundsSnapshot?>(
+            @"requestedNodeId => {
+                const host = document.querySelector('.cw-canvas-host');
+                const node = host?.__canvasWorkbenchState?.sceneGeometry?.nodes?.get(requestedNodeId);
+                if (!node) {
+                    return null;
+                }
+
+                return {
+                    left: node.left || 0,
+                    top: node.top || 0,
+                    width: node.width || 0,
+                    height: node.height || 0,
+                    right: node.right || 0,
+                    bottom: node.bottom || 0
+                };
+            }",
+            nodeId);
+
+    private static async Task<CanvasNodeRenderedBoundsSnapshot> WaitForCanvasRenderedNodeBoundsAsync(IPage page, string nodeId, int timeoutMs = 6_000)
+    {
+        var attempts = Math.Max(1, timeoutMs / 120);
+        CanvasNodeRenderedBoundsSnapshot? lastSnapshot = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            lastSnapshot = await TryReadCanvasRenderedNodeBoundsAsync(page, nodeId);
+            if (lastSnapshot is { Width: > 0, Height: > 0 })
+            {
+                return lastSnapshot;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException(
+            $"Timed out waiting for rendered canvas bounds on '{nodeId}'. " +
+            $"Last width={lastSnapshot?.Width}, height={lastSnapshot?.Height}.");
+    }
+
+    private static async Task<CanvasWorkbenchNodeRuntimeSnapshot> WaitForWorkbenchNodeStateAsync(
+        IPage page,
+        string nodeId,
+        Func<CanvasWorkbenchNodeRuntimeSnapshot, bool> predicate,
+        string description,
+        int timeoutMs = 6_000)
+    {
+        var attempts = Math.Max(1, timeoutMs / 120);
+        CanvasWorkbenchNodeRuntimeSnapshot? lastSnapshot = null;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            lastSnapshot = await TryReadWorkbenchNodeStateAsync(page, nodeId);
+            if (lastSnapshot is not null && predicate(lastSnapshot))
+            {
+                return lastSnapshot;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException(
+            $"Timed out waiting for workbench node state '{description}' on '{nodeId}'. " +
+            $"Last snapshot title='{lastSnapshot?.Title ?? string.Empty}', notes='{lastSnapshot?.Notes ?? string.Empty}', " +
+            $"inlineText='{lastSnapshot?.InlineText ?? string.Empty}', subtype='{lastSnapshot?.ObjectSubtype ?? string.Empty}', " +
+            $"palette='{lastSnapshot?.PaletteKey ?? string.Empty}', inline={lastSnapshot?.IsInlineTextNode}, " +
+            $"x={lastSnapshot?.X}, y={lastSnapshot?.Y}.");
+    }
+
+    private static async Task WaitForWorkbenchNodeMissingAsync(IPage page, string nodeId, int timeoutMs = 6_000)
+    {
+        var attempts = Math.Max(1, timeoutMs / 120);
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            if (await TryReadWorkbenchNodeStateAsync(page, nodeId) is null)
+            {
+                return;
+            }
+
+            await page.WaitForTimeoutAsync(120);
+        }
+
+        throw new InvalidOperationException($"Timed out waiting for workbench node '{nodeId}' to disappear from the active canvas state.");
+    }
+
+    private string ToAbsoluteRoute(string route)
+        => route.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            route.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                ? route
+                : $"{fixture.BaseUrl.TrimEnd('/')}/{route.TrimStart('/')}";
+
+    private static string NormalizeLineEndings(string value)
+        => value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private sealed class CanvasNodeDomPaletteSnapshot
+    {
+        public string PaletteKey { get; set; } = string.Empty;
+
+        public string SurfaceBackground { get; set; } = string.Empty;
+
+        public string SurfaceBorder { get; set; } = string.Empty;
+    }
+
+    private sealed class CanvasWorkbenchNodeRuntimeSnapshot
+    {
+        public string Id { get; set; } = string.Empty;
+
+        public string? ParentId { get; set; }
+
+        public string Title { get; set; } = string.Empty;
+
+        public string Notes { get; set; } = string.Empty;
+
+        public string InlineText { get; set; } = string.Empty;
+
+        public string ObjectSubtype { get; set; } = string.Empty;
+
+        public string PaletteKey { get; set; } = string.Empty;
+
+        public string Route { get; set; } = string.Empty;
+
+        public double X { get; set; }
+
+        public double Y { get; set; }
+
+        public bool IsInlineTextNode { get; set; }
+
+        public string[] AnnotationActionIds { get; set; } = [];
+    }
+
+    private sealed class CanvasNodeRenderedBoundsSnapshot
+    {
+        public double Left { get; set; }
+
+        public double Top { get; set; }
+
+        public double Width { get; set; }
+
+        public double Height { get; set; }
+
+        public double Right { get; set; }
+
+        public double Bottom { get; set; }
+    }
+}

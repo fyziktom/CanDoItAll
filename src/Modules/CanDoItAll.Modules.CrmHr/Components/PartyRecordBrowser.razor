@@ -1,0 +1,117 @@
+@inject IPartyRecordQueryService PartyRecordQueryService
+
+<PagedRecordBrowser TKey="Guid"
+                    TFilter="PartyRecordScope"
+                    Loader="LoadPageAsync"
+                    InitialFilter="@InitialScope"
+                    FilterOptions="@scopeOptions"
+                    Selection="@Selection"
+                    SelectionChanged="@SelectionChanged"
+                    LoadFailed="@LoadFailed"
+                    PageSize="@PageSize"
+                    ResultsScrollMode="@ResultsScrollMode"
+                    GridMode="@GridMode"
+                    SearchPlaceholder="@SearchPlaceholder"
+                    TagPlaceholder="Filter by all selected tags"
+                    FilterAriaLabel="Party type"
+                    LoadingEyebrow="Directory"
+                    LoadingTitle="Loading parties"
+                    EmptyEyebrow="No parties"
+                    EmptyTitle="No directory records match"
+                    EmptyDescription="Change the search, tags, or party type."
+                    DataTestId="@DataTestId" />
+
+@code {
+    private IReadOnlyList<PagedRecordFilterOption<PartyRecordScope>> scopeOptions = [];
+    private PartyRecordScope? configuredAllowedScope;
+    private PartyRecordScope? configuredInitialScope;
+
+    [Parameter]
+    public Guid? SelectedPartyId { get; set; }
+
+    [Parameter]
+    public PartyRecordScope AllowedScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public PartyRecordScope InitialScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public Guid? ExcludedPartyId { get; set; }
+
+    [Parameter]
+    public bool IncludeArchived { get; set; }
+
+    [Parameter]
+    public PartyRecordPopulation Population { get; set; } = PartyRecordPopulation.All;
+
+    [Parameter]
+    public EventCallback<Guid> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = PartyRecordQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public PagedRecordResultsScrollMode ResultsScrollMode { get; set; } = PagedRecordResultsScrollMode.Page;
+
+    [Parameter]
+    public PagedRecordGridMode GridMode { get; set; } = PagedRecordGridMode.Fluid;
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search name, code, or summary";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "crmhr-party-browser";
+
+    [Parameter]
+    public string OptionTestId { get; set; } = string.Empty;
+
+    private PagedRecordSelection<Guid>? Selection => SelectedPartyId.HasValue
+        ? new PagedRecordSelection<Guid>(SelectedPartyId.Value)
+        : null;
+
+    protected override void OnParametersSet()
+    {
+        if (configuredAllowedScope == AllowedScope &&
+            configuredInitialScope == InitialScope)
+        {
+            return;
+        }
+
+        scopeOptions = PartyRecordPresentation.BuildScopeOptions(AllowedScope, InitialScope);
+        configuredAllowedScope = AllowedScope;
+        configuredInitialScope = InitialScope;
+    }
+
+    private async Task<PagedRecordPage<Guid>> LoadPageAsync(
+        PagedRecordRequest<PartyRecordScope> request,
+        CancellationToken cancellationToken)
+    {
+        var scope = PartyRecordPresentation.ConstrainScope(request.Filter, AllowedScope);
+        var result = await PartyRecordQueryService.SearchAsync(
+            new PartyRecordQuery(
+                request.SearchText,
+                request.Tags,
+                scope,
+                request.PageIndex,
+                request.PageSize,
+                ExcludedPartyId,
+                IncludeArchived,
+                Population),
+            cancellationToken);
+
+        var options = result.Items
+            .Select(PartyRecordPresentation.ToOption)
+            .Select(option => string.IsNullOrWhiteSpace(OptionTestId)
+                ? option
+                : option with { TestId = OptionTestId })
+            .ToList();
+        return new PagedRecordPage<Guid>(
+            options,
+            result.PageIndex,
+            result.PageSize,
+            result.TotalCount);
+    }
+}

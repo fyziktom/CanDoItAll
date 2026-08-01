@@ -1,0 +1,209 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+
+<Stack GapScale="LayoutGap.Small"
+       AlignItems="AlignItems.Stretch"
+       data-testid="@($"{DataTestId}-shell")">
+    <CheckedBadgeFilterGroup TValue="ProjectStructureTaskResourceKind"
+                             Options="@KindFilterOptions"
+                             Value="@visibleKinds"
+                             ValueChanged="HandleVisibleKindsChangedAsync"
+                             ResultText="@($"{visibleOptionCount} of {allowedOptionCount} resources by type")"
+                             AriaLabel="Resource types shown"
+                             DataTestId="@($"{DataTestId}-filters")" />
+
+    <ResourceCardPicker TItem="ProjectStructureTaskResourceSelection"
+                        Options="@PickerOptions"
+                        SelectionChanged="SelectionChanged"
+                        FavoriteToggled="FavoriteToggled"
+                        SearchPlaceholder="@SearchPlaceholder"
+                        EmptyEyebrow="@EmptyEyebrow"
+                        EmptyTitle="@EmptyTitle"
+                        EmptyDescription="@EmptyDescription"
+                        UseBoundedResultsViewport="@UseBoundedResultsViewport"
+                        DataTestId="@DataTestId" />
+</Stack>
+
+@code {
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> DefaultAllowedKinds =
+        Enum.GetValues<ProjectStructureTaskResourceKind>().ToHashSet();
+
+    private bool initialized;
+    private HashSet<ProjectStructureTaskResourceKind> allowedKindsSnapshot = [];
+    private HashSet<ProjectStructureTaskResourceKind> visibleKinds = [];
+    private IReadOnlyList<ProjectStructureTaskResourceOption>? optionsSnapshot;
+    private ProjectStructureTaskResourceSelection? selectedResourceSnapshot;
+    private bool showFavoriteActionsSnapshot;
+    private string dataTestIdSnapshot = string.Empty;
+    private string optionTestIdPrefixSnapshot = string.Empty;
+    private IReadOnlyList<CheckedBadgeFilterOption<ProjectStructureTaskResourceKind>> kindFilterOptions = [];
+    private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> pickerOptions = [];
+    private int allowedOptionCount;
+    private int visibleOptionCount;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectStructureTaskResourceOption> Options { get; set; } = [];
+
+    [Parameter]
+    public ProjectStructureTaskResourceSelection? SelectedResource { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureTaskResourceSelection> SelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureTaskResourceSelection> FavoriteToggled { get; set; }
+
+    [Parameter]
+    public bool ShowFavoriteActions { get; set; }
+
+    [Parameter]
+    public IReadOnlySet<ProjectStructureTaskResourceKind> AllowedKinds { get; set; } = DefaultAllowedKinds;
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search people, agents, workflows, and processes";
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "No resources";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No resources match the current filters";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Change the resource-type filters or clear the search.";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "project-structure-task-resource-picker";
+
+    [Parameter]
+    public string OptionTestIdPrefix { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool UseBoundedResultsViewport { get; set; } = true;
+
+    private IReadOnlyList<CheckedBadgeFilterOption<ProjectStructureTaskResourceKind>> KindFilterOptions => kindFilterOptions;
+
+    private IReadOnlyList<ResourceCardPickerOption<ProjectStructureTaskResourceSelection>> PickerOptions => pickerOptions;
+
+    protected override void OnParametersSet()
+    {
+        var nextAllowedKinds = AllowedKinds.ToHashSet();
+        var allowedKindsChanged = !initialized || !allowedKindsSnapshot.SetEquals(nextAllowedKinds);
+        if (allowedKindsChanged)
+        {
+            initialized = true;
+            allowedKindsSnapshot = nextAllowedKinds;
+            visibleKinds = nextAllowedKinds.ToHashSet();
+        }
+
+        if (!allowedKindsChanged &&
+            ReferenceEquals(optionsSnapshot, Options) &&
+            selectedResourceSnapshot == SelectedResource &&
+            showFavoriteActionsSnapshot == ShowFavoriteActions &&
+            string.Equals(dataTestIdSnapshot, DataTestId, StringComparison.Ordinal) &&
+            string.Equals(optionTestIdPrefixSnapshot, OptionTestIdPrefix, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        optionsSnapshot = Options;
+        selectedResourceSnapshot = SelectedResource;
+        showFavoriteActionsSnapshot = ShowFavoriteActions;
+        dataTestIdSnapshot = DataTestId;
+        optionTestIdPrefixSnapshot = OptionTestIdPrefix;
+        RebuildOptions();
+    }
+
+    private Task HandleVisibleKindsChangedAsync(IReadOnlySet<ProjectStructureTaskResourceKind> value)
+    {
+        visibleKinds = value
+            .Where(allowedKindsSnapshot.Contains)
+            .ToHashSet();
+        RebuildVisibleOptions();
+        return Task.CompletedTask;
+    }
+
+    private void RebuildOptions()
+    {
+        kindFilterOptions = Enum.GetValues<ProjectStructureTaskResourceKind>()
+            .Where(allowedKindsSnapshot.Contains)
+            .Select(kind => new CheckedBadgeFilterOption<ProjectStructureTaskResourceKind>(
+                kind,
+                ResolveFilterLabel(kind),
+                $"{DataTestId}-filter-{kind.ToString().ToLowerInvariant()}"))
+            .ToArray();
+        allowedOptionCount = Options.Count(option => allowedKindsSnapshot.Contains(option.Kind));
+        RebuildVisibleOptions();
+    }
+
+    private void RebuildVisibleOptions()
+    {
+        var visibleOptions = Options
+            .Where(option =>
+                allowedKindsSnapshot.Contains(option.Kind) &&
+                visibleKinds.Contains(option.Kind))
+            .ToArray();
+        visibleOptionCount = visibleOptions.Length;
+        pickerOptions = visibleOptions
+            .Select(option =>
+            {
+                var selection = new ProjectStructureTaskResourceSelection(
+                    option.Kind,
+                    option.ResourceId,
+                    option.VersionId);
+                return new ResourceCardPickerOption<ProjectStructureTaskResourceSelection>(
+                    selection,
+                    option.DisplayName,
+                    option.TypeLabel)
+                {
+                    Description = option.IsSensitive
+                        ? "Sensitive resource details are hidden."
+                        : option.Description,
+                    Icon = ResolveResourceIcon(option.Kind),
+                    VisualKind = option.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent
+                        ? ResourceCardPickerVisualKind.Avatar
+                        : ResourceCardPickerVisualKind.Icon,
+                    AvatarFallback = BuildInitials(option.DisplayName),
+                    Tags = [option.TypeLabel],
+                    IsSelected = SelectedResource == selection,
+                    ShowFavorite = ShowFavoriteActions,
+                    IsFavorite = option.IsFavorite,
+                    TestId = $"{ResolveOptionTestIdPrefix()}-{option.Kind.ToString().ToLowerInvariant()}-{option.ResourceId:N}"
+                };
+            })
+            .ToArray();
+    }
+
+    private string ResolveOptionTestIdPrefix()
+        => string.IsNullOrWhiteSpace(OptionTestIdPrefix)
+            ? $"{DataTestId}-option"
+            : OptionTestIdPrefix;
+
+    private static string ResolveFilterLabel(ProjectStructureTaskResourceKind kind)
+        => kind switch
+        {
+            ProjectStructureTaskResourceKind.Person => "People",
+            ProjectStructureTaskResourceKind.Agent => "Agents",
+            ProjectStructureTaskResourceKind.Workflow => "Workflows",
+            ProjectStructureTaskResourceKind.Process => "Processes",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown task resource kind.")
+        };
+
+    private static string ResolveResourceIcon(ProjectStructureTaskResourceKind kind)
+        => kind switch
+        {
+            ProjectStructureTaskResourceKind.Person => "person",
+            ProjectStructureTaskResourceKind.Agent => "smart_toy",
+            ProjectStructureTaskResourceKind.Workflow => "account_tree",
+            ProjectStructureTaskResourceKind.Process => "schema",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown task resource kind.")
+        };
+
+    private static string BuildInitials(string value)
+    {
+        var words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length == 0
+            ? "R"
+            : string.Concat(words.Take(2).Select(static word => char.ToUpperInvariant(word[0])));
+    }
+}

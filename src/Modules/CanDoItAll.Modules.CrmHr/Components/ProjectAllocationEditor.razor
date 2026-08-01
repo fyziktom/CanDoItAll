@@ -1,0 +1,661 @@
+@using CanDoItAll.Modules.Projects
+
+<Stack GapScale="LayoutGap.Large">
+    <SurfaceCard data-testid="crmhr-allocations-surface">
+        <Stack GapScale="LayoutGap.Medium">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween">
+                <div class="min-w-0">
+                    <p class="cda-eyebrow cda-eyebrow--tight">Current allocations</p>
+                    <h2 class="mt-1 truncate text-lg font-semibold tracking-tight text-slate-950">
+                        @(string.IsNullOrWhiteSpace(ProjectName) ? "Project resource plan" : ProjectName)
+                    </h2>
+                    <SmallText Text="@($"{TotalCount} saved allocation(s)")" />
+                </div>
+                <TooltipTarget Text="Create project allocation"
+                               Position="TooltipPosition.Bottom"
+                               TestId="crmhr-allocation-create-tooltip">
+                    <Button Class="cda-button--quick"
+                            Icon="add"
+                            Disabled="@(!CanCreate || isPreparingCreate)"
+                            IsBusy="@isPreparingCreate"
+                            aria-label="Create project allocation"
+                            data-testid="crmhr-allocation-create-button"
+                            Click="OpenCreateDialogAsync" />
+                </TooltipTarget>
+            </Split>
+
+            <CompactFilterBar ResultText="@($"{TotalCount} matching allocation(s)")">
+                <input value="@SearchText"
+                       @oninput="HandleAllocationSearchInputAsync"
+                       class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
+                       style="width: auto; flex: 1 1 24rem;"
+                       placeholder="Search party, role, task, or notes"
+                       data-testid="crmhr-allocation-filter-search" />
+                <InputSelect TValue="ProjectPartyAssignmentRole?"
+                             Value="@RoleFilter"
+                             ValueChanged="HandleAllocationRoleChangedAsync"
+                             ValueExpression="@(() => RoleFilter)"
+                             class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                             style="width: 13rem; flex: 0 1 13rem;"
+                             data-testid="crmhr-allocation-filter-role">
+                    <option value="">All allocation roles</option>
+                    @foreach (var role in AllocationRoles) {
+                        <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
+                    }
+                </InputSelect>
+            </CompactFilterBar>
+
+            @if (Allocations.Count == 0) {
+                <EmptyState Eyebrow="No matching allocations"
+                            Title="No allocation records are in view"
+                            Description="Create an allocation or adjust the search and role filters." />
+            }
+            else {
+                <PagedCardGrid TItem="ProjectPartyAssignmentDetail"
+                               Items="Allocations"
+                               PageSize="@PageSize"
+                               PageIndex="@PageIndex"
+                               TotalCount="@TotalCount"
+                               PageChanged="PageChanged"
+                               TestIdPrefix="crmhr-allocations">
+                    <ItemTemplate Context="allocation">
+                        <ProjectAssignmentRecordCard Assignment="allocation"
+                                                     ProjectName="@ProjectName"
+                                                     TestIdPrefix="crmhr-allocation"
+                                                     ShowDetails="ShowAssignmentDetailsAsync"
+                                                     Delete="DeleteAllocation" />
+                    </ItemTemplate>
+                </PagedCardGrid>
+            }
+        </Stack>
+    </SurfaceCard>
+
+</Stack>
+
+@if (isAllocationDialogOpen) {
+    <Dialog IsOpen="true"
+            Eyebrow="Project allocation"
+            Title="@AllocationDialogTitle"
+            Subtitle="@ProjectName"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="crmhr-allocation-dialog"
+            OnClose="CloseAllocationDialogAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <SurfaceCard Soft="true" data-testid="crmhr-allocation-candidates-surface">
+                    <Stack GapScale="LayoutGap.Medium">
+                        <div>
+                            <p class="cda-eyebrow cda-eyebrow--tight">Candidate finder</p>
+                            <h3 class="mt-1 text-base font-semibold text-slate-950">Available staffing candidates</h3>
+                        </div>
+
+                        <CompactFilterBar ResultText="@($"{CandidateTotalCount} matching candidate(s)")">
+                            <input value="@CandidateSearchText"
+                                   @oninput="HandleCandidateSearchInputAsync"
+                                   class="cda-input cda-input--toolbar h-10 min-w-[15rem] flex-1"
+                                   style="width: auto; flex: 1 1 20rem;"
+                                   placeholder="Search people or delivery units"
+                                   data-testid="crmhr-allocation-candidate-search" />
+                            <InputSelect TValue="string"
+                                         Value="@CandidateSkillFilter"
+                                         ValueChanged="HandleCandidateSkillChangedAsync"
+                                         ValueExpression="@(() => CandidateSkillFilter)"
+                                         class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                                         style="width: 13rem; flex: 0 1 13rem;"
+                                         data-testid="crmhr-allocation-candidate-skill">
+                                <option value="">All skills</option>
+                                @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name)) {
+                                    <option value="@skill.Id.ToString("D")">@skill.Name (@skill.Category)</option>
+                                }
+                            </InputSelect>
+                            <InputSelect TValue="string"
+                                         Value="@CandidateAvailabilityFilter"
+                                         ValueChanged="HandleCandidateAvailabilityChangedAsync"
+                                         ValueExpression="@(() => CandidateAvailabilityFilter)"
+                                         class="cda-input cda-input--toolbar h-10 min-w-[10rem]"
+                                         style="width: 10rem; flex: 0 1 10rem;"
+                                         data-testid="crmhr-allocation-candidate-availability">
+                                <option value="">Any availability</option>
+                                @foreach (var availabilityState in Enum.GetValues<WorkforceAvailabilityState>()) {
+                                    <option value="@availabilityState.ToString()">@availabilityState</option>
+                                }
+                            </InputSelect>
+                            <TooltipTarget Text="Refresh staffing candidates" Position="TooltipPosition.Bottom">
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
+                                        Icon="search"
+                                        aria-label="Refresh staffing candidates"
+                                        Click="SearchCandidates"
+                                        data-testid="crmhr-allocation-candidate-search-button" />
+                            </TooltipTarget>
+                            <TooltipTarget Text="Reset candidate filters" Position="TooltipPosition.Bottom">
+                                <Button ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Class="cda-button--quick"
+                                        Icon="restart_alt"
+                                        aria-label="Reset candidate filters"
+                                        Click="ResetCandidateFilters"
+                                        data-testid="crmhr-allocation-candidate-reset-button" />
+                            </TooltipTarget>
+                        </CompactFilterBar>
+
+                        @if (Candidates.Count == 0) {
+                            <EmptyState Eyebrow="No candidates"
+                                        Title="No workforce candidates matched"
+                                        Description="Adjust the candidate filters and refresh the search." />
+                        }
+                        else {
+                            <Grid Gap="LayoutGap.Medium"
+                                  ColumnTemplate="repeat(auto-fill,minmax(min(100%,20rem),30rem))"
+                                  data-testid="crmhr-staffing-candidates-grid">
+                                @foreach (var candidate in Candidates)
+                                {
+                                    <PanelCard Class="h-full" data-testid="crmhr-staffing-candidate-item">
+                                        <Stack GapScale="LayoutGap.Small" Class="h-full">
+                                            <Split Breakpoint="LayoutBreakpoint.None"
+                                                   Gap="LayoutGap.Small"
+                                                   AlignItems="AlignItems.Start"
+                                                   JustifyContent="JustifyContent.SpaceBetween">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-base font-semibold text-slate-950">@candidate.DisplayName</p>
+                                                    <div class="mt-2 flex min-w-0 items-center gap-2"
+                                                         title="@candidate.OtherAffiliationsSummary">
+                                                        <StatusBadge Tone="@ResolveClassificationTone(candidate.Classification)"
+                                                                     Text="@ResolveClassificationLabel(candidate.Classification)" />
+                                                        @if (!string.IsNullOrWhiteSpace(candidate.PrimaryAffiliationText))
+                                                        {
+                                                            <span class="truncate text-xs text-slate-600">
+                                                                @candidate.PrimaryAffiliationText
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                    <p class="mt-1 text-sm leading-5 text-slate-600">@BuildCandidateMeta(candidate)</p>
+                                                </div>
+                                                <StatusBadge Tone="@ResolveAvailabilityTone(candidate.AvailabilityState)"
+                                                             Text="@candidate.AvailabilityState.ToString()" />
+                                            </Split>
+
+                                            @if (!string.IsNullOrWhiteSpace(candidate.SkillSummary)) {
+                                                <p class="line-clamp-2 text-sm leading-5 text-slate-600">@candidate.SkillSummary</p>
+                                            }
+
+                                            <CardActions Secondary="true" Class="mt-auto pt-3">
+                                                <SmallText Text="@($"{candidate.AvailablePercent:0.##}% available")" />
+                                                <Button Text="Use candidate"
+                                                        Size="ButtonSize.Small"
+                                                        Click="@(() => SelectCandidateAsync(candidate))"
+                                                        data-testid="crmhr-allocation-use-candidate" />
+                                            </CardActions>
+                                        </Stack>
+                                    </PanelCard>
+                                }
+                            </Grid>
+
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Small"
+                                   AlignItems="AlignItems.Center"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="neutral"
+                                             Text="@CandidatePageText" />
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Button Text="Previous"
+                                            Icon="chevron_left"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(CandidatePageIndex <= 0)"
+                                            Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex - 1))"
+                                            data-testid="crmhr-staffing-candidates-previous" />
+                                    <Button Text="Next"
+                                            Icon="chevron_right"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Disabled="@(CandidatePageIndex + 1 >= CandidateTotalPages)"
+                                            Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex + 1))"
+                                            data-testid="crmhr-staffing-candidates-next" />
+                                </Cluster>
+                            </Split>
+                        }
+                    </Stack>
+                </SurfaceCard>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                    <FormField Text="Allocation role">
+                        <InputSelect @bind-Value="Draft.Role"
+                                     class="cda-input"
+                                     data-testid="crmhr-allocation-role">
+                            @foreach (var role in AllocationRoles) {
+                                <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <PartyPicker Label="Party"
+                                 TestIdPrefix="crmhr-allocation-party"
+                                 SelectedPartyId="Draft.PartyId"
+                                 SelectedPartyIdChanged="HandlePartyChanged" />
+                </Grid>
+
+                <PartyAffiliationPicker PartyId="Draft.PartyId"
+                                        SelectedAffiliationId="Draft.PartyAffiliationId"
+                                        SelectedAffiliationIdChanged="HandleAffiliationChanged"
+                                        TestIdPrefix="crmhr-allocation-affiliation" />
+
+                @if (SelectedCandidate is not null) {
+                    <div class="@ResolveSelectedCandidateClasses()"
+                         data-testid="crmhr-allocation-candidate-warning">
+                        @BuildSelectedCandidateMessage(SelectedCandidate)
+                    </div>
+                }
+
+                <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
+                    <FormField Text="Allocation %">
+                        <InputNumber @bind-Value="Draft.AllocationPercent"
+                                     class="cda-input"
+                                     data-testid="crmhr-allocation-percent" />
+                    </FormField>
+                    <FormField Text="Starts on">
+                        <InputDate @bind-Value="Draft.StartsOn"
+                                   class="cda-input"
+                                   data-testid="crmhr-allocation-start-date" />
+                    </FormField>
+                    <FormField Text="Ends on">
+                        <InputDate @bind-Value="Draft.EndsOn"
+                                   class="cda-input"
+                                   data-testid="crmhr-allocation-end-date" />
+                    </FormField>
+                </Grid>
+
+                <FormField Text="Notes">
+                    <InputTextArea @bind-Value="Draft.Notes"
+                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                   data-testid="crmhr-allocation-notes" />
+                </FormField>
+
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <InputCheckbox @bind-Value="Draft.IsPrimary"
+                                   data-testid="crmhr-allocation-primary" />
+                    <span>Mark as primary</span>
+                </label>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Small"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <Button Text="Reset"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isAllocationSaving"
+                        Click="ResetAllocation"
+                        data-testid="crmhr-allocation-reset-button" />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@isAllocationSaving"
+                            Click="CloseAllocationDialogAsync" />
+                    <Button Text="Save allocation"
+                            Disabled="@isAllocationSaving"
+                            IsBusy="@isAllocationSaving"
+                            Click="SaveAllocationAsync"
+                            data-testid="crmhr-allocation-save-button" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+<ProjectAssignmentDetailsDialog Assignment="detailsAssignment"
+                                TaskDetails="detailsTask"
+                                ProjectName="@ProjectName"
+                                IsTaskLoading="isDetailsTaskLoading"
+                                OnClose="CloseAssignmentDetailsAsync"
+                                OpenStructure="OpenStructure"
+                                OpenGantt="OpenGantt" />
+
+@code {
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllocationRoles =
+    [
+        ProjectPartyAssignmentRole.TeamMember,
+        ProjectPartyAssignmentRole.DeliveryUnit,
+        ProjectPartyAssignmentRole.Manager,
+        ProjectPartyAssignmentRole.AiAgent,
+        ProjectPartyAssignmentRole.Reviewer,
+        ProjectPartyAssignmentRole.WorkItemAssignee
+    ];
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool CanCreate { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentUpsertRequest Draft { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Allocations { get; set; } = [];
+
+    [Parameter]
+    public int PageIndex { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = ProjectPartyAssignmentQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int TotalCount { get; set; }
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentRole? RoleFilter { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectPartyAssignmentRole?> RoleFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<SkillCatalogItemModel> SkillCatalog { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<StaffingCandidateItemModel> Candidates { get; set; } = [];
+
+    [Parameter]
+    public int CandidatePageIndex { get; set; }
+
+    [Parameter]
+    public int CandidatePageSize { get; set; } = StaffingQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int CandidateTotalCount { get; set; }
+
+    [Parameter]
+    public EventCallback<int> CandidatePageChanged { get; set; }
+
+    [Parameter]
+    public string CandidateSearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> CandidateSearchTextChanged { get; set; }
+
+    [Parameter]
+    public string CandidateSkillFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> CandidateSkillFilterChanged { get; set; }
+
+    [Parameter]
+    public string CandidateAvailabilityFilter { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> CandidateAvailabilityFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback SearchCandidates { get; set; }
+
+    [Parameter]
+    public EventCallback ResetCandidateFilters { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<Task<bool>> PrepareCreate { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<Task<bool>> SaveAllocation { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback ResetAllocation { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> DeleteAllocation { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<ProjectPartyAssignmentDetail, Task<ProjectNodeDetails?>> LoadTaskDetails { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback OpenGantt { get; set; }
+
+    private bool isAllocationDialogOpen;
+    private bool isPreparingCreate;
+    private bool isAllocationSaving;
+    private ProjectPartyAssignmentDetail? detailsAssignment;
+    private ProjectNodeDetails? detailsTask;
+    private bool isDetailsTaskLoading;
+    private int detailsLoadVersion;
+    private StaffingCandidateItemModel? selectedCandidate;
+
+    private StaffingCandidateItemModel? SelectedCandidate => selectedCandidate;
+
+    private string AllocationDialogTitle => SelectedCandidate is null
+        ? "Create allocation"
+        : $"Allocate {SelectedCandidate.DisplayName}";
+
+    private int CandidateTotalPages => CandidateTotalCount == 0
+        ? 0
+        : (int)Math.Ceiling(CandidateTotalCount / (double)CandidatePageSize);
+
+    private string CandidatePageText => CandidateTotalPages == 0
+        ? "No pages"
+        : $"Page {CandidatePageIndex + 1:N0} of {CandidateTotalPages:N0} · {CandidateTotalCount:N0} candidate(s)";
+
+    protected override void OnParametersSet() {
+        var pageCandidate = Candidates.FirstOrDefault(item => item.PartyId == Draft.PartyId);
+        if (pageCandidate is not null) {
+            selectedCandidate = pageCandidate;
+            return;
+        }
+
+        if (Draft.PartyId == Guid.Empty || selectedCandidate?.PartyId != Draft.PartyId) {
+            selectedCandidate = null;
+        }
+    }
+
+    private Task HandleAllocationSearchInputAsync(ChangeEventArgs args) {
+        return SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleAllocationRoleChangedAsync(ProjectPartyAssignmentRole? role) {
+        return RoleFilterChanged.InvokeAsync(role);
+    }
+
+    private Task HandleCandidateSearchInputAsync(ChangeEventArgs args) {
+        return CandidateSearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleCandidateSkillChangedAsync(string value) {
+        return CandidateSkillFilterChanged.InvokeAsync(value);
+    }
+
+    private Task HandleCandidateAvailabilityChangedAsync(string value) {
+        return CandidateAvailabilityFilterChanged.InvokeAsync(value);
+    }
+
+    private Task HandlePartyChanged(Guid? partyId) {
+        Draft.PartyId = partyId ?? Guid.Empty;
+        Draft.PartyAffiliationId = null;
+        selectedCandidate = Candidates.FirstOrDefault(candidate => candidate.PartyId == Draft.PartyId);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAffiliationChanged(Guid? affiliationId) {
+        Draft.PartyAffiliationId = affiliationId;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenCreateDialogAsync() {
+        if (!CanCreate || isPreparingCreate || isAllocationDialogOpen) {
+            return;
+        }
+
+        isPreparingCreate = true;
+        try {
+            if (!await PrepareCreate()) {
+                return;
+            }
+
+            isAllocationDialogOpen = true;
+        }
+        finally {
+            isPreparingCreate = false;
+        }
+    }
+
+    private Task SelectCandidateAsync(StaffingCandidateItemModel candidate) {
+        selectedCandidate = candidate;
+        Draft.PartyId = candidate.PartyId;
+        Draft.PartyAffiliationId = null;
+        Draft.Role = candidate.PartyType == PartyType.OrganizationUnit
+            ? ProjectPartyAssignmentRole.DeliveryUnit
+            : ProjectPartyAssignmentRole.TeamMember;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAllocationAsync() {
+        if (isAllocationSaving) {
+            return;
+        }
+
+        isAllocationSaving = true;
+        try {
+            if (await SaveAllocation()) {
+                isAllocationDialogOpen = false;
+            }
+        }
+        finally {
+            isAllocationSaving = false;
+        }
+    }
+
+    private Task CloseAllocationDialogAsync() {
+        if (!isAllocationSaving) {
+            isAllocationDialogOpen = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ShowAssignmentDetailsAsync(ProjectPartyAssignmentDetail assignment) {
+        var loadVersion = ++detailsLoadVersion;
+        detailsAssignment = assignment;
+        detailsTask = null;
+        isDetailsTaskLoading = !string.IsNullOrWhiteSpace(assignment.NodeKey);
+
+        if (!isDetailsTaskLoading) {
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+        try {
+            var taskDetails = await LoadTaskDetails(assignment);
+            if (loadVersion == detailsLoadVersion) {
+                detailsTask = taskDetails;
+            }
+        }
+        finally {
+            if (loadVersion == detailsLoadVersion) {
+                isDetailsTaskLoading = false;
+            }
+        }
+    }
+
+    private Task CloseAssignmentDetailsAsync() {
+        detailsLoadVersion++;
+        detailsAssignment = null;
+        detailsTask = null;
+        isDetailsTaskLoading = false;
+        return Task.CompletedTask;
+    }
+
+    private string ResolveSelectedCandidateClasses() {
+        var candidate = SelectedCandidate;
+        if (candidate is null) {
+            return "hidden";
+        }
+
+        return candidate.AvailabilityState == WorkforceAvailabilityState.Overallocated
+               || Draft.AllocationPercent.HasValue
+               && Draft.AllocationPercent.Value > candidate.AvailablePercent
+            ? "rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+            : "rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700";
+    }
+
+    private string BuildSelectedCandidateMessage(StaffingCandidateItemModel candidate) {
+        if (candidate.AvailabilityState == WorkforceAvailabilityState.Overallocated) {
+            return $"{candidate.DisplayName} is already overallocated. Save only if this overlap is intentional and will be resolved immediately.";
+        }
+
+        if (Draft.AllocationPercent.HasValue && Draft.AllocationPercent.Value > candidate.AvailablePercent) {
+            return $"{candidate.DisplayName} only shows {candidate.AvailablePercent:0.##}% available, which is below the requested {Draft.AllocationPercent.Value:0.##}%.";
+        }
+
+        return $"{candidate.DisplayName} currently shows {candidate.AvailablePercent:0.##}% available with state {candidate.AvailabilityState}.";
+    }
+
+    private static string BuildCandidateMeta(StaffingCandidateItemModel candidate) {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(candidate.JobTitle)) {
+            parts.Add(candidate.JobTitle);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.Discipline)) {
+            parts.Add(candidate.Discipline);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.Seniority)) {
+            parts.Add(candidate.Seniority);
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.Location)) {
+            parts.Add(candidate.Location);
+        }
+
+        if (candidate.NextAvailabilityOn.HasValue) {
+            parts.Add($"Next {candidate.NextAvailabilityOn.Value:yyyy-MM-dd}");
+        }
+
+        return parts.Count == 0 ? "No profile details" : string.Join(" · ", parts);
+    }
+
+    private static string ResolveAvailabilityTone(WorkforceAvailabilityState availabilityState) {
+        return availabilityState switch {
+            WorkforceAvailabilityState.Overallocated => "danger",
+            WorkforceAvailabilityState.Bench => "success",
+            WorkforceAvailabilityState.NearAvailable => "warning",
+            _ => "info"
+        };
+    }
+
+    private static string ResolveClassificationLabel(
+        WorkforceRecordClassification classification) {
+        return classification switch {
+            WorkforceRecordClassification.ExternalContact => "External contact",
+            WorkforceRecordClassification.DeliveryUnit => "Delivery unit",
+            _ => classification.ToString()
+        };
+    }
+
+    private static string ResolveClassificationTone(
+        WorkforceRecordClassification classification) {
+        return classification switch {
+            WorkforceRecordClassification.Employee => "success",
+            WorkforceRecordClassification.Contractor => "warning",
+            WorkforceRecordClassification.Freelancer => "info",
+            WorkforceRecordClassification.DeliveryUnit => "primary",
+            _ => "neutral"
+        };
+    }
+}

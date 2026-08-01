@@ -1,0 +1,651 @@
+@page "/plugins"
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using CanDoItAll.SharedKernel.Configuration
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject PluginCatalogService PluginCatalog
+@inject PluginSettingsService PluginSettings
+@inject PluginOAuthService PluginOAuth
+@inject PluginPackageService PluginPackages
+@inject PluginLogStore PluginLogs
+@inject PluginRuntimeRestartService PluginRestart
+@inject PluginPackageOptions PluginPackageOptions
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Plugins</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Plugins"
+                    Title="Plugin catalog"
+                    Description="Review plugin manifests, runtime packages, grants, connection settings, OAuth status, and logs."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="packages"
+                             Value="@packageCatalog.Count.ToString()"
+                             TooltipText="Runtime plugin packages available in the package catalog."
+                             Tone="info" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="inventory_2"
+                                        Label="Install packages"
+                                        TooltipText="Open plugin package installation."
+                                        data-testid="plugin-packages-open"
+                                        Click="OpenPackageDialog" />
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh"
+                                        TooltipText="Refresh plugin manifests, grants, connections, OAuth status, and logs."
+                                        Click="LoadAsync" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(statusMessage))
+        {
+            <Alert AlertStyle="@statusAlertStyle" Class="mb-4">
+                @statusMessage
+            </Alert>
+        }
+
+        @if (restartStatus.IsRestartRequired)
+        {
+            <Alert AlertStyle="AlertStyle.Warning" Class="mb-4">
+                <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Center">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <strong>Plugin runtime restart required</strong>
+                        <span>@restartStatus.Reason</span>
+                    </Stack>
+                    <Button Text="Restart application"
+                            Icon="restart_alt"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Size="ButtonSize.Small"
+                            data-testid="plugin-runtime-restart"
+                            Disabled="@restartStatus.IsRestartRequested"
+                            IsBusy="@IsPageBusy(PluginsPageHelpers.RestartAction)"
+                            Click="RequestRestartAsync" />
+                </Split>
+            </Alert>
+        }
+
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mb-4">
+            <StatusBadge Tone="neutral" Text="@($"{catalog.Count} catalog")" />
+            <StatusBadge Tone="info" Text="@($"{catalog.Count(item => item.IsInstalled)} installed")" />
+            <StatusBadge Tone="success" Text="@($"{catalog.Count(item => item.IsEnabled)} enabled")" />
+            <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
+            <StatusBadge Tone="warning" Text="@($"{catalog.Count(item => item.Availability == PluginCatalogAvailabilityKind.Unavailable)} unavailable")" />
+        </Cluster>
+
+        @if (catalog.Count == 0)
+        {
+            <EmptyState Eyebrow="No plugins"
+                        Title="No plugins are registered"
+                        Description="Catalog entries appear here after app sources or runtime packages provide manifests." />
+        }
+        else if (SelectedPlugin is { } selectedPlugin)
+        {
+            var selectedSettings = ResolveSettings(selectedPlugin);
+            <ListDetailShell ListPaneWidth="24rem" DetailPaneClass="min-h-[38rem]" ListPaneClass="min-h-[38rem]">
+                <ListHeader>
+                    <ListPanelHeader Title="Available plugins"
+                                     Description="Select a plugin to inspect manifest data, settings, grants, and live connections."
+                                     Count="@($"{catalog.Count} plugin(s)")"
+                                     HelpText="Plugins are grouped by tags supplied by their plugin descriptors." />
+                </ListHeader>
+
+                <ListContent>
+                    <PluginList Catalog="@catalog"
+                                SelectedPlugin="@selectedPlugin"
+                                ExpandedNodeIds="@expandedPluginTreeNodeIds"
+                                OnPluginSelected="SelectPluginAsync"
+                                OnNodeToggled="TogglePluginTreeNodeAsync" />
+                </ListContent>
+
+                <DetailHeader>
+                    <PluginDetailsHeader Plugin="@selectedPlugin"
+                                         IsBusy="@IsBusy"
+                                         OnInstall="@InstallAsync"
+                                         OnEnable="@EnableAsync"
+                                         OnDisable="@DisableAsync" />
+                </DetailHeader>
+
+                <DetailContent>
+                    <PluginDetails Plugin="@selectedPlugin"
+                                   Settings="@selectedSettings"
+                                   @bind-SelectedTabIndex="@selectedPluginTabIndex"
+                                   InstallationLogs="@installationLogs"
+                                   RuntimeLogs="@runtimeLogs"
+                                   ShowAllPluginLogs="@showAllPluginLogs"
+                                   ResolveConnectionEditor="@ResolveConnectionEditor"
+                                   ResolveOAuthStatus="@ResolveOAuthStatus"
+                                   IsBusy="@IsBusy"
+                                   OnDisplayNameChanged="@HandleConnectionDisplayNameChanged"
+                                   OnEnabledChanged="@HandleConnectionEnabledChanged"
+                                   OnSettingChanged="@HandleConnectionSettingChanged"
+                                   OnSaveConnectionSettings="@SaveConnectionSettingsAsync"
+                                   OnStartOAuth="@StartOAuthAsync"
+                                   OnDisconnectOAuth="@DisconnectOAuthAsync"
+                                   OnSetLogScope="@SetLogScopeAsync"
+                                   OnUpdateGrant="@UpdateGrantAsync" />
+                </DetailContent>
+            </ListDetailShell>
+        }
+    </ChildContent>
+</PageScaffold>
+
+<Dialog IsOpen="@showPackageDialog"
+        Eyebrow="Plugin packages"
+        Title="Install runtime packages"
+        Subtitle="Install from the configured catalogue or upload a package archive."
+        Size="ModalSize.Wide"
+        TestId="plugin-packages-dialog"
+        OnClose="ClosePackageDialog">
+    <HeaderActions>
+        <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} packages")" />
+    </HeaderActions>
+    <ChildContent>
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                    <h2 class="cda-title-md">Catalogue</h2>
+                    <StatusBadge Tone="info" Text="@($"{packageCatalog.Count} package(s)")" />
+                </Cluster>
+
+                @if (packageCatalog.Count == 0)
+                {
+                    <EmptyState Eyebrow="Packages"
+                                Title="No package catalogue entries"
+                                Description="Configured package archives appear here after the catalogue folder contains valid plugin packages." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Small">
+                        @foreach (var package in packageCatalog)
+                        {
+                            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Tone="@PluginsPageHelpers.ResolvePackageTone(package)" Text="@(package.IsInstalled ? "Installed" : "Available")" />
+                                        <StatusBadge Tone="neutral" Text="@package.CatalogSourceKind.ToString()" />
+                                        @if (package.RequiresRestart)
+                                        {
+                                            <StatusBadge Tone="warning" Text="Restart" />
+                                        }
+                                    </Cluster>
+                                    <span class="text-sm font-medium text-[var(--cda-text)]">@package.DisplayName</span>
+                                    <span class="break-all text-xs text-[var(--cda-text-muted)]">@package.PackageId.Value</span>
+                                    <span class="text-sm text-[var(--cda-text-muted)]">@package.Description</span>
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Tiny" Class="self-start">
+                                    <Button Text="Install"
+                                            Icon="download"
+                                            ButtonStyle="ButtonStyle.Primary"
+                                            Size="ButtonSize.Small"
+                                            data-testid="@PluginsPageHelpers.BuildPackageInstallTestId(package)"
+                                            Disabled="@package.IsInstalled"
+                                            IsBusy="@IsPackageBusy(package, PluginsPageHelpers.PackageInstallAction)"
+                                            Click="@(() => InstallPackageAsync(package))" />
+                                </Cluster>
+                            </div>
+                        }
+                    </Stack>
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Medium">
+                <h2 class="cda-title-md">Upload zip</h2>
+                <div>
+                    <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
+                    <InputFile id="plugin-package-upload"
+                               class="cda-input"
+                               accept=".zip,application/zip"
+                               data-testid="plugin-package-upload"
+                               OnChange="UploadPackageAsync" />
+                </div>
+                @if (!string.IsNullOrWhiteSpace(packageUploadFileName))
+                {
+                    <p class="cda-body-muted break-all">@packageUploadFileName</p>
+                }
+            </Stack>
+        </Grid>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+            <Button Text="Close"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="ClosePackageDialog" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private const string UiActor = "ui";
+
+    private static readonly ConfigurationSchemaValidator ConnectionSettingsValidator = new();
+
+    private readonly HashSet<string> busyActions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> expandedPluginTreeNodeIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> knownPluginTreeTagNodeIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PluginConnectionEditorState> connectionEditors = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<PluginCatalogItem> catalog = [];
+    private IReadOnlyList<PluginPackageCatalogItem> packageCatalog = [];
+    private IReadOnlyList<PluginLogItem> installationLogs = [];
+    private IReadOnlyList<PluginLogItem> runtimeLogs = [];
+    private IReadOnlyDictionary<string, PluginSettingsDetail> settingsByPluginId = new Dictionary<string, PluginSettingsDetail>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, IReadOnlyList<PluginOAuthConnectionStatusItem>> oauthStatusesByPluginId = new Dictionary<string, IReadOnlyList<PluginOAuthConnectionStatusItem>>(StringComparer.OrdinalIgnoreCase);
+    private PluginRuntimeRestartStatus restartStatus = new(false, false, string.Empty, null, string.Empty, null, Environment.ProcessId);
+    private string? selectedPluginId;
+    private bool showAllPluginLogs;
+    private bool showPackageDialog;
+    private int selectedPluginTabIndex;
+    private string statusMessage = string.Empty;
+    private AlertStyle statusAlertStyle = AlertStyle.Info;
+    private string packageUploadFileName = string.Empty;
+
+    private PluginCatalogItem? SelectedPlugin
+        => catalog.FirstOrDefault(item => string.Equals(item.PluginId.Value, selectedPluginId, StringComparison.OrdinalIgnoreCase)) ??
+           catalog.FirstOrDefault();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var previousSelectedPluginId = selectedPluginId;
+        catalog = await PluginCatalog.ListCatalogAsync();
+        packageCatalog = await PluginPackages.ListPackagesAsync();
+        restartStatus = await PluginRestart.GetStatusAsync();
+        selectedPluginId = catalog.Any(item => string.Equals(item.PluginId.Value, previousSelectedPluginId, StringComparison.OrdinalIgnoreCase))
+            ? previousSelectedPluginId
+            : catalog.FirstOrDefault()?.PluginId.Value;
+        RefreshPluginTreeExpansionDefaults();
+
+        var settings = new Dictionary<string, PluginSettingsDetail>(StringComparer.OrdinalIgnoreCase);
+        var oauthStatuses = new Dictionary<string, IReadOnlyList<PluginOAuthConnectionStatusItem>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var plugin in catalog)
+        {
+            var detail = await PluginSettings.GetSettingsAsync(plugin.PluginId);
+            if (detail is not null)
+            {
+                settings[plugin.PluginId.Value] = detail;
+            }
+
+            oauthStatuses[plugin.PluginId.Value] = await PluginOAuth.ListStatusesAsync(plugin.PluginId);
+        }
+
+        settingsByPluginId = settings;
+        oauthStatusesByPluginId = oauthStatuses;
+        await LoadPluginLogsAsync();
+        InitializeConnectionEditors();
+    }
+
+    private async Task SelectPluginAsync(PluginCatalogItem plugin)
+    {
+        selectedPluginId = plugin.PluginId.Value;
+        selectedPluginTabIndex = 0;
+        await LoadPluginLogsAsync();
+    }
+
+    private Task TogglePluginTreeNodeAsync(string nodeId)
+    {
+        if (!expandedPluginTreeNodeIds.Add(nodeId))
+        {
+            expandedPluginTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task SetLogScopeAsync(bool showAll)
+    {
+        showAllPluginLogs = showAll;
+        await LoadPluginLogsAsync();
+    }
+
+    private Task OpenPackageDialog()
+    {
+        showPackageDialog = true;
+        return Task.CompletedTask;
+    }
+
+    private Task ClosePackageDialog()
+    {
+        showPackageDialog = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadPluginLogsAsync()
+    {
+        var pluginFilter = showAllPluginLogs ? null : SelectedPlugin?.PluginId;
+        installationLogs = await PluginLogs.ListAsync(new PluginLogQuery(
+            PluginLogStreamKind.Installation,
+            pluginFilter,
+            Take: 50));
+        runtimeLogs = await PluginLogs.ListAsync(new PluginLogQuery(
+            PluginLogStreamKind.Runtime,
+            pluginFilter,
+            Take: 50));
+    }
+
+    private Task InstallAsync(PluginCatalogItem plugin)
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.InstallAction, async () =>
+        {
+            var result = await PluginCatalog.InstallAsync(plugin.PluginId, new PluginInstallRequest(Enable: true, Actor: UiActor));
+            ApplyStatus(result, $"Installed {plugin.DisplayName}.");
+        });
+
+    private Task EnableAsync(PluginCatalogItem plugin)
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.EnableAction, async () =>
+        {
+            var result = await PluginCatalog.SetEnabledAsync(plugin.PluginId, isEnabled: true, new PluginInstallationUpdateRequest(UiActor));
+            ApplyStatus(result, $"Enabled {plugin.DisplayName}.");
+        });
+
+    private Task DisableAsync(PluginCatalogItem plugin)
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.DisableAction, async () =>
+        {
+            var result = await PluginCatalog.SetEnabledAsync(plugin.PluginId, isEnabled: false, new PluginInstallationUpdateRequest(UiActor));
+            ApplyStatus(result, $"Disabled {plugin.DisplayName}.");
+        });
+
+    private Task InstallPackageAsync(PluginPackageCatalogItem package)
+        => RunPackageActionAsync(package.PackageId, PluginsPageHelpers.PackageInstallAction, async () =>
+        {
+            var result = await PluginPackages.InstallFromCatalogAsync(
+                package.PackageId,
+                new PluginPackageInstallRequest(Enable: true, Actor: UiActor));
+            ApplyStatus(result, result.Value?.RestartRequired == true
+                ? $"Installed {package.DisplayName}. Restart is required before runtime assemblies are active."
+                : $"Installed {package.DisplayName}.");
+        });
+
+    private async Task UploadPackageAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        packageUploadFileName = file.Name;
+        await RunPageActionAsync(PluginsPageHelpers.PackageUploadAction, async () =>
+        {
+            await using var stream = file.OpenReadStream(PluginPackageOptions.MaxPackageBytes);
+            var result = await PluginPackages.InstallUploadedPackageAsync(
+                stream,
+                file.Name,
+                new PluginPackageInstallRequest(Enable: true, Actor: UiActor));
+            ApplyStatus(result, result.Value?.RestartRequired == true
+                ? $"Uploaded {file.Name}. Restart is required before runtime assemblies are active."
+                : $"Uploaded {file.Name}.");
+        });
+    }
+
+    private Task RequestRestartAsync()
+        => RunPageActionAsync(PluginsPageHelpers.RestartAction, async () =>
+        {
+            var result = await PluginRestart.RequestRestartAsync(new PluginRuntimeRestartRequest(UiActor));
+            ApplyStatus(result, "Restart requested.");
+        });
+
+    private Task UpdateGrantAsync(
+        PluginCatalogItem plugin,
+        PluginCapabilityGrantItem grant,
+        PluginGrantState state)
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, state.ToString()), async () =>
+        {
+            var request = new PluginGrantUpdateRequest(
+                grant.Capability,
+                state,
+                grant.RecipeId?.Value,
+                grant.ScopeKind,
+                grant.ScopeKey,
+                grant.RiskKind,
+                $"{state} from plugin settings UI.");
+            var result = await PluginSettings.UpdateGrantAsync(plugin.PluginId, request, UiActor);
+            ApplyStatus(result, $"{state} {PluginsPageHelpers.ResolveGrantName(grant)} for {plugin.DisplayName}.");
+        });
+
+    private async Task SaveConnectionSettingsAsync(
+        PluginCatalogItem plugin,
+        PluginSettingsDetail settings,
+        PluginConnectionDescriptor descriptor)
+    {
+        var editor = ResolveConnectionEditor(plugin.PluginId, settings, descriptor);
+        var settingsState = editor.State.Clone();
+        settingsState.KeepOnly(descriptor.SettingsSchema.Fields.Select(field => field.Key));
+        var validation = ConnectionSettingsValidator.Validate(descriptor.SettingsSchema, settingsState);
+        editor.Validation = validation;
+        if (!validation.Succeeded)
+        {
+            statusAlertStyle = AlertStyle.Danger;
+            statusMessage = string.Join(" ", validation.Issues.Select(issue => issue.Message));
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.ConnectionSaveBusyKey(descriptor), async () =>
+        {
+            var result = await PluginSettings.SaveConnectionAsync(
+                plugin.PluginId,
+                new PluginConnectionSaveRequest(
+                    editor.ConnectionId,
+                    descriptor.Key,
+                    editor.DisplayName,
+                    settingsState.ToJson(),
+                    editor.IsEnabled),
+                UiActor);
+            ApplyStatus(result, $"Saved {descriptor.DisplayName} settings for {plugin.DisplayName}.");
+        });
+    }
+
+    private Task StartOAuthAsync(
+        PluginCatalogItem plugin,
+        PluginSettingsDetail settings,
+        PluginConnectionDescriptor connectionDescriptor)
+        => RunPluginActionAsync(plugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "login"), async () =>
+        {
+            var connection = PluginsPageHelpers.ResolveConnection(settings, connectionDescriptor);
+            var result = await PluginOAuth.StartAsync(
+                plugin.PluginId,
+                new PluginOAuthStartRequest(
+                    connectionDescriptor.Key,
+                    connection?.Id,
+                    connectionDescriptor.DisplayName,
+                    "/plugins"),
+                Navigation.ToAbsoluteUri("/"),
+                UiActor);
+            if (result.IsFailure)
+            {
+                ApplyStatus(result, string.Empty);
+                return;
+            }
+
+            await JsRuntime.InvokeVoidAsync("open", result.Value!.AuthorizationUrl, "_blank", "noopener,noreferrer");
+            statusAlertStyle = AlertStyle.Info;
+            statusMessage = "OAuth login opened in a new browser tab.";
+        });
+
+    private Task DisconnectOAuthAsync(
+        PluginCatalogItem plugin,
+        PluginConnectionItem? connection)
+        => connection is null
+            ? Task.CompletedTask
+            : RunPluginActionAsync(plugin.PluginId, $"oauth-disconnect:{connection.Id.Value:D}", async () =>
+            {
+                var result = await PluginOAuth.DisconnectAsync(plugin.PluginId, connection.Id);
+                ApplyStatus(result, $"Disconnected {connection.DisplayName}.");
+            });
+
+    private async Task RunPluginActionAsync(
+        PluginId pluginId,
+        string action,
+        Func<Task> operation)
+        => await RunBusyActionAsync(PluginsPageHelpers.BusyKey(pluginId, action), operation);
+
+    private async Task RunPackageActionAsync(
+        PluginPackageId packageId,
+        string action,
+        Func<Task> operation)
+        => await RunBusyActionAsync(PluginsPageHelpers.PackageBusyKey(packageId, action), operation);
+
+    private async Task RunPageActionAsync(
+        string action,
+        Func<Task> operation)
+        => await RunBusyActionAsync(PluginsPageHelpers.PageBusyKey(action), operation);
+
+    private async Task RunBusyActionAsync(
+        string key,
+        Func<Task> operation)
+    {
+        if (!busyActions.Add(key))
+        {
+            return;
+        }
+
+        statusMessage = string.Empty;
+        try
+        {
+            await operation();
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            statusAlertStyle = AlertStyle.Danger;
+            statusMessage = exception.Message;
+        }
+        finally
+        {
+            busyActions.Remove(key);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ApplyStatus<T>(CanDoItAll.SharedKernel.Result<T> result, string successMessage)
+    {
+        if (result.IsSuccess)
+        {
+            statusAlertStyle = AlertStyle.Success;
+            statusMessage = successMessage;
+            return;
+        }
+
+        statusAlertStyle = AlertStyle.Danger;
+        statusMessage = string.Join(" ", result.Errors.Select(error => error.Message));
+    }
+
+    private PluginSettingsDetail? ResolveSettings(PluginCatalogItem plugin)
+        => settingsByPluginId.TryGetValue(plugin.PluginId.Value, out var settings)
+            ? settings
+            : null;
+
+    private void RefreshPluginTreeExpansionDefaults()
+    {
+        var validTagNodeIds = PluginCatalogTreeNodeBuilder.BuildTagNodeIds(catalog).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        expandedPluginTreeNodeIds.RemoveWhere(nodeId => !validTagNodeIds.Contains(nodeId));
+        knownPluginTreeTagNodeIds.RemoveWhere(nodeId => !validTagNodeIds.Contains(nodeId));
+
+        foreach (var tagNodeId in validTagNodeIds)
+        {
+            if (knownPluginTreeTagNodeIds.Add(tagNodeId))
+            {
+                expandedPluginTreeNodeIds.Add(tagNodeId);
+            }
+        }
+    }
+
+    private void InitializeConnectionEditors()
+    {
+        var validKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var plugin in catalog)
+        {
+            if (!settingsByPluginId.TryGetValue(plugin.PluginId.Value, out var settings))
+            {
+                continue;
+            }
+
+            foreach (var descriptor in settings.ConnectionDescriptors)
+            {
+                var editorKey = PluginsPageHelpers.ConnectionEditorKey(plugin.PluginId, descriptor.Key);
+                validKeys.Add(editorKey);
+                var connection = PluginsPageHelpers.ResolveConnection(settings, descriptor);
+                connectionEditors[editorKey] = PluginConnectionEditorState.Create(descriptor, connection);
+            }
+        }
+
+        foreach (var staleKey in connectionEditors.Keys.Where(key => !validKeys.Contains(key)).ToArray())
+        {
+            connectionEditors.Remove(staleKey);
+        }
+    }
+
+    private PluginConnectionEditorState ResolveConnectionEditor(
+        PluginId pluginId,
+        PluginSettingsDetail settings,
+        PluginConnectionDescriptor descriptor)
+    {
+        var key = PluginsPageHelpers.ConnectionEditorKey(pluginId, descriptor.Key);
+        if (!connectionEditors.TryGetValue(key, out var editor))
+        {
+            editor = PluginConnectionEditorState.Create(descriptor, PluginsPageHelpers.ResolveConnection(settings, descriptor));
+            connectionEditors[key] = editor;
+        }
+
+        return editor;
+    }
+
+    private void HandleConnectionDisplayNameChanged(PluginConnectionEditorState editor, string? value)
+    {
+        editor.DisplayName = string.IsNullOrWhiteSpace(value)
+            ? editor.ConnectionKey.Value
+            : value.Trim();
+        editor.IsDirty = true;
+    }
+
+    private static void HandleConnectionEnabledChanged(PluginConnectionEditorState editor, bool value)
+    {
+        editor.IsEnabled = value;
+        editor.IsDirty = true;
+    }
+
+    private static void HandleConnectionSettingChanged(PluginConnectionEditorState editor, string key, string? value)
+    {
+        var state = editor.State.Clone();
+        state.SetText(key, value);
+        editor.State = state;
+        editor.Validation = ConfigurationValidationResult.Success;
+        editor.IsDirty = true;
+    }
+
+    private bool IsBusy(PluginId pluginId, string action)
+        => busyActions.Contains(PluginsPageHelpers.BusyKey(pluginId, action));
+
+    private bool IsPackageBusy(PluginPackageCatalogItem package, string action)
+        => busyActions.Contains(PluginsPageHelpers.PackageBusyKey(package.PackageId, action));
+
+    private bool IsPageBusy(string action)
+        => busyActions.Contains(PluginsPageHelpers.PageBusyKey(action));
+
+    private PluginOAuthConnectionStatusItem? ResolveOAuthStatus(
+        PluginId pluginId,
+        PluginConnectionId? connectionId,
+        PluginConnectionKey connectionKey)
+    {
+        if (!oauthStatusesByPluginId.TryGetValue(pluginId.Value, out var statuses))
+        {
+            return null;
+        }
+
+        if (connectionId is { } id)
+        {
+            return statuses.SingleOrDefault(item => item.ConnectionId == id);
+        }
+
+        return statuses
+            .Where(item => item.ConnectionKey == connectionKey)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .FirstOrDefault();
+    }
+}

@@ -1,0 +1,436 @@
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.AgentFramework.Maf;
+
+public sealed class MafWorkflowLlmComponentInvoker(
+    IAgentRuntime agentRuntime,
+    IProviderRuntimeProfileSource providerSource,
+    IProviderProfileService providerProfileService,
+    TimeProvider? timeProvider = null) : IWorkflowLlmComponentInvoker
+{
+    public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        LlmCallComponent component,
+        WorkflowNodeInput input,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(node);
+        ArgumentNullException.ThrowIfNull(component);
+        ArgumentNullException.ThrowIfNull(input);
+
+        var effectiveComponent = ApplyNodeExecutionOverrides(node, component);
+        var provider = await ResolveProviderAsync(effectiveComponent, cancellationToken);
+        var model = ResolveEffectiveModel(effectiveComponent, provider);
+        var agent = CreateAgent(node, effectiveComponent, provider, model);
+        var clock = timeProvider ?? TimeProvider.System;
+        var now = clock.GetUtcNow();
+        var invocationId = Guid.NewGuid();
+        var session = new ChatSessionRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agent.Id,
+            Title: $"Workflow node {node.Id}",
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            Messages: [],
+            PendingApprovals: []);
+        AgentRuntimeResponse response;
+        try
+        {
+            response = await agentRuntime.RunAsync(
+                agent,
+                provider,
+                session,
+                capabilities: [],
+                memory: [],
+                BuildPrompt(definition, node, component, input),
+                runtimeSessionKey: null,
+                static (_, _, _) => Task.CompletedTask,
+                cancellationToken,
+                suppressApprovalRequirements: true,
+                executionOptions: CreateExecutionOptions(effectiveComponent, input));
+        }
+        catch (AgentRuntimeUsageException exception)
+        {
+            var failureObservations = WorkflowUsageObservationFactory.FromProviderObservations(
+                CreateUsageContext(definition, node, component, invocationId, now, clock.GetUtcNow()),
+                provider,
+                model,
+                exception.UsageObservations);
+            throw new WorkflowUsageObservationException(exception.Message, exception, failureObservations);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var failureCompletedAtUtc = clock.GetUtcNow();
+            var unavailable = WorkflowUsageObservationFactory.FromProviderResponseMetrics(
+                CreateUsageContext(definition, node, component, invocationId, now, failureCompletedAtUtc),
+                provider,
+                model,
+                inputTokens: 0,
+                cachedInputTokens: 0,
+                outputTokens: 0,
+                reasoningTokens: 0,
+                totalTokens: 0,
+                toolCallCount: 0,
+                failureCompletedAtUtc);
+            throw new WorkflowUsageObservationException(exception.Message, exception, [unavailable]);
+        }
+
+        var completedAtUtc = clock.GetUtcNow();
+        var usageContext = CreateUsageContext(
+            definition,
+            node,
+            component,
+            invocationId,
+            now,
+            completedAtUtc);
+        var usageObservations = response.UsageObservations.Count > 0
+            ? WorkflowUsageObservationFactory.FromProviderObservations(
+                usageContext,
+                provider,
+                model,
+                response.UsageObservations)
+            :
+            [
+                WorkflowUsageObservationFactory.FromProviderResponseMetrics(
+                    usageContext,
+                    provider,
+                    model,
+                    response.InputTokens,
+                    response.CachedInputTokens,
+                    response.OutputTokens,
+                    reasoningTokens: 0,
+                    totalTokens: response.InputTokens + response.OutputTokens,
+                    response.ToolCalls,
+                    completedAtUtc)
+            ];
+
+        var payload = response.ResponseText.Trim();
+        try
+        {
+            if (RequiresJsonOutput(component))
+            {
+                ValidateJsonPayload(payload, node, component);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new WorkflowUsageObservationException(exception.Message, exception, usageObservations);
+        }
+
+        return new WorkflowNodeExecutionResult(
+            node.Id,
+            payload,
+            component.ResultShape)
+        {
+            Usage = WorkflowUsageCompatibilityProjection.Project(usageObservations, provider.Name, model),
+            UsageObservations = usageObservations
+        };
+    }
+
+    private static WorkflowUsageObservationContext CreateUsageContext(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        LlmCallComponent component,
+        Guid invocationId,
+        DateTimeOffset startedAtUtc,
+        DateTimeOffset completedAtUtc)
+        => new(
+            WorkflowExecutorExecutionAuditScope.CurrentRunId,
+            definition.Id,
+            definition.VersionId,
+            node.Id,
+            ExecutorId: null,
+            component.Id,
+            WorkflowUsageProducerKind.LlmComponent,
+            invocationId,
+            Attempt: 1,
+            startedAtUtc,
+            completedAtUtc);
+
+    private async Task<ProviderProfile> ResolveProviderAsync(
+        LlmCallComponent component,
+        CancellationToken cancellationToken)
+    {
+        if (component.ProviderProfileId is { } providerId)
+        {
+            var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
+                ?? throw new InvalidOperationException($"LLM workflow component '{component.Id}' references provider '{providerId:D}', but that provider is not registered.");
+
+            return ValidateProvider(provider, component);
+        }
+
+        var providers = await providerSource.ListProvidersAsync(cancellationToken);
+        var matchingProvider = providers
+            .Select(providerProfileService.NormalizeImportedProfile)
+            .Where(provider => provider.IsEnabled && provider.Purpose == ProviderProfilePurpose.Chat)
+            .FirstOrDefault(provider => ModelMatches(provider, component.Model));
+        if (matchingProvider is not null)
+        {
+            return matchingProvider;
+        }
+
+        throw new InvalidOperationException(
+            $"LLM workflow component '{component.Id}' does not specify a provider, and no enabled chat provider offers model '{component.Model}'.");
+    }
+
+    private ProviderProfile ValidateProvider(ProviderProfile provider, LlmCallComponent component)
+    {
+        provider = providerProfileService.NormalizeImportedProfile(provider);
+        if (!provider.IsEnabled)
+        {
+            throw new InvalidOperationException($"LLM workflow component '{component.Id}' references disabled provider '{provider.Name}'.");
+        }
+
+        if (provider.Purpose != ProviderProfilePurpose.Chat)
+        {
+            throw new InvalidOperationException($"LLM workflow component '{component.Id}' references provider '{provider.Name}', which is not a chat provider.");
+        }
+
+        return provider;
+    }
+
+    private static bool ModelMatches(ProviderProfile provider, string model)
+        => string.Equals(provider.DefaultModel, model, StringComparison.OrdinalIgnoreCase)
+           || provider.SuggestedModels.Any(item => string.Equals(item, model, StringComparison.OrdinalIgnoreCase));
+
+    private static AgentDefinition CreateAgent(
+        WorkflowNode node,
+        LlmCallComponent component,
+        ProviderProfile provider,
+        string model)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (WorkflowInstructionSnapshotPolicy.RequiresComponentBackfill(node.Settings.Instructions))
+        {
+            throw new InvalidOperationException(
+                $"LLM workflow node '{node.Id}' has no usable immutable instruction snapshot. " +
+                "Its instructions are blank or contain the legacy template placeholder and must be backfilled from the component before execution.");
+        }
+
+        var instructions = node.Settings.Instructions.Trim();
+        return new AgentDefinition(
+            Id: Guid.NewGuid(),
+            Name: component.Name,
+            RoleTitle: "Workflow LLM Component",
+            Summary: $"Workflow LLM component '{component.Name}'.",
+            Instructions: instructions,
+            Status: AgentLifecycleStatus.Active,
+            ProviderProfileId: provider.Id,
+            Model: model,
+            Workload: AgentWorkloadKind.General,
+            ChatHistoryMode: AgentChatHistoryMode.FrameworkManaged,
+            Temperature: component.ModelSettings.Temperature ?? 0.2,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            ConfigurationJson: string.Empty,
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            Permissions: component.Permissions with
+            {
+                CanUseTools = false,
+                CanAskOtherAgents = false,
+                CanEscalateToHuman = false,
+                CanObserveOtherAgents = false,
+                CanScheduleWork = false,
+                RequiresApprovalForExternalCalls = false,
+                AutoApproveExternalCallsByDefault = false
+            },
+            Capabilities: [],
+            Tags: ["workflow", "llm-component"],
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now);
+    }
+
+    private static string ResolveEffectiveModel(
+        LlmCallComponent component,
+        ProviderProfile provider)
+    {
+        return string.IsNullOrWhiteSpace(component.Model)
+            ? provider.DefaultModel
+            : component.Model.Trim();
+    }
+
+    private static LlmCallComponent ApplyNodeExecutionOverrides(
+        WorkflowNode node,
+        LlmCallComponent component)
+    {
+        return component with
+        {
+            ProviderProfileId = node.Settings.ProviderProfileId ?? component.ProviderProfileId,
+            Model = string.IsNullOrWhiteSpace(node.Settings.Model)
+                ? component.Model
+                : node.Settings.Model.Trim()
+        };
+    }
+
+    private static string BuildPrompt(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        LlmCallComponent component,
+        WorkflowNodeInput input)
+        => $"""
+           Execute workflow LLM component '{component.Name}' for workflow '{definition.Name}' node '{node.Id}'.
+
+           Follow the component instructions exactly. Transform only the workflow input payload below.
+           Return only the final component result. Do not explain the workflow runtime.
+
+           Workflow input payload:
+           {input.PayloadJson}
+           """;
+
+    private static AgentRuntimeExecutionOptions CreateExecutionOptions(
+        LlmCallComponent component,
+        WorkflowNodeInput input)
+    {
+        var requiresJson = RequiresJsonOutput(component);
+        return new(
+            StructuredOutput: null,
+            FinalizerMode: AgentFinalizerMode.Disabled,
+            RequireStructuredOutputValidation: true,
+            MaxStructuredOutputRepairAttempts: 0,
+            ContextWorkspaceScope: TryResolveProjectScope(input, out var projectScope)
+                ? projectScope
+                : null,
+            RequireJsonResponseFormat: requiresJson,
+            ResponseFormatJsonSchema: requiresJson ? ResolveResponseFormatJsonSchema(component) : string.Empty,
+            ResponseFormatSchemaName: requiresJson ? "workflow_llm_component_result" : string.Empty,
+            ResponseFormatSchemaDescription: requiresJson ? $"Workflow LLM component '{component.Name}' JSON result." : string.Empty);
+    }
+
+    private static bool RequiresJsonOutput(LlmCallComponent component)
+        => component.ModelSettings.RequireJsonOutput ||
+           component.ResultShape.Kind == WorkflowValueShapeKind.Json;
+
+    private static string ResolveResponseFormatJsonSchema(LlmCallComponent component)
+        => string.IsNullOrWhiteSpace(component.ModelSettings.ResponseFormatJsonSchema)
+            ? string.Empty
+            : component.ModelSettings.ResponseFormatJsonSchema.Trim();
+
+    private static bool TryResolveProjectScope(
+        WorkflowNodeInput input,
+        out WorkspaceScopeDescriptor scope)
+    {
+        if (TryResolveProjectId(input.PayloadJson, out var projectId))
+        {
+            scope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+            return true;
+        }
+
+        scope = WorkspaceScopeDescriptor.Sandbox;
+        return false;
+    }
+
+    private static bool TryResolveProjectId(
+        string payloadJson,
+        out Guid projectId)
+    {
+        projectId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            var root = document.RootElement;
+            if (TryReadGuidProperty(root, "projectId", out projectId))
+            {
+                return true;
+            }
+
+            return root.ValueKind == JsonValueKind.Object &&
+                   root.TryGetProperty("project", out var project) &&
+                   TryReadGuidProperty(project, "id", out projectId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryReadGuidProperty(
+        JsonElement element,
+        string propertyName,
+        out Guid value)
+    {
+        value = Guid.Empty;
+        return element.ValueKind == JsonValueKind.Object &&
+               element.TryGetProperty(propertyName, out var property) &&
+               property.ValueKind == JsonValueKind.String &&
+               Guid.TryParse(property.GetString(), out value) &&
+               value != Guid.Empty;
+    }
+
+    private static void ValidateJsonPayload(
+        string payload,
+        WorkflowNode node,
+        LlmCallComponent component)
+    {
+        var schemaJson = ResolveResponseFormatJsonSchema(component);
+        if (!string.IsNullOrWhiteSpace(schemaJson))
+        {
+            AgentJsonSchemaOutputResult validation;
+            try
+            {
+                validation = AgentJsonSchemaOutputValidator.Validate(
+                    schemaJson,
+                    payload,
+                    schemaName: "workflow_llm_component_result");
+            }
+            catch (AgentJsonSchemaOutputContractException exception)
+            {
+                throw new InvalidOperationException(
+                    $"LLM workflow node '{node.Id}' component '{component.Id}' has an invalid response JSON Schema " +
+                    $"({exception.Code}): {exception.Message}",
+                    exception);
+            }
+
+            if (validation.ValidationStatus != AgentJsonSchemaOutputValidationStatus.Valid)
+            {
+                throw new InvalidOperationException(
+                    $"LLM workflow node '{node.Id}' component '{component.Id}' returned output that failed the configured " +
+                    $"response JSON Schema validation ({validation.ValidationStatus}): " +
+                    FormatSchemaValidationErrors(validation.ValidationErrors));
+            }
+
+            return;
+        }
+
+        try
+        {
+            using var _ = JsonDocument.Parse(payload);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"LLM workflow node '{node.Id}' component '{component.Id}' returned invalid JSON: {exception.Message}",
+                exception);
+        }
+    }
+
+    private static string FormatSchemaValidationErrors(
+        IReadOnlyList<AgentJsonSchemaOutputValidationError> errors)
+    {
+        const int maximumReportedErrors = 8;
+        if (errors.Count == 0)
+        {
+            return "No validation details were reported.";
+        }
+
+        var summary = string.Join(
+            "; ",
+            errors.Take(maximumReportedErrors)
+                .Select(error => $"[{error.Code}] {error.Path}: {error.Message}"));
+        var remaining = errors.Count - maximumReportedErrors;
+        return remaining > 0
+            ? $"{summary}; plus {remaining} more validation error(s)."
+            : summary;
+    }
+}

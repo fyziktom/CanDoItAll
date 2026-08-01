@@ -1,0 +1,58 @@
+{
+  "stableIdKey": "agents/javascript-solution-architect",
+  "name": "JavaScript Solution Architect",
+  "roleTitle": "JavaScript architecture specialist",
+  "summary": "Designs maintainable JavaScript and TypeScript app structures, package boundaries, and validation paths.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-04.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.6-luna",
+  "workload": "Research",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 5
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "javascript-solution-architect",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "ArchitectureReview",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "javascript",
+    "typescript",
+    "architecture"
+  ]
+}

@@ -1,0 +1,44 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<section class="memory-ui-section" data-testid="memory-ui-query-result">
+    <StatusBadge Tone="@MemoryProviderUiAvailability.HandlerTone(Result.Status)"
+                 Text="@Result.Status.ToString()" />
+    <TextBlock TextStyle="TextStyle.Body2" Value="@Result.Diagnostic" />
+
+    @if (Result.Operation is not null)
+    {
+        <MemoryOperationFacts Operation="@Result.Operation" />
+    }
+    @if (Result.AcceptedOperation is not null)
+    {
+        <MemoryActionResult Status="Accepted operation"
+                            Diagnostic="@Result.AcceptedOperation.StatusPath" />
+    }
+    @if (Result.ContextPack is not null)
+    {
+        <MemoryContextPackPanel ContextPack="@Result.ContextPack" />
+        @if (MemoryProviderUiAvailability.CanSubmitFeedback(Provider, FeedbackEditor.Stage))
+        {
+            <MemoryFeedbackForm Editor="@FeedbackEditor"
+                                IsBusy="@IsFeedbackBusy"
+                                OnSubmit="OnSubmitFeedback" />
+        }
+    }
+</section>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter, EditorRequired]
+    public MemoryProviderQueryUiResult Result { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public MemoryFeedbackEditorModel FeedbackEditor { get; set; } = new();
+
+    [Parameter]
+    public bool IsFeedbackBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmitFeedback { get; set; }
+}

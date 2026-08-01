@@ -1,0 +1,353 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
+@inject FileInteractionComponentComposition InteractionComposition
+@inject ILogger<ProjectStructureAttachmentPreviewDialog> Logger
+
+<ProjectStructureOverlayDialog CanvasScoped="true"
+                               CanMaximize="true"
+                               AriaLabel="@($"{ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(Node)} file interaction")"
+                               Kicker="Governed file"
+                               Title="@ProjectStructureNodeHelpers.ResolveAttachmentDisplayName(Node)"
+                               Summary="@(Interaction?.HostNotice ?? ProjectStructureNodeHelpers.ResolveAttachmentLeadCopy(Node))"
+                               BodyClass="project-structure-file-interaction-dialog__body"
+                               Close="RequestCloseAsync">
+    <Actions>
+        @if (state is not null)
+        {
+            <StatusBadge Tone="@ResolveStateTone()" Text="@ResolveStateLabel()" />
+        }
+        @if (CanEditNode(Node))
+        {
+            <Button Text="Edit node details"
+                    ButtonStyle="ButtonStyle.Info"
+                    Disabled="HasGuardedWork"
+                    Click="@(() => EditNode.InvokeAsync(Node))" />
+        }
+        @if (CanOpenInPreferredApplication(Node))
+        {
+            <Button Text="Open in preferred app"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Click="@(() => OpenInPreferredApplication.InvokeAsync(Node))" />
+        }
+        @if (CanShowLocalOpen(Node))
+        {
+            <Button Text="Show in folder"
+                    ButtonStyle="ButtonStyle.Info"
+                    Click="@(() => OpenLocally.InvokeAsync(Node))" />
+        }
+        <Button Text="Close"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Click="RequestCloseAsync" />
+    </Actions>
+    <Body>
+        @if (Interaction is null || activeRequest is null)
+        {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   Variant="Variant.Outlined"
+                   data-testid="project-structure-direct-file-interaction-unavailable">
+                The current file authority could not be established. No unsigned preview is available.
+            </Alert>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small"
+                   Class="project-structure-file-interaction-layout h-full min-h-0 w-full"
+                   Style="height:100%;min-height:0;width:100%;overflow:hidden;">
+                <Alert AlertStyle="AlertStyle.Info"
+                       Variant="Variant.Outlined"
+                       data-testid="project-structure-file-interaction-policy">
+                    @Interaction.HostNotice
+                </Alert>
+
+                @if (!string.IsNullOrWhiteSpace(supplementalNotes))
+                {
+                    <PanelCard Soft="true"
+                               Style="flex:0 1 auto;max-height:min(12rem,35%);min-height:0;overflow:auto;box-sizing:border-box;"
+                               data-testid="project-structure-file-interaction-notes">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@supplementalNotes"
+                                       Class="whitespace-pre-wrap break-words" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <SurfaceCard Class="project-structure-direct-file-interaction"
+                             style="flex:1 1 0;min-height:0;overflow:hidden;width:100%;"
+                             data-testid="project-structure-direct-file-interaction">
+                    <FileInteraction @key="interactionKey"
+                                     Request="activeRequest"
+                                     ContentSource="Interaction.Session.ContentSource"
+                                     Composition="InteractionComposition"
+                                     SaveRequested="SaveCallback"
+                                     ModeChanged="HandleModeChanged"
+                                     StateChanged="HandleStateChangedAsync"
+                                     AllowModeSwitch="Interaction.CanEdit"
+                                     FillAvailableHeight="true"
+                                     MaximumContentBytes="ProjectStructureFileInteractionPolicy.MaximumContentBytes"
+                                     AriaLabel="@($"Governed project structure file {activeRequest.FileName}")" />
+                </SurfaceCard>
+
+                @if (showCloseGuard)
+                {
+                    <Alert AlertStyle="AlertStyle.Warning"
+                           Variant="Variant.Filled"
+                           data-testid="project-structure-interaction-close-guard">
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                       Value="@(state?.IsSaving == true ? "Save is still in progress" : "Unsaved work remains")" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@(state?.IsSaving == true
+                                           ? "Wait for the awaited save before closing this interaction."
+                                           : "Close and discard the in-memory edit session?")" />
+                            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                                <Button Text="Keep editing"
+                                        Variant="Variant.Text"
+                                        Click="CancelClose" />
+                                <Button Text="Discard and close"
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Disabled="@(state?.IsSaving == true)"
+                                        data-testid="project-structure-interaction-close-confirm"
+                                        Click="ConfirmCloseAsync" />
+                            </Cluster>
+                        </Stack>
+                    </Alert>
+                }
+            </Stack>
+        }
+    </Body>
+</ProjectStructureOverlayDialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectStructureNode Node { get; set; } = default!;
+
+    [Parameter]
+    public ProjectStructureKnownFileInteraction? Interaction { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> OpenLocally { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> OpenInPreferredApplication { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> EditNode { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanOpenInPreferredApplication { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanEditNode { get; set; } = default!;
+
+    private ProjectStructureKnownFileInteraction? activeInteraction;
+    private FileInteractionRequest? activeRequest;
+    private FileInteractionState? state;
+    private long interactionKey;
+    private bool showCloseGuard;
+    private ProjectStructureKnownFileInteraction? notesInteraction;
+    private string? notesNodeId;
+    private string notesSource = string.Empty;
+    private string? supplementalNotes;
+    private CancellationTokenSource? notesResolutionCancellation;
+    private bool shouldResolveNotes;
+
+    private bool HasGuardedWork =>
+        state is { IsDirty: true } or { IsSaving: true } or { HasConflict: true };
+
+    private EventCallback<FileInteractionSaveRequestedEventArgs> SaveCallback
+        => Interaction?.CanEdit == true
+            ? EventCallback.Factory.Create<FileInteractionSaveRequestedEventArgs>(this, HandleSaveRequestedAsync)
+            : default;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(activeInteraction, Interaction))
+        {
+            activeInteraction = Interaction;
+            activeRequest = Interaction?.Request;
+            state = null;
+            showCloseGuard = false;
+            interactionKey++;
+        }
+
+        shouldResolveNotes = false;
+        if (ReferenceEquals(notesInteraction, Interaction) &&
+            string.Equals(notesNodeId, Node.Id, StringComparison.Ordinal) &&
+            string.Equals(notesSource, Node.Notes, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        CancelNotesResolution();
+        notesInteraction = Interaction;
+        notesNodeId = Node.Id;
+        notesSource = Node.Notes;
+        supplementalNotes = string.IsNullOrWhiteSpace(Node.Notes) ? null : Node.Notes;
+        if (!ProjectStructureAttachmentNotesResolver.RequiresContentComparison(Node, Interaction))
+        {
+            return;
+        }
+
+        supplementalNotes = null;
+        notesResolutionCancellation = new CancellationTokenSource();
+        shouldResolveNotes = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!shouldResolveNotes ||
+            notesInteraction is not { } interaction ||
+            notesResolutionCancellation is not { } cancellation)
+        {
+            return;
+        }
+
+        shouldResolveNotes = false;
+        string nodeId = notesNodeId!;
+        string sourceNotes = notesSource;
+        try
+        {
+            string? resolvedNotes = await ProjectStructureAttachmentNotesResolver.ResolveSupplementalNotesAsync(
+                Node,
+                interaction,
+                cancellation.Token);
+            if (IsCurrentNotesResolution(interaction, nodeId, sourceNotes, cancellation))
+            {
+                supplementalNotes = resolvedNotes;
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (IsCurrentNotesResolution(interaction, nodeId, sourceNotes, cancellation))
+            {
+                Logger.LogWarning(
+                    ex,
+                    "Could not compare supplemental notes with governed file content for project-structure node {NodeId}.",
+                    nodeId);
+                supplementalNotes = sourceNotes;
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(notesResolutionCancellation, cancellation))
+            {
+                notesResolutionCancellation = null;
+                cancellation.Dispose();
+            }
+        }
+    }
+
+    private Task HandleSaveRequestedAsync(FileInteractionSaveRequestedEventArgs args)
+        => Interaction?.SaveAsync(args)
+           ?? Task.FromException(new InvalidOperationException("The file interaction is no longer available."));
+
+    private void HandleModeChanged(FileInteractionMode mode)
+    {
+        if (Interaction is not null)
+        {
+            activeRequest = Interaction.WithMode(mode);
+        }
+    }
+
+    private Task HandleStateChangedAsync(FileInteractionState next)
+    {
+        state = next;
+        if (showCloseGuard && !next.IsDirty && !next.IsSaving && !next.HasConflict)
+        {
+            showCloseGuard = false;
+        }
+
+        if (Interaction is not null && activeRequest?.Mode != next.Mode)
+        {
+            activeRequest = Interaction.WithMode(next.Mode);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task RequestCloseAsync()
+    {
+        if (HasGuardedWork)
+        {
+            showCloseGuard = true;
+            return;
+        }
+
+        await Close.InvokeAsync();
+    }
+
+    private void CancelClose() => showCloseGuard = false;
+
+    private async Task ConfirmCloseAsync()
+    {
+        if (state?.IsSaving != true)
+        {
+            await Close.InvokeAsync();
+        }
+    }
+
+    private bool IsCurrentNotesResolution(
+        ProjectStructureKnownFileInteraction interaction,
+        string nodeId,
+        string sourceNotes,
+        CancellationTokenSource cancellation)
+        => ReferenceEquals(notesInteraction, interaction) &&
+           ReferenceEquals(notesResolutionCancellation, cancellation) &&
+           string.Equals(notesNodeId, nodeId, StringComparison.Ordinal) &&
+           string.Equals(notesSource, sourceNotes, StringComparison.Ordinal) &&
+           !cancellation.IsCancellationRequested;
+
+    private void CancelNotesResolution()
+    {
+        CancellationTokenSource? cancellation = notesResolutionCancellation;
+        notesResolutionCancellation = null;
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        cancellation.Cancel();
+        cancellation.Dispose();
+    }
+
+    private string ResolveStateLabel()
+        => state switch
+        {
+            null => "Loading",
+            { IsSaving: true } => "Saving",
+            { HasConflict: true } => "Conflict",
+            { IsDirty: true } => "Unsaved",
+            { Lifecycle: FileInteractionLifecycleState.Unsupported } => "Inert",
+            { Lifecycle: FileInteractionLifecycleState.Error } => "Error",
+            _ => Interaction?.CanEdit == true ? "Revision guarded" : "Read only"
+        };
+
+    private string ResolveStateTone()
+        => state switch
+        {
+            { IsSaving: true } => "info",
+            { HasConflict: true } or { Lifecycle: FileInteractionLifecycleState.Error } => "danger",
+            { IsDirty: true } => "warning",
+            { Lifecycle: FileInteractionLifecycleState.Unsupported } => "neutral",
+            _ => "success"
+        };
+
+    public ValueTask DisposeAsync()
+    {
+        CancelNotesResolution();
+        return ValueTask.CompletedTask;
+    }
+}

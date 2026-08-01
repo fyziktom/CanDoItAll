@@ -1,0 +1,91 @@
+@namespace CanDoItAll.Web.Components.Layout
+@using CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.SharedKernel
+
+@if (!string.IsNullOrWhiteSpace(DatabaseSwitchAlert))
+{
+    <div class="mb-3 rounded-[1.35rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+         data-testid="database-switch-alert">
+        @DatabaseSwitchAlert
+    </div>
+}
+
+<div class="cda-shell-status-row"
+     data-testid="layout-compact-status-bar">
+    <HelpPopover RootClass="pf-help-popover cda-shell-status-popover-root"
+                 ToggleClass="pf-help-popover__toggle cda-shell-status-trigger"
+                 PanelClass="pf-help-popover__panel cda-shell-status-panel"
+                 PanelTestId="layout-status-popover"
+                 Glyph="i"
+                 AriaLabel="Workspace status"
+                 Title="Show workspace status"
+                 OpenOnHover="true">
+        <PanelContent>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="cda-shell-status-popover"
+                   data-testid="layout-status-content">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.NoWrap"
+                         AlignItems="AlignItems.Center"
+                         Class="border-b border-slate-200 pb-2.5">
+                    <span class="cda-shell-status-popover__icon" aria-hidden="true">
+                        <Icon Name="monitor_heart" />
+                    </span>
+                    <Stack GapScale="LayoutGap.XSmall" Class="min-w-0">
+                        <p class="cda-shell-status-popover__title">Workspace status</p>
+                        <p class="cda-shell-status-popover__description">Current context and live shell counts</p>
+                    </Stack>
+                </Cluster>
+
+                <Cluster Wrap="FlexWrap.Wrap"
+                         Gap="LayoutGap.XSmall"
+                         AlignItems="AlignItems.Center">
+                    <StatusBadge Tone="neutral" Text="@ActiveWorkspaceTitle" />
+                    <StatusBadge Tone="info" Text="@ActiveNavigationTitle" />
+                    @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle))
+                    {
+                        <StatusBadge Tone="info" Text="@ActiveProjectTitle" />
+                    }
+                    @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
+                    {
+                        <StatusBadge Tone="neutral" Text="@ActivePhaseTitle" />
+                    }
+                    <StatusBadge Tone="info" Text="Interactive Server" />
+                    <StatusBadge Tone="success" Text="@($"Live items {OpenedItemCount}")" />
+                    <StatusBadge Tone="neutral" Text="@($"Tabs {TabCount}")" />
+                </Cluster>
+            </Stack>
+        </PanelContent>
+    </HelpPopover>
+</div>
+
+@code {
+    [Parameter]
+    public string? DatabaseSwitchAlert { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ActiveWorkspaceTitle { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ActiveNavigationTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public AppShellMode ShellMode { get; set; }
+
+    [Parameter]
+    public string? ActiveProjectTitle { get; set; }
+
+    [Parameter, EditorRequired]
+    public string CurrentRouteDisplay { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ActivePhaseTitle { get; set; }
+
+    [Parameter]
+    public int OpenedItemCount { get; set; }
+
+    [Parameter]
+    public int TabCount { get; set; }
+}

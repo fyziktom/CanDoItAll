@@ -1,0 +1,509 @@
+@implements IAsyncDisposable
+@using CanDoItAll.Components.Common
+@inject IProjectFilePortfolioCoordinator Coordinator
+@inject IFileToolsBrowseItemActionService ItemActionService
+@inject FileInteractionComponentComposition InteractionComposition
+@inject IJSRuntime JSRuntime
+@inject ILogger<ProjectFilesPortfolioPane> Logger
+
+<Stack GapScale="LayoutGap.Small"
+       AlignItems="AlignItems.Stretch"
+       Class="h-full min-h-0"
+       data-testid="project-files-portfolio-pane">
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap"
+           Class="shrink-0 border-b border-slate-200 px-1 pb-3">
+        <Stack GapScale="LayoutGap.Tiny"
+               Class="min-w-0">
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="Filtered project files" />
+            <TextBlock TextStyle="TextStyle.Caption"
+                       Value="@SourceSummary" />
+        </Stack>
+        <Cluster Gap="LayoutGap.XSmall"
+                 Wrap="FlexWrap.NoWrap"
+                 JustifyContent="JustifyContent.End">
+            @if (browserSnapshot?.Search is { } search)
+            {
+                <StatusBadge Tone="neutral" Text="@($"{browserSnapshot.Items.Count} visible")" />
+                <StatusBadge Tone="info" Text="@($"{search.ScannedItems} inspected")" />
+            }
+            <TooltipTarget Text="Refresh filtered project sources"
+                           Position="TooltipPosition.Bottom"
+                           TestId="project-files-portfolio-refresh-tooltip">
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Class="cda-button--quick"
+                        Icon="refresh"
+                        aria-label="Refresh filtered project sources"
+                        Disabled="@isLoading"
+                        data-testid="project-files-portfolio-refresh"
+                        Click="RefreshSourcesAsync" />
+            </TooltipTarget>
+        </Cluster>
+    </Split>
+
+    @if (Projection.Projects.Count == 0)
+    {
+        <EmptyState Eyebrow="No project sources"
+                    Title="No projects match the shared filters"
+                    Description="Adjust the portfolio filters to select at least one authorized project file source." />
+    }
+    else if (isLoading)
+    {
+        <LoadingState Eyebrow="Filtered portfolio"
+                      Title="Resolving project file sources"
+                      Description="Building the bounded source set from the same project projection used by the cards." />
+    }
+    else if (!string.IsNullOrWhiteSpace(openError))
+    {
+        <EmptyState Eyebrow="Project files unavailable"
+                    Title="Unable to open the filtered file sources"
+                    Description="@openError">
+            <Actions>
+                <Button Text="Retry"
+                        data-testid="project-files-portfolio-retry"
+                        Click="RetryAsync" />
+            </Actions>
+        </EmptyState>
+    }
+    else if (interaction is not null)
+    {
+        <Stack GapScale="LayoutGap.Small"
+               AlignItems="AlignItems.Stretch"
+               Class="h-full min-h-0">
+            <Cluster Gap="LayoutGap.Small"
+                     Class="shrink-0">
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Icon="arrow_back"
+                        Text="Back to filtered files"
+                        data-testid="project-files-portfolio-back"
+                        Click="CloseInteractionAsync" />
+                <StatusBadge Tone="info" Text="Read only" />
+            </Cluster>
+            @if (!string.IsNullOrWhiteSpace(activationError))
+            {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                    @activationError
+                </Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(actionFeedback))
+            {
+                <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                    @actionFeedback
+                </Alert>
+            }
+            <FileInteraction Request="interaction.Request"
+                             ContentSource="interaction.Session.ContentSource"
+                             OpenExternallyRequested="OpenInteractionExternallyCallback"
+                             OpenExternallyLabel="Open in preferred app"
+                             AllowModeSwitch="false"
+                             MaximumContentBytes="@(4 * 1024 * 1024)"
+                             AriaLabel="@($"Read-only project file {interaction.Request.FileName}")" />
+        </Stack>
+    }
+    else if (workspace is not null)
+    {
+        @if (!string.IsNullOrWhiteSpace(activationError))
+        {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   Variant="Variant.Outlined"
+                   data-testid="project-files-portfolio-activation-error">
+                @activationError
+            </Alert>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(actionFeedback))
+        {
+            <Alert AlertStyle="AlertStyle.Info"
+                   Variant="Variant.Outlined"
+                   data-testid="project-files-portfolio-action-feedback">
+                @actionFeedback
+            </Alert>
+        }
+
+        <FileBrowser Session="workspace.Browser"
+                     HostActionCatalog="hostActionCatalog"
+                     Class="w-full flex-1 min-h-0"
+                     AriaLabel="Filtered project file sources"
+                     DisplayMode="FileBrowserDisplayMode.Compact"
+                     InitialViewMode="FileBrowserViewMode.List"
+                     SearchDebounceMilliseconds="280"
+                     SnapshotChanged="HandleSnapshotChanged"
+                     ItemInvoked="ActivateAsync"
+                     ActionRequested="HandleActionRequestedAsync" />
+    }
+</Stack>
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private ProjectFilePortfolioWorkspace? workspace;
+    private ProjectFilesPilotInteraction? interaction;
+    private FileBrowserItemKey? interactionItemKey;
+    private IFileBrowserHostActionCatalog? hostActionCatalog;
+    private FileToolsHostActionRunner? actionRunner;
+    private CancellationTokenSource? operation;
+    private FileBrowserSnapshot? browserSnapshot;
+    private string? activeProjectionFingerprint;
+    private string? openError;
+    private string? activationError;
+    private string? actionFeedback;
+    private bool isLoading;
+    private bool disposed;
+
+    private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+
+    private EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback
+        => workspace is not null &&
+           interactionItemKey is { } itemKey &&
+           SupportsLocalOpen(workspace, itemKey.SourceId)
+            ? EventCallback.Factory.Create<FileInteractionRequest>(this, OpenInteractionExternallyAsync)
+            : default;
+
+    [Parameter, EditorRequired]
+    public ProjectFileFilterProjection Projection { get; set; } = default!;
+
+    private string SourceSummary => workspace is null
+        ? $"{Projection.Projects.Count} filtered project(s)"
+        : $"{workspace.ProjectCount} project(s) · {workspace.SourceCount} source(s) · revision {workspace.Revision.Value[..12]}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ArgumentNullException.ThrowIfNull(Projection);
+        if (string.Equals(activeProjectionFingerprint, Projection.Fingerprint, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await ApplyProjectionAsync(force: false);
+    }
+
+    private Task RetryAsync() => ApplyProjectionAsync(force: true);
+
+    private Task RefreshSourcesAsync() => ApplyProjectionAsync(force: true, refreshCurrentSource: true);
+
+    private async Task ApplyProjectionAsync(bool force, bool refreshCurrentSource = false)
+    {
+        if (!force && string.Equals(activeProjectionFingerprint, Projection.Fingerprint, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        string requestedFingerprint = Projection.Fingerprint;
+        isLoading = true;
+        openError = null;
+        activationError = null;
+        actionFeedback = null;
+        try
+        {
+            if (interaction is not null)
+            {
+                await interaction.DisposeAsync();
+                interaction = null;
+            }
+
+            interactionItemKey = null;
+
+            bool changed;
+            if (workspace is null)
+            {
+                ProjectFilePortfolioWorkspace opened = await Coordinator.OpenAsync(
+                    Projection,
+                    currentOperation.Token);
+                if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+                {
+                    await opened.DisposeAsync();
+                    return;
+                }
+
+                workspace = opened;
+                hostActionCatalog = new DefaultFileToolsHostActionCatalog(
+                    opened.GetActionAvailability,
+                    ItemActionService.IsLocalLaunchAvailable);
+                changed = true;
+            }
+            else
+            {
+                changed = await Coordinator.UpdateAsync(
+                    workspace,
+                    Projection,
+                    currentOperation.Token);
+            }
+
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            activeProjectionFingerprint = requestedFingerprint;
+            browserSnapshot = workspace.Browser.Snapshot;
+            if (refreshCurrentSource && !changed && workspace.SourceCount > 0 && workspace.Browser.Snapshot.CurrentSource is not null)
+            {
+                await workspace.Browser.RefreshAsync(currentOperation.Token);
+            }
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            activeProjectionFingerprint = requestedFingerprint;
+            openError = SafeMessage(exception, "Unable to open filtered project files.");
+        }
+        finally
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
+            SupportsLocalOpen(workspace, args.Item.Key.SourceId))
+        {
+            await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+            return;
+        }
+
+        activationError = null;
+        actionFeedback = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        ProjectFilesPilotInteraction? activated = null;
+        try
+        {
+            activated = await Coordinator.ActivateAsync(
+                workspace,
+                args.Item.Key,
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            interaction = activated;
+            interactionItemKey = args.Item.Key;
+            activated = null;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            activationError = SafeMessage(exception, "Unable to open the selected project file.");
+        }
+        finally
+        {
+            if (activated is not null)
+            {
+                await activated.DisposeAsync();
+            }
+        }
+    }
+
+    private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)
+    {
+        if (workspace is null || args.Origin != FileBrowserActionOrigin.Host)
+        {
+            return;
+        }
+
+        switch (args.ActionId)
+        {
+            case FileBrowserActionIds.Open:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+                break;
+            case FileToolsBrowseHostActionIds.OpenContainingFolder:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenContainingFolder);
+                break;
+            case FileBrowserActionIds.Download:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.Download);
+                break;
+            default:
+                activationError = "The selected portfolio file action is not supported by this host.";
+                break;
+        }
+    }
+
+    private async Task OpenInteractionExternallyAsync(FileInteractionRequest request)
+    {
+        if (interaction is null ||
+            interactionItemKey is not { } itemKey ||
+            request.File != interaction.Request.File)
+        {
+            return;
+        }
+
+        await ExecuteFileActionAsync(itemKey, FileToolsHostAction.OpenInPreferredApplication);
+    }
+
+    private async Task ExecuteFileActionAsync(
+        FileBrowserItemKey itemKey,
+        FileToolsHostAction action)
+    {
+        if (workspace is null)
+        {
+            return;
+        }
+
+        ProjectFilePortfolioWorkspace currentWorkspace = workspace;
+
+        activationError = null;
+        actionFeedback = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        try
+        {
+            FileToolsSemanticScope scope = ResolveScope(currentWorkspace, itemKey.SourceId);
+            FileToolsBrowseItemActionResult result = await ActionRunner.ExecuteAsync(
+                action,
+                (localAction, cancellationToken) => ItemActionService.LaunchAsync(
+                    scope,
+                    itemKey,
+                    localAction,
+                    cancellationToken),
+                cancellationToken => ItemActionService.AuthorizeDownloadAsync(
+                    scope,
+                    itemKey,
+                    cancellationToken),
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (result.IsSuccess)
+            {
+                actionFeedback = result.Message;
+            }
+            else
+            {
+                activationError = result.Message;
+            }
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Authorized portfolio file action failed. Action={Action} Revision={Revision} FailureType={FailureType}.",
+                action,
+                currentWorkspace.Revision.Value[..12],
+                exception.GetType().Name);
+            activationError = SafeMessage(
+                exception,
+                action == FileToolsHostAction.Download
+                    ? "Unable to download the selected portfolio file."
+                    : "Unable to open the selected portfolio file locally.");
+        }
+    }
+
+    private bool SupportsLocalOpen(
+        ProjectFilePortfolioWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+        => ItemActionService.IsLocalLaunchAvailable &&
+           currentWorkspace.GetActionAvailability(sourceId).SupportsLocalOpen;
+
+    private static FileToolsSemanticScope ResolveScope(
+        ProjectFilePortfolioWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+    {
+        if (currentWorkspace.IsDisposed)
+        {
+            throw new ObjectDisposedException(nameof(ProjectFilePortfolioWorkspace));
+        }
+
+        if (!currentWorkspace.TryGetScope(sourceId, out FileToolsSemanticScope? scope) || scope is null)
+        {
+            throw new FileBrowserProviderException(new FileBrowserError(
+                FileBrowserErrorCode.Conflict,
+                "The selected file source is no longer part of the filtered portfolio."));
+        }
+
+        return scope;
+    }
+
+    private async Task CloseInteractionAsync()
+    {
+        activeProjectionFingerprint = null;
+        await ApplyProjectionAsync(force: true);
+    }
+
+    private void HandleSnapshotChanged(FileBrowserSnapshot snapshot)
+    {
+        browserSnapshot = snapshot;
+        if (snapshot.Search is not { } search || snapshot.IsBusy)
+        {
+            return;
+        }
+
+        Logger.LogInformation(
+            "Project portfolio file search completed. Returned={ReturnedItems} Inspected={InspectedItems} Retained={RetainedItems} RetainedBytes={RetainedBytes} DurationMs={DurationMs} Partial={IsPartial}.",
+            snapshot.Items.Count,
+            search.ScannedItems,
+            search.RetainedItems,
+            search.RetainedBytes,
+            search.Elapsed.TotalMilliseconds,
+            search.IsPartial);
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private static string SafeMessage(Exception exception, string fallback)
+        => exception switch
+        {
+            FileBrowserProviderException providerException => providerException.Error.Message,
+            FileAccessDeniedException deniedException => deniedException.Message,
+            _ => fallback
+        };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        operation?.Cancel();
+        operation?.Dispose();
+        if (interaction is not null)
+        {
+            await interaction.DisposeAsync();
+        }
+
+        interactionItemKey = null;
+
+        if (workspace is not null)
+        {
+            await workspace.DisposeAsync();
+        }
+
+        hostActionCatalog = null;
+        if (actionRunner is not null)
+        {
+            await actionRunner.DisposeAsync();
+            actionRunner = null;
+        }
+
+        lifetime.Dispose();
+    }
+}

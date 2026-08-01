@@ -1,0 +1,32 @@
+{
+  "capabilityKeys": [
+    "playwright-local-mcp",
+    "concrete-deliverable-delivery-inline-skill",
+    "development-image-analysis-guidance-inline-skill",
+    "candoitall-frontend-theme",
+    "frontend-skill",
+    "candoitall-watch-playwright-loop",
+    "run-tests",
+    "writing-mstest-tests",
+    "dotnet-app-delivery-inline-skill",
+    "blazor-ssr-delivery-inline-skill",
+    "candoitall-components-mcp",
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-dotnet-build",
+    "workspace-dotnet-restore",
+    "workspace-dotnet-test",
+    "workspace-dotnet-run",
+    "workspace-dotnet-stop",
+    "workspace-pwsh-run-script",
+    "workspace-inspect-image",
+    "workspace-analyze-image",
+    "workspace-analyze-images"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

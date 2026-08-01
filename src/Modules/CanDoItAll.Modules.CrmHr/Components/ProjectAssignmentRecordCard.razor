@@ -1,0 +1,111 @@
+@using CanDoItAll.Modules.Projects
+
+<PanelCard Class="h-full" data-testid="@($"{TestIdPrefix}-item")">
+    <Stack GapScale="LayoutGap.Small" Class="h-full">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Start"
+               JustifyContent="JustifyContent.SpaceBetween">
+            <div class="min-w-0">
+                <p class="cda-eyebrow cda-eyebrow--tight">Project</p>
+                <p class="truncate text-xs font-semibold text-slate-600">@ProjectName</p>
+                <h3 class="mt-2 truncate text-base font-semibold text-slate-950">@Assignment.PartyDisplayName</h3>
+                @if (Assignment.Affiliation is not null)
+                {
+                    <div class="mt-2 flex min-w-0 items-center gap-2"
+                         title="@Assignment.Affiliation.OtherAffiliationsSummary"
+                         data-testid="@($"{TestIdPrefix}-affiliation")">
+                        <StatusBadge Tone="neutral"
+                                     Text="@Assignment.Affiliation.AffiliationLabel" />
+                        @if (!string.IsNullOrWhiteSpace(Assignment.Affiliation.PrimaryDisplayText))
+                        {
+                            <span class="truncate text-xs text-slate-600">
+                                @Assignment.Affiliation.PrimaryDisplayText
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+            @if (Assignment.IsPrimary)
+            {
+                <StatusBadge Tone="info" Text="Primary" />
+            }
+        </Split>
+
+        <p class="text-sm leading-5 text-slate-600">@BuildAssignmentMeta()</p>
+        @if (!string.IsNullOrWhiteSpace(Assignment.NodeKey))
+        {
+            <p class="truncate font-mono text-xs text-slate-500" title="@Assignment.NodeKey">@Assignment.NodeKey</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(Assignment.Notes))
+        {
+            <p class="line-clamp-2 text-sm leading-5 text-slate-600">@Assignment.Notes</p>
+        }
+
+        <CardActions Secondary="true" Class="mt-auto pt-3">
+            <StatusBadge Tone="neutral" Text="@Assignment.PartyTypeLabel" />
+            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
+                <TooltipTarget Text="Show assignment and linked work-item details"
+                               Position="TooltipPosition.Bottom">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick"
+                            Icon="visibility"
+                            aria-label="Show details"
+                            data-testid="@($"{TestIdPrefix}-details-button")"
+                            Click="@(() => ShowDetails.InvokeAsync(Assignment))" />
+                </TooltipTarget>
+                <TooltipTarget Text="Delete this project assignment"
+                               Position="TooltipPosition.Bottom">
+                    <Button ButtonStyle="ButtonStyle.Danger"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick"
+                            Icon="delete"
+                            aria-label="Delete assignment"
+                            data-testid="@($"{TestIdPrefix}-delete-button")"
+                            Click="@(() => Delete.InvokeAsync(Assignment.Id))" />
+                </TooltipTarget>
+            </Cluster>
+        </CardActions>
+    </Stack>
+</PanelCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectPartyAssignmentDetail Assignment { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "crmhr-assignment";
+
+    [Parameter]
+    public EventCallback<ProjectPartyAssignmentDetail> ShowDetails { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> Delete { get; set; }
+
+    private string BuildAssignmentMeta()
+    {
+        var parts = new List<string>
+        {
+            ProjectPartyAssignmentPresentation.ResolveRoleLabel(Assignment.Role)
+        };
+
+        if (Assignment.AllocationPercent.HasValue)
+        {
+            parts.Add($"{Assignment.AllocationPercent.Value:0.##}%");
+        }
+
+        if (Assignment.StartsAtUtc.HasValue || Assignment.EndsAtUtc.HasValue)
+        {
+            parts.Add($"{FormatDate(Assignment.StartsAtUtc)} → {FormatDate(Assignment.EndsAtUtc)}");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string FormatDate(DateTimeOffset? value)
+        => value.HasValue ? value.Value.UtcDateTime.ToString("yyyy-MM-dd") : "Open";
+}

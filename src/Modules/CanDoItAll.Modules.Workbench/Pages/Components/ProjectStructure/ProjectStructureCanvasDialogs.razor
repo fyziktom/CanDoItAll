@@ -1,0 +1,1313 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.SharedKernel
+
+@if (ProjectHierarchyDialog is not null)
+{
+    var hierarchyDialog = ProjectHierarchyDialog;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@hierarchyDialog.Title"
+                                   Kicker="Project hierarchy"
+                                   Title="@hierarchyDialog.Title"
+                                   Summary="@hierarchyDialog.Copy"
+                                   DataTestId="project-structure-hierarchy-dialog"
+                                   Close="CloseProjectHierarchy">
+        <Actions>
+            <Button Text="Create new project"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    data-testid="project-structure-hierarchy-create-project"
+                    Click="OpenProjectCreateDialog" />
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseProjectHierarchy" />
+            <Button Text="@hierarchyDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-hierarchy-submit"
+                    Disabled="@(hierarchyDialog.AvailableProjects.Count == 0)"
+                    Click="ExecuteProjectHierarchyCommand" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                @if (!string.IsNullOrWhiteSpace(hierarchyDialog.CurrentParentProjectTitle))
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current parent" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@hierarchyDialog.CurrentParentProjectTitle" Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Project" Class="cw-panel-copy" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-hierarchy-project-select"
+                                value="@(hierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
+                                @onchange="ProjectHierarchySelectionChanged">
+                            <option value="">Select a project</option>
+                            @foreach (var projectOption in hierarchyDialog.AvailableProjects)
+                            {
+                                <option value="@projectOption.Id">@projectOption.Name</option>
+                            }
+                        </select>
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(hierarchyDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @hierarchyDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (BlockMutationDialog is not null)
+{
+    var blockDialog = BlockMutationDialog;
+    var selectedOption = blockDialog.Options.FirstOrDefault(option => string.Equals(option.ActionId, blockDialog.SelectedActionId, StringComparison.OrdinalIgnoreCase));
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@blockDialog.Title"
+                                   Kicker="Block mutation"
+                                   Title="@blockDialog.Title"
+                                   Summary="@blockDialog.Copy"
+                                   DataTestId="project-structure-block-mutation-dialog"
+                                   Close="CloseBlockMutation">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseBlockMutation" />
+            <Button Text="@blockDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-block-mutation-submit"
+                    Click="ExecuteBlockMutation" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="@blockDialog.SelectionLabel" Class="cw-panel-copy" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-block-mutation-select"
+                                value="@blockDialog.SelectedActionId"
+                                @onchange="BlockMutationSelectionChanged">
+                            @foreach (var option in blockDialog.Options)
+                            {
+                                <option value="@option.ActionId">@option.Label</option>
+                            }
+                        </select>
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected type" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.Label" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@selectedOption.Description" Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(blockDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @blockDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (SubprojectTransferDialog is not null)
+{
+    var transferDialog = SubprojectTransferDialog;
+    var moveScopeCopy = transferDialog.DescendantCount == 1
+        ? "1 descendant will move into the new subproject root."
+        : $"{transferDialog.DescendantCount} descendants will move into the new subproject root.";
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@transferDialog.Title"
+                                   Kicker="Subproject transfer"
+                                   Title="@transferDialog.Title"
+                                   Summary="@transferDialog.Copy"
+                                   DataTestId="project-structure-subproject-transfer-dialog"
+                                   Close="CloseSubprojectTransfer">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseSubprojectTransfer" />
+            <Button Text="@transferDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-subproject-transfer-submit"
+                    Click="ExecuteSubprojectTransfer" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="New subproject name" Class="cw-panel-copy" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-subproject-transfer-name"
+                               value="@transferDialog.ProjectName"
+                               @oninput="SubprojectTransferNameChanged" />
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Move scope" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@moveScopeCopy"
+                                   Class="cw-panel-copy" />
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(transferDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @transferDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (ProcessLinkDialog is not null)
+{
+    var processDialog = ProcessLinkDialog;
+    var selectedOption = processDialog.SelectedDefinitionId.HasValue
+        ? processDialog.Options.FirstOrDefault(option => option.DefinitionId == processDialog.SelectedDefinitionId.Value)
+        : null;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@processDialog.Title"
+                                   Kicker="Process link"
+                                   Title="@processDialog.Title"
+                                   Summary="@processDialog.Copy"
+                                   DataTestId="project-structure-process-link-dialog"
+                                   Close="CloseProcessLink">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseProcessLink" />
+            <Button Text="@processDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-process-link-submit"
+                    Disabled="@(processDialog.Options.Count == 0 || !processDialog.SelectedDefinitionId.HasValue)"
+                    Click="ExecuteProcessLink" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium"
+                   AlignItems="AlignItems.Stretch">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Process" Class="cw-panel-copy" />
+                        <ResourceCardPicker TItem="Guid"
+                                            Options="@BuildProcessLinkPickerOptions(processDialog)"
+                                            SelectionChanged="ProcessLinkSelectionChanged"
+                                            SearchPlaceholder="Search process definitions"
+                                            EmptyTitle="No processes match the current search"
+                                            UseBoundedResultsViewport="false"
+                                            DataTestId="project-structure-process-link-select" />
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected process" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{selectedOption.ScopeLabel} scope • {selectedOption.Status}")"
+                                       Class="cw-panel-copy" />
+                            @if (!selectedOption.HasPublishedVersion)
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="This process is not published yet, so execution will fail until a published version exists."
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(processDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @processDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (WorkflowAddDialog is not null)
+{
+    var workflowDialog = WorkflowAddDialog;
+    var selectedOption = workflowDialog.SelectedWorkflowId.HasValue
+        ? workflowDialog.Options.FirstOrDefault(option => option.WorkflowId == workflowDialog.SelectedWorkflowId.Value)
+        : null;
+    var source = ResolveWorkflowInputSource(workflowDialog.InputSettings);
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@workflowDialog.Title"
+                                   Kicker="Workflow input"
+                                   Title="@workflowDialog.Title"
+                                   Summary="@workflowDialog.Copy"
+                                   DialogClass="project-structure-workflow-add-dialog"
+                                   BodyClass="project-structure-workflow-add-dialog__body"
+                                   DataTestId="project-structure-workflow-add-dialog"
+                                   Close="CloseWorkflowAdd">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseWorkflowAdd" />
+            <Button Text="@workflowDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-workflow-add-submit"
+                    Disabled="@(workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"
+                    Click="ExecuteWorkflowAdd" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Workflow" Class="cw-panel-copy" />
+                        <ResourceCardPicker TItem="WorkflowId"
+                                            Options="@BuildWorkflowPickerOptions(workflowDialog)"
+                                            SelectionChanged="WorkflowAddSelectionChanged"
+                                            SearchPlaceholder="Search workflow definitions"
+                                            EmptyTitle="No workflows match the current search"
+                                            DataTestId="project-structure-workflow-add-select" />
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected workflow" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{selectedOption.PreferredBackend} backend")"
+                                       Class="cw-panel-copy" />
+                            @if (!string.IsNullOrWhiteSpace(selectedOption.Description))
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@selectedOption.Description"
+                                           Class="cw-panel-copy" />
+                            }
+                            @if (!selectedOption.IsSelectable)
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@selectedOption.DisabledReason"
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Always included" />
+                        <div class="cw-chip-row">
+                            <Pill Tone="PillTone.Info" Text="Project details" />
+                            <Pill Tone="PillTone.Info" Text="@($"Parent: {workflowDialog.ParentNodeTitle}")" />
+                        </div>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Optional input" />
+                        <label class="project-structure-checkbox-row">
+                            <input type="checkbox"
+                                   checked="@workflowDialog.InputSettings.IncludeParentSubtree"
+                                   data-testid="project-structure-workflow-add-include-subtree"
+                                   @onchange="WorkflowAddIncludeParentSubtreeChanged" />
+                            <span>Include parent subtree</span>
+                        </label>
+                        <label class="project-structure-checkbox-row">
+                            <input type="checkbox"
+                                   checked="@workflowDialog.InputSettings.IncludeAssets"
+                                   data-testid="project-structure-workflow-add-include-assets"
+                                   @onchange="WorkflowAddIncludeAssetsChanged" />
+                            <span>Include asset references</span>
+                        </label>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Additional source" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-workflow-add-source-kind"
+                                value="@source.Kind.ToString()"
+                                @onchange="WorkflowAddSourceKindChanged">
+                            @foreach (var sourceKind in WorkflowInputSourceKinds)
+                            {
+                                <option value="@sourceKind">@ResolveWorkflowInputSourceKindLabel(sourceKind)</option>
+                            }
+                        </select>
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-key"
+                               placeholder="Source key"
+                               value="@source.Key"
+                               @oninput="WorkflowAddSourceKeyChanged" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-label"
+                               placeholder="Source label"
+                               value="@source.Label"
+                               @oninput="WorkflowAddSourceLabelChanged" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-value"
+                               placeholder="File path, folder path, or external reference"
+                               value="@source.Value"
+                               @oninput="WorkflowAddSourceValueChanged" />
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual JSON" />
+                        <textarea class="cw-context-toolbox__search"
+                                  rows="5"
+                                  data-testid="project-structure-workflow-add-manual-json"
+                                  value="@workflowDialog.InputSettings.ManualInputJson"
+                                  @oninput="WorkflowAddManualInputChanged"></textarea>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Input preview" />
+                        @foreach (var previewSection in workflowDialog.Preview.Sections)
+                        {
+                            <div class="project-structure-facts-list">
+                                <div class="project-structure-fact-row">
+                                    <span>@previewSection.Title</span>
+                                    <strong>@previewSection.Summary</strong>
+                                </div>
+                                @foreach (var row in previewSection.Rows)
+                                {
+                                    <div class="project-structure-fact-row">
+                                        <span>@row.Label</span>
+                                        <strong>@row.Value</strong>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(workflowDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @workflowDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (WorkflowStartDialog is not null)
+{
+    var workflowStart = WorkflowStartDialog;
+    var status = workflowStart.Status;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@workflowStart.Title"
+                                   Kicker="Workflow start"
+                                   Title="@workflowStart.Title"
+                                   Summary="@workflowStart.Copy"
+                                   DataTestId="project-structure-workflow-start-dialog"
+                                   Close="CloseWorkflowStart">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Disabled="@workflowStart.IsBusy"
+                    Click="CloseWorkflowStart" />
+            <Button Text="@workflowStart.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Success"
+                    data-testid="project-structure-workflow-start-submit"
+                    IsBusy="@workflowStart.IsBusy"
+                    Disabled="@workflowStart.IsBusy"
+                    Click="ExecuteWorkflowStart" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow node" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@workflowStart.NodeTitle" />
+                        @if (status is not null)
+                        {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{status.Status} / step {status.CurrentStepIndex} of {status.StepCount}")"
+                                       Class="cw-panel-copy" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@status.Message"
+                                       Class="cw-panel-copy" />
+                        }
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run backend" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                   Value="@workflowStart.RequestedBackend.ToString()" />
+                        <div class="cw-chip-row">
+                            <Pill Tone="PillTone.Neutral"
+                                  Text="@($"Definition: {workflowStart.PreferredBackend}")" />
+                            <Pill Tone="PillTone.Info"
+                                  Text="@($"Requested: {workflowStart.RequestedBackend}")" />
+                        </div>
+                        @if (workflowStart.BackendOptions.Count > 0)
+                        {
+                            <div class="cw-chip-row">
+                                @foreach (var backendOption in workflowStart.BackendOptions)
+                                {
+                                    <Pill Tone="@(backendOption.IsSelected ? PillTone.Ok : PillTone.Neutral)"
+                                          Text="@backendOption.Label" />
+                                }
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(workflowStart.BackendWarning))
+                        {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@workflowStart.BackendWarning"
+                                       Class="cw-panel-copy" />
+                        }
+                    </Stack>
+                </PanelCard>
+
+                @if (workflowStart.SimulationOptions.Count > 0)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run Preview" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="Skip selected project-structure write steps during this preview run."
+                                       Class="cw-panel-copy" />
+                            @foreach (var option in workflowStart.SimulationOptions)
+                            {
+                                <label class="project-structure-checkbox-row">
+                                    <input type="checkbox"
+                                           checked="@workflowStart.SimulatedNodeIds.Contains(option.NodeId, StringComparer.OrdinalIgnoreCase)"
+                                           data-testid="@($"project-structure-workflow-start-simulate-{NormalizeTestIdToken(option.NodeId)}")"
+                                           @onchange="args => WorkflowStartSimulationChanged.InvokeAsync(new ProjectStructureWorkflowStartSimulationChange(option.NodeId, ParseCheckboxValue(args)))" />
+                                    <span>@option.NodeName: @option.Description</span>
+                                </label>
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(workflowStart.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @workflowStart.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (QuickActionDialog is not null)
+{
+    var quickActionDialog = QuickActionDialog;
+
+    <ProjectStructureOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@($"{quickActionDialog.Title} quick actions")"
+                                   Kicker="Node quick actions"
+                                   Title="@quickActionDialog.Title"
+                                   Summary="@quickActionDialog.Copy"
+                                   DialogClass="project-structure-quick-action-dialog"
+                                   BodyClass="project-structure-quick-action-dialog__body"
+                                   DataTestId="project-structure-node-quick-actions"
+                                   Close="CloseQuickActionDialog">
+        <Actions>
+            <Pill Tone="PillTone.Info" Text="@quickActionDialog.NodeLabel" />
+            <Button Text="Close"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="CloseQuickActionDialog" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium">
+                @if (!string.IsNullOrWhiteSpace(quickActionDialog.Notes))
+                {
+                    <PanelCard Soft="true" data-testid="project-structure-quick-action-notes">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@quickActionDialog.Notes"
+                                       Class="whitespace-pre-wrap break-words" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <Grid Columns="2"
+                      Gap="LayoutGap.Medium"
+                      Class="project-structure-quick-action-grid">
+                    @foreach (var action in quickActionDialog.Actions)
+                    {
+                        <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
+                                Variant="Variant.Outlined"
+                                Class="project-structure-quick-action-card"
+                                data-testid="@ResolveQuickActionTestId(action)"
+                                Disabled="@action.IsDisabled"
+                                Click="@(() => ExecuteQuickAction.InvokeAsync(action))">
+                            <Stack GapScale="LayoutGap.Small"
+                                   Class="items-center text-center">
+                                <Icon Name="@action.Icon" />
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@action.Label" />
+                                <TextBlock TextStyle="TextStyle.Note" Value="@action.Description" />
+                            </Stack>
+                        </Button>
+                    }
+                </Grid>
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+}
+
+@if (WebPreviewDialog is not null)
+{
+    <ProjectStructureWebPreviewDialog State="WebPreviewDialog"
+                                      Close="CloseWebPreviewDialog" />
+}
+
+@if (RenderProcessStartDialog && ProcessStartDialog is not null)
+{
+    var startDialog = ProcessStartDialog;
+    var isStaffingStage = startDialog.Stage == ProjectStructureProcessStartStage.Staffing;
+    var processStartCancelKey = $"project-structure-process-start-cancel-{startDialog.Stage}-{startDialog.ConfirmHrManagerMatch}";
+    const string processStartKeepManualKey = "project-structure-process-start-keep-manual";
+    const string processStartConfirmHrKey = "project-structure-process-start-confirm-hr";
+    const string processStartStartKey = "project-structure-process-start-start";
+    const string processStartRequestHrKey = "project-structure-process-start-request-hr";
+    const string processStartContinueKey = "project-structure-process-start-continue";
+
+    @if (isStaffingStage)
+    {
+        <ProjectStructureProcessAssignmentDialog Dialog="@startDialog"
+                                                 Close="CloseProcessStart"
+                                                 ReviewAndStartProcess="ReviewAndStartProcess"
+                                                 RequestHrManagerMatch="RequestHrManagerMatch"
+                                                 CancelHrManagerMatch="CancelHrManagerMatch"
+                                                 ExecuteHrManagerMatch="ExecuteHrManagerMatch"
+                                                 SelectProcessStartCandidate="SelectProcessStartCandidate"
+                                                 AssignProcessStartAgent="AssignProcessStartAgent" />
+    }
+    else
+    {
+    <ProjectStructureOverlayDialog AriaLabel="@startDialog.Title"
+                                   Kicker="Process start"
+                                   Title="@startDialog.Title"
+                                   Summary="@startDialog.Copy"
+                                   DialogClass="project-structure-process-start-dialog"
+                                   BodyClass="project-structure-process-start-dialog__body"
+                                   DataTestId="project-structure-process-start-dialog"
+                                   Close="CloseProcessStart">
+        <Actions>
+            <Button @key="processStartCancelKey"
+                    Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Disabled="@startDialog.IsBusy"
+                    Click="CloseProcessStart" />
+            @if (isStaffingStage)
+            {
+                if (startDialog.ConfirmHrManagerMatch)
+                {
+                    <Button @key="processStartKeepManualKey"
+                            Text="Keep manual matching"
+                            Variant="Variant.Text"
+                            ButtonStyle="ButtonStyle.Base"
+                            Disabled="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-cancel-hr-match"
+                            Click="CancelHrManagerMatch" />
+                    <Button @key="processStartConfirmHrKey"
+                            Text="Confirm HR match"
+                            ButtonStyle="ButtonStyle.Info"
+                            IsBusy="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-confirm-hr-match"
+                            Click="ExecuteHrManagerMatch" />
+                }
+                else
+                {
+                    <Button @key="processStartStartKey"
+                            Text="@startDialog.SubmitLabel"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Disabled="@(!startDialog.CanStart || startDialog.IsBusy)"
+                            IsBusy="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-start"
+                            Click="ExecuteProcessStart" />
+                    <Button @key="processStartRequestHrKey"
+                            Text="Use HR manager suggestions"
+                            Variant="Variant.Text"
+                            ButtonStyle="ButtonStyle.Base"
+                            Disabled="@startDialog.IsBusy"
+                            data-testid="project-structure-process-start-request-hr-match"
+                            Click="RequestHrManagerMatch" />
+                }
+            }
+            else
+            {
+                <Button @key="processStartContinueKey"
+                        Text="@startDialog.SubmitLabel"
+                        ButtonStyle="ButtonStyle.Warning"
+                        IsBusy="@startDialog.IsBusy"
+                        data-testid="project-structure-process-start-continue"
+                        Click="ExecuteProcessStart" />
+            }
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="project-structure-process-start-dialog__content"
+                   Style="min-height:0;overflow:auto;padding-right:0.3rem;">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution target" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@startDialog.TargetNodeTitle" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Target node id: {startDialog.TargetNodeId}")"
+                                   Class="cw-panel-copy" />
+                        @if (!string.IsNullOrWhiteSpace(startDialog.ParentNodeId))
+                        {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"Resolved parent node id: {startDialog.ParentNodeId}")"
+                                       Class="cw-panel-copy" />
+                        }
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Selected process node id: {startDialog.NodeId}")"
+                                   Class="cw-panel-copy" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Project id: {startDialog.ProjectId:D}")"
+                                   Class="cw-panel-copy" />
+                    </Stack>
+                </PanelCard>
+
+                @if (startDialog.Estimate is not null)
+                {
+                    var estimate = startDialog.Estimate;
+                    <PanelCard data-testid="project-structure-process-estimate-summary">
+                        <Stack GapScale="LayoutGap.Small">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Preflight estimate" />
+                                <Pill Tone="PillTone.Info"
+                                      Text="@estimate.ConfidenceLabel" />
+                                <Pill Tone="PillTone.Neutral"
+                                      Text="@estimate.SourceLabel" />
+                            </div>
+                            <Grid Columns="1"
+                                  ColumnsMd="3"
+                                  GapScale="LayoutGap.Small">
+                                <MetricCard Label="Estimated price"
+                                            Value="@FormatUsd(estimate.EstimatedCostUsd)" />
+                                <MetricCard Label="Elapsed time"
+                                            Value="@($"{estimate.EstimatedElapsedMinutes:N0} min")" />
+                                <MetricCard Label="Touch time"
+                                            Value="@($"{estimate.EstimatedTouchMinutes:N0} min")" />
+                            </Grid>
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@estimate.Summary"
+                                       Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!isStaffingStage)
+                {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="The app will create or reuse a launch plan, then open staffing review. Approval, provisioning, and execution only happen after the role assignments are reviewed and the final Start action is confirmed."
+                           Class="cw-panel-copy" />
+            </Stack>
+        </PanelCard>
+                }
+                else
+                {
+                    <PanelCard data-testid="project-structure-process-start-staffing-summary">
+                        <Stack GapScale="LayoutGap.Small">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Pill Tone="PillTone.Info"
+                                      Text="@($"Resolved {startDialog.ResolvedRoleCount} of {startDialog.Roles.Count}")" />
+                                <Pill Tone="@(startDialog.RequiredGapCount == 0 ? PillTone.Ok : PillTone.Warn)"
+                                      Text="@(startDialog.RequiredGapCount == 0 ? "Ready to start" : $"{startDialog.RequiredGapCount} required role gaps")" />
+                                @if (startDialog.LaunchPlanId.HasValue)
+                                {
+                                    <Pill Tone="PillTone.Neutral"
+                                          Text="@($"Launch plan {startDialog.LaunchPlanId.Value:D}")" />
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(startDialog.StatusMessage))
+                            {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@startDialog.StatusMessage"
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+
+                    <PanelCard>
+                        <label class="flex items-start gap-3"
+                               data-testid="project-structure-process-start-review-panel">
+                            <input type="checkbox"
+                                   class="mt-1"
+                                   data-testid="project-structure-process-start-review-confirmation"
+                                   checked="@startDialog.AssignmentsReviewed"
+                                   @onchange="ProcessStartAssignmentsReviewedChanged" />
+                            <span class="cw-panel-copy">
+                                I reviewed these role assignments and want the process to start with them after every required role is resolved.
+                            </span>
+                        </label>
+                    </PanelCard>
+
+                    @if (startDialog.ConfirmHrManagerMatch)
+                    {
+                        <PanelCard Class="project-structure-inline-feedback"
+                                   data-tone="warn"
+                                   data-testid="project-structure-process-start-hr-confirmation">
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                           Value="@($"Let {startDialog.HrManagerName} pair the roles?")" />
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="The HR manager will review the required roles, current project assignments, CRM-HR workforce records, and AI agent catalog facts to propose the best matches. The suggestions will stay visible here so you can review them before the process starts."
+                                           Class="cw-panel-copy" />
+                            </Stack>
+                        </PanelCard>
+                    }
+
+                    <div class="space-y-4 project-structure-process-start-dialog__roles"
+                         style="min-height:0;"
+                         data-testid="project-structure-process-start-staffing-roles">
+                        @foreach (var role in startDialog.Roles)
+                        {
+                            var orderedCandidates = role.Candidates
+                                .OrderByDescending(candidate => candidate.IsSelected)
+                                .ThenByDescending(candidate => candidate.IsRecommended)
+                                .ThenByDescending(candidate => candidate.IsResolvable)
+                                .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+                                .ToList();
+                            var visibleCandidates = showAllProcessStartCandidates
+                                ? orderedCandidates
+                                : SelectVisibleProcessStartCandidates(orderedCandidates);
+                            var hiddenCandidateCount = orderedCandidates.Count - visibleCandidates.Count;
+
+                            <PanelCard data-testid="@($"project-structure-process-start-role-{role.LaunchPlanRoleId:D}")">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                   Value="@role.DisplayName" />
+                                        <Pill Tone="@(role.IsRequired ? PillTone.Warn : PillTone.Neutral)"
+                                              Text="@(role.IsRequired ? "Required" : "Optional")" />
+                                        <Pill Tone="@(role.IsResolved ? PillTone.Ok : PillTone.Warn)"
+                                              Text="@(role.IsResolved ? "Resolved" : "Needs selection")" />
+                                        @if (role.RequiresProvisioning)
+                                        {
+                                            <Pill Tone="PillTone.Info"
+                                                  Text="Provisioning required" />
+                                        }
+                                    </div>
+
+                                    <TextBlock TextStyle="TextStyle.Note"
+                                               Value="@($"{role.PreferredExecutorKind} / {role.SelectionSummary}")"
+                                               Class="cw-panel-copy" />
+                                    @if (!string.IsNullOrWhiteSpace(role.ReadinessSummary))
+                                    {
+                                        <TextBlock TextStyle="TextStyle.Note"
+                                                   Value="@role.ReadinessSummary"
+                                                   Class="cw-panel-copy" />
+                                    }
+
+                                    @if (orderedCandidates.Count == 0)
+                                    {
+                                        <PanelCard Class="project-structure-inline-feedback"
+                                                   data-tone="warn">
+                                            No staffing candidates are available for this role yet.
+                                        </PanelCard>
+                                    }
+                                    else
+                                    {
+                                        <div class="space-y-3">
+                                            @foreach (var candidate in visibleCandidates)
+                                            {
+                                                <PanelCard Class="@(candidate.IsSelected ? "ring-2 ring-emerald-400/70" : string.Empty)"
+                                                           data-testid="@($"project-structure-process-start-candidate-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")">
+                                                    <Stack GapScale="LayoutGap.Small">
+                                                        <div class="flex flex-wrap items-start justify-between gap-3">
+                                                            <div class="space-y-1">
+                                                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                                           Value="@candidate.DisplayName" />
+                                                                <TextBlock TextStyle="TextStyle.Note"
+                                                                           Value="@($"{candidate.CandidateKindLabel} / {candidate.ExecutorKind}")"
+                                                                           Class="cw-panel-copy" />
+                                                            </div>
+                                                            <div class="flex flex-wrap items-center gap-2">
+                                                                <Pill Tone="PillTone.Neutral"
+                                                                      Text="@candidate.ScoreLabel" />
+                                                                @if (candidate.IsRecommended)
+                                                                {
+                                                                    <Pill Tone="PillTone.Info"
+                                                                          Text="Recommended" />
+                                                                }
+                                                                @if (candidate.RequiresProvisioning)
+                                                                {
+                                                                    <Pill Tone="PillTone.Warn"
+                                                                          Text="Provisioning" />
+                                                                }
+                                                                @if (candidate.IsSelected)
+                                                                {
+                                                                    <Pill Tone="PillTone.Ok"
+                                                                          Text="Selected" />
+                                                                }
+                                                            </div>
+                                                        </div>
+
+                                                        @if (!string.IsNullOrWhiteSpace(candidate.RecommendationSummary))
+                                                        {
+                                                            <TextBlock TextStyle="TextStyle.Note"
+                                                                       Value="@candidate.RecommendationSummary"
+                                                                       Class="cw-panel-copy" />
+                                                        }
+
+                                                        @if (!string.IsNullOrWhiteSpace(candidate.AvailabilitySummary))
+                                                        {
+                                                            <TextBlock TextStyle="TextStyle.Note"
+                                                                       Value="@candidate.AvailabilitySummary"
+                                                                       Class="cw-panel-copy" />
+                                                        }
+
+                                                        <div class="flex flex-wrap items-center justify-between gap-3">
+                                                            <TextBlock TextStyle="TextStyle.Note"
+                                                                       Value="@candidate.SourceRegistryKey"
+                                                                       Class="cw-panel-copy" />
+                                                            <Button Text="@(candidate.IsSelected ? "Selected" : "Select")"
+                                                                    Variant="@(candidate.IsSelected ? Variant.Filled : Variant.Outlined)"
+                                                                    ButtonStyle="@(candidate.IsSelected ? ButtonStyle.Success : ButtonStyle.Info)"
+                                                                    Disabled="@(!candidate.IsResolvable || startDialog.IsBusy || candidate.IsSelected)"
+                                                                    data-testid="@($"project-structure-process-start-select-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")"
+                                                                    Click="@(() => SelectProcessStartCandidate.InvokeAsync(new ProjectStructureProcessStartCandidateSelection(role.LaunchPlanRoleId, candidate.CandidateId)))" />
+                                                        </div>
+                                                    </Stack>
+                                                </PanelCard>
+                                            }
+
+                                            @if (hiddenCandidateCount > 0)
+                                            {
+                                                <PanelCard Class="project-structure-inline-feedback"
+                                                           data-tone="info">
+                                                    <Stack GapScale="LayoutGap.Tiny">
+                                                        <TextBlock TextStyle="TextStyle.Note"
+                                                                   Value="@($"{hiddenCandidateCount} additional candidate(s) remain available in this launch plan. The dialog shows selected and recommended options first to keep the staffing review responsive.")"
+                                                                   Class="cw-panel-copy" />
+                                                        <Button Text="Show all candidates"
+                                                                Variant="Variant.Text"
+                                                                ButtonStyle="ButtonStyle.Info"
+                                                                Click="ShowAllProcessStartCandidates" />
+                                                    </Stack>
+                                                </PanelCard>
+                                            }
+                                        </div>
+                                    }
+                                </Stack>
+                            </PanelCard>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(startDialog.Error))
+                {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @startDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </ProjectStructureOverlayDialog>
+    }
+}
+
+@if (PreviewNode is not null)
+{
+    <ProjectStructureAttachmentPreviewDialog Node="PreviewNode"
+                                             Interaction="PreviewInteraction"
+                                             Close="CloseAttachmentPreview"
+                                             OpenLocally="OpenAttachmentLocally"
+                                             OpenInPreferredApplication="OpenAttachmentInPreferredApplication"
+                                             EditNode="EditPreviewNode"
+                                             CanShowLocalOpen="CanShowLocalOpen"
+                                             CanOpenInPreferredApplication="CanOpenInPreferredApplication"
+                                             CanEditNode="CanEditPreviewNode" />
+}
+
+@code {
+    private const int ProcessStartVisibleCandidateCount = 5;
+    private static readonly ProjectStructureWorkflowInputSourceKind[] WorkflowInputSourceKinds =
+    [
+        ProjectStructureWorkflowInputSourceKind.FilePath,
+        ProjectStructureWorkflowInputSourceKind.FolderPath,
+        ProjectStructureWorkflowInputSourceKind.SelectedNode,
+        ProjectStructureWorkflowInputSourceKind.ManualJson
+    ];
+
+    private Guid? processStartCandidateVisibilityLaunchPlanId;
+    private bool showAllProcessStartCandidates;
+
+    [Parameter]
+    public ProjectStructureProjectHierarchyDialogState? ProjectHierarchyDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProjectHierarchy { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> ProjectHierarchySelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteProjectHierarchyCommand { get; set; }
+
+    [Parameter]
+    public ProjectStructureBlockMutationDialogState? BlockMutationDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseBlockMutation { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> BlockMutationSelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteBlockMutation { get; set; }
+
+    [Parameter]
+    public ProjectStructureSubprojectTransferDialogState? SubprojectTransferDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseSubprojectTransfer { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> SubprojectTransferNameChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteSubprojectTransfer { get; set; }
+
+    [Parameter]
+    public EventCallback OpenProjectCreateDialog { get; set; }
+
+    [Parameter]
+    public ProjectStructureProcessLinkDialogState? ProcessLinkDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProcessLink { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> ProcessLinkSelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteProcessLink { get; set; }
+
+    [Parameter]
+    public ProjectStructureWorkflowAddDialogState? WorkflowAddDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseWorkflowAdd { get; set; }
+
+    [Parameter]
+    public EventCallback<WorkflowId> WorkflowAddSelectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddIncludeParentSubtreeChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddIncludeAssetsChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddManualInputChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceKindChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceKeyChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceLabelChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> WorkflowAddSourceValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteWorkflowAdd { get; set; }
+
+    [Parameter]
+    public ProjectStructureWorkflowStartDialogState? WorkflowStartDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseWorkflowStart { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureWorkflowStartSimulationChange> WorkflowStartSimulationChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteWorkflowStart { get; set; }
+
+    [Parameter]
+    public bool RenderProcessStartDialog { get; set; } = true;
+
+    [Parameter]
+    public ProjectStructureProcessStartDialogState? ProcessStartDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProcessStart { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteProcessStart { get; set; }
+
+    [Parameter]
+    public EventCallback ReviewAndStartProcess { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureProcessStartCandidateSelection> SelectProcessStartCandidate { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> AssignProcessStartAgent { get; set; }
+
+    [Parameter]
+    public EventCallback<ChangeEventArgs> ProcessStartAssignmentsReviewedChanged { get; set; }
+
+    [Parameter]
+    public EventCallback RequestHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback CancelHrManagerMatch { get; set; }
+
+    [Parameter]
+    public EventCallback ExecuteHrManagerMatch { get; set; }
+
+    [Parameter]
+    public ProjectStructureQuickActionDialogState? QuickActionDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseQuickActionDialog { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureQuickActionButton> ExecuteQuickAction { get; set; }
+
+    [Parameter]
+    public ProjectStructureWebPreviewDialogState? WebPreviewDialog { get; set; }
+
+    [Parameter]
+    public EventCallback CloseWebPreviewDialog { get; set; }
+
+    [Parameter]
+    public ProjectStructureNode? PreviewNode { get; set; }
+
+    [Parameter]
+    public ProjectStructureKnownFileInteraction? PreviewInteraction { get; set; }
+
+    [Parameter]
+    public EventCallback CloseAttachmentPreview { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> OpenAttachmentLocally { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> OpenAttachmentInPreferredApplication { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureNode> EditPreviewNode { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanShowLocalOpen { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanOpenInPreferredApplication { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectStructureNode, bool> CanEditPreviewNode { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        var launchPlanId = ProcessStartDialog?.LaunchPlanId;
+        if (launchPlanId == processStartCandidateVisibilityLaunchPlanId)
+        {
+            return;
+        }
+
+        processStartCandidateVisibilityLaunchPlanId = launchPlanId;
+        showAllProcessStartCandidates = false;
+    }
+
+    private static ButtonStyle ResolveButtonStyle(string tone)
+    {
+        return tone switch
+        {
+            "danger" => ButtonStyle.Danger,
+            "warn" => ButtonStyle.Warning,
+            "mint" => ButtonStyle.Success,
+            "sky" => ButtonStyle.Info,
+            _ => ButtonStyle.Primary
+        };
+    }
+
+    private static string ResolveQuickActionTestId(ProjectStructureQuickActionButton action)
+        => action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit
+            ? "project-structure-quick-action-edit"
+            : $"project-structure-quick-action-{NormalizeTestIdToken(action.ActionId)}";
+
+    private static string FormatUsd(decimal amount)
+        => string.Concat("$", amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
+
+    private static IReadOnlyList<ResourceCardPickerOption<Guid>> BuildProcessLinkPickerOptions(
+        ProjectStructureProcessLinkDialogState dialog)
+    {
+        return dialog.Options
+            .Select(option => new ResourceCardPickerOption<Guid>(
+                option.DefinitionId,
+                option.DisplayName,
+                "Process")
+            {
+                Subtitle = $"{option.ScopeLabel} scope",
+                Description = option.HasPublishedVersion
+                    ? "A published version is available."
+                    : "No published version is available yet.",
+                Meta = option.Status,
+                Icon = "account_tree",
+                Tags = [option.Status],
+                IsSelected = dialog.SelectedDefinitionId == option.DefinitionId,
+                TestId = $"project-structure-process-link-option-{option.DefinitionId:N}"
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<ResourceCardPickerOption<WorkflowId>> BuildWorkflowPickerOptions(
+        ProjectStructureWorkflowAddDialogState dialog)
+    {
+        return dialog.Options
+            .Select(option => new ResourceCardPickerOption<WorkflowId>(
+                option.WorkflowId,
+                option.DisplayName,
+                "Workflow")
+            {
+                Subtitle = $"{option.PreferredBackend} backend",
+                Description = option.Description,
+                Meta = option.Status.ToString(),
+                Icon = "account_tree",
+                Tags = [option.Status.ToString()],
+                IsSelected = dialog.SelectedWorkflowId == option.WorkflowId,
+                IsDisabled = !option.IsSelectable,
+                DisabledReason = option.DisabledReason,
+                TestId = $"project-structure-workflow-add-option-{option.WorkflowId.Value:N}"
+            })
+            .ToList();
+    }
+
+    private static string NormalizeTestIdToken(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? "primary"
+            : value.Trim().ToLowerInvariant().Replace(':', '-');
+
+    private static ProjectStructureWorkflowInputSource ResolveWorkflowInputSource(
+        ProjectStructureWorkflowInputSettings settings)
+        => settings.AdditionalSources.FirstOrDefault()
+           ?? new ProjectStructureWorkflowInputSource(
+               ProjectStructureWorkflowInputSourceKind.FilePath,
+               "source",
+               "Additional source",
+               string.Empty);
+
+    private static string ResolveWorkflowInputSourceKindLabel(ProjectStructureWorkflowInputSourceKind sourceKind)
+        => sourceKind switch
+        {
+            ProjectStructureWorkflowInputSourceKind.FolderPath => "Folder path",
+            ProjectStructureWorkflowInputSourceKind.SelectedNode => "Selected node",
+            ProjectStructureWorkflowInputSourceKind.ManualJson => "Manual JSON reference",
+            _ => "File path"
+        };
+
+    private static bool ParseCheckboxValue(ChangeEventArgs args)
+        => args.Value switch
+        {
+            bool value => value,
+            string value when bool.TryParse(value, out var parsed) => parsed,
+            _ => false
+        };
+
+    private static IReadOnlyList<ProjectStructureProcessStartCandidateState> SelectVisibleProcessStartCandidates(
+        IReadOnlyList<ProjectStructureProcessStartCandidateState> orderedCandidates)
+    {
+        if (orderedCandidates.Count <= ProcessStartVisibleCandidateCount)
+        {
+            return orderedCandidates;
+        }
+
+        var visibleCandidates = new List<ProjectStructureProcessStartCandidateState>();
+        var visibleCandidateIds = new HashSet<Guid>();
+        foreach (var candidate in orderedCandidates)
+        {
+            if ((candidate.IsSelected || candidate.IsRecommended) &&
+                visibleCandidateIds.Add(candidate.CandidateId))
+            {
+                visibleCandidates.Add(candidate);
+            }
+        }
+
+        foreach (var candidate in orderedCandidates)
+        {
+            if (visibleCandidates.Count >= ProcessStartVisibleCandidateCount)
+            {
+                break;
+            }
+
+            if (visibleCandidateIds.Add(candidate.CandidateId))
+            {
+                visibleCandidates.Add(candidate);
+            }
+        }
+
+        return visibleCandidates;
+    }
+
+    private Task ShowAllProcessStartCandidates()
+    {
+        showAllProcessStartCandidates = true;
+        return Task.CompletedTask;
+    }
+}

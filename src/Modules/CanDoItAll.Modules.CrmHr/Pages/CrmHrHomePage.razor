@@ -1,0 +1,291 @@
+@page "/crm-hr"
+@inject ICrmHrHomeQueryService HomeQueryService
+@inject NavigationManager Navigation
+
+<PageTitle>CRM / HR</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface" />
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="CRM / HR"
+                    Title="Unified relationship and workforce workspace"
+                    Description="Track people, organizations, delivery units, recruiting, and AI agents in one module shell without leaving the core application."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="parties"
+                             Value="@homeSnapshot.PartyCount.ToString()"
+                             TooltipText="Unified directory records across CRM and HR." />
+                <CompactStat Label="organizations"
+                             Value="@homeSnapshot.OrganizationCount.ToString()"
+                             TooltipText="Accounts, legal entities, and delivery units."
+                             Tone="info" />
+                <CompactStat Label="pipeline"
+                             Value="@homeSnapshot.OpportunityCount.ToString()"
+                             TooltipText="Tracked opportunities in the shared CRM workspace." />
+                <CompactStat Label="workforce"
+                             Value="@homeSnapshot.WorkforceProfileCount.ToString()"
+                             TooltipText="People and delivery supply profiles."
+                             Tone="success" />
+                <CompactStat Label="agents"
+                             Value="@homeSnapshot.AgentProjectionCount.ToString()"
+                             TooltipText="Bound AgentFramework projections available to CRM-HR."
+                             Tone="warning" />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the CRM-HR party directory."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenDirectory"
+                                        data-testid="crmhr-home-open-directory" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Home" />
+
+            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                <SurfaceCard>
+                    <p class="cda-eyebrow">Directory focus</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">One party model, multiple operating contexts</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        Start from the directory when you need to create or maintain a shared party record before CRM, HR, recruiting, or assignments branch into specialized flows.
+                    </p>
+
+                    <Stack GapScale="LayoutGap.Small" Class="mt-5">
+                        @foreach (var item in homeSnapshot.DirectoryPreview)
+                        {
+                            <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/90 px-4 py-3">
+                                <Split Gap="LayoutGap.Small">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-slate-950">@item.DisplayName</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@item.PartyType / @item.LifecycleStatus</p>
+                                        @if (!string.IsNullOrWhiteSpace(item.Summary))
+                                        {
+                                            <p class="mt-2 text-sm leading-6 text-slate-600">@item.Summary</p>
+                                        }
+                                    </div>
+                                    @if (item.IsSensitive)
+                                    {
+                                        <StatusBadge Tone="warning" Text="Sensitive" />
+                                    }
+                                </Split>
+                            </div>
+                        }
+                    </Stack>
+
+                    @if (homeSnapshot.PartyCount == 0)
+                    {
+                        <div class="mt-5">
+                            <EmptyState Eyebrow="No parties"
+                                        Title="Create the first shared party record"
+                                        Description="The directory shell is ready. Add a person, organization, unit, or AI agent record to unlock downstream CRM and HR flows.">
+                                <Actions>
+                                    <Button Text="Create party"
+                                            Click="OpenDirectory" />
+                                </Actions>
+                            </EmptyState>
+                        </div>
+                    }
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <p class="cda-eyebrow">Route coverage</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">Module entry points</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        Move directly between the shared directory, commercial pipeline, workforce, recruiting, AI-agent projection, and project assignments.
+                    </p>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsSm="2" Class="mt-5">
+                        <Button Text="Directory"
+                                Click="OpenDirectory" />
+                        <Button Text="CRM"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenCrm" />
+                        <Button Text="Workforce"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenWorkforce" />
+                        <Button Text="Recruiting"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenRecruiting" />
+                        <Button Text="Agents"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenAgents" />
+                        <Button Text="Assignments"
+                                ButtonStyle="ButtonStyle.Light"
+                                Click="OpenAssignments" />
+                    </Grid>
+
+                    <div class="mt-6 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-4">
+                        <p class="cda-eyebrow">Current signal</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">
+                            Opportunities: @homeSnapshot.OpportunityCount. Workforce profiles: @homeSnapshot.WorkforceProfileCount. Agent projections: @homeSnapshot.AgentProjectionCount.
+                        </p>
+                    </div>
+                </SurfaceCard>
+            </Grid>
+
+            <div data-testid="crmhr-home-sensitive-card">
+                <SurfaceCard Soft="true">
+                    <Split Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween">
+                        <div class="min-w-0">
+                            <p class="cda-eyebrow">Privacy posture</p>
+                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Sensitive directory records</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                Sensitive parties remain visible to trusted operators in CRM-HR while staying out of the global search surface and keeping confidential notes separated in the directory.
+                            </p>
+                        </div>
+                        <Cluster Gap="LayoutGap.Small">
+                            <StatusBadge Tone="warning" Text="@($"{SensitiveCount} sensitive record(s)")" />
+                            <Button Text="Open directory"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="OpenDirectory"
+                                    data-testid="crmhr-home-sensitive-open-directory" />
+                        </Cluster>
+                    </Split>
+
+                    @if (homeSnapshot.SensitivePreview.Count == 0)
+                    {
+                        <p class="mt-5 text-sm leading-6 text-slate-600">No sensitive parties are currently flagged in the shared directory.</p>
+                    }
+                    else
+                    {
+                        <Stack GapScale="LayoutGap.Small" Class="mt-5">
+                            @foreach (var item in homeSnapshot.SensitivePreview)
+                            {
+                                <div class="rounded-[1rem] border border-slate-200 bg-white/90 px-4 py-4">
+                                    <Split Gap="LayoutGap.Small"
+                                           AlignItems="AlignItems.Start"
+                                           JustifyContent="JustifyContent.SpaceBetween">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-slate-950">@item.DisplayName</p>
+                                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@item.PartyType / @item.LifecycleStatus</p>
+                                        </div>
+                                        <StatusBadge Tone="warning" Text="Sensitive" />
+                                    </Split>
+                                </div>
+                            }
+                        </Stack>
+                    }
+                </SurfaceCard>
+            </div>
+
+            <SurfaceCard>
+                <Split Gap="LayoutGap.Medium"
+                       AlignItems="AlignItems.Center"
+                       JustifyContent="JustifyContent.SpaceBetween">
+                    <div>
+                        <p class="cda-eyebrow">Open pipeline</p>
+                        <h2 class="mt-1 text-lg font-semibold text-slate-950">Recent opportunities</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Live opportunity context stays visible here so project and workforce reviews do not have to reconstruct the commercial pipeline.
+                        </p>
+                    </div>
+                    <Button Text="Open CRM"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="OpenCrm" />
+                </Split>
+
+                @if (homeSnapshot.OpenPipelinePreview.Count == 0)
+                {
+                    <p class="mt-5 text-sm leading-6 text-slate-600">No open opportunities are currently tracked.</p>
+                }
+                else
+                {
+                    <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-5">
+                        @foreach (var opportunity in homeSnapshot.OpenPipelinePreview)
+                        {
+                            <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                 data-testid="crmhr-home-opportunity-item">
+                                <Split Gap="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Start"
+                                       JustifyContent="JustifyContent.SpaceBetween">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-slate-950">@opportunity.Title</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                                            @opportunity.AccountDisplayName / @opportunity.Stage / @opportunity.OpportunitySource
+                                        </p>
+                                        <p class="mt-2 text-sm text-slate-600">Owner: @opportunity.OwnerDisplayName</p>
+                                        @if (opportunity.Amount.HasValue)
+                                        {
+                                            <p class="mt-1 text-sm text-slate-600">
+                                                @($"{opportunity.Amount.Value:0.##}") / @($"{opportunity.ProbabilityPercent}%")
+                                            </p>
+                                        }
+                                    </div>
+                                    <Button Text="Open"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => OpenCrmOpportunity(opportunity.AccountPartyId, opportunity.Id))" />
+                                </Split>
+                            </div>
+                        }
+                    </Grid>
+                }
+            </SurfaceCard>
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private static AgentChatContextSurface AgentChatSurface { get; } =
+        CrmHrAgentChatSurfaceBuilder.BuildHomeSurface();
+
+    private CrmHrHomeSnapshotModel homeSnapshot = new(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        [],
+        [],
+        []);
+
+    private int SensitiveCount => homeSnapshot.SensitiveCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        homeSnapshot = await HomeQueryService.GetAsync();
+    }
+
+    private void OpenDirectory()
+    {
+        Navigation.NavigateTo("/crm-hr/directory");
+    }
+
+    private void OpenCrm()
+    {
+        Navigation.NavigateTo("/crm-hr/crm");
+    }
+
+    private void OpenCrmOpportunity(Guid accountPartyId, Guid opportunityId)
+    {
+        Navigation.NavigateTo($"/crm-hr/crm?accountId={accountPartyId}&opportunityId={opportunityId}");
+    }
+
+    private void OpenWorkforce()
+    {
+        Navigation.NavigateTo("/crm-hr/workforce");
+    }
+
+    private void OpenRecruiting()
+    {
+        Navigation.NavigateTo("/crm-hr/recruiting");
+    }
+
+    private void OpenAgents()
+    {
+        Navigation.NavigateTo("/crm-hr/agents");
+    }
+
+    private void OpenAssignments()
+    {
+        Navigation.NavigateTo("/crm-hr/assignments");
+    }
+}

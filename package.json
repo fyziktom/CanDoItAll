@@ -1,29 +1,20 @@
 {
   "name": "candoitall",
   "version": "1.0.0",
-  "description": "CanDoItAll is a modular .NET 10 Blazor Web App for managing project delivery work in one local workspace: projects, resources, prompts, validation runs, test evidence, workbench tabs, activity history, automation visibility, and a development-sidecar manager for watch readiness, capsule coverage, and tuning requests.",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "test": "tests"
-  },
+  "private": true,
+  "description": "Private repository tooling for building CanDoItAll application Tailwind assets.",
   "scripts": {
-    "canvaslib:build-assets": "node tools/canvaslib/build-assets.cjs",
-    "canvaslib:verify-assets": "node tools/canvaslib/verify-assets.cjs",
     "tailwind:build": "npm --prefix Tailwind run build",
-    "tailwind:watch": "npm --prefix Tailwind run watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "tailwind:watch": "npm --prefix Tailwind run watch"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fyziktom/CanDoItAll.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "author": "Tomas Svoboda (fyziktom)",
+  "license": "SEE LICENSE IN LICENSE",
   "bugs": {
     "url": "https://github.com/fyziktom/CanDoItAll/issues"
   },
-  "homepage": "https://github.com/fyziktom/CanDoItAll#readme"
+  "homepage": "https://aicandoitall.com"
 }

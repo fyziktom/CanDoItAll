@@ -1,0 +1,478 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Modules.Workbench.ProjectStructure
+@using CanDoItAll.SharedKernel
+@using Microsoft.Extensions.Logging
+@using System.Globalization
+@using System.Text
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
+@inject IAgentReferenceDataProvider ReferenceDataProvider
+@inject IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator
+@inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject TimeProvider TimeProvider
+@inject ILogger<ProjectStructureAgentChatContextProvider> Logger
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public ProjectStructureSurface? Surface { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ProjectStructureNode> SelectedNodes { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<AgentChatContextEntityReference> SelectedEntityReferences { get; set; } = [];
+
+    [Parameter]
+    public ProjectStructureAgentChatView ActiveView { get; set; } = ProjectStructureAgentChatView.Canvas;
+
+    [Parameter]
+    public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState? ContextAccessState { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
+
+    private readonly CancellationTokenSource disposalCts = new();
+    private IReadOnlyList<AgentDefinition> agents = [];
+    private IAgentChatContextPublicationLease? publicationLease;
+    private IAgentChatExecutionNotificationSubscription? notificationSubscription;
+    private AgentChatContextSource? activeSource;
+    private ProjectStructureInvocationSnapshotCapture? activeSnapshotCapture;
+    private ITimer? snapshotRenewalTimer;
+    private DateTimeOffset? scheduledSnapshotDeadlineUtc;
+    private Guid activeProjectId;
+    private AgentChatContextAccessState accessState = AgentChatContextAccessState.Loading;
+    private string publicationKey = string.Empty;
+    private long agentAccessGeneration;
+    private bool isDisposed;
+
+    protected override void OnInitialized()
+    {
+        ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ContextAccessState.HasValue && !Enum.IsDefined(ContextAccessState.Value))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ContextAccessState),
+                ContextAccessState,
+                "The project-structure agent chat context access state is undefined.");
+        }
+
+        if (ProjectId == Guid.Empty || string.IsNullOrWhiteSpace(ProjectName))
+        {
+            DisposeContext();
+            return;
+        }
+
+        if (activeProjectId != ProjectId)
+        {
+            await ActivateContextAsync();
+            return;
+        }
+
+        PublishCurrentContext();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+        => publicationLease?.SynchronizeNavigation(
+            ContextNavigationIdentity ?? AgentChatNavigationIdentity.CreateForLocation(
+                Navigation.BaseUri,
+                Navigation.Uri));
+
+    private AgentChatContextAccessState EffectiveAccessState
+        => ResolveEffectiveAccessState(
+            accessState,
+            ContextAccessState ?? AgentChatContextAccessState.Ready,
+            ActiveView,
+            Surface,
+            ProjectId);
+
+    private static AgentChatContextAccessState ResolveEffectiveAccessState(
+        AgentChatContextAccessState agentAccessState,
+        AgentChatContextAccessState parentAccessState,
+        ProjectStructureAgentChatView activeView,
+        ProjectStructureSurface? surface,
+        Guid projectId)
+    {
+        var combinedState = (agentAccessState, parentAccessState) switch
+        {
+            (AgentChatContextAccessState.Failed, _) or
+            (_, AgentChatContextAccessState.Failed)
+                => AgentChatContextAccessState.Failed,
+            (AgentChatContextAccessState.Loading, _) or
+            (_, AgentChatContextAccessState.Loading)
+                => AgentChatContextAccessState.Loading,
+            _ => AgentChatContextAccessState.Ready
+        };
+        if (combinedState != AgentChatContextAccessState.Ready ||
+            activeView == ProjectStructureAgentChatView.Calendar)
+        {
+            return combinedState;
+        }
+
+        return surface is not null && surface.ProjectId == projectId
+            ? AgentChatContextAccessState.Ready
+            : AgentChatContextAccessState.Loading;
+    }
+
+    private async Task ActivateContextAsync()
+    {
+        DisposeContext();
+        var projectId = ProjectId;
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        activeProjectId = projectId;
+        accessState = AgentChatContextAccessState.Loading;
+        var scopeId = AgentChatContextScopeId.Create();
+        var source = ProjectStructureAgentChatContextBuilder.BuildSource(projectId);
+        activeSource = source;
+        var initialPublication = BuildPublication(scopeId);
+        publicationLease = ContextRegistry.PublishModuleContext(initialPublication);
+        publicationKey = BuildPublicationKey(initialPublication);
+        UpdateSnapshotRenewalTimer();
+        notificationSubscription = ExecutionNotificationHub.Subscribe(
+            source,
+            HandleExecutionCompletedAsync);
+
+        await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+    }
+
+    private async Task LoadAgentAccessAsync(
+        Guid projectId,
+        AgentChatContextScopeId scopeId,
+        long loadGeneration)
+    {
+        try
+        {
+            var referenceData = await ReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(
+                    AgentReferenceDataSections.Agents,
+                    IncludeAgentTemplates: false,
+                    ActiveAgentsOnly: true),
+                disposalCts.Token);
+            if (activeProjectId != projectId ||
+                isDisposed ||
+                loadGeneration != Volatile.Read(ref agentAccessGeneration) ||
+                publicationLease?.ScopeId != scopeId)
+            {
+                return;
+            }
+
+            agents = referenceData.Agents;
+            accessState = AgentChatContextAccessState.Ready;
+            PublishCurrentContext();
+        }
+        catch (OperationCanceledException) when (disposalCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (loadGeneration != Volatile.Read(ref agentAccessGeneration) ||
+                activeProjectId != projectId ||
+                isDisposed)
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Unable to resolve project-structure agent chat access. ProjectId={ProjectId} FailureType={FailureType}.",
+                projectId,
+                exception.GetType().Name);
+            agents = [];
+            accessState = AgentChatContextAccessState.Failed;
+            PublishCurrentContext();
+        }
+    }
+
+    private void HandleReferenceDataInvalidated(object? sender, EventArgs eventArgs)
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        _ = InvokeAsync(async () =>
+        {
+            if (isDisposed ||
+                activeProjectId == Guid.Empty ||
+                publicationLease is null ||
+                loadGeneration != Volatile.Read(ref agentAccessGeneration))
+            {
+                return;
+            }
+
+            var projectId = activeProjectId;
+            var scopeId = publicationLease.ScopeId;
+            agents = [];
+            accessState = AgentChatContextAccessState.Loading;
+            PublishCurrentContext();
+            await LoadAgentAccessAsync(projectId, scopeId, loadGeneration);
+        });
+    }
+
+    private void PublishCurrentContext()
+    {
+        if (publicationLease is null)
+        {
+            return;
+        }
+
+        var publication = BuildPublication(publicationLease.ScopeId);
+        var nextPublicationKey = BuildPublicationKey(publication);
+        UpdateSnapshotRenewalTimer();
+        if (string.Equals(publicationKey, nextPublicationKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        publicationLease.Update(publication);
+        publicationKey = nextPublicationKey;
+    }
+
+    private AgentChatContextPublication BuildPublication(
+        AgentChatContextScopeId scopeId)
+    {
+        var selectedEntities = ProjectStructureAgentChatContextBuilder.BuildSelectedEntities(
+            SelectedNodes,
+            SelectedEntityReferences);
+        ProjectStructureInvocationSnapshotCapture? snapshotCapture = null;
+        if (EffectiveAccessState == AgentChatContextAccessState.Ready &&
+            ActiveView != ProjectStructureAgentChatView.Calendar &&
+            Surface is { } surface &&
+            surface.ProjectId == ProjectId)
+        {
+            var capturedAtUtc = TimeProvider.GetUtcNow();
+            var candidateCapture = ProjectStructureInvocationSnapshotMapper.Capture(
+                surface,
+                ActiveView,
+                selectedEntities,
+                new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
+                capturedAtUtc);
+            snapshotCapture = ProjectStructureInvocationSnapshotMapper.ReuseCurrent(
+                activeSnapshotCapture,
+                candidateCapture,
+                capturedAtUtc);
+        }
+
+        activeSnapshotCapture = snapshotCapture;
+        var selectionFragment = snapshotCapture is null
+            ? ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(selectedEntities)
+            : ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
+                snapshotCapture.Snapshot,
+                selectedEntities);
+        AgentChatContextContributorPublication selectionContributor =
+            snapshotCapture is null
+                ? new AgentChatContextContributorPublication(selectionFragment)
+                : new AgentChatContextContributorPublication(
+                    selectionFragment,
+                    [snapshotCapture.AttachmentDraft]);
+
+        return new AgentChatContextPublication(
+            ProjectStructureAgentChatContextBuilder.BuildScope(
+                scopeId,
+                ProjectId,
+                ProjectName,
+                agents,
+                EffectiveAccessState,
+                ActiveView,
+                selectedEntities),
+            [
+                new AgentChatContextContributorPublication(
+                    ProjectStructureAgentChatContextBuilder.BuildBaseFragment(ProjectId)),
+                new AgentChatContextContributorPublication(
+                    ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView)),
+                selectionContributor
+            ]);
+    }
+
+    private static string BuildPublicationKey(
+        AgentChatContextPublication publication)
+    {
+        var builder = new StringBuilder();
+        AppendKeyPart(builder, publication.Scope.DisplayName);
+        AppendKeyPart(
+            builder,
+            ((int)publication.Scope.AccessState).ToString(CultureInfo.InvariantCulture));
+        foreach (var access in publication.Scope.AgentAccess
+                     .OrderBy(static access => access.AgentId))
+        {
+            AppendKeyPart(builder, access.AgentId.ToString("D"));
+            AppendKeyPart(
+                builder,
+                ((int)access.Permissions).ToString(CultureInfo.InvariantCulture));
+            AppendKeyPart(builder, access.ScopeLabel);
+        }
+
+        foreach (var contributor in publication.Contributors
+                     .OrderBy(static contributor => contributor.Fragment.Order)
+                     .ThenBy(
+                         static contributor => contributor.Fragment.ContributorId.Value,
+                         StringComparer.Ordinal))
+        {
+            AppendKeyPart(builder, contributor.Fragment.ContributorId.Value);
+            AppendKeyPart(builder, contributor.Fragment.Content);
+            foreach (var attachment in contributor.AttachmentDrafts)
+            {
+                AppendKeyPart(builder, attachment.Kind.Value);
+                AppendKeyPart(builder, attachment.ContentFingerprint.Value);
+                AppendKeyPart(builder, attachment.CoverageFingerprint.Value);
+                AppendKeyPart(
+                    builder,
+                    attachment.DatabaseProfileGeneration.Value.ToString(
+                        CultureInfo.InvariantCulture));
+                AppendKeyPart(builder, attachment.FreshnessFingerprint.Value);
+                AppendKeyPart(
+                    builder,
+                    attachment.CapturedAtUtc.ToUniversalTime().ToString(
+                        "O",
+                        CultureInfo.InvariantCulture));
+                AppendKeyPart(
+                    builder,
+                    attachment.FreshUntilUtc?.ToUniversalTime().ToString(
+                        "O",
+                        CultureInfo.InvariantCulture) ??
+                    string.Empty);
+            }
+        }
+
+        return StableContentHash.ComputeSha256Hex(builder.ToString());
+    }
+
+    private static void AppendKeyPart(StringBuilder builder, string value)
+    {
+        builder
+            .Append(value.Length.ToString(CultureInfo.InvariantCulture))
+            .Append(':')
+            .Append(value)
+            .Append('|');
+    }
+
+    private void UpdateSnapshotRenewalTimer()
+    {
+        var deadlineUtc =
+            activeSnapshotCapture?.AttachmentDraft.FreshUntilUtc;
+        if (snapshotRenewalTimer is not null &&
+            scheduledSnapshotDeadlineUtc == deadlineUtc)
+        {
+            return;
+        }
+
+        snapshotRenewalTimer?.Dispose();
+        snapshotRenewalTimer = null;
+        scheduledSnapshotDeadlineUtc = deadlineUtc;
+        if (!deadlineUtc.HasValue || isDisposed)
+        {
+            return;
+        }
+
+        var dueTime = deadlineUtc.Value - TimeProvider.GetUtcNow();
+        if (dueTime < TimeSpan.Zero)
+        {
+            dueTime = TimeSpan.Zero;
+        }
+
+        snapshotRenewalTimer = TimeProvider.CreateTimer(
+            static state =>
+                ((ProjectStructureAgentChatContextProvider)state!)
+                    .QueueSnapshotRenewal(),
+            this,
+            dueTime,
+            Timeout.InfiniteTimeSpan);
+    }
+
+    private void QueueSnapshotRenewal()
+    {
+        _ = RenewSnapshotAsync();
+    }
+
+    private async Task RenewSnapshotAsync()
+    {
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (isDisposed || publicationLease is null)
+                {
+                    return;
+                }
+
+                snapshotRenewalTimer?.Dispose();
+                snapshotRenewalTimer = null;
+                scheduledSnapshotDeadlineUtc = null;
+                PublishCurrentContext();
+            });
+        }
+        catch (OperationCanceledException) when (isDisposed)
+        {
+        }
+        catch (ObjectDisposedException) when (isDisposed)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Unable to renew the project-structure agent context snapshot. ProjectId={ProjectId} FailureType={FailureType}.",
+                activeProjectId,
+                exception.GetType().Name);
+        }
+    }
+
+    private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+    }
+
+    private void DisposeContext()
+    {
+        Interlocked.Increment(ref agentAccessGeneration);
+        notificationSubscription?.Dispose();
+        notificationSubscription = null;
+        activeSource = null;
+        publicationLease?.Dispose();
+        publicationLease = null;
+        snapshotRenewalTimer?.Dispose();
+        snapshotRenewalTimer = null;
+        scheduledSnapshotDeadlineUtc = null;
+        activeSnapshotCapture = null;
+        agents = [];
+        activeProjectId = Guid.Empty;
+        accessState = AgentChatContextAccessState.Loading;
+        publicationKey = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
+        disposalCts.Cancel();
+        DisposeContext();
+        disposalCts.Dispose();
+    }
+}

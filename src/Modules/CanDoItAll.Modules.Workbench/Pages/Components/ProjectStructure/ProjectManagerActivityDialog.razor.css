@@ -1,0 +1,22 @@
+.project-manager-activity__identity {
+    min-width: 18rem;
+}
+
+.project-manager-activity__summary {
+    display: block;
+    max-width: 30rem;
+    overflow: hidden;
+    font-size: 0.85rem;
+    line-height: 1.25;
+    opacity: 0.72;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-manager-activity__nowrap {
+    white-space: nowrap;
+}
+
+::deep [data-testid="manager-activity-list"] {
+    width: 100%;
+}

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CanDoItAll.FileTools.Abstractions" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
+  </ItemGroup>
+</Project>

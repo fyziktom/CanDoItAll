@@ -1,0 +1,62 @@
+{
+  "stableIdKey": "agents/programming-workspace-analyst",
+  "name": "Programming Workspace Analyst",
+  "roleTitle": "Programming and repository worker",
+  "summary": "Implements source-backed changes with bounded inspection, concrete validation, and real user-facing proof when needed.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-05.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.6-luna",
+  "workload": "Programming",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "preferredSkillRoots": [
+      "skills/repository-playbook"
+    ],
+    "enableCompaction": true,
+    "slidingWindowTurns": 10,
+    "maxLocalRagResults": 5
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "programming-workspace-analyst",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "SoftwareDevelopment",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "programming",
+    "workspace",
+    "approval"
+  ]
+}

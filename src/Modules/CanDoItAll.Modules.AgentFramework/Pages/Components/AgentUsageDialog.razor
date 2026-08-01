@@ -1,0 +1,170 @@
+@inject IAgentFrameworkWorkspaceService WorkspaceService
+
+@if (isLoading)
+{
+    <LoadingState Eyebrow="Agent usage"
+                  Title="Loading agent usage"
+                  Description="Reading the compact agent usage projection for this workspace." />
+}
+else if (!string.IsNullOrWhiteSpace(loadError))
+{
+    <EmptyState Eyebrow="Usage unavailable"
+                Title="Agent usage could not be loaded"
+                Description="@loadError" />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Large"
+           data-testid="agents-usage-dialog">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(9rem,1fr))">
+            <MetricCard Label="Ranked agents" Value="@AgentUsageDisplay.FormatCount(snapshot.Agents.Count)" />
+            <MetricCard Label="Runs" Value="@AgentUsageDisplay.FormatCount(snapshot.Agents.Sum(item => item.RunCount))" />
+            <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
+            <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.TotalTokens)" />
+            <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
+        </Grid>
+
+        <CdaChart Title="Agent execution ranking"
+                  Description="Top agents by execution count, with failures preserved in the detail table."
+                  Series="@AgentRunSeries"
+                  Options="@AgentRunChartOptions"
+                  Height="320"
+                  Class="w-full"
+                  EmptyText="No agent usage has been recorded." />
+
+        <SurfaceCard Soft="true">
+            @if (snapshot.Agents.Count == 0)
+            {
+                <EmptyState Eyebrow="No usage"
+                            Title="No agent usage rows"
+                            Description="Run an agent execution to populate this detail view." />
+            }
+            else
+            {
+                <DataGrid TItem="AgentOverviewUsageRow"
+                          Data="@AgentRows"
+                          AllowPaging="true"
+                          PageSize="10"
+                          data-testid="agents-usage-dialog-grid">
+                    <Columns>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Agent">
+                            <Template Context="agent">
+                                <Stack Gap="0.15rem">
+                                    <span class="font-medium text-slate-950">@agent.AgentName</span>
+                                    <span class="text-xs text-slate-500">@AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc)</span>
+                                </Stack>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Runs">
+                            <Template Context="agent">
+                                <span>@AgentUsageDisplay.FormatCount(agent.RunCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Failed">
+                            <Template Context="agent">
+                                <StatusBadge Tone="@(agent.FailedRunCount > 0 ? "danger" : "success")"
+                                             Text="@AgentUsageDisplay.FormatCount(agent.FailedRunCount)"
+                                             NoWrap="true" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Observations">
+                            <Template Context="agent">
+                                <span>@AgentUsageDisplay.FormatCount(agent.UsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Unknown">
+                            <Template Context="agent">
+                                <span>@AgentUsageDisplay.FormatCount(agent.UnknownUsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Tokens">
+                            <Template Context="agent">
+                                <span>@AgentUsageDisplay.FormatTokens(agent.TotalTokens)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Known cost">
+                            <Template Context="agent">
+                                <span>@AgentUsageDisplay.FormatCost(agent.KnownCostUsd)</span>
+                            </Template>
+                        </DataGridColumn>
+                    </Columns>
+                </DataGrid>
+            }
+        </SurfaceCard>
+
+        <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Close"
+                    Icon="close"
+                    Variant="Variant.Outlined"
+                    Click="CloseAsync" />
+        </Cluster>
+    </Stack>
+}
+
+@code {
+    private static readonly CdaChartOptions AgentRunChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "runs",
+        YAxisTitle = "Runs",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = false,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        Palette = CdaChartPalette.Calm
+    };
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private AgentUsageDetailSnapshot snapshot = AgentUsageDetailSnapshot.Empty;
+    private bool isLoading = true;
+    private string? loadError;
+
+    private IReadOnlyList<AgentOverviewUsageRow> AgentRows =>
+        snapshot.Agents
+            .OrderByDescending(item => item.RunCount)
+            .ThenBy(item => item.AgentName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private IReadOnlyList<CdaChartSeries> AgentRunSeries =>
+        AgentRows.Count == 0
+            ? []
+            :
+            [
+                new CdaChartSeries
+                {
+                    Name = "Runs",
+                    Type = CdaChartType.Bar,
+                    Points = AgentRows
+                        .Take(10)
+                        .Select(item => new CdaChartPoint(
+                            AgentUsageDisplay.TrimLabel(item.AgentName, 22),
+                            item.RunCount))
+                        .ToArray()
+                }
+            ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            snapshot = await WorkspaceService.GetAgentUsageDetailsAsync();
+        }
+        catch (Exception exception)
+        {
+            loadError = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task CloseAsync()
+        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+}

@@ -1,0 +1,74 @@
+{
+  "stableIdKey": "agents/hr-agent",
+  "name": "HR Agent",
+  "roleTitle": "Agent governance and workforce intelligence lead",
+  "summary": "Creates and maintains technical agents, audits their usage and process performance, generates safe avatars, and reads privacy-safe CRM/HR evidence.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-07.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.4-mini",
+  "workload": "Hr",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 4,
+    "runtimeUse": "hr-agent-governance",
+    "hrCapabilityCurationAccessVersion": "2026-07-hr-capability-curation-v1",
+    "memory": {
+      "invocationMode": "Disabled",
+      "canUseMemoryTools": false,
+      "allowedSourceScopes": [
+        "Crm"
+      ]
+    }
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "hr-agent",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": false,
+      "canWrite": false,
+      "allowAllProjects": false,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "ReadOnly",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": true,
+      "preferredProviderProfileKey": "openai-image-generation",
+      "defaultModel": "gpt-image-1-mini",
+      "canStoreImagesAsProjectAssets": false
+    }
+  },
+  "tags": [
+    "hr",
+    "agent-governance",
+    "workforce-analytics",
+    "privacy"
+  ]
+}

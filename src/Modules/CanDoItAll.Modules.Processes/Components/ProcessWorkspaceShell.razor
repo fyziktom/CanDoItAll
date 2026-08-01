@@ -1,0 +1,4034 @@
+@namespace CanDoItAll.Modules.Processes
+@using System.Globalization
+@using CanDoItAll.AgentFramework.Components
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Voice
+@using CanDoItAll.Infrastructure.Configuration
+@using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Modules.AgentFramework
+@using CanDoItAll.Modules.Processes.AgentChat
+@using CanDoItAll.Processes.Application
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject IProcessWorkspaceProjectionClient ProjectionClient
+@inject IServiceProvider Services
+@inject ICurrencyFormatter CurrencyFormatter
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+@inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject TimeProvider TimeProvider
+@inject IAgentChatExecutionOrchestrator ChatExecutionOrchestrator
+@inject ILogger<ProcessWorkspaceShell> Logger
+
+@{
+    var agentChatContextPublication = ResolveAgentChatPublication();
+}
+
+<AgentChatContextSurfaceProvider Surface="@agentChatContextPublication.Surface"
+                                 ContributorPublications="@agentChatContextPublication.ContributorPublications"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence" />
+
+<PageScaffold FillHeight="true"
+              MaxWidthClass="max-w-full"
+              Class="processes-page-scaffold"
+              data-testid="processes-page-scaffold">
+    <Header>
+        <Toolbar Class="processes-command-strip"
+                 data-testid="processes-command-strip">
+            <ToolbarRow Class="processes-command-strip__row">
+                <CompactStatStrip Class="min-w-0">
+                    <p class="cda-eyebrow whitespace-nowrap">@ScopeEyebrow</p>
+                    <CompactStat Tone="info"
+                                 Text="@($"{DefinitionTotalText} definition(s)")"
+                                 TooltipText="@DefinitionTooltip" />
+                    <CompactStat Tone="success"
+                                 Text="@($"{LiveRunActiveText} active")"
+                                 TooltipText="@LiveRunTooltip" />
+                    <CompactStat Tone="warning"
+                                 Text="@($"{LiveRunAttentionText} attention")"
+                                 TooltipText="Runs projected as needing operator attention." />
+                    <CompactStat Tone="@ProjectionTone"
+                                 Text="@ProjectionStatusText"
+                                 TooltipText="@ProjectionTooltip" />
+                </CompactStatStrip>
+
+                <ToolbarActions Class="processes-command-strip__actions">
+                    @if (shell is null)
+                    {
+                        <PageHeaderActionButton Icon="refresh"
+                                                Label="Refresh"
+                                                TooltipText="Refresh process shell projections."
+                                                Disabled="@isBusy"
+                                                IsBusy="@isBusy"
+                                                Click="RefreshAsync"
+                                                data-testid="processes-refresh" />
+                        <PageHeaderActionButton Icon="smart_toy"
+                                                Label="Agent context"
+                                                TooltipText="@AgentContextTooltip"
+                                                Disabled="@AgentContextDisabled"
+                                                Click="OpenAgentContext"
+                                                data-testid="processes-agent-context" />
+                    }
+                    else
+                    {
+                        @foreach (var command in shell.Commands)
+                        {
+                            <PageHeaderActionButton Icon="@command.Icon"
+                                                    Label="@command.Text"
+                                                    TooltipText="@(command.DisabledReason ?? command.Text)"
+                                                    Disabled="@(!command.IsEnabled)"
+                                                    Click="@(() => ExecuteCommandAsync(command))"
+                                                    data-testid="@BuildCommandTestId(command.Kind)" />
+                        }
+                    }
+                </ToolbarActions>
+            </ToolbarRow>
+        </Toolbar>
+    </Header>
+
+    <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <SurfaceCard Soft="true" data-testid="processes-shell-error">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
+                <h2 class="text-base font-semibold text-rose-900">Process shell projection failed</h2>
+                <p class="mt-2 text-sm leading-6 text-rose-700">@errorMessage</p>
+            </SurfaceCard>
+        }
+
+        @if (shell is null)
+        {
+            <SurfaceCard data-testid="processes-shell-loading">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Loading" />
+                <h2 class="text-base font-semibold text-slate-900">Refreshing process workspace</h2>
+            </SurfaceCard>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="processes-workspace-root min-h-0 flex-1"
+                   data-testid="processes-shell">
+                @if (!string.IsNullOrWhiteSpace(agentContextNotice))
+                {
+                    <p class="text-xs font-semibold text-slate-500" data-testid="processes-agent-context-notice">@agentContextNotice</p>
+                }
+
+                <ListDetailShell ListPaneWidth="28rem"
+                                 Dense="true"
+                                 ListPaneClass="h-full min-h-0"
+                                 DetailPaneClass="h-full min-h-0"
+                                 data-testid="processes-workspace-list-detail">
+                    <ListHeader>
+                        <ListPanelHeader Title="Process definitions"
+                                         Description=""
+                                         Dense="true"
+                                         HelpText="Browse process contracts, filter the library, and keep selection synchronized with the detail workspace."
+                                         Count="@($"{DefinitionCatalog.Items.Count} definition(s)")">
+                            <Filters>
+                                <FilterBar>
+                                    <input class="cda-input min-w-[16rem] flex-1"
+                                           value="@pendingSearchText"
+                                           @oninput="UpdateDefinitionSearchText"
+                                           placeholder="Search definitions"
+                                           aria-label="Search process definitions"
+                                           data-testid="processes-definition-search" />
+                                    <Button Icon="search"
+                                            Class="cda-button--quick"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            title="Search definitions"
+                                            aria-label="Search definitions"
+                                            Disabled="@isBusy"
+                                            Click="ApplyDefinitionSearchAsync"
+                                            data-testid="processes-definition-search-submit" />
+                                    <Button Icon="close"
+                                            Class="cda-button--quick"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            title="Clear search"
+                                            aria-label="Clear search"
+                                            Disabled="@isBusy"
+                                            Click="ClearDefinitionSearchAsync"
+                                            data-testid="processes-definition-search-clear" />
+                                </FilterBar>
+                            </Filters>
+                        </ListPanelHeader>
+                    </ListHeader>
+
+                    <ListContent>
+                        @RenderDefinitionListPane()
+                    </ListContent>
+
+                    <DetailHeader>
+                        @RenderDefinitionIdentityHeader()
+                    </DetailHeader>
+
+                    <DetailContent>
+                        <Tabs SelectedIndex="@activeDetailTabIndex"
+                              SelectedIndexChanged="HandleDetailTabChangedAsync"
+                              RenderMode="TabRenderMode.Server"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              BorderMode="TabsBorderMode.Soft"
+                              OverflowMode="TabsOverflowMode.Auto"
+                              PanelOverflowMode="TabsPanelOverflowMode.Auto"
+                              FillHeight="true"
+                              Class="h-full min-h-0 w-full min-w-0"
+                              AriaLabel="Process workspace detail panels"
+                              data-testid="processes-detail-tabs">
+                            @foreach (var tab in DetailTabs)
+                            {
+                                <TabsItem Text="@tab.Text"
+                                          Icon="@tab.Icon"
+                                          BadgeText="@tab.BadgeText"
+                                          data-testid="@BuildDetailTabTestId(tab.Key)">
+                                    @RenderDetailTab(tab)
+                                </TabsItem>
+                            }
+                        </Tabs>
+                    </DetailContent>
+                </ListDetailShell>
+            </Stack>
+        }
+    </ChildContent>
+</PageScaffold>
+
+@if (runDetailDialogOpen && runDetailSnapshot is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Process run"
+            Title="@BuildRunTitle(runDetailSnapshot)"
+            Subtitle="@BuildRunSubtitle(runDetailSnapshot)"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            TestId="processes-run-detail-dialog"
+            OnClose="CloseRunDetailDialogAsync">
+        <ChildContent>
+            @RenderRunDetailDialog(runDetailSnapshot)
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseRunDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (eventDetailDialogOpen && eventDetail is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Runtime event"
+            Title="@eventDetail.EventType"
+            Subtitle="@eventDetail.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="processes-runtime-event-detail-dialog"
+            OnClose="CloseEventDetailDialogAsync">
+        <ChildContent>
+            @RenderEventDetailDialog(eventDetail)
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseEventDetailDialogAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public Guid? ProjectId { get; set; }
+
+    [Parameter]
+    public Guid? ProcessIdQuery { get; set; }
+
+    [Parameter]
+    public Guid? RunIdQuery { get; set; }
+
+    [Parameter]
+    public Guid? LaunchPlanIdQuery { get; set; }
+
+    [Parameter]
+    public string? DefinitionSearchText { get; set; }
+
+    [Parameter]
+    public string? SelectedDefinitionKey { get; set; }
+
+    [Parameter]
+    public bool LiveRoute { get; set; }
+
+    private const string AllDefinitionsTreeNodeId = "processes:scope:all";
+    private const string ScopeTreeNodePrefix = "processes:scope:";
+    private const string DefinitionTreeNodePrefix = "processes:definition:";
+    private const int SelectedRunGraphsViewIndex = 4;
+    private const decimal RuntimeUsageTokenThousandsDivisor = 1_000m;
+    private const decimal RuntimeUsageCostUsdMultiplier = 1_000m;
+
+    private ProcessWorkspaceShellProjection? shell;
+    private int activeDetailTabIndex;
+    private int selectedRunViewIndex = 1;
+    private Guid? selectedRuntimeRunId;
+    private Guid? routeSelectionProjectId;
+    private Guid? routeSelectionProcessId;
+    private Guid? routeSelectionRunId;
+    private Guid? routeSelectionLaunchPlanId;
+    private Guid? requiredRouteProcessId;
+    private Guid? requiredRouteRunId;
+    private Guid? requiredRouteLaunchPlanId;
+    private string? routeSelectionDefinitionKey;
+    private string? requiredRouteDefinitionKey;
+    private bool routeSelectionInitialized;
+    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.LiveHour;
+    private ProcessRuntimeHistoryWindow managerChatHistoryWindow = ProcessRuntimeHistoryWindow.OneDay;
+    private int runtimeEventPage;
+    private const int RuntimeEventPageSize = 25;
+    private bool processGraphsHistoryLoaded;
+    private bool runDetailDialogOpen;
+    private ProcessLiveProcessSnapshot? runDetailSnapshot;
+    private bool eventDetailDialogOpen;
+    private ProcessTimelineEventProjection? eventDetail;
+    private IReadOnlyList<AgentDefinition> managerChatAgents = [];
+    private AgentDefinition? managerChatAgent;
+    private Guid? managerChatAgentId;
+    private Guid? managerChatSessionId;
+    private ChatAgentWorkspaceSnapshot? managerChatWorkspace;
+    private Guid? managerChatLoadedRunId;
+    private Guid? managerChatLoadedAgentId;
+    private readonly Dictionary<string, Guid> managerChatSessionIdsByRun = new(StringComparer.Ordinal);
+    private IReadOnlyList<ExecutionLogEntry> managerChatExecutionLog = [];
+    private AgentExecutionActivityStreamId? managerChatActivityStreamId;
+    private string managerChatDraftPrompt = string.Empty;
+    private string managerChatPendingPrompt = string.Empty;
+    private IReadOnlyList<string> managerChatDraftAttachmentPaths = [];
+    private int managerChatComposerKey;
+    private bool managerChatIsLoading;
+    private bool managerChatIsBusy;
+    private bool managerChatVoiceModeEnabled;
+    private bool managerChatVoiceRecording;
+    private bool managerChatVoiceTranscribing;
+    private bool managerChatVoiceSpeaking;
+    private string? managerChatErrorMessage;
+    private string managerChatRunStateText = string.Empty;
+    private string managerChatRunStateTone = "neutral";
+    private string managerChatVoiceStatusText = string.Empty;
+    private string managerChatVoiceStatusTone = "neutral";
+    private readonly HashSet<Guid> managerChatSessionsWithVoiceIdentifierOmissionNotice = [];
+    private bool managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
+    private ProcessAgentChatContextPublication? agentChatPublication;
+    private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
+    private bool isDisposed;
+    private bool activeDetailTabInitialized;
+    private bool isBusy;
+    private string? errorMessage;
+    private long workspaceGeneration;
+    private string? agentContextNotice;
+    private string searchText = string.Empty;
+    private string pendingSearchText = string.Empty;
+    private string? selectedDefinitionKey;
+    private ProcessDefinitionCatalogScopeKind selectedDefinitionScope = ProcessDefinitionCatalogScopeKind.All;
+    private string? catalogCommandNotice;
+    private ProcessDefinitionCatalogItemKey? editorDefinitionKey;
+    private ProcessDefinitionEditorVersionToken? editorVersionToken;
+    private string? editorCommandNotice;
+    private string editorName = string.Empty;
+    private string editorCustomerName = string.Empty;
+    private string editorOwnerName = string.Empty;
+    private string editorSummary = string.Empty;
+    private string editorValueStatement = string.Empty;
+    private string editorManagerOverrideSummary = string.Empty;
+    private string editorGovernanceNotes = string.Empty;
+    private string editorChangeSummary = string.Empty;
+    private string editorGovernancePolicySummary = string.Empty;
+    private string editorInterfaceContractSummary = string.Empty;
+    private string editorConstitutionRuleSummary = string.Empty;
+    private string editorOperatingModeSummary = string.Empty;
+    private string editorSimulationReadinessSummary = string.Empty;
+    private ProcessDefinitionCriticalityLevel editorCriticality = ProcessDefinitionCriticalityLevel.Standard;
+    private ProcessDefinitionAutonomyLevel editorAutonomyLevel = ProcessDefinitionAutonomyLevel.Assisted;
+    private ProcessDefinitionOperatingModeKind editorOperatingMode = ProcessDefinitionOperatingModeKind.AssistedExecution;
+    private ProcessDefinitionAuthoringStatus editorWorkingStatus = ProcessDefinitionAuthoringStatus.TemplateDefault;
+    private int editorStepCount;
+    private int editorRequiredRoleCount;
+    private int editorRequiredArtifactExpectationCount;
+    private string templateSearchText = string.Empty;
+    private ProcessTemplateCatalogCategoryKind selectedTemplateCategory = ProcessTemplateCatalogCategoryKind.All;
+    private ProcessTemplateCatalogItemKey? selectedTemplateItemKey;
+    private ProcessTemplateCatalogPreviewTabKind selectedTemplatePreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview;
+    private readonly HashSet<string> expandedDefinitionTreeNodeIds =
+    [
+        BuildScopeTreeNodeId(ProcessDefinitionCatalogScopeKind.Global),
+        BuildScopeTreeNodeId(ProcessDefinitionCatalogScopeKind.Project)
+    ];
+
+    private static readonly ProcessDefinitionCriticalityLevel[] CriticalityOptions =
+    [
+        ProcessDefinitionCriticalityLevel.Low,
+        ProcessDefinitionCriticalityLevel.Standard,
+        ProcessDefinitionCriticalityLevel.High,
+        ProcessDefinitionCriticalityLevel.MissionCritical
+    ];
+
+    private static readonly ProcessDefinitionAutonomyLevel[] AutonomyOptions =
+    [
+        ProcessDefinitionAutonomyLevel.Manual,
+        ProcessDefinitionAutonomyLevel.Assisted,
+        ProcessDefinitionAutonomyLevel.Guarded,
+        ProcessDefinitionAutonomyLevel.Delegated
+    ];
+
+    private static readonly ProcessDefinitionOperatingModeKind[] OperatingModeOptions =
+    [
+        ProcessDefinitionOperatingModeKind.Manual,
+        ProcessDefinitionOperatingModeKind.AssistedExecution,
+        ProcessDefinitionOperatingModeKind.GovernedLive
+    ];
+
+    private static readonly ProcessRuntimeHistoryWindow[] RuntimeHistoryWindowOptions =
+    [
+        ProcessRuntimeHistoryWindow.LiveHour,
+        ProcessRuntimeHistoryWindow.OneDay,
+        ProcessRuntimeHistoryWindow.SevenDays,
+        ProcessRuntimeHistoryWindow.ThirtyDays
+    ];
+
+    private IReadOnlyList<ProcessWorkspaceDetailTabDescriptor> DetailTabs =>
+    [
+        new(
+            ProcessWorkspaceDetailTabKey.Definition,
+            "Definition",
+            "edit_note",
+            "Basic process information, governance, contracts, and simulation readiness.",
+            null),
+        new(
+            ProcessWorkspaceDetailTabKey.Roles,
+            "Roles",
+            "groups",
+            "Role requirements and bindings.",
+            DefinitionCatalog.SelectedEditor?.RoleEditor?.Roles.Count.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Steps,
+            "Steps",
+            "account_tree",
+            "Canvas-first process topology and step contract editing.",
+            DefinitionCatalog.SelectedEditor?.StepEditor?.Steps.Count.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Runs,
+            "Runs",
+            "rocket_launch",
+            "Launch planning, activity, operator control, execution, coordination, and evidence.",
+            LiveRunActiveText),
+        new(
+            ProcessWorkspaceDetailTabKey.Graphs,
+            "Graphs",
+            "bar_chart",
+            "Run history metrics for cost, token, and time projections.",
+            shell?.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Analytics,
+            "Analytics",
+            "analytics",
+            "Readiness and improvement signals.",
+            DefinitionCatalog.TemplateCompatibilityIssueCount.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.Exchange,
+            "Exchange",
+            "sync_alt",
+            "Templates, import, export, and compatibility preview.",
+            DefinitionCatalog.SelectedEditor?.TemplateCatalog?.Items.Count.ToString(CultureInfo.InvariantCulture)),
+        new(
+            ProcessWorkspaceDetailTabKey.ManagerChat,
+            "Manager chat",
+            "forum",
+            "Manager agent context and run-scoped chat entry point.",
+            shell?.AgentEntry.IsAvailable == true ? "ready" : null)
+    ];
+
+    private string ScopeEyebrow => ProjectId.HasValue ? "Project processes" : "Processes";
+
+    private string HeaderTitle => shell?.Title ?? ScopeEyebrow;
+
+    private string HeaderDescription
+        => shell?.Subtitle ?? "Projection-first process workspace.";
+
+    private string DefinitionTotalText
+        => shell is null
+            ? "0"
+            : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount).ToString(CultureInfo.InvariantCulture);
+
+    private string DefinitionTooltip
+        => shell?.DefinitionCatalog.Summary ?? "Definition catalog projection is loading.";
+
+    private string LiveRunActiveText
+        => shell?.LiveRuns.ActiveRunCount.ToString(CultureInfo.InvariantCulture) ?? "0";
+
+    private string LiveRunAttentionText
+        => shell?.LiveRuns.AttentionRunCount.ToString(CultureInfo.InvariantCulture) ?? "0";
+
+    private string LiveRunTooltip
+        => shell?.LiveRuns.Summary ?? "Live run projection is loading.";
+
+    private string ProjectionStatusText
+        => shell?.Refresh.Status switch
+        {
+            ProcessWorkspaceProjectionStatus.Ready => "Ready",
+            ProcessWorkspaceProjectionStatus.RefreshRequested => "Refresh requested",
+            ProcessWorkspaceProjectionStatus.ProjectionStoreUnavailable => "Store pending",
+            _ => "Loading"
+        };
+
+    private string ProjectionTooltip
+        => shell?.Refresh.Summary ?? "Projection freshness is loading.";
+
+    private string ProjectionTone
+        => shell?.Refresh.Status switch
+        {
+            ProcessWorkspaceProjectionStatus.Ready => "success",
+            ProcessWorkspaceProjectionStatus.RefreshRequested => "info",
+            ProcessWorkspaceProjectionStatus.ProjectionStoreUnavailable => "warning",
+            _ => "neutral"
+        };
+
+    private bool AgentContextDisabled
+        => isBusy || shell?.AgentEntry.IsAvailable != true;
+
+    private string AgentContextTooltip
+        => shell?.AgentEntry.DisabledReason ?? shell?.AgentEntry.ContextKey ?? "Process agent context is loading.";
+
+    private ProcessDefinitionCatalogProjection DefinitionCatalog
+        => shell?.DefinitionCatalog ?? throw new InvalidOperationException("Definition catalog is not loaded.");
+
+    private ProcessWorkspaceShellProjection CurrentShell
+        => shell ?? throw new InvalidOperationException("Process workspace shell is not loaded.");
+
+    private bool HasUnresolvedRouteRunSelection
+        => requiredRouteRunId is { } requestedRunId &&
+           shell is not null &&
+           shell.Runtime.SelectedRunId != requestedRunId;
+
+    private bool HasUnresolvedRouteDefinitionSelection
+        => !string.IsNullOrWhiteSpace(requiredRouteDefinitionKey) &&
+           shell is not null &&
+           !string.Equals(
+               shell.DefinitionCatalog.SelectedItem?.Key.Value,
+               requiredRouteDefinitionKey,
+               StringComparison.Ordinal);
+
+    private bool HasUnresolvedRouteProcessSelection
+        => requiredRouteProcessId is { } requestedProcessId &&
+           shell is not null &&
+           (shell.DefinitionCatalog.SelectedItem is not { } selectedDefinition ||
+            ProcessDefinitionCatalogProjectionService.CreateDefinitionId(selectedDefinition.Key).Value != requestedProcessId);
+
+    private bool HasUnresolvedRouteLaunchPlanSelection
+        => requiredRouteLaunchPlanId.HasValue && shell is not null;
+
+    private bool HasUnresolvedNonRunRouteSelection
+        => HasUnresolvedRouteDefinitionSelection ||
+           HasUnresolvedRouteProcessSelection ||
+           HasUnresolvedRouteLaunchPlanSelection;
+
+    private bool HasUnresolvedRouteSelection
+        => HasUnresolvedRouteRunSelection || HasUnresolvedNonRunRouteSelection;
+
+    private ProcessWorkspaceShellProjection? AgentChatShell
+    {
+        get
+        {
+            if (!HasUnresolvedNonRunRouteSelection || shell is null)
+            {
+                return shell;
+            }
+
+            return shell with
+            {
+                DefinitionCatalog = shell.DefinitionCatalog with
+                {
+                    SelectedDefinitionKey = string.IsNullOrWhiteSpace(requiredRouteDefinitionKey)
+                        ? null
+                        : new ProcessDefinitionCatalogItemKey(requiredRouteDefinitionKey),
+                    SelectedItem = null,
+                    SelectedEditor = null
+                }
+            };
+        }
+    }
+
+    private ProcessAgentChatContextPublication ResolveAgentChatPublication()
+    {
+        var context = new ProcessWorkspaceAgentChatContext(
+            Navigation.Uri,
+            ProjectId,
+            AgentChatWorkspaceView,
+            AgentChatRunView,
+            HasUnresolvedNonRunRouteSelection
+                ? null
+                : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
+            AgentChatShell,
+            !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
+            !HasUnresolvedRouteSelection && eventDetailDialogOpen ? eventDetail : null,
+            AgentChatAccessState);
+        agentChatPublication = ProcessInvocationSnapshotMapper.BuildWorkspacePublication(
+            context,
+            new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
+            TimeProvider.GetUtcNow(),
+            agentChatPublication);
+        AgentChatFreshnessLease.Schedule(
+            agentChatPublication.SnapshotCapture?.AttachmentDraft);
+        return agentChatPublication;
+    }
+
+    private ProcessAgentChatFreshnessLease AgentChatFreshnessLease
+        => agentChatFreshnessLease ??= new ProcessAgentChatFreshnessLease(
+            TimeProvider,
+            ExpireAgentChatPublicationAsync,
+            exception => Logger.LogError(
+                exception,
+                "Failed to expire the process workspace agent context at its freshness deadline."));
+
+    private Task ExpireAgentChatPublicationAsync()
+        => InvokeAsync(() =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            StateHasChanged();
+        });
+
+    private AgentChatContextAccessState AgentChatAccessState
+        => isBusy
+            ? AgentChatContextAccessState.Loading
+            : shell is not null
+            ? HasUnresolvedRouteSelection
+                ? AgentChatContextAccessState.Failed
+                : AgentChatContextAccessState.Ready
+            : string.IsNullOrWhiteSpace(errorMessage)
+                ? AgentChatContextAccessState.Loading
+                : AgentChatContextAccessState.Failed;
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [
+                new("processId", ProcessIdQuery?.ToString("D")),
+                new("runId", RunIdQuery?.ToString("D")),
+                new("launchPlanId", LaunchPlanIdQuery?.ToString("D")),
+                new("q", DefinitionSearchText),
+                new("definitionKey", SelectedDefinitionKey)
+            ]);
+
+    private ProcessAgentChatWorkspaceView AgentChatWorkspaceView
+        => (!activeDetailTabInitialized && ResolvePreferredDetailTab() == ProcessWorkspaceDetailTabKey.Runs
+                ? 3
+                : activeDetailTabIndex) switch
+        {
+            0 => ProcessAgentChatWorkspaceView.Definition,
+            1 => ProcessAgentChatWorkspaceView.Roles,
+            2 => ProcessAgentChatWorkspaceView.Steps,
+            3 => ProcessAgentChatWorkspaceView.Runs,
+            4 => ProcessAgentChatWorkspaceView.Graphs,
+            5 => ProcessAgentChatWorkspaceView.Analytics,
+            6 => ProcessAgentChatWorkspaceView.Exchange,
+            7 => ProcessAgentChatWorkspaceView.ManagerChat,
+            _ => ProcessAgentChatWorkspaceView.Definition
+        };
+
+    private ProcessAgentChatRunView AgentChatRunView
+        => selectedRunViewIndex switch
+        {
+            0 => ProcessAgentChatRunView.Launch,
+            1 => ProcessAgentChatRunView.Activity,
+            2 => ProcessAgentChatRunView.Control,
+            3 => ProcessAgentChatRunView.Execution,
+            4 => ProcessAgentChatRunView.Graphs,
+            5 => ProcessAgentChatRunView.Coordination,
+            6 => ProcessAgentChatRunView.Evidence,
+            _ => ProcessAgentChatRunView.Activity
+        };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        SynchronizeRouteSelections();
+        searchText = DefinitionSearchText?.Trim() ?? string.Empty;
+        pendingSearchText = searchText;
+        selectedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
+            ? null
+            : SelectedDefinitionKey.Trim();
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private void SynchronizeRouteSelections()
+    {
+        var normalizedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
+            ? null
+            : SelectedDefinitionKey.Trim();
+        if (routeSelectionInitialized &&
+            routeSelectionProjectId == ProjectId &&
+            routeSelectionProcessId == ProcessIdQuery &&
+            routeSelectionRunId == RunIdQuery &&
+            routeSelectionLaunchPlanId == LaunchPlanIdQuery &&
+            string.Equals(routeSelectionDefinitionKey, normalizedDefinitionKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        routeSelectionInitialized = true;
+        routeSelectionProjectId = ProjectId;
+        routeSelectionProcessId = ProcessIdQuery;
+        routeSelectionRunId = RunIdQuery;
+        routeSelectionLaunchPlanId = LaunchPlanIdQuery;
+        requiredRouteProcessId = ProcessIdQuery;
+        requiredRouteRunId = RunIdQuery;
+        requiredRouteLaunchPlanId = LaunchPlanIdQuery;
+        routeSelectionDefinitionKey = normalizedDefinitionKey;
+        requiredRouteDefinitionKey = normalizedDefinitionKey;
+        selectedRuntimeRunId = RunIdQuery;
+        runtimeEventPage = 0;
+        runDetailDialogOpen = false;
+        runDetailSnapshot = null;
+        eventDetailDialogOpen = false;
+        eventDetail = null;
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadAsync(forceRefresh: true);
+    }
+
+    private async Task LoadAsync(bool forceRefresh)
+    {
+        var generation = Interlocked.Increment(ref workspaceGeneration);
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var detailTabKey = ResolveRequestedDetailTabKey();
+            var definitionLoadOptions = CreateDefinitionLoadOptions(detailTabKey);
+            var runtimeLoadOptions = CreateRuntimeLoadOptions(detailTabKey);
+            var runtimeQueryHistoryWindow = ResolveRuntimeHistoryWindow(detailTabKey);
+            var shouldAutoSelectRuntimeRun = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat ||
+                (selectedRuntimeRunId ?? RunIdQuery).HasValue;
+            var scope = ResolveScope();
+            var request = new ProcessWorkspaceShellRequest(
+                scope,
+                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, selectedRuntimeRunId ?? RunIdQuery, LaunchPlanIdQuery),
+                new ProcessDefinitionCatalogQueryProjection(
+                    searchText,
+                    string.IsNullOrWhiteSpace(selectedDefinitionKey)
+                        ? null
+                        : new ProcessDefinitionCatalogItemKey(selectedDefinitionKey),
+                    selectedDefinitionScope,
+                    Take: 50),
+                new ProcessTemplateCatalogQueryProjection(
+                    templateSearchText,
+                    selectedTemplateCategory,
+                    selectedTemplateItemKey,
+                    selectedTemplatePreviewTab,
+                    Take: 50),
+                forceRefresh,
+                new ProcessRuntimeWorkspaceQueryProjection(
+                    runtimeQueryHistoryWindow,
+                    runtimeEventPage,
+                    RuntimeEventPageSize,
+                    selectedRuntimeRunId ?? RunIdQuery,
+                    AutoSelectRun: shouldAutoSelectRuntimeRun,
+                    TakeRuns: 50,
+                    runtimeLoadOptions)
+                {
+                    PreviouslyLoadedRuns = ResolvePreviouslyLoadedRuns(
+                        forceRefresh,
+                        scope,
+                        runtimeQueryHistoryWindow)
+                },
+                definitionLoadOptions);
+
+            var loadedShell = await ProjectionClient.GetShellAsync(request);
+            if (generation != Volatile.Read(ref workspaceGeneration))
+            {
+                return;
+            }
+
+            shell = loadedShell;
+            selectedRuntimeRunId = requiredRouteRunId is { } requestedRunId &&
+                loadedShell.Runtime.SelectedRunId != requestedRunId
+                    ? requestedRunId
+                    : loadedShell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
+            if (!activeDetailTabInitialized)
+            {
+                activeDetailTabIndex = ResolveDetailTabIndex(ResolvePreferredDetailTab());
+                activeDetailTabInitialized = true;
+            }
+
+            if (!HasUnresolvedNonRunRouteSelection &&
+                (definitionLoadOptions.IncludeSelectedEditor || shell.DefinitionCatalog.SelectedEditor is not null))
+            {
+                SyncDefinitionEditor(shell.DefinitionCatalog.SelectedEditor);
+            }
+
+            if (!HasUnresolvedNonRunRouteSelection &&
+                (definitionLoadOptions.IncludeTemplateCatalog || shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog is not null))
+            {
+                SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
+            }
+
+            if (!HasUnresolvedRouteSelection &&
+                activeDetailTabIndex == ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat))
+            {
+                await EnsureManagerChatLoadedAsync();
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (generation != Volatile.Read(ref workspaceGeneration))
+            {
+                return;
+            }
+
+            errorMessage = exception.Message;
+            shell = null;
+        }
+        finally
+        {
+            if (generation == Volatile.Read(ref workspaceGeneration))
+            {
+                isBusy = false;
+            }
+        }
+    }
+
+    private ProcessWorkspaceShellScope ResolveScope()
+        => ProjectId.HasValue
+            ? ProcessWorkspaceShellScope.ForProject(ProjectId.Value)
+            : ProcessWorkspaceShellScope.Global;
+
+    private IReadOnlyList<ProcessLiveProcessSnapshot>? ResolvePreviouslyLoadedRuns(
+        bool forceRefresh,
+        ProcessWorkspaceShellScope scope,
+        ProcessRuntimeHistoryWindow historyWindow)
+        => !forceRefresh &&
+           shell is { } loadedShell &&
+           loadedShell.Scope == scope &&
+           loadedShell.Runtime.HistoryWindow == historyWindow
+            ? loadedShell.Runtime.ReusableRuns
+            : null;
+
+    private ProcessWorkspaceDetailTabKey ResolvePreferredDetailTab()
+        => LiveRoute || RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue
+            ? ProcessWorkspaceDetailTabKey.Runs
+            : ProcessWorkspaceDetailTabKey.Definition;
+
+    private ProcessWorkspaceDetailTabKey ResolveRequestedDetailTabKey()
+    {
+        if (!activeDetailTabInitialized)
+        {
+            return ResolvePreferredDetailTab();
+        }
+
+        return DetailTabs.ElementAtOrDefault(activeDetailTabIndex)?.Key ?? ResolvePreferredDetailTab();
+    }
+
+    private ProcessDefinitionWorkspaceLoadOptions CreateDefinitionLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey)
+        => detailTabKey switch
+        {
+            ProcessWorkspaceDetailTabKey.Definition => ProcessDefinitionWorkspaceLoadOptions.Basics,
+            ProcessWorkspaceDetailTabKey.Roles => ProcessDefinitionWorkspaceLoadOptions.Roles,
+            ProcessWorkspaceDetailTabKey.Steps => ProcessDefinitionWorkspaceLoadOptions.Steps,
+            ProcessWorkspaceDetailTabKey.Analytics => ProcessDefinitionWorkspaceLoadOptions.Basics,
+            ProcessWorkspaceDetailTabKey.Exchange => ProcessDefinitionWorkspaceLoadOptions.Exchange,
+            _ => ProcessDefinitionWorkspaceLoadOptions.CatalogOnly
+        };
+
+    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey)
+    {
+        var hasExplicitRuntimeSelection = (selectedRuntimeRunId ?? RunIdQuery).HasValue || LiveRoute || LaunchPlanIdQuery.HasValue;
+        return detailTabKey switch
+        {
+            ProcessWorkspaceDetailTabKey.Runs => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = !SelectedRunViewNeedsMetrics,
+                IncludeHistory = !SelectedRunViewNeedsMetrics,
+                IncludeMetricHistory = SelectedRunViewNeedsMetrics,
+                IncludeUsageTelemetry = SelectedRunViewNeedsMetrics,
+                IncludeActiveAgents = SelectedRunViewNeedsActiveAgents
+            },
+            ProcessWorkspaceDetailTabKey.Graphs when !processGraphsHistoryLoaded => ProcessRuntimeWorkspaceLoadOptions.ListOnly,
+            ProcessWorkspaceDetailTabKey.Graphs or ProcessWorkspaceDetailTabKey.Analytics => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeSelectedRun = false,
+                IncludeHistory = false,
+                IncludeActiveAgents = false
+            },
+            ProcessWorkspaceDetailTabKey.ManagerChat => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                LiveProcesses = ProcessLiveProcessesLoadOptions.SnapshotOnly,
+                IncludeSelectedRun = true,
+                IncludeHistory = false,
+                IncludeMetricHistory = false,
+                IncludeActiveAgents = false,
+                IncludeUsageTelemetry = true
+            },
+            _ when hasExplicitRuntimeSelection => new ProcessRuntimeWorkspaceLoadOptions
+            {
+                IncludeMetricHistory = false,
+                IncludeUsageTelemetry = false
+            },
+            _ => ProcessRuntimeWorkspaceLoadOptions.ListOnly
+        };
+    }
+
+    private ProcessRuntimeHistoryWindow ResolveRuntimeHistoryWindow(ProcessWorkspaceDetailTabKey detailTabKey)
+        => detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat
+            ? managerChatHistoryWindow
+            : runtimeHistoryWindow;
+
+    private bool SelectedRunViewNeedsMetrics
+        => selectedRunViewIndex == SelectedRunGraphsViewIndex;
+
+    private bool SelectedRunViewNeedsActiveAgents
+        => selectedRunViewIndex is 1 or 2 or 3 or 5 or 6;
+
+    private bool ShouldDeferProcessGraphsHistoryLoad
+        => ResolveRequestedDetailTabKey() == ProcessWorkspaceDetailTabKey.Graphs && !processGraphsHistoryLoaded;
+
+    private int ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey key)
+    {
+        var index = DetailTabs
+            .Select((tab, tabIndex) => new { tab.Key, Index = tabIndex })
+            .FirstOrDefault(item => item.Key == key)?.Index;
+
+        return index ?? 0;
+    }
+
+    private async Task HandleDetailTabChangedAsync(int index)
+    {
+        activeDetailTabIndex = index;
+        if (ShouldDeferProcessGraphsHistoryLoad)
+        {
+            return;
+        }
+
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task HandleSelectedRunViewChangedAsync(int index)
+    {
+        selectedRunViewIndex = index;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task ExecuteCommandAsync(ProcessWorkspaceCommandProjection command)
+    {
+        if (!command.IsEnabled)
+        {
+            return;
+        }
+
+        switch (command.Kind)
+        {
+            case ProcessWorkspaceCommandKind.RefreshProjections:
+                await RefreshAsync();
+                break;
+            case ProcessWorkspaceCommandKind.OpenAgentContext:
+                OpenAgentContext();
+                break;
+            case ProcessWorkspaceCommandKind.FeedDefaults:
+                await FeedDefaultsAsync();
+                break;
+            case ProcessWorkspaceCommandKind.OpenLiveDashboard:
+                Navigation.NavigateTo(ProjectId.HasValue
+                    ? $"/projects/{ProjectId.Value:D}/processes/live"
+                    : "/processes/live");
+                break;
+            case ProcessWorkspaceCommandKind.LaunchRun:
+                await LaunchSelectedDefinitionAsync();
+                break;
+        }
+    }
+
+    private async Task LaunchSelectedDefinitionAsync()
+    {
+        var selectedDefinition = shell?.DefinitionCatalog.SelectedItem;
+        if (selectedDefinition is null)
+        {
+            catalogCommandNotice = "Select a process definition before launching.";
+            return;
+        }
+
+        var launchService = Services.GetService<ProcessLaunchApplicationService>();
+        if (launchService is null)
+        {
+            errorMessage = "Process launch services are not registered.";
+            return;
+        }
+
+        isBusy = true;
+        errorMessage = null;
+        try
+        {
+            var variables = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["LaunchSource"] = ProjectId.HasValue ? "project-processes-ui" : "processes-ui"
+            };
+            if (ProjectId.HasValue)
+            {
+                variables["ProjectId"] = ProjectId.Value.ToString("D");
+            }
+
+            var result = await launchService.LaunchAsync(
+                new ProcessLaunchRequest(
+                    selectedDefinition.Key.Value,
+                    ProcessDefinitionId: null,
+                    LiveRunProfileKey: null,
+                    ProjectId,
+                    ProjectNodeId: null,
+                    RequestedBy: "processes-ui",
+                    variables,
+                    RunReadiness: true,
+                    Execute: true));
+
+            catalogCommandNotice = result.Warnings.Count == 0
+                ? $"Launch {result.Stage}."
+                : string.Join(" ", result.Warnings);
+            await LoadAsync(forceRefresh: true);
+            if (result.RunId is not null && !string.IsNullOrWhiteSpace(result.Route))
+            {
+                Navigation.NavigateTo(result.Route);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void OpenAgentContext()
+    {
+        if (shell?.AgentEntry.IsAvailable != true)
+        {
+            return;
+        }
+
+        agentContextNotice = shell.AgentEntry.ContextKey;
+        Navigation.NavigateTo($"/agents?processContext={Uri.EscapeDataString(shell.AgentEntry.ContextKey)}");
+    }
+
+    private void UpdateDefinitionSearchText(ChangeEventArgs args)
+    {
+        pendingSearchText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task ApplyDefinitionSearchAsync()
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
+        searchText = pendingSearchText.Trim();
+        selectedDefinitionKey = null;
+        selectedTemplateItemKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task ClearDefinitionSearchAsync()
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
+        pendingSearchText = string.Empty;
+        searchText = string.Empty;
+        selectedDefinitionKey = null;
+        selectedTemplateItemKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectDefinitionAsync(ProcessDefinitionCatalogItemKey key)
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
+        selectedDefinitionKey = key.Value;
+        selectedTemplateItemKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind scopeKind)
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteDefinitionKey = null;
+        selectedDefinitionScope = scopeKind;
+        selectedDefinitionKey = null;
+        selectedTemplateItemKey = null;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task FeedDefaultsAsync()
+    {
+        isBusy = true;
+        errorMessage = null;
+
+        try
+        {
+            var receipt = await ProjectionClient.FeedDefaultDefinitionsAsync(
+                new ProcessDefinitionFeedDefaultsCommand(ResolveScope()));
+            catalogCommandNotice = $"{receipt.Summary} Refresh token: {receipt.RefreshToken.Value}.";
+            await LoadAsync(forceRefresh: true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private RenderFragment RenderDetailTab(ProcessWorkspaceDetailTabDescriptor tab) => @<div class="processes-detail-tab-panel"
+                                                                                         data-testid="@BuildDetailPanelTestId(tab.Key)">
+        @switch (tab.Key)
+        {
+            case ProcessWorkspaceDetailTabKey.Definition:
+                @RenderDefinitionBasicsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Roles:
+                @RenderRolesTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Steps:
+                @RenderStepsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Runs:
+                @RenderRunsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Graphs:
+                @RenderGraphsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Analytics:
+                @RenderAnalyticsTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.Exchange:
+                @RenderExchangeTab()
+                break;
+            case ProcessWorkspaceDetailTabKey.ManagerChat:
+                @RenderManagerChatTab()
+                break;
+        }
+    </div>;
+
+    private RenderFragment RenderDefinitionListPane() => @<Stack GapScale="LayoutGap.Medium"
+                                                                 Class="h-full min-h-0 overflow-y-auto pr-1"
+                                                                 data-testid="processes-definition-list-scroll">
+        @if (!string.IsNullOrWhiteSpace(catalogCommandNotice))
+        {
+            <p class="text-xs font-semibold text-slate-500" data-testid="processes-feed-defaults-receipt">@catalogCommandNotice</p>
+        }
+
+        <TreeView Items="@ProcessDefinitionTreeNodes"
+                  Style="TreeViewStyle.Workbench"
+                  AriaLabel="Process definitions by scope"
+                  EmptyText="No process definitions match the current filters."
+                  OnSelect="HandleDefinitionTreeSelectAsync"
+                  OnToggle="HandleDefinitionTreeToggleAsync"
+                  data-testid="processes-definition-tree" />
+
+        @if (DefinitionCatalog.Items.Count == 0)
+        {
+            <EmptyState Eyebrow="No matches"
+                        Title="No definitions match the current search"
+                        Description="Clear the search or use a broader definition term." />
+        }
+    </Stack>;
+
+    private RenderFragment RenderDefinitionIdentityHeader() => @<SurfaceCard Class="processes-workspace-identity">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               AlignItems="AlignItems.Center"
+               Gap="LayoutGap.Small"
+               Wrap="FlexWrap.Wrap">
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.NoWrap"
+                     Class="processes-workspace-identity__copy">
+                <p class="cda-eyebrow">Process</p>
+                <h2 class="processes-workspace-identity__title">@(DefinitionCatalog.SelectedItem?.Name ?? HeaderTitle)</h2>
+            </Cluster>
+            <CompactStatStrip Class="processes-workspace-identity__badges">
+                @if (DefinitionCatalog.SelectedItem is { } selected)
+                {
+                    <CompactStat Tone="@ResolveDefinitionTone(selected.Status)"
+                                 Text="@selected.Status.ToString()"
+                                 TooltipText="@($"Definition status: {selected.Status}.")" />
+                    <CompactStat Tone="neutral"
+                                 Text="@selected.Criticality"
+                                 TooltipText="Definition criticality." />
+                    <CompactStat Tone="info"
+                                 Text="@selected.OperatingMode"
+                                 TooltipText="Definition operating mode." />
+                    @if (selected.CompatibilityIssueCount > 0)
+                    {
+                        <CompactStat Tone="warning"
+                                     Text="@($"{selected.CompatibilityIssueCount} review")"
+                                     TooltipText="Template compatibility issues for the selected definition." />
+                    }
+                }
+                else
+                {
+                    <CompactStat Tone="neutral"
+                                 Text="No selection"
+                                 TooltipText="Select a process definition from the list." />
+                }
+            </CompactStatStrip>
+        </Split>
+    </SurfaceCard>;
+
+    private IReadOnlyList<TreeViewNode> ProcessDefinitionTreeNodes
+    {
+        get
+        {
+            var globalItems = DefinitionCatalog.Items
+                .Where(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Global)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(BuildDefinitionTreeNode)
+                .ToList();
+            var projectItems = DefinitionCatalog.Items
+                .Where(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Project)
+                .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(BuildDefinitionTreeNode)
+                .ToList();
+
+            return
+            [
+                new TreeViewNode
+                {
+                    Id = AllDefinitionsTreeNodeId,
+                    Text = "All definitions",
+                    Icon = ResolveScopeIcon(ProcessDefinitionCatalogScopeKind.All),
+                    Tooltip = "Show all visible process definitions.",
+                    BadgeText = DefinitionCatalog.ScopeGroups.FirstOrDefault(group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.All)?.Count.ToString(CultureInfo.InvariantCulture) ?? DefinitionCatalog.Items.Count.ToString(CultureInfo.InvariantCulture),
+                    IsSelected = selectedDefinitionScope == ProcessDefinitionCatalogScopeKind.All && DefinitionCatalog.SelectedDefinitionKey is null,
+                    DataTestId = BuildScopeTestId(ProcessDefinitionCatalogScopeKind.All)
+                },
+                BuildScopeTreeNode(ProcessDefinitionCatalogScopeKind.Global, "Global defaults", globalItems),
+                BuildScopeTreeNode(ProcessDefinitionCatalogScopeKind.Project, "Project definitions", projectItems)
+            ];
+        }
+    }
+
+    private TreeViewNode BuildScopeTreeNode(
+        ProcessDefinitionCatalogScopeKind scopeKind,
+        string fallbackLabel,
+        IReadOnlyList<TreeViewNode> children)
+    {
+        var group = DefinitionCatalog.ScopeGroups.FirstOrDefault(item => item.ScopeKind == scopeKind);
+        var nodeId = BuildScopeTreeNodeId(scopeKind);
+        return new TreeViewNode
+        {
+            Id = nodeId,
+            Text = group?.Label ?? fallbackLabel,
+            Icon = ResolveScopeIcon(scopeKind),
+            Tooltip = group?.Description ?? fallbackLabel,
+            BadgeText = (group?.Count ?? children.Count).ToString(CultureInfo.InvariantCulture),
+            IsExpanded = expandedDefinitionTreeNodeIds.Contains(nodeId),
+            IsSelected = selectedDefinitionScope == scopeKind && DefinitionCatalog.SelectedDefinitionKey is null,
+            DataTestId = BuildScopeTestId(scopeKind),
+            ChildrenDataTestId = $"{BuildScopeTestId(scopeKind)}-children",
+            Children = children
+        };
+    }
+
+    private TreeViewNode BuildDefinitionTreeNode(ProcessDefinitionCatalogItemProjection item)
+        => new()
+        {
+            Id = BuildDefinitionTreeNodeId(item.Key),
+            Text = item.Name,
+            Icon = ResolveDefinitionIcon(item.Status),
+            Tooltip = item.Summary,
+            BadgeText = item.Status.ToString(),
+            IsSelected = item.Key == DefinitionCatalog.SelectedDefinitionKey,
+            DataTestId = BuildDefinitionItemTestId(item.Key)
+        };
+
+    private async Task HandleDefinitionTreeSelectAsync(string nodeId)
+    {
+        if (string.Equals(nodeId, AllDefinitionsTreeNodeId, StringComparison.Ordinal))
+        {
+            await SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind.All);
+            return;
+        }
+
+        if (nodeId.StartsWith(ScopeTreeNodePrefix, StringComparison.Ordinal))
+        {
+            var scopeValue = nodeId[ScopeTreeNodePrefix.Length..];
+            if (Enum.TryParse<ProcessDefinitionCatalogScopeKind>(scopeValue, ignoreCase: false, out var scopeKind))
+            {
+                await SelectDefinitionScopeAsync(scopeKind);
+            }
+
+            return;
+        }
+
+        if (nodeId.StartsWith(DefinitionTreeNodePrefix, StringComparison.Ordinal))
+        {
+            await SelectDefinitionAsync(new ProcessDefinitionCatalogItemKey(nodeId[DefinitionTreeNodePrefix.Length..]));
+        }
+    }
+
+    private Task HandleDefinitionTreeToggleAsync(string nodeId)
+    {
+        if (!expandedDefinitionTreeNodeIds.Add(nodeId))
+        {
+            expandedDefinitionTreeNodeIds.Remove(nodeId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private RenderFragment RenderDefinitionBasicsTab() => @<div data-testid="processes-definition-basics-tab">
+        @if (DefinitionCatalog.SelectedEditor is null)
+        {
+            <EmptyState Eyebrow="No definition selected"
+                        Title="Select a process definition"
+                        Description="The definition editor opens after a process is selected from the tree." />
+        }
+        else
+        {
+            @RenderDefinitionEditor(DefinitionCatalog.SelectedEditor)
+        }
+    </div>;
+
+    private RenderFragment RenderRolesTab() => @<div data-testid="processes-definition-roles-tab">
+        @if (DefinitionCatalog.SelectedEditor?.RoleEditor is null)
+        {
+            <EmptyState Eyebrow="Roles"
+                        Title="No role projection is available"
+                        Description="Select a definition with role projections before editing role requirements." />
+        }
+        else
+        {
+            <ProcessDefinitionRoleEditorPanel RoleEditor="DefinitionCatalog.SelectedEditor.RoleEditor"
+                                              Scope="ResolveScope()"
+                                              Disabled="@isBusy"
+                                              ExecuteCommand="ExecuteDefinitionRoleEditorCommandAsync" />
+        }
+    </div>;
+
+    private RenderFragment RenderStepsTab() => @<Stack GapScale="LayoutGap.Large"
+                                                       Class="processes-definition-steps-tab"
+                                                       data-testid="processes-definition-steps-tab">
+        @if (DefinitionCatalog.SelectedEditor?.Canvas is null &&
+             DefinitionCatalog.SelectedEditor?.StepEditor is null)
+        {
+            <EmptyState Eyebrow="Steps"
+                        Title="No step projection is available"
+                        Description="Select a definition with canvas and step projections before editing the workflow graph." />
+        }
+        else
+        {
+            @if (DefinitionCatalog.SelectedEditor.Canvas is not null)
+            {
+                <ProcessDefinitionCanvasPanel Canvas="DefinitionCatalog.SelectedEditor.Canvas"
+                                              Scope="ResolveScope()"
+                                              Disabled="@isBusy"
+                                              ExecuteCommand="ExecuteDefinitionCanvasCommandAsync" />
+            }
+
+            @if (DefinitionCatalog.SelectedEditor.StepEditor is not null)
+            {
+                <ProcessDefinitionStepEditorPanel StepEditor="DefinitionCatalog.SelectedEditor.StepEditor"
+                                                  Scope="ResolveScope()"
+                                                  Disabled="@isBusy"
+                                                  ExecuteCommand="ExecuteDefinitionStepEditorCommandAsync" />
+            }
+        }
+    </Stack>;
+
+    private RenderFragment RenderExchangeTab() => @<div data-testid="processes-definition-exchange-tab">
+        @if (DefinitionCatalog.SelectedEditor?.TemplateCatalog is null)
+        {
+            <EmptyState Eyebrow="Exchange"
+                        Title="No template projection is available"
+                        Description="Template compatibility, import, and version preview open after a definition is selected." />
+        }
+        else
+        {
+            <ProcessTemplateLibraryPanel TemplateCatalog="DefinitionCatalog.SelectedEditor.TemplateCatalog"
+                                         Scope="ResolveScope()"
+                                         Disabled="@isBusy"
+                                         QueryChanged="ApplyTemplateCatalogQueryAsync"
+                                         ExecuteImport="ExecuteTemplateImportCommandAsync" />
+        }
+    </div>;
+
+    private RenderFragment RenderRunsTab() => @<Stack GapScale="LayoutGap.Large"
+                                                      Class="processes-runs-tab-shell"
+                                                      data-testid="processes-runs-tab-shell">
+        @RenderRuntimeToolbar("processes-runs-runtime-toolbar")
+
+        <SurfaceCard Soft="true"
+                     data-testid="processes-selected-run-summary">
+            <Split Gap="LayoutGap.Medium"
+                   Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run focus" />
+                    <h3 class="text-base font-semibold text-slate-900">@SelectedRunTitle</h3>
+                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.Runtime.AttentionSummary</p>
+                </Stack>
+                <CompactStatStrip>
+                    <CompactStat Tone="success"
+                                 Text="@($"{CurrentShell.Runtime.Stats.ActiveRunCount} active")"
+                                 TooltipText="Active process runs in the selected window." />
+                    <CompactStat Tone="warning"
+                                 Text="@($"{CurrentShell.Runtime.Stats.AttentionRunCount} attention")"
+                                 TooltipText="Runs that need operator review." />
+                    <CompactStat Tone="danger"
+                                 Text="@($"{CurrentShell.Runtime.Stats.FailedRunCount} failed")"
+                                 TooltipText="Failed runs in the selected window." />
+                    <CompactStat Tone="@ProjectionTone"
+                                 Text="@ProjectionStatusText"
+                                 TooltipText="@ProjectionTooltip" />
+                </CompactStatStrip>
+            </Split>
+        </SurfaceCard>
+
+        <Tabs SelectedIndex="@selectedRunViewIndex"
+              SelectedIndexChanged="HandleSelectedRunViewChangedAsync"
+              Variant="TabsVariant.WorkspaceSecondary"
+              BorderMode="TabsBorderMode.Soft"
+              OverflowMode="TabsOverflowMode.Auto"
+              PanelOverflowMode="TabsPanelOverflowMode.Auto"
+              Class="w-full min-w-0"
+              AriaLabel="Process runs workspace sections"
+              data-testid="processes-runs-tabs">
+            <TabsItem Text="Launch" Icon="rocket_launch">
+                @RenderLaunchSection()
+            </TabsItem>
+            <TabsItem Text="Activity" Icon="monitoring">
+                @RenderRuntimeActivitySection()
+            </TabsItem>
+            <TabsItem Text="Control" Icon="rule">
+                @RenderRuntimeControlSection()
+            </TabsItem>
+            <TabsItem Text="Execution" Icon="terminal">
+                @RenderRuntimeExecutionSection()
+            </TabsItem>
+            <TabsItem Text="Graphs" Icon="bar_chart">
+                <div data-testid="processes-selected-run-graphs-tab">
+                    @RenderGraphMetricGrid("Selected run graph projection")
+                </div>
+            </TabsItem>
+            <TabsItem Text="Coordination" Icon="hub">
+                @RenderRuntimeCoordinationSection()
+            </TabsItem>
+            <TabsItem Text="Evidence" Icon="inventory_2">
+                @RenderRuntimeEvidenceSection()
+            </TabsItem>
+        </Tabs>
+    </Stack>;
+
+    private RenderFragment RenderGraphsTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                        data-testid="processes-process-graphs-tab">
+        @if (processGraphsHistoryLoaded)
+        {
+            @RenderRuntimeToolbar("processes-process-graphs-toolbar")
+            @RenderGraphMetricGrid("Process run history graph projection")
+        }
+        else
+        {
+            @RenderGraphHistoryLoadGate()
+        }
+    </Stack>;
+
+    private RenderFragment RenderAnalyticsTab() => @<Stack GapScale="LayoutGap.Medium"
+                                                           data-testid="processes-analytics-tab">
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+            @RenderMetricCard("Readiness", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "Ready" : "Review", DefinitionCatalog.SelectedEditor?.Simulation.IsReadyForSimulation == true ? "success" : "warning", "Simulation readiness from the selected definition projection.")
+            @RenderMetricCard("Compatibility", DefinitionCatalog.TemplateCompatibilityIssueCount.ToString(CultureInfo.InvariantCulture), DefinitionCatalog.TemplateCompatibilityIssueCount > 0 ? "warning" : "success", "Template compatibility issues for the current catalog.")
+            @RenderMetricCard("Runtime events", CurrentShell.Runtime.Stats.EventCount.ToString(CultureInfo.InvariantCulture), "info", "Paged runtime history events in the selected window.")
+            @RenderMetricCard("Projection backlog", CurrentShell.Refresh.BacklogEventCount.ToString(CultureInfo.InvariantCulture), ProjectionTone, CurrentShell.Refresh.Summary)
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1.2fr) minmax(0,0.8fr)"
+              data-testid="processes-runtime-analytics-ledger">
+            @RenderRuntimeEventLedger("processes-analytics-event-ledger")
+            @RenderToolUsageLedger("processes-analytics-tool-usage")
+        </Grid>
+    </Stack>;
+
+    private RenderFragment RenderManagerChatTab() => @<Grid Gap="LayoutGap.Medium"
+                                                            ColumnTemplateXl="minmax(16rem,0.35fr) minmax(0,1.65fr)"
+                                                            Class="h-full min-h-0 w-full"
+                                                            data-testid="processes-manager-chat-tab">
+        <SurfaceCard Soft="true"
+                     Class="h-full min-h-0"
+                     data-testid="processes-manager-chat-context">
+            <Stack GapScale="LayoutGap.Medium">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Process manager" />
+                    <h3 class="text-base font-semibold text-slate-900">@ManagerChatManagerLabel</h3>
+                    <p class="text-sm leading-6 text-slate-600">@CurrentShell.AgentEntry.ContextKey</p>
+                </Stack>
+
+                <Stack GapScale="LayoutGap.Small">
+                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-history-window">History length</label>
+                    <select id="processes-manager-chat-history-window"
+                            class="cda-input"
+                            value="@managerChatHistoryWindow"
+                            @onchange="ChangeManagerChatHistoryWindowAsync"
+                            data-testid="processes-manager-chat-history-window">
+                        @foreach (var option in RuntimeHistoryWindowOptions)
+                        {
+                            <option value="@option">@FormatHistoryWindow(option)</option>
+                        }
+                    </select>
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-run-select">Run</label>
+                    <select id="processes-manager-chat-run-select"
+                            class="cda-input"
+                            value="@RuntimeRunSelectValue"
+                            @onchange="SelectRuntimeRunAsync"
+                            data-testid="processes-manager-chat-run-select">
+                        @RenderRuntimeRunOptions()
+                    </select>
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-agent-select">Manager agent</label>
+                    <select id="processes-manager-chat-agent-select"
+                            class="cda-input"
+                            value="@ManagerChatAgentSelectValue"
+                            @onchange="SelectManagerChatAgentAsync"
+                            disabled="@(managerChatAgents.Count == 0)"
+                            data-testid="processes-manager-chat-agent-select">
+                        @foreach (var agent in managerChatAgents)
+                        {
+                            <option value="@agent.Id.ToString("D")">@agent.Name</option>
+                        }
+                    </select>
+                </Stack>
+
+                <Cluster Gap="LayoutGap.XSmall"
+                         Class="flex-wrap">
+                    <StatusBadge Tone="@(CurrentShell.AgentEntry.IsAvailable ? "success" : "warning")"
+                                 Text="@(CurrentShell.AgentEntry.IsAvailable ? "Available" : "Unavailable")" />
+                    <StatusBadge Tone="neutral" Text="@CurrentShell.AgentEntry.Kind.ToString()" />
+                    <StatusBadge Tone="info" Text="@SelectedRunTitle" />
+                </Cluster>
+
+                <Button Text="Reload"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="w-full justify-start"
+                        Disabled="@managerChatIsLoading"
+                        IsBusy="@managerChatIsLoading"
+                        Click="ReloadManagerChatAsync"
+                        data-testid="processes-manager-chat-reload" />
+                <Button Text="Open agent context"
+                        Icon="smart_toy"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Class="w-full justify-start"
+                        Disabled="@AgentContextDisabled"
+                        Click="OpenAgentContext"
+                        data-testid="processes-manager-chat-open-agent-context" />
+            </Stack>
+        </SurfaceCard>
+
+        <div class="h-full min-h-0" data-testid="processes-manager-chat-workspace">
+            @if (managerChatIsLoading)
+            {
+                <LoadingState Eyebrow="Manager chat"
+                              Title="Loading manager workspace"
+                              Description="Resolving the selected run and manager agent thread." />
+            }
+            else if (!string.IsNullOrWhiteSpace(managerChatErrorMessage))
+            {
+                <EmptyState Eyebrow="Manager chat unavailable"
+                            Title="Manager chat cannot be opened"
+                            Description="@managerChatErrorMessage" />
+            }
+            else if (managerChatAgent is null)
+            {
+                <EmptyState Eyebrow="Manager chat"
+                            Title="No manager agent is available"
+                            Description="Create or enable a process manager agent before starting a run-scoped conversation." />
+            }
+            else
+            {
+                <ChatWorkspacePanel Agent="@managerChatAgent"
+                                    Session="@managerChatWorkspace?.SelectedSession"
+                                    ActiveRun="@managerChatWorkspace?.SelectedRun"
+                                    ExecutionLog="@managerChatExecutionLog"
+                                    DraftPrompt="@managerChatDraftPrompt"
+                                    DraftPromptChanged="HandleManagerChatDraftPromptChangedAsync"
+                                    IsBusy="@managerChatIsBusy"
+                                    ComposerKey="@managerChatComposerKey"
+                                     RunStateText="@managerChatRunStateText"
+                                     RunStateTone="@managerChatRunStateTone"
+                                     PendingUserPrompt="@managerChatPendingPrompt"
+                                     ActivityStreamId="@managerChatActivityStreamId"
+                                     DraftAttachmentPaths="@managerChatDraftAttachmentPaths"
+                                    CanUseVoiceMode="@CanUseManagerChatVoiceMode"
+                                    IsVoiceModeEnabled="@managerChatVoiceModeEnabled"
+                                    IsVoiceRecording="@managerChatVoiceRecording"
+                                    IsVoiceTranscribing="@managerChatVoiceTranscribing"
+                                    IsVoiceSpeaking="@managerChatVoiceSpeaking"
+                                    VoiceStatusText="@managerChatVoiceStatusText"
+                                    VoiceStatusTone="@managerChatVoiceStatusTone"
+                                    SendRequested="SendManagerChatMessageAsync"
+                                    ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
+                                    ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
+                                    AttachmentRequested="StageManagerChatRunArtifactsAsync"
+                                    SessionTitleChanged="RenameManagerChatSessionAsync"
+                                    VoiceModeChanged="HandleManagerChatVoiceModeChangedAsync"
+                                    VoiceRecordingToggled="ToggleManagerChatVoiceRecordingAsync"
+                                    SpeakLatestAssistantMessageRequested="SpeakLatestManagerChatAssistantMessageAsync" />
+            }
+        </div>
+    </Grid>;
+
+    private RenderFragment RenderGraphMetricGrid(string title) => @<Stack GapScale="LayoutGap.Medium"
+                                                                          data-testid="processes-graph-metric-grid">
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+            @RenderMetricCard("Cost", FormatCurrency(CurrentShell.Runtime.Stats.ActualCost), CurrentShell.Runtime.Stats.ActualCost > 0 ? "success" : "neutral", $"{title}: actual cost projected from runtime usage data when provider metrics are linked.")
+            @RenderMetricCard("Tokens", FormatTokenCount(ResolveRuntimeTotalTokens(CurrentShell.Runtime.Stats)), ResolveRuntimeTotalTokens(CurrentShell.Runtime.Stats) > 0 ? "info" : "neutral", "Provider-reported total tokens for the selected history scope, including hidden reasoning tokens when reported.")
+            @RenderMetricCard("Time", FormatDuration(CurrentShell.Runtime.Stats.DurationMs), CurrentShell.Runtime.Stats.DurationMs > 0 ? "info" : "neutral", "Observed runtime span in the selected history page.")
+            @RenderMetricCard("Tool usage", CurrentShell.Runtime.Stats.ToolCallCount.ToString(CultureInfo.InvariantCulture), CurrentShell.Runtime.Stats.ToolCallCount > 0 ? "warning" : "neutral", "Runtime dispatch, step, and manager events grouped as tool/activity usage.")
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+              Class="w-full">
+            <CdaChart Title="Runtime activity"
+                      Description="Events, manager signals, and grouped tool activity."
+                      Series="@RuntimeActivitySeries"
+                      Options="@RuntimeActivityChartOptions"
+                      Height="320"
+                      EmptyText="No runtime events match the selected history window." />
+            <CdaChart Title="Token and cost telemetry"
+                      Description="Provider usage appears when linked runtime metrics are projected."
+                      Series="@RuntimeUsageSeries"
+                      Options="@RuntimeUsageChartOptions"
+                      Height="320"
+                      EmptyText="No provider usage metrics are linked to this process run yet." />
+            <CdaChart Title="Tool usage"
+                      Description="Most active runtime event/tool categories."
+                      Series="@RuntimeToolUsageSeries"
+                      Options="@RuntimeToolUsageChartOptions"
+                      Height="320"
+                      EmptyText="No runtime tool activity is present in this scope." />
+        </Grid>
+    </Stack>;
+
+    private static readonly CdaChartOptions RuntimeActivityChartOptions = new()
+    {
+        Type = CdaChartType.Area,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "Events",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        FillOpacity = 0.22,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#2563eb", "#7c3aed", "#0891b2"]
+    };
+
+    private static readonly CdaChartOptions RuntimeUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.DateTime,
+        YAxisTitle = "k tokens / min / USD x1k",
+        TooltipPrecision = 2,
+        ValuePrecision = 2,
+        ShowToolbar = false,
+        EnableZoom = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#16a34a", "#d97706", "#dc2626"]
+    };
+
+    private static readonly CdaChartOptions RuntimeToolUsageChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        YAxisTitle = "Calls",
+        TooltipPrecision = 0,
+        ValuePrecision = 0,
+        ShowToolbar = false,
+        EnableZoom = false,
+        RotateXAxisLabels = false,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = ["#f59e0b"]
+    };
+
+    private IReadOnlyList<CdaChartSeries> RuntimeActivitySeries
+    {
+        get
+        {
+            var points = CurrentShell.Runtime.MetricPoints;
+            if (points.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Runtime events",
+                    Type = CdaChartType.Area,
+                    Color = "#2563eb",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.EventCount)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Manager signals",
+                    Type = CdaChartType.Line,
+                    Color = "#7c3aed",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ManagerEventCount)).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Tool activity",
+                    Type = CdaChartType.Line,
+                    Color = "#0891b2",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.ToolCallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> RuntimeUsageSeries
+    {
+        get
+        {
+            var points = CurrentShell.Runtime.MetricPoints;
+            if (points.Count == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Tokens (k)",
+                    Type = CdaChartType.Bar,
+                    Color = "#16a34a",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeTokensToThousands(item))).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Minutes",
+                    Type = CdaChartType.Line,
+                    Color = "#d97706",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeDurationToMinutes(item))).ToArray()
+                },
+                new CdaChartSeries
+                {
+                    Name = "Cost (USD x1k)",
+                    Type = CdaChartType.Line,
+                    Color = "#dc2626",
+                    Points = points.Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, ScaleRuntimeCostByUsdMultiplier(item))).ToArray()
+                }
+            ];
+        }
+    }
+
+    private IReadOnlyList<CdaChartSeries> RuntimeToolUsageSeries
+    {
+        get
+        {
+            var toolUsage = CurrentShell.Runtime.ToolUsage.Take(15).ToArray();
+            if (toolUsage.Length == 0)
+            {
+                return [];
+            }
+
+            return
+            [
+                new CdaChartSeries
+                {
+                    Name = "Calls",
+                    Type = CdaChartType.Bar,
+                    Color = "#f59e0b",
+                    Points = toolUsage.Select(item => new CdaChartPoint(TrimLabel(item.ToolName, 26), item.CallCount)).ToArray()
+                }
+            ];
+        }
+    }
+
+    private string SelectedRunTitle
+        => CurrentShell.Runtime.SelectedRun is { } selectedRun
+            ? BuildRunTitle(selectedRun)
+            : CurrentShell.Runtime.Runs.Count == 0
+                ? "No runtime run selected"
+                : "Select a runtime run";
+
+    private string RuntimeRunSelectValue => (selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId)?.ToString("D") ?? string.Empty;
+
+    private string ManagerChatAgentSelectValue => managerChatAgentId?.ToString("D") ?? string.Empty;
+
+    private string ManagerChatManagerLabel => managerChatAgent?.Name ?? CurrentShell.AgentEntry.Label;
+
+    private RenderFragment RenderGraphHistoryLoadGate() => @<SurfaceCard Soft="true"
+                                                                         Class="processes-graphs-load-gate"
+                                                                         data-testid="processes-process-graphs-load-gate">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(14rem,0.6fr) minmax(16rem,1fr) auto"
+              AlignItems="AlignItems.End">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="History on demand" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-window">History window</label>
+                <select id="processes-process-graphs-load-window"
+                        class="cda-input"
+                        value="@runtimeHistoryWindow"
+                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                        data-testid="processes-runtime-history-window">
+                    @foreach (var option in RuntimeHistoryWindowOptions)
+                    {
+                        <option value="@option">@FormatHistoryWindow(option)</option>
+                    }
+                </select>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-run">Run</label>
+                <select id="processes-process-graphs-load-run"
+                        class="cda-input"
+                        value="@RuntimeRunSelectValue"
+                        @onchange="SelectRuntimeRunAsync"
+                        data-testid="processes-runtime-run-select">
+                    @RenderRuntimeRunOptions()
+                </select>
+            </Stack>
+            <Button Text="Load data history"
+                    Icon="bar_chart"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Size="ButtonSize.Small"
+                    Disabled="@isBusy"
+                    IsBusy="@isBusy"
+                    Click="LoadProcessGraphsHistoryAsync"
+                    data-testid="processes-process-graphs-load-button" />
+        </Grid>
+    </SurfaceCard>;
+
+    private RenderFragment RenderRuntimeToolbar(string testId) => @<SurfaceCard Soft="true"
+                                                                                Class="processes-runtime-toolbar"
+                                                                                data-testid="@testId">
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplateXl="minmax(14rem,0.6fr) minmax(16rem,1fr) auto"
+              AlignItems="AlignItems.End">
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History window</label>
+                <select id="@($"{testId}-window")"
+                        class="cda-input"
+                        value="@runtimeHistoryWindow"
+                        @onchange="ChangeRuntimeHistoryWindowAsync"
+                        data-testid="processes-runtime-history-window">
+                    @foreach (var option in RuntimeHistoryWindowOptions)
+                    {
+                        <option value="@option">@FormatHistoryWindow(option)</option>
+                    }
+                </select>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
+                <select id="@($"{testId}-run")"
+                        class="cda-input"
+                        value="@RuntimeRunSelectValue"
+                        @onchange="SelectRuntimeRunAsync"
+                        data-testid="processes-runtime-run-select">
+                    @RenderRuntimeRunOptions()
+                </select>
+            </Stack>
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                <Button Icon="chevron_left"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        title="Previous event page"
+                        aria-label="Previous event page"
+                        Disabled="@(runtimeEventPage == 0 || isBusy)"
+                        Click="PreviousRuntimeEventPageAsync"
+                        data-testid="processes-runtime-events-prev" />
+                <StatusBadge Tone="neutral" Text="@($"Page {runtimeEventPage + 1}")" />
+                <Button Icon="chevron_right"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        title="Next event page"
+                        aria-label="Next event page"
+                        Disabled="@(!CurrentShell.Runtime.HasMoreEvents || isBusy)"
+                        Click="NextRuntimeEventPageAsync"
+                        data-testid="processes-runtime-events-next" />
+                <Button Text="Refresh"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        Click="RefreshAsync"
+                        data-testid="processes-runtime-refresh-button" />
+            </Cluster>
+        </Grid>
+    </SurfaceCard>;
+
+    private RenderFragment RenderRuntimeRunOptions() => @<text>
+        @if (CurrentShell.Runtime.Runs.Count == 0)
+        {
+            <option value="">No runtime runs</option>
+        }
+        else
+        {
+            <option value="">All runs</option>
+            @foreach (var run in CurrentShell.Runtime.Runs)
+            {
+                <option value="@run.RunId.Value.ToString("D")">@BuildRunOptionText(run)</option>
+            }
+        }
+    </text>;
+
+    private RenderFragment RenderLaunchSection() => @<Grid Gap="LayoutGap.Medium"
+                                                           ColumnsLg="2"
+                                                           data-testid="processes-run-launch-section">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Launch planning" />
+            <h3 class="text-base font-semibold text-slate-900">@(DefinitionCatalog.SelectedItem?.Name ?? "Select a definition")</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Launch uses the process application boundary and refreshes runtime projections after the run is accepted.</p>
+            <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
+                <StatusBadge Tone="info" Text="@ResolveHistoryWindowText(CurrentShell.Runtime.HistoryWindow)" />
+                <StatusBadge Tone="@ResolveEditorStatusTone(DefinitionCatalog.SelectedEditor?.Status ?? ProcessDefinitionAuthoringStatus.TemplateDefault)" Text="@(DefinitionCatalog.SelectedEditor?.Status.ToString() ?? "No definition")" />
+            </Cluster>
+            <Button Text="Launch"
+                    Icon="rocket_launch"
+                    ButtonStyle="ButtonStyle.Success"
+                    Size="ButtonSize.Small"
+                    Class="mt-4"
+                    Disabled="@(isBusy || DefinitionCatalog.SelectedItem is null)"
+                    IsBusy="@isBusy"
+                    Click="LaunchSelectedDefinitionAsync"
+                    data-testid="processes-runs-launch-selected-definition" />
+        </SurfaceCard>
+        @RenderRunList("processes-run-launch-run-list")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeActivitySection() => @<Grid Gap="LayoutGap.Medium"
+                                                                    ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)"
+                                                                    data-testid="processes-run-activity">
+        @RenderRunList("processes-run-activity-list")
+        @RenderRuntimeEventLedger("processes-run-activity-events")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeControlSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                   ColumnTemplateXl="minmax(0,0.8fr) minmax(0,1.2fr)"
+                                                                   data-testid="processes-operator-control-section">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager resolution" />
+            <h3 class="text-base font-semibold text-slate-900">@CurrentShell.Runtime.AttentionSummary</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Manager incidents, recovery denials, branch rejections, and loop-budget escalations are projected from runtime events.</p>
+        </SurfaceCard>
+        @RenderIncidentLedger("processes-run-control-incidents")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeExecutionSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                     ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)"
+                                                                     data-testid="processes-runtime-host-readback">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected run" />
+            <h3 class="text-base font-semibold text-slate-900">@SelectedRunTitle</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">@CurrentShell.Runtime.Summary</p>
+            <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
+                @if (CurrentShell.Runtime.SelectedRun is { } selectedRun)
+                {
+                    <StatusBadge Tone="@ResolveRunStatusTone(selectedRun.Status)" Text="@selectedRun.Status.ToString()" />
+                    <StatusBadge Tone="neutral" Text="@($"first {selectedRun.FirstEventAtUtc.LocalDateTime:g}")" />
+                    <StatusBadge Tone="info" Text="@($"latest {selectedRun.LastEventAtUtc.LocalDateTime:g}")" />
+                }
+                <StatusBadge Tone="neutral" Text="@($"{CurrentShell.Runtime.Events.Count} event(s)")" />
+            </Cluster>
+        </SurfaceCard>
+        @RenderRuntimeEventLedger("processes-run-execution-events")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeCoordinationSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                        ColumnTemplateXl="minmax(0,0.9fr) minmax(0,1.1fr)"
+                                                                        data-testid="processes-run-coordination">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Assignments and messaging" />
+            <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.ManagerMessages.Count} manager message(s)")</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Manager messages are filtered to the selected run and history window.</p>
+            <Button Text="Open manager chat"
+                    Icon="forum"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Class="mt-4"
+                    Click="OpenManagerChatTabAsync"
+                    data-testid="processes-run-open-manager-chat" />
+        </SurfaceCard>
+        @RenderManagerMessageLedger("processes-run-manager-messages")
+    </Grid>;
+
+    private RenderFragment RenderRuntimeEvidenceSection() => @<Grid Gap="LayoutGap.Medium"
+                                                                    ColumnTemplateXl="minmax(0,0.8fr) minmax(0,1.2fr)"
+                                                                    data-testid="processes-run-evidence">
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Evidence" />
+            <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.Events.Count} event(s) on page")</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Runtime evidence is shown as event history, incidents, diagnostic references, and manager decisions until artifact-map projections contain concrete artifact rows.</p>
+        </SurfaceCard>
+        @RenderRuntimeEventLedger("processes-run-evidence-events")
+    </Grid>;
+
+    private RenderFragment RenderRunList(string testId) => @<Stack GapScale="LayoutGap.Small"
+                                                                    data-testid="@testId">
+        @if (CurrentShell.Runtime.Runs.Count == 0)
+        {
+            <EmptyState Eyebrow="Runtime runs"
+                        Title="No runs in the selected window"
+                        Description="Launch a process or widen the history window." />
+        }
+        else
+        {
+            @foreach (var run in CurrentShell.Runtime.Runs)
+            {
+                <article class="processes-runtime-run-card @(run.RunId.Value == (selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId) ? "processes-runtime-run-card--selected" : string.Empty)"
+                         data-testid="processes-runtime-run-card">
+                    <button type="button"
+                            class="processes-runtime-run-card__body"
+                            @onclick="@(() => SelectRuntimeRunAsync(run.RunId.Value))">
+                        <span class="processes-runtime-run-card__header">
+                            <span class="processes-runtime-run-card__title">@BuildRunTitle(run)</span>
+                            <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" />
+                        </span>
+                        <span class="processes-runtime-run-card__summary">@BuildRunCardSummary(run)</span>
+                        <span class="processes-runtime-run-card__badges">
+                            <StatusBadge Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" />
+                            <StatusBadge Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" />
+                            @if (run.WaitingOnChildRuns.Count > 0)
+                            {
+                                <StatusBadge Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" />
+                            }
+                            <StatusBadge Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" />
+                        </span>
+                    </button>
+                    <Button Icon="open_in_new"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Class="cda-button--quick processes-runtime-run-card__open"
+                            title="Open run details"
+                            aria-label="Open run details"
+                            Click="@(() => OpenRunDetailDialogAsync(run))"
+                            data-testid="processes-runtime-run-open-details" />
+                </article>
+            }
+        }
+    </Stack>;
+
+    private RenderFragment RenderRuntimeEventLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                    data-testid="@testId">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Runtime timeline" />
+                <h3 class="text-base font-semibold text-slate-900">@($"{CurrentShell.Runtime.Events.Count} event(s)")</h3>
+            </Stack>
+            <StatusBadge Tone="neutral" Text="@ResolveHistoryWindowText(CurrentShell.Runtime.HistoryWindow)" />
+        </Split>
+        @if (CurrentShell.Runtime.Events.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime events match this filter.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var runtimeEvent in CurrentShell.Runtime.Events)
+                {
+                    <button type="button"
+                            class="processes-runtime-event-row"
+                            @onclick="@(() => OpenEventDetailDialogAsync(runtimeEvent))"
+                            data-testid="processes-runtime-event-row">
+                        <span>
+                            <span class="processes-runtime-event-row__title">@runtimeEvent.EventType</span>
+                            <span class="processes-runtime-event-row__summary">@runtimeEvent.Summary</span>
+                        </span>
+                        <span class="processes-runtime-event-row__meta">
+                            <StatusBadge Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.Sensitivity.ToString()" />
+                            <span>@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </span>
+                    </button>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderIncidentLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                data-testid="@testId">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
+        @if (CurrentShell.Runtime.Incidents.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No manager incidents are open in this projection window.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var incident in CurrentShell.Runtime.Incidents)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-runtime-incident-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="warning" Text="@incident.Severity" />
+                            <StatusBadge Tone="neutral" Text="@incident.Status" />
+                            <span class="text-xs text-slate-500">@incident.RaisedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
+                        <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderManagerMessageLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                      data-testid="@testId">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager messages" />
+        @if (CurrentShell.Runtime.ManagerMessages.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No manager messages match the selected run and history window.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var message in CurrentShell.Runtime.ManagerMessages)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-runtime-manager-message-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveManagerMessageTone(message)" Text="@message.Kind" />
+                            <span class="text-xs text-slate-500">@message.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@message.Summary</p>
+                        @if (!string.IsNullOrWhiteSpace(message.RestrictedDiagnosticReference))
+                        {
+                            <p class="mt-1 text-xs text-slate-500">@message.RestrictedDiagnosticReference</p>
+                        }
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderToolUsageLedger(string testId) => @<SurfaceCard Soft="true"
+                                                                                 data-testid="@testId">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool usage" />
+        @if (CurrentShell.Runtime.ToolUsage.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime tool usage is present in this scope.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var tool in CurrentShell.Runtime.ToolUsage)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-runtime-tool-row">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">@tool.ToolName</p>
+                                <p class="mt-1 text-xs text-slate-500">@tool.Summary</p>
+                            </div>
+                            <StatusBadge Tone="warning" Text="@($"{tool.CallCount} calls")" />
+                        </Split>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private RenderFragment RenderRunDetailDialog(ProcessLiveProcessSnapshot run) => @<Stack GapScale="LayoutGap.Medium"
+                                                                                           data-testid="processes-run-detail-dialog-content">
+        <CompactStatStrip>
+            <CompactStat Tone="@ResolveRunStatusTone(run.Status)" Text="@run.Status.ToString()" TooltipText="Projected run status." />
+            <CompactStat Tone="neutral" Text="@($"{run.RecentEvents.Count} recent")" TooltipText="Recent events kept in the live run snapshot." />
+            <CompactStat Tone="warning" Text="@($"{run.Incidents.Count} incident(s)")" TooltipText="Manager incidents projected for this run." />
+            @if (run.WaitingOnChildRuns.Count > 0)
+            {
+                <CompactStat Tone="info" Text="@FormatCount(run.WaitingOnChildRuns.Count, "child wait", "child waits")" TooltipText="Parent steps waiting on active child process runs." />
+            }
+            @if (run.CurrentStep is not null)
+            {
+                <CompactStat Tone="neutral" Text="@run.CurrentStep.StepKey" TooltipText="@run.CurrentStep.Summary" />
+            }
+            <CompactStat Tone="info" Text="@run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)" TooltipText="Latest runtime event time." />
+        </CompactStatStrip>
+        @if (run.CurrentStep is not null)
+        {
+            @RenderCurrentStep(run.CurrentStep)
+        }
+        @if (run.WaitingOnChildRuns.Count > 0)
+        {
+            @RenderChildRunWaits(run)
+        }
+        <Grid Gap="LayoutGap.Medium" ColumnTemplateXl="minmax(0,1fr) minmax(0,1fr)">
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Recent events" />
+                @foreach (var runtimeEvent in run.RecentEvents.OrderByDescending(item => item.OccurredAtUtc))
+                {
+                    <div class="processes-runtime-ledger-row">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
+                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">@runtimeEvent.Summary</p>
+                    </div>
+                }
+            </SurfaceCard>
+            <SurfaceCard Soft="true">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
+                @if (run.Incidents.Count == 0)
+                {
+                    <p class="mt-3 text-sm leading-6 text-slate-500">No incidents are attached to this run.</p>
+                }
+                else
+                {
+                    @foreach (var incident in run.Incidents.OrderByDescending(item => item.RaisedAtUtc))
+                    {
+                        <div class="processes-runtime-ledger-row">
+                            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                <StatusBadge Tone="warning" Text="@incident.Severity" />
+                                <StatusBadge Tone="neutral" Text="@incident.Status" />
+                            </Cluster>
+                            <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
+                            <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                        </div>
+                    }
+                }
+            </SurfaceCard>
+        </Grid>
+    </Stack>;
+
+    private RenderFragment RenderChildRunWaits(ProcessLiveProcessSnapshot run) => @<SurfaceCard Soft="true"
+                                                                                                 data-testid="processes-child-run-waits">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Child runs" />
+                <h3 class="text-base font-semibold text-slate-900">@FormatCount(run.WaitingOnChildRuns.Count, "wait", "waits")</h3>
+            </Stack>
+            <StatusBadge Tone="info" Text="Subprocess" />
+        </Split>
+        @if (run.WaitingOnChildRuns.Count == 0)
+        {
+            <p class="mt-3 text-sm leading-6 text-slate-500">No parent step is waiting on an active child process run.</p>
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                @foreach (var wait in run.WaitingOnChildRuns)
+                {
+                    <div class="processes-runtime-ledger-row" data-testid="processes-child-run-wait-row">
+                        <Split Gap="LayoutGap.Small">
+                            <div>
+                                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                    <StatusBadge Tone="neutral" Text="@wait.ParentStepKey" />
+                                    <StatusBadge Tone="info" Text="@($"child {wait.ChildRunId.ToString("N")[..8]}")" />
+                                    @if (!string.IsNullOrWhiteSpace(wait.ChildStepStatus))
+                                    {
+                                        <StatusBadge Tone="warning" Text="@wait.ChildStepStatus" />
+                                    }
+                                </Cluster>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">@wait.Summary</p>
+                            </div>
+                            <Button Icon="open_in_new"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    title="Open child run"
+                                    aria-label="Open child run"
+                                    Click="@(() => OpenChildRunAsync(wait.ChildRunId))" />
+                        </Split>
+                    </div>
+                }
+            </Stack>
+        }
+    </SurfaceCard>;
+
+    private static RenderFragment RenderCurrentStep(ProcessRuntimeCurrentStepProjection step) => @<SurfaceCard Soft="true"
+                                                                                                  data-testid="processes-current-step">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current step" />
+                <h3 class="text-base font-semibold text-slate-900">@step.StepKey</h3>
+            </Stack>
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                <StatusBadge Tone="info" Text="@step.StepStatus" />
+                @if (step.IsLeaseExpired)
+                {
+                    <StatusBadge Tone="warning" Text="Lease expired" />
+                }
+                else if (step.IsWorking)
+                {
+                    <StatusBadge Tone="success" Text="Working" />
+                }
+            </Cluster>
+        </Split>
+        <p class="mt-3 text-sm leading-6 text-slate-700">@step.Summary</p>
+    </SurfaceCard>;
+
+    private RenderFragment RenderEventDetailDialog(ProcessTimelineEventProjection runtimeEvent) => @<Stack GapScale="LayoutGap.Medium"
+                                                                                                          data-testid="processes-runtime-event-detail-content">
+        <CompactStatStrip>
+            <CompactStat Tone="info" Text="@runtimeEvent.GlobalSequence.ToString(CultureInfo.InvariantCulture)" TooltipText="Global sequence." />
+            <CompactStat Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.Sensitivity.ToString()" TooltipText="Event sensitivity." />
+            <CompactStat Tone="neutral" Text="@runtimeEvent.RunId.Value.ToString("N")[..8]" TooltipText="@runtimeEvent.RunId.Value.ToString("D")" />
+        </CompactStatStrip>
+        <SurfaceCard Soft="true">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Summary" />
+            <p class="mt-2 text-sm leading-6 text-slate-700">@runtimeEvent.Summary</p>
+            @if (!string.IsNullOrWhiteSpace(runtimeEvent.RestrictedDiagnosticReference))
+            {
+                <p class="mt-2 text-xs font-semibold text-slate-500">@runtimeEvent.RestrictedDiagnosticReference</p>
+            }
+        </SurfaceCard>
+    </Stack>;
+
+    private async Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed))
+        {
+            runtimeHistoryWindow = parsed;
+            runtimeEventPage = 0;
+            if (ShouldDeferProcessGraphsHistoryLoad)
+            {
+                return;
+            }
+
+            await LoadAsync(forceRefresh: false);
+        }
+    }
+
+    private async Task ChangeManagerChatHistoryWindowAsync(ChangeEventArgs args)
+    {
+        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed))
+        {
+            managerChatHistoryWindow = parsed;
+            runtimeEventPage = 0;
+            ResetManagerChatForSelectedRunChange();
+            await LoadAsync(forceRefresh: false);
+        }
+    }
+
+    private async Task LoadProcessGraphsHistoryAsync()
+    {
+        processGraphsHistoryLoaded = true;
+        runtimeEventPage = 0;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectRuntimeRunAsync(ChangeEventArgs args)
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteRunId = null;
+        var value = ReadChangeValue(args);
+        selectedRuntimeRunId = Guid.TryParse(value, out var parsed) && parsed != Guid.Empty
+            ? parsed
+            : null;
+        runtimeEventPage = 0;
+        ResetManagerChatForSelectedRunChange();
+        if (ShouldDeferProcessGraphsHistoryLoad)
+        {
+            return;
+        }
+
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task SelectRuntimeRunAsync(Guid runId)
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteRunId = null;
+        selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
+        runtimeEventPage = 0;
+        ResetManagerChatForSelectedRunChange();
+        if (ShouldDeferProcessGraphsHistoryLoad)
+        {
+            return;
+        }
+
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task PreviousRuntimeEventPageAsync()
+    {
+        if (runtimeEventPage == 0)
+        {
+            return;
+        }
+
+        runtimeEventPage--;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task NextRuntimeEventPageAsync()
+    {
+        if (!CurrentShell.Runtime.HasMoreEvents)
+        {
+            return;
+        }
+
+        runtimeEventPage++;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run)
+    {
+        runDetailSnapshot = run;
+        runDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenChildRunAsync(Guid runId)
+    {
+        requiredRouteProcessId = null;
+        requiredRouteLaunchPlanId = null;
+        requiredRouteRunId = null;
+        selectedRuntimeRunId = runId;
+        runDetailSnapshot = CurrentShell.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId);
+        if (runDetailSnapshot is null)
+        {
+            Navigation.NavigateTo(ProjectId.HasValue
+                ? $"/projects/{ProjectId.Value:D}/processes/live?runId={runId:D}"
+                : $"/processes/live?runId={runId:D}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRunDetailDialogAsync()
+    {
+        runDetailDialogOpen = false;
+        runDetailSnapshot = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenEventDetailDialogAsync(ProcessTimelineEventProjection runtimeEvent)
+    {
+        eventDetail = runtimeEvent;
+        eventDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseEventDetailDialogAsync()
+    {
+        eventDetailDialogOpen = false;
+        eventDetail = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenManagerChatTabAsync()
+    {
+        activeDetailTabIndex = ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat);
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task ReloadManagerChatAsync()
+    {
+        managerChatWorkspace = null;
+        managerChatLoadedRunId = null;
+        managerChatLoadedAgentId = null;
+        await EnsureManagerChatLoadedAsync(forceReload: true);
+    }
+
+    private async Task EnsureManagerChatLoadedAsync(bool forceReload = false)
+    {
+        var selectedRunId = ResolveSelectedManagerChatRunId();
+        if (!forceReload &&
+            managerChatWorkspace is not null &&
+            managerChatAgent is not null &&
+            managerChatLoadedRunId == selectedRunId &&
+            managerChatLoadedAgentId == managerChatAgentId)
+        {
+            return;
+        }
+
+        var workspaceService = ResolveManagerChatWorkspaceService();
+        if (workspaceService is null)
+        {
+            managerChatErrorMessage = "Agent workspace service is not registered for this module instance.";
+            return;
+        }
+
+        var referenceDataProvider = Services.GetService<IAgentReferenceDataProvider>();
+        if (referenceDataProvider is null)
+        {
+            managerChatErrorMessage = "Agent reference data provider is not registered for this module instance.";
+            return;
+        }
+
+        managerChatIsLoading = true;
+        managerChatErrorMessage = null;
+
+        try
+        {
+            var referenceData = await referenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(AgentReferenceDataSections.Agents));
+            managerChatAgents = referenceData.Agents;
+            managerChatAgentId = ResolveManagerAgentId(managerChatAgents, managerChatAgentId);
+            if (managerChatAgentId is null)
+            {
+                managerChatAgent = null;
+                managerChatWorkspace = null;
+                managerChatExecutionLog = [];
+                managerChatErrorMessage = "No technical agent is available for process manager chat.";
+                return;
+            }
+
+            managerChatAgent = managerChatAgents.First(agent => agent.Id == managerChatAgentId.Value);
+            ResetManagerChatVoiceIfUnavailable();
+            managerChatSessionId = await ResolveManagerChatSessionIdAsync(workspaceService, managerChatAgentId.Value, selectedRunId);
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatSessionId = managerChatWorkspace.SelectedSessionId;
+            TrackManagerChatSessionForRun(managerChatAgentId.Value, selectedRunId, managerChatSessionId);
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            managerChatLoadedRunId = selectedRunId;
+            managerChatLoadedAgentId = managerChatAgentId;
+            ResolveManagerChatRunState();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = exception.Message;
+            managerChatWorkspace = null;
+        }
+        finally
+        {
+            managerChatIsLoading = false;
+        }
+    }
+
+    private async Task SelectManagerChatAgentAsync(ChangeEventArgs args)
+    {
+        managerChatAgentId = Guid.TryParse(ReadChangeValue(args), out var parsed) && parsed != Guid.Empty
+            ? parsed
+            : null;
+        managerChatActivityStreamId = null;
+        managerChatSessionId = null;
+        managerChatWorkspace = null;
+        managerChatLoadedRunId = null;
+        managerChatLoadedAgentId = null;
+        ResetManagerChatVoiceState(clearStatus: true);
+        await EnsureManagerChatLoadedAsync(forceReload: true);
+    }
+
+    private Task HandleManagerChatDraftPromptChangedAsync(string value)
+    {
+        managerChatDraftPrompt = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task SendManagerChatMessageAsync()
+    {
+        var workspaceService = ResolveManagerChatWorkspaceService();
+        if (workspaceService is null || managerChatAgentId is null)
+        {
+            managerChatErrorMessage = "Select a manager agent before sending a message.";
+            return;
+        }
+
+        var prompt = managerChatDraftPrompt.Trim();
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            managerChatErrorMessage = "Enter a manager prompt before sending.";
+            return;
+        }
+
+        managerChatIsBusy = true;
+        managerChatPendingPrompt = managerChatDraftPrompt;
+        var previousDraft = managerChatDraftPrompt;
+        managerChatDraftPrompt = string.Empty;
+        managerChatComposerKey++;
+
+        try
+        {
+            var disableManagerTelemetryTools = ProcessManagerChatPromptClassifier.ShouldDisableRuntimeTools(previousDraft);
+            var operation = ChatExecutionOrchestrator.StartSendMessage(
+                new AgentChatSendRequest(
+                    managerChatAgentId.Value,
+                    managerChatSessionId,
+                    prompt)
+                {
+                    AttachmentPaths = managerChatDraftAttachmentPaths,
+                    Behavior = disableManagerTelemetryTools
+                        ? new AgentChatExecutionBehavior(
+                            RuntimeToolProvidersEnabled: false,
+                            WorkspaceToolsEnabled: false)
+                        : AgentChatExecutionBehavior.Default
+                });
+            managerChatActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            var result = await operation.Completion;
+            managerChatSessionId = result.ChatSessionId;
+            TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
+            managerChatDraftAttachmentPaths = [];
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            ResolveManagerChatRunState();
+            managerChatErrorMessage = null;
+            if (managerChatVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.AssistantMessage.Content))
+            {
+                await SpeakManagerChatTextAsync(result.AssistantMessage.Content);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatDraftPrompt = previousDraft;
+            managerChatComposerKey++;
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatPendingPrompt = string.Empty;
+            managerChatIsBusy = false;
+        }
+    }
+
+    private async Task HandleManagerChatApprovalDecisionAsync(bool approved)
+    {
+        await ContinueManagerChatApprovalAsync(approved, autoApprovePendingToolCalls: false);
+    }
+
+    private async Task ApproveManagerChatConversationAsync()
+    {
+        await ContinueManagerChatApprovalAsync(approved: true, autoApprovePendingToolCalls: true);
+    }
+
+    private async Task ContinueManagerChatApprovalAsync(bool approved, bool autoApprovePendingToolCalls)
+    {
+        var workspaceService = ResolveManagerChatWorkspaceService();
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
+        {
+            return;
+        }
+
+        managerChatIsBusy = true;
+        try
+        {
+            var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
+                managerChatAgentId.Value,
+                managerChatSessionId.Value,
+                approved,
+                autoApprovePendingToolCalls);
+            managerChatActivityStreamId = operation.StreamId;
+            await InvokeAsync(StateHasChanged);
+            await operation.Completion;
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+            var runtimeSnapshot = await workspaceService.GetChatRuntimeSnapshotAsync(managerChatAgentId.Value, managerChatSessionId);
+            managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
+            ResolveManagerChatRunState();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatIsBusy = false;
+        }
+    }
+
+    private async Task RenameManagerChatSessionAsync(string title)
+    {
+        var workspaceService = ResolveManagerChatWorkspaceService();
+        if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
+        {
+            return;
+        }
+
+        managerChatIsBusy = true;
+        try
+        {
+            var session = await workspaceService.RenameChatSessionAsync(managerChatAgentId.Value, managerChatSessionId.Value, title);
+            managerChatSessionId = session.Id;
+            TrackManagerChatSessionForRun(managerChatAgentId.Value, ResolveSelectedManagerChatRunId(), managerChatSessionId);
+            managerChatWorkspace = await workspaceService.GetChatAgentWorkspaceAsync(managerChatAgentId.Value, managerChatSessionId);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            managerChatErrorMessage = exception.Message;
+        }
+        finally
+        {
+            managerChatIsBusy = false;
+        }
+    }
+
+    private async Task StageManagerChatRunArtifactsAsync()
+    {
+        var workspaceService = ResolveManagerChatWorkspaceService();
+        if (workspaceService is null || managerChatWorkspace?.SelectedRun is null)
+        {
+            managerChatDraftAttachmentPaths = [];
+            return;
+        }
+
+        var detail = await workspaceService.GetExecutionRunDetailAsync(managerChatWorkspace.SelectedRun.Id);
+        managerChatDraftAttachmentPaths = detail.Artifacts
+            .Select(item => item.RelativePath)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private IAgentFrameworkWorkspaceService? ResolveManagerChatWorkspaceService()
+    {
+        return Services.GetService<IAgentFrameworkWorkspaceService>();
+    }
+
+    private Guid? ResolveManagerAgentId(IReadOnlyList<AgentDefinition> agents, Guid? currentAgentId)
+    {
+        if (currentAgentId is { } current && agents.Any(agent => agent.Id == current))
+        {
+            return current;
+        }
+
+        return agents
+            .OrderByDescending(agent => agent.Name.Contains("process", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(agent => agent.Name.Contains("manager", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(agent => (Guid?)agent.Id)
+            .FirstOrDefault();
+    }
+
+    private Guid? ResolveSelectedManagerChatRunId()
+        => selectedRuntimeRunId ?? CurrentShell.Runtime.SelectedRunId ?? RunIdQuery;
+
+    private async Task<Guid?> ResolveManagerChatSessionIdAsync(
+        IAgentFrameworkWorkspaceService workspaceService,
+        Guid agentId,
+        Guid? selectedRunId)
+    {
+        if (selectedRunId is null)
+        {
+            return managerChatSessionId;
+        }
+
+        var mapKey = BuildManagerChatSessionMapKey(agentId, selectedRunId.Value);
+        if (managerChatSessionIdsByRun.TryGetValue(mapKey, out var cachedSessionId))
+        {
+            return cachedSessionId;
+        }
+
+        var title = BuildManagerChatRunThreadTitle(selectedRunId.Value);
+        var existingSession = (await workspaceService.ListChatSessionsAsync(agentId))
+            .FirstOrDefault(session => string.Equals(session.Title, title, StringComparison.OrdinalIgnoreCase));
+        if (existingSession is not null)
+        {
+            managerChatSessionIdsByRun[mapKey] = existingSession.Id;
+            return existingSession.Id;
+        }
+
+        var createdSession = await workspaceService.GetOrCreateChatSessionAsync(agentId);
+        var renamedSession = string.Equals(createdSession.Title, title, StringComparison.Ordinal)
+            ? createdSession
+            : await workspaceService.RenameChatSessionAsync(agentId, createdSession.Id, title);
+        managerChatSessionIdsByRun[mapKey] = renamedSession.Id;
+        return renamedSession.Id;
+    }
+
+    private void TrackManagerChatSessionForRun(Guid agentId, Guid? selectedRunId, Guid? chatSessionId)
+    {
+        if (selectedRunId is null || chatSessionId is null)
+        {
+            return;
+        }
+
+        managerChatSessionIdsByRun[BuildManagerChatSessionMapKey(agentId, selectedRunId.Value)] = chatSessionId.Value;
+    }
+
+    private void ResetManagerChatForSelectedRunChange()
+    {
+        managerChatDraftPrompt = string.Empty;
+        managerChatActivityStreamId = null;
+        managerChatSessionId = null;
+        managerChatWorkspace = null;
+        managerChatExecutionLog = [];
+        managerChatLoadedRunId = null;
+        managerChatLoadedAgentId = null;
+        managerChatRunStateText = string.Empty;
+        managerChatRunStateTone = "neutral";
+        ResetManagerChatVoiceState(clearStatus: false);
+    }
+
+    private AgentVoiceAccessSettings ManagerChatVoiceAccess
+        => managerChatAgent is null
+            ? new AgentVoiceAccessSettings()
+            : AgentVoiceAccessMetadata.Read(managerChatAgent.ConfigurationJson);
+
+    private bool CanUseManagerChatVoiceMode
+        => ManagerChatVoiceAccess.CanUseVoiceMode;
+
+    private Task HandleManagerChatVoiceModeChangedAsync(bool enabled)
+    {
+        if (enabled && !CanUseManagerChatVoiceMode)
+        {
+            SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return Task.CompletedTask;
+        }
+
+        managerChatVoiceModeEnabled = enabled;
+        SetManagerChatVoiceStatus(enabled ? "Audio on" : "Audio off", enabled ? "primary" : "neutral");
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleManagerChatVoiceRecordingAsync()
+    {
+        if (!CanUseManagerChatVoiceMode)
+        {
+            SetManagerChatVoiceStatus("Voice denied", "warning", "This agent does not allow voice mode.");
+            return;
+        }
+
+        if (!managerChatVoiceRecording)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.startRecording");
+                managerChatVoiceModeEnabled = true;
+                managerChatVoiceRecording = true;
+                SetManagerChatVoiceStatus("Recording", "danger");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                SetManagerChatVoiceStatus("Record failed", "danger", exception.Message);
+            }
+
+            return;
+        }
+
+        await StopManagerChatRecordingAndSendAsync();
+    }
+
+    private async Task StopManagerChatRecordingAndSendAsync()
+    {
+        managerChatVoiceRecording = false;
+        managerChatVoiceTranscribing = true;
+        SetManagerChatVoiceStatus("Transcribing", "info");
+        try
+        {
+            var voiceService = ResolveManagerChatVoiceService();
+            if (voiceService is null)
+            {
+                return;
+            }
+
+            var recording = await JsRuntime.InvokeAsync<BrowserVoiceRecording>(
+                "CanDoItAll.agentFramework.voice.stopRecording");
+            var transcription = await voiceService.TranscribeAsync(recording.ToTranscriptionRequest());
+
+            managerChatDraftPrompt = transcription.Text;
+            managerChatComposerKey++;
+            SetManagerChatVoiceStatus("Sending", "info");
+            await SendManagerChatMessageAsync();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetManagerChatVoiceStatus("Voice failed", "danger", exception.Message);
+        }
+        finally
+        {
+            managerChatVoiceTranscribing = false;
+        }
+    }
+
+    private Task SpeakLatestManagerChatAssistantMessageAsync()
+    {
+        var latestAssistantMessage = managerChatWorkspace?.SelectedSession?.Messages
+            .Where(message => message.Role == ChatMessageRole.Assistant)
+            .OrderByDescending(message => message.CreatedAtUtc)
+            .FirstOrDefault();
+        if (latestAssistantMessage is null || string.IsNullOrWhiteSpace(latestAssistantMessage.Content))
+        {
+            SetManagerChatVoiceStatus("Nothing to speak", "warning", "No assistant message is available.");
+            return Task.CompletedTask;
+        }
+
+        return SpeakManagerChatTextAsync(latestAssistantMessage.Content);
+    }
+
+    private async Task SpeakManagerChatTextAsync(string text)
+    {
+        if (managerChatAgent is null)
+        {
+            SetManagerChatVoiceStatus("No agent", "warning", "Select a manager agent before using text-to-speech.");
+            return;
+        }
+
+        var voiceService = ResolveManagerChatVoiceService();
+        if (voiceService is null)
+        {
+            return;
+        }
+
+        managerChatVoiceSpeaking = true;
+        SetManagerChatVoiceStatus("Speaking", "primary");
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("CanDoItAll.agentFramework.voice.clearAudioQueue");
+            var queuedChunks = 0;
+            await foreach (var synthesis in voiceService.SynthesizeChunksAsync(new AgentVoiceSynthesisRequest(
+                               text,
+                               ManagerChatVoiceAccess,
+                               SuppressIdentifierOmissionNotice: ShouldSuppressManagerChatIdentifierOmissionNotice())))
+            {
+                TrackManagerChatIdentifierOmissionNotice(synthesis);
+                queuedChunks++;
+                await JsRuntime.InvokeVoidAsync(
+                    "CanDoItAll.agentFramework.voice.enqueueAudio",
+                    Convert.ToBase64String(synthesis.AudioBytes),
+                    synthesis.ContentType);
+                if (queuedChunks == 1)
+                {
+                    SetManagerChatVoiceStatus("Playing", "primary");
+                }
+            }
+
+            SetManagerChatVoiceStatus(queuedChunks == 1 ? "Audio ready" : $"Audio ready ({queuedChunks} chunks)", "success");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetManagerChatVoiceStatus("Speak failed", "danger", exception.Message);
+        }
+        finally
+        {
+            managerChatVoiceSpeaking = false;
+        }
+    }
+
+    private IAgentVoiceService? ResolveManagerChatVoiceService()
+    {
+        var voiceService = Services.GetService<IAgentVoiceService>();
+        if (voiceService is not null)
+        {
+            return voiceService;
+        }
+
+        SetManagerChatVoiceStatus("Voice unavailable", "warning", "Voice services are not registered.");
+        return null;
+    }
+
+    private bool ShouldSuppressManagerChatIdentifierOmissionNotice()
+    {
+        return managerChatSessionId is { } sessionId
+            ? managerChatSessionsWithVoiceIdentifierOmissionNotice.Contains(sessionId)
+            : managerChatHasVoiceIdentifierOmissionNoticeWithoutSession;
+    }
+
+    private void TrackManagerChatIdentifierOmissionNotice(AgentVoiceSynthesisResult synthesis)
+    {
+        if (!synthesis.IdentifierOmissionNoticeIncluded)
+        {
+            return;
+        }
+
+        if (managerChatSessionId is { } sessionId)
+        {
+            managerChatSessionsWithVoiceIdentifierOmissionNotice.Add(sessionId);
+            return;
+        }
+
+        managerChatHasVoiceIdentifierOmissionNoticeWithoutSession = true;
+    }
+
+    private void ResetManagerChatVoiceIfUnavailable()
+    {
+        if (CanUseManagerChatVoiceMode)
+        {
+            return;
+        }
+
+        ResetManagerChatVoiceState(clearStatus: false);
+    }
+
+    private void ResetManagerChatVoiceState(bool clearStatus)
+    {
+        managerChatVoiceModeEnabled = false;
+        managerChatVoiceRecording = false;
+        managerChatVoiceTranscribing = false;
+        managerChatVoiceSpeaking = false;
+        if (!clearStatus)
+        {
+            return;
+        }
+
+        managerChatVoiceStatusText = string.Empty;
+        managerChatVoiceStatusTone = "neutral";
+    }
+
+    private void SetManagerChatVoiceStatus(string text, string tone, string? detail = null)
+    {
+        managerChatVoiceStatusText = string.IsNullOrWhiteSpace(detail)
+            ? text
+            : $"{text}: {detail}";
+        managerChatVoiceStatusTone = tone;
+    }
+
+    private static string BuildManagerChatSessionMapKey(Guid agentId, Guid runId)
+        => $"{agentId:N}:{runId:N}";
+
+    private static string BuildManagerChatRunThreadTitle(Guid runId)
+        => $"Process manager / run {runId:D}";
+
+    private void ResolveManagerChatRunState()
+    {
+        if (managerChatWorkspace?.SelectedRun is null)
+        {
+            managerChatRunStateText = string.Empty;
+            managerChatRunStateTone = "neutral";
+            return;
+        }
+
+        managerChatRunStateText = managerChatWorkspace.SelectedRun.State.ToString();
+        managerChatRunStateTone = ResolveExecutionTone(managerChatWorkspace.SelectedRun.State);
+    }
+
+    private static string BuildRunTitle(ProcessRunDetailProjection run)
+        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+
+    private static string BuildRunTitle(ProcessLiveProcessSnapshot run)
+        => $"Run {run.RunId.Value.ToString("N")[..8]}";
+
+    private static string BuildRunSubtitle(ProcessLiveProcessSnapshot run)
+        => $"{run.Status} / {run.LastEventAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)}";
+
+    private static string BuildRunOptionText(ProcessLiveProcessSnapshot run)
+        => $"{BuildRunTitle(run)} / {run.Status} / {run.LastEventAtUtc.LocalDateTime:g}";
+
+    private static string BuildRunCardSummary(ProcessLiveProcessSnapshot run)
+    {
+        var incident = run.Incidents.OrderByDescending(item => item.RaisedAtUtc).FirstOrDefault();
+        if (incident is not null)
+        {
+            return $"Cause: {EnsureSentence(incident.SafeSummary)}";
+        }
+
+        var childWait = run.WaitingOnChildRuns.FirstOrDefault();
+        if (childWait is not null)
+        {
+            return $"Waiting: {EnsureSentence(childWait.Summary)}";
+        }
+
+        if (run.CurrentStep is not null)
+        {
+            return $"Current: {EnsureSentence(run.CurrentStep.Summary)}";
+        }
+
+        var runtimeEvent = ResolveRunCardEvent(run.RecentEvents);
+        return runtimeEvent is null
+            ? "No recent runtime events are attached to this run."
+            : $"{runtimeEvent.EventType}: {runtimeEvent.Summary}";
+    }
+
+    private static string ResolveRunStatusTone(ProcessProjectedRunStatus status)
+        => status switch
+        {
+            ProcessProjectedRunStatus.Active => "success",
+            ProcessProjectedRunStatus.NeedsAttention => "warning",
+            ProcessProjectedRunStatus.Failed => "danger",
+            ProcessProjectedRunStatus.Completed => "info",
+            ProcessProjectedRunStatus.Cancelled => "neutral",
+            _ => "neutral"
+        };
+
+    private static string ResolveEventTone(ProcessTimelineEventProjection runtimeEvent)
+        => runtimeEvent.Sensitivity == ProcessProjectedSensitivity.Restricted
+            ? "warning"
+            : runtimeEvent.EventType.StartsWith("Manager", StringComparison.Ordinal)
+                ? "info"
+                : IsAttentionEventType(runtimeEvent.EventType)
+                    ? "warning"
+                    : "neutral";
+
+    private static string ResolveManagerMessageTone(ProcessManagerMessageProjection message)
+        => message.Sensitivity == ProcessProjectedSensitivity.Restricted
+            ? "warning"
+            : message.Kind.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
+              message.Kind.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
+              message.Kind.Contains("Escalated", StringComparison.OrdinalIgnoreCase)
+                ? "warning"
+                : "info";
+
+    private static ProcessLiveRunEventProjection? ResolveRunCardEvent(IReadOnlyList<ProcessLiveRunEventProjection> events)
+        => events
+            .OrderByDescending(item => IsAttentionEventType(item.EventType))
+            .ThenByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+
+    private static bool IsAttentionEventType(string eventType)
+        => eventType.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Failed", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Released", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Denied", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Rejected", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Escalated", StringComparison.OrdinalIgnoreCase) ||
+           eventType.Contains("Incident", StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatCount(int count, string singular, string plural)
+        => $"{count.ToString(CultureInfo.InvariantCulture)} {(count == 1 ? singular : plural)}";
+
+    private static string ResolveExecutionTone(ExecutionState state)
+        => state switch
+        {
+            ExecutionState.Completed => "success",
+            ExecutionState.WaitingOnTool => "warning",
+            ExecutionState.Failed => "danger",
+            ExecutionState.Running or ExecutionState.Preparing or ExecutionState.Persisting => "info",
+            _ => "neutral"
+        };
+
+    private static string FormatHistoryWindow(ProcessRuntimeHistoryWindow window)
+        => window switch
+        {
+            ProcessRuntimeHistoryWindow.LiveHour => "Last hour",
+            ProcessRuntimeHistoryWindow.OneDay => "Last 24 hours",
+            ProcessRuntimeHistoryWindow.SevenDays => "Last 7 days",
+            ProcessRuntimeHistoryWindow.ThirtyDays => "Last 30 days",
+            _ => window.ToString()
+        };
+
+    private static string ResolveHistoryWindowText(ProcessRuntimeHistoryWindow window)
+        => FormatHistoryWindow(window);
+
+    private static int ResolveRuntimeTotalTokens(ProcessRuntimeStatsProjection stats)
+        => stats.TotalTokens > 0
+            ? stats.TotalTokens
+            : Math.Max(0, stats.InputTokens) + Math.Max(0, stats.OutputTokens);
+
+    private static int ResolveRuntimeTotalTokens(ProcessRuntimeMetricPointProjection point)
+        => point.TotalTokens > 0
+            ? point.TotalTokens
+            : Math.Max(0, point.InputTokens) + Math.Max(0, point.OutputTokens);
+
+    private static decimal ScaleRuntimeTokensToThousands(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(ResolveRuntimeTotalTokens(point) / RuntimeUsageTokenThousandsDivisor, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ScaleRuntimeDurationToMinutes(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(Math.Max(0, point.DurationMs) / 60000m, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ScaleRuntimeCostByUsdMultiplier(ProcessRuntimeMetricPointProjection point)
+        => decimal.Round(ResolveRuntimeUsageCost(point) * RuntimeUsageCostUsdMultiplier, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal ResolveRuntimeUsageCost(ProcessRuntimeMetricPointProjection point)
+        => Math.Max(0m, point.ActualCost > 0 ? point.ActualCost : point.EstimatedCost);
+
+    private string FormatCurrency(decimal value)
+        => CurrencyFormatter.Format(value);
+
+    private static string FormatTokenCount(int value)
+        => value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatDuration(long durationMs)
+    {
+        if (durationMs <= 0)
+        {
+            return "0 min";
+        }
+
+        var duration = TimeSpan.FromMilliseconds(durationMs);
+        return duration.TotalHours >= 1
+            ? $"{duration.TotalHours:N1} h"
+            : $"{duration.TotalMinutes:N1} min";
+    }
+
+    private static string TrimLabel(string value, int maxLength)
+    {
+        if (value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        return $"{value[..Math.Max(0, maxLength - 3)]}...";
+    }
+
+    private static string EnsureSentence(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0 ||
+            trimmed.EndsWith(".", StringComparison.Ordinal) ||
+            trimmed.EndsWith("!", StringComparison.Ordinal) ||
+            trimmed.EndsWith("?", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        return $"{trimmed}.";
+    }
+
+    private RenderFragment RenderMetricCard(
+        string label,
+        string value,
+        string tone,
+        string summary) => @<SurfaceCard Soft="true">
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="@label" />
+        <h3 class="text-base font-semibold text-slate-900">@value</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-600">@summary</p>
+        <StatusBadge Tone="@tone" Text="@label" />
+    </SurfaceCard>;
+
+    private RenderFragment RenderDefinitionEditor(ProcessDefinitionEditorProjection editor) => @<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-editor">
+        <Split Gap="LayoutGap.Small">
+            <Stack GapScale="LayoutGap.Tiny">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Authoring" />
+                <h3 class="text-sm font-semibold text-slate-900">Definition editor</h3>
+                <p class="text-sm leading-6 text-slate-600">Edit identity, governance, contract, and simulation-readiness fields through the process projection boundary.</p>
+            </Stack>
+            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                <StatusBadge Tone="@ResolveEditorStatusTone(editor.Status)" Text="@editor.Status.ToString()" />
+                <StatusBadge Tone="@ResolveEditorLintTone(editor.Lint)" Text="@ResolveEditorLintText(editor.Lint)" />
+            </Cluster>
+        </Split>
+
+        @if (!string.IsNullOrWhiteSpace(editorCommandNotice) || editor.LastCommandReceipt is not null)
+        {
+            <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-definition-editor-receipt">
+                @(editor.LastCommandReceipt is null ? editorCommandNotice : $"{editor.LastCommandReceipt.Status}: {editor.LastCommandReceipt.Summary}")
+            </p>
+        }
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2" Class="mt-5" data-testid="processes-definition-editor-sections">
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-editor-identity">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-name-input">Name</label>
+                <input id="processes-definition-editor-name-input"
+                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       value="@editorName"
+                       @oninput="args => editorName = ReadChangeValue(args)"
+                       data-testid="processes-definition-editor-name" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-owner-input">Owner</label>
+                <input id="processes-definition-editor-owner-input"
+                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       value="@editorOwnerName"
+                       @oninput="args => editorOwnerName = ReadChangeValue(args)"
+                       data-testid="processes-definition-editor-owner" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-customer-input">Customer</label>
+                <input id="processes-definition-editor-customer-input"
+                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       value="@editorCustomerName"
+                       @oninput="args => editorCustomerName = ReadChangeValue(args)"
+                       data-testid="processes-definition-editor-customer" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-summary-input">Summary</label>
+                <textarea id="processes-definition-editor-summary-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorSummary"
+                          @oninput="args => editorSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-summary"></textarea>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-editor-value-input">Value statement</label>
+                <textarea id="processes-definition-editor-value-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorValueStatement"
+                          @oninput="args => editorValueStatement = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-value"></textarea>
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-editor-governance">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Governance" />
+                <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <label class="text-xs font-semibold text-slate-500" for="processes-definition-criticality-input">Criticality</label>
+                        <select id="processes-definition-criticality-input"
+                                class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                value="@editorCriticality"
+                                @onchange="args => editorCriticality = ParseCriticality(args)"
+                                data-testid="processes-definition-editor-criticality">
+                            @foreach (var option in CriticalityOptions)
+                            {
+                                <option value="@option">@option.ToString()</option>
+                            }
+                        </select>
+                    </Stack>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <label class="text-xs font-semibold text-slate-500" for="processes-definition-autonomy-input">Autonomy</label>
+                        <select id="processes-definition-autonomy-input"
+                                class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                value="@editorAutonomyLevel"
+                                @onchange="args => editorAutonomyLevel = ParseAutonomy(args)"
+                                data-testid="processes-definition-editor-autonomy">
+                            @foreach (var option in AutonomyOptions)
+                            {
+                                <option value="@option">@option.ToString()</option>
+                            }
+                        </select>
+                    </Stack>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <label class="text-xs font-semibold text-slate-500" for="processes-definition-mode-input">Mode</label>
+                        <select id="processes-definition-mode-input"
+                                class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                value="@editorOperatingMode"
+                                @onchange="args => editorOperatingMode = ParseOperatingMode(args)"
+                                data-testid="processes-definition-editor-operating-mode">
+                            @foreach (var option in OperatingModeOptions)
+                            {
+                                <option value="@option">@option.ToString()</option>
+                            }
+                        </select>
+                    </Stack>
+                </Grid>
+                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                    <StatusBadge Tone="@ResolveEditorStatusTone(editorWorkingStatus)" Text="@editorWorkingStatus.ToString()" />
+                    <StatusBadge Tone="neutral" Text="@($"{editorRequiredRoleCount} required role(s)")" />
+                </Cluster>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-governance-policy-input">Governance policy</label>
+                <textarea id="processes-definition-governance-policy-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorGovernancePolicySummary"
+                          @oninput="args => editorGovernancePolicySummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-governance-policy"></textarea>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-manager-override-input">Manager override</label>
+                <textarea id="processes-definition-manager-override-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorManagerOverrideSummary"
+                          @oninput="args => editorManagerOverrideSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-manager-override"></textarea>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-governance-notes-input">Governance notes</label>
+                <textarea id="processes-definition-governance-notes-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorGovernanceNotes"
+                          @oninput="args => editorGovernanceNotes = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-governance-notes"></textarea>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-change-summary-input">Change summary</label>
+                <textarea id="processes-definition-change-summary-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorChangeSummary"
+                          @oninput="args => editorChangeSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-change-summary"></textarea>
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-editor-contracts">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Contracts" />
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-interface-contract-input">Interface contract</label>
+                <textarea id="processes-definition-interface-contract-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorInterfaceContractSummary"
+                          @oninput="args => editorInterfaceContractSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-interface-contract"></textarea>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-constitution-input">Constitution rule</label>
+                <textarea id="processes-definition-constitution-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorConstitutionRuleSummary"
+                          @oninput="args => editorConstitutionRuleSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-constitution"></textarea>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-operating-summary-input">Operating mode summary</label>
+                <textarea id="processes-definition-operating-summary-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorOperatingModeSummary"
+                          @oninput="args => editorOperatingModeSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-operating-summary"></textarea>
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-definition-editor-simulation">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Simulation" />
+                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                    <StatusBadge Tone="info" Text="@($"{editorStepCount} step(s)")" />
+                    <StatusBadge Tone="neutral" Text="@($"{editorRequiredArtifactExpectationCount} required artifact(s)")" />
+                </Cluster>
+                <label class="text-xs font-semibold text-slate-500" for="processes-definition-simulation-input">Simulation readiness</label>
+                <textarea id="processes-definition-simulation-input"
+                          class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                          value="@editorSimulationReadinessSummary"
+                          @oninput="args => editorSimulationReadinessSummary = ReadChangeValue(args)"
+                          data-testid="processes-definition-editor-simulation-readiness"></textarea>
+
+                <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-definition-lint-panel">
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                        <StatusBadge Tone="@ResolveEditorLintTone(editor.Lint)" Text="@ResolveEditorLintText(editor.Lint)" />
+                    </Cluster>
+                    @if (!editor.Lint.HasWarningsOrErrors)
+                    {
+                        <p class="mt-2 text-sm leading-6 text-slate-600">No blocking lint issues.</p>
+                    }
+                    else
+                    {
+                        @foreach (var issue in editor.Lint.Issues)
+                        {
+                            <div class="mt-3 border-t border-slate-200 pt-3">
+                                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                    <StatusBadge Tone="@ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
+                                    <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
+                                    <span class="text-xs text-slate-500">@issue.Code</span>
+                                </Cluster>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
+                                <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                            </div>
+                        }
+                    }
+                </div>
+            </Stack>
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Small" Class="mt-5 flex-wrap justify-end">
+            @foreach (var command in editor.Commands)
+            {
+                <Button Text="@command.Text"
+                        Icon="@command.Icon"
+                        ButtonStyle="@ResolveDefinitionEditorCommandButtonStyle(command.Kind)"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!command.IsEnabled || isBusy)"
+                        IsBusy="@isBusy"
+                        Click="@(() => ExecuteDefinitionEditorCommandAsync(command.Kind))"
+                        title="@command.DisabledReason"
+                        data-testid="@BuildDefinitionEditorCommandTestId(command.Kind)" />
+            }
+        </Cluster>
+    </div>;
+
+    private void SyncDefinitionEditor(ProcessDefinitionEditorProjection? editor)
+    {
+        if (editor is null)
+        {
+            editorDefinitionKey = null;
+            editorVersionToken = null;
+            editorCommandNotice = null;
+            return;
+        }
+
+        editorDefinitionKey = editor.DefinitionKey;
+        editorVersionToken = editor.VersionToken;
+        editorCommandNotice = editor.LastCommandReceipt?.Summary;
+        editorName = editor.Identity.Name;
+        editorCustomerName = editor.Identity.CustomerName;
+        editorOwnerName = editor.Identity.OwnerName;
+        editorSummary = editor.Identity.Summary;
+        editorValueStatement = editor.Identity.ValueStatement;
+        editorCriticality = editor.Governance.Criticality == ProcessDefinitionCriticalityLevel.Unspecified
+            ? ProcessDefinitionCriticalityLevel.Standard
+            : editor.Governance.Criticality;
+        editorAutonomyLevel = editor.Governance.AutonomyLevel == ProcessDefinitionAutonomyLevel.Unspecified
+            ? ProcessDefinitionAutonomyLevel.Assisted
+            : editor.Governance.AutonomyLevel;
+        editorOperatingMode = editor.Governance.OperatingMode == ProcessDefinitionOperatingModeKind.Unspecified
+            ? ProcessDefinitionOperatingModeKind.AssistedExecution
+            : editor.Governance.OperatingMode;
+        editorWorkingStatus = editor.Status;
+        editorManagerOverrideSummary = editor.Governance.ManagerOverrideSummary;
+        editorGovernanceNotes = editor.Governance.GovernanceNotes;
+        editorChangeSummary = editor.Governance.ChangeSummary;
+        editorGovernancePolicySummary = editor.Governance.GovernancePolicySummary;
+        editorInterfaceContractSummary = editor.Contracts.InterfaceContractSummary;
+        editorConstitutionRuleSummary = editor.Contracts.ConstitutionRuleSummary;
+        editorOperatingModeSummary = editor.Contracts.OperatingModeSummary;
+        editorSimulationReadinessSummary = editor.Simulation.SimulationReadinessSummary;
+        editorStepCount = editor.Simulation.StepCount;
+        editorRequiredRoleCount = editor.Simulation.RequiredRoleCount;
+        editorRequiredArtifactExpectationCount = editor.Simulation.RequiredArtifactExpectationCount;
+    }
+
+    private async Task ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommandKind commandKind)
+    {
+        var editor = DefinitionCatalog.SelectedEditor;
+        if (editor is null)
+        {
+            return;
+        }
+
+        var operation = TryBeginDefinitionEditorOperation(editor.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteDefinitionEditorCommandAsync(new ProcessDefinitionEditorCommand(
+                ResolveScope(),
+                editor.DefinitionKey,
+                commandKind,
+                editorVersionToken,
+                CreateDefinitionEditorDraft(editor)));
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
+            editorCommandNotice = result.Receipt.Summary;
+            ApplyDefinitionEditorProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
+        }
+        finally
+        {
+            CompleteDefinitionEditorOperation(operation.Value);
+        }
+    }
+
+    private void ApplyDefinitionEditorProjection(ProcessDefinitionEditorProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
+        {
+            return;
+        }
+
+        var selectedEditor = projection;
+        if (selectedEditor.RoleEditor is null && currentEditor.RoleEditor is { } roleEditor)
+        {
+            selectedEditor = selectedEditor with { RoleEditor = roleEditor };
+        }
+
+        if (selectedEditor.Canvas is null && currentEditor.Canvas is { } canvas)
+        {
+            selectedEditor = selectedEditor with { Canvas = canvas };
+        }
+
+        if (selectedEditor.StepEditor is null && currentEditor.StepEditor is { } stepEditor)
+        {
+            selectedEditor = selectedEditor with { StepEditor = stepEditor };
+        }
+
+        if (selectedEditor.TemplateCatalog is null && currentEditor.TemplateCatalog is { } templateCatalog)
+        {
+            selectedEditor = selectedEditor with { TemplateCatalog = templateCatalog };
+        }
+
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedDefinitionKey = selectedEditor.DefinitionKey,
+                SelectedEditor = selectedEditor
+            }
+        };
+        SyncDefinitionEditor(selectedEditor);
+    }
+
+    private async Task ExecuteDefinitionRoleEditorCommandAsync(ProcessDefinitionRoleEditorCommand command)
+    {
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteDefinitionRoleEditorCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
+            ApplyDefinitionRoleEditorProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
+        }
+        finally
+        {
+            CompleteDefinitionEditorOperation(operation.Value);
+        }
+    }
+
+    private void SyncTemplateCatalogQuery(ProcessTemplateCatalogProjection? templateCatalog)
+    {
+        if (templateCatalog is null)
+        {
+            templateSearchText = string.Empty;
+            selectedTemplateCategory = ProcessTemplateCatalogCategoryKind.All;
+            selectedTemplateItemKey = null;
+            selectedTemplatePreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview;
+            return;
+        }
+
+        templateSearchText = templateCatalog.Query.SearchText ?? string.Empty;
+        selectedTemplateCategory = templateCatalog.Query.Category;
+        selectedTemplateItemKey = templateCatalog.Query.SelectedItemKey;
+        selectedTemplatePreviewTab = templateCatalog.Query.PreviewTab;
+    }
+
+    private async Task ApplyTemplateCatalogQueryAsync(ProcessTemplateCatalogQueryProjection query)
+    {
+        templateSearchText = query.SearchText ?? string.Empty;
+        selectedTemplateCategory = query.Category;
+        selectedTemplateItemKey = query.SelectedItemKey;
+        selectedTemplatePreviewTab = query.PreviewTab;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async Task ExecuteTemplateImportCommandAsync(ProcessTemplateImportCommand command)
+    {
+        var operation = TryBeginDefinitionEditorOperation(command.TargetDefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteTemplateImportCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
+            ApplyTemplateCatalogProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
+        }
+        finally
+        {
+            CompleteDefinitionEditorOperation(operation.Value);
+        }
+    }
+
+    private void ApplyTemplateCatalogProjection(ProcessTemplateCatalogProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.TargetDefinitionKey)
+        {
+            return;
+        }
+
+        var selectedEditor = currentEditor with
+        {
+            TemplateCatalog = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+        SyncTemplateCatalogQuery(projection);
+    }
+
+    private void ApplyDefinitionRoleEditorProjection(ProcessDefinitionRoleEditorProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
+        {
+            return;
+        }
+
+        var selectedEditor = currentEditor with
+        {
+            RoleEditor = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+    }
+
+    private async Task ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command)
+    {
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteDefinitionCanvasCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
+            ApplyDefinitionCanvasProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
+        }
+        finally
+        {
+            CompleteDefinitionEditorOperation(operation.Value);
+        }
+    }
+
+    private void ApplyDefinitionCanvasProjection(ProcessDefinitionCanvasEditorProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
+        {
+            return;
+        }
+
+        var selectedEditor = currentEditor with
+        {
+            Canvas = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+    }
+
+    private async Task ExecuteDefinitionStepEditorCommandAsync(ProcessDefinitionStepEditorCommand command)
+    {
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
+        if (operation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ProjectionClient.ExecuteDefinitionStepEditorCommandAsync(command);
+            if (!IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                return;
+            }
+
+            ApplyDefinitionStepEditorProjection(result.Projection);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (IsCurrentDefinitionEditorOperation(operation.Value))
+            {
+                errorMessage = exception.Message;
+            }
+        }
+        finally
+        {
+            CompleteDefinitionEditorOperation(operation.Value);
+        }
+    }
+
+    private void ApplyDefinitionStepEditorProjection(ProcessDefinitionStepEditorProjection projection)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != projection.DefinitionKey)
+        {
+            return;
+        }
+
+        var selectedEditor = currentEditor with
+        {
+            StepEditor = projection
+        };
+        shell = shell with
+        {
+            DefinitionCatalog = shell.DefinitionCatalog with
+            {
+                SelectedEditor = selectedEditor
+            }
+        };
+    }
+
+    private DefinitionEditorOperationFence? TryBeginDefinitionEditorOperation(
+        ProcessDefinitionCatalogItemKey definitionKey)
+    {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != definitionKey)
+        {
+            return null;
+        }
+
+        var operation = new DefinitionEditorOperationFence(
+            Interlocked.Increment(ref workspaceGeneration),
+            currentEditor.DefinitionKey,
+            currentEditor.VersionToken);
+        isBusy = true;
+        errorMessage = null;
+        return operation;
+    }
+
+    private bool IsCurrentDefinitionEditorOperation(DefinitionEditorOperationFence operation)
+        => operation.Generation == Volatile.Read(ref workspaceGeneration) &&
+           shell?.DefinitionCatalog.SelectedEditor is { } currentEditor &&
+           currentEditor.DefinitionKey == operation.DefinitionKey &&
+           currentEditor.VersionToken == operation.VersionToken;
+
+    private void CompleteDefinitionEditorOperation(DefinitionEditorOperationFence operation)
+    {
+        if (operation.Generation == Volatile.Read(ref workspaceGeneration))
+        {
+            isBusy = false;
+        }
+    }
+
+    private readonly record struct DefinitionEditorOperationFence(
+        long Generation,
+        ProcessDefinitionCatalogItemKey DefinitionKey,
+        ProcessDefinitionEditorVersionToken VersionToken);
+
+    private ProcessDefinitionEditorDraftProjection CreateDefinitionEditorDraft(ProcessDefinitionEditorProjection editor)
+        => new(
+            editor.DefinitionKey,
+            new ProcessDefinitionEditorIdentityProjection(
+                editorName,
+                editor.Identity.ScopeLabel,
+                editorCustomerName,
+                editorOwnerName,
+                editorSummary,
+                editorValueStatement),
+            new ProcessDefinitionEditorGovernanceProjection(
+                editorCriticality,
+                editorAutonomyLevel,
+                editorOperatingMode,
+                editorWorkingStatus,
+                editorManagerOverrideSummary,
+                editorGovernanceNotes,
+                editorChangeSummary,
+                editorGovernancePolicySummary),
+            new ProcessDefinitionEditorContractProjection(
+                editorInterfaceContractSummary,
+                editorConstitutionRuleSummary,
+                editorOperatingModeSummary),
+            new ProcessDefinitionEditorSimulationProjection(
+                editorSimulationReadinessSummary,
+                editorStepCount,
+                editorRequiredRoleCount,
+                editorRequiredArtifactExpectationCount,
+                !string.IsNullOrWhiteSpace(editorSimulationReadinessSummary) && editorStepCount > 0));
+
+    private static string ReadChangeValue(ChangeEventArgs args)
+        => args.Value?.ToString() ?? string.Empty;
+
+    private static ProcessDefinitionCriticalityLevel ParseCriticality(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionCriticalityLevel>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionCriticalityLevel.Standard;
+
+    private static ProcessDefinitionAutonomyLevel ParseAutonomy(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionAutonomyLevel>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionAutonomyLevel.Assisted;
+
+    private static ProcessDefinitionOperatingModeKind ParseOperatingMode(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionOperatingModeKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionOperatingModeKind.AssistedExecution;
+
+    private static string ResolveTabEyebrow(ProcessWorkspaceTabKey key)
+        => key switch
+        {
+            ProcessWorkspaceTabKey.Definitions => "Definitions",
+            ProcessWorkspaceTabKey.LaunchPlans => "Launch",
+            ProcessWorkspaceTabKey.LiveRuns => "Live",
+            ProcessWorkspaceTabKey.History => "History",
+            _ => "Process"
+        };
+
+    private string ResolveTabStatus(ProcessWorkspaceTabKey key)
+        => key switch
+        {
+            ProcessWorkspaceTabKey.Definitions => $"{DefinitionTotalText} definition(s)",
+            ProcessWorkspaceTabKey.LaunchPlans => "0 plan(s)",
+            ProcessWorkspaceTabKey.LiveRuns => $"{LiveRunActiveText} active",
+            ProcessWorkspaceTabKey.History => ProjectionStatusText,
+            _ => "Ready"
+        };
+
+    private string ResolveTabTone(ProcessWorkspaceTabKey key)
+        => key switch
+        {
+            ProcessWorkspaceTabKey.Definitions => "info",
+            ProcessWorkspaceTabKey.LaunchPlans => "neutral",
+            ProcessWorkspaceTabKey.LiveRuns => shell?.LiveRuns.AttentionRunCount > 0 ? "warning" : "success",
+            ProcessWorkspaceTabKey.History => ProjectionTone,
+            _ => "neutral"
+        };
+
+    private static ButtonStyle ResolveCommandButtonStyle(ProcessWorkspaceCommandProjection command)
+        => command.Kind switch
+        {
+            ProcessWorkspaceCommandKind.RefreshProjections => ButtonStyle.Light,
+            ProcessWorkspaceCommandKind.OpenAgentContext => ButtonStyle.Info,
+            ProcessWorkspaceCommandKind.OpenLiveDashboard => ButtonStyle.Light,
+            ProcessWorkspaceCommandKind.FeedDefaults => ButtonStyle.Info,
+            ProcessWorkspaceCommandKind.LaunchRun => ButtonStyle.Success,
+            ProcessWorkspaceCommandKind.CreateDefinition => ButtonStyle.Primary,
+            _ => ButtonStyle.Light
+        };
+
+    private static string ResolveScopeIcon(ProcessDefinitionCatalogScopeKind scopeKind)
+        => scopeKind switch
+        {
+            ProcessDefinitionCatalogScopeKind.All => "select_all",
+            ProcessDefinitionCatalogScopeKind.Global => "public",
+            ProcessDefinitionCatalogScopeKind.Project => "folder",
+            _ => "account_tree"
+        };
+
+    private static string ResolveDefinitionIcon(ProcessDefinitionCatalogItemStatus status)
+        => status switch
+        {
+            ProcessDefinitionCatalogItemStatus.Published => "verified",
+            ProcessDefinitionCatalogItemStatus.Draft => "edit_note",
+            ProcessDefinitionCatalogItemStatus.RequiresReview => "report",
+            ProcessDefinitionCatalogItemStatus.TemplateDefault => "account_tree",
+            _ => "account_tree"
+        };
+
+    private static string ResolveDefinitionTone(ProcessDefinitionCatalogItemStatus status)
+        => status switch
+        {
+            ProcessDefinitionCatalogItemStatus.TemplateDefault => "info",
+            ProcessDefinitionCatalogItemStatus.Published => "success",
+            ProcessDefinitionCatalogItemStatus.Draft => "neutral",
+            ProcessDefinitionCatalogItemStatus.RequiresReview => "warning",
+            _ => "neutral"
+        };
+
+    private static string ResolveEditorStatusTone(ProcessDefinitionAuthoringStatus status)
+        => status switch
+        {
+            ProcessDefinitionAuthoringStatus.TemplateDefault => "info",
+            ProcessDefinitionAuthoringStatus.Draft => "neutral",
+            ProcessDefinitionAuthoringStatus.Published => "success",
+            ProcessDefinitionAuthoringStatus.Archived => "warning",
+            _ => "neutral"
+        };
+
+    private static string ResolveEditorLintTone(ProcessDefinitionEditorLintProjection lint)
+    {
+        if (lint.HasBlockingIssues)
+        {
+            return "danger";
+        }
+
+        return lint.HasWarningsOrErrors ? "warning" : "success";
+    }
+
+    private static string ResolveEditorLintText(ProcessDefinitionEditorLintProjection lint)
+    {
+        if (lint.HasBlockingIssues)
+        {
+            return $"{lint.Issues.Count(issue => issue.Severity == ProcessDefinitionEditorLintSeverity.Error)} blocking";
+        }
+
+        return lint.HasWarningsOrErrors ? $"{lint.Issues.Count} lint issue(s)" : "Lint clear";
+    }
+
+    private static string ResolveLintIssueTone(ProcessDefinitionEditorLintSeverity severity)
+        => severity switch
+        {
+            ProcessDefinitionEditorLintSeverity.Error => "danger",
+            ProcessDefinitionEditorLintSeverity.Warning => "warning",
+            ProcessDefinitionEditorLintSeverity.Info => "info",
+            _ => "neutral"
+        };
+
+    private static ButtonStyle ResolveDefinitionEditorCommandButtonStyle(ProcessDefinitionEditorCommandKind kind)
+        => kind switch
+        {
+            ProcessDefinitionEditorCommandKind.SaveDraft => ButtonStyle.Primary,
+            ProcessDefinitionEditorCommandKind.Publish => ButtonStyle.Success,
+            ProcessDefinitionEditorCommandKind.Archive => ButtonStyle.Light,
+            ProcessDefinitionEditorCommandKind.Delete => ButtonStyle.Danger,
+            _ => ButtonStyle.Light
+        };
+
+    private static string BuildScopeTestId(ProcessDefinitionCatalogScopeKind kind)
+        => $"processes-definition-scope-{kind.ToString().ToLowerInvariant()}";
+
+    private static string BuildScopeTreeNodeId(ProcessDefinitionCatalogScopeKind kind)
+        => $"{ScopeTreeNodePrefix}{kind}";
+
+    private static string BuildDefinitionTreeNodeId(ProcessDefinitionCatalogItemKey key)
+        => $"{DefinitionTreeNodePrefix}{key.Value}";
+
+    private static string BuildDefinitionItemTestId(ProcessDefinitionCatalogItemKey key)
+    {
+        var normalized = new string(key.Value
+            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+            .ToArray());
+        return $"processes-definition-{normalized}";
+    }
+
+    private static string BuildCommandTestId(ProcessWorkspaceCommandKind kind)
+        => kind switch
+        {
+            ProcessWorkspaceCommandKind.RefreshProjections => "processes-refresh",
+            ProcessWorkspaceCommandKind.OpenAgentContext => "processes-agent-context",
+            ProcessWorkspaceCommandKind.FeedDefaults => "processes-feed-defaults",
+            ProcessWorkspaceCommandKind.OpenLiveDashboard => "processes-open-live-dashboard",
+            _ => $"processes-command-{kind.ToString().ToLowerInvariant()}"
+        };
+
+    private static string BuildDefinitionEditorCommandTestId(ProcessDefinitionEditorCommandKind kind)
+        => kind switch
+        {
+            ProcessDefinitionEditorCommandKind.SaveDraft => "processes-definition-save",
+            ProcessDefinitionEditorCommandKind.Publish => "processes-definition-publish",
+            ProcessDefinitionEditorCommandKind.Archive => "processes-definition-archive",
+            ProcessDefinitionEditorCommandKind.Delete => "processes-definition-delete",
+            _ => $"processes-definition-command-{kind.ToString().ToLowerInvariant()}"
+        };
+
+    private static string BuildDetailTabTestId(ProcessWorkspaceDetailTabKey key)
+        => key == ProcessWorkspaceDetailTabKey.Definition
+            ? "processes-tab-definitions"
+            : $"processes-detail-tab-{NormalizeDetailTabKey(key)}";
+
+    private static string BuildDetailPanelTestId(ProcessWorkspaceDetailTabKey key)
+        => key == ProcessWorkspaceDetailTabKey.Definition
+            ? "processes-tab-panel-definitions"
+            : $"processes-detail-panel-{NormalizeDetailTabKey(key)}";
+
+    private static string NormalizeDetailTabKey(ProcessWorkspaceDetailTabKey key)
+        => key.ToString().ToLowerInvariant().Replace("managerchat", "manager-chat", StringComparison.Ordinal);
+
+    private static string FormatObservedAt(DateTimeOffset observedAtUtc)
+        => observedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+
+    void IDisposable.Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        agentChatFreshnessLease?.Dispose();
+        agentChatFreshnessLease = null;
+    }
+
+    private enum ProcessWorkspaceDetailTabKey
+    {
+        Definition,
+        Roles,
+        Steps,
+        Runs,
+        Graphs,
+        Analytics,
+        Exchange,
+        ManagerChat
+    }
+
+    private sealed record ProcessWorkspaceDetailTabDescriptor(
+        ProcessWorkspaceDetailTabKey Key,
+        string Text,
+        string Icon,
+        string Description,
+        string? BadgeText);
+}

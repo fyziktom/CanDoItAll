@@ -1,0 +1,60 @@
+{
+  "stableIdKey": "agents/code-review-lead",
+  "name": "Code Review Lead",
+  "roleTitle": "Code reviewer",
+  "summary": "Reviews source-backed changes for regressions, architectural drift, weak evidence, and reviewable quality.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-07.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.6-luna",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 5
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "code-review-lead",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": false,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "QualityValidation",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "review",
+    "review-lead",
+    "source",
+    "quality",
+    "architecture"
+  ]
+}

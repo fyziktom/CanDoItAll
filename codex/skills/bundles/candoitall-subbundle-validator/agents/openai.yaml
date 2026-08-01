@@ -1,4 +1,0 @@
-interface:
-  display_name: "CanDoItAll Subbundle Validator"
-  short_description: "Validate subbundle entry and closure gates"
-  default_prompt: "Audit the current subbundle's prerequisites, proof, and progression gate before allowing work to continue."

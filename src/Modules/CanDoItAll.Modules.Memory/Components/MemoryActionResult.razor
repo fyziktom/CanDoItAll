@@ -1,0 +1,14 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<Alert AlertStyle="AlertStyle.Info" Class="memory-ui-callout">
+    <strong>@Status</strong>
+    <span>@Diagnostic</span>
+</Alert>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Status { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Diagnostic { get; set; } = string.Empty;
+}

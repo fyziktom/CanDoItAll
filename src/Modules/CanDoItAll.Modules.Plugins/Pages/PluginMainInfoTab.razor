@@ -1,0 +1,66 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using Microsoft.AspNetCore.Components
+
+<Stack GapScale="LayoutGap.Large">
+    <FormSection Title="Plugin identity" Description="Manifest data that determines where this plugin comes from and what it can request.">
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Plugin id</p>
+                <p class="break-all text-sm font-medium text-[var(--cda-text)]">@Plugin.PluginId.Value</p>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Version</p>
+                <p class="text-sm font-medium text-[var(--cda-text)]">@Plugin.Version</p>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Vendor</p>
+                <p class="text-sm font-medium text-[var(--cda-text)]">@Plugin.Vendor</p>
+            </Stack>
+            <Stack GapScale="LayoutGap.Tiny">
+                <p class="cda-eyebrow">Trust</p>
+                <p class="text-sm font-medium text-[var(--cda-text)]">@Plugin.TrustLevel</p>
+            </Stack>
+        </Grid>
+
+        <Stack GapScale="LayoutGap.Tiny">
+            <p class="cda-eyebrow">Capabilities</p>
+            <Cluster Gap="LayoutGap.Tiny">
+                @foreach (var capability in PluginsPageHelpers.ResolveDeclaredCapabilities(Plugin))
+                {
+                    <StatusBadge Tone="info" Text="@capability.ToString()" />
+                }
+            </Cluster>
+        </Stack>
+
+        <Stack GapScale="LayoutGap.Tiny">
+            <p class="cda-eyebrow">Tags</p>
+            @if (Plugin.Descriptor.Tags.Count == 0)
+            {
+                <p class="cda-body-muted">No plugin descriptor tags.</p>
+            }
+            else
+            {
+                <Cluster Gap="LayoutGap.Tiny">
+                    @foreach (var tag in Plugin.Descriptor.Tags.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <StatusBadge Tone="neutral" Text="@tag" />
+                    }
+                </Cluster>
+            }
+        </Stack>
+    </FormSection>
+
+    @if (!string.IsNullOrWhiteSpace(Plugin.UnavailableReason))
+    {
+        <Alert AlertStyle="AlertStyle.Warning">
+            @Plugin.UnavailableReason
+        </Alert>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+}

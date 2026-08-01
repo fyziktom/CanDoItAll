@@ -1,0 +1,405 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "app-page-screenshot",
+  "DisplayName": "App page screenshot capture",
+  "Summary": "Capture, review, and store one screenshot for one known app page through generic process steps.",
+  "ValueStatement": "Turns a requested app-page screenshot into durable browser evidence and a project-structure image asset without screenshot-specific process runtime logic.",
+  "CustomerName": "CanDoItAll scenario validation",
+  "OwnerName": "Delivery manager",
+  "InterfaceContractSummary": "Input supplies project id, delivery node id, source root, run command, app URL, and one route. Output is a reviewed screenshot plus project-structure image-asset storage receipt.",
+  "GovernanceNotes": "Screenshot capture is controlled by role instructions, artifact expectations, and project-structure storage rules; the process core remains generic.",
+  "ChangeSummary": "Adds a reusable single-page screenshot acquisition template.",
+  "GovernancePolicySummary": "Do not close until app startup, browser navigation, screenshot capture, image review, and project-asset storage are all evidenced.",
+  "ConstitutionRuleSummary": "The process records explicit artifacts rather than relying on hidden agent memory or chat-only screenshots.",
+  "OperatingModeSummary": "Governed live execution with a capture agent and a review/storage agent.",
+  "SimulationReadinessSummary": "Small enough to run against local .NET or JavaScript apps while proving Playwright MCP and asset storage.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "software-engineer",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Screenshot process runs completed with browser evidence and storage receipts.",
+    "Blank or failed screenshots caught by review before storage."
+  ],
+  "Risks": [
+    "Agent starts the wrong app root or route.",
+    "Screenshot is blank, error-screen-only, or captured before hydration completes.",
+    "Screenshot is left as an execution artifact but not stored as a project-structure image asset."
+  ],
+  "TailoringRules": [
+    "Use .NET or JavaScript startup commands from the project structure or run prompt; do not infer unrelated commands.",
+    "Capture the exact route supplied by the project page node.",
+    "If the app cannot start or the route fails, record an explicit blocker instead of fabricating a screenshot.",
+    "Store accepted screenshots as image asset nodes under the project delivery area."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "screenshot-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Screenshot run manager",
+      "Purpose": "Confirm the route, source root, run command, artifact targets, and closure evidence.",
+      "StaffingIntent": "A manager-capable agent or person that can keep the screenshot run bounded.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "app-screenshot-capture-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "App screenshot QA capture agent",
+      "Purpose": "Start the requested .NET or JavaScript app, navigate with Playwright MCP, capture the screenshot, and record console/browser proof.",
+      "StaffingIntent": "Agent template with workspace command tools and Playwright MCP.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 900,
+      "CanvasY": 40
+    },
+    {
+      "Key": "screenshot-review-storage-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Screenshot review and storage agent",
+      "Purpose": "Reject blank or failed screenshots, then store accepted images as project-structure image assets with a storage receipt.",
+      "StaffingIntent": "Agent template with image review, project-structure write, and storage write permissions.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 1760,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "resolve-single-page-target",
+      "Title": "Resolve single page target",
+      "Subtitle": "Route and run contract",
+      "Notes": "Read the project structure and process prompt to identify project id, delivery node id, source root, run command, expected localhost URL, and exactly one page route. Do not start the app in this step.",
+      "StepKind": "Start",
+      "InputContractSummary": "Project delivery block, source root, route node, runtime notes, and process prompt.",
+      "OutputContractSummary": "Single-page screenshot target packet.",
+      "EvidenceContractSummary": "Route, app root, command, URL, viewport, and storage target.",
+      "DecisionRightsSummary": "Manager may block if route or source root is ambiguous.",
+      "ExceptionPolicySummary": "Block on missing route, missing source root, or contradictory run commands.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "TargetLeadHours": 1,
+      "CanvasX": 240,
+      "CanvasY": 0,
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "single-page-target-packet",
+          "Title": "Single page screenshot target packet",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by capture and storage steps.",
+          "ValidationRequirementSummary": "Must name route, source root, run command, expected URL, viewport, and delivery node."
+        }
+      ]
+    },
+    {
+      "Order": 1,
+      "Key": "start-app-once",
+      "Title": "Start app once",
+      "Subtitle": "Local runtime session",
+      "Notes": "Start the app from the approved source root using the requested .NET or JavaScript command. For .NET apps, call workspace_dotnet_run with keepAlive true and lifetimeScope ProcessRun because the later capture and cleanup steps own browser proof and shutdown. Wait for the expected local URL to respond. Record process id, command, working directory, port, stdout/stderr summary, readiness checks, and stop command. Do not use Playwright or capture screenshots in this step.",
+      "StepKind": "Work",
+      "DependsOnStepKey": "resolve-single-page-target",
+      "InputContractSummary": "Single-page target packet.",
+      "OutputContractSummary": "Reachable local app instance.",
+      "EvidenceContractSummary": "Startup command, working directory, PID, port, and readiness proof.",
+      "DecisionRightsSummary": "Capture agent may adjust only port arguments needed to avoid conflicts and must record the change.",
+      "ExceptionPolicySummary": "Block when startup fails or the expected route cannot become reachable.",
+      "TargetLeadHours": 1,
+      "CanvasX": 1080,
+      "CanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-single-page-target"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "app-screenshot-capture-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an app-capable screenshot agent with workspace command access."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "app-startup-receipt",
+          "Title": "App startup receipt",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by browser capture and failure triage.",
+          "ValidationRequirementSummary": "Must include command, working directory, process id or managed run handle, URL, and readiness status."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "resolve-single-page-target",
+          "ArtifactExpectationKey": "single-page-target-packet"
+        }
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "capture-page-screenshot",
+      "Title": "Capture page screenshot",
+      "Subtitle": "Playwright MCP proof",
+      "Notes": "Use the App startup receipt from the previous step as the authoritative running-app contract. Reuse its URL, port, process id, and working directory; do not run dotnet, npm, or other app startup commands in this step. Use Playwright MCP to navigate to the target URL, wait for the page to finish rendering, capture console messages, capture a full-page screenshot, and record viewport/device details. Do not use a static file copy as screenshot proof. Do not call project_structure_asset_create or write project-structure nodes in this capture step; the following review/storage step owns accepted image asset creation. If the startup receipt is missing, stale, or says the app stopped, block with that reason instead of starting a second app instance.",
+      "StepKind": "Work",
+      "DependsOnStepKey": "start-app-once",
+      "InputContractSummary": "Startup receipt and target route.",
+      "OutputContractSummary": "Screenshot file and browser evidence for one route.",
+      "EvidenceContractSummary": "Playwright navigation, console summary, screenshot path, viewport, and route URL.",
+      "DecisionRightsSummary": "Capture agent can retry browser readiness waits but must not change the route or start a second app instance without a manager-visible blocker.",
+      "ExceptionPolicySummary": "Block on navigation errors, console fatal errors, blank screenshot, or missing screenshot file.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "TargetLeadHours": 1,
+      "CanvasX": 1920,
+      "CanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "start-app-once"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "app-screenshot-capture-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with Playwright MCP screenshot tools."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "page-screenshot-file",
+          "Title": "Page screenshot file",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Input for screenshot review, project asset storage, and later layout generation.",
+          "ValidationRequirementSummary": "Must be a readable image captured from the running app route."
+        },
+        {
+          "Key": "browser-evidence",
+          "Title": "Browser navigation and console evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by QA and failure triage.",
+          "ValidationRequirementSummary": "Must include URL, viewport, wait condition, console messages, and errors if any."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "start-app-once",
+          "ArtifactExpectationKey": "app-startup-receipt"
+        }
+      ]
+    },
+    {
+      "Order": 3,
+      "Key": "review-and-store-screenshot",
+      "Title": "Review and store screenshot",
+      "Subtitle": "Image asset node",
+      "Notes": "Review the screenshot for blank output, wrong route, fatal error page, obvious layout corruption, and missing primary UI. Call workspace_inspect_image for the screenshot file before storage and include format, dimensions, and byte size in the review findings. When workspace_analyze_image is available, call it and ground the visual acceptance or rejection reason in the provider-backed image analysis result. If the assigned provider/model is not vision-capable, return Blocked with the missing vision capability, provider/model, screenshot path, and the operator action needed to reassign to a vision-capable screenshot reviewer instead of accepting an image from metadata alone. If accepted, store it through the project-structure asset path as an image asset node under the delivery area and record the node id and storage locator. Use project_structure_asset_create with sourceWorkspacePath for managed workspace screenshot files; do not try to read binary screenshots as text just to base64-encode them.",
+      "StepKind": "Review",
+      "DependsOnStepKey": "capture-page-screenshot",
+      "DecisionRoleKey": "screenshot-review-storage-agent",
+      "InputContractSummary": "Screenshot file and browser evidence.",
+      "OutputContractSummary": "Review findings and project-structure image asset storage receipt.",
+      "EvidenceContractSummary": "Acceptance/rejection, image dimensions or visual sanity check, asset node id, and storage locator.",
+      "DecisionRightsSummary": "Review/storage agent must reject unusable screenshots instead of storing them as accepted evidence.",
+      "ExceptionPolicySummary": "Block on unreadable image, blank image, wrong route, or failed asset storage.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
+      "TargetLeadHours": 1,
+      "CanvasX": 2760,
+      "CanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "capture-page-screenshot"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-review-storage-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with image review and project-structure asset write access."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "screenshot-review-findings",
+          "Title": "Screenshot review findings",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by layout generation and QA.",
+          "ValidationRequirementSummary": "Must state accepted or rejected with the visual reason, include workspace_inspect_image format, dimensions, and byte size, and include workspace_analyze_image provider/model/token evidence when the assigned provider/model supports vision."
+        },
+        {
+          "Key": "image-asset-storage-receipt",
+          "Title": "Project image asset storage receipt",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by project structure and later layout recommendation workflows.",
+          "ValidationRequirementSummary": "Must include project id, image asset node id, content type, original file name, and storage locator."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "capture-page-screenshot",
+          "ArtifactExpectationKey": "page-screenshot-file"
+        },
+        {
+          "SourceStepKey": "capture-page-screenshot",
+          "ArtifactExpectationKey": "browser-evidence"
+        }
+      ]
+    },
+    {
+      "Order": 4,
+      "Key": "cleanup-and-handoff",
+      "Title": "Cleanup and handoff",
+      "Subtitle": "Close runtime session",
+      "Notes": "Read the upstream review findings and image asset storage receipt, stop only the app process started by this run if the startup receipt identifies a live managed run, and summarize screenshot file, review result, image asset node id, cleanup status, and unresolved blockers. Do not use Playwright, browser tools, or capture screenshots in this cleanup step; browser evidence belongs only to the capture step.",
+      "StepKind": "End",
+      "DependsOnStepKey": "review-and-store-screenshot",
+      "InputContractSummary": "Review findings and storage receipt.",
+      "OutputContractSummary": "Closed local runtime session and final screenshot handoff.",
+      "EvidenceContractSummary": "Cleanup receipt and final project asset reference.",
+      "DecisionRightsSummary": "Manager can close only when cleanup and storage receipt are present.",
+      "ExceptionPolicySummary": "Do not close with a live orphaned process unless the blocker is recorded.",
+      "TargetLeadHours": 1,
+      "CanvasX": 3600,
+      "CanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "review-and-store-screenshot"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "single-page-screenshot-handoff",
+          "Title": "Single page screenshot handoff",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by downstream QA and layout generation.",
+          "ValidationRequirementSummary": "Must include final route, screenshot artifact, asset node id, cleanup status, and blockers."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "SourceStepKey": "review-and-store-screenshot",
+          "ArtifactExpectationKey": "screenshot-review-findings"
+        },
+        {
+          "SourceStepKey": "review-and-store-screenshot",
+          "ArtifactExpectationKey": "image-asset-storage-receipt"
+        }
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ]
+}

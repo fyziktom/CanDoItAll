@@ -1,44 +1,60 @@
-# UI Shared Components
+# Shared UI Component Boundary
 
-This folder documents the shared Blazor component library currently stored in:
+Reusable UI libraries are owned by the sibling
+[CanDoItAll.Components repository](https://github.com/fyziktom/CanDoItAll.Components).
+This repository consumes released packages from NuGet.org and owns only
+application-specific composition and styling.
 
-- `C:\repositories\CanDoItAll\src\CanDoItAll.Components`
-- `C:\repositories\CanDoItAll\src\CanDoItAll.Components\Components`
+## Ownership
 
-The current library is a compatibility layer with familiar component names and enums, backed by custom Razor components, helper enums, and a generated CSS file.
+The component repository owns:
 
-## Key conclusions
+- BaseLib, CanvasLib, Common, Gantt, Charts, Mermaid, OverlayLib, QRCode,
+  WebGlLib, and WebGlRunLib;
+- shared Tailwind tokens and the CSS shipped by BaseLib;
+- component sandbox and WebGL sandbox sample applications;
+- reusable component behavior, examples, and catalog documentation.
 
-- The API surface is custom and intentionally narrow.
-- Most components are thin wrappers over native HTML plus utility-class styling.
-- The library is useful for consistent layout and simple CRUD screens.
-- Several names imply richer behavior than what is actually implemented.
-- Codex should check this documentation before assuming a feature exists.
+This repository owns:
 
-## Documentation map
+- `src/UI/CanDoItAll.AppComponents`, the app-shell/facade Razor library;
+- `src/App/CanDoItAll.Web/wwwroot/css/output.css` and other product-specific styling;
+- module-specific UI that does not yet have a real cross-module consumer;
+- composition of the packaged libraries in the web host.
 
-- [Architecture: stack and architecture](architecture/stack-and-architecture.md)
-- [Reference: helpers, enums, and models](reference/helpers-enums-and-models.md)
-- [Components: layout and typography](components/layout-and-typography.md)
-- [Components: forms and inputs](components/forms-and-inputs.md)
-- [Components: navigation and workflow](components/navigation-and-workflow.md)
-- [Components: data and feedback](components/data-and-feedback.md)
-- [Guidelines: Codex usage guide](guidelines/codex-usage-guide.md)
-- [Recommendations: missing components](recommendations/missing-components.md)
-- [Transfer checklist](component-transfer-checklist.md)
+`CanDoItAll.AppComponents` currently consumes BaseLib, CanvasLib, and Common `0.1.18`,
+`Microsoft.AspNetCore.Components.Web` `10.0.10`, and the FileTools component contracts.
+Its adjacent
+[project file](../../src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj)
+is the authoritative dependency list.
 
-## Fast bootstrap checklist
+Reusable component preview routes and component-library tests remain in the sibling
+`CanDoItAll.Components` repository. This consumer repository keeps only application
+and module integration tests.
 
-1. Reference `CanDoItAll.Components`.
-2. Import `@using CanDoItAll.Components`.
-3. Register services with `services.AddCanDoItAllComponents()`.
-4. Load `_content/CanDoItAll.Components.BaseLib/css/output.css`.
-5. Do not assume advanced features unless they are documented here.
+## Change Rules
 
-## Fast rules for Codex
+1. Use an existing typed component before introducing markup-heavy local substitutes.
+2. Keep UI local until it has a real reusable boundary.
+3. Change shared behavior, shared CSS, examples, and package versions in the component
+   repository; do not copy their implementation into this consumer.
+4. Keep application-only orchestration in `CanDoItAll.AppComponents` or the owning
+   module.
+5. Validate reusable changes in the component repository's sandbox and tests, publish
+   the released packages, then update the consuming package version.
 
-- Prefer these shared components for common layout, inputs, tabs, steps, grids, and simple notifications.
-- Do not use `Dialog`, `Tooltip`, or `ContextMenu` as functional overlays. They are placeholders only.
-- Do not assume `DataGrid` supports sorting, filtering, virtualization, grouping, or empty templates.
-- Do not assume `Chart` supports full axis configuration. It currently renders only simple line-series values.
-- Treat `Variant`, `Shade`, and some enum members as partially implemented unless called out otherwise.
+Specialized libraries are not substitutes for BaseLib: use CanvasLib for graph/canvas
+workflows, Gantt for schedules, OverlayLib for floating surfaces, and WebGlLib/WebGlRunLib
+for typed WebGL behavior.
+
+## Styling
+
+The web host loads the packaged BaseLib stylesheet before this repository's generated
+application stylesheet. Build only the application-specific output here:
+
+```powershell
+npm install --prefix .\Tailwind
+npm run tailwind:build
+```
+
+See [Tailwind](../../Tailwind/README.md) for the input and output paths.

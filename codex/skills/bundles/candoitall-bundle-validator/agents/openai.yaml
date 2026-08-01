@@ -1,4 +1,0 @@
-interface:
-  display_name: "CanDoItAll Bundle Validator"
-  short_description: "Validate bundle readiness and final closure"
-  default_prompt: "Audit the bundle, run the validator, and fail the gate if coverage, dependencies, or proof are weak."

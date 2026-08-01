@@ -1,0 +1,209 @@
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<div class="agent-switch-dialog" data-testid="agent-switch-dialog">
+    @if (localAgents.Count == 0)
+    {
+        <EmptyState Eyebrow="Agents"
+                    Title="No agents available"
+                    Description="Create or feed a technical agent before opening chat threads." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            <div class="agent-switch-dialog__filters">
+                <TextBox Value="@searchText"
+                         ValueChanged="HandleSearchChangedAsync"
+                         Placeholder="Search agents"
+                         Immediate="true"
+                         Class="agent-switch-dialog__search"
+                         aria-label="Search agents"
+                         data-testid="agent-switch-search" />
+
+                <TagEditor Value="@tagFilters"
+                           ValueChanged="HandleTagFiltersChangedAsync"
+                           Suggestions="@AvailableFilterTags"
+                           Placeholder="Filter tags"
+                           MaxTags="6"
+                           TestId="agent-switch-tag-filter"
+                           InputTestId="agent-switch-tag-filter-input" />
+            </div>
+
+            <Split Gap="LayoutGap.Small">
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="info" Text="@($"{FilteredAgents.Count} of {localAgents.Count} agents")" />
+                    @if (tagFilters.Count > 0)
+                    {
+                        <StatusBadge Tone="neutral" Text="@($"{tagFilters.Count} tag filter(s)")" />
+                    }
+                </Cluster>
+                @if (FilteredAgents.Any(IsFavorite))
+                {
+                    <StatusBadge Tone="warning" Text="Favorites first" />
+                }
+            </Split>
+
+            @if (FilteredAgents.Count == 0)
+            {
+                <EmptyState Eyebrow="No matches"
+                            Title="No agents match the current filters"
+                            Description="Clear the text search or tag filters to show the full agent list." />
+            }
+            else
+            {
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))"
+                      Class="w-full">
+                    @foreach (var agent in FilteredAgents)
+                    {
+                        var isSelected = agent.Id == SelectedAgentId;
+                        var isFavorite = IsFavorite(agent);
+
+                        <AgentSelectionCard Agent="@agent"
+                                            IsSelected="@isSelected"
+                                            IsPrivateProvider="@PrivateAgentIds.Contains(agent.Id)"
+                                            Compact="true"
+                                            CenterContent="true"
+                                            ShowFavorite="true"
+                                            IsFavorite="@isFavorite"
+                                            FavoriteDisabled="@(favoriteBusyAgentId == agent.Id || FavoriteToggled is null)"
+                                            ShowDetailsTooltip="true"
+                                            ShowWorkload="false"
+                                            ShowUpdatedAt="false"
+                                            ShellTestId="agent-switch-card-shell"
+                                            SelectTestId="agent-switch-card"
+                                            OnSelect="@(() => SelectAgentAsync(agent.Id))"
+                                            OnFavoriteToggle="@(() => ToggleFavoriteAsync(agent))" />
+                    }
+                </Grid>
+            }
+        </Stack>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<AgentDefinition> localAgents = [];
+    private IReadOnlyList<AgentDefinition>? previousAgents;
+    private IReadOnlyList<string> tagFilters = [];
+    private string searchText = string.Empty;
+    private Guid? favoriteBusyAgentId;
+
+    [Parameter]
+    public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
+    [Parameter]
+    public Guid? SelectedAgentId { get; set; }
+
+    [Parameter]
+    public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
+
+    [Parameter]
+    public Func<AgentDefinition, Task<AgentDefinition>>? FavoriteToggled { get; set; }
+
+    private IReadOnlyList<string> AvailableFilterTags
+        => localAgents
+            .SelectMany(VisibleTags)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<AgentDefinition> FilteredAgents
+        => localAgents
+            .Where(MatchesSearch)
+            .Where(MatchesTagFilters)
+            .OrderByDescending(IsFavorite)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(previousAgents, Agents))
+        {
+            return;
+        }
+
+        previousAgents = Agents;
+        localAgents = Agents.ToList();
+    }
+
+    private Task SelectAgentAsync(Guid agentId)
+    {
+        return DialogService.CloseAsync(agentId);
+    }
+
+    private Task HandleSearchChangedAsync(string? value)
+    {
+        searchText = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTagFiltersChangedAsync(IReadOnlyList<string> value)
+    {
+        tagFilters = value
+            .Where(item => !AgentSpecialTags.IsFavorite(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleFavoriteAsync(AgentDefinition agent)
+    {
+        if (FavoriteToggled is null)
+        {
+            return;
+        }
+
+        favoriteBusyAgentId = agent.Id;
+        try
+        {
+            var updatedAgent = await FavoriteToggled.Invoke(agent);
+            localAgents = localAgents
+                .Select(item => item.Id == updatedAgent.Id ? updatedAgent : item)
+                .ToList();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Favorite update failed", exception.Message);
+        }
+        finally
+        {
+            favoriteBusyAgentId = null;
+        }
+    }
+
+    private bool MatchesSearch(AgentDefinition agent)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return true;
+        }
+
+        var query = searchText.Trim();
+        return agent.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               agent.RoleTitle.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               agent.Summary.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               agent.Model.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesTagFilters(AgentDefinition agent)
+    {
+        if (tagFilters.Count == 0)
+        {
+            return true;
+        }
+
+        return tagFilters.All(filter => agent.Tags.Any(tag => string.Equals(tag, filter, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool IsFavorite(AgentDefinition agent)
+        => agent.Tags.Any(AgentSpecialTags.IsFavorite);
+
+    private static IReadOnlyList<string> VisibleTags(AgentDefinition agent)
+        => agent.Tags
+            .Where(item => !AgentSpecialTags.IsFavorite(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+}

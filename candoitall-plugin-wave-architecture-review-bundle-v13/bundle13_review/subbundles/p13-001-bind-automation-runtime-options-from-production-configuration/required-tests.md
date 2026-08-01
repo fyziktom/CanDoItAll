@@ -1,4 +1,0 @@
-# Required tests
-
-- `Automation_runtime_options_bind_from_configuration`
-- `Automation_mqtt_bridge_reads_production_configuration_without_test_only_overrides`

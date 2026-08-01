@@ -1,0 +1,55 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="@(Provider is null ? "memory-ui-provider-detail-empty" : "memory-ui-provider-detail")">
+    @if (Provider is null)
+    {
+        <EmptyState Eyebrow="No selection"
+                    Title="Create or select a provider"
+                    Description="No provider-backed action can dispatch in the current state." />
+    }
+    else
+    {
+        <Cluster Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.Wrap"
+                 AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween">
+            <Stack Orientation="Orientation.Vertical" Gap="LayoutGap.XSmall">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="@Provider.InstanceId.Value" />
+                <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Provider.DisplayName" />
+            </Stack>
+            <StatusBadge Tone="@MemoryProviderUiAvailability.HealthTone(Provider.HealthState)"
+                         Text="@Provider.HealthState.ToString()" />
+        </Cluster>
+
+        <div class="memory-ui-facts">
+            <MemoryProviderFact Label="Driver" Value="@Provider.DriverKind.ToString()" />
+            <MemoryProviderFact Label="Workspace" Value="@Provider.WorkspaceScope.ToString()" />
+            <MemoryProviderFact Label="Protocol" Value="@Provider.ProtocolVersion.Value" />
+            <MemoryProviderFact Label="Fallback" Value="@Provider.DefaultPolicy.FallbackBehavior.ToString()" />
+            <MemoryProviderFact Label="Sections" Value="@Provider.Limits.MaxContextSections.ToString()" />
+            <MemoryProviderFact Label="Timeout" Value="@Provider.Limits.OperationTimeout.ToString()" />
+        </div>
+
+        <FormSection Title="Capabilities" Description="The provider manifest controls which runtime actions may dispatch.">
+            <MemoryProviderCapabilityList Capabilities="@Provider.Capabilities" />
+        </FormSection>
+    }
+
+    <MemoryProviderProfileEditor Editor="@Editor"
+                                 IsBusy="@IsBusy"
+                                 OnSave="OnSave" />
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter, EditorRequired]
+    public MemoryProviderProfileEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+}

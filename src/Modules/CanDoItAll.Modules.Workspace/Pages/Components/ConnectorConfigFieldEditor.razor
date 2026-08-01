@@ -1,0 +1,131 @@
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.Modules.Workspace
+@using CanDoItAll.SharedKernel.Configuration
+
+<div>
+    <label class="cda-field-label">@Field.Label</label>
+@switch (Field.FieldType)
+    {
+        case ConnectorConfigFieldType.Number:
+            <InputNumber TValue="decimal?"
+                         Value="NumberValue"
+                         ValueChanged="HandleNumberChanged"
+                         ValueExpression="() => NumberValue"
+                         class="@InputClass"
+                         data-testid="@TestId" />
+            break;
+        case ConnectorConfigFieldType.Boolean:
+            <label class="cda-inline-option">
+                <InputCheckbox Value="BooleanValue"
+                               ValueChanged="HandleBooleanChanged"
+                               ValueExpression="() => BooleanValue"
+                               data-testid="@TestId" />
+                @Field.HelpText
+            </label>
+            break;
+        case ConnectorConfigFieldType.Json:
+        case ConnectorConfigFieldType.MultilineText:
+            <InputTextArea Value="@TextValue"
+                           ValueChanged="HandleTextChanged"
+                           ValueExpression="@(() => TextValue)"
+                           class="@($"{InputClass} cda-input--textarea min-h-24")"
+                           data-testid="@TestId" />
+            break;
+        case ConnectorConfigFieldType.Select:
+            <InputSelect TValue="string"
+                         Value="@TextValue"
+                         ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
+                         ValueExpression="@(() => TextValue)"
+                         class="@InputClass"
+                         data-testid="@TestId">
+                @foreach (var option in Field.Options)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
+            break;
+        case ConnectorConfigFieldType.SecretReference:
+            <InputSelect TValue="string"
+                         Value="@TextValue"
+                         ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
+                         ValueExpression="@(() => TextValue)"
+                         class="@InputClass"
+                         data-testid="@TestId">
+                <option value="">None</option>
+                @foreach (var secret in Secrets)
+                {
+                    <option value="@secret.Id">@secret.Name</option>
+                }
+            </InputSelect>
+            break;
+        default:
+            <InputText Value="@TextValue"
+                       ValueChanged="HandleTextChanged"
+                       ValueExpression="@(() => TextValue)"
+                       class="@InputClass"
+                       data-testid="@TestId" />
+            break;
+    }
+
+    @if (Field.FieldType is not ConnectorConfigFieldType.Boolean &&
+         !string.IsNullOrWhiteSpace(Field.HelpText))
+    {
+        <p class="cda-body-muted mt-2">@Field.HelpText</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public required ConfigurationFieldDescriptor Field { get; set; }
+
+    [Parameter]
+    public required ConfigurationState State { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
+
+    [Parameter]
+    public string InputClass { get; set; } = "cda-input";
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationState> StateChanged { get; set; }
+
+    private string TextValue
+    {
+        get => State.GetText(Field.Key);
+        set => State.SetText(Field.Key, value);
+    }
+
+    private decimal? NumberValue
+    {
+        get => State.GetDecimalNumber(Field.Key);
+        set => State.SetDecimalNumber(Field.Key, value);
+    }
+
+    private bool BooleanValue
+    {
+        get => State.GetBoolean(Field.Key);
+        set => State.SetBoolean(Field.Key, value);
+    }
+
+    private async Task HandleTextChanged(string value)
+    {
+        TextValue = value;
+        await StateChanged.InvokeAsync(State);
+    }
+
+    private async Task HandleNumberChanged(decimal? value)
+    {
+        NumberValue = value;
+        await StateChanged.InvokeAsync(State);
+    }
+
+    private async Task HandleBooleanChanged(bool value)
+    {
+        BooleanValue = value;
+        await StateChanged.InvokeAsync(State);
+    }
+}

@@ -1,0 +1,26 @@
+@page "/processes"
+
+<PageTitle>Processes</PageTitle>
+
+<ProcessWorkspaceShell ProcessIdQuery="@ProcessIdQuery"
+                       RunIdQuery="@RunIdQuery"
+                       LaunchPlanIdQuery="@LaunchPlanIdQuery"
+                       DefinitionSearchText="@DefinitionSearchText"
+                       SelectedDefinitionKey="@SelectedDefinitionKey" />
+
+@code {
+    [SupplyParameterFromQuery(Name = "processId")]
+    public Guid? ProcessIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "launchPlanId")]
+    public Guid? LaunchPlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? DefinitionSearchText { get; set; }
+
+    [SupplyParameterFromQuery(Name = "definitionKey")]
+    public string? SelectedDefinitionKey { get; set; }
+}

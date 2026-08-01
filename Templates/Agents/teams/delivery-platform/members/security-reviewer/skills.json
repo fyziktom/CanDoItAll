@@ -1,0 +1,21 @@
+{
+  "capabilityKeys": [
+    "aspnet-core-skill",
+    "candoitall-codeanalytics-mcp",
+    "repository-playbook",
+    "git-standard-operations",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file",
+    "workspace-diff-text",
+    "workspace-git-status",
+    "workspace-git-diff",
+    "workspace-git-log",
+    "workspace-git-show",
+    "architecture-source-rag"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this list role-specific."
+}

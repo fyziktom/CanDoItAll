@@ -1,0 +1,156 @@
+@inject IFloatingAgentChatSettingsService SettingsService
+@inject IFloatingAgentChatCoordinator Coordinator
+@inject NotificationService NotificationService
+
+<Grid Gap="LayoutGap.Large"
+      ColumnsLg="2"
+      data-testid="floating-agent-chat-settings">
+    <SurfaceCard>
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Active chat lifecycle" />
+        <h2 class="mt-1 text-lg font-semibold text-slate-950">Retention and capacity</h2>
+        <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+            <label class="cda-field">
+                <span class="cda-field-label">Keep hidden chats active (minutes)</span>
+                <InputNumber @bind-Value="hiddenActiveChatRetentionMinutes"
+                             class="cda-input"
+                             min="1"
+                             max="@FloatingAgentChatSettingsValidator.MaximumRetentionMinutes"
+                             data-testid="floating-agent-chat-retention" />
+            </label>
+            <TextBlock TextStyle="TextStyle.Caption"
+                       Value="Idle hidden handles are stopped after this interval. Durable conversation history is not deleted." />
+
+            <label class="cda-field">
+                <span class="cda-field-label">Maximum active chats</span>
+                <InputNumber @bind-Value="maximumActiveChats"
+                             class="cda-input"
+                             min="1"
+                             max="@FloatingAgentChatSettingsValidator.MaximumActiveChatLimit"
+                             data-testid="floating-agent-chat-maximum-active" />
+            </label>
+        </Stack>
+    </SurfaceCard>
+
+    <SurfaceCard>
+        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Prepared activation stock" />
+        <h2 class="mt-1 text-lg font-semibold text-slate-950">Background preparation budget</h2>
+        <Stack GapScale="LayoutGap.Medium" Class="mt-4">
+            <Alert AlertStyle="AlertStyle.Info">
+                Preparation caches immutable agent activation metadata only. Live runtime agents, credentials, tool clients, and execution sessions remain per-run and are never pooled.
+            </Alert>
+
+            <label class="cda-field">
+                <span class="cda-field-label">Maximum prepared agents</span>
+                <InputNumber @bind-Value="maximumPreparedAgents"
+                             class="cda-input"
+                             min="0"
+                             max="@FloatingAgentChatSettingsValidator.MaximumPreparedAgentLimit"
+                             data-testid="floating-agent-chat-maximum-prepared" />
+            </label>
+            <TextBlock TextStyle="TextStyle.Caption"
+                       Value="Use 0 to disable background preparation. The stock favors agents used most often in this circuit." />
+
+            <label class="cda-inline-option">
+                <InputCheckbox @bind-Value="adaptivePreparationEnabled" />
+                <span>Adapt preparation to recent usage</span>
+            </label>
+
+            <label class="cda-field">
+                <span class="cda-field-label">Prepared metadata idle retention (minutes)</span>
+                <InputNumber @bind-Value="preparedResourceIdleRetentionMinutes"
+                             class="cda-input"
+                             min="1"
+                             max="@FloatingAgentChatSettingsValidator.MaximumRetentionMinutes"
+                             data-testid="floating-agent-chat-prepared-retention" />
+            </label>
+        </Stack>
+    </SurfaceCard>
+</Grid>
+
+<Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+    <Button Text="Save floating chat settings"
+            Icon="save"
+            Disabled="@isBusy"
+            IsBusy="@isBusy"
+            Click="SaveAsync"
+            data-testid="floating-agent-chat-settings-save" />
+    <StatusBadge Tone="@statusTone" Text="@statusText" />
+</Cluster>
+
+@code {
+    private int hiddenActiveChatRetentionMinutes;
+    private int maximumActiveChats;
+    private int maximumPreparedAgents;
+    private int preparedResourceIdleRetentionMinutes;
+    private bool adaptivePreparationEnabled;
+    private bool isBusy;
+    private string statusText = "Loading";
+    private string statusTone = "neutral";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isBusy = true;
+        try
+        {
+            ApplyToEditor(await SettingsService.GetSettingsAsync());
+            SetStatus("Ready", "success");
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Load failed", "danger");
+            NotificationService.Error("Floating chat settings failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var settings = new FloatingAgentChatSettings(
+                hiddenActiveChatRetentionMinutes,
+                maximumActiveChats,
+                maximumPreparedAgents,
+                adaptivePreparationEnabled,
+                preparedResourceIdleRetentionMinutes);
+            settings = await SettingsService.SaveSettingsAsync(settings);
+            Coordinator.ApplySettings(settings);
+            ApplyToEditor(settings);
+            SetStatus("Saved", "success");
+            NotificationService.Success("Floating chat settings saved", "The active lifecycle and preparation budgets were updated.");
+        }
+        catch (Exception exception)
+        {
+            SetStatus("Save failed", "danger");
+            NotificationService.Error("Floating chat settings failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void ApplyToEditor(FloatingAgentChatSettings settings)
+    {
+        hiddenActiveChatRetentionMinutes = settings.HiddenActiveChatRetentionMinutes;
+        maximumActiveChats = settings.MaximumActiveChats;
+        maximumPreparedAgents = settings.MaximumPreparedAgents;
+        adaptivePreparationEnabled = settings.AdaptivePreparationEnabled;
+        preparedResourceIdleRetentionMinutes = settings.PreparedResourceIdleRetentionMinutes;
+    }
+
+    private void SetStatus(string text, string tone)
+    {
+        statusText = text;
+        statusTone = tone;
+    }
+}

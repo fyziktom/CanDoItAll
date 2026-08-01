@@ -1,0 +1,143 @@
+.process-role-card-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+}
+
+.process-role-card {
+    align-items: stretch;
+    aspect-ratio: 1 / 1;
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    display: grid;
+    gap: 0.7rem;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    min-width: 0;
+    padding: 1rem;
+    text-align: center;
+}
+
+.process-role-card__identity {
+    align-content: center;
+    display: grid;
+    gap: 0.45rem;
+    justify-items: center;
+    min-height: 0;
+    min-width: 0;
+}
+
+.process-role-card__icon {
+    align-items: center;
+    background: #e0f2fe;
+    border: 1px solid rgba(14, 165, 233, 0.24);
+    border-radius: 999px;
+    color: #0369a1;
+    display: inline-flex;
+    font-size: 1.75rem;
+    height: 3.15rem;
+    justify-content: center;
+    width: 3.15rem;
+}
+
+.process-role-card__icon ::deep .cda-material-icon {
+    font-size: 1.75rem;
+    line-height: 1;
+}
+
+.process-role-card__title {
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 750;
+    line-height: 1.25;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.process-role-card__summary {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    color: #64748b;
+    display: -webkit-box;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    margin: 0;
+    overflow: hidden;
+}
+
+.process-role-card__badges {
+    justify-content: center;
+}
+
+.process-role-card__details {
+    justify-content: center;
+    width: 100%;
+}
+
+.process-role-dialog-hero {
+    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.55rem;
+    justify-items: center;
+    margin: 0 auto;
+    max-width: 34rem;
+    padding: 1rem;
+    text-align: center;
+    width: min(100%, 34rem);
+}
+
+.process-role-dialog-hero h3 {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 750;
+    line-height: 1.25;
+    margin: 0;
+}
+
+.process-role-dialog-hero__icon {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(14, 165, 233, 0.24);
+    border-radius: 999px;
+    color: #0369a1;
+    display: inline-flex;
+    font-size: 1.8rem;
+    height: 3.25rem;
+    justify-content: center;
+    width: 3.25rem;
+}
+
+.process-role-dialog-hero__icon ::deep .cda-material-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.process-role-dialog-section {
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.process-role-dialog-textarea {
+    min-height: 6.5rem;
+}
+
+.process-role-bindings {
+    background: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.5rem;
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
+}
+
+.process-role-bindings__row {
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 0.5rem;
+    padding: 0.7rem;
+}

@@ -1,0 +1,13 @@
+# Implement bounded code change through feature/function subprocess
+
+Launch the feature/function implementation subprocess for the bounded behavior in this slice. Keep the parent step focused on observing the child run status, change-set artifact, targeted validation evidence, accepted handoff evidence, repair escalation evidence, blockers, and manager rework directives.
+
+First call `project_structure_process_subprocess_launch` with `definitionKey` set to `dotnet-feature-function-implementation`. Do not wait silently or return `Blocked` before attempting that child launch unless mandatory launch inputs are missing. If the launch response includes `ParentDeferredOutcomeJson`, submit that parent outcome exactly: active child runs defer the parent, completed child runs complete the parent from child evidence, and stopped child runs propagate their concrete blocker.
+
+Before launching the child, carry forward one concrete feature request from the slice scope and architecture artifacts. Include the product root, app archetype, setup handoff, acceptance criteria, validation hooks, and exclusions. When the parent slice came from a full app request, the child request must be the derived first MVP behavior, not the whole app backlog.
+
+When the slice scope includes visual target ImageAsset ids or media paths, include them in the child request and require the visible implementation to use those assets as the design target. Do not launch a child request that only says to make the UI "look good" while dropping the listed source image.
+
+Do not launch the child when the slice scope only asks for scaffold readiness, solution setup, naming, or generic app-shell existence. A scaffold is prerequisite evidence, not an accepted implementation behavior. Reopen or block the slice intake unless the child request names an observable product-specific behavior and the acceptance checks for that behavior.
+
+Accepted implementation evidence can come from `feature-handoff` or `feature-handoff-after-repair`. A `feature-repair-escalation` packet is failed-implementation evidence, not accepted implementation proof. For this initial child launch, materialize that typed packet into the parent coordinator artifact, select `implementation-needs-manager-repair`, and route directly to `initial-manager-assisted-repair`. Do not run `add-tests-and-proof` against a known failed child implementation, do not treat its no-go as accepted behavior, and do not spend another blind feature retry before the manager-assisted diagnosis path.

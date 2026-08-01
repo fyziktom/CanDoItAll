@@ -1,0 +1,217 @@
+@inject IPartyRecordQueryService PartyRecordQueryService
+
+<Stack GapScale="LayoutGap.Medium">
+    <Split Gap="LayoutGap.Medium"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween">
+        <div>
+            <p class="cda-eyebrow">Relationships and org structure</p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">Model parent-child, reporting, membership, and partner links without losing the shared party identity.</p>
+        </div>
+        <Button Text="Add relationship"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="AddRelationship"
+                Disabled="@(!CurrentPartyId.HasValue)"
+                data-testid="crmhr-relationship-add" />
+    </Split>
+
+    @if (!CurrentPartyId.HasValue)
+    {
+        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+            Save the party first, then add relationships to other saved parties.
+        </div>
+    }
+    else if (Relationships.Count == 0)
+    {
+        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+            No relationships defined yet.
+        </div>
+    }
+    else
+    {
+        @foreach (var row in Relationships.Select((item, index) => (Item: item, Index: index)))
+        {
+            var item = row.Item;
+            var rowIndex = row.Index;
+            <PanelCard @key="item" Soft="true">
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+                    <div>
+                        <label class="cda-field-label">Direction</label>
+                        <InputSelect TValue="bool"
+                                     @bind-Value="item.IsOutgoing"
+                                     class="cda-input"
+                                     data-testid="@($"crmhr-relationship-direction-{rowIndex}")">
+                            <option value="@true">This party points to related party</option>
+                            <option value="@false">Related party points to this party</option>
+                        </InputSelect>
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Relationship</label>
+                        <InputSelect @bind-Value="item.RelationshipKind"
+                                     class="cda-input"
+                                     data-testid="@($"crmhr-relationship-kind-{rowIndex}")">
+                            @foreach (var relationshipKind in Enum.GetValues<PartyRelationshipKind>())
+                            {
+                                <option value="@relationshipKind">@relationshipKind</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="cda-field-label">Related party</label>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Small"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween">
+                            <p class="min-w-0 truncate text-sm text-slate-700"
+                               data-testid="@($"crmhr-relationship-party-name-{rowIndex}")">
+                                @ResolveRelatedPartyLabel(item)
+                            </p>
+                            <Button Text="Choose party"
+                                    Icon="search"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => OpenRelatedPartyPicker(item))"
+                                    data-testid="@($"crmhr-relationship-party-{rowIndex}")" />
+                        </Split>
+                    </div>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Start date</label>
+                        <InputDate @bind-Value="item.StartDateUtc"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-relationship-start-{rowIndex}")" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">End date</label>
+                        <InputDate @bind-Value="item.EndDateUtc"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-relationship-end-{rowIndex}")" />
+                    </div>
+                    <label class="cda-inline-option">
+                        <InputCheckbox @bind-Value="item.IsPrimary"
+                                       data-testid="@($"crmhr-relationship-primary-{rowIndex}")" />
+                        Primary relationship
+                    </label>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
+                    <div>
+                        <label class="cda-field-label">Notes</label>
+                        <InputText @bind-Value="item.Notes"
+                                   class="cda-input"
+                                   data-testid="@($"crmhr-relationship-notes-{rowIndex}")" />
+                    </div>
+                    <div class="flex items-end justify-end">
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Size="ButtonSize.Small"
+                                Click="@(() => RemoveRelationship(item))"
+                                data-testid="@($"crmhr-relationship-remove-{rowIndex}")" />
+                    </div>
+                </Grid>
+            </PanelCard>
+        }
+    }
+</Stack>
+
+<PartyRecordPickerDialog IsOpen="@(relationshipPickerTarget is not null)"
+                         SelectedPartyId="@SelectedRelatedPartyId"
+                         ExcludedPartyId="@CurrentPartyId"
+                         SelectionConfirmed="SelectRelatedParty"
+                         OnClose="CloseRelatedPartyPicker"
+                         Eyebrow="Party relationship"
+                         Title="Choose a related party"
+                         Subtitle="Search the full directory by name, code, summary, tags, or party type."
+                         DataTestId="crmhr-relationship-picker" />
+
+@code {
+    private PartyRelationshipEditorModel? relationshipPickerTarget;
+    private bool isNewRelationshipPickerTarget;
+
+    [Parameter]
+    public Guid? CurrentPartyId { get; set; }
+
+    [Parameter, EditorRequired]
+    public IList<PartyRelationshipEditorModel> Relationships { get; set; } = default!;
+
+    private Guid? SelectedRelatedPartyId => relationshipPickerTarget?.RelatedPartyId == Guid.Empty
+        ? null
+        : relationshipPickerTarget?.RelatedPartyId;
+
+    private void AddRelationship()
+    {
+        var relationship = new PartyRelationshipEditorModel();
+        Relationships.Add(relationship);
+        relationshipPickerTarget = relationship;
+        isNewRelationshipPickerTarget = true;
+    }
+
+    private void RemoveRelationship(PartyRelationshipEditorModel relationship)
+    {
+        Relationships.Remove(relationship);
+        if (ReferenceEquals(relationshipPickerTarget, relationship))
+        {
+            relationshipPickerTarget = null;
+            isNewRelationshipPickerTarget = false;
+        }
+    }
+
+    private void OpenRelatedPartyPicker(PartyRelationshipEditorModel relationship)
+    {
+        relationshipPickerTarget = relationship;
+        isNewRelationshipPickerTarget = false;
+    }
+
+    private async Task SelectRelatedParty(Guid partyId)
+    {
+        if (relationshipPickerTarget is null)
+        {
+            return;
+        }
+
+        var selectedParty = await PartyRecordQueryService.GetAsync(
+            partyId,
+            includeArchived: true);
+        if (selectedParty is null)
+        {
+            throw new InvalidOperationException(
+                $"Selected related party '{partyId}' no longer exists.");
+        }
+
+        relationshipPickerTarget.RelatedPartyId = partyId;
+        relationshipPickerTarget.RelatedPartyDisplayName = selectedParty.DisplayName;
+        relationshipPickerTarget.RelatedPartyType = selectedParty.PartyType;
+        relationshipPickerTarget = null;
+        isNewRelationshipPickerTarget = false;
+    }
+
+    private void CloseRelatedPartyPicker()
+    {
+        if (isNewRelationshipPickerTarget &&
+            relationshipPickerTarget is { RelatedPartyId: var partyId } &&
+            partyId == Guid.Empty)
+        {
+            Relationships.Remove(relationshipPickerTarget);
+        }
+
+        relationshipPickerTarget = null;
+        isNewRelationshipPickerTarget = false;
+    }
+
+    private string ResolveRelatedPartyLabel(PartyRelationshipEditorModel relationship)
+    {
+        if (relationship.RelatedPartyId == Guid.Empty)
+        {
+            return "No party selected";
+        }
+
+        return string.IsNullOrWhiteSpace(relationship.RelatedPartyDisplayName)
+            ? relationship.RelatedPartyId.ToString("D")
+            : relationship.RelatedPartyType.HasValue
+                ? $"{relationship.RelatedPartyDisplayName} ({relationship.RelatedPartyType.Value})"
+                : relationship.RelatedPartyDisplayName;
+    }
+}

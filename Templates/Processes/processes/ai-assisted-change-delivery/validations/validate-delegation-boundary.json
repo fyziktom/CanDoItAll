@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validate-delegation-boundary",
+  "DisplayName": "Validate AI delegation boundary",
+  "Scope": "local",
+  "ProcessKey": "ai-assisted-change-delivery",
+  "Severity": "critical",
+  "OwnerRoleKey": "model-risk-approver",
+  "Gate": "ai-delegation",
+  "Summary": "Confirms the workflow does not delegate materially sensitive judgment beyond the approved boundary.",
+  "PassCriteria": "Delegated tasks match the approved use boundary and required human checkpoints are intact.",
+  "FailCriteria": "Workflow silently extends AI autonomy beyond the reviewed scope or removes required human oversight.",
+  "EscalationRule": "Escalate immediately and suspend AI-assisted execution for the affected step.",
+  "DocPath": "processes/ai-assisted-change-delivery/validations/validate-delegation-boundary.md"
+}

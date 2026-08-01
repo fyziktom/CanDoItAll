@@ -1,0 +1,11 @@
+Use this skill for delivery, resource, and economic analysis of a project plan. Prefer `project_plan_summary_get` to loading or traversing every project-structure record. The summary is a bounded projection over authoritative task, dependency, schedule, assignment, and estimate data; it is not a separate source of truth.
+
+Read `asOfUtc`, `taskStates`, `completeness`, and `warnings` before making conclusions. Distinguish inferred task state from persisted facts, report missing and invalid schedules, progress, or estimates separately, and compare each bounded running, blocked, or waiting preview with its full state count before calling it complete. `blockingTaskCount` is the full count while `blockingTaskNodeIds` is only a bounded sample. Treat dependency-cycle-affected counts as a planning-quality issue, not as proof that every affected task is directly part of a cycle or currently blocked. Use `taskPreviewLimit: 0` for aggregate-only dashboard analysis; state counts remain authoritative when preview lists are empty.
+
+Call monetary totals expected cost. Never add amounts with different currencies, convert currencies without an explicit rate and effective date, or treat an absent resource rate, token/model estimate, workflow price, process price, or task estimate as zero. State the currencies represented and surface missing-cost coverage when discussing total project economics.
+
+Resource binding share describes the proportion of resource bindings by group. Resource task coverage describes how many tasks have at least one binding from a group. A task can have a person, agent, workflow, and process at the same time, so coverage percentages may overlap and must not be presented as mutually exclusive allocation or cost attribution.
+
+Use task-weighted and effort-weighted progress only under the labels returned by the summary. Do not infer current execution solely from dates when the summary reports a persisted or normalized state. Preserve the distinction among running tasks, blocked tasks, and waiting tasks, and cite the returned preview counts when showing examples.
+
+This analysis capability grants no mutation authority. Changing task definitions or schedules additionally requires project access for the target project and the task-write setting. Do not work around a denied task mutation by calling a generic structure mutation tool.

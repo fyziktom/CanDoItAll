@@ -1,0 +1,30 @@
+@page "/projects/{ProjectId:guid}/processes"
+
+<PageTitle>Project Processes</PageTitle>
+
+<ProcessWorkspaceShell ProjectId="@ProjectId"
+                       ProcessIdQuery="@ProcessIdQuery"
+                       RunIdQuery="@RunIdQuery"
+                       LaunchPlanIdQuery="@LaunchPlanIdQuery"
+                       DefinitionSearchText="@DefinitionSearchText"
+                       SelectedDefinitionKey="@SelectedDefinitionKey" />
+
+@code {
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "processId")]
+    public Guid? ProcessIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "launchPlanId")]
+    public Guid? LaunchPlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? DefinitionSearchText { get; set; }
+
+    [SupplyParameterFromQuery(Name = "definitionKey")]
+    public string? SelectedDefinitionKey { get; set; }
+}

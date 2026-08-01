@@ -1,0 +1,28 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "strategy-brief",
+  "DisplayName": "Strategy brief",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "ArtifactKind": "Brief",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Planning brief with objective, source materials, facts, assumptions, unknowns, and artifact folder.",
+  "AllowedFutureUsageSummary": "Reusable by finance, marketing, and final review.",
+  "ValidationRequirementSummary": "Must separate facts from assumptions and identify open questions.",
+  "OwnerRoleKey": "business-strategist",
+  "DocPath": "processes/business-plan-development/artifacts/strategy-brief.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "strategy-brief",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must separate facts from assumptions and identify open questions."
+  }
+}
+

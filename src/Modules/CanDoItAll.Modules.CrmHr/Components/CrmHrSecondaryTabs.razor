@@ -1,0 +1,44 @@
+@inject NavigationManager Navigation
+
+<Cluster Gap="LayoutGap.XSmall" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+    <SecondaryTabs Items="Tabs"
+                   SelectedKey="@ActiveRoute.Key"
+                   SelectedKeyChanged="HandleSelectedKeyChanged"
+                   ShowActiveDescription="false" />
+    <TooltipTarget Text="@ActiveDescription"
+                   Position="TooltipPosition.Bottom"
+                   TestId="crmhr-navigation-tooltip">
+        <Button ButtonStyle="ButtonStyle.Light"
+                Variant="Variant.Text"
+                Size="ButtonSize.Small"
+                Class="cda-button--quick"
+                Icon="info"
+                aria-label="@($"{ActiveLabel} tab information")" />
+    </TooltipTarget>
+</Cluster>
+
+@code {
+    private static readonly IReadOnlyList<SecondaryTabItem> Tabs = CrmHrRouteCatalog.Items
+        .Select(item => new SecondaryTabItem(item.Key, item.TabLabel, Description: item.Description))
+        .ToArray();
+
+    [Parameter, EditorRequired]
+    public CrmHrWorkspaceArea SelectedArea { get; set; }
+
+    private CrmHrRouteDefinition ActiveRoute => CrmHrRouteCatalog.Get(SelectedArea);
+
+    private string ActiveDescription => ActiveRoute.Description;
+
+    private string ActiveLabel => ActiveRoute.TabLabel;
+
+    private Task HandleSelectedKeyChanged(string key)
+    {
+        if (!CrmHrRouteCatalog.TryGetByKey(key, out var definition))
+        {
+            throw new InvalidOperationException($"Unknown CRM / HR secondary tab key '{key}'.");
+        }
+
+        Navigation.NavigateTo(definition.Route);
+        return Task.CompletedTask;
+    }
+}

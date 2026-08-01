@@ -1,0 +1,261 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+@inject IPartyRecordQueryService PartyRecordQueryService
+
+<Stack GapScale="LayoutGap.Medium">
+    <FormField Text="@Label">
+        <SurfaceCard Soft="true">
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <div class="min-w-0">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="@SelectedPartyLabel" />
+                    <TextBlock TextStyle="TextStyle.Note"
+                               Value="@SelectedPartyDescription" />
+                </div>
+                <Cluster Gap="LayoutGap.Small">
+                    @if (EffectiveSelectedPartyId.HasValue)
+                    {
+                        <Button Text="Clear"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ClearSelectionAsync"
+                                data-testid="@($"{TestIdPrefix}-clear")" />
+                    }
+                    <Button Text="Choose party"
+                            Icon="search"
+                            Size="ButtonSize.Small"
+                            Click="OpenPicker"
+                            data-testid="@($"{TestIdPrefix}-select")" />
+                </Cluster>
+            </Split>
+        </SurfaceCard>
+    </FormField>
+
+    @if (ResolvedSelectedParty is not null)
+    {
+        <PanelCard data-testid="@($"{TestIdPrefix}-summary")">
+            <div class="space-y-1 text-sm text-slate-600">
+                <p class="font-semibold text-slate-900">@ResolvedSelectedParty.DisplayName</p>
+                @if (!string.IsNullOrWhiteSpace(ResolvedSelectedParty.PrimaryEmail))
+                {
+                    <p>Email: @ResolvedSelectedParty.PrimaryEmail</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ResolvedSelectedParty.PrimaryPhone))
+                {
+                    <p>Phone: @ResolvedSelectedParty.PrimaryPhone</p>
+                }
+                @if (ResolvedSelectedParty.IsSensitive)
+                {
+                    <p class="text-amber-700">Sensitive handling enabled for this party.</p>
+                }
+            </div>
+        </PanelCard>
+    }
+
+    @if (AllowQuickCreate)
+    {
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Medium">
+                <div>
+                    <p class="cda-eyebrow">Quick create</p>
+                    <p class="mt-1 text-sm text-slate-600">Create a directory record without leaving the current flow.</p>
+                </div>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="2">
+                    <FormField Text="Kind">
+                        <InputSelect @bind-Value="QuickCreate.PartyKind"
+                                     class="cda-input"
+                                     data-testid="@($"{TestIdPrefix}-quick-kind")">
+                            @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
+                            {
+                                <option value="@kind">@ResolveQuickCreateLabel(kind)</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+                    <FormField Text="Name">
+                        <InputText @bind-Value="QuickCreate.DisplayName"
+                                   class="cda-input"
+                                   data-testid="@($"{TestIdPrefix}-quick-name")" />
+                    </FormField>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnsLg="2">
+                    <FormField Text="Email">
+                        <InputText @bind-Value="QuickCreate.Email"
+                                   class="cda-input"
+                                   data-testid="@($"{TestIdPrefix}-quick-email")" />
+                    </FormField>
+                    <FormField Text="Phone">
+                        <InputText @bind-Value="QuickCreate.Phone"
+                                   class="cda-input"
+                                   data-testid="@($"{TestIdPrefix}-quick-phone")" />
+                    </FormField>
+                </Grid>
+
+                <FormField Text="Summary">
+                    <InputTextArea @bind-Value="QuickCreate.Summary"
+                                   class="cda-input cda-input--textarea min-h-24"
+                                   data-testid="@($"{TestIdPrefix}-quick-summary")" />
+                </FormField>
+
+                <Cluster>
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Text="Create party"
+                            data-testid="@($"{TestIdPrefix}-quick-create-button")"
+                            Click="CreateParty" />
+                </Cluster>
+            </Stack>
+        </SurfaceCard>
+    }
+</Stack>
+
+<PartyRecordPickerDialog IsOpen="@isPickerOpen"
+                         SelectedPartyId="@EffectiveSelectedPartyId"
+                         AllowedScope="@AllowedScope"
+                         InitialScope="@InitialScope"
+                         ExcludedPartyId="@EffectiveExcludedPartyId"
+                         SelectionConfirmed="ConfirmSelectionAsync"
+                         OnClose="ClosePickerAsync"
+                         Title="@($"Choose {Label.ToLowerInvariant()}")"
+                         Subtitle="Search and page through the shared party directory."
+                         DataTestId="@($"{TestIdPrefix}-dialog")" />
+
+@code {
+    private bool isPickerOpen;
+    private ProjectPartyOption? resolvedSelectedParty;
+    private Guid? resolvedPartyId;
+    private long resolveGeneration;
+
+    [Parameter]
+    public string Label { get; set; } = "Party";
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "project-party-picker";
+
+    [Parameter]
+    public PartyRecordScope AllowedScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public PartyRecordScope InitialScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public Guid? ExcludedPartyId { get; set; }
+
+    [Parameter]
+    public Guid? SelectedPartyId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedPartyIdChanged { get; set; }
+
+    [Parameter]
+    public bool AllowQuickCreate { get; set; }
+
+    [Parameter]
+    public ProjectPartyQuickCreateRequest QuickCreate { get; set; } = new();
+
+    [Parameter]
+    public EventCallback CreateParty { get; set; }
+
+    private ProjectPartyOption? ResolvedSelectedParty => resolvedSelectedParty;
+
+    private Guid? EffectiveSelectedPartyId => SelectedPartyId is { } partyId && partyId != Guid.Empty
+        ? partyId
+        : null;
+
+    private Guid? EffectiveExcludedPartyId => ExcludedPartyId is { } partyId && partyId != Guid.Empty
+        ? partyId
+        : null;
+
+    private string SelectedPartyLabel => ResolvedSelectedParty?.DisplayName
+        ?? (EffectiveSelectedPartyId.HasValue ? "Selected directory party" : "No party selected");
+
+    private string SelectedPartyDescription => ResolvedSelectedParty is null
+        ? EffectiveSelectedPartyId.HasValue
+            ? "The selected party remains linked even when it is outside the current project option set."
+            : "Choose from the server-paged shared directory."
+        : ResolvedSelectedParty.PartyTypeLabel;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var selectedPartyId = EffectiveSelectedPartyId;
+        if (resolvedPartyId == selectedPartyId)
+        {
+            return;
+        }
+
+        resolvedPartyId = selectedPartyId;
+        var generation = ++resolveGeneration;
+        if (!selectedPartyId.HasValue)
+        {
+            resolvedSelectedParty = null;
+            return;
+        }
+
+        var party = await PartyRecordQueryService.GetAsync(selectedPartyId.Value);
+        if (generation != resolveGeneration ||
+            resolvedPartyId != EffectiveSelectedPartyId)
+        {
+            return;
+        }
+
+        resolvedSelectedParty = party is null
+            ? null
+            : new ProjectPartyOption(
+                party.Id,
+                party.DisplayName,
+                party.PartyType.ToString(),
+                MapPartyType(party.PartyType),
+                string.Empty,
+                string.Empty,
+                party.IsSensitive);
+    }
+
+    private void OpenPicker()
+    {
+        isPickerOpen = true;
+    }
+
+    private Task ClosePickerAsync()
+    {
+        isPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmSelectionAsync(Guid partyId)
+    {
+        isPickerOpen = false;
+        await SelectedPartyIdChanged.InvokeAsync(partyId);
+    }
+
+    private Task ClearSelectionAsync()
+    {
+        return SelectedPartyIdChanged.InvokeAsync(null);
+    }
+
+    private static string ResolveQuickCreateLabel(ProjectPartyQuickCreateKind kind)
+    {
+        return kind switch
+        {
+            ProjectPartyQuickCreateKind.OrganizationUnit => "Organization unit",
+            ProjectPartyQuickCreateKind.AiAgent => "AI agent",
+            _ => kind.ToString()
+        };
+    }
+
+    private static ProjectPartyType MapPartyType(PartyType partyType)
+    {
+        return partyType switch
+        {
+            PartyType.Organization => ProjectPartyType.Organization,
+            PartyType.OrganizationUnit => ProjectPartyType.OrganizationUnit,
+            PartyType.AiAgent => ProjectPartyType.AiAgent,
+            _ => ProjectPartyType.Person
+        };
+    }
+}

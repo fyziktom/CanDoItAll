@@ -1,0 +1,1002 @@
+@if (isLoading)
+{
+    <SurfaceCard Soft="true" data-testid="agents-details-loading">
+        <p class="cda-eyebrow">Loading agent</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-950">Preparing technical editor</h3>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+            AgentFramework is loading the selected technical record and runtime catalogs.
+        </p>
+    </SurfaceCard>
+}
+else
+{
+    <EditForm Model="editorModel" OnValidSubmit="SaveAgentAsync">
+        <Stack Class="agent-details-dialog min-h-0" GapScale="LayoutGap.Large">
+            @if (linkedPartyId.HasValue)
+            {
+                <Alert AlertStyle="AlertStyle.Info">
+                    <p class="font-semibold">Bound CRM-HR resource</p>
+                    <p class="mt-1">This technical agent is linked to business resource <a class="text-slate-900 underline" href="@($"/crm-hr/agents?partyId={linkedPartyId.Value:D}")">/crm-hr/agents</a>.</p>
+                </Alert>
+            }
+
+            <Tabs data-testid="agents-details-tabs"
+                  SelectedIndex="@selectedTabIndex"
+                  SelectedIndexChanged="HandleSelectedTabIndexChanged"
+                  Variant="@(TabsVariant.ModalCompact)"
+                  BorderMode="@(TabsBorderMode.Soft)"
+                  Tone="@(TabsTone.Info)"
+                  OverflowMode="@(TabsOverflowMode.Scroll)"
+                  PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
+                  FillHeight="true"
+                  Class="agent-details-dialog__tabs w-full min-w-0 flex-1 min-h-0"
+                  AriaLabel="Agent details sections">
+                <TabItems>
+                    <TabsItem Text="Identity">
+                        <FormSection Title="Identity" Description="Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Name</label>
+                                    <InputText @bind-Value="editorModel.Name" class="cda-input" data-testid="agents-catalog-name" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Role title</label>
+                                    <InputText @bind-Value="editorModel.RoleTitle" class="cda-input" data-testid="agents-catalog-role" />
+                                </div>
+                            </Grid>
+
+                            <SurfaceCard Soft="true" Class="agent-details-dialog__avatar-summary" data-testid="agents-catalog-avatar-summary">
+                                <Stack Orientation="Orientation.Horizontal"
+                                       AlignItems="AlignItems.Center"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       GapScale="LayoutGap.Medium">
+                                    <Stack Orientation="Orientation.Horizontal"
+                                           AlignItems="AlignItems.Center"
+                                           GapScale="LayoutGap.Medium">
+                                        <Avatar Alt="@ResolveAvatarAltText()"
+                                                ImageUrl="@editorModel.AvatarImageUrl"
+                                                FallbackText="@ResolveAvatarFallbackText()"
+                                                DefaultImageSeed="@ResolveAvatarSeed()"
+                                                Size="AvatarSize.Large"
+                                                Shape="AvatarShape.Rounded" />
+                                        <Stack GapScale="LayoutGap.XSmall">
+                                            <span class="cda-field-label">Avatar</span>
+                                            <strong>@ResolveAvatarSelectionText()</strong>
+                                            <small class="text-sm text-slate-600">Stored with the technical agent identity and reused by runtime surfaces.</small>
+                                        </Stack>
+                                    </Stack>
+                                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                                        <Button Text="Choose avatar"
+                                                Icon="face"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="OpenAvatarSelectorAsync"
+                                                data-testid="agents-catalog-avatar-open" />
+                                        <Button Text="Use default"
+                                                Icon="restart_alt"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)"
+                                                Click="ClearAvatarAsync"
+                                                data-testid="agents-catalog-avatar-clear" />
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+
+                            <FormField Text="Tags"
+                                       Class="agent-details-dialog__full-field"
+                                       data-testid="agents-catalog-tags-section">
+                                <TagEditor Value="@tagValues"
+                                           ValueChanged="HandleTagsChangedAsync"
+                                           Suggestions="@VisibleTagSuggestions"
+                                           Placeholder="Add agent tag"
+                                           Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
+                                           MaxTags="12"
+                                           TestId="agents-catalog-tags"
+                                           InputTestId="agents-catalog-tags-input" />
+                            </FormField>
+
+                            <div class="agent-details-dialog__full-field">
+                                <label class="cda-field-label">Summary</label>
+                                <InputTextArea @bind-Value="editorModel.Summary"
+                                               class="cda-input cda-input--textarea agent-details-dialog__summary-textarea"
+                                               data-testid="agents-catalog-summary" />
+                            </div>
+
+                            <div class="agent-details-dialog__full-field">
+                                <label class="cda-field-label">Instructions</label>
+                                <InputTextArea @bind-Value="editorModel.Instructions"
+                                               class="cda-input cda-input--textarea agent-details-dialog__instructions-textarea"
+                                               data-testid="agents-catalog-instructions" />
+                            </div>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Runtime">
+                        <FormSection Title="Runtime" Description="Pick the provider and model that the imported AgentFramework runtime will actually execute.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                <div>
+                                    <label class="cda-field-label">Provider</label>
+                                    <InputSelect TValue="Guid?"
+                                                 Value="@editorModel.ProviderProfileId"
+                                                 ValueChanged="HandleRuntimeProviderChangedAsync"
+                                                 ValueExpression="@(() => editorModel.ProviderProfileId)"
+                                                 class="cda-input"
+                                                 disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                 data-testid="agents-catalog-provider">
+                                        <option value="">None</option>
+                                        @foreach (var provider in providers)
+                                        {
+                                            <option value="@provider.Id">@provider.Name</option>
+                                        }
+                                    </InputSelect>
+                                    @if (!areProvidersLoaded &&
+                                         string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                                    {
+                                        <p class="mt-2 text-sm leading-6 text-slate-500">Loading providers for runtime binding...</p>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                                    {
+                                        <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
+                                    }
+                                </div>
+                                <ProviderModelSelector Provider="@SelectedRuntimeProvider"
+                                                       Value="@editorModel.Model"
+                                                       ValueChanged="HandleRuntimeModelChangedAsync"
+                                                       Disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                       TestId="agents-catalog-model-selector"
+                                                       ChoiceTestId="agents-catalog-model-choice"
+                                                       OverrideTestId="agents-catalog-model-override"
+                                                       CustomModelTestId="agents-catalog-model" />
+                            </Grid>
+
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                                <div>
+                                    <label class="cda-field-label">Status</label>
+                                    <InputSelect @bind-Value="editorModel.Status" class="cda-input">
+                                        @foreach (var status in Enum.GetValues<AgentLifecycleStatus>())
+                                        {
+                                            <option value="@status">@status</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Workload</label>
+                                    <InputSelect @bind-Value="editorModel.Workload" class="cda-input">
+                                        @foreach (var workload in Enum.GetValues<AgentWorkloadKind>())
+                                        {
+                                            <option value="@workload">@workload</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Chat history</label>
+                                    <InputSelect @bind-Value="editorModel.ChatHistoryMode" class="cda-input">
+                                        @foreach (var mode in Enum.GetValues<AgentChatHistoryMode>())
+                                        {
+                                            <option value="@mode">@mode</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                            </Grid>
+
+                            @if (SelectedRuntimeProvider is { } runtimeProvider)
+                            {
+                                <Alert AlertStyle="AlertStyle.Info">
+                                    <p class="font-semibold">Runtime parameter policy</p>
+                                    <p class="mt-1">@DescribeRuntimeParameterPolicy(runtimeProvider)</p>
+                                </Alert>
+                            }
+
+                            <SurfaceCard Soft="true" data-testid="agents-catalog-approval-policy">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approval policy" />
+                                    <label class="cda-inline-option">
+                                        <input type="checkbox"
+                                               checked="@editorModel.Permissions.RequiresApprovalForExternalCalls"
+                                               @onchange="args => ToggleExternalCallApprovalRequirement(args.Value)"
+                                               data-testid="agents-catalog-require-external-approval" />
+                                        Require approval for external calls
+                                    </label>
+                                    <label class="cda-inline-option">
+                                        <input @key="autoApprovalInputVersion"
+                                               type="checkbox"
+                                               checked="@editorModel.Permissions.AutoApproveExternalCallsByDefault"
+                                               disabled="@isConfirmingAutoApproval"
+                                               @onchange="args => HandleAutoApprovalChangedAsync(args.Value)"
+                                               data-testid="agents-catalog-auto-approval" />
+                                        Auto-approve approval-required tool calls by default
+                                    </label>
+                                    <TextBlock TextStyle="TextStyle.Body2"
+                                               Value="Per-run approval choices remain available in chat. This setting changes the default for every new run of this agent." />
+
+                                    @if (editorModel.Permissions.AutoApproveExternalCallsByDefault)
+                                    {
+                                        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-auto-approval-warning">
+                                            <p class="font-semibold">Automatic approval is enabled</p>
+                                            <p class="mt-1">This agent can continue approval-required tool calls without asking for each call. Scope and runtime policy checks still apply.</p>
+                                        </Alert>
+                                    }
+                                </Stack>
+                            </SurfaceCard>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Memory">
+                        <AgentMemorySettingsPanel Value="@editorModel.MemoryAccess" />
+                    </TabsItem>
+
+                    <TabsItem Text="Images">
+                        <FormSection Title="Image Generation" Description="Control whether this agent may generate image deliverables and which image provider it should use.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-image-generation-access">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Access</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ImageGenerationAccess.CanGenerateImages"
+                                                   @onchange="args => ToggleImageGenerationAccess(args.Value)"
+                                                   data-testid="agents-catalog-image-generation-enabled" />
+                                            Can generate images
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets"
+                                                   @onchange="args => ToggleImageProjectAssetStorage(args.Value)"
+                                                   data-testid="agents-catalog-image-generation-project-assets" />
+                                            Can store generated images as project assets
+                                        </label>
+                                    </Stack>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                        <div>
+                                            <label class="cda-field-label">Image provider</label>
+                                            <InputSelect TValue="Guid?"
+                                                         Value="@editorModel.ImageGenerationAccess.PreferredProviderProfileId"
+                                                         ValueChanged="HandleImageGenerationProviderChangedAsync"
+                                                         ValueExpression="@(() => editorModel.ImageGenerationAccess.PreferredProviderProfileId)"
+                                                         class="cda-input"
+                                                         disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || !areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                         data-testid="agents-catalog-image-generation-provider">
+                                                <option value="">Choose recommended image provider on save</option>
+                                                @foreach (var provider in ImageGenerationProviderOptions)
+                                                {
+                                                    <option value="@provider.Id">@($"{provider.Name}{(provider.IsEnabled ? string.Empty : " (disabled)")}")</option>
+                                                }
+                                            </InputSelect>
+                                            @if (!areProvidersLoaded &&
+                                                 string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                                            {
+                                                <p class="mt-2 text-sm leading-6 text-slate-500">Loading image-generation providers...</p>
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(providerLoadErrorMessage))
+                                            {
+                                                <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
+                                            }
+                                            else if (ImageGenerationProviderOptions.Count == 0)
+                                            {
+                                                <p class="mt-2 text-sm leading-6 text-slate-600">No image-generation provider profiles are configured.</p>
+                                            }
+                                        </div>
+                                        <ProviderModelSelector Provider="@SelectedImageGenerationProvider"
+                                                               Value="@editorModel.ImageGenerationAccess.DefaultModel"
+                                                               ValueChanged="HandleImageGenerationModelChangedAsync"
+                                                               Disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || SelectedImageGenerationProvider is null)"
+                                                               Label="Image model"
+                                                               TestId="agents-catalog-image-model-selector"
+                                                               ChoiceTestId="agents-catalog-image-model-choice"
+                                                               OverrideTestId="agents-catalog-image-model-override"
+                                                               CustomModelTestId="agents-catalog-image-model" />
+                                    </Grid>
+
+                                    <Alert AlertStyle="AlertStyle.Info" Class="mt-4">
+                                        <p class="font-semibold">Image provider policy</p>
+                                        <p class="mt-1">@DescribeImageGenerationProviderChoice()</p>
+                                    </Alert>
+
+                                    @{
+                                        var imageGenerationWarning = ResolveImageGenerationWarning();
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(imageGenerationWarning))
+                                    {
+                                        <Alert AlertStyle="AlertStyle.Warning" Class="mt-3">
+                                            <p class="font-semibold">Image generation configuration needs attention</p>
+                                            <p class="mt-1">@imageGenerationWarning</p>
+                                        </Alert>
+                                    }
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Project Structure Access">
+                        <FormSection Title="Project Structure Access" Description="Project reads, project creation, subproject creation, non-task structure changes, task-only changes, and unrestricted changes are separate permissions. Advanced plan and cost analysis additionally requires its assigned planning skill and tool capability.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Access mode</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProjectStructureAccess.CanRead"
+                                                   @onchange="args => ToggleProjectStructureRead(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-read" />
+                                            Can read project structure
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProjectStructureAccess.CanCreateProjects"
+                                                   @onchange="args => ToggleProjectCreation(args.Value)"
+                                                   data-testid="agents-catalog-project-create" />
+                                            Can create standalone projects
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProjectStructureAccess.CanCreateSubprojects"
+                                                   @onchange="args => ToggleSubprojectCreation(args.Value)"
+                                                   data-testid="agents-catalog-subproject-create" />
+                                            Can create subprojects under allowed projects
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteNonTaskStructure)"
+                                                   disabled="@editorModel.ProjectStructureAccess.CanWrite"
+                                                   @onchange="args => ToggleProjectStructureNonTaskWrite(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-non-task-write" />
+                                            Can write project structure except tasks
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteTasks)"
+                                                   disabled="@editorModel.ProjectStructureAccess.CanWrite"
+                                                   @onchange="args => ToggleProjectStructureTaskWrite(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-task-write" />
+                                            Can write project tasks
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProjectStructureAccess.CanWrite"
+                                                   @onchange="args => ToggleProjectStructureWrite(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-write" />
+                                            Can write entire project structure (includes tasks)
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProjectStructureAccess.AllowAllProjects"
+                                                   @onchange="args => ToggleProjectStructureAllowAll(args.Value)"
+                                                   data-testid="agents-catalog-project-structure-all" />
+                                            Allow all current and future projects
+                                        </label>
+                                    </Stack>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <Split Breakpoint="LayoutBreakpoint.Md"
+                                           Gap="LayoutGap.Medium"
+                                           AlignItems="AlignItems.Center"
+                                           JustifyContent="JustifyContent.SpaceBetween"
+                                           Wrap="FlexWrap.Wrap">
+                                        <div>
+                                            <p class="cda-field-label mb-1">Allowed projects</p>
+                                            <p class="text-sm leading-6 text-slate-600">
+                                                @DescribeProjectStructureScope(editorModel)
+                                            </p>
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                            <Button Text="Select all"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="SelectAllProjectStructureProjects"
+                                                    Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
+                                            <Button Text="Clear"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="ClearProjectStructureProjects"
+                                                    Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
+                                        </Cluster>
+                                    </Split>
+
+                                    @if (editorModel.ProjectStructureAccess.AllowAllProjects)
+                                    {
+                                        <div class="mt-3 cda-admin-empty">
+                                            This agent can access all current and future projects. Turn off the all-projects option to manage a specific allowlist.
+                                        </div>
+                                    }
+                                    else if (!projectStructureProjectsRequested)
+                                    {
+                                        <div class="mt-3 cda-admin-empty">
+                                            Load the project list only when you need to inspect or change the access scope.
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Small"
+                                                 Wrap="FlexWrap.Wrap"
+                                                 Class="mt-3">
+                                            <Button Text="Load project list"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="RequestProjectStructureProjectsAsync"
+                                                    Disabled="@isLoadingProjectStructureProjects"
+                                                    IsBusy="@isLoadingProjectStructureProjects"
+                                                    data-testid="agents-catalog-project-structure-load" />
+                                        </Cluster>
+                                    }
+                                    else if (!areProjectStructureProjectsLoaded &&
+                                             string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))
+                                    {
+                                        <div class="mt-3 cda-admin-empty">
+                                            Loading projects that can be granted to this agent...
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage))
+                                    {
+                                        <div class="mt-3 cda-admin-empty text-rose-700">
+                                            @projectStructureProjectsErrorMessage
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Small"
+                                                 Wrap="FlexWrap.Wrap"
+                                                 Class="mt-3">
+                                            <Button Text="Retry project list"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Click="RequestProjectStructureProjectsAsync"
+                                                    Disabled="@isLoadingProjectStructureProjects"
+                                                    IsBusy="@isLoadingProjectStructureProjects" />
+                                        </Cluster>
+                                    }
+                                    else if (projectStructureProjects.Count == 0)
+                                    {
+                                        <div class="mt-3 cda-admin-empty">
+                                            No projects exist yet. Create a project before granting project-structure access.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mt-3 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"
+                                             data-testid="agents-catalog-project-structure-projects">
+                                            <Stack GapScale="LayoutGap.Small">
+                                                @foreach (var project in projectStructureProjects)
+                                                {
+                                                    <label class="cda-inline-option cda-inline-option--muted">
+                                                        <input type="checkbox"
+                                                               checked="@HasProjectStructureProjectAccess(project.Id)"
+                                                               @onchange="args => ToggleProjectStructureProject(project.Id, args.Value)" />
+                                                        @project.Name
+                                                    </label>
+                                                }
+                                            </Stack>
+                                        </div>
+                                    }
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Workspace Tools">
+                        <FormSection Title="Workspace Tools" Description="These settings decide whether the current agent receives native workspace file tools, external workspace roots, and storage-driver tools.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-workspace-tools">
+                                <div class="cda-admin-subpanel">
+                                    <label class="cda-field-label" for="agents-catalog-workspace-profile">Access profile</label>
+                                    <select id="agents-catalog-workspace-profile"
+                                            class="cda-input mt-2"
+                                            value="@editorModel.WorkspaceToolAccess.Profile"
+                                            @onchange="args => ChangeWorkspaceToolProfile(args.Value)"
+                                            data-testid="agents-catalog-workspace-profile">
+                                        @foreach (var profile in WorkspaceToolProfileOptions)
+                                        {
+                                            <option value="@profile">@FormatWorkspaceToolProfile(profile)</option>
+                                        }
+                                    </select>
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        @DescribeWorkspaceExecutionScope(editorModel)
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <p class="cda-field-label mb-2">Execution tools</p>
+                                    <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanRunValidationCommands"
+                                                   @onchange="args => ToggleWorkspaceValidationCommands(args.Value)"
+                                                   data-testid="agents-catalog-workspace-validation" />
+                                            Can run build, test, and app commands
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanRunLocalScripts"
+                                                   @onchange="args => ToggleWorkspaceLocalScripts(args.Value)"
+                                                   data-testid="agents-catalog-workspace-scripts" />
+                                            Can run local scripts
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanScaffoldProjects"
+                                                   @onchange="args => ToggleWorkspaceScaffoldProjects(args.Value)"
+                                                   data-testid="agents-catalog-workspace-scaffold" />
+                                            Can scaffold projects
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanManageWorkspacePaths"
+                                                   @onchange="args => ToggleWorkspaceManagePaths(args.Value)"
+                                                   data-testid="agents-catalog-workspace-manage-paths" />
+                                            Can move, copy, and delete paths
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanTransformArtifacts"
+                                                   @onchange="args => ToggleWorkspaceTransformArtifacts(args.Value)"
+                                                   data-testid="agents-catalog-workspace-transform" />
+                                            Can transform artifacts
+                                        </label>
+                                    </Grid>
+                                </div>
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">File access</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanReadFiles"
+                                                   @onchange="args => ToggleWorkspaceFileRead(args.Value)"
+                                                   data-testid="agents-catalog-workspace-read" />
+                                            Can browse and read files
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanWriteFiles"
+                                                   @onchange="args => ToggleWorkspaceFileWrite(args.Value)"
+                                                   data-testid="agents-catalog-workspace-write" />
+                                            Can write files
+                                        </label>
+                                    </Stack>
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        @DescribeWorkspaceFileScope(editorModel)
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <label class="cda-field-label">External workspace roots</label>
+                                    <InputTextArea @bind-Value="externalWorkspaceRootsText"
+                                                   class="cda-input cda-input--textarea mt-2 min-h-28"
+                                                   placeholder="C:\repositories\OtherRepo&#10;external-target/D/work/repos/demo"
+                                                   data-testid="agents-catalog-workspace-external-roots" />
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                                        Add persistent roots here when needed. Absolute folders mentioned in a prompt are also grounded for that run when file tools are enabled.
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Storage access</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanReadStorage"
+                                                   @onchange="args => ToggleStorageRead(args.Value)"
+                                                   data-testid="agents-catalog-storage-read" />
+                                            Can read storage driver catalogs
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.CanWriteStorage"
+                                                   @onchange="args => ToggleStorageWrite(args.Value)"
+                                                   data-testid="agents-catalog-storage-write" />
+                                            Can write storage driver objects
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                                                   @onchange="args => ToggleStorageAllowAll(args.Value)"
+                                                   data-testid="agents-catalog-storage-all" />
+                                            Allow all storage catalogs
+                                        </label>
+                                    </Stack>
+                                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        @DescribeStorageScope(editorModel)
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <label class="cda-field-label">Allowed storage catalog IDs</label>
+                                    <InputTextArea @bind-Value="allowedStorageCatalogIdsText"
+                                                   class="cda-input cda-input--textarea mt-2 min-h-28"
+                                                   disabled="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                                                   placeholder="00000000-0000-0000-0000-000000000000"
+                                                   data-testid="agents-catalog-storage-ids" />
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                                        Use one catalog ID per line when the all-storage option is off. Write permission is still blocked for read-only catalogs.
+                                    </p>
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Secrets">
+                        <FormSection Title="Secrets" Description="Grant only the stored secrets this agent may request during explicit runtime actions. Values are not stored in the agent definition.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-secrets">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Allowed secrets</p>
+                                    <p class="text-sm leading-6 text-slate-600">
+                                        @DescribeSecretScope(editorModel)
+                                    </p>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    @if (isLoadingSecrets && !areSecretsLoaded)
+                                    {
+                                        <div class="cda-admin-empty">
+                                            Loading stored secrets...
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(secretsErrorMessage))
+                                    {
+                                        <div class="cda-admin-empty text-rose-700">
+                                            @secretsErrorMessage
+                                        </div>
+                                    }
+                                    else if (secrets.Count == 0)
+                                    {
+                                        <div class="cda-admin-empty">
+                                            No stored secrets exist yet.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"
+                                             data-testid="agents-catalog-secret-list">
+                                            <Stack GapScale="LayoutGap.Small">
+                                                @foreach (var secret in secrets)
+                                                {
+                                                    <label class="cda-inline-option cda-inline-option--muted">
+                                                        <input type="checkbox"
+                                                               checked="@HasAllowedSecret(secret.Id)"
+                                                               @onchange="args => ToggleAllowedSecret(secret, args.Value)" />
+                                                        @secret.Name
+                                                        <span class="text-slate-500">(@secret.Kind)</span>
+                                                    </label>
+                                                }
+                                            </Stack>
+                                        </div>
+                                    }
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Process Access">
+                        <FormSection Title="Process Access" Description="Internal agents always carry the process-module tool family. These settings decide whether the current agent can read or mutate process data and which process definitions it may touch.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-process-access">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Access mode</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProcessAccess.CanRead"
+                                                   @onchange="args => ToggleProcessRead(args.Value)"
+                                                   data-testid="agents-catalog-process-read" />
+                                            Can read processes
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProcessAccess.CanWrite"
+                                                   @onchange="args => ToggleProcessWrite(args.Value)"
+                                                   data-testid="agents-catalog-process-write" />
+                                            Can write processes
+                                        </label>
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.ProcessAccess.AllowAllDefinitions"
+                                                   @onchange="args => ToggleProcessAllowAll(args.Value)"
+                                                   data-testid="agents-catalog-process-all" />
+                                            Allow all current and future processes
+                                        </label>
+                                    </Stack>
+                                </div>
+                                <div class="cda-admin-subpanel md:col-span-2">
+                                    <p class="cda-field-label mb-1">Allowed processes</p>
+                                    <p class="text-sm leading-6 text-slate-600">
+                                        @DescribeProcessScope(editorModel)
+                                    </p>
+                                    <div class="mt-3 cda-admin-empty">
+                                        Process definition selection is unavailable while the Process module is rebuilt. Existing stored access metadata is preserved.
+                                    </div>
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Capabilities">
+                        <FormSection Title="Capabilities" Description="Attach cataloged tools, skills, and MCP servers to this agent, or open the guided setup flow to create and assign one.">
+                            <div data-testid="agents-details-capability-summary">
+                                <CompactStatStrip>
+                                    <CompactStat Label="attached"
+                                                 Value="@editorModel.SelectedCapabilityIds.Count.ToString()"
+                                                 TooltipText="Capabilities currently assigned to this agent."
+                                                 Tone="info" />
+                                    <CompactStat Label="skills"
+                                                 Value="@capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
+                                                 TooltipText="Prompt and workflow skills in the catalog."
+                                                 Tone="success" />
+                                    <CompactStat Label="tools"
+                                                 Value="@capabilities.Count(item => item.Kind == CapabilityKind.Tool).ToString()"
+                                                 TooltipText="Runtime tools in the catalog."
+                                                 Tone="accent" />
+                                    <CompactStat Label="MCP servers"
+                                                 Value="@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
+                                                 TooltipText="MCP tool surfaces in the catalog."
+                                                 Tone="warning" />
+                                    <CompactStat Label="verified"
+                                                 Value="@capabilities.Count(item => item.ProofStatus == CapabilityProofStatus.Verified).ToString()"
+                                                 TooltipText="Capabilities with successful proof status."
+                                                 Tone="success" />
+                                </CompactStatStrip>
+                            </div>
+
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.Wrap"
+                                     Class="agent-details-dialog__capability-actions"
+                                 data-testid="agents-details-new-capability">
+                                <Button Text="New tool"
+                                        Icon="build"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
+                                        data-testid="agents-details-new-tool" />
+                                <Button Text="New MCP"
+                                        Icon="hub"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
+                                        data-testid="agents-details-new-mcp" />
+                                <Button Text="New skill"
+                                        Icon="psychology"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
+                                        data-testid="agents-details-new-skill" />
+                            </Cluster>
+
+                            @if (AssignableCapabilities.Count > 0)
+                            {
+                                <FilterBar ResultText="@($"{FilteredAssignableCapabilities.Count} matching capability(s)")">
+                                    <div class="agent-details-dialog__capability-filters">
+                                        <input @bind="capabilitySearch"
+                                               @bind:event="oninput"
+                                               class="cda-input agent-details-dialog__capability-filter-input"
+                                               placeholder="Search capabilities"
+                                               data-testid="agents-details-capability-search" />
+                                        <InputSelect @bind-Value="capabilityAssignmentFilter"
+                                                     class="cda-input agent-details-dialog__capability-filter-select"
+                                                     data-testid="agents-details-capability-assignment-filter">
+                                            <option value="@CapabilityDialogAssignmentFilter.All">All assignments</option>
+                                            <option value="@CapabilityDialogAssignmentFilter.Attached">Attached</option>
+                                            <option value="@CapabilityDialogAssignmentFilter.Available">Available</option>
+                                        </InputSelect>
+                                        <InputSelect @bind-Value="capabilityKindFilter"
+                                                     class="cda-input agent-details-dialog__capability-filter-select"
+                                                     data-testid="agents-details-capability-kind-filter">
+                                            <option value="@CapabilityDialogKindFilter.All">All kinds</option>
+                                            <option value="@CapabilityDialogKindFilter.Tool">Tool</option>
+                                            <option value="@CapabilityDialogKindFilter.Skill">Skill</option>
+                                            <option value="@CapabilityDialogKindFilter.Mcp">MCP server</option>
+                                        </InputSelect>
+                                        <Button Text="Reset"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="ResetCapabilityFilters"
+                                                data-testid="agents-details-capability-filter-reset" />
+                                    </div>
+                                </FilterBar>
+                            }
+
+                            @if (AssignableCapabilities.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No capabilities"
+                                            Title="No tools, skills, or MCP servers are cataloged yet"
+                                            Description="Use the guided setup actions above to create the first capability for this agent." />
+                            }
+                            else if (FilteredAssignableCapabilities.Count == 0)
+                            {
+                                <EmptyState Eyebrow="No matches"
+                                            Title="No capabilities match the current filters"
+                                            Description="Clear search, assignment, or kind filters to broaden the catalog." />
+                            }
+                            else
+                            {
+                                <AgentCapabilityList Items="@FilteredAssignableCapabilities"
+                                                     AttachedCapabilityIds="@editorModel.SelectedCapabilityIds"
+                                                     IsBusy="@isBusy"
+                                                     CanVerify="@editorModel.Id.HasValue"
+                                                     AssignmentRequested="ToggleCapabilityAsync"
+                                                     VerificationRequested="VerifyCapabilityAsync"
+                                                     TestIdPrefix="agents-details-capability"
+                                                     ColumnTemplateLg="repeat(2,minmax(16rem,1fr))" />
+                            }
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Voice">
+                        <FormSection Title="Voice" Description="Allow this agent to participate in audio mode and optionally override the general text-to-speech voice.">
+                            <Grid Gap="LayoutGap.Large" ColumnsMd="2" data-testid="agents-catalog-voice-access">
+                                <div class="cda-admin-subpanel">
+                                    <p class="cda-field-label mb-2">Voice access</p>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editorModel.VoiceAccess.CanUseVoiceMode"
+                                                   @onchange="args => ToggleVoiceModeAccess(args.Value)"
+                                                   data-testid="agents-catalog-voice-enabled" />
+                                            Can use audio mode
+                                        </label>
+                                    </Stack>
+                                </div>
+                                <div class="cda-admin-subpanel">
+                                    <label class="cda-field-label">Voice override</label>
+                                    <InputSelect @bind-Value="editorModel.VoiceAccess.PreferredVoiceId"
+                                                 class="cda-input"
+                                                 disabled="@(!editorModel.VoiceAccess.CanUseVoiceMode)"
+                                                 data-testid="agents-catalog-voice-override">
+                                        <option value="">Use general voice</option>
+                                        @foreach (var voiceId in AgentVoiceDefaults.OpenAiVoiceIds)
+                                        {
+                                            <option value="@voiceId">@voiceId</option>
+                                        }
+                                    </InputSelect>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                                        When set, this voice takes priority over the general AgentFramework voice.
+                                    </p>
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+
+                </TabItems>
+            </Tabs>
+
+            <StickyActionFooter StatusLabel="Technical agents">
+                <SecondaryActions>
+                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
+                </SecondaryActions>
+                <PrimaryActions>
+                    <Button Text="Save agent" Type="submit" Disabled="@isBusy" IsBusy="@isBusy" data-testid="agents-catalog-save" />
+                </PrimaryActions>
+                <DangerActions>
+                    @if (editorModel.Id.HasValue)
+                    {
+                        <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Disabled="@isBusy" Click="DeleteAgentAsync" />
+                    }
+                </DangerActions>
+            </StickyActionFooter>
+        </Stack>
+    </EditForm>
+}
+
+@if (avatarSelectorOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Agent identity"
+            Title="Choose avatar"
+            Subtitle="@ResolveAvatarAltText()"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="agents-catalog-avatar-dialog"
+            OnClose="CloseAvatarSelectorAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <SurfaceCard Soft="true">
+                    <Stack Orientation="Orientation.Horizontal"
+                           AlignItems="AlignItems.Center"
+                           GapScale="LayoutGap.Medium">
+                        <Avatar Alt="@ResolveAvatarAltText()"
+                                ImageUrl="@editorModel.AvatarImageUrl"
+                                FallbackText="@ResolveAvatarFallbackText()"
+                                DefaultImageSeed="@ResolveAvatarSeed()"
+                                Size="AvatarSize.Large"
+                                Shape="AvatarShape.Rounded" />
+                        <Stack GapScale="LayoutGap.XSmall">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
+                            <strong>@ResolveAvatarSelectionText()</strong>
+                            <small class="text-sm text-slate-600">Avatar changes are saved when you save the agent.</small>
+                        </Stack>
+                    </Stack>
+                </SurfaceCard>
+                <SurfaceCard Soft="true" Class="agent-details-dialog__custom-avatar">
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label" for="agents-catalog-avatar-upload">Custom image</label>
+                            <InputFile id="agents-catalog-avatar-upload"
+                                       class="cda-input"
+                                       accept="image/png,image/jpeg,image/webp,image/gif"
+                                       OnChange="LoadCustomAvatarAsync"
+                                       data-testid="agents-catalog-avatar-upload" />
+                            @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
+                            {
+                                <p class="mt-2 break-all text-sm text-slate-600" data-testid="agents-catalog-avatar-upload-file">@customAvatarFileName</p>
+                            }
+                        </div>
+                        <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Start">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Custom avatar" />
+                            <p class="text-sm leading-6 text-slate-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
+                            @if (isAvatarUploadBusy)
+                            {
+                                <StatusBadge Tone="info" Text="Loading" />
+                            }
+                            else if (IsCustomAvatarLoaded())
+                            {
+                                <StatusBadge Tone="success" Text="Loaded" />
+                            }
+                        </Stack>
+                    </Grid>
+                </SurfaceCard>
+                <SurfaceCard Soft="true" data-testid="agents-catalog-avatar-ai">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Create with AI" />
+                        @if (DefaultAvatarImageProvider is { } avatarProvider)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2"
+                                       Value="@($"Uses the default image provider '{avatarProvider.Name}' and model '{ResolveAvatarImageModel(avatarProvider)}'.")" />
+                            <FormField Text="Creative direction">
+                                <TextArea Value="@avatarGenerationPrompt"
+                                          ValueChanged="@(value => avatarGenerationPrompt = value ?? string.Empty)"
+                                          Size="TextAreaSize.Compact"
+                                          Immediate="true"
+                                          Disabled="@isAvatarGenerationBusy"
+                                          maxlength="@AgentAvatarGenerationService.MaximumVisualBriefLength"
+                                          data-testid="agents-catalog-avatar-ai-prompt" />
+                            </FormField>
+                            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                                <Button Text="Create avatar with AI"
+                                        Icon="auto_awesome"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Small"
+                                        IsBusy="@isAvatarGenerationBusy"
+                                        Disabled="@(isAvatarGenerationBusy || string.IsNullOrWhiteSpace(avatarGenerationPrompt))"
+                                        Click="GenerateAvatarAsync"
+                                        data-testid="agents-catalog-avatar-ai-generate" />
+                            </Cluster>
+                        }
+                        else
+                        {
+                            <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-avatar-ai-unavailable">
+                                No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.
+                            </Alert>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(avatarGenerationErrorMessage))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-catalog-avatar-ai-error">
+                                @avatarGenerationErrorMessage
+                            </Alert>
+                        }
+                    </Stack>
+                </SurfaceCard>
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplate="repeat(4,minmax(0,1fr))"
+                      data-testid="agents-catalog-avatar-options">
+                    @foreach (var option in AvatarOptions.Select((url, index) => new { Url = url, Number = index + 1 }))
+                    {
+                        <button type="button"
+                                class="@ResolveAvatarOptionClass(option.Url)"
+                                @onclick="@(() => SelectAvatar(option.Url))"
+                                data-testid="@($"agents-catalog-avatar-option-{option.Number}")">
+                            <Avatar Alt="@($"Avatar {option.Number}")"
+                                    ImageUrl="@option.Url"
+                                    FallbackText="@option.Number.ToString()"
+                                    UseDefaultImageWhenMissing="false"
+                                    Size="AvatarSize.Large"
+                                    Shape="AvatarShape.Rounded" />
+                            <span>Avatar @option.Number</span>
+                            @if (IsSelectedAvatar(option.Url))
+                            {
+                                <StatusBadge Tone="success" Text="Selected" />
+                            }
+                        </button>
+                    }
+                </Grid>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseAvatarSelectorAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}

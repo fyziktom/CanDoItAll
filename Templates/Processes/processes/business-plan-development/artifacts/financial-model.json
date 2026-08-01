@@ -1,0 +1,28 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "financial-model",
+  "DisplayName": "Financial model",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "ArtifactKind": "Dataset",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Confidential",
+  "DefaultRetentionDays": 365,
+  "Summary": "Financial model and sensitivity note with drivers, units, currency, assumptions, formulas, and ranges.",
+  "AllowedFutureUsageSummary": "Reusable for budget planning, pricing decisions, and integrated strategy review.",
+  "ValidationRequirementSummary": "Must show model logic and identify unsupported or missing data.",
+  "OwnerRoleKey": "financial-strategist",
+  "DocPath": "processes/business-plan-development/artifacts/financial-model.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "financial-model",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must show model logic and identify unsupported or missing data."
+  }
+}
+

@@ -1,0 +1,343 @@
+@page "/agents"
+
+<PageTitle>Agents</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="AgentFramework"
+                    Title="Integrated technical agent runtime"
+                    Description="@AgentFrameworkShellHelpText"
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="technical agents"
+                             Value="@ResolveSummaryValue(technicalAgentCount)"
+                             TooltipText="Organization-scoped technical runtime records."
+                             Tone="info" />
+                <CompactStat Label="providers"
+                             Value="@ResolveSummaryValue(providerCount)"
+                             TooltipText="Workspace-owned providers executed through AgentFramework."
+                             Tone="success" />
+                <CompactStat Label="bound resources"
+                             Value="@ResolveSummaryValue(boundResourceCount)"
+                             TooltipText="CRM-HR AI resources already bound to a technical agent."
+                             Tone="warning" />
+                <CompactStat Label="capabilities"
+                             Value="@ResolveSummaryValue(capabilityCount)"
+                             TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
+                             Tone="accent" />
+                <CompactStat Label="active runs"
+                             Value="@ResolveSummaryValue(activeRunCount)"
+                             TooltipText="Durable technical executions still in progress."
+                             Tone="info" />
+                <CompactStat Label="failed runs"
+                             Value="@ResolveSummaryValue(failedRunCount)"
+                             TooltipText="Recent execution failures that still need governance attention."
+                             Tone="danger" />
+            </Stats>
+            <Actions>
+                <AgentAvatarActionButton AgentName="@HrAgentDisplayName"
+                                         AvatarImageUrl="@HrAgentAvatarImageUrl"
+                                         FallbackText="HR"
+                                         Label="@($"Open {HrAgentDisplayName}")"
+                                         Click="OpenHrAgentAsync"
+                                         Disabled="@(hrAgent is null || isOpeningHrAgent || AgentChatAccessState != AgentChatContextAccessState.Ready)"
+                                         TestId="agents-hr-agent-open-header"
+                                         TooltipTestId="agents-hr-agent-tooltip" />
+                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                             OpenOnHover="true"
+                             AriaLabel="Show AgentFramework shell help"
+                             Title="Show AgentFramework shell help"
+                             Heading="AgentFramework shell"
+                             Body="@AgentFrameworkShellHelpText" />
+                <PageHeaderActionButton Icon="groups"
+                                        Label="Open CRM / HR agents"
+                                        TooltipText="Open CRM-HR agent projections."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="OpenCrmHrAgents"
+                                        data-testid="agents-shell-open-crmhr" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open workflows"
+                                        TooltipText="Open AgentFramework workflows."
+                                        Click="OpenWorkflows"
+                                        data-testid="agents-shell-open-workflows" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open processes"
+                                        TooltipText="Open the processes workspace."
+                                        Click="OpenProcesses"
+                                        data-testid="agents-shell-open-processes" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <Cluster AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.NoWrap"
+                 Class="w-full"
+                 data-testid="agents-shell-tabs">
+            <SecondaryTabs Items="Tabs"
+                           SelectedKey="@selectedTab"
+                           SelectedKeyChanged="HandleTabChangedAsync" />
+            <PageHeaderActionButton Icon="cloud_sync"
+                                    Label="Load default agents and providers"
+                                    TooltipText="Load the managed default agents and providers again."
+                                    Click="FeedDefaultsAsync"
+                                    Disabled="@(isConfirmingDefaults || isFeedingDefaults)"
+                                    IsBusy="@isFeedingDefaults"
+                                    data-testid="agents-shell-feed-defaults" />
+        </Cluster>
+    </Lead>
+
+    <ChildContent>
+        @if (string.Equals(selectedTab, "providers", StringComparison.Ordinal))
+        {
+            <AgentProviderProfilesPanel />
+        }
+        else if (string.Equals(selectedTab, "voice", StringComparison.Ordinal))
+        {
+            <AgentVoiceSettingsPanel />
+        }
+        else if (string.Equals(selectedTab, "floating-chat", StringComparison.Ordinal))
+        {
+            <FloatingAgentChatSettingsPanel />
+        }
+        else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
+        {
+            <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
+                               RequestedTeamId="@effectiveRequestedTeamId"
+                               SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                               SelectedTeamChanged="HandleSelectedTeamChangedAsync"
+                               ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync"
+                               SkipCatalogRepair="true" />
+        }
+        else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))
+        {
+            <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId"
+                            SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                            ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
+        }
+        else if (string.Equals(selectedTab, "capabilities", StringComparison.Ordinal))
+        {
+            <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId"
+                                    SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                                    ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
+        }
+        else if (string.Equals(selectedTab, "governance", StringComparison.Ordinal))
+        {
+            <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId"
+                                  SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                                  ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
+        }
+        else if (string.Equals(selectedTab, "diagnostics", StringComparison.Ordinal))
+        {
+            <AgentDiagnosticsPanel />
+        }
+        else
+        {
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="agents-overview-dashboard"
+                   data-testid="agents-overview-dashboard">
+                @if (hasOverviewLoadError)
+                {
+                    <SurfaceCard Soft="true"
+                                 data-testid="agents-overview-load-error">
+                        <p class="cda-eyebrow">Overview unavailable</p>
+                        <h2 class="mt-1 text-base font-semibold text-slate-950">Agent runtime summary could not be refreshed</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">@overviewLoadError</p>
+                    </SurfaceCard>
+                }
+
+                <div class="agents-overview-stat-strip w-full"
+                     data-testid="agents-overview-metrics">
+                    @foreach (var metric in OverviewMetricBadges)
+                    {
+                        <div class="@ResolveOverviewMetricBadgeClass(metric.Tone)"
+                             title="@metric.TooltipText"
+                             data-testid="@metric.TestId">
+                            <span class="agents-overview-stat-badge__icon" aria-hidden="true">
+                                <Icon Name="@metric.Icon" />
+                            </span>
+                            <span class="agents-overview-stat-badge__body">
+                                <span class="agents-overview-stat-badge__label">@metric.Label</span>
+                                <strong class="agents-overview-stat-badge__value">@metric.Value</strong>
+                            </span>
+                        </div>
+                    }
+                </div>
+
+                <Grid Gap="LayoutGap.Large"
+                      Class="agents-overview-main-grid"
+                      ColumnTemplateLg="repeat(2,minmax(0,1fr))"
+                      ColumnTemplateXl="minmax(20rem,0.95fr) minmax(0,1.1fr) minmax(16rem,0.72fr) minmax(20rem,0.95fr)">
+                    <SurfaceCard Soft="true"
+                                 Class="agents-overview-main-card agents-overview-list-card"
+                                 data-testid="agents-overview-top-agents">
+                        <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                                 AlignItems="AlignItems.Start"
+                                 Gap="LayoutGap.Medium"
+                                 Wrap="FlexWrap.Wrap">
+                            <Stack Gap="0.25rem">
+                                <p class="cda-eyebrow">Most used agents</p>
+                                <h2 class="text-base font-semibold text-slate-950">Top 5 by execution count</h2>
+                            </Stack>
+                            <StatusBadge Tone="info"
+                                         Text="@(isLoaded ? $"{overview.TopAgents.Count} ranked" : "Loading")" />
+                        </Cluster>
+
+                        <AgentOverviewUsageList IsLoaded="@isLoaded"
+                                                Rows="@overview.TopAgents"
+                                                TestId="agents-overview-top-agents-list"
+                                                EmptyDescription="Run an agent or process-backed execution to populate top-agent usage." />
+                    </SurfaceCard>
+
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="agents-overview-main-card agents-overview-chart-shell"
+                           data-testid="agents-overview-provider-bar">
+                        <CdaChart Title="Usage per provider"
+                                  Description="Provider usage observations captured from technical executions."
+                                  Series="@ProviderUsageBarSeries"
+                                  Options="@ProviderUsageBarChartOptions"
+                                  Height="310"
+                                  class="agents-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
+                                  EmptyText="No provider usage has been recorded." />
+                    </Stack>
+
+                    <Stack GapScale="LayoutGap.Medium"
+                           Class="agents-overview-main-card agents-overview-chart-shell"
+                           data-testid="agents-overview-provider-distribution">
+                        <CdaChart Title="Provider distribution"
+                                  Description="Share of total provider usage observations across the current workspace."
+                                  Series="@ProviderUsageDistributionSeries"
+                                  Options="@ProviderUsageDistributionChartOptions"
+                                  Height="310"
+                                  class="agents-overview-chart-card box-border h-full w-full max-w-full min-w-0 overflow-hidden"
+                                  EmptyText="Provider distribution is not available yet." />
+                    </Stack>
+
+                    <SurfaceCard Soft="true"
+                                 Class="agents-overview-main-card agents-overview-list-card"
+                                 data-testid="agents-overview-failing-agents">
+                        <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                                 AlignItems="AlignItems.Start"
+                                 Gap="LayoutGap.Medium"
+                                 Wrap="FlexWrap.Wrap">
+                            <Stack Gap="0.25rem">
+                                <p class="cda-eyebrow">Most failing agents</p>
+                                <h2 class="text-base font-semibold text-slate-950">Top 5 by failed runs</h2>
+                            </Stack>
+                            <StatusBadge Tone="danger"
+                                         Text="@(isLoaded ? $"{overview.TopFailingAgents.Count} flagged" : "Loading")" />
+                        </Cluster>
+
+                        <AgentOverviewUsageList IsLoaded="@isLoaded"
+                                                Rows="@overview.TopFailingAgents"
+                                                ShowFailureRank="true"
+                                                TestId="agents-overview-failing-agents-list"
+                                                LoadingTitle="Failure ranking is loading"
+                                                EmptyEyebrow="No failures"
+                                                EmptyTitle="No failing agents are ranked"
+                                                EmptyDescription="Recent failed executions will appear here without opening the full usage dialog." />
+                    </SurfaceCard>
+                </Grid>
+
+                <Grid Gap="LayoutGap.Medium"
+                      Class="agents-overview-secondary-grid"
+                      ColumnTemplateLg="minmax(0,1fr) minmax(20rem,0.55fr)">
+                    <SurfaceCard Soft="true"
+                                 Class="agents-overview-secondary-card"
+                                 data-testid="agents-overview-team-shortcuts">
+                        <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                                 AlignItems="AlignItems.Start"
+                                 Gap="LayoutGap.Medium"
+                                 Wrap="FlexWrap.Wrap">
+                            <Stack Gap="0.35rem">
+                                <p class="cda-eyebrow">Teams</p>
+                            </Stack>
+                            <StatusBadge Tone="info"
+                                         Text="@(isLoaded ? $"{overview.TeamShortcuts.Count} team(s)" : "Loading")" />
+                        </Cluster>
+
+                        @if (!isLoaded)
+                        {
+                            <EmptyState Eyebrow="Loading"
+                                        Title="Teams are loading"
+                                        Description="Team shortcuts appear after the catalog snapshot is available." />
+                        }
+                        else if (overview.TeamShortcuts.Count == 0)
+                        {
+                            <EmptyState Eyebrow="No teams"
+                                        Title="No teams are defined"
+                                        Description="Create teams on the Agents tab to enable one-click filtered shortcuts." />
+                        }
+                        else
+                        {
+                            <Grid Gap="LayoutGap.Small"
+                                  ColumnsSm="2"
+                                  ColumnsLg="3"
+                                  ColumnsXl="6"
+                                  Class="mt-2"
+                                  data-testid="agents-overview-team-shortcuts-grid">
+                                @foreach (var team in overview.TeamShortcuts.Take(6))
+                                {
+                                    <button type="button"
+                                            class="agents-overview-team-shortcut"
+                                            title="@team.Name"
+                                            @onclick="@(() => OpenAgentsForTeamAsync(team.TeamId))"
+                                            data-testid="agents-overview-team-shortcut">
+                                        <span class="material-icons text-2xl" aria-hidden="true">@team.Icon</span>
+                                        <span class="agents-overview-team-shortcut__name">@team.Name</span>
+                                        <span class="agents-overview-team-shortcut__count">@($"{team.AgentCount} agent(s)")</span>
+                                    </button>
+                                }
+                            </Grid>
+                        }
+                    </SurfaceCard>
+
+                    <SurfaceCard Soft="true"
+                                 Class="agents-overview-secondary-card"
+                                 data-testid="agents-overview-demand-details">
+                        <Stack GapScale="LayoutGap.Small">
+                            <Stack Gap="0.25rem">
+                                <p class="cda-eyebrow">Load on demand</p>
+                                <h2 class="text-base font-semibold text-slate-950">Deeper usage views stay out of default load</h2>
+                            </Stack>
+                            <Cluster Gap="LayoutGap.Small"
+                                     Wrap="FlexWrap.Wrap">
+                                <Button Text="Agents"
+                                        Icon="analytics"
+                                        Size="ButtonSize.Small"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Variant="Variant.Outlined"
+                                        title="Open agent usage details"
+                                        Click="OpenAgentUsageDialogAsync"
+                                        data-testid="agents-overview-open-agent-usage" />
+                                <Button Text="Providers"
+                                        Icon="bar_chart"
+                                        Size="ButtonSize.Small"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Variant="Variant.Outlined"
+                                        title="Open provider usage details"
+                                        Click="OpenProviderUsageDialogAsync"
+                                        data-testid="agents-overview-open-provider-usage" />
+                                <Button Text="Models"
+                                        Icon="query_stats"
+                                        Size="ButtonSize.Small"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Variant="Variant.Outlined"
+                                        title="Open model usage details"
+                                        Click="OpenModelUsageDialogAsync"
+                                        data-testid="agents-overview-open-model-usage" />
+                            </Cluster>
+                        </Stack>
+                    </SurfaceCard>
+                </Grid>
+            </Stack>
+        }
+    </ChildContent>
+</PageScaffold>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@AgentChatAccessState" />

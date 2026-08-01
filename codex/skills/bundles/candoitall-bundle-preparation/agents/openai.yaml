@@ -1,4 +1,0 @@
-interface:
-  display_name: "CanDoItAll Bundle Preparation"
-  short_description: "Turn raw requests into validated implementation bundles"
-  default_prompt: "Prepare a complete CanDoItAll implementation bundle from my raw request or artifacts."

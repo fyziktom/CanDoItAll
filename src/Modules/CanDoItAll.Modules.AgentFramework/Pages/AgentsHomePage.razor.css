@@ -1,0 +1,234 @@
+.agents-runtime-badges-shell ::deep .agents-runtime-badges {
+    align-items: stretch;
+}
+
+.agents-runtime-badges-shell ::deep .cda-summary-tile--badge {
+    flex: 0 1 14.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 0.95rem;
+}
+
+.agents-runtime-badges-shell ::deep .cda-summary-tile__row {
+    gap: 0.55rem;
+}
+
+.agents-runtime-badges-shell ::deep .cda-summary-tile__value {
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+.agents-runtime-badges-shell ::deep .cda-eyebrow {
+    letter-spacing: 0.14em;
+}
+
+@media (min-width: 1280px) {
+    .agents-runtime-badges-shell ::deep .cda-summary-tile--badge {
+        flex-basis: 13rem;
+    }
+}
+
+.agents-overview-dashboard {
+    --agents-overview-main-card-height: 27.5rem;
+}
+
+.agents-overview-stat-strip {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(9.25rem, 1fr));
+    gap: 0.5rem;
+}
+
+.agents-overview-stat-badge {
+    display: flex;
+    min-width: 0;
+    min-height: 2.85rem;
+    align-items: center;
+    gap: 0.55rem;
+    overflow: hidden;
+    border: 1px solid var(--agents-overview-stat-border);
+    border-radius: 0.7rem;
+    background: var(--agents-overview-stat-bg);
+    padding: 0.4rem 0.6rem;
+    color: var(--agents-overview-stat-fg);
+    box-shadow: 0 8px 18px rgb(15 23 42 / 0.05);
+}
+
+.agents-overview-stat-badge__icon {
+    display: inline-flex;
+    width: 1.9rem;
+    height: 1.9rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.55rem;
+    background: rgb(255 255 255 / 0.72);
+    color: var(--agents-overview-stat-icon);
+}
+
+.agents-overview-stat-badge__body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.05rem;
+}
+
+.agents-overview-stat-badge__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+    color: rgb(51 65 85 / 0.78);
+}
+
+.agents-overview-stat-badge__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.95rem;
+    line-height: 1.12;
+    color: rgb(15 23 42);
+}
+
+.agents-overview-stat-badge--info {
+    --agents-overview-stat-bg: #eef6ff;
+    --agents-overview-stat-border: #bae6fd;
+    --agents-overview-stat-fg: #075985;
+    --agents-overview-stat-icon: #0284c7;
+}
+
+.agents-overview-stat-badge--success {
+    --agents-overview-stat-bg: #ecfdf5;
+    --agents-overview-stat-border: #bbf7d0;
+    --agents-overview-stat-fg: #065f46;
+    --agents-overview-stat-icon: #059669;
+}
+
+.agents-overview-stat-badge--warning {
+    --agents-overview-stat-bg: #fffbeb;
+    --agents-overview-stat-border: #fde68a;
+    --agents-overview-stat-fg: #92400e;
+    --agents-overview-stat-icon: #d97706;
+}
+
+.agents-overview-stat-badge--danger {
+    --agents-overview-stat-bg: #fff1f2;
+    --agents-overview-stat-border: #fecdd3;
+    --agents-overview-stat-fg: #9f1239;
+    --agents-overview-stat-icon: #e11d48;
+}
+
+.agents-overview-stat-badge--accent {
+    --agents-overview-stat-bg: #f5f3ff;
+    --agents-overview-stat-border: #ddd6fe;
+    --agents-overview-stat-fg: #5b21b6;
+    --agents-overview-stat-icon: #7c3aed;
+}
+
+.agents-overview-stat-badge--neutral {
+    --agents-overview-stat-bg: #f8fafc;
+    --agents-overview-stat-border: #cbd5e1;
+    --agents-overview-stat-fg: #334155;
+    --agents-overview-stat-icon: #475569;
+}
+
+.agents-overview-main-grid {
+    align-items: stretch;
+}
+
+.agents-overview-main-card {
+    min-height: var(--agents-overview-main-card-height);
+    height: var(--agents-overview-main-card-height);
+}
+
+.agents-overview-list-card {
+    overflow: hidden;
+}
+
+.agents-overview-chart-shell {
+    min-width: 0;
+}
+
+.agents-overview-chart-shell ::deep .agents-overview-chart-card {
+    height: 100%;
+}
+
+.agents-overview-secondary-grid {
+    align-items: stretch;
+}
+
+.agents-overview-secondary-card {
+    min-height: 9.75rem;
+}
+
+.agents-overview-team-shortcut {
+    display: flex;
+    min-width: 0;
+    height: 4.7rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.18rem;
+    overflow: hidden;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.65rem;
+    background: rgb(255 255 255);
+    padding: 0.35rem 0.45rem;
+    text-align: center;
+    color: rgb(51 65 85);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.agents-overview-team-shortcut:hover {
+    border-color: rgb(125 211 252);
+    background: rgb(240 249 255);
+    color: rgb(3 105 161);
+}
+
+.agents-overview-team-shortcut .material-icons {
+    flex: 0 0 auto;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.agents-overview-team-shortcut__name,
+.agents-overview-team-shortcut__count {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agents-overview-team-shortcut__name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.agents-overview-team-shortcut__count {
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: rgb(100 116 139);
+}
+
+@media (max-width: 1279px) {
+    .agents-overview-main-card {
+        min-height: auto;
+        height: auto;
+    }
+}
+
+@media (max-width: 767px) {
+    .agents-overview-stat-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .agents-overview-stat-badge {
+        min-height: 3.25rem;
+    }
+}

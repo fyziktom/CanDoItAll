@@ -1,0 +1,53 @@
+.capability-setup-wizard {
+    display: flex;
+    flex-direction: column;
+    height: min(48rem, calc(100vh - 12rem));
+    min-height: 36rem;
+    overflow: hidden;
+}
+
+.capability-setup-wizard ::deep [role="tabpanel"] {
+    max-height: calc(100vh - 23rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.capability-setup-wizard ::deep .rz-steps {
+    max-height: calc(100vh - 23rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.capability-setup-wizard ::deep .capability-setup-wizard__textarea {
+    min-height: 8rem;
+    resize: vertical;
+}
+
+.capability-setup-wizard ::deep .capability-setup-wizard__small-textarea {
+    min-height: 6rem;
+    resize: vertical;
+}
+
+.capability-setup-wizard ::deep .capability-setup-wizard__large-textarea {
+    min-height: 18rem;
+    resize: vertical;
+}
+
+.capability-setup-wizard ::deep .capability-setup-wizard__inline-option {
+    min-height: 2.75rem;
+}
+
+.capability-setup-wizard__upload {
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    background: rgb(248 250 252);
+    padding: 0.9rem;
+}
+
+.capability-setup-wizard ::deep .capability-setup-wizard__mono {
+    color: rgb(51 65 85);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}

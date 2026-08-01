@@ -1,0 +1,324 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Workflows.Abstractions
+
+@if (!IsActive)
+{
+    <Stack data-testid="workflow-analytics-inactive">
+        <EmptyState Eyebrow="Analytics"
+                    Title="Analytics load on demand"
+                    Description="Open the Analytics tab to query the typed workflow analytics projection." />
+    </Stack>
+}
+else if (isLoading)
+{
+    <Stack data-testid="workflow-analytics-loading">
+        <LoadingState Eyebrow="Workflow analytics"
+                      Title="Loading workflow analytics"
+                      Description="Reading aggregate usage, duration, state, backend, and recent-run projections." />
+    </Stack>
+}
+else if (!string.IsNullOrWhiteSpace(loadError))
+{
+    <Stack GapScale="LayoutGap.Medium"
+           data-testid="workflow-analytics-error">
+        <EmptyState Eyebrow="Analytics unavailable"
+                    Title="Workflow analytics could not be loaded"
+                    Description="@loadError" />
+        <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Retry"
+                    Icon="refresh"
+                    Variant="Variant.Outlined"
+                    Click="RefreshAsync"
+                    data-testid="workflow-analytics-retry" />
+        </Cluster>
+    </Stack>
+}
+else if (snapshot is not null)
+{
+    <Stack GapScale="LayoutGap.Large"
+           data-testid="workflow-analytics-content">
+        <SurfaceCard Soft="true">
+            <Cluster Gap="LayoutGap.Large"
+                     AlignItems="AlignItems.End"
+                     JustifyContent="JustifyContent.SpaceBetween"
+                     Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow analytics" />
+                    <TextBlock Value="Typed aggregates across the complete filtered run set." />
+                    <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="info" Text="@ScopeDescription" />
+                        <StatusBadge Tone="neutral" Text="@($"As of {snapshot.AsOfUtc.LocalDateTime:g}")" />
+                    </Cluster>
+                </Stack>
+
+                <Cluster Gap="LayoutGap.Medium"
+                         AlignItems="AlignItems.End"
+                         Wrap="FlexWrap.Wrap">
+                    <FormField Text="Scope">
+                        <InputSelect TValue="WorkflowAnalyticsScopeKind"
+                                     Value="@scopeKind"
+                                     ValueChanged="HandleScopeChangedAsync"
+                                     ValueExpression="@(() => scopeKind)"
+                                     class="cda-input"
+                                     data-testid="workflow-analytics-scope">
+                            <option value="@WorkflowAnalyticsScopeKind.All">All workflows</option>
+                            @if (Workflows.Count > 0)
+                            {
+                                <option value="@WorkflowAnalyticsScopeKind.SelectedWorkflow">Selected workflow</option>
+                            }
+                        </InputSelect>
+                    </FormField>
+
+                    @if (scopeKind == WorkflowAnalyticsScopeKind.SelectedWorkflow)
+                    {
+                        <FormField Text="Workflow">
+                            <InputSelect TValue="Guid?"
+                                         Value="@selectedWorkflowValue"
+                                         ValueChanged="HandleSelectedWorkflowChangedAsync"
+                                         ValueExpression="@(() => selectedWorkflowValue)"
+                                         class="cda-input"
+                                         data-testid="workflow-analytics-workflow">
+                                @foreach (var workflow in OrderedWorkflows)
+                                {
+                                    <option value="@workflow.Id.Value">@workflow.Name</option>
+                                }
+                            </InputSelect>
+                        </FormField>
+                    }
+
+                    <Button Text="Refresh analytics"
+                            Icon="refresh"
+                            Variant="Variant.Outlined"
+                            Click="RefreshAsync"
+                            data-testid="workflow-analytics-refresh" />
+                </Cluster>
+            </Cluster>
+        </SurfaceCard>
+
+        <SectionCard Title="Inventory and runtime"
+                     Description="Definition and run totals are queried from the full typed projection, not the recent-run window.">
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="4" ColumnsXl="6">
+                <MetricCard Label="Definitions"
+                            Value="@FormatCount(snapshot.DefinitionCount)"
+                            data-testid="workflow-analytics-definition-count" />
+                <MetricCard Label="Active definitions"
+                            Value="@FormatCount(snapshot.ActiveDefinitionCount)"
+                            data-testid="workflow-analytics-active-definition-count" />
+                <MetricCard Label="Runs"
+                            Value="@FormatCount(snapshot.RunCount)"
+                            data-testid="workflow-analytics-run-count" />
+                <MetricCard Label="Running"
+                            Value="@FormatCount(snapshot.RunningRunCount)"
+                            data-testid="workflow-analytics-running-count" />
+                <MetricCard Label="Waiting for input"
+                            Value="@FormatCount(snapshot.WaitingForInputRunCount)"
+                            data-testid="workflow-analytics-waiting-count" />
+                <MetricCard Label="Failed"
+                            Value="@FormatCount(snapshot.FailedRunCount)"
+                            data-testid="workflow-analytics-failed-count" />
+            </Grid>
+        </SectionCard>
+
+        <SectionCard Title="Tokens, observations, and pricing"
+                     Description="Known cost excludes observations without pricing while preserving their token and completeness counts.">
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="4" ColumnsXl="5">
+                <MetricCard Label="Total tokens"
+                            Value="@FormatCount(snapshot.Usage.TotalTokens)"
+                            data-testid="workflow-analytics-total-tokens" />
+                <MetricCard Label="Input tokens"
+                            Value="@FormatCount(snapshot.Usage.InputTokens)"
+                            data-testid="workflow-analytics-input-tokens" />
+                <MetricCard Label="Cached input"
+                            Value="@FormatCount(snapshot.Usage.CachedInputTokens)"
+                            data-testid="workflow-analytics-cached-tokens" />
+                <MetricCard Label="Output tokens"
+                            Value="@FormatCount(snapshot.Usage.OutputTokens)"
+                            data-testid="workflow-analytics-output-tokens" />
+                <MetricCard Label="Reasoning tokens"
+                            Value="@FormatCount(snapshot.Usage.ReasoningTokens)"
+                            data-testid="workflow-analytics-reasoning-tokens" />
+                <MetricCard Label="Known cost"
+                            Value="@FormatCost(snapshot.Usage.KnownCostUsd)"
+                            data-testid="workflow-analytics-known-cost" />
+                <MetricCard Label="Unknown pricing"
+                            Value="@FormatCount(snapshot.Usage.PricingUnknownObservationCount)"
+                            data-testid="workflow-analytics-unknown-pricing" />
+                <MetricCard Label="Known-priced observations"
+                            Value="@FormatCount(snapshot.Usage.PricingKnownObservationCount)"
+                            data-testid="workflow-analytics-known-pricing" />
+                <MetricCard Label="Usage completeness"
+                            Value="@FormatObservationCompleteness(snapshot.Usage)"
+                            data-testid="workflow-analytics-completeness" />
+                <MetricCard Label="Unknown usage"
+                            Value="@FormatCount(snapshot.Usage.UsageUnknownObservationCount)"
+                            data-testid="workflow-analytics-unknown-usage" />
+            </Grid>
+        </SectionCard>
+
+        <SectionCard Title="Duration"
+                     Description="Active durations are measured at the snapshot time; final durations use the persisted terminal timestamp.">
+            <Grid Gap="LayoutGap.Medium" ColumnsLg="4" ColumnsXl="6">
+                <MetricCard Label="Total"
+                            Value="@FormatDuration(snapshot.Duration.Total)"
+                            data-testid="workflow-analytics-duration-total" />
+                <MetricCard Label="Average"
+                            Value="@FormatDuration(snapshot.Duration.Average)"
+                            data-testid="workflow-analytics-duration-average" />
+                <MetricCard Label="Minimum"
+                            Value="@FormatDuration(snapshot.Duration.Minimum)"
+                            data-testid="workflow-analytics-duration-minimum" />
+                <MetricCard Label="Maximum"
+                            Value="@FormatDuration(snapshot.Duration.Maximum)"
+                            data-testid="workflow-analytics-duration-maximum" />
+                <MetricCard Label="Final durations"
+                            Value="@FormatCount(snapshot.Duration.FinalRunCount)"
+                            data-testid="workflow-analytics-duration-final" />
+                <MetricCard Label="Active durations"
+                            Value="@FormatCount(snapshot.Duration.ActiveRunCount)"
+                            data-testid="workflow-analytics-duration-active" />
+            </Grid>
+        </SectionCard>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsLg="2">
+            <SectionCard Title="Run distribution"
+                         Description="State and runtime-backend totals across the selected scope.">
+                @if (DistributionRows.Count == 0)
+                {
+                    <EmptyState Eyebrow="No runs"
+                                Title="No distribution is available"
+                                Description="Run state and backend rows appear after workflows execute." />
+                }
+                else
+                {
+                    <DataGrid TItem="WorkflowAnalyticsCountRow"
+                              Data="@DistributionRows"
+                              AllowPaging="false"
+                              data-testid="workflow-analytics-distribution-grid">
+                        <Columns>
+                            <DataGridColumn TItem="WorkflowAnalyticsCountRow" Title="Dimension">
+                                <Template Context="row">
+                                    <TextBlock Value="@row.Dimension" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowAnalyticsCountRow" Title="Value">
+                                <Template Context="row">
+                                    <StatusBadge Tone="@row.Tone" Text="@row.Label" NoWrap="true" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowAnalyticsCountRow" Title="Runs">
+                                <Template Context="row">
+                                    <TextBlock Value="@FormatCount(row.Count)" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                }
+            </SectionCard>
+
+            <SectionCard Title="Provider and model usage"
+                         Description="Usage and pricing completeness remain separate for every provider-model pair.">
+                @if (ProviderModelRows.Count == 0)
+                {
+                    <EmptyState Eyebrow="No provider usage"
+                                Title="No provider-model observations"
+                                Description="Provider-model rows appear after workflow nodes report typed usage observations." />
+                }
+                else
+                {
+                    <DataGrid TItem="WorkflowProviderModelAnalyticsRow"
+                              Data="@ProviderModelRows"
+                              AllowPaging="false"
+                              data-testid="workflow-analytics-provider-model-grid">
+                        <Columns>
+                            <DataGridColumn TItem="WorkflowProviderModelAnalyticsRow" Title="Provider / model">
+                                <Template Context="row">
+                                    <Stack GapScale="LayoutGap.Tiny"
+                                           data-testid="workflow-analytics-provider-model">
+                                        <TextBlock Value="@row.ProviderName" />
+                                        <TextBlock Value="@row.Model" />
+                                        @if (row.ProviderKind.HasValue)
+                                        {
+                                            <StatusBadge Tone="info" Text="@row.ProviderKind.Value.ToString()" NoWrap="true" />
+                                        }
+                                    </Stack>
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderModelAnalyticsRow" Title="Observations">
+                                <Template Context="row">
+                                    <TextBlock Value="@FormatCount(row.Usage.ObservationCount)" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderModelAnalyticsRow" Title="Tokens">
+                                <Template Context="row">
+                                    <TextBlock Value="@FormatCount(row.Usage.TotalTokens)" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderModelAnalyticsRow" Title="Known cost">
+                                <Template Context="row">
+                                    <TextBlock Value="@FormatCost(row.Usage.KnownCostUsd)" />
+                                </Template>
+                            </DataGridColumn>
+                            <DataGridColumn TItem="WorkflowProviderModelAnalyticsRow" Title="Unknown pricing">
+                                <Template Context="row">
+                                    <TextBlock Value="@FormatCount(row.Usage.PricingUnknownObservationCount)" />
+                                </Template>
+                            </DataGridColumn>
+                        </Columns>
+                    </DataGrid>
+                }
+            </SectionCard>
+        </Grid>
+
+        <SectionCard Title="Recent runs"
+                     Description="The recent window is intentionally bounded to eight rows and never supplies aggregate totals.">
+            @if (RecentRuns.Count == 0)
+            {
+                <EmptyState Eyebrow="No recent runs"
+                            Title="No workflow runs in this scope"
+                            Description="Recent runs appear after a workflow starts." />
+            }
+            else
+            {
+                <DataGrid TItem="WorkflowRunSnapshot"
+                          Data="@RecentRuns"
+                          AllowPaging="false"
+                          data-testid="workflow-analytics-recent-runs-grid">
+                    <Columns>
+                        <DataGridColumn TItem="WorkflowRunSnapshot" Title="Run">
+                            <Template Context="run">
+                                <Stack GapScale="LayoutGap.Tiny"
+                                       data-testid="workflow-analytics-recent-run">
+                                    <TextBlock Value="@run.Summary" />
+                                    <TextBlock Value="@FormatShortId(run.RunId.Value)" />
+                                </Stack>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunSnapshot" Title="State">
+                            <Template Context="run">
+                                <StatusBadge Tone="@ResolveStateTone(run.State)"
+                                             Text="@run.State.ToString()"
+                                             NoWrap="true" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunSnapshot" Title="Backend">
+                            <Template Context="run">
+                                <TextBlock Value="@run.Backend.ToString()" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunSnapshot" Title="Duration">
+                            <Template Context="run">
+                                <TextBlock Value="@FormatRunDuration(run.RunId)" />
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="WorkflowRunSnapshot" Title="Updated">
+                            <Template Context="run">
+                                <TextBlock Value="@run.UpdatedAtUtc.LocalDateTime.ToString("g")" />
+                            </Template>
+                        </DataGridColumn>
+                    </Columns>
+                </DataGrid>
+            }
+        </SectionCard>
+    </Stack>
+}

@@ -1,0 +1,65 @@
+{
+  "stableIdKey": "agents/financial-strategist",
+  "name": "Financial Strategist",
+  "roleTitle": "Financial planning specialist",
+  "summary": "Builds assumption-driven budgets, unit economics, spreadsheet analysis, and sensitivity views for planning processes.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-02.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.4-mini",
+  "workload": "Spreadsheet",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.2,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 5
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "financial-strategist",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": true
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "canWriteTasks": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "BusinessAnalysis",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    },
+    "imageGeneration": {
+      "canGenerateImages": true,
+      "preferredProviderProfileKey": "openai-image-generation",
+      "defaultModel": "gpt-image-1-mini",
+      "canStoreImagesAsProjectAssets": true
+    }
+  },
+  "tags": [
+    "finance",
+    "strategy",
+    "spreadsheet"
+  ]
+}

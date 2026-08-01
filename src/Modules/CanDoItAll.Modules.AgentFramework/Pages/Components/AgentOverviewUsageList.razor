@@ -1,0 +1,129 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+
+<Stack GapScale="LayoutGap.Small"
+       data-testid="@TestId">
+    @if (!IsLoaded)
+    {
+        <EmptyState Eyebrow="Loading"
+                    Title="@LoadingTitle"
+                    Description="The overview shell is already available while compact usage aggregates are read." />
+    }
+    else if (Rows.Count == 0)
+    {
+        <EmptyState Eyebrow="@EmptyEyebrow"
+                    Title="@EmptyTitle"
+                    Description="@EmptyDescription" />
+    }
+    else
+    {
+        @foreach (var agent in Rows.Take(5))
+        {
+            <div class="flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-white/80 px-2.5 py-1.5 shadow-sm"
+                 data-testid="@($"{TestId}-row")">
+                <span class="h-9 w-9 shrink-0"
+                      data-testid="@($"{TestId}-avatar")">
+                    <Avatar Alt="@agent.AgentName"
+                            ImageUrl="@agent.AvatarImageUrl"
+                            FallbackText="@ResolveInitials(agent.AgentName)"
+                            DefaultImageSeed="@ResolveAvatarSeed(agent)"
+                            Size="AvatarSize.Small"
+                            Shape="AvatarShape.Rounded" />
+                </span>
+
+                <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm font-semibold text-slate-950">@agent.AgentName</div>
+                    <div class="truncate text-xs text-slate-500">@ResolveSubtitle(agent)</div>
+                </div>
+
+                <div class="flex max-w-[6rem] shrink-0 flex-col items-end gap-0.5">
+                    <StatusBadge Tone="@ResolvePrimaryTone(agent)"
+                                 Text="@ResolvePrimaryText(agent)"
+                                 NoWrap="true" />
+                    @if (ShowFailureRank)
+                    {
+                        <StatusBadge Tone="success"
+                                     Text="@ResolveRunText(agent)"
+                                     NoWrap="true" />
+                    }
+                    else if (agent.FailedRunCount > 0)
+                    {
+                        <StatusBadge Tone="danger"
+                                     Text="@ResolveFailedText(agent)"
+                                     NoWrap="true" />
+                    }
+                </div>
+            </div>
+        }
+    }
+</Stack>
+
+@code {
+    [Parameter]
+    public bool IsLoaded { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<AgentOverviewUsageRow> Rows { get; set; } = [];
+
+    [Parameter]
+    public bool ShowFailureRank { get; set; }
+
+    [Parameter]
+    public string TestId { get; set; } = "agents-overview-usage-list";
+
+    [Parameter]
+    public string LoadingTitle { get; set; } = "Usage ranking is loading";
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "No usage";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No agent usage has been recorded";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Run an agent or process-backed execution to populate this ranking.";
+
+    private static string ResolveInitials(string value)
+    {
+        var words = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(item => char.ToUpperInvariant(item[0]))
+            .ToArray();
+
+        return words.Length == 0 ? "A" : new string(words);
+    }
+
+    private static string ResolveAvatarSeed(AgentOverviewUsageRow agent)
+        => string.IsNullOrWhiteSpace(agent.AgentName)
+            ? agent.AgentId.ToString("D")
+            : agent.AgentName;
+
+    private string ResolveSubtitle(AgentOverviewUsageRow agent)
+    {
+        if (ShowFailureRank)
+        {
+            return AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc);
+        }
+
+        return AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc);
+    }
+
+    private string ResolvePrimaryText(AgentOverviewUsageRow agent)
+    {
+        return ShowFailureRank
+            ? ResolveFailedText(agent)
+            : ResolveRunText(agent);
+    }
+
+    private string ResolvePrimaryTone(AgentOverviewUsageRow agent)
+    {
+        return ShowFailureRank ? "danger" : "success";
+    }
+
+    private static string ResolveRunText(AgentOverviewUsageRow agent)
+        => $"{AgentUsageDisplay.FormatCount(agent.RunCount)} runs";
+
+    private static string ResolveFailedText(AgentOverviewUsageRow agent)
+        => $"{AgentUsageDisplay.FormatCount(agent.FailedRunCount)} failed";
+}

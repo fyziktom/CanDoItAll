@@ -1,0 +1,29 @@
+{
+  "packKey": "candoitall-agent-template-pack",
+  "name": "CanDoItAll default agent template pack",
+  "version": "2026-07-agent-template-teams-v69",
+  "seedMarker": "Managed agent template team seed",
+  "seedVersion": "2026-07-agent-template-teams-v69",
+  "teams": [
+    {
+      "key": "delivery-platform",
+      "relativePath": "teams/delivery-platform"
+    },
+    {
+      "key": "dotnet-delivery",
+      "relativePath": "teams/dotnet-delivery"
+    },
+    {
+      "key": "javascript-delivery",
+      "relativePath": "teams/javascript-delivery"
+    },
+    {
+      "key": "business-and-research",
+      "relativePath": "teams/business-and-research"
+    },
+    {
+      "key": "visual-automation-templates",
+      "relativePath": "teams/visual-automation-templates"
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+<Stack GapScale="LayoutGap.Large">
+    <FormSection Title="Provider and governance"
+                 Description="Bind the agent to the shared Workspace provider registry, name a human steward, and make the operational review state explicit before the agent is reused elsewhere.">
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <div>
+                <label class="cda-field-label">Provider profile</label>
+                <InputSelect @bind-Value="Model.ProviderProfileId"
+                             class="cda-input"
+                             data-testid="crmhr-agent-provider">
+                    <option value="">No provider linked</option>
+                    @foreach (var option in ProviderOptions)
+                    {
+                        <option value="@option.Id">@BuildProviderLabel(option)</option>
+                    }
+                </InputSelect>
+                <p class="mt-2 text-xs leading-5 text-slate-500">@ProviderHintText</p>
+            </div>
+            <div>
+                <label class="cda-field-label">Default model</label>
+                <InputText @bind-Value="Model.DefaultModel"
+                           class="cda-input"
+                           data-testid="crmhr-agent-default-model" />
+            </div>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
+            <div>
+                <label class="cda-field-label">Execution mode</label>
+                <InputSelect @bind-Value="Model.ExecutionMode"
+                             class="cda-input"
+                             data-testid="crmhr-agent-execution-mode">
+                    @foreach (var executionMode in Enum.GetValues<AiExecutionMode>())
+                    {
+                        <option value="@executionMode">@executionMode</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label class="cda-field-label">Owner / steward</label>
+                <InputSelect @bind-Value="Model.OwnerPartyId"
+                             class="cda-input"
+                             data-testid="crmhr-agent-owner">
+                    <option value="">No steward assigned</option>
+                    @foreach (var owner in OwnerOptions)
+                    {
+                        <option value="@owner.Id">@owner.DisplayName</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <label class="cda-field-label">Validation status</label>
+                <InputSelect @bind-Value="Model.ValidationStatus"
+                             class="cda-input"
+                             data-testid="crmhr-agent-validation-status">
+                    @foreach (var validationStatus in Enum.GetValues<AiValidationStatus>())
+                    {
+                        <option value="@validationStatus">@validationStatus</option>
+                    }
+                </InputSelect>
+            </div>
+        </Grid>
+
+        <div class="mt-5 max-w-sm">
+            <label class="cda-field-label">Last reviewed on</label>
+            <InputDate @bind-Value="Model.LastReviewedOn"
+                       class="cda-input"
+                       data-testid="crmhr-agent-last-reviewed-on" />
+        </div>
+
+        <div class="mt-5">
+            <label class="cda-field-label">Governance notes</label>
+            <InputTextArea @bind-Value="Model.Notes"
+                           class="cda-input cda-input--textarea min-h-[8rem]"
+                           data-testid="crmhr-agent-notes" />
+        </div>
+    </FormSection>
+
+    <FormSection Title="Capabilities"
+                 Description="Describe concrete delivery capabilities, limits, and tool boundaries so project staffing can reuse the same agent identity without guesswork.">
+        <AiCapabilityList Capabilities="Model.Capabilities" />
+    </FormSection>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public AiAgentProfileEditorModel Model { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<PartyOptionModel> OwnerOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<AiProviderOptionModel> ProviderOptions { get; set; } = [];
+
+    private string ProviderHintText
+    {
+        get
+        {
+            var selectedProvider = ProviderOptions.FirstOrDefault(item => item.Id == Model.ProviderProfileId);
+            if (selectedProvider is null)
+            {
+                return ProviderOptions.Count == 0
+                    ? "No provider profiles exist yet. Create them in Workspace settings before binding this agent."
+                    : "Link a Workspace provider profile here to reuse the shared provider registry and default model contract.";
+            }
+
+            var modelText = string.IsNullOrWhiteSpace(selectedProvider.DefaultModel)
+                ? "No provider default model configured."
+                : $"Provider default model: {selectedProvider.DefaultModel}.";
+            return selectedProvider.IsEnabled
+                ? $"{selectedProvider.ProviderLabel} provider is enabled. {modelText}"
+                : $"{selectedProvider.ProviderLabel} provider is currently disabled. {modelText}";
+        }
+    }
+
+    private static string BuildProviderLabel(AiProviderOptionModel option)
+    {
+        return option.IsEnabled
+            ? $"{option.Name} ({option.ProviderLabel})"
+            : $"{option.Name} ({option.ProviderLabel}, disabled)";
+    }
+}

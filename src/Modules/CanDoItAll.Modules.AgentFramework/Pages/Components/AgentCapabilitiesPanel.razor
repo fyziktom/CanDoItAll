@@ -1,0 +1,295 @@
+<ListDetailShell ListPaneWidth="23rem"
+                 data-testid="agents-capabilities-panel">
+    <ListHeader>
+        <ListPanelHeader Title="Agents"
+                         Description="Select the technical agent whose runtime capabilities you want to inspect, assign, or verify."
+                         Count="@($"{agents.Count} agent(s)")" />
+    </ListHeader>
+
+    <ListContent>
+        @if (agents.Count == 0)
+        {
+            <EmptyState Eyebrow="No agents"
+                        Title="Create a technical agent first"
+                        Description="Capability assignment only makes sense after the technical runtime catalog exists." />
+        }
+        else
+        {
+            <div class="agent-capabilities-panel__tree-scroll">
+                <TreeView Items="@AgentTreeNodes"
+                          Style="TreeViewStyle.Workbench"
+                          AriaLabel="Capability agents"
+                          EmptyText="No technical agents are available."
+                          OnSelect="HandleAgentTreeSelectAsync"
+                          OnToggle="HandleAgentTreeToggleAsync"
+                          data-testid="agents-capability-agent-tree" />
+            </div>
+        }
+    </ListContent>
+
+    <DetailHeader>
+        <div class="agent-capabilities-panel__detail-header">
+            <Stack Gap="0.25rem" Class="agent-capabilities-panel__detail-title">
+                <p class="cda-eyebrow">Capability assignment</p>
+                <h2 class="agent-capabilities-panel__heading">@(selectedAgent?.Name ?? "Select an agent")</h2>
+            </Stack>
+
+            @if (selectedAgentEditor is not null)
+            {
+                <div class="agent-capabilities-panel__header-stats">
+                    <CompactStatStrip>
+                        <CompactStat Label="attached"
+                                     Value="@selectedAgentEditor.SelectedCapabilityIds.Count.ToString()"
+                                     TooltipText="Capabilities currently assigned to this agent."
+                                     Tone="info" />
+                        <CompactStat Label="shown"
+                                     Value="@FilteredCapabilities.Count.ToString()"
+                                     TooltipText="Capabilities matching the current filters."
+                                     Tone="accent" />
+                        <CompactStat Label="skills"
+                                     Value="@capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
+                                     TooltipText="Prompt and workflow skills."
+                                     Tone="success" />
+                        <CompactStat Label="tools"
+                                     Value="@capabilities.Count(item => item.Kind == CapabilityKind.Tool).ToString()"
+                                     TooltipText="Runtime tools in the catalog."
+                                     Tone="accent" />
+                        <CompactStat Label="MCP servers"
+                                     Value="@capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
+                                     TooltipText="Connector-backed tool surfaces."
+                                     Tone="warning" />
+                        <CompactStat Label="verified"
+                                     Value="@capabilities.Count(item => item.ProofStatus == CapabilityProofStatus.Verified).ToString()"
+                                     TooltipText="Capabilities with successful proof status."
+                                     Tone="success" />
+                    </CompactStatStrip>
+                </div>
+            }
+
+            <Cluster Gap="LayoutGap.Small"
+                     Wrap="FlexWrap.Wrap"
+                     JustifyContent="JustifyContent.End"
+                     Class="agent-capabilities-panel__header-actions">
+                <AgentAvatarActionButton AgentName="@CapabilityCuratorDisplayName"
+                                         AvatarImageUrl="@CapabilityCuratorAvatarImageUrl"
+                                         FallbackText="CC"
+                                         Label="@($"Open {CapabilityCuratorDisplayName}")"
+                                         Click="OpenCapabilityCuratorAsync"
+                                         Disabled="@(!CanOpenCapabilityCurator)"
+                                         TestId="agents-capability-curator-open"
+                                         TooltipTestId="agents-capability-curator-tooltip" />
+                <Button Text="New tool"
+                        Icon="build"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
+                        data-testid="agents-capability-new-tool" />
+                <Button Text="New MCP"
+                        Icon="hub"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
+                        data-testid="agents-capability-new-mcp" />
+                <Button Text="New skill"
+                        Icon="psychology"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(isBusy || isOpeningCapabilityWizard)"
+                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
+                        data-testid="agents-capability-new-skill" />
+            </Cluster>
+        </div>
+    </DetailHeader>
+
+    <DetailContent>
+        <Stack GapScale="LayoutGap.Large">
+            @if (selectedAgent is null || selectedAgentEditor is null)
+            {
+                <EmptyState Eyebrow="Select an agent"
+                            Title="Choose a technical agent from the left rail"
+                            Description="The right pane shows the capability inventory and the attached runtime set for the selected agent." />
+            }
+            else if (capabilities.Count == 0)
+            {
+                <EmptyState Eyebrow="No capabilities"
+                            Title="No capabilities are cataloged yet"
+                            Description="Add a skill, tool, or MCP server before assigning it to this agent." />
+            }
+            else
+            {
+                <FormSection Title="Access preview"
+                             Description="Validate one capability access rule against the selected agent capability set before changing runtime policy templates.">
+                    <Grid Gap="LayoutGap.Large" ColumnsLg="5">
+                        <div>
+                            <label class="cda-field-label">Effect</label>
+                            <InputSelect @bind-Value="accessRuleEffect"
+                                         class="cda-input"
+                                         data-testid="agents-capability-access-effect">
+                                <option value="deny">Deny</option>
+                                <option value="allow">Allow</option>
+                                <option value="require">Require</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Scope</label>
+                            <InputSelect @bind-Value="accessRuleScope"
+                                         class="cda-input"
+                                         data-testid="agents-capability-access-scope">
+                                <option value="uiPreview">UI preview</option>
+                                <option value="agentDefault">Agent default</option>
+                                <option value="workflowDefinition">Workflow definition</option>
+                                <option value="workflowNode">Workflow node</option>
+                                <option value="processDefinition">Process definition</option>
+                                <option value="processStep">Process step</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Selector</label>
+                            <InputSelect @bind-Value="accessRuleSelectorKind"
+                                         class="cda-input"
+                                         data-testid="agents-capability-access-selector">
+                                <option value="all">All</option>
+                                <option value="kind">Kind</option>
+                                <option value="capabilityKey">Capability key</option>
+                                <option value="tag">Tag</option>
+                                <option value="operationClassification">Operation classification</option>
+                                <option value="runtimeToolName">Runtime tool name</option>
+                                <option value="mcpServerKey">MCP server key</option>
+                                <option value="mcpToolName">MCP tool name</option>
+                                <option value="implementationKey">Implementation key</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Value</label>
+                            <InputText @bind-Value="accessRuleSelectorValue"
+                                       class="cda-input"
+                                       data-testid="agents-capability-access-value" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">MCP server key</label>
+                            <InputText @bind-Value="accessRuleSelectorServerKey"
+                                       class="cda-input"
+                                       data-testid="agents-capability-access-server-key" />
+                        </div>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                        <div>
+                            <label class="cda-field-label">Reason</label>
+                            <InputText @bind-Value="accessRuleReason"
+                                       class="cda-input"
+                                       data-testid="agents-capability-access-reason" />
+                        </div>
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.End">
+                            <Button Text="Preview access"
+                                    Icon="policy"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Disabled="@isAccessPreviewBusy"
+                                    IsBusy="@isAccessPreviewBusy"
+                                    Click="PreviewAccessAsync"
+                                    data-testid="agents-capability-access-preview" />
+                            @if (accessPreviewResult is not null)
+                            {
+                                <StatusBadge Tone="@(accessPreviewResult.ValidationResult.IsValid ? "success" : "danger")"
+                                             Text="@($"{accessPreviewResult.EffectiveSet.AllowedCapabilities.Count} allowed")" />
+                                <StatusBadge Tone="@(accessPreviewResult.EffectiveSet.Diagnostics.Count == 0 ? "neutral" : "warning")"
+                                             Text="@($"{accessPreviewResult.EffectiveSet.Diagnostics.Count} suppressed")" />
+                            }
+                        </Cluster>
+                    </Grid>
+
+                    @if (accessPreviewResult is not null && !accessPreviewResult.ValidationResult.IsValid)
+                    {
+                        <SurfaceCard Soft="true" data-testid="agents-capability-access-validation">
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var issue in accessPreviewResult.ValidationResult.Issues.Take(4))
+                                {
+                                    <div>
+                                        <p class="cda-field-label">@issue.FieldPath</p>
+                                        <p>@issue.Message</p>
+                                        <p class="cda-body-muted">@issue.RepairHint</p>
+                                    </div>
+                                }
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                    else if (accessPreviewResult is not null && accessPreviewResult.EffectiveSet.Diagnostics.Count > 0)
+                    {
+                        <SurfaceCard Soft="true" data-testid="agents-capability-access-diagnostics">
+                            <Stack GapScale="LayoutGap.Small">
+                                @foreach (var diagnostic in accessPreviewResult.EffectiveSet.Diagnostics.Take(4))
+                                {
+                                    <div>
+                                        <p class="cda-field-label">@diagnostic.Identity.Key.Value</p>
+                                        <p>@diagnostic.Reason</p>
+                                        <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                                    </div>
+                                }
+                            </Stack>
+                        </SurfaceCard>
+                    }
+                </FormSection>
+
+                <FilterBar ResultText="@($"{FilteredCapabilities.Count} matching capability(s)")">
+                    <div class="agent-capabilities-panel__filters">
+                        <input @bind="capabilitySearch"
+                               @bind:event="oninput"
+                               class="cda-input agent-capabilities-panel__filter-input"
+                               placeholder="Search capabilities"
+                               data-testid="agents-capability-search" />
+                        <TagEditor Value="@capabilityTagFilters"
+                                   ValueChanged="HandleCapabilityTagFiltersChangedAsync"
+                                   Suggestions="@AvailableCapabilityTags"
+                                   Placeholder="Filter tags"
+                                   MaxTags="6"
+                                   TestId="agents-capability-tag-filter"
+                                   InputTestId="agents-capability-tag-filter-input" />
+                        <InputSelect @bind-Value="assignmentFilter"
+                                     class="cda-input agent-capabilities-panel__filter-select"
+                                     data-testid="agents-capability-assignment-filter">
+                            <option value="@CapabilityAssignmentFilter.All">All</option>
+                            <option value="@CapabilityAssignmentFilter.Assigned">Assigned</option>
+                            <option value="@CapabilityAssignmentFilter.NotAssigned">Not Assigned</option>
+                        </InputSelect>
+                        <InputSelect @bind-Value="typeFilter"
+                                     class="cda-input agent-capabilities-panel__filter-select"
+                                     data-testid="agents-capability-type-filter">
+                            <option value="@CapabilityTypeFilter.All">All</option>
+                            <option value="@CapabilityTypeFilter.Mcp">MCP</option>
+                            <option value="@CapabilityTypeFilter.Skill">Skill</option>
+                            <option value="@CapabilityTypeFilter.Tool">Tool</option>
+                        </InputSelect>
+                        <Button Text="Reset"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ResetCapabilityFilters" />
+                    </div>
+                </FilterBar>
+
+                @if (FilteredCapabilities.Count == 0)
+                {
+                    <EmptyState Eyebrow="No matches"
+                                Title="No capabilities match the current filters"
+                                Description="Clear search, tag, assignment, or type filters to broaden the inventory." />
+                }
+                else
+                {
+                    <div class="agent-capabilities-panel__card-scroll">
+                        <AgentCapabilityList Items="@FilteredCapabilities"
+                                             AttachedCapabilityIds="@selectedAgentEditor.SelectedCapabilityIds"
+                                             IsBusy="@isBusy"
+                                             CanVerify="true"
+                                             AssignmentRequested="ToggleCapabilityAsync"
+                                             VerificationRequested="VerifyCapabilityAsync"
+                                             DetailsRequested="OpenCapabilityDetailsDialogAsync"
+                                             TestIdPrefix="agents-capability"
+                                             ListTestId="agents-capability-card-grid"
+                                             ColumnTemplateLg="repeat(3,minmax(16rem,1fr))" />
+                    </div>
+                }
+            }
+        </Stack>
+    </DetailContent>
+</ListDetailShell>

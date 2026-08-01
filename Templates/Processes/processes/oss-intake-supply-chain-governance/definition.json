@@ -1,0 +1,992 @@
+{
+  "Kind": "process-template",
+  "Key": "oss-intake-supply-chain-governance",
+  "DisplayName": "Open-source intake and supply-chain governance",
+  "Summary": "Assess new third-party components through identity, license, provenance, security, SBOM, and approval steps so reuse remains deliberate and auditable.",
+  "ValueStatement": "Make open-source adoption safe, fast, and reusable by standardizing component intake, license obligation review, provenance checks, and durable approval records.",
+  "CustomerName": "Engineering, legal, and security stakeholders",
+  "OwnerName": "Open-source governance office",
+  "InterfaceContractSummary": "A requested component or package becomes an approved or rejected intake decision with explicit obligations, provenance evidence, and SBOM updates.",
+  "GovernanceNotes": "Do not confuse convenient package acquisition with approved component adoption. Identity, obligations, provenance, and update ownership must be explicit.",
+  "ChangeSummary": "Built from OpenChain resources, SPDX metadata practice, SLSA provenance expectations, and SSDF supply-chain protections.",
+  "GovernancePolicySummary": "No component may be adopted without verified identity, license review, security/provenance assessment, SBOM registration, and accountable ongoing ownership.",
+  "ConstitutionRuleSummary": "A component can be popular and still be unsuitable; approval requires explicit reasoning, not reputation transfer.",
+  "OperatingModeSummary": "Assisted execution with human legal/security approval. Automation may collect evidence and draft analysis, but approval remains accountable.",
+  "SimulationReadinessSummary": "Works for procurement-style intake, dev-team self-service review, and AI-assisted package research pipelines.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "AssistedExecution",
+  "SourceFrameworkKeys": [
+    "openchain",
+    "spdx",
+    "slsa",
+    "nist-ssdf"
+  ],
+  "SharedRoleRefs": [
+    "compliance-steward",
+    "security-reviewer",
+    "service-owner",
+    "software-engineer"
+  ],
+  "SharedChecklistRefs": [
+    "oss-intake-checklist",
+    "security-review-checklist"
+  ],
+  "SharedValidationRefs": [
+    "validation-sbom-ready",
+    "validation-security-clear"
+  ],
+  "SharedPromptRefs": [
+    "prompt-oss-evaluation"
+  ],
+  "LocalRoleRefs": [
+    "license-counsel",
+    "sbom-curator"
+  ],
+  "LocalChecklistRefs": [
+    "component-identity-checklist"
+  ],
+  "LocalValidationRefs": [
+    "validate-license-obligation-coverage"
+  ],
+  "LocalPromptRefs": [
+    "prompt-component-approval-note"
+  ],
+  "LocalArtifactRefs": [
+    "license-obligation-matrix"
+  ],
+  "Metrics": [
+    "Average component intake cycle time",
+    "Percentage of adopted components with current SBOM entry",
+    "Number of approvals with unresolved provenance gaps",
+    "Time to publish obligation guidance to consuming teams"
+  ],
+  "Risks": [
+    "Component identity is wrong or incomplete.",
+    "License obligations are misunderstood or not passed downstream.",
+    "Provenance or build integrity is weak relative to sensitivity of use.",
+    "SBOM updates lag behind real adoption."
+  ],
+  "TailoringRules": [
+    "For internal low-risk tooling, security review may be lighter but SBOM and ownership still remain required.",
+    "For runtime production dependencies, provenance and maintenance posture must be stricter.",
+    "For AI/ML model packages and datasets, add the AI evaluation and dataset handling sidecars."
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "component-request",
+      "Title": "Register component intake request",
+      "Subtitle": "Make the request explicit before evaluation",
+      "Notes": "Capture why the component is wanted, where it will be used, what alternatives exist, and who will own it after approval.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Package name or component identifier, intended use, business context, and requesting team.",
+      "OutputContractSummary": "Typed component intake request with accountable owner.",
+      "EvidenceContractSummary": "Intake brief and ownership statement.",
+      "DecisionRightsSummary": "Software engineer requests; service owner confirms operational ownership exists.",
+      "ExceptionPolicySummary": "Reject anonymous or ownerless component requests.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Requester remains accountable for supplying context."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Operational owner review is required."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "intake-brief",
+          "Title": "Component intake request",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "component-request-intake-brief"
+        }
+      ],
+      "ChecklistRefs": [
+        "oss-intake-checklist",
+        "component-identity-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-sbom-ready"
+      ],
+      "PromptRefs": [
+        "prompt-oss-evaluation"
+      ],
+      "DocRefs": [
+        "processes/oss-intake-supply-chain-governance/steps/component-request.md"
+      ],
+      "BranchCanvasX": 320,
+      "BranchCanvasY": 260,
+      "Dependencies": [],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "identity-and-maintenance",
+      "Title": "Verify component identity and maintenance posture",
+      "Subtitle": "Know exactly what you are evaluating",
+      "Notes": "Confirm upstream source, package lineage, maintainer activity, release freshness, and whether the requested artifact matches the claimed project.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Component request, repository links, package registry metadata, and maintainer signals.",
+      "OutputContractSummary": "Verified identity record and maintenance posture summary.",
+      "EvidenceContractSummary": "Identity note, upstream mapping, and maintenance-health summary.",
+      "DecisionRightsSummary": "SBOM curator verifies identity; software engineer helps interpret practical adoption implications.",
+      "ExceptionPolicySummary": "Do not continue if the requested package cannot be reliably tied to an upstream project and maintenance history.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "component-request",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "sbom-curator",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Identity verification remains with the catalog steward."
+        },
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Engineering review confirms functional match."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "sbom-manifest",
+          "Title": "Component identity registration draft",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "identity-and-maintenance-sbom-manifest"
+        },
+        {
+          "TemplateKey": "provenance-report",
+          "Title": "Upstream identity and maintenance summary",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "identity-and-maintenance-provenance-report"
+        }
+      ],
+      "ChecklistRefs": [
+        "component-identity-checklist",
+        "oss-intake-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-sbom-ready"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/oss-intake-supply-chain-governance/steps/identity-and-maintenance.md"
+      ],
+      "BranchCanvasX": 630,
+      "BranchCanvasY": 260,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "component-request",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "license-and-obligations",
+      "Title": "Analyze license obligations and redistribution constraints",
+      "Subtitle": "Adoption must preserve downstream compliance",
+      "Notes": "Translate the component license, notice requirements, source obligations, export constraints, and policy exceptions into explicit obligations.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Verified identity, license texts, notice files, policy guidance, and intended distribution model.",
+      "OutputContractSummary": "Obligation matrix and legal position for adoption.",
+      "EvidenceContractSummary": "License-obligation matrix and unresolved legal questions.",
+      "DecisionRightsSummary": "License counsel owns legal interpretation; compliance steward reviews policy fit.",
+      "ExceptionPolicySummary": "No approval if obligations cannot be explained to downstream teams.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "identity-and-maintenance",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "license-counsel",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Legal interpretation remains with qualified counsel."
+        },
+        {
+          "RoleKey": "compliance-steward",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Compliance stewardship remains explicit."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "license-obligation-matrix",
+          "Title": "License obligation matrix",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "license-and-obligations-license-obligation-matrix"
+        },
+        {
+          "TemplateKey": "sbom-manifest",
+          "Title": "Component license metadata entry",
+          "ArtifactKind": "Deliverable",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "license-and-obligations-sbom-manifest"
+        }
+      ],
+      "ChecklistRefs": [
+        "oss-intake-checklist"
+      ],
+      "ValidationRefs": [
+        "validate-license-obligation-coverage"
+      ],
+      "PromptRefs": [
+        "prompt-component-approval-note"
+      ],
+      "DocRefs": [
+        "processes/oss-intake-supply-chain-governance/steps/license-and-obligations.md"
+      ],
+      "BranchCanvasX": 940,
+      "BranchCanvasY": 260,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "identity-and-maintenance",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 3,
+      "Key": "security-and-provenance",
+      "Title": "Review security posture and provenance trust",
+      "Subtitle": "Supply-chain trust must match deployment risk",
+      "Notes": "Assess known vulnerabilities, update responsiveness, maintainer trust, signed provenance, and build-chain confidence relative to intended use.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Identity record, license position, vulnerability data, provenance statements, and deployment context.",
+      "OutputContractSummary": "Supply-chain risk position with compensating controls or rejection rationale.",
+      "EvidenceContractSummary": "Security/provenance review note and risk position.",
+      "DecisionRightsSummary": "Security reviewer may reject a component even if the license is acceptable.",
+      "ExceptionPolicySummary": "Do not approve runtime-critical components on weak provenance without explicit compensating controls.",
+      "TargetLeadHours": 8,
+      "DependsOnStepKey": "license-and-obligations",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "security-reviewer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Security and provenance review remain explicit."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Operational owner reviews deployment risk."
+        },
+        {
+          "RoleKey": "sbom-curator",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Catalog steward verifies metadata completeness."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "security-review-note",
+          "Title": "Security review note",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "security-and-provenance-security-review-note"
+        },
+        {
+          "TemplateKey": "provenance-report",
+          "Title": "Provenance report",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "security-and-provenance-provenance-report"
+        }
+      ],
+      "ChecklistRefs": [
+        "security-review-checklist",
+        "oss-intake-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-security-clear"
+      ],
+      "PromptRefs": [
+        "prompt-oss-evaluation"
+      ],
+      "DocRefs": [
+        "processes/oss-intake-supply-chain-governance/steps/security-and-provenance.md"
+      ],
+      "BranchCanvasX": 1250,
+      "BranchCanvasY": 260,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "license-and-obligations",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    },
+    {
+      "Order": 4,
+      "Key": "approval-and-registration",
+      "Title": "Approve, reject, or constrain adoption",
+      "Subtitle": "Approval carries obligations forward",
+      "Notes": "Make the adoption decision and publish the resulting obligations, owner, approved version boundary, and review cadence.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "License position, security/provenance review, and intended use context.",
+      "OutputContractSummary": "Approval decision with obligations, owner, and review cadence.",
+      "EvidenceContractSummary": "Approval record and final SBOM registration.",
+      "DecisionRightsSummary": "Compliance steward approves policy fit; service owner accepts operational ownership.",
+      "ExceptionPolicySummary": "No approval without named ongoing owner and explicit version boundary.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "security-and-provenance",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "compliance-steward",
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchOutcomes": [
+        {
+          "Key": "approved",
+          "Title": "Approved",
+          "Description": "Component may be adopted under recorded conditions."
+        },
+        {
+          "Key": "rejected",
+          "Title": "Rejected",
+          "Description": "Component is not approved for the intended use."
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "compliance-steward",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Approval stays with compliance steward."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Owner acceptance remains explicit."
+        },
+        {
+          "RoleKey": "license-counsel",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Legal review is retained in the record."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "sbom-manifest",
+          "Title": "SBOM manifest",
+          "ArtifactKind": "",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "approval-and-registration-sbom-manifest"
+        },
+        {
+          "TemplateKey": "release-readiness-report",
+          "Title": "Component approval note",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "approval-and-registration-release-readiness-report"
+        }
+      ],
+      "ChecklistRefs": [
+        "oss-intake-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-sbom-ready",
+        "validate-license-obligation-coverage"
+      ],
+      "PromptRefs": [
+        "prompt-component-approval-note"
+      ],
+      "DocRefs": [
+        "processes/oss-intake-supply-chain-governance/steps/approval-and-registration.md"
+      ],
+      "BranchCanvasX": 4789,
+      "BranchCanvasY": -1390,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "security-and-provenance",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "BranchDecision"
+    },
+    {
+      "Order": 5,
+      "Key": "handoff-and-watch",
+      "Title": "Hand off obligations and establish re-review triggers",
+      "Subtitle": "Approval must become operational practice",
+      "Notes": "Publish obligation guidance, notify consuming teams, and define the triggers that force re-review when component posture changes.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Approval record, SBOM entry, obligations matrix, and owner contacts.",
+      "OutputContractSummary": "Downstream handoff package and re-review trigger list.",
+      "EvidenceContractSummary": "Obligation handoff note and re-review log.",
+      "DecisionRightsSummary": "SBOM curator owns metadata dissemination; service owner owns runtime review cadence.",
+      "ExceptionPolicySummary": "If obligations cannot be passed to consuming teams, the adoption is not operationally complete.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "approval-and-registration",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 5660,
+      "CanvasY": -1040,
+      "BranchOutcomes": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "sbom-curator",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Catalog dissemination remains with the SBOM curator."
+        },
+        {
+          "RoleKey": "service-owner",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Operational owner confirms ongoing watch."
+        },
+        {
+          "RoleKey": "software-engineer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Consuming engineer confirms implementation fit."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "TemplateKey": "license-obligation-matrix",
+          "Title": "Published obligation handoff",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "handoff-and-watch-license-obligation-matrix"
+        },
+        {
+          "TemplateKey": "retrospective-improvement-log",
+          "Title": "Component re-review trigger log",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "",
+          "SensitivityLevel": "",
+          "RetentionDays": 0,
+          "AllowedFutureUsageSummary": "",
+          "ValidationRequirementSummary": "",
+          "Key": "handoff-and-watch-retrospective-improvement-log"
+        }
+      ],
+      "ChecklistRefs": [
+        "oss-intake-checklist"
+      ],
+      "ValidationRefs": [
+        "validation-sbom-ready"
+      ],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/oss-intake-supply-chain-governance/steps/handoff-and-watch.md"
+      ],
+      "BranchCanvasX": 1870,
+      "BranchCanvasY": 260,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "approval-and-registration",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
+    }
+  ],
+  "RelativePath": "processes/oss-intake-supply-chain-governance",
+  "DefinitionJsonPath": "processes/oss-intake-supply-chain-governance/definition.json",
+  "LocalRoles": [
+    {
+      "Kind": "role-resource",
+      "Key": "license-counsel",
+      "DisplayName": "License counsel",
+      "Scope": "local",
+      "ProcessKey": "oss-intake-supply-chain-governance",
+      "Summary": "Specialist reviewer for open-source license obligations, incompatibilities, and exception framing.",
+      "Purpose": "Ensure component use decisions reflect actual license obligations and approved exception logic.",
+      "StaffingIntent": "A legal or licensing specialist focused on OSS usage governance.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 15,
+      "RoleTemplateSourceKey": "process-role-template/oss-intake-supply-chain-governance/license-counsel",
+      "RoleTemplateSnapshotName": "License counsel / template-pack v1",
+      "SnapshotSummary": "Specialist reviewer for open-source license obligations, incompatibilities, and exception framing.",
+      "SeniorityBand": "Senior OSS legal/compliance counsel",
+      "MinimumYearsInPrimaryDiscipline": 7,
+      "MinimumYearsInSoftwareDelivery": 9,
+      "DomainTags": [
+        "open-source-licenses",
+        "legal",
+        "policy"
+      ],
+      "KnowledgeRequirements": [
+        "Deep knowledge of common open-source licenses, notice obligations, reciprocity triggers, and distribution models.",
+        "Ability to interpret license implications in the actual product delivery context.",
+        "Knowledge of when engineering or product assumptions create legal risk.",
+        "Understanding of exception and approval patterns for non-standard component use.",
+        "Ability to separate opinion, precedent, and mandatory restriction clearly.",
+        "Knowledge of how license obligations interact with third-party distribution and customer commitments."
+      ],
+      "ExperienceRequirements": [
+        "Has reviewed OSS component usage for a commercial product or enterprise environment.",
+        "Has handled license incompatibility or obligation-escalation scenarios.",
+        "Has written or approved a licensing position that guided engineering action.",
+        "Has worked with compliance stewards and engineers on OSS policy execution.",
+        "Has helped define reusable policy patterns for repeated component intake."
+      ],
+      "DecisionRights": [
+        "Approve, reject, or conditionally approve license acceptability.",
+        "Require notices, attribution, or exception handling before component adoption.",
+        "Escalate unresolved incompatibility to accountable governance owners.",
+        "Define whether a component can move forward with conditions."
+      ],
+      "OwnedArtifacts": [
+        "License review note",
+        "OSS exception request",
+        "Obligation summary"
+      ],
+      "CollaborationExpectations": [
+        "Work with compliance steward, SBOM curator, and engineers.",
+        "Explain consequences in delivery-usable language.",
+        "Review policy questions early enough to avoid wasted implementation effort.",
+        "Document precedent carefully for future reuse."
+      ],
+      "AntiPatterns": [
+        "Treating popular components as automatically safe from a license standpoint.",
+        "Giving vague legal caution without a usable recommendation.",
+        "Approving exceptions without required follow-up obligations.",
+        "Waiting until release to ask how the component is actually distributed."
+      ],
+      "FitnessEvidence": [
+        "Clear licensing decisions consumed by delivery teams.",
+        "Reduced late-stage OSS licensing surprises.",
+        "Documented obligation patterns reused across component reviews.",
+        "Audit or legal review confidence in the role’s output."
+      ],
+      "DocPath": "processes/oss-intake-supply-chain-governance/roles/license-counsel.md"
+    },
+    {
+      "Kind": "role-resource",
+      "Key": "sbom-curator",
+      "DisplayName": "SBOM curator",
+      "Scope": "local",
+      "ProcessKey": "oss-intake-supply-chain-governance",
+      "Summary": "Metadata owner for component inventory, provenance completeness, and reusable dependency evidence.",
+      "Purpose": "Keep the software bill of materials and dependency evidence accurate enough for governance, response, and later reuse.",
+      "StaffingIntent": "A supply-chain operations specialist who can structure component metadata and evidence consistently.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 35,
+      "RoleTemplateSourceKey": "process-role-template/oss-intake-supply-chain-governance/sbom-curator",
+      "RoleTemplateSnapshotName": "SBOM curator / template-pack v1",
+      "SnapshotSummary": "Metadata owner for component inventory, provenance completeness, and reusable dependency evidence.",
+      "SeniorityBand": "Senior release engineering or supply-chain operations",
+      "MinimumYearsInPrimaryDiscipline": 4,
+      "MinimumYearsInSoftwareDelivery": 6,
+      "DomainTags": [
+        "sbom",
+        "dependency-metadata",
+        "provenance",
+        "supply-chain"
+      ],
+      "KnowledgeRequirements": [
+        "Knowledge of SBOM concepts, provenance metadata, component identifiers, and dependency relationship modeling.",
+        "Ability to collect and normalize component data from build, package, and repository sources.",
+        "Understanding of how missing metadata weakens vulnerability and compliance response.",
+        "Knowledge of SPDX-compatible or equivalent metadata structures and reuse expectations.",
+        "Ability to track completeness, gaps, and manual overrides transparently.",
+        "Understanding of retention and sensitivity requirements for supply-chain evidence."
+      ],
+      "ExperienceRequirements": [
+        "Has built or maintained component inventory or SBOM outputs for a software product.",
+        "Has reconciled incomplete dependency metadata and documented the gaps.",
+        "Has worked with engineering, security, and compliance on dependency evidence needs.",
+        "Has supported vulnerability-response or audit work using component metadata.",
+        "Has improved repeatability of dependency evidence generation."
+      ],
+      "DecisionRights": [
+        "Approve metadata completeness for the OSS intake gate.",
+        "Require missing provenance or component identifiers before release use.",
+        "Escalate when dependency evidence is not reproducible.",
+        "Define reuse restrictions for incomplete or provisional SBOM outputs."
+      ],
+      "OwnedArtifacts": [
+        "SBOM manifest",
+        "Provenance mapping note",
+        "Dependency evidence gap log"
+      ],
+      "CollaborationExpectations": [
+        "Coordinate with platform, security, and license roles.",
+        "Keep evidence structured, versioned, and reviewable.",
+        "Document manual assumptions instead of burying them.",
+        "Support rapid lookup during vulnerability or audit events."
+      ],
+      "AntiPatterns": [
+        "Publishing an SBOM that looks complete but contains unexplained blind spots.",
+        "Treating dependency metadata as a one-time release artifact instead of a reusable capability.",
+        "Ignoring transitive or generated dependencies that materially affect risk.",
+        "Allowing manual corrections without provenance."
+      ],
+      "FitnessEvidence": [
+        "Structured SBOM outputs used in later reviews or incidents.",
+        "Traceable reconciliation notes for incomplete metadata.",
+        "Reduced dependency-visibility gaps over time.",
+        "Stakeholder trust in the curator’s completeness signals."
+      ],
+      "DocPath": "processes/oss-intake-supply-chain-governance/roles/sbom-curator.md"
+    }
+  ],
+  "LocalArtifacts": [
+    {
+      "Kind": "artifact-resource",
+      "Key": "license-obligation-matrix",
+      "DisplayName": "License obligation matrix",
+      "Scope": "local",
+      "ProcessKey": "oss-intake-supply-chain-governance",
+      "ArtifactKind": "Checklist",
+      "DefaultTrustRequirement": "ReviewRequired",
+      "DefaultSensitivityLevel": "Internal",
+      "DefaultRetentionDays": 1095,
+      "Summary": "Matrix of component-specific obligations, notices, approvals, and residual restrictions for the intake decision.",
+      "AllowedFutureUsageSummary": "Reusable for release packaging, audit response, and future version updates of the same component family.",
+      "ValidationRequirementSummary": "Must identify which obligation applies to which component and usage mode.",
+      "OwnerRoleKey": "license-counsel",
+      "DocPath": "processes/oss-intake-supply-chain-governance/artifacts/license-obligation-matrix.md"
+    }
+  ],
+  "LocalChecklists": [
+    {
+      "Kind": "checklist-resource",
+      "Key": "component-identity-checklist",
+      "DisplayName": "Component identity checklist",
+      "Scope": "local",
+      "ProcessKey": "oss-intake-supply-chain-governance",
+      "OwnerRoleKey": "sbom-curator",
+      "Phase": "component-intake",
+      "Summary": "Ensures the team knows exactly what component is being approved and from where.",
+      "EntryCriteria": "A new component or version has been proposed.",
+      "ExitCriteria": "Identity, source, and version are explicit enough for reproducible review and later response.",
+      "Checks": [
+        "Component name, version, and upstream source are captured.",
+        "Build or package identity is linked where available.",
+        "Manual assumptions are documented.",
+        "Transitive risk blind spots are called out."
+      ],
+      "EvidenceExpectations": [
+        "SBOM entry",
+        "Provenance note"
+      ],
+      "DocPath": "processes/oss-intake-supply-chain-governance/checklists/component-identity-checklist.md"
+    }
+  ],
+  "LocalValidations": [
+    {
+      "Kind": "validation-resource",
+      "Key": "validate-license-obligation-coverage",
+      "DisplayName": "Validate license obligation coverage",
+      "Scope": "local",
+      "ProcessKey": "oss-intake-supply-chain-governance",
+      "Severity": "high",
+      "OwnerRoleKey": "license-counsel",
+      "Gate": "component-intake",
+      "Summary": "Confirms all relevant license obligations were identified and assigned.",
+      "PassCriteria": "Component obligations are explicit and mapped to a concrete delivery or compliance action where needed.",
+      "FailCriteria": "License interpretation remains ambiguous or obligations have no owner.",
+      "EscalationRule": "Escalate to compliance steward and sponsoring manager before component approval.",
+      "DocPath": "processes/oss-intake-supply-chain-governance/validations/validate-license-obligation-coverage.md"
+    }
+  ],
+  "LocalPrompts": [
+    {
+      "Kind": "prompt-resource",
+      "Key": "prompt-component-approval-note",
+      "DisplayName": "Prompt / component approval note",
+      "Scope": "local",
+      "ProcessKey": "oss-intake-supply-chain-governance",
+      "AudienceRoleKey": "sbom-curator",
+      "Phase": "component-intake",
+      "Summary": "Prompt scaffold for the final component approval summary.",
+      "RequiredInputs": [
+        "component identity",
+        "license findings",
+        "security findings",
+        "usage context",
+        "metadata gaps"
+      ],
+      "OutputSchema": [
+        "component decision",
+        "usage restrictions",
+        "open follow-ups",
+        "reuse guidance"
+      ],
+      "RefusalConditions": [
+        "Refuse to state unrestricted approval while major provenance or obligation gaps remain."
+      ],
+      "DocPath": "processes/oss-intake-supply-chain-governance/prompts/prompt-component-approval-note.md"
+    }
+  ],
+  "RoleUsages": [
+    {
+      "Key": "software-engineer",
+      "RoleResourceKey": "software-engineer",
+      "DisplayName": "Software engineer",
+      "Purpose": "Produce working change artifacts that satisfy the process contract, surface blockers quickly, and leave enough proof for review and reuse.",
+      "StaffingIntent": "A build-capable engineer who can turn scope into code, tests, documentation, and traceable technical decisions.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 60,
+      "CanvasY": 40,
+      "Notes": "Implementation owner for code, automated tests, and change-level technical evidence."
+    },
+    {
+      "Key": "service-owner",
+      "RoleResourceKey": "service-owner",
+      "DisplayName": "Service owner",
+      "Purpose": "Represent live-service constraints, operational history, and post-release accountability in change decisions.",
+      "StaffingIntent": "A domain-aligned owner with authority over service-level objectives, support load, and operational trade-offs.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "TechnicalContact",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 25,
+      "CanvasX": 210,
+      "CanvasY": 110,
+      "Notes": "Operational accountability owner for a live service, product surface, or bounded business capability."
+    },
+    {
+      "Key": "sbom-curator",
+      "RoleResourceKey": "sbom-curator",
+      "DisplayName": "SBOM curator",
+      "Purpose": "Keep the software bill of materials and dependency evidence accurate enough for governance, response, and later reuse.",
+      "StaffingIntent": "A supply-chain operations specialist who can structure component metadata and evidence consistently.",
+      "PreferredExecutorKind": "person-or-agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 35,
+      "CanvasX": 360,
+      "CanvasY": 40,
+      "Notes": "Metadata owner for component inventory, provenance completeness, and reusable dependency evidence."
+    },
+    {
+      "Key": "license-counsel",
+      "RoleResourceKey": "license-counsel",
+      "DisplayName": "License counsel",
+      "Purpose": "Ensure component use decisions reflect actual license obligations and approved exception logic.",
+      "StaffingIntent": "A legal or licensing specialist focused on OSS usage governance.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 15,
+      "CanvasX": 510,
+      "CanvasY": 110,
+      "Notes": "Specialist reviewer for open-source license obligations, incompatibilities, and exception framing."
+    },
+    {
+      "Key": "compliance-steward",
+      "RoleResourceKey": "compliance-steward",
+      "DisplayName": "Compliance steward",
+      "Purpose": "Ensure required compliance considerations are identified early, translated into actionable checks, and retained as evidence.",
+      "StaffingIntent": "A governance specialist who understands how policy obligations intersect with real delivery work.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": false,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 20,
+      "CanvasX": 660,
+      "CanvasY": 40,
+      "Notes": "Policy and evidence steward for contractual, regulatory, license, and audit-sensitive change decisions."
+    },
+    {
+      "Key": "security-reviewer",
+      "RoleResourceKey": "security-reviewer",
+      "DisplayName": "Security reviewer",
+      "Purpose": "Ensure changes touching trust boundaries, sensitive data, dependencies, or operational attack surface are reviewed proportionally and documented defensibly.",
+      "StaffingIntent": "A senior security practitioner who can translate security risk into concrete engineering and governance decisions.",
+      "PreferredExecutorKind": "person",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 25,
+      "CanvasX": 3059,
+      "CanvasY": -540.5,
+      "Notes": "Security gate owner for threat assessment, exception handling, and trust-boundary decisions."
+    }
+  ],
+  "SharedArtifactRefs": []
+}
+

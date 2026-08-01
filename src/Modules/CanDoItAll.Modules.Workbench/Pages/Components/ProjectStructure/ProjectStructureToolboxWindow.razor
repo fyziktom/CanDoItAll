@@ -1,0 +1,154 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.OverlayLib
+
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      BodyClass="project-structure-toolbox-window__body"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="@DefaultToolboxWindowHeight"
+                      MinWidth="320"
+                      MinHeight="320"
+                      MaxWidth="520"
+                      MaxHeight="760"
+                      State="@ResolvedState"
+                      StateChanged="StateChanged">
+    <OverlayComponentToolbox TestId="project-structure-standard-blocks-toolbox"
+                             AriaLabel="Project structure standard blocks toolbox"
+                             Class="project-structure-toolbox"
+                             ShowHeader="false"
+                             SearchText="@SearchText"
+                             SearchTextChanged="SearchTextChanged"
+                             SearchPlaceholder="Search blocks, files, runtime, or infrastructure"
+                             SearchClass="project-structure-toolbox__search w-full"
+                             BodyClass="project-structure-toolbox__body"
+                             SectionsClass="project-structure-toolbox__sections"
+                             ItemButtonClass="cda-treeview__row"
+                             ItemIconClass="cda-treeview__icon"
+                             ItemLabelClass="cda-treeview__text"
+                             EmptyTitle="No blocks match the current search."
+                             EmptyDescription="Clear the filter to restore the full catalog."
+                             Badges="@ToolboxBadges"
+                             Sections="@ToolboxSections"
+                             GroupToggled="OnToggleGroup"
+                             ItemSelected="HandleNodeSelectedAsync" />
+</CanvasFloatingWindow>
+
+@code {
+    private const double LegacyDefaultToolboxWindowHeight = 420;
+    private const double DefaultToolboxWindowHeight = 560;
+
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectStructureInspectorCreateGroup> Groups { get; set; } = [];
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public string SourceLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public double DefaultWidth { get; set; }
+
+    private CanvasWorkbenchWindowState ResolvedState
+        => UpgradeLegacyDefaultHeight(State, LegacyDefaultToolboxWindowHeight, DefaultToolboxWindowHeight);
+
+    [Parameter]
+    public EventCallback<string> OnToggleGroup { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnOpenAction { get; set; }
+
+    private int ItemCount => Groups.Sum(group => group.Actions.Count);
+
+    private IReadOnlyList<OverlayToolboxBadge> ToolboxBadges
+        =>
+        [
+            new OverlayToolboxBadge(SourceLabel, "info"),
+            new OverlayToolboxBadge($"{ItemCount} items", "label")
+        ];
+
+    private IReadOnlyList<OverlayToolboxSection> ToolboxSections
+        =>
+        [
+            new OverlayToolboxSection(
+                "project-structure",
+                "Project structure",
+                "Standard blocks",
+                Groups.Select(BuildGroup).ToList(),
+                IsExpanded: true,
+                DataTestId: "project-structure-toolbox-section")
+        ];
+
+    private static OverlayToolboxGroup BuildGroup(ProjectStructureInspectorCreateGroup group)
+    {
+        return new OverlayToolboxGroup(
+            group.Key,
+            group.Label,
+            group.Description,
+            group.Actions.Select(action => new OverlayToolboxItem(
+                action.ActionId,
+                action.Label,
+                action.Description,
+                Icon: action.Icon,
+                Tone: action.Tone,
+                DataTestId: $"project-structure-toolbox-{action.ActionId}")).ToList(),
+            Icon: group.Actions.FirstOrDefault()?.Icon ?? "folder",
+            IsExpanded: group.IsOpen,
+            DataTestId: $"project-structure-toolbox-group-{group.Key}",
+            BodyDataTestId: $"project-structure-toolbox-group-body-{group.Key}");
+    }
+
+    private Task HandleNodeSelectedAsync(string actionId)
+        => OnOpenAction.InvokeAsync(actionId);
+
+    private static CanvasWorkbenchWindowState UpgradeLegacyDefaultHeight(
+        CanvasWorkbenchWindowState state,
+        double legacyDefaultHeight,
+        double defaultHeight)
+    {
+        var normalized = CanvasWorkbenchWindowState.Normalize(state);
+        if (normalized.IsMinimized ||
+            !normalized.Height.HasValue ||
+            normalized.Height.Value > legacyDefaultHeight + 0.5)
+        {
+            return normalized;
+        }
+
+        var upgraded = normalized.Clone();
+        upgraded.Height = defaultHeight;
+        return CanvasWorkbenchWindowState.Normalize(upgraded);
+    }
+}

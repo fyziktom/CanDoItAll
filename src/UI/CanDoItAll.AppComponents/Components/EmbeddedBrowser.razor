@@ -1,0 +1,86 @@
+@namespace CanDoItAll.AppComponents
+
+<SurfaceCard Class="@Class"
+             Style="flex:1 1 0;height:100%;min-height:0;width:100%;overflow:hidden;display:flex;padding:0;"
+             data-testid="@DataTestId"
+             data-embeddable="@CanEmbed.ToString().ToLowerInvariant()">
+    @if (CanEmbed)
+    {
+        <iframe src="@Source.AbsoluteUri"
+                title="@Title"
+                class="embedded-browser__frame"
+                sandbox="@RestrictedSandbox"
+                referrerpolicy="no-referrer"
+                loading="lazy"></iframe>
+    }
+    else
+    {
+        <Stack FillHeight="true"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.Center"
+               Style="width:100%;height:100%;min-height:0;overflow:auto;padding:1rem;box-sizing:border-box;">
+            <EmptyState Eyebrow="External page"
+                        Title="This site cannot be embedded"
+                        Description="@ResolvedEmbedUnavailableReason">
+                <Actions>
+                    <Button Text="Open in browser"
+                            Icon="open_in_new"
+                            ButtonStyle="ButtonStyle.Primary"
+                            Href="@Source.AbsoluteUri"
+                            Target="_blank"
+                            Rel="noopener noreferrer"
+                            data-testid="@($"{DataTestId}-open-browser")" />
+                </Actions>
+            </EmptyState>
+        </Stack>
+    }
+</SurfaceCard>
+
+@code {
+    public const string RestrictedSandbox = "allow-forms allow-popups allow-scripts";
+
+    [Parameter, EditorRequired]
+    public Uri Source { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool CanEmbed { get; set; } = true;
+
+    [Parameter]
+    public string EmbedUnavailableReason { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DataTestId { get; set; } = "embedded-browser";
+
+    private string ResolvedEmbedUnavailableReason
+        => string.IsNullOrWhiteSpace(EmbedUnavailableReason)
+            ? "This page prevents other sites from displaying it in an embedded browser. Open it in a new browser tab instead."
+            : EmbedUnavailableReason;
+
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Source);
+        if (!Source.IsAbsoluteUri ||
+            !string.IsNullOrEmpty(Source.UserInfo) ||
+            !IsAllowedScheme(Source))
+        {
+            throw new ArgumentException(
+                "Embedded browser sources must use HTTPS, or HTTP on the local machine, and cannot contain user credentials.",
+                nameof(Source));
+        }
+
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new ArgumentException("An embedded browser title is required.", nameof(Title));
+        }
+    }
+
+    private static bool IsAllowedScheme(Uri source)
+        => source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+           source.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) && source.IsLoopback;
+}

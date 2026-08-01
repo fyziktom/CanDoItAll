@@ -1,0 +1,53 @@
+@media (min-width: 1200px) {
+    .agent-provider-editor-form,
+    .agent-provider-editor-tabs-shell,
+    .agent-provider-editor-tabs,
+    .agent-provider-connection-tab,
+    .agent-provider-prices-tab,
+    .agent-provider-runtime-tab {
+        width: 100%;
+    }
+
+    .agent-provider-editor-tabs-shell ::deep .cad-tabs__list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+        align-items: stretch;
+        padding-block-end: 0.5rem;
+        width: 100%;
+    }
+
+    .agent-provider-editor-tabs-shell ::deep .cad-tabs__tab {
+        justify-content: center;
+        width: 100%;
+        min-height: 2.75rem;
+        border: 1px solid var(--cda-border-subtle, #dbe3ef);
+        border-radius: 0.5rem;
+    }
+
+    .agent-provider-editor-tabs-shell ::deep .cad-tabs__tab[aria-selected="true"] {
+        border-color: var(--cda-border-strong, #b7c5d8);
+    }
+
+    .agent-provider-editor-tabs-shell ::deep .cad-tabs__panels,
+    .agent-provider-editor-tabs-shell ::deep .cad-tabs__panel {
+        width: 100%;
+    }
+
+    .agent-provider-editor-tabs-shell ::deep .cad-tabs__panel {
+        min-height: clamp(30rem, calc(100vh - 22rem), 54rem);
+        padding: 1rem;
+    }
+
+    .agent-provider-runtime-tab {
+        display: grid;
+        grid-template-columns: minmax(28rem, 0.95fr) minmax(34rem, 1.35fr);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .agent-provider-runtime-tab ::deep textarea[data-testid="providers-config-json"],
+    .agent-provider-runtime-tab ::deep textarea[data-testid="providers-notes"] {
+        min-height: 20rem;
+    }
+}

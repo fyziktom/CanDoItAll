@@ -1,0 +1,140 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+@inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<div class="agent-team-details-dialog" data-testid="agents-team-details-dialog">
+    @if (isLoading)
+    {
+        <SurfaceCard Soft="true">
+            <p class="cda-eyebrow">Loading</p>
+            <h3 class="agent-team-details-dialog__title">Loading team details</h3>
+        </SurfaceCard>
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium">
+            <div class="grid gap-2">
+                <span class="text-xs font-bold text-slate-600">Icon</span>
+                <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700"
+                          data-testid="agents-team-selected-icon">
+                        <span class="material-icons text-2xl" aria-hidden="true">@AgentTeamIconCatalog.Normalize(editorModel.Icon)</span>
+                    </span>
+                    <Button Text="Choose icon"
+                            Icon="widgets"
+                            ButtonStyle="ButtonStyle.Light"
+                            Variant="Variant.Outlined"
+                            Click="OpenIconPickerAsync"
+                            data-testid="agents-team-choose-icon" />
+                </Cluster>
+            </div>
+
+            <label class="agent-team-details-dialog__field">
+                <span>Name</span>
+                <input @bind="editorModel.Name"
+                       @bind:event="oninput"
+                       class="cda-input agent-team-details-dialog__input"
+                       data-testid="agents-team-name" />
+            </label>
+
+            <label class="agent-team-details-dialog__field">
+                <span>Description</span>
+                <textarea @bind="editorModel.Description"
+                          @bind:event="oninput"
+                          class="cda-input agent-team-details-dialog__textarea"
+                          data-testid="agents-team-description"></textarea>
+            </label>
+
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                <Button Text="Cancel"
+                        Icon="close"
+                        Variant="Variant.Outlined"
+                        Disabled="@isBusy"
+                        Click="CancelAsync" />
+                <Button Text="Save team"
+                        Icon="check"
+                        Disabled="@isBusy"
+                        IsBusy="@isBusy"
+                        Click="SaveAsync"
+                        data-testid="agents-team-save" />
+            </Cluster>
+        </Stack>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid? TeamId { get; set; }
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private AgentTeamEditorModel editorModel = new();
+    private bool isLoading = true;
+    private bool isBusy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            editorModel = await WorkspaceService.GetAgentTeamEditorAsync(TeamId);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        isBusy = true;
+        try
+        {
+            editorModel.Icon = AgentTeamIconCatalog.Normalize(editorModel.Icon);
+            var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel);
+            NotificationService.Success("Team saved", "Agent team details were saved.");
+            if (DialogReference is not null)
+            {
+                await DialogReference.CloseAsync(new AgentTeamDetailsDialogResult(teamId));
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Team save failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private Task CancelAsync()
+        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
+    private async Task OpenIconPickerAsync()
+    {
+        var result = await DialogService.OpenAsync<MaterialIconPickerDialog>(
+            "Choose team icon",
+            new Dictionary<string, object?>
+            {
+                [nameof(MaterialIconPickerDialog.SelectedIcon)] = editorModel.Icon
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Team identity",
+                Subtitle = "Pick a Material icon for this AgentFramework team.",
+                Size = ModalSize.Wide,
+                DenseChrome = true,
+                AriaLabel = "Choose team icon",
+                TestId = "material-icon-picker-dialog-shell"
+            });
+
+        if (result is string icon)
+        {
+            editorModel.Icon = AgentTeamIconCatalog.Normalize(icon);
+        }
+    }
+}

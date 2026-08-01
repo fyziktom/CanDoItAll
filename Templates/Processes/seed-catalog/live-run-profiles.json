@@ -1,0 +1,170 @@
+[
+  {
+    "Key": "generic-blazor-wasm-pwa-app",
+    "ProcessTemplateKey": "blazor-app-delivery",
+    "RunNameTemplate": "Blazor WASM PWA delivery / {AppTopic}",
+    "Summary": "Live-run profile for a fresh Blazor WebAssembly PWA delivery run. The app topic and acceptance criteria come from the run request; this profile does not seed transitions or artifacts.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReasonTemplate": "Deliver a Blazor WebAssembly PWA for {AppTopic} from the approved project-structure node. Acceptance criteria must be supplied by the run request and should cover the app's primary user workflow, responsive UI, state behavior, PWA manifest/service-worker readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
+    "FreshRunPolicy": {
+      "RequiresFreshRun": true,
+      "AllowsSeededTransitions": false,
+      "AllowsSeededArtifacts": false,
+      "RequiredPreDispatchChecks": [
+        "Confirm the run request supplies the concrete app topic and acceptance criteria.",
+        "Confirm no baseline scenario transitions are imported into the live run.",
+        "Confirm no baseline scenario artifacts are imported into the live run.",
+        "Confirm the first executable work is architecture and contract resolution before implementation."
+      ],
+      "RequiredEvidenceChecks": [
+        "Before validation, read run detail and confirm required artifact expectations are satisfied by current-run evidence.",
+        "Confirm projection lineage points to the current run and not to a seeded baseline scenario.",
+        "Confirm runtime invariant diagnostics are clear before project-structure writeback."
+      ],
+      "ProjectStructureWritebackGuidance": "Write back only current-run managed output and evidence roots with project-structure lineage; do not write seeded baseline artifacts or transition receipts as live delivery evidence."
+    },
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "blazor-delivery-manager",
+        "DisplayNameTemplate": "{AppTopic} delivery manager",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns process flow, acceptance scope, evidence index, and project-structure writeback for the requested Blazor WASM PWA run."
+      },
+      {
+        "StepKey": "resolve-blazor-contract",
+        "RoleKey": "blazor-solution-architect",
+        "DisplayNameTemplate": "{AppTopic} solution architect",
+        "ExecutorKind": "agent",
+        "BindingReason": "Resolves architecture, route structure, output root, acceptance criteria, and evidence targets without implementing code."
+      },
+      {
+        "StepKey": "implement-blazor-change",
+        "RoleKey": "blazor-engineer",
+        "DisplayNameTemplate": "{AppTopic} Blazor engineer",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns scoped implementation of the requested Blazor WASM PWA and build/test proof."
+      },
+      {
+        "StepKey": "validate-blazor-runtime",
+        "RoleKey": "blazor-qa-lead",
+        "DisplayNameTemplate": "{AppTopic} QA and browser proof lead",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns non-mutating runtime validation, screenshot capture, console inspection, acceptance checks, and PWA/offline readiness proof."
+      }
+    ],
+    "AcceptanceCriteria": [
+      {
+        "Key": "run-request-topic",
+        "Title": "Run request drives the app topic",
+        "Description": "The delivered app satisfies the concrete topic and acceptance criteria supplied in the run request without relying on template-hardcoded feature names."
+      },
+      {
+        "Key": "blazor-wasm-pwa-shape",
+        "Title": "Blazor WASM PWA shape",
+        "Description": "The implementation is a Blazor WebAssembly PWA with a relevant route structure, responsive UI, explicit client-side state behavior, and PWA manifest/service-worker readiness where feasible."
+      },
+      {
+        "Key": "runtime-browser-proof",
+        "Title": "Runtime and browser proof",
+        "Description": "Validation captures build/test output, a browser screenshot or Playwright proof, console inspection with no active JavaScript/runtime errors, and any offline-readiness limitations."
+      },
+      {
+        "Key": "process-evidence-boundary",
+        "Title": "Process evidence boundary",
+        "Description": "Architecture is read-only, implementation is the only normal product mutation step, validation is non-mutating, and final writeback records current-run evidence with project-structure lineage."
+      }
+    ],
+    "RequiredProofKinds": [
+      "Architecture and acceptance contract brief",
+      "Implementation change-set summary",
+      "Build and test transcript",
+      "Browser screenshot or Playwright proof",
+      "Console inspection result",
+      "PWA manifest/service-worker readiness notes",
+      "Project-structure writeback receipt"
+    ]
+  },
+  {
+    "Key": "generic-simple-local-app",
+    "ProcessTemplateKey": "simple-app-delivery",
+    "RunNameTemplate": "Simple app delivery / {AppTopic}",
+    "Summary": "Framework-neutral live-run profile for a small local UI, API, console, or library application. The run request supplies the application kind, stack, product root, and acceptance criteria.",
+    "OperatingMode": "GovernedLive",
+    "TriggerReasonTemplate": "Deliver the bounded local application requested for {AppTopic}. Resolve exactly one application kind, the approved product root, technology stack, entry point, acceptance criteria, and only the proof applicable to that kind. Do not infer browser, HTTP, deployment, or privileged-operation requirements from the topic. Route explicit production, privilege, regulated-data, payment, destructive-migration, or unresolved security risk to specialist review.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "simple-app-manager",
+        "DisplayNameTemplate": "{AppTopic} delivery manager",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns the bounded delivery contract, recovery decisions, evidence index, and terminal routing without performing implementation work."
+      },
+      {
+        "StepKey": "resolve-app-profile",
+        "RoleKey": "simple-app-architect",
+        "DisplayNameTemplate": "{AppTopic} contract reviewer",
+        "ExecutorKind": "agent",
+        "BindingReason": "Reviews application kind, product boundary, applicable proof, and unsupported-risk classification without mutating the product."
+      },
+      {
+        "StepKey": "implement-application",
+        "RoleKey": "simple-app-engineer",
+        "DisplayNameTemplate": "{AppTopic} implementation owner",
+        "ExecutorKind": "agent",
+        "BindingReason": "Owns scaffolding, implementation, and current-run build, test, or smoke proof inside the approved product root."
+      },
+      {
+        "StepKey": "validate-application",
+        "RoleKey": "simple-app-qa",
+        "DisplayNameTemplate": "{AppTopic} independent validator",
+        "ExecutorKind": "agent",
+        "BindingReason": "Validates the declared acceptance contract using only the runtime, HTTP, browser, console, or consumer proof applicable to the selected application kind."
+      },
+      {
+        "StepKey": "repair-findings",
+        "RoleKey": "simple-app-engineer",
+        "DisplayNameTemplate": "{AppTopic} repair owner",
+        "ExecutorKind": "agent",
+        "BindingReason": "Applies the single bounded repair from concrete validation findings."
+      },
+      {
+        "StepKey": "revalidate-repair",
+        "RoleKey": "simple-app-qa",
+        "DisplayNameTemplate": "{AppTopic} repair validator",
+        "ExecutorKind": "agent",
+        "BindingReason": "Revalidates only the repaired acceptance contract and produces fresh proof."
+      }
+    ],
+    "AcceptanceCriteria": [
+      {
+        "Key": "explicit-application-profile",
+        "Title": "Explicit application profile",
+        "Description": "The current run declares one supported application kind, stack, approved product root, entry point, and bounded acceptance contract."
+      },
+      {
+        "Key": "complete-bounded-delivery",
+        "Title": "Complete bounded delivery",
+        "Description": "The implementation satisfies every declared acceptance criterion and does not expand into deployment, privilege, regulated-data, payment, destructive-migration, or unresolved security work."
+      },
+      {
+        "Key": "kind-appropriate-proof",
+        "Title": "Application-kind appropriate proof",
+        "Description": "Build, tests, and only the runtime, HTTP, browser, console, or consumer evidence applicable to the declared application kind are captured from the current run."
+      },
+      {
+        "Key": "single-mutation-owner",
+        "Title": "Predictable team boundary",
+        "Description": "The implementation owner is the only normal product mutator; architecture and QA remain independent and read-only."
+      }
+    ],
+    "RequiredProofKinds": [
+      "Simple application delivery contract",
+      "Implementation change-set summary",
+      "Current-run build and test transcript",
+      "Application-kind appropriate smoke or consumer proof",
+      "Independent acceptance result",
+      "Managed handoff receipt"
+    ]
+  }
+]

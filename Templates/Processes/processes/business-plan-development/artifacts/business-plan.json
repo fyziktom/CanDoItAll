@@ -1,0 +1,28 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "business-plan",
+  "DisplayName": "Business plan",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "ArtifactKind": "Deliverable",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Decision-oriented business plan with segment, problem, offer, product evidence implications, differentiation, channels, operating model, risks, and validation plan.",
+  "AllowedFutureUsageSummary": "Reusable for finance, marketing, funding, and execution planning.",
+  "ValidationRequirementSummary": "Must include strategy spine, assumptions, risks, and next validation actions.",
+  "OwnerRoleKey": "business-strategist",
+  "DocPath": "processes/business-plan-development/artifacts/business-plan.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "business-plan",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must include strategy spine, assumptions, risks, and next validation actions."
+  }
+}
+

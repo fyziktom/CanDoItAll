@@ -1,0 +1,201 @@
+<Stack Class="agent-catalog-panel"
+       GapScale="LayoutGap.Large">
+    <div class="agent-catalog-panel__hero">
+        <div class="agent-catalog-panel__toolbar">
+            <div class="agent-catalog-panel__heading">
+                <p class="cda-eyebrow">Technical agents</p>
+                <h2 class="cda-title-xl">Agent cards</h2>
+            </div>
+            <div class="agent-catalog-panel__toolbar-controls">
+                <StatusBadge Tone="info" Text="@(isLoading ? "Loading..." : $"{FilteredAgents.Count} of {agents.Count} agent(s)")" />
+                <Button Text="New team"
+                        Icon="groups"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenNewTeamDialogAsync"
+                        data-testid="agents-team-new" />
+                <Button Text="New agent"
+                        Icon="add"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OpenNewAgentDialogAsync"
+                        data-testid="agents-catalog-new" />
+                <div class="agent-catalog-panel__search" role="search">
+                    <input @bind="agentSearch"
+                           @bind:event="oninput"
+                           class="cda-input agent-catalog-panel__search-input"
+                           placeholder="Search agents"
+                           data-testid="agents-catalog-search" />
+                    <TooltipTarget Text="Reset agent search"
+                                   Position="TooltipPosition.Bottom"
+                                   Duration="@((TimeSpan?)null)"
+                                   TestId="agents-catalog-reset-tooltip">
+                        <Button Icon="restart_alt"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ResetAgentSearch"
+                                aria-label="Reset agent search"
+                                data-testid="agents-catalog-reset" />
+                    </TooltipTarget>
+                </div>
+                @if (SelectedTeam is not null)
+                {
+                    <StatusBadge Tone="info" Text="@SelectedTeam.Name" />
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <SurfaceCard Soft="true">
+            <p class="cda-eyebrow">Loading catalog</p>
+            <h3 class="mt-1 text-lg font-semibold text-slate-950">Loading technical agents</h3>
+            <p class="mt-3 text-sm leading-6 text-slate-600">
+                AgentFramework is loading the technical runtime catalog before the roster is rendered.
+            </p>
+        </SurfaceCard>
+    }
+    else if (agents.Count == 0)
+    {
+        <EmptyState Eyebrow="No technical agents"
+                    Title="Create the first technical agent"
+                    Description="Technical agents define runtime prompts, provider bindings, and tool-ready execution policy." />
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Large"
+              ColumnTemplateLg="minmax(17rem,0.65fr) minmax(0,1.75fr)"
+              Class="agent-catalog-panel__workspace"
+              data-testid="agents-catalog-workspace">
+            <section class="agent-catalog-panel__team-panel" data-testid="agents-team-panel">
+                <Split Breakpoint="LayoutBreakpoint.None"
+                       Gap="LayoutGap.Small"
+                       AlignItems="AlignItems.Center"
+                       data-testid="agents-team-header">
+                    <Cluster Gap="LayoutGap.XSmall"
+                             AlignItems="AlignItems.Center"
+                             Wrap="FlexWrap.NoWrap">
+                        <p class="cda-eyebrow">Teams</p>
+                        <h3 class="agent-catalog-panel__section-title">@TeamPanelTitle</h3>
+                    </Cluster>
+                    <StatusBadge Tone="info" Text="@teams.Count.ToString()" />
+                </Split>
+
+                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="agent-catalog-panel__team-actions">
+                    <Button Text="New"
+                            Icon="add"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="OpenNewTeamDialogAsync"
+                            data-testid="agents-team-new-compact" />
+                    <Button Text="Edit"
+                            Icon="edit"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(SelectedTeam is null)"
+                            Click="OpenSelectedTeamDialogAsync"
+                            data-testid="agents-team-edit" />
+                    <Button Text="Members"
+                            Icon="group_add"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(SelectedTeam is null)"
+                            Click="OpenSelectedTeamMembersDialogAsync"
+                            data-testid="agents-team-members" />
+                    <Button Text="Delete"
+                            Icon="delete"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Danger"
+                            Disabled="@(SelectedTeam is null)"
+                            Click="DeleteSelectedTeamAsync"
+                            data-testid="agents-team-delete" />
+                </Cluster>
+
+                <TreeView Items="@AgentTeamTreeNodes"
+                          Style="TreeViewStyle.Workbench"
+                          AriaLabel="Agent teams and members"
+                          EmptyText="No agent teams are available."
+                          OnSelect="HandleAgentTeamTreeSelectAsync"
+                          OnToggle="HandleAgentTeamTreeToggleAsync"
+                          data-testid="agents-team-tree" />
+            </section>
+
+            <section class="agent-catalog-panel__agent-results" data-testid="agents-catalog-results">
+                @if (FilteredAgents.Count == 0)
+                {
+                    <EmptyState Eyebrow="No matching agents"
+                                Title="No agents match the current team"
+                                Description="Choose another team or clear the search filter to see more technical agents." />
+                }
+                else
+                {
+                    <div class="agent-catalog-panel__agent-scroll">
+                        <Grid Gap="LayoutGap.Medium"
+                              ColumnTemplate="repeat(auto-fit,minmax(17rem,1fr))"
+                              Class="agent-catalog-panel__grid"
+                              data-testid="agents-catalog-card-grid">
+                            @foreach (var agent in FilteredAgents)
+                            {
+                                <AgentSelectionCard Agent="@agent"
+                                                    IsSelected="@(selectedAgentId == agent.Id)"
+                                                    IsPrivateProvider="@UsesPrivateProvider(agent)"
+                                                    SelectedLabel="Selected"
+                                                    ShowChatHistory="true"
+                                                    ShowDetailsTooltip="true"
+                                                    ShellTestId="agents-catalog-card-shell"
+                                                    SelectTestId="agents-catalog-card"
+                                                    OnSelect="@(() => SelectAgentAsync(agent.Id))"
+                                                    OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))">
+                                    <Actions>
+                                        @if (HrAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="forum"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-hr-agent-open" />
+                                        }
+                                        @if (PromptsCuratorAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="forum"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-prompts-curator-open" />
+                                        }
+                                        @if (WorkflowCuratorAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="account_tree"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-workflow-curator-open" />
+                                        }
+                                        @if (SchedulerAgentIdentity.Matches(agent))
+                                        {
+                                            <Button Text="Open chat"
+                                                    Icon="event_repeat"
+                                                    Size="ButtonSize.Small"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Disabled="@openingManagedAgentChatId.HasValue"
+                                                    Click="@(() => OpenManagedAgentChatAsync(agent))"
+                                                    data-testid="agents-scheduler-agent-open" />
+                                        }
+                                    </Actions>
+                                </AgentSelectionCard>
+                            }
+                        </Grid>
+                    </div>
+                }
+            </section>
+        </Grid>
+    }
+
+</Stack>

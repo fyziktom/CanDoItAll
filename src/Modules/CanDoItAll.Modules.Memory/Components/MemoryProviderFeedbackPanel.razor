@@ -1,0 +1,34 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-feedback">
+    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Feedback" />
+    <TextBlock TextStyle="TextStyle.Subtitle1" Value="Feedback ledger" />
+    @if (ActionResult is not null)
+    {
+        <MemoryActionResult Status="@ActionResult.Status.ToString()" Diagnostic="@ActionResult.Diagnostic" />
+    }
+
+    @if (Feedback.Count > 0)
+    {
+        <Stack Orientation="Orientation.Vertical" Gap="LayoutGap.Medium" Class="memory-ui-ledger-list">
+            @foreach (var item in Feedback)
+            {
+                <MemoryFeedbackLedgerRow Feedback="@item" />
+            }
+        </Stack>
+    }
+    else
+    {
+        <EmptyState Eyebrow="No feedback"
+                    Title="No feedback rows for the selected provider"
+                    Description="Submit feedback from a delivered context pack to create correlation rows." />
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<MemoryProviderFeedbackUiRecord> Feedback { get; set; } = [];
+
+    [Parameter]
+    public MemoryProviderFeedbackUiResult? ActionResult { get; set; }
+}

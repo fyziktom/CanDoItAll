@@ -1,4 +1,0 @@
-# Required tests
-
-- `Automation_message_pump_worker_continues_after_transient_dispatch_failure`
-- `Connector_outbox_worker_continues_after_transient_processing_failure`

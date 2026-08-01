@@ -1,0 +1,137 @@
+<div class="agent-execution-log-dialog-body" data-testid="agent-execution-log-dialog-body">
+    @if (OrderedEntries.Count == 0)
+    {
+        <EmptyState Eyebrow="Agent work"
+                    Title="No execution steps"
+                    Description="The selected run does not have persisted execution log entries." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            <SurfaceCard Soft="true">
+                <Stack GapScale="LayoutGap.Small">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@ResolveTone(ResolveLatestState())" Text="@ResolveLatestState().ToString()" />
+                        <StatusBadge Tone="neutral" Text="@($"{OrderedEntries.Count} steps")" />
+                        <StatusBadge Tone="neutral" Text="@FormatDuration(ResolveDuration())" />
+                        @if (Run is not null)
+                        {
+                            <StatusBadge Tone="info" Text="@Run.ProviderName" />
+                        }
+                    </Cluster>
+
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@ResolveRunTitle()" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@ResolveRunMeta()" />
+                </Stack>
+            </SurfaceCard>
+
+            <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                @foreach (var entry in OrderedEntries)
+                {
+                    var isHighlighted = entry.Id == HighlightEntryId;
+
+                    <article class="agent-execution-log-dialog-entry @(isHighlighted ? "agent-execution-log-dialog-entry--highlight" : string.Empty)"
+                             data-testid="agent-execution-log-dialog-entry">
+                        <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="@ResolveTone(entry.State)" Text="@entry.State.ToString()" />
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@entry.Phase" />
+                                <TextBlock TextStyle="TextStyle.Caption" Value="@entry.CreatedAtUtc.LocalDateTime.ToString("g")" />
+                            </Cluster>
+
+                            <pre class="agent-execution-log-dialog-entry__message">@entry.Message</pre>
+
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="neutral" Text="@($"Run {entry.ExecutionRunId}")" />
+                                <CopyButton Value="@entry.Message"
+                                            Disabled="@string.IsNullOrWhiteSpace(entry.Message)"
+                                            DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                            Size="CopyButtonSize.ExtraSmall"
+                                            AriaLabel="Copy execution step details" />
+                            </Cluster>
+                        </Stack>
+                    </article>
+                }
+            </Stack>
+        </Stack>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public ExecutionRunRecord? Run { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ExecutionLogEntry> Entries { get; set; } = [];
+
+    [Parameter]
+    public Guid? HighlightEntryId { get; set; }
+
+    private IReadOnlyList<ExecutionLogEntry> OrderedEntries
+        => Entries
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToList();
+
+    private string ResolveRunTitle()
+    {
+        if (!string.IsNullOrWhiteSpace(Run?.Title))
+        {
+            return Run.Title;
+        }
+
+        return "Agent execution";
+    }
+
+    private string ResolveRunMeta()
+    {
+        if (Run is null)
+        {
+            return $"Execution log from {OrderedEntries[0].CreatedAtUtc.LocalDateTime:g}.";
+        }
+
+        return $"{Run.Model} / {Run.SourceKind} / revision {Run.Revision}";
+    }
+
+    private ExecutionState ResolveLatestState()
+        => OrderedEntries.Count == 0 ? ExecutionState.Idle : OrderedEntries[^1].State;
+
+    private TimeSpan ResolveDuration()
+    {
+        if (OrderedEntries.Count == 0)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var startedAtUtc = Run?.StartedAtUtc ?? Run?.CreatedAtUtc ?? OrderedEntries[0].CreatedAtUtc;
+        var completedAtUtc = Run?.CompletedAtUtc ?? OrderedEntries[^1].CreatedAtUtc;
+        var duration = completedAtUtc - startedAtUtc;
+        return duration < TimeSpan.Zero ? TimeSpan.Zero : duration;
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}h {duration.Minutes:D2}m";
+        }
+
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s";
+        }
+
+        return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds))}s";
+    }
+
+    private static string ResolveTone(ExecutionState state)
+    {
+        return state switch
+        {
+            ExecutionState.Completed => "success",
+            ExecutionState.WaitingOnTool => "warning",
+            ExecutionState.Failed => "danger",
+            ExecutionState.Running or ExecutionState.Preparing or ExecutionState.Persisting => "info",
+            _ => "neutral"
+        };
+    }
+}

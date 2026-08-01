@@ -1,0 +1,27 @@
+{
+  "packKey": "candoitall-capability-template-pack",
+  "name": "CanDoItAll default capability template pack",
+  "version": "2026-07-capability-template-pack-v22",
+  "seedMarker": "Managed capability template seed",
+  "seedVersion": "2026-07-capability-template-pack-v22",
+  "capabilityFiles": [
+    {
+      "relativePath": "skills.json"
+    },
+    {
+      "relativePath": "tools.json"
+    },
+    {
+      "relativePath": "mcps.json"
+    },
+    {
+      "relativePath": "other.json"
+    }
+  ],
+  "policyFiles": [
+    {
+      "key": "default-compatibility-policy",
+      "relativePath": "policies/capability-access-policy.json"
+    }
+  ]
+}

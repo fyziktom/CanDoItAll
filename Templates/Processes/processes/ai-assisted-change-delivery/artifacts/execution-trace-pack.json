@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "execution-trace-pack",
+  "DisplayName": "Execution trace pack",
+  "Scope": "local",
+  "ProcessKey": "ai-assisted-change-delivery",
+  "ArtifactKind": "Transcript",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Confidential",
+  "DefaultRetentionDays": 365,
+  "Summary": "Trace pack containing prompt, response, tool-use, and reviewer notes for sampled AI-assisted execution.",
+  "AllowedFutureUsageSummary": "Reusable for AI safety review, audit, and later comparative evaluation within authorized audiences only.",
+  "ValidationRequirementSummary": "Must protect sensitive content and include enough context to interpret the sample correctly.",
+  "OwnerRoleKey": "ai-safety-reviewer",
+  "DocPath": "processes/ai-assisted-change-delivery/artifacts/execution-trace-pack.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "execution-trace-pack",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must protect sensitive content and include enough context to interpret the sample correctly."
+  }
+}

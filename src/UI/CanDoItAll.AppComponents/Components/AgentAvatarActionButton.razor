@@ -1,0 +1,71 @@
+@namespace CanDoItAll.AppComponents
+
+<TooltipTarget Text="@Label"
+               Position="TooltipPosition.Bottom"
+               Delay="@((TimeSpan?)null)"
+               Duration="@((TimeSpan?)null)"
+               TriggerClass="shrink-0"
+               TooltipClass="cda-page-header-action-tooltip"
+               TestId="@TooltipTestId">
+    <Button Size="ButtonSize.Small"
+            ButtonStyle="@ButtonStyle"
+            Class="cda-button--quick"
+            Style="padding-block:0"
+            Click="@Click"
+            Disabled="@Disabled"
+            aria-label="@Label"
+            data-testid="@TestId">
+        <Avatar Alt="@AgentName"
+                ImageUrl="@AvatarImageUrl"
+                FallbackText="@ResolvedFallbackText"
+                DefaultImageSeed="@AgentName"
+                Size="AvatarSize.Small"
+                Shape="AvatarShape.Rounded" />
+    </Button>
+</TooltipTarget>
+
+@code {
+    [Parameter, EditorRequired]
+    public string AgentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? AvatarImageUrl { get; set; }
+
+    [Parameter]
+    public string? FallbackText { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Info;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback Click { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public string? TooltipTestId { get; set; }
+
+    private string ResolvedFallbackText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(FallbackText))
+            {
+                return FallbackText.Trim();
+            }
+
+            return string.Concat(
+                AgentName
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Take(2)
+                    .Select(part => char.ToUpperInvariant(part[0])));
+        }
+    }
+}

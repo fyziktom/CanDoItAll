@@ -1,0 +1,26 @@
+{
+  "Kind": "checklist-resource",
+  "Key": "oss-intake-checklist",
+  "DisplayName": "OSS intake checklist",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "OwnerRoleKey": "compliance-steward",
+  "Phase": "oss-intake",
+  "Summary": "Open-source intake checklist covering license, provenance, security, and metadata completeness.",
+  "EntryCriteria": "A new component or dependency is being considered for use.",
+  "ExitCriteria": "Component decision is explicit, evidence-backed, and reusable later without redoing basic due diligence.",
+  "Checks": [
+    "Component identity, version, and source are known.",
+    "License obligations and compatibility were reviewed.",
+    "Security or supply-chain concerns were reviewed proportionally to risk.",
+    "SBOM and provenance expectations are defined.",
+    "Approval conditions or exception logic are explicit.",
+    "Reuse restrictions are documented when evidence is incomplete."
+  ],
+  "EvidenceExpectations": [
+    "OSS review note.",
+    "SBOM manifest or gap log.",
+    "License obligation summary."
+  ],
+  "DocPath": "shared/checklists/oss-intake-checklist.md"
+}

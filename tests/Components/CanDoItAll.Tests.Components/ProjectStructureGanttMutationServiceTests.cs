@@ -1,0 +1,1185 @@
+using CanDoItAll.Components.Gantt;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
+using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace CanDoItAll.Tests.Components;
+
+public sealed class ProjectStructureGanttMutationServiceTests
+{
+    private static readonly DateTimeOffset Baseline = new(2026, 7, 14, 8, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task ApplyTitleAsync_RejectsStaleTitleWithoutWriting()
+    {
+        await using var fixture = await MutationFixture.CreateAsync(
+            CreateTask("custom:00000000000000000000000000000001", "Authoritative", 0, 1));
+        var request = new GanttTaskTitleChangeRequest(
+            TaskId("custom:00000000000000000000000000000001"),
+            "Stale title",
+            "Proposed title");
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyTitleAsync(fixture.ProjectId, request));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var task = await fixture.FindTaskAsync(request.TaskId.Value);
+        Assert.Equal("Authoritative", task.Title);
+    }
+
+    [Fact]
+    public async Task ApplyDependencyAsync_PersistsSuccessorDependsOnPredecessor_AndPreservesMultiplePrerequisites()
+    {
+        var predecessorA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var successor = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        var predecessorC = CreateTask("custom:00000000000000000000000000000003", "C", 2, 3);
+        var existingLink = DependsOn(successor.NodeKey, predecessorA.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [predecessorA, successor, predecessorC],
+            [existingLink]);
+        var addedId = Guid.NewGuid();
+        var request = new GanttDependencyMutationRequest(
+            GanttDependencyMutationKind.Add,
+            null,
+            new GanttDependency(
+                PendingDependencyId(addedId),
+                TaskId(predecessorC.NodeKey),
+                TaskId(successor.NodeKey)));
+
+        var result = await fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request);
+
+        Assert.Equal(1, result.AddedDependencyCount);
+        var links = await fixture.LoadLinksAsync();
+        Assert.Equal(2, links.Count);
+        Assert.Contains(links, link =>
+            link.Id == addedId &&
+            link.SourceNodeKey == successor.NodeKey &&
+            link.TargetNodeKey == predecessorC.NodeKey);
+        Assert.Contains(links, link => link.Id == existingLink.Id);
+        var shiftedSuccessor = await fixture.FindTaskAsync(successor.NodeKey);
+        Assert.Equal(At(3), shiftedSuccessor.StartUtc);
+        Assert.Equal(At(4), shiftedSuccessor.EndUtc);
+        Assert.Equal(3600, shiftedSuccessor.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyDependencyAsync_RejectsCycleWithoutWriting()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        var taskC = CreateTask("custom:00000000000000000000000000000003", "C", 2, 3);
+        var links = new[]
+        {
+            DependsOn(taskB.NodeKey, taskA.NodeKey),
+            DependsOn(taskC.NodeKey, taskB.NodeKey)
+        };
+        await using var fixture = await MutationFixture.CreateAsync([taskA, taskB, taskC], links);
+        var request = new GanttDependencyMutationRequest(
+            GanttDependencyMutationKind.Add,
+            null,
+            new GanttDependency(
+                PendingDependencyId(Guid.NewGuid()),
+                TaskId(taskC.NodeKey),
+                TaskId(taskA.NodeKey)));
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.CycleDetected, exception.Code);
+        Assert.Equal(2, (await fixture.LoadLinksAsync()).Count);
+    }
+
+    [Fact]
+    public async Task ApplyDependencyAsync_ReconnectsPersistedLinkIdentity_AndShiftsNewSuccessorConstraint()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        var taskC = CreateTask("custom:00000000000000000000000000000003", "C", 2, 3);
+        var link = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync([taskA, taskB, taskC], [link]);
+        var previous = Dependency(link, taskA.NodeKey, taskB.NodeKey);
+        var request = new GanttDependencyMutationRequest(
+            GanttDependencyMutationKind.Reconnect,
+            previous,
+            new GanttDependency(
+                previous.Id,
+                TaskId(taskC.NodeKey),
+                TaskId(taskB.NodeKey)));
+
+        await fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request);
+
+        var persistedLink = Assert.Single(await fixture.LoadLinksAsync());
+        Assert.Equal(link.Id, persistedLink.Id);
+        Assert.Equal(taskB.NodeKey, persistedLink.SourceNodeKey);
+        Assert.Equal(taskC.NodeKey, persistedLink.TargetNodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal(At(3), persistedB.StartUtc);
+        Assert.Equal(At(4), persistedB.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenOneAffectedTaskIsStale_WritesNoDates()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB],
+            [DependsOn(taskB.NodeKey, taskA.NodeKey)]);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(taskA.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [
+                DateChange(taskA.NodeKey, 0, 1, 0, 2),
+                new GanttTaskDateChange(
+                    TaskId(taskB.NodeKey),
+                    At(1).AddMinutes(1),
+                    At(2).AddMinutes(1),
+                    At(2),
+                    At(3),
+                    true)
+            ],
+            [TaskId(taskA.NodeKey), TaskId(taskB.NodeKey)]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(
+                fixture.ProjectId,
+                new ProjectStructureGanttScheduleMutationRequest(
+                    request,
+                    [
+                        Snapshot(taskA),
+                        new ProjectStructureTaskScheduleSnapshot(
+                            TaskId(taskB.NodeKey),
+                            At(1).AddMinutes(1),
+                            At(2).AddMinutes(1),
+                            3600,
+                            At(1).AddMinutes(1),
+                            At(2).AddMinutes(1))
+                    ])));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal(At(0), persistedA.StartUtc);
+        Assert.Equal(At(1), persistedA.EndUtc);
+        Assert.Equal(At(1), persistedB.StartUtc);
+        Assert.Equal(At(2), persistedB.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_PersistsProjectionOnlySchedule()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Unscheduled", 0, 1);
+        task.StartUtc = null;
+        task.EndUtc = null;
+        task.DurationSeconds = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.Move,
+            [DateChange(task.NodeKey, 0, 1, 2, 3)],
+            []);
+
+        var result = await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            ScheduleMutation(request, task));
+
+        Assert.Equal([TaskId(task.NodeKey)], result.AffectedTaskIds);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(2), persisted.StartUtc);
+        Assert.Equal(At(3), persisted.EndUtc);
+        Assert.Equal(3600, persisted.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_DoesNotRequireHiddenSystemManagedTasksInRenderedSnapshot()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Visible", 0, 1);
+        var systemTask = CreateTask("custom:00000000000000000000000000000002", "System", 1, 2);
+        systemTask.IsSystemManaged = true;
+        await using var fixture = await MutationFixture.CreateAsync(task, systemTask);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+
+        await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            ScheduleMutation(request, task));
+
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(0), persisted.StartUtc);
+        Assert.Equal(At(2), persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_DoesNotApplyHiddenSystemManagedDependenciesToRenderedGraph()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 0, 1);
+        var hiddenDependency = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        hiddenDependency.IsSystemManaged = true;
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB],
+            [hiddenDependency]);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(taskA.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(taskA.NodeKey, 0, 1, 0, 2)],
+            []);
+
+        await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            ScheduleMutation(request, taskA, taskB));
+
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal(At(2), persistedA.EndUtc);
+        Assert.Equal(At(0), persistedB.StartUtc);
+        Assert.Equal(At(1), persistedB.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_PersistsProjectedTaskAndShiftedProjectedSuccessorAtomically()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        taskA.StartUtc = null;
+        taskA.EndUtc = null;
+        taskA.DurationSeconds = null;
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        taskB.StartUtc = null;
+        taskB.EndUtc = null;
+        taskB.DurationSeconds = null;
+        var dependency = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB],
+            [dependency]);
+        var request = GanttSchedulePlanner.Plan(
+            [
+                new GanttTask(TaskId(taskA.NodeKey), taskA.Title, At(0), At(1)),
+                new GanttTask(TaskId(taskB.NodeKey), taskB.Title, At(1), At(2))
+            ],
+            [Dependency(dependency, taskA.NodeKey, taskB.NodeKey)],
+            TaskId(taskA.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            At(2));
+
+        var result = await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            ScheduleMutation(request, taskA, taskB));
+
+        Assert.Equal(2, result.AffectedTaskIds.Count);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal(At(0), persistedA.StartUtc);
+        Assert.Equal(At(2), persistedA.EndUtc);
+        Assert.Equal(At(2), persistedB.StartUtc);
+        Assert.Equal(At(3), persistedB.EndUtc);
+        Assert.Equal(7200, persistedA.DurationSeconds);
+        Assert.Equal(3600, persistedB.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_MaterializesUnchangedProjectedPredecessorWithAffectedChain()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        var taskC = CreateTask("custom:00000000000000000000000000000003", "C", 2, 3);
+        var taskD = CreateTask("custom:00000000000000000000000000000004", "D", 3, 4);
+        taskA.StartUtc = null;
+        taskA.EndUtc = null;
+        taskA.DurationSeconds = null;
+
+        var dependencyAB = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        var dependencyBC = DependsOn(taskC.NodeKey, taskB.NodeKey);
+        var dependencyCD = DependsOn(taskD.NodeKey, taskC.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB, taskC, taskD],
+            [dependencyAB, dependencyBC, dependencyCD]);
+        var request = GanttSchedulePlanner.Plan(
+            [
+                new GanttTask(TaskId(taskA.NodeKey), taskA.Title, At(0), At(1)),
+                new GanttTask(TaskId(taskB.NodeKey), taskB.Title, At(1), At(2)),
+                new GanttTask(TaskId(taskC.NodeKey), taskC.Title, At(2), At(3)),
+                new GanttTask(TaskId(taskD.NodeKey), taskD.Title, At(3), At(4))
+            ],
+            [
+                Dependency(dependencyAB, taskA.NodeKey, taskB.NodeKey),
+                Dependency(dependencyBC, taskB.NodeKey, taskC.NodeKey),
+                Dependency(dependencyCD, taskC.NodeKey, taskD.NodeKey)
+            ],
+            TaskId(taskB.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            At(3));
+        Assert.DoesNotContain(request.AffectedTasks, change => change.TaskId == TaskId(taskA.NodeKey));
+
+        var result = await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            new ProjectStructureGanttScheduleMutationRequest(
+                request,
+                [
+                    Snapshot(taskA, At(0), At(1)),
+                    Snapshot(taskB),
+                    Snapshot(taskC),
+                    Snapshot(taskD)
+                ]));
+
+        Assert.Equal(4, result.AffectedTaskIds.Count);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        var persistedC = await fixture.FindTaskAsync(taskC.NodeKey);
+        var persistedD = await fixture.FindTaskAsync(taskD.NodeKey);
+        Assert.Equal(At(0), persistedA.StartUtc);
+        Assert.Equal(At(1), persistedA.EndUtc);
+        Assert.Equal(3600, persistedA.DurationSeconds);
+        Assert.Equal(At(1), persistedB.StartUtc);
+        Assert.Equal(At(3), persistedB.EndUtc);
+        Assert.Equal(7200, persistedB.DurationSeconds);
+        Assert.Equal(At(3), persistedC.StartUtc);
+        Assert.Equal(At(4), persistedC.EndUtc);
+        Assert.Equal(3600, persistedC.DurationSeconds);
+        Assert.Equal(At(4), persistedD.StartUtc);
+        Assert.Equal(At(5), persistedD.EndUtc);
+        Assert.Equal(3600, persistedD.DurationSeconds);
+
+        var persistedTasks = new[] { persistedA, persistedB, persistedC, persistedD };
+        var projectionOrigin = persistedTasks.Min(static task => task.StartUtc)
+            ?? throw new InvalidOperationException("The reloaded schedule has no persisted start.");
+        var surface = new ProjectStructureSurface(
+            fixture.ProjectId,
+            "Reloaded Gantt mutation test",
+            persistedTasks.Select(ProjectionNode).ToArray(),
+            new[] { dependencyAB, dependencyBC, dependencyCD }
+                .Select(static dependency => new ProjectStructureLink(
+                    dependency.SourceNodeKey,
+                    dependency.TargetNodeKey,
+                    dependency.LinkKind,
+                    !dependency.IsSystemManaged,
+                    dependency.Id))
+                .ToArray(),
+            null);
+        var projection = new ProjectStructureGanttProjectionAdapter().Build(
+            surface,
+            [],
+            new ProjectStructureGanttProjectionOptions(projectionOrigin, TimeSpan.FromHours(1)));
+
+        Assert.True(projection.IsValid, string.Join(Environment.NewLine, projection.Issues.Select(static issue => issue.Message)));
+        Assert.DoesNotContain(
+            projection.Issues,
+            static issue => issue.Code == ProjectStructureGanttProjectionIssueCode.DependencyScheduleConflict);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_PromotesStartOnlyProjectionWhenPersistedStartMatches()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Start only", 0, 1);
+        task.EndUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+
+        await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            ScheduleMutation(request, task));
+
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(0), persisted.StartUtc);
+        Assert.Equal(At(2), persisted.EndUtc);
+        Assert.Equal(7200, persisted.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenProjectedPersistedEndpointIsStale_WritesNoDates()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Start changed", 0, 1);
+        task.StartUtc = At(0.5);
+        task.EndUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(
+                fixture.ProjectId,
+                new ProjectStructureGanttScheduleMutationRequest(
+                    request,
+                    [new ProjectStructureTaskScheduleSnapshot(
+                        TaskId(task.NodeKey),
+                        At(0),
+                        null,
+                        3600,
+                        At(0),
+                        At(1))])));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(0.5), persisted.StartUtc);
+        Assert.Null(persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_PromotesEndOnlyProjectionWhenPersistedEndMatches()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "End only", 0, 1);
+        task.StartUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeStart,
+            [DateChange(task.NodeKey, 0, 1, -1, 1)],
+            []);
+
+        await fixture.Service.ApplyScheduleAsync(
+            fixture.ProjectId,
+            ScheduleMutation(request, task));
+
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(-1), persisted.StartUtc);
+        Assert.Equal(At(1), persisted.EndUtc);
+        Assert.Equal(7200, persisted.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenCompleteEndpointWasCleared_WritesNothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Cleared end", 0, 1);
+        task.EndUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+        var mutation = new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            [new ProjectStructureTaskScheduleSnapshot(
+                TaskId(task.NodeKey),
+                At(0),
+                At(1),
+                3600,
+                At(0),
+                At(1))]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(0), persisted.StartUtc);
+        Assert.Null(persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenStartOnlyAnchorWasCleared_WritesNothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Cleared start", 0, 1);
+        task.StartUtc = null;
+        task.EndUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+        var mutation = new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            [new ProjectStructureTaskScheduleSnapshot(
+                TaskId(task.NodeKey),
+                At(0),
+                null,
+                3600,
+                At(0),
+                At(1))]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Null(persisted.StartUtc);
+        Assert.Null(persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenEndOnlyAnchorWasCleared_WritesNothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Cleared end anchor", 0, 1);
+        task.StartUtc = null;
+        task.EndUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeStart,
+            [DateChange(task.NodeKey, 0, 1, -1, 1)],
+            []);
+        var mutation = new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            [new ProjectStructureTaskScheduleSnapshot(
+                TaskId(task.NodeKey),
+                null,
+                At(1),
+                3600,
+                At(0),
+                At(1))]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Null(persisted.StartUtc);
+        Assert.Null(persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenMissingEndpointWasFilled_WritesNothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Filled end", 0, 1);
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+        var mutation = new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            [new ProjectStructureTaskScheduleSnapshot(
+                TaskId(task.NodeKey),
+                At(0),
+                null,
+                3600,
+                At(0),
+                At(1))]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal(At(0), persisted.StartUtc);
+        Assert.Equal(At(1), persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenProjectedDurationChanged_WritesNothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Duration changed", 0, 1);
+        task.StartUtc = null;
+        task.EndUtc = null;
+        task.DurationSeconds = 7200;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+        var mutation = new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            [new ProjectStructureTaskScheduleSnapshot(
+                TaskId(task.NodeKey),
+                null,
+                null,
+                3600,
+                At(0),
+                At(1))]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Null(persisted.StartUtc);
+        Assert.Null(persisted.EndUtc);
+        Assert.Equal(7200, persisted.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ApplyScheduleAsync_WhenUnchangedPartialSuccessorChangedConcurrently_WritesNothing()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskC = CreateTask("custom:00000000000000000000000000000003", "C", 0, 5);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 4, 5);
+        taskB.EndUtc = null;
+        var dependencyA = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        var dependencyC = DependsOn(taskB.NodeKey, taskC.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB, taskC],
+            [dependencyA, dependencyC]);
+        var request = GanttSchedulePlanner.Plan(
+            [
+                new GanttTask(TaskId(taskA.NodeKey), taskA.Title, At(0), At(1)),
+                new GanttTask(TaskId(taskB.NodeKey), taskB.Title, At(6), At(7)),
+                new GanttTask(TaskId(taskC.NodeKey), taskC.Title, At(0), At(5))
+            ],
+            [
+                Dependency(dependencyA, taskA.NodeKey, taskB.NodeKey),
+                Dependency(dependencyC, taskC.NodeKey, taskB.NodeKey)
+            ],
+            TaskId(taskA.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            At(4));
+        Assert.Single(request.AffectedTasks);
+        var mutation = new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            [
+                Snapshot(taskA),
+                new ProjectStructureTaskScheduleSnapshot(
+                    TaskId(taskB.NodeKey),
+                    At(6),
+                    null,
+                    3600,
+                    At(6),
+                    At(7)),
+                Snapshot(taskC)
+            ]);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyScheduleAsync(fixture.ProjectId, mutation));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal(At(1), persistedA.EndUtc);
+        Assert.Equal(At(4), persistedB.StartUtc);
+        Assert.Null(persistedB.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyTaskDetailsAsync_RejectsProjectionOnlySchedule()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Projected", 0, 1);
+        task.StartUtc = null;
+        task.EndUtc = null;
+        task.DurationSeconds = null;
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var schedule = new GanttTaskScheduleChangeRequest(
+            TaskId(task.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [DateChange(task.NodeKey, 0, 1, 0, 2)],
+            []);
+        var request = new ProjectStructureTaskDetailsMutationRequest(
+            TaskId(task.NodeKey),
+            task.Title,
+            "Should not persist",
+            task.ProgressPercent,
+            50,
+            ProjectTaskEstimate.Empty(),
+            ProjectTaskEstimate.Empty(),
+            schedule,
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.ProjectionOnlySchedule, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal("Projected", persisted.Title);
+        Assert.Null(persisted.StartUtc);
+        Assert.Null(persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyDependencyAsync_StillRejectsPartialPersistedSchedule()
+    {
+        var predecessor = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var successor = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        successor.EndUtc = null;
+        await using var fixture = await MutationFixture.CreateAsync(predecessor, successor);
+        var request = new GanttDependencyMutationRequest(
+            GanttDependencyMutationKind.Add,
+            null,
+            new GanttDependency(
+                PendingDependencyId(Guid.NewGuid()),
+                TaskId(predecessor.NodeKey),
+                TaskId(successor.NodeKey)));
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyDependencyAsync(fixture.ProjectId, request));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.InvalidSchedule, exception.Code);
+        Assert.Empty(await fixture.LoadLinksAsync());
+    }
+
+    [Fact]
+    public async Task ApplyTaskDetailsAsync_Persists_title_progress_estimate_and_propagated_schedule_atomically()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        taskA.ProgressPercent = 25;
+        taskA.ProgressMode = "progress";
+        var currentEstimate = new ProjectTaskEstimate(
+            8m,
+            ProjectWorkItemEffortUnit.ManDays,
+            900m,
+            "USD");
+        taskA.MetadataJson = EstimateMetadata(currentEstimate);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB],
+            [DependsOn(taskB.NodeKey, taskA.NodeKey)]);
+        var proposedEstimate = new ProjectTaskEstimate(
+            4m,
+            ProjectWorkItemEffortUnit.Hours,
+            500m,
+            "EUR");
+        var schedule = new GanttTaskScheduleChangeRequest(
+            TaskId(taskA.NodeKey),
+            GanttScheduleGesture.ResizeEnd,
+            [
+                DateChange(taskA.NodeKey, 0, 1, 0, 2),
+                DateChange(taskB.NodeKey, 1, 2, 2, 3)
+            ],
+            [TaskId(taskA.NodeKey), TaskId(taskB.NodeKey)]);
+        var request = new ProjectStructureTaskDetailsMutationRequest(
+            TaskId(taskA.NodeKey),
+            "A",
+            "Updated A",
+            25,
+            60,
+            currentEstimate,
+            proposedEstimate,
+            schedule,
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
+
+        var result = await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
+
+        Assert.Equal(2, result.AffectedTaskIds.Count);
+        var persistedA = await fixture.FindTaskAsync(taskA.NodeKey);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        Assert.Equal("Updated A", persistedA.Title);
+        Assert.Equal("progress", persistedA.ProgressMode);
+        Assert.Equal(60, persistedA.ProgressPercent);
+        Assert.Equal(At(0), persistedA.StartUtc);
+        Assert.Equal(At(2), persistedA.EndUtc);
+        Assert.Equal(At(2), persistedB.StartUtc);
+        Assert.Equal(At(3), persistedB.EndUtc);
+        var metadata = ProjectObjectMetadataSerializer.Parse(persistedA.MetadataJson).WorkItem;
+        Assert.NotNull(metadata);
+        Assert.Equal(proposedEstimate.ExpectedEffortHours, metadata.ExpectedEffortHours);
+        Assert.Equal(proposedEstimate.ExpectedEffortUnit, metadata.ExpectedEffortUnit);
+        Assert.Equal(proposedEstimate.ExpectedCostAmount, metadata.ExpectedCostAmount);
+        Assert.Equal(proposedEstimate.ExpectedCostCurrencyCode, metadata.ExpectedCostCurrencyCode);
+    }
+
+    [Fact]
+    public async Task ApplyTaskDetailsAsync_accepts_exact_untracked_current_progress()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Untracked", 0, 1);
+        task.ProgressPercent = ProjectProgressPolicy.UntrackedPercent;
+        task.ProgressMode = string.Empty;
+        task.MetadataJson = EstimateMetadata(ProjectTaskEstimate.Empty());
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var request = new ProjectStructureTaskDetailsMutationRequest(
+            TaskId(task.NodeKey),
+            "Untracked",
+            "Tracked",
+            ProjectProgressPolicy.UntrackedPercent,
+            30,
+            ProjectTaskEstimate.Empty(),
+            ProjectTaskEstimate.Empty(),
+            ScheduleChange: null,
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
+
+        await fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request);
+
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal("Tracked", persisted.Title);
+        Assert.Equal(30, persisted.ProgressPercent);
+        Assert.Equal("progress", persisted.ProgressMode);
+    }
+
+    [Fact]
+    public async Task ApplyTaskDetailsAsync_When_estimate_is_stale_writes_nothing()
+    {
+        var task = CreateTask("custom:00000000000000000000000000000001", "Authoritative", 0, 1);
+        task.ProgressPercent = 10;
+        task.MetadataJson = EstimateMetadata(new ProjectTaskEstimate(
+            8m,
+            ProjectWorkItemEffortUnit.Hours,
+            100m,
+            "USD"));
+        await using var fixture = await MutationFixture.CreateAsync(task);
+        var staleEstimate = new ProjectTaskEstimate(
+            4m,
+            ProjectWorkItemEffortUnit.Hours,
+            100m,
+            "USD");
+        var request = new ProjectStructureTaskDetailsMutationRequest(
+            TaskId(task.NodeKey),
+            "Authoritative",
+            "Should not persist",
+            10,
+            90,
+            staleEstimate,
+            ProjectTaskEstimate.Empty(),
+            ScheduleChange: null,
+            CurrentExecution: ProjectTaskExecutionSnapshot.Unknown,
+            ProposedExecution: ProjectTaskExecutionSnapshot.Unknown,
+            CurrentCostBasis: null,
+            ProposedCostBasis: null,
+            CostBasisChanged: false,
+            CurrentDirectAssignmentRevision: 0);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureGanttMutationException>(() =>
+            fixture.Service.ApplyTaskDetailsAsync(fixture.ProjectId, request));
+
+        Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        var persisted = await fixture.FindTaskAsync(task.NodeKey);
+        Assert.Equal("Authoritative", persisted.Title);
+        Assert.Equal(10, persisted.ProgressPercent);
+        Assert.Equal(At(0), persisted.StartUtc);
+        Assert.Equal(At(1), persisted.EndUtc);
+    }
+
+    [Fact]
+    public async Task ApplyInsertionAsync_RewiresOnlyBridge_PreservesOtherPrerequisite_AndPersistsCriticalPathDates()
+    {
+        var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
+        var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
+        var taskC = CreateTask("custom:00000000000000000000000000000003", "C", 2, 3);
+        var taskD = CreateTask("custom:00000000000000000000000000000004", "D", 0, 1);
+        var bridge = DependsOn(taskB.NodeKey, taskA.NodeKey);
+        var otherPrerequisite = DependsOn(taskB.NodeKey, taskD.NodeKey);
+        var downstream = DependsOn(taskC.NodeKey, taskB.NodeKey);
+        await using var fixture = await MutationFixture.CreateAsync(
+            [taskA, taskB, taskC, taskD],
+            [bridge, otherPrerequisite, downstream]);
+        var insertedId = TaskId("custom:00000000000000000000000000000005");
+        var predecessorToInsertedId = Guid.NewGuid();
+        var insertedToSuccessorId = Guid.NewGuid();
+        var insertedTask = new GanttTask(insertedId, "Inserted", At(1), At(1.5));
+        var request = new GanttTaskInsertionRequest(
+            insertedTask,
+            TaskId(taskA.NodeKey),
+            TaskId(taskB.NodeKey),
+            [
+                new GanttDependencyMutationRequest(
+                    GanttDependencyMutationKind.Remove,
+                    Dependency(bridge, taskA.NodeKey, taskB.NodeKey),
+                    null),
+                new GanttDependencyMutationRequest(
+                    GanttDependencyMutationKind.Add,
+                    null,
+                    new GanttDependency(
+                        PendingDependencyId(predecessorToInsertedId),
+                        TaskId(taskA.NodeKey),
+                        insertedId)),
+                new GanttDependencyMutationRequest(
+                    GanttDependencyMutationKind.Add,
+                    null,
+                    new GanttDependency(
+                        PendingDependencyId(insertedToSuccessorId),
+                        insertedId,
+                        TaskId(taskB.NodeKey)))
+            ],
+            [
+                new GanttTaskDateChange(insertedId, At(1), At(1.5), At(1), At(1.5), true),
+                DateChange(taskB.NodeKey, 1, 2, 1.5, 2.5),
+                DateChange(taskC.NodeKey, 2, 3, 2.5, 3.5)
+            ],
+            [TaskId(taskA.NodeKey), insertedId, TaskId(taskB.NodeKey), TaskId(taskC.NodeKey)]);
+
+        var result = await fixture.Service.ApplyInsertionAsync(fixture.ProjectId, request);
+
+        Assert.Equal(2, result.AddedDependencyCount);
+        Assert.Equal(1, result.RemovedDependencyCount);
+        var links = await fixture.LoadLinksAsync();
+        Assert.Equal(4, links.Count);
+        Assert.DoesNotContain(links, link => link.Id == bridge.Id);
+        Assert.Contains(links, link => link.Id == otherPrerequisite.Id);
+        Assert.Contains(links, link => link.Id == downstream.Id);
+        Assert.Contains(links, link =>
+            link.Id == predecessorToInsertedId &&
+            link.SourceNodeKey == insertedId.Value &&
+            link.TargetNodeKey == taskA.NodeKey);
+        Assert.Contains(links, link =>
+            link.Id == insertedToSuccessorId &&
+            link.SourceNodeKey == taskB.NodeKey &&
+            link.TargetNodeKey == insertedId.Value);
+
+        var inserted = await fixture.FindTaskAsync(insertedId.Value);
+        var persistedB = await fixture.FindTaskAsync(taskB.NodeKey);
+        var persistedC = await fixture.FindTaskAsync(taskC.NodeKey);
+        Assert.Equal(ProjectObjectType.WorkItem, inserted.ObjectType);
+        Assert.Equal("task", inserted.ObjectSubtype);
+        Assert.Equal(At(1), inserted.StartUtc);
+        Assert.Equal(At(1.5), inserted.EndUtc);
+        Assert.Equal(1800, inserted.DurationSeconds);
+        Assert.Equal(At(1.5), persistedB.StartUtc);
+        Assert.Equal(At(2.5), persistedB.EndUtc);
+        Assert.Equal(At(2.5), persistedC.StartUtc);
+        Assert.Equal(At(3.5), persistedC.EndUtc);
+    }
+
+    private static ProjectObjectRecord CreateTask(
+        string nodeKey,
+        string title,
+        double startHour,
+        double endHour)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            NodeKey = nodeKey,
+            ObjectType = ProjectObjectType.WorkItem,
+            ObjectSubtype = "task",
+            Title = title,
+            Status = "Draft",
+            MetadataJson = "{}",
+            MarkersJson = "[]",
+            StartUtc = At(startHour),
+            EndUtc = At(endHour),
+            DurationSeconds = (int)TimeSpan.FromHours(endHour - startHour).TotalSeconds,
+            CreatedAtUtc = Baseline,
+            UpdatedAtUtc = Baseline
+        };
+
+    private static ProjectObjectLinkRecord DependsOn(string successorId, string predecessorId)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            SourceNodeKey = successorId,
+            TargetNodeKey = predecessorId,
+            LinkKind = ProjectObjectLinkKind.DependsOn,
+            CreatedAtUtc = Baseline
+        };
+
+    private static string EstimateMetadata(ProjectTaskEstimate estimate)
+        => ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            WorkItem = new ProjectWorkItemMetadata
+            {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                ExpectedEffortHours = estimate.ExpectedEffortHours,
+                ExpectedEffortUnit = estimate.ExpectedEffortUnit,
+                ExpectedCostAmount = estimate.ExpectedCostAmount,
+                ExpectedCostCurrencyCode = estimate.ExpectedCostCurrencyCode
+            }
+        });
+
+    private static GanttDependency Dependency(
+        ProjectObjectLinkRecord record,
+        string predecessorId,
+        string successorId)
+        => new(
+            PersistedDependencyId(record.Id),
+            TaskId(predecessorId),
+            TaskId(successorId));
+
+    private static GanttTaskDateChange DateChange(
+        string taskId,
+        double previousStart,
+        double previousEnd,
+        double proposedStart,
+        double proposedEnd)
+        => new(
+            TaskId(taskId),
+            At(previousStart),
+            At(previousEnd),
+            At(proposedStart),
+            At(proposedEnd),
+            true);
+
+    private static ProjectStructureGanttScheduleMutationRequest ScheduleMutation(
+        GanttTaskScheduleChangeRequest request,
+        params ProjectObjectRecord[] tasks)
+    {
+        var changesByTaskId = request.AffectedTasks.ToDictionary(
+            static change => change.TaskId.Value,
+            StringComparer.Ordinal);
+        return new ProjectStructureGanttScheduleMutationRequest(
+            request,
+            tasks.Select(task => changesByTaskId.TryGetValue(task.NodeKey, out var change)
+                ? Snapshot(task, change.PreviousStart, change.PreviousEnd)
+                : Snapshot(task)));
+    }
+
+    private static ProjectStructureTaskScheduleSnapshot Snapshot(
+        ProjectObjectRecord task,
+        DateTimeOffset? projectedStartUtc = null,
+        DateTimeOffset? projectedEndUtc = null)
+        => new(
+            TaskId(task.NodeKey),
+            task.StartUtc,
+            task.EndUtc,
+            task.DurationSeconds,
+            projectedStartUtc ?? task.StartUtc
+                ?? throw new InvalidOperationException($"Projected start is required for task '{task.NodeKey}'."),
+            projectedEndUtc ?? task.EndUtc
+                ?? throw new InvalidOperationException($"Projected end is required for task '{task.NodeKey}'."));
+
+    private static ProjectStructureNode ProjectionNode(ProjectObjectRecord task)
+        => new(
+            Id: task.NodeKey,
+            ParentId: task.ParentNodeKey,
+            ObjectType: task.ObjectType,
+            ObjectSubtype: task.ObjectSubtype,
+            Title: task.Title,
+            Subtitle: task.Subtitle,
+            Status: task.Status,
+            Notes: task.Notes,
+            Route: string.Empty,
+            ArtifactKind: string.Empty,
+            ArtifactId: null,
+            MediaRelativePath: string.Empty,
+            MediaContentType: string.Empty,
+            MediaOriginalFileName: string.Empty,
+            X: task.PositionX,
+            Y: task.PositionY,
+            VisualProfile: new ProjectObjectVisualProfile("pill", "#2563eb", "TK", "Task"),
+            Badges: [],
+            ProgressMode: task.ProgressMode,
+            ProgressPercent: task.ProgressPercent,
+            MarkerIcon: string.Empty,
+            MarkerTone: string.Empty,
+            MarkerLabel: string.Empty,
+            Markers: [],
+            Priority: task.Priority,
+            StartUtc: task.StartUtc,
+            EndUtc: task.EndUtc,
+            MetadataJson: task.MetadataJson,
+            DurationSeconds: task.DurationSeconds,
+            IsSystemManaged: task.IsSystemManaged);
+
+    private static DateTimeOffset At(double hours)
+        => Baseline.AddHours(hours);
+
+    private static GanttTaskId TaskId(string value)
+        => new(value);
+
+    private static GanttDependencyId PersistedDependencyId(Guid value)
+        => new($"project-link:{value:N}");
+
+    private static GanttDependencyId PendingDependencyId(Guid value)
+        => new($"gantt-dependency:{value:N}");
+
+    private sealed class MutationFixture : IAsyncDisposable
+    {
+        private readonly TestDbContextFactory dbContextFactory;
+
+        private MutationFixture(
+            Guid projectId,
+            TestDbContextFactory dbContextFactory,
+            ProjectStructureGanttMutationService service)
+        {
+            ProjectId = projectId;
+            this.dbContextFactory = dbContextFactory;
+            Service = service;
+        }
+
+        public Guid ProjectId { get; }
+
+        public ProjectStructureGanttMutationService Service { get; }
+
+        public static Task<MutationFixture> CreateAsync(params ProjectObjectRecord[] tasks)
+            => CreateAsync((IReadOnlyList<ProjectObjectRecord>)tasks, []);
+
+        public static async Task<MutationFixture> CreateAsync(
+            IReadOnlyList<ProjectObjectRecord> tasks,
+            IReadOnlyList<ProjectObjectLinkRecord> links)
+        {
+            AppDbContextModelRegistry.ConfigureAssemblies(
+            [
+                typeof(Project).Assembly,
+                typeof(ProjectObjectRecord).Assembly
+            ]);
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase($"gantt-mutations-{Guid.NewGuid():N}")
+                .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+                .Options;
+            var factory = new TestDbContextFactory(options);
+            var projectId = Guid.NewGuid();
+            await using (var context = await factory.CreateDbContextAsync())
+            {
+                context.Set<Project>().Add(new Project
+                {
+                    Id = projectId,
+                    Name = "Gantt mutation tests",
+                    Slug = $"gantt-{projectId:N}",
+                    CreatedAtUtc = Baseline,
+                    UpdatedAtUtc = Baseline
+                });
+                foreach (var task in tasks)
+                {
+                    task.ProjectId = projectId;
+                }
+
+                foreach (var link in links)
+                {
+                    link.ProjectId = projectId;
+                }
+
+                context.Set<ProjectObjectRecord>().AddRange(tasks);
+                context.Set<ProjectObjectLinkRecord>().AddRange(links);
+                await context.SaveChangesAsync();
+            }
+
+            var service = new ProjectStructureGanttMutationService(
+                factory,
+                new FixedClock(Baseline.AddDays(1)),
+                NullLogger<ProjectStructureGanttMutationService>.Instance);
+            return new MutationFixture(projectId, factory, service);
+        }
+
+        public async Task<ProjectObjectRecord> FindTaskAsync(string nodeKey)
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            return await context.Set<ProjectObjectRecord>().SingleAsync(task =>
+                task.ProjectId == ProjectId && task.NodeKey == nodeKey);
+        }
+
+        public async Task<IReadOnlyList<ProjectObjectLinkRecord>> LoadLinksAsync()
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            return await context.Set<ProjectObjectLinkRecord>()
+                .Where(link => link.ProjectId == ProjectId && link.LinkKind == ProjectObjectLinkKind.DependsOn)
+                .ToListAsync();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            await context.Database.EnsureDeletedAsync();
+        }
+    }
+
+    private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext()
+            => new(options);
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateDbContext());
+    }
+
+    private sealed class FixedClock(DateTimeOffset value) : IClock
+    {
+        public DateTimeOffset GetUtcNow()
+            => value;
+    }
+}

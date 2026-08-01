@@ -1,0 +1,23 @@
+# Approve first-pass release readiness
+
+Approve or reject release using first-pass QA proof, shipped entrypoint/runtime consistency, security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required.
+
+For a local generated application, artifact handoff, static export, or non-production deliverable, do not block solely because there is no separate pre-existing support ownership note. If QA, security, runtime-command, and screenshot/no-UI evidence are sufficient, the release approval record itself must name bounded support and rollback/removal owners from the process role context, project assignment context, or implementation handoff. Mark production telemetry, live service ownership, and deployment-window controls as not applicable when the approved boundary has no live production host.
+
+Before returning Completed, write the release approval record to `artifacts/process-runs/<current-process-run-id>/steps/release-approval.md` and include that exact path in `evidenceRefs`. Do not rely on `artifacts/process-runs/<current-process-run-id>/release-approval.md` as the only approval record reference, because the runtime validates produced managed artifacts through the `steps/` path.
+
+When UI screenshots are applicable, accept current-run screenshot evidence from the screenshot writeback child run referenced by the parent `capture-ui-screenshots` step. The durable screenshot evidence may live under the child run, for example `artifacts/process-runs/<child-run-id>/steps/screenshot-handoff.md`, `artifacts/process-runs/<child-run-id>/steps/capture-ui-screenshots.md`, `artifacts/process-runs/<child-run-id>/browser/*.png`, and the Screenshots parent or image asset node ids. Do not block solely because accepted screenshot files are stored under the child process-run artifact root instead of copied into the parent run root.
+
+When release approval depends on visual UI claims, require current-run `workspace_analyze_image` or `workspace_analyze_images` receipts from screenshot writeback evidence. Do not approve from screenshot file paths, dimensions, project-structure image asset ids, or chat summaries alone.
+
+Return Completed with exactly one `branchOutcomeKey`: `release-approved` when the decision-ready evidence supports rollout, or `release-rejected` when the decision-ready evidence supports a governed no-go. A rejected release is a completed decision, not an execution failure. The decision record, returned output, and `evidenceRefs` must state the exact branch outcome. For `release-rejected`, they must also preserve the rejection rationale, accountable owner, and next admissible re-entry or replanning action.
+
+When complete evidence demonstrates that release is not admissible, including a security rejection, failed boundary-critical proof, unacceptable residual risk, or unavailable rollback/removal path, return Completed with `release-rejected`.
+
+Return Blocked, not `release-rejected`, when boundary-critical evidence, the release boundary, decision authority, a required tool, or required access is missing or ambiguous enough that no accountable release decision can be made. Examples include an entrypoint/runtime that cannot be tied to QA proof or an ownership record that cannot be resolved from upstream evidence and the current decision context.
+
+## Contract
+- Inputs: QA evidence that names the shipped entrypoint and referenced runtime, security outcome, Run command nodes, UI screenshot or no-UI evidence, rollback/removal plan or removable-artifact statement, upstream or decision-recorded support ownership, and declared release boundary.
+- Outputs: Completed decision with the exact `release-approved` or `release-rejected` branch outcome and boundary-applicable conditions only. A rejected output must include rationale, accountable owner, and the next admissible re-entry or replanning action.
+- Evidence: Decision record at `artifacts/process-runs/<current-process-run-id>/steps/release-approval.md` naming the exact branch outcome, residual risk register, rollback/removal ownership record, declared-boundary confirmation, Run command node references, Screenshots parent/image asset or no-UI evidence, provider-backed image-analysis receipts for visual approval claims, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts. A rejected record must also preserve its rationale, accountable owner, and next admissible re-entry or replanning action.
+- Operation target scope: `ExternalProductTargetReadOnly`

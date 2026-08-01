@@ -1,0 +1,294 @@
+@using CanDoItAll.Modules.Projects
+
+@if (IsOpen && Opportunity is not null)
+{
+    <Dialog IsOpen="true"
+            Title="Convert won opportunity"
+            Eyebrow="CRM / HR"
+            Subtitle="Create a project or attach an existing Projects-owned record while preserving the opportunity handoff."
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="crmhr-opportunity-conversion-dialog"
+            OnClose="HandleCloseAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Large">
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <PanelCard Soft="true"
+                               data-testid="crmhr-opportunity-conversion-message">
+                        <TextBlock TextStyle="TextStyle.Body1"
+                                   Value="@Message" />
+                    </PanelCard>
+                }
+
+                <Grid Gap="LayoutGap.Large"
+                      ColumnsLg="2">
+                    <FormSection Title="Opportunity"
+                                 Description="The won opportunity remains the durable CRM record.">
+                        <ChildContent>
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                           Value="@Opportunity.Title" />
+                                <SmallText Text="@($"{Opportunity.AccountDisplayName} · {Opportunity.OpportunitySource} · {Opportunity.Stage}")" />
+                                @if (!string.IsNullOrWhiteSpace(Opportunity.Summary))
+                                {
+                                    <TextBlock TextStyle="TextStyle.Body1"
+                                               Value="@Opportunity.Summary" />
+                                }
+                                <StatusBadge Tone="success"
+                                             Text="@ResolveValueLabel(Opportunity)" />
+                            </Stack>
+                        </ChildContent>
+                    </FormSection>
+
+                    <FormSection Title="Project target"
+                                 Description="Choose an existing project with a paged query or create a new delivery record.">
+                        <ChildContent>
+                            <Stack GapScale="LayoutGap.Medium">
+                                <label class="flex items-center gap-3 text-sm font-medium text-slate-700">
+                                    <InputCheckbox @bind-Value="draft.LinkExistingProject"
+                                                   data-testid="crmhr-opportunity-conversion-link-existing" />
+                                    <span>Link an existing project</span>
+                                </label>
+
+                                @if (draft.LinkExistingProject)
+                                {
+                                    <PanelCard Soft="true">
+                                        <Split Breakpoint="LayoutBreakpoint.None"
+                                               Gap="LayoutGap.Medium"
+                                               AlignItems="AlignItems.Center"
+                                               JustifyContent="JustifyContent.SpaceBetween"
+                                               Wrap="FlexWrap.Wrap">
+                                            <Stack GapScale="LayoutGap.XSmall">
+                                                <SmallText Text="Existing project" />
+                                                <TextBlock TextStyle="TextStyle.Subtitle2"
+                                                           Value="@ResolveExistingProjectLabel()" />
+                                            </Stack>
+                                            <Cluster Gap="LayoutGap.Small">
+                                                @if (draft.ExistingProjectId.HasValue)
+                                                {
+                                                    <Button Text="Clear"
+                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Size="ButtonSize.Small"
+                                                            Click="ClearExistingProject"
+                                                            data-testid="crmhr-opportunity-conversion-project-clear" />
+                                                }
+                                                <Button Text="Select project"
+                                                        Icon="folder_open"
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Size="ButtonSize.Small"
+                                                        Click="OpenProjectPicker"
+                                                        data-testid="crmhr-opportunity-conversion-project" />
+                                            </Cluster>
+                                        </Split>
+                                    </PanelCard>
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.XSmall">
+                                        <label class="cda-field-label">Project name</label>
+                                        <InputText @bind-Value="draft.ProjectName"
+                                                   class="cda-input"
+                                                   data-testid="crmhr-opportunity-conversion-name" />
+                                    </Stack>
+                                    <Stack GapScale="LayoutGap.XSmall">
+                                        <label class="cda-field-label">Description</label>
+                                        <InputTextArea @bind-Value="draft.ProjectDescription"
+                                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                                       data-testid="crmhr-opportunity-conversion-description" />
+                                    </Stack>
+                                    <Stack GapScale="LayoutGap.XSmall">
+                                        <label class="cda-field-label">Objective</label>
+                                        <InputTextArea @bind-Value="draft.ProjectObjective"
+                                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                                       data-testid="crmhr-opportunity-conversion-objective" />
+                                    </Stack>
+                                    <Stack GapScale="LayoutGap.XSmall">
+                                        <label class="cda-field-label">Current phase</label>
+                                        <InputText @bind-Value="draft.CurrentPhase"
+                                                   class="cda-input"
+                                                   data-testid="crmhr-opportunity-conversion-phase" />
+                                    </Stack>
+                                }
+                            </Stack>
+                        </ChildContent>
+                    </FormSection>
+                </Grid>
+
+                <FormSection Title="Projected party handoff"
+                             Description="These CRM relationships are carried into project assignments.">
+                    <ChildContent>
+                        <Cluster Gap="LayoutGap.Small"
+                                 Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"Customer: {Opportunity.AccountDisplayName}")" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"Owner: {Opportunity.OwnerDisplayName}")" />
+                            @if (!string.IsNullOrWhiteSpace(Opportunity.DeliveryUnitDisplayName))
+                            {
+                                <StatusBadge Tone="neutral"
+                                             Text="@($"Delivery: {Opportunity.DeliveryUnitDisplayName}")" />
+                            }
+                            @foreach (var party in Opportunity.Parties)
+                            {
+                                <StatusBadge Tone="neutral"
+                                             Text="@($"{party.Role}: {party.DisplayName}")" />
+                            }
+                        </Cluster>
+                    </ChildContent>
+                </FormSection>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <SmallText Text="The opportunity remains in CRM history after project handoff." />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="IsBusy"
+                            Click="HandleCloseAsync"
+                            data-testid="crmhr-opportunity-conversion-cancel" />
+                    <Button Text="Save conversion"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="IsBusy"
+                            IsBusy="IsBusy"
+                            Click="HandleSaveAsync"
+                            data-testid="crmhr-opportunity-conversion-save" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+<ProjectRecordPickerDialog IsOpen="isProjectPickerOpen"
+                           SelectedProjectId="draft.ExistingProjectId"
+                           InitialScope="ProjectRecordScope.Open"
+                           SelectionConfirmed="HandleProjectSelectedAsync"
+                           OnClose="CloseProjectPickerAsync"
+                           LoadFailed="LoadFailed"
+                           Title="Choose an existing project"
+                           Subtitle="Search and page through Projects-owned records."
+                           DataTestId="crmhr-opportunity-conversion-project-picker" />
+
+@code {
+    private CrmOpportunityConversionEditorModel draft = new();
+    private bool isProjectPickerOpen;
+    private bool wasOpen;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public CrmOpportunityDetailModel? Opportunity { get; set; }
+
+    [Parameter, EditorRequired]
+    public CrmOpportunityConversionEditorModel Model { get; set; } = new();
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback<CrmOpportunityConversionEditorModel> Save { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            draft = Clone(Model);
+        }
+
+        wasOpen = IsOpen;
+    }
+
+    private string ResolveExistingProjectLabel()
+    {
+        if (!draft.ExistingProjectId.HasValue)
+        {
+            return "No project selected";
+        }
+
+        return Opportunity?.LinkedProjectId == draft.ExistingProjectId &&
+               !string.IsNullOrWhiteSpace(Opportunity.LinkedProjectName)
+            ? Opportunity.LinkedProjectName
+            : "Project selected";
+    }
+
+    private void OpenProjectPicker()
+    {
+        isProjectPickerOpen = true;
+    }
+
+    private void ClearExistingProject()
+    {
+        draft.ExistingProjectId = null;
+    }
+
+    private Task CloseProjectPickerAsync()
+    {
+        isProjectPickerOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleProjectSelectedAsync(Guid projectId)
+    {
+        draft.ExistingProjectId = projectId;
+        await CloseProjectPickerAsync();
+    }
+
+    private async Task HandleCloseAsync()
+    {
+        draft = Clone(Model);
+        isProjectPickerOpen = false;
+        wasOpen = false;
+        await Close.InvokeAsync();
+    }
+
+    private Task HandleSaveAsync()
+    {
+        return Save.InvokeAsync(draft);
+    }
+
+    private static CrmOpportunityConversionEditorModel Clone(
+        CrmOpportunityConversionEditorModel source)
+    {
+        return new CrmOpportunityConversionEditorModel
+        {
+            OpportunityId = source.OpportunityId,
+            ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
+            LinkExistingProject = source.LinkExistingProject,
+            ExistingProjectId = source.ExistingProjectId,
+            ProjectName = source.ProjectName,
+            ProjectDescription = source.ProjectDescription,
+            ProjectObjective = source.ProjectObjective,
+            CurrentPhase = source.CurrentPhase,
+            LastChangedBy = source.LastChangedBy
+        };
+    }
+
+    private static string ResolveValueLabel(CrmOpportunityDetailModel opportunity)
+    {
+        if (!opportunity.Amount.HasValue)
+        {
+            return "Value not set";
+        }
+
+        var currencyCode = string.IsNullOrWhiteSpace(opportunity.CurrencyCode)
+            ? "Currency missing"
+            : opportunity.CurrencyCode.Trim().ToUpperInvariant();
+        return $"{currencyCode} {opportunity.Amount.Value:N2}";
+    }
+}

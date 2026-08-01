@@ -1,0 +1,59 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<article class="memory-ui-ledger-row" data-testid="@($"memory-operation-{MemoryUiFormatting.ToTestIdSegment(Operation.OperationId.Value.ToString("D"))}")">
+    <div>
+        <strong>@Operation.OperationKind</strong>
+        <small>@Operation.OperationId.Value.ToString("D")</small>
+    </div>
+    <StatusBadge Tone="@MemoryUiFormatting.LedgerTone(Operation.Status)" Text="@Operation.Status.ToString()" />
+    <p class="memory-ui-muted">@Operation.StatusReason</p>
+    <p class="memory-ui-muted">@Operation.RequestedCapability.Value</p>
+    @if (Operation.AcceptedOperation is not null)
+    {
+        <p class="memory-ui-muted">@Operation.AcceptedOperation.StatusPath</p>
+    }
+
+    <div class="memory-ui-row-actions">
+        <Button Text="Refresh status"
+                Icon="refresh"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="RefreshStatusAsync"
+                Disabled="@(IsBusy || !CanRefreshStatus)"
+                data-testid="memory-ui-refresh-operation" />
+        @if (CanCancel && Operation.Status is MemoryLedgerStatus.Accepted or MemoryLedgerStatus.Running)
+        {
+            <Button Text="Cancel operation"
+                    Icon="cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="CancelOperationAsync"
+                    Disabled="@IsBusy"
+                    data-testid="memory-ui-cancel-operation" />
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter]
+    public MemoryProviderOperationUiRecord Operation { get; set; } = default!;
+
+    [Parameter]
+    public bool CanRefreshStatus { get; set; }
+
+    [Parameter]
+    public bool CanCancel { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<MemoryOperationId> OnRefreshStatus { get; set; }
+
+    [Parameter]
+    public EventCallback<MemoryOperationId> OnCancelOperation { get; set; }
+
+    private Task RefreshStatusAsync() => OnRefreshStatus.InvokeAsync(Operation.OperationId);
+
+    private Task CancelOperationAsync() => OnCancelOperation.InvokeAsync(Operation.OperationId);
+}

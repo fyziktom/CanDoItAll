@@ -1,0 +1,73 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using Microsoft.AspNetCore.Components
+
+@if (Settings.Grants.Count == 0)
+{
+    <EmptyState Eyebrow="Grants"
+                Title="No capability grants"
+                Description="This plugin does not request host capabilities." />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Medium">
+        @foreach (var grant in Settings.Grants)
+        {
+            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <Cluster Gap="LayoutGap.Small">
+                        <StatusBadge Tone="@PluginsPageHelpers.ResolveGrantTone(grant.State)" Text="@grant.State.ToString()" />
+                        <StatusBadge Tone="@PluginsPageHelpers.ResolveRiskTone(grant.RiskKind)" Text="@grant.RiskKind.ToString()" />
+                        <StatusBadge Tone="neutral" Text="@grant.Capability.ToString()" />
+                    </Cluster>
+                    <span class="text-sm font-medium text-[var(--cda-text)]">@PluginsPageHelpers.ResolveGrantName(grant)</span>
+                    @if (!string.IsNullOrWhiteSpace(grant.Reason))
+                    {
+                        <span class="text-sm text-[var(--cda-text-muted)]">@grant.Reason</span>
+                    }
+                </Stack>
+                <Cluster Gap="LayoutGap.Tiny" Class="self-start">
+                    <Button Text="Grant"
+                            Icon="check"
+                            ButtonStyle="ButtonStyle.Success"
+                            Size="ButtonSize.Small"
+                            Disabled="@(grant.State == PluginGrantState.Granted)"
+                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "grant"))"
+                            Click="@(() => OnUpdateGrant(Plugin, grant, PluginGrantState.Granted))" />
+                    <Button Text="Deny"
+                            Icon="close"
+                            ButtonStyle="ButtonStyle.Danger"
+                            Variant="Variant.Outlined"
+                            Size="ButtonSize.Small"
+                            Disabled="@(grant.State == PluginGrantState.Denied)"
+                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "deny"))"
+                            Click="@(() => OnUpdateGrant(Plugin, grant, PluginGrantState.Denied))" />
+                    <Button Text="Revoke"
+                            Icon="undo"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Variant="Variant.Outlined"
+                            Size="ButtonSize.Small"
+                            Disabled="@(grant.State == PluginGrantState.Revoked)"
+                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "revoke"))"
+                            Click="@(() => OnUpdateGrant(Plugin, grant, PluginGrantState.Revoked))" />
+                </Cluster>
+            </div>
+        }
+    </Stack>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public PluginSettingsDetail Settings { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginCapabilityGrantItem, PluginGrantState, Task> OnUpdateGrant { get; set; } = default!;
+}

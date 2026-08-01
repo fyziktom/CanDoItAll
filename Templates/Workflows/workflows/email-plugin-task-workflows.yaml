@@ -1,0 +1,214 @@
+workflows:
+  - key: gmail-label-email-tasks-to-project
+    name: Gmail Label Email Tasks To Project
+    description: Downloads a Gmail message with a configured label, extracts actionable tasks, creates project-structure task nodes under the selected workflow node, stores a no-task summary when appropriate, and moves the processed label.
+    routingInstructions: |-
+      Classify route as `tasks`, `asap_response`, `informative`, or `no_action`.
+      Use `tasks` when the sender asks me or the current project team to do concrete work.
+      Use `asap_response` when the sender expects an urgent same-day, blocked, escalated, immediate, or ASAP response.
+      Use `informative` when the message is only FYI, context, or status and no work is assigned to me or the current project team.
+      Use `no_action` when the message is delegated to someone else, irrelevant, or spam-like.
+      For `tasks` and `asap_response`, return a non-empty tasks array. Each task requires title, summary, owner, dueUtc when present, urgency, requiresResponse, asap, sourceEmailId, and evidence.
+      For `informative` and `no_action`, return tasks as [] and write a concise markdown summary explaining why no task was created.
+      Preserve projectId, nodeId, project, and runContext from the Gmail payload. Preserve runContext.gmailProcessing unchanged so the final Gmail step can move the processed label.
+      The markdown field must include sender, subject, received time, route decision, task evidence, and open questions.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 250 }
+        - id: download-gmail
+          kind: Executor
+          name: Download Gmail task label
+          x: 330
+          y: 250
+          executor:
+            id: gmail.messages-by-label
+            settings:
+              connectionId: ""
+              label: CanDoItAllTaskIntake
+              processedLabel: CanDoItAllTaskIntakeProcessed
+              maxMessages: 1
+          instructions: Download one bounded Gmail message from the task-intake label.
+        - { id: extract-gmail-tasks, kind: LlmCall, name: Extract Gmail tasks, x: 620, y: 250 }
+        - { id: email-task-switch, kind: Triage, name: SWITCH, x: 910, y: 250 }
+        - id: create-gmail-task-nodes
+          kind: Executor
+          name: Create Gmail task nodes
+          x: 1220
+          y: 95
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateTaskNodes
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              taskItemsJsonPath: "$.tasks"
+              taskObjectSubtype: task
+              maxTaskNodes: 12
+              includeInputPayload: true
+          instructions: Create WorkItem/task nodes under the selected project-structure workflow node.
+        - id: store-gmail-no-task-summary
+          kind: Executor
+          name: Store Gmail no-task summary
+          x: 1220
+          y: 400
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Gmail no-task email summary
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+          instructions: Store the LLM markdown summary when no task should be created.
+        - id: mark-gmail-tasks-processed
+          kind: Executor
+          name: Mark Gmail task email processed
+          x: 1530
+          y: 250
+          executor:
+            id: gmail.mark-message-processed
+            settings:
+              connectionId: ""
+              sourceLabel: CanDoItAllTaskIntake
+              processedLabel: CanDoItAllTaskIntakeProcessed
+              messageIdJsonPath: "$.inputPayload.runContext.gmailProcessing.messageIds[0]"
+          instructions: Move the processed label after the workflow result is stored in project structure.
+        - { id: end, kind: End, name: End, x: 1820, y: 250 }
+      edges:
+        - { source: start, target: download-gmail }
+        - { source: download-gmail, target: extract-gmail-tasks }
+        - { source: extract-gmail-tasks, target: email-task-switch }
+        - id: email-route-to-create-gmail-task-nodes-tasks
+          source: email-task-switch
+          target: create-gmail-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: tasks, expectedValueKind: String, label: Tasks }
+        - id: email-route-to-create-gmail-task-nodes-asap-response
+          source: email-task-switch
+          target: create-gmail-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: asap_response, expectedValueKind: String, label: ASAP response }
+        - id: email-route-to-store-gmail-no-task-summary-informative
+          source: email-task-switch
+          target: store-gmail-no-task-summary
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: informative, expectedValueKind: String, label: Informative }
+        - id: email-route-to-store-gmail-no-task-summary-default
+          source: email-task-switch
+          target: store-gmail-no-task-summary
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: DEFAULT }
+        - { source: create-gmail-task-nodes, target: mark-gmail-tasks-processed }
+        - { source: store-gmail-no-task-summary, target: mark-gmail-tasks-processed }
+        - { source: mark-gmail-tasks-processed, target: end }
+
+  - key: office365-category-email-tasks-to-project
+    name: Office365 Category Email Tasks To Project
+    description: Downloads a Microsoft 365 mailbox message in a configured Outlook category, extracts actionable tasks, creates project-structure task nodes under the selected workflow node, stores a no-task summary when appropriate, and moves the processed category.
+    routingInstructions: |-
+      Classify route as `tasks`, `asap_response`, `informative`, or `no_action`.
+      Use `tasks` when the sender asks me or the current project team to do concrete work.
+      Use `asap_response` when the sender expects an urgent same-day, blocked, escalated, immediate, or ASAP response.
+      Use `informative` when the message is only FYI, context, or status and no work is assigned to me or the current project team.
+      Use `no_action` when the message is delegated to someone else, irrelevant, or spam-like.
+      For `tasks` and `asap_response`, return a non-empty tasks array. Each task requires title, summary, owner, dueUtc when present, urgency, requiresResponse, asap, sourceEmailId, and evidence.
+      For `informative` and `no_action`, return tasks as [] and write a concise markdown summary explaining why no task was created.
+      Preserve projectId, nodeId, project, and runContext from the Office365 payload. Preserve runContext.office365Processing unchanged so the final Office365 step can move the processed category.
+      The markdown field must include sender, subject, received time, route decision, task evidence, and open questions.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 250 }
+        - id: download-office365
+          kind: Executor
+          name: Download Office365 task category
+          x: 330
+          y: 250
+          executor:
+            id: office365.messages-by-category
+            settings:
+              connectionId: ""
+              category: CanDoItAllTaskIntake
+              processedCategory: CanDoItAllTaskIntakeProcessed
+              maxMessages: 1
+          instructions: Download one bounded Microsoft 365 message from the task-intake Outlook category.
+        - { id: extract-office365-tasks, kind: LlmCall, name: Extract Office365 tasks, x: 620, y: 250 }
+        - { id: email-task-switch, kind: Triage, name: SWITCH, x: 910, y: 250 }
+        - id: create-office365-task-nodes
+          kind: Executor
+          name: Create Office365 task nodes
+          x: 1220
+          y: 95
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateTaskNodes
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              taskItemsJsonPath: "$.tasks"
+              taskObjectSubtype: task
+              maxTaskNodes: 12
+              includeInputPayload: true
+          instructions: Create WorkItem/task nodes under the selected project-structure workflow node.
+        - id: store-office365-no-task-summary
+          kind: Executor
+          name: Store Office365 no-task summary
+          x: 1220
+          y: 400
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Office365 no-task email summary
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+          instructions: Store the LLM markdown summary when no task should be created.
+        - id: mark-office365-tasks-processed
+          kind: Executor
+          name: Mark Office365 task email processed
+          x: 1530
+          y: 250
+          executor:
+            id: office365.mark-message-processed
+            settings:
+              connectionId: ""
+              sourceCategory: CanDoItAllTaskIntake
+              processedCategory: CanDoItAllTaskIntakeProcessed
+              messageIdJsonPath: "$.inputPayload.runContext.office365Processing.messageIds[0]"
+          instructions: Move the processed category after the workflow result is stored in project structure.
+        - { id: end, kind: End, name: End, x: 1820, y: 250 }
+      edges:
+        - { source: start, target: download-office365 }
+        - { source: download-office365, target: extract-office365-tasks }
+        - { source: extract-office365-tasks, target: email-task-switch }
+        - id: email-route-to-create-office365-task-nodes-tasks
+          source: email-task-switch
+          target: create-office365-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: tasks, expectedValueKind: String, label: Tasks }
+        - id: email-route-to-create-office365-task-nodes-asap-response
+          source: email-task-switch
+          target: create-office365-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: asap_response, expectedValueKind: String, label: ASAP response }
+        - id: email-route-to-store-office365-no-task-summary-informative
+          source: email-task-switch
+          target: store-office365-no-task-summary
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: informative, expectedValueKind: String, label: Informative }
+        - id: email-route-to-store-office365-no-task-summary-default
+          source: email-task-switch
+          target: store-office365-no-task-summary
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: DEFAULT }
+        - { source: create-office365-task-nodes, target: mark-office365-tasks-processed }
+        - { source: store-office365-no-task-summary, target: mark-office365-tasks-processed }
+        - { source: mark-office365-tasks-processed, target: end }

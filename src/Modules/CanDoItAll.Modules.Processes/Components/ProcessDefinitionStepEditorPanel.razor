@@ -1,0 +1,772 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Processes.Projections
+
+<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-step-editor">
+    <Split Gap="LayoutGap.Small">
+        <Stack GapScale="LayoutGap.Tiny">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Steps" />
+            <h3 class="text-sm font-semibold text-slate-900">Step editor</h3>
+            <p class="text-sm leading-6 text-slate-600">Basic info, operation contract, route targets, roles, artifacts, and subprocess mappings.</p>
+        </Stack>
+        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+            <StatusBadge Tone="info" Text="@($"{StepEditor.Steps.Count} step(s)")" />
+            <StatusBadge Tone="@ResolveLintTone(StepEditor.Lint)" Text="@ResolveLintText(StepEditor.Lint)" />
+        </Cluster>
+    </Split>
+
+    @if (!string.IsNullOrWhiteSpace(commandNotice) || StepEditor.LastCommandReceipt is not null)
+    {
+        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-step-command-receipt">
+            @(StepEditor.LastCommandReceipt is null ? commandNotice : $"{StepEditor.LastCommandReceipt.Status}: {StepEditor.LastCommandReceipt.Summary}")
+        </p>
+    }
+
+    @if (StepEditor.SelectedStep is null || selectedStepKey is null)
+    {
+        <EmptyState Eyebrow="No step"
+                    Title="No step selected"
+                    Description="Select a process definition step before editing operation contracts or routing." />
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Large" ColumnsLg="4" Class="mt-5" data-testid="processes-step-editor-layout">
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-step-list">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Step list" />
+                @foreach (var step in StepEditor.Steps)
+                {
+                    <Button Text="@step.Title"
+                            Icon="@ResolveStepIcon(step.StepKind)"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="@(step.StepKey == selectedStepKey ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Disabled="@Disabled"
+                            Click="@(() => SelectStep(step.StepKey))"
+                            data-testid="@BuildStepItemTestId(step.StepKey)" />
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                        <StatusBadge Tone="neutral" Text="@step.StepKind.ToString()" />
+                        <StatusBadge Tone="info" Text="@($"order {step.Order}")" />
+                    </Cluster>
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" Class="lg:col-span-2" data-testid="processes-step-editor-form">
+                <Stack GapScale="LayoutGap.Small" data-testid="processes-step-basic">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Basic" />
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-title-input">Title</label>
+                    <input id="processes-step-title-input"
+                           class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                           value="@stepTitle"
+                           @oninput="args => stepTitle = ReadChangeValue(args)"
+                           data-testid="processes-step-title" />
+
+                    <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <label class="text-xs font-semibold text-slate-500" for="processes-step-kind-input">Kind</label>
+                            <select id="processes-step-kind-input"
+                                    class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                    value="@stepKind"
+                                    @onchange="args => stepKind = ParseStepKind(args)"
+                                    data-testid="processes-step-kind">
+                                @foreach (var option in StepKindOptions)
+                                {
+                                    <option value="@option">@option.ToString()</option>
+                                }
+                            </select>
+                        </Stack>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <label class="text-xs font-semibold text-slate-500" for="processes-step-lead-hours-input">Lead hours</label>
+                            <input id="processes-step-lead-hours-input"
+                                   type="number"
+                                   min="0"
+                                   class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                   value="@targetLeadHours"
+                                   @oninput="args => targetLeadHours = ParseInt(args)"
+                                   data-testid="processes-step-target-lead-hours" />
+                        </Stack>
+                    </Grid>
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-subtitle-input">Subtitle</label>
+                    <input id="processes-step-subtitle-input"
+                           class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                           value="@stepSubtitle"
+                           @oninput="args => stepSubtitle = ReadChangeValue(args)"
+                           data-testid="processes-step-subtitle" />
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-notes-input">Notes</label>
+                    <textarea id="processes-step-notes-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@stepNotes"
+                              @oninput="args => stepNotes = ReadChangeValue(args)"
+                              data-testid="processes-step-notes"></textarea>
+
+                    <Cluster Gap="LayoutGap.Medium" Class="flex-wrap">
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@allowsManualSkip"
+                                   @onchange="args => allowsManualSkip = ParseBool(args)"
+                                   data-testid="processes-step-allows-manual-skip" />
+                            Manual skip
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@allowsSafeRefusal"
+                                   @onchange="args => allowsSafeRefusal = ParseBool(args)"
+                                   data-testid="processes-step-allows-safe-refusal" />
+                            Safe refusal
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@requiresApproval"
+                                   @onchange="args => requiresApproval = ParseBool(args)"
+                                   data-testid="processes-step-requires-approval" />
+                            Approval
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@requiresDecisionRecord"
+                                   @onchange="args => requiresDecisionRecord = ParseBool(args)"
+                                   data-testid="processes-step-requires-decision-record" />
+                            Decision record
+                        </label>
+                    </Cluster>
+                </Stack>
+
+                <Stack GapScale="LayoutGap.Small" data-testid="processes-step-operation-contract">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operation" />
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-target-scope-input">Target scope</label>
+                    <select id="processes-step-target-scope-input"
+                            class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                            value="@operationTargetScope"
+                            @onchange="args => operationTargetScope = ParseTargetScope(args)"
+                            data-testid="processes-step-operation-target-scope">
+                        @foreach (var option in TargetScopeOptions)
+                        {
+                            <option value="@option">@option.ToString()</option>
+                        }
+                    </select>
+
+                    <Grid Gap="LayoutGap.XSmall" ColumnsMd="2" data-testid="processes-step-allowed-operations">
+                        @foreach (var operation in OperationOptions)
+                        {
+                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox"
+                                       checked="@selectedOperations.Contains(operation)"
+                                       @onchange="args => ToggleOperation(operation, args)"
+                                       data-testid="@BuildOperationTestId(operation)" />
+                                @operation.ToString()
+                            </label>
+                        }
+                    </Grid>
+                </Stack>
+
+                <Stack GapScale="LayoutGap.Small" data-testid="processes-step-contracts">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Contracts" />
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-input-contract-input">Input</label>
+                    <textarea id="processes-step-input-contract-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@inputContractSummary"
+                              @oninput="args => inputContractSummary = ReadChangeValue(args)"
+                              data-testid="processes-step-input-contract"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-output-contract-input">Output</label>
+                    <textarea id="processes-step-output-contract-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@outputContractSummary"
+                              @oninput="args => outputContractSummary = ReadChangeValue(args)"
+                              data-testid="processes-step-output-contract"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-evidence-contract-input">Evidence</label>
+                    <textarea id="processes-step-evidence-contract-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@evidenceContractSummary"
+                              @oninput="args => evidenceContractSummary = ReadChangeValue(args)"
+                              data-testid="processes-step-evidence-contract"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-decision-rights-input">Decision rights</label>
+                    <textarea id="processes-step-decision-rights-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@decisionRightsSummary"
+                              @oninput="args => decisionRightsSummary = ReadChangeValue(args)"
+                              data-testid="processes-step-decision-rights"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-exception-policy-input">Exception policy</label>
+                    <textarea id="processes-step-exception-policy-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@exceptionPolicySummary"
+                              @oninput="args => exceptionPolicySummary = ReadChangeValue(args)"
+                              data-testid="processes-step-exception-policy"></textarea>
+                </Stack>
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-step-sidecar">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Routing" />
+                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                    <StatusBadge Tone="neutral" Text="@($"{branchOutcomes.Count} route(s)")" />
+                    <StatusBadge Tone="info" Text="@($"{artifactExpectations.Count} artifact(s)")" />
+                </Cluster>
+
+                @for (var index = 0; index < branchOutcomes.Count; index++)
+                {
+                    var branchIndex = index;
+                    var branch = branchOutcomes[branchIndex];
+                    <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@BuildBranchTestId(branch.OutcomeKey)">
+                        <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-route-title-{branchIndex}")">Route</label>
+                        <input id="@($"processes-step-route-title-{branchIndex}")"
+                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               value="@branch.Title"
+                               @oninput="args => UpdateBranchTitle(branchIndex, args)"
+                               data-testid="@BuildBranchTitleTestId(branch.OutcomeKey)" />
+                        <label class="mt-3 block text-xs font-semibold text-slate-500" for="@($"processes-step-route-target-{branchIndex}")">Target</label>
+                        <select id="@($"processes-step-route-target-{branchIndex}")"
+                                class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                value="@branch.RouteTarget.Kind"
+                                @onchange="args => UpdateBranchRouteTarget(branchIndex, args)"
+                                data-testid="@BuildBranchRouteTargetTestId(branch.OutcomeKey)">
+                            @foreach (var option in RouteTargetOptions)
+                            {
+                                <option value="@option">@option.ToString()</option>
+                            }
+                        </select>
+                        <label class="mt-3 block text-xs font-semibold text-slate-500" for="@($"processes-step-route-budget-{branchIndex}")">Loop budget</label>
+                        <input id="@($"processes-step-route-budget-{branchIndex}")"
+                               type="number"
+                               min="0"
+                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               value="@branch.LoopBudget.MaximumRepeats"
+                               @oninput="args => UpdateBranchLoopBudget(branchIndex, args)"
+                               data-testid="@BuildBranchLoopBudgetTestId(branch.OutcomeKey)" />
+                    </div>
+                }
+
+                <Button Text="Add route"
+                        Icon="alt_route"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@Disabled"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteAsync(ProcessDefinitionStepCommandKind.AddBranchOutcome))"
+                        data-testid="processes-step-add-branch-outcome" />
+
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Artifacts" />
+                @for (var index = 0; index < artifactExpectations.Count; index++)
+                {
+                    var artifactIndex = index;
+                    var artifact = artifactExpectations[artifactIndex];
+                    <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@BuildArtifactTestId(artifact.ArtifactKey)">
+                        <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-title-{artifactIndex}")">Artifact</label>
+                        <input id="@($"processes-step-artifact-title-{artifactIndex}")"
+                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               value="@artifact.Title"
+                               @oninput="args => UpdateArtifactTitle(artifactIndex, args)"
+                               data-testid="@BuildArtifactTitleTestId(artifact.ArtifactKey)" />
+                        <Grid Gap="LayoutGap.XSmall" ColumnsMd="2" Class="mt-3">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-kind-{artifactIndex}")">Kind</label>
+                                <select id="@($"processes-step-artifact-kind-{artifactIndex}")"
+                                        class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                        value="@artifact.ArtifactKind"
+                                        @onchange="args => UpdateArtifactKind(artifactIndex, args)"
+                                        data-testid="@BuildArtifactKindTestId(artifact.ArtifactKey)">
+                                    @foreach (var option in ArtifactKindOptions)
+                                    {
+                                        <option value="@option">@option.ToString()</option>
+                                    }
+                                </select>
+                            </Stack>
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-retention-{artifactIndex}")">Retention</label>
+                                <input id="@($"processes-step-artifact-retention-{artifactIndex}")"
+                                       type="number"
+                                       min="0"
+                                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                       value="@artifact.RetentionDays"
+                                       @oninput="args => UpdateArtifactRetention(artifactIndex, args)"
+                                       data-testid="@BuildArtifactRetentionTestId(artifact.ArtifactKey)" />
+                            </Stack>
+                        </Grid>
+                    </div>
+                }
+
+                <Button Text="Add artifact"
+                        Icon="inventory_2"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@Disabled"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteAsync(ProcessDefinitionStepCommandKind.AddArtifactExpectation))"
+                        data-testid="processes-step-add-artifact-expectation" />
+
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Subprocess" />
+                <select class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                        value="@subprocessProcessKey"
+                        @onchange="args => subprocessProcessKey = ReadChangeValue(args)"
+                        data-testid="processes-step-subprocess-definition">
+                    <option value="">None</option>
+                    @foreach (var option in StepEditor.SubprocessOptions)
+                    {
+                        <option value="@option.DefinitionKey.Value">@option.DisplayName</option>
+                    }
+                </select>
+                <input class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       value="@subprocessSnapshotName"
+                       @oninput="args => subprocessSnapshotName = ReadChangeValue(args)"
+                       placeholder="Snapshot name"
+                       aria-label="Subprocess snapshot name"
+                       data-testid="processes-step-subprocess-snapshot" />
+                <Button Text="Map subprocess"
+                        Icon="account_tree"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(Disabled || stepKind != ProcessDefinitionStepKind.Subprocess)"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteAsync(ProcessDefinitionStepCommandKind.MapSubprocess))"
+                        data-testid="processes-step-map-subprocess" />
+            </Stack>
+        </Grid>
+
+        @if (StepEditor.Lint.HasWarningsOrErrors)
+        {
+            <div class="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-step-lint-panel">
+                @foreach (var issue in StepEditor.Lint.Issues)
+                {
+                    <div class="border-t border-slate-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
+                            <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
+                            <span class="text-xs text-slate-500">@issue.Code</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
+                        <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                    </div>
+                }
+            </div>
+        }
+
+        <Cluster Gap="LayoutGap.Small" Class="mt-5 flex-wrap justify-end">
+            @foreach (var command in StepEditor.Commands)
+            {
+                <Button Text="@command.Text"
+                        Icon="@command.Icon"
+                        ButtonStyle="@ResolveCommandButtonStyle(command.Kind)"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!command.IsEnabled || Disabled)"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteAsync(command.Kind))"
+                        title="@command.DisabledReason"
+                        data-testid="@BuildCommandTestId(command.Kind)" />
+            }
+        </Cluster>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessDefinitionStepEditorProjection StepEditor { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ProcessWorkspaceShellScope Scope { get; set; } = default!;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessDefinitionStepEditorCommand> ExecuteCommand { get; set; }
+
+    private ProcessDefinitionStepEditorVersionToken? syncedVersionToken;
+    private ProcessDefinitionStepKey? selectedStepKey;
+    private string? commandNotice;
+    private string stepTitle = string.Empty;
+    private string stepSubtitle = string.Empty;
+    private string stepNotes = string.Empty;
+    private ProcessDefinitionStepKind stepKind = ProcessDefinitionStepKind.Work;
+    private int targetLeadHours;
+    private bool allowsManualSkip;
+    private bool allowsSafeRefusal;
+    private bool requiresApproval;
+    private bool requiresDecisionRecord;
+    private ProcessDefinitionStepTargetScopeKind operationTargetScope = ProcessDefinitionStepTargetScopeKind.Unspecified;
+    private HashSet<ProcessDefinitionStepOperationKind> selectedOperations = [];
+    private string inputContractSummary = string.Empty;
+    private string outputContractSummary = string.Empty;
+    private string evidenceContractSummary = string.Empty;
+    private string decisionRightsSummary = string.Empty;
+    private string exceptionPolicySummary = string.Empty;
+    private string subprocessProcessKey = string.Empty;
+    private string subprocessSnapshotName = string.Empty;
+    private List<ProcessDefinitionBranchOutcomeProjection> branchOutcomes = [];
+    private List<ProcessDefinitionStepRoleBindingProjection> roleBindings = [];
+    private List<ProcessDefinitionArtifactExpectationProjection> artifactExpectations = [];
+
+    private static readonly ProcessDefinitionStepKind[] StepKindOptions =
+    [
+        ProcessDefinitionStepKind.Start,
+        ProcessDefinitionStepKind.Work,
+        ProcessDefinitionStepKind.Decision,
+        ProcessDefinitionStepKind.Review,
+        ProcessDefinitionStepKind.Approval,
+        ProcessDefinitionStepKind.Delivery,
+        ProcessDefinitionStepKind.Subprocess,
+        ProcessDefinitionStepKind.End
+    ];
+
+    private static readonly ProcessDefinitionStepTargetScopeKind[] TargetScopeOptions =
+    [
+        ProcessDefinitionStepTargetScopeKind.Unspecified,
+        ProcessDefinitionStepTargetScopeKind.ManagedProcessArtifactsOnly,
+        ProcessDefinitionStepTargetScopeKind.ManagedOutputProduct,
+        ProcessDefinitionStepTargetScopeKind.ExternalArtifactDestination,
+        ProcessDefinitionStepTargetScopeKind.ExternalProductTargetReadOnly,
+        ProcessDefinitionStepTargetScopeKind.ExternalProductTargetMutable,
+        ProcessDefinitionStepTargetScopeKind.ExternalActionControlled
+    ];
+
+    private static readonly ProcessDefinitionStepOperationKind[] OperationOptions =
+    [
+        ProcessDefinitionStepOperationKind.ReadProcessContext,
+        ProcessDefinitionStepOperationKind.ReadProjectStructure,
+        ProcessDefinitionStepOperationKind.ReadUpstreamArtifacts,
+        ProcessDefinitionStepOperationKind.WriteManagedProcessArtifacts,
+        ProcessDefinitionStepOperationKind.WriteExternalArtifactDestination,
+        ProcessDefinitionStepOperationKind.MutateProductTarget,
+        ProcessDefinitionStepOperationKind.RunValidation,
+        ProcessDefinitionStepOperationKind.LaunchRuntime,
+        ProcessDefinitionStepOperationKind.CaptureRuntimeProof,
+        ProcessDefinitionStepOperationKind.ExecuteExternalAction,
+        ProcessDefinitionStepOperationKind.RecoverArtifactsOnly,
+        ProcessDefinitionStepOperationKind.EscalateOrDecide
+    ];
+
+    private static readonly ProcessDefinitionRouteTargetKind[] RouteTargetOptions =
+    [
+        ProcessDefinitionRouteTargetKind.NextStep,
+        ProcessDefinitionRouteTargetKind.SpecificStep,
+        ProcessDefinitionRouteTargetKind.PreviousStep,
+        ProcessDefinitionRouteTargetKind.SubprocessStart,
+        ProcessDefinitionRouteTargetKind.SubprocessResume,
+        ProcessDefinitionRouteTargetKind.WaitForArtifact,
+        ProcessDefinitionRouteTargetKind.WaitForUser,
+        ProcessDefinitionRouteTargetKind.Escalate,
+        ProcessDefinitionRouteTargetKind.CompleteRun,
+        ProcessDefinitionRouteTargetKind.FailRun,
+        ProcessDefinitionRouteTargetKind.CancelRun
+    ];
+
+    private static readonly ProcessDefinitionArtifactKind[] ArtifactKindOptions =
+    [
+        ProcessDefinitionArtifactKind.Brief,
+        ProcessDefinitionArtifactKind.Checklist,
+        ProcessDefinitionArtifactKind.Dataset,
+        ProcessDefinitionArtifactKind.Decision,
+        ProcessDefinitionArtifactKind.DecisionRecord,
+        ProcessDefinitionArtifactKind.Deliverable,
+        ProcessDefinitionArtifactKind.Evidence,
+        ProcessDefinitionArtifactKind.Prompt,
+        ProcessDefinitionArtifactKind.Report,
+        ProcessDefinitionArtifactKind.Transcript
+    ];
+
+    protected override void OnParametersSet()
+    {
+        if (syncedVersionToken == StepEditor.VersionToken &&
+            selectedStepKey == StepEditor.SelectedStepKey)
+        {
+            return;
+        }
+
+        syncedVersionToken = StepEditor.VersionToken;
+        selectedStepKey = StepEditor.SelectedStepKey;
+        commandNotice = StepEditor.LastCommandReceipt?.Summary;
+        SyncSelectedStep();
+    }
+
+    private void SelectStep(ProcessDefinitionStepKey stepKey)
+    {
+        selectedStepKey = stepKey;
+        SyncSelectedStep();
+    }
+
+    private void SyncSelectedStep()
+    {
+        var draft = selectedStepKey is { } stepKey
+            ? ResolveDraft(stepKey)
+            : StepEditor.SelectedStep;
+        if (draft is null)
+        {
+            return;
+        }
+
+        selectedStepKey = draft.Basic.StepKey;
+        stepTitle = draft.Basic.Title;
+        stepSubtitle = draft.Basic.Subtitle;
+        stepNotes = draft.Basic.Notes;
+        stepKind = draft.Basic.StepKind == ProcessDefinitionStepKind.Unspecified
+            ? ProcessDefinitionStepKind.Work
+            : draft.Basic.StepKind;
+        targetLeadHours = draft.Basic.TargetLeadHours;
+        allowsManualSkip = draft.Basic.AllowsManualSkip;
+        allowsSafeRefusal = draft.Basic.AllowsSafeRefusal;
+        requiresApproval = draft.Basic.RequiresApproval;
+        requiresDecisionRecord = draft.Basic.RequiresDecisionRecord;
+        operationTargetScope = draft.OperationContract.TargetScope;
+        selectedOperations = draft.OperationContract.AllowedOperations.ToHashSet();
+        inputContractSummary = draft.Contracts.InputContractSummary;
+        outputContractSummary = draft.Contracts.OutputContractSummary;
+        evidenceContractSummary = draft.Contracts.EvidenceContractSummary;
+        decisionRightsSummary = draft.Contracts.DecisionRightsSummary;
+        exceptionPolicySummary = draft.Contracts.ExceptionPolicySummary;
+        branchOutcomes = draft.BranchOutcomes.ToList();
+        roleBindings = draft.RoleBindings.ToList();
+        artifactExpectations = draft.ArtifactExpectations.ToList();
+        subprocessProcessKey = draft.SubprocessMapping.ProcessKey;
+        subprocessSnapshotName = draft.SubprocessMapping.DefinitionSnapshotName;
+    }
+
+    private ProcessDefinitionStepDraftProjection? ResolveDraft(ProcessDefinitionStepKey stepKey)
+        => StepEditor.SelectedStep?.Basic.StepKey == stepKey
+            ? StepEditor.SelectedStep
+            : StepEditor.StepDrafts.FirstOrDefault(step => step.Basic.StepKey == stepKey);
+
+    private async Task ExecuteAsync(ProcessDefinitionStepCommandKind commandKind)
+    {
+        if (selectedStepKey is null)
+        {
+            return;
+        }
+
+        var command = new ProcessDefinitionStepEditorCommand(
+            Scope,
+            StepEditor.DefinitionKey,
+            commandKind,
+            syncedVersionToken ?? StepEditor.VersionToken,
+            CreateDraft());
+        await ExecuteCommand.InvokeAsync(command);
+    }
+
+    private ProcessDefinitionStepDraftProjection CreateDraft()
+    {
+        var stepKey = selectedStepKey ?? StepEditor.SelectedStep?.Basic.StepKey ?? new ProcessDefinitionStepKey("step-draft");
+        return new ProcessDefinitionStepDraftProjection(
+            new ProcessDefinitionStepBasicDraftProjection(
+                stepKey,
+                stepTitle,
+                stepSubtitle,
+                stepNotes,
+                stepKind,
+                targetLeadHours,
+                allowsManualSkip,
+                allowsSafeRefusal,
+                requiresApproval,
+                requiresDecisionRecord,
+                StepEditor.SelectedStep?.Basic.DecisionRoleKey),
+            new ProcessDefinitionStepOperationContractProjection(
+                operationTargetScope,
+                selectedOperations.OrderBy(operation => operation.ToString(), StringComparer.Ordinal).ToArray()),
+            new ProcessDefinitionStepContractsProjection(
+                inputContractSummary,
+                outputContractSummary,
+                evidenceContractSummary,
+                decisionRightsSummary,
+                exceptionPolicySummary),
+            branchOutcomes,
+            roleBindings,
+            artifactExpectations,
+            new ProcessDefinitionSubprocessMappingProjection(
+                subprocessProcessKey,
+                subprocessSnapshotName,
+                artifactExpectations
+                    .Where(artifact => !string.IsNullOrWhiteSpace(artifact.SubprocessChildStepKey) ||
+                                       !string.IsNullOrWhiteSpace(artifact.SubprocessChildArtifactTitle) ||
+                                       artifact.SubprocessChildArtifactExpectationId.HasValue)
+                    .ToArray()));
+    }
+
+    private void ToggleOperation(
+        ProcessDefinitionStepOperationKind operation,
+        ChangeEventArgs args)
+    {
+        if (ParseBool(args))
+        {
+            selectedOperations.Add(operation);
+            return;
+        }
+
+        selectedOperations.Remove(operation);
+    }
+
+    private void UpdateBranchTitle(int index, ChangeEventArgs args)
+    {
+        var branch = branchOutcomes[index];
+        branchOutcomes[index] = branch with { Title = ReadChangeValue(args) };
+    }
+
+    private void UpdateBranchRouteTarget(int index, ChangeEventArgs args)
+    {
+        var branch = branchOutcomes[index];
+        var targetKind = ParseRouteTargetKind(args);
+        branchOutcomes[index] = branch with
+        {
+            RouteTarget = branch.RouteTarget with
+            {
+                Kind = targetKind,
+                Summary = targetKind.ToString()
+            },
+            IsBackwardRoute = targetKind == ProcessDefinitionRouteTargetKind.PreviousStep,
+            LoopBudget = branch.LoopBudget with
+            {
+                IsRequired = targetKind == ProcessDefinitionRouteTargetKind.PreviousStep
+            }
+        };
+    }
+
+    private void UpdateBranchLoopBudget(int index, ChangeEventArgs args)
+    {
+        var branch = branchOutcomes[index];
+        branchOutcomes[index] = branch with
+        {
+            LoopBudget = branch.LoopBudget with
+            {
+                MaximumRepeats = ParseInt(args)
+            }
+        };
+    }
+
+    private void UpdateArtifactTitle(int index, ChangeEventArgs args)
+    {
+        var artifact = artifactExpectations[index];
+        artifactExpectations[index] = artifact with { Title = ReadChangeValue(args) };
+    }
+
+    private void UpdateArtifactKind(int index, ChangeEventArgs args)
+    {
+        var artifact = artifactExpectations[index];
+        artifactExpectations[index] = artifact with { ArtifactKind = ParseArtifactKind(args) };
+    }
+
+    private void UpdateArtifactRetention(int index, ChangeEventArgs args)
+    {
+        var artifact = artifactExpectations[index];
+        artifactExpectations[index] = artifact with { RetentionDays = ParseInt(args) };
+    }
+
+    private static string ReadChangeValue(ChangeEventArgs args)
+        => args.Value?.ToString() ?? string.Empty;
+
+    private static bool ParseBool(ChangeEventArgs args)
+        => args.Value is bool value && value;
+
+    private static int ParseInt(ChangeEventArgs args)
+        => int.TryParse(ReadChangeValue(args), out var parsed) ? parsed : 0;
+
+    private static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionStepKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionStepKind.Work;
+
+    private static ProcessDefinitionStepTargetScopeKind ParseTargetScope(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionStepTargetScopeKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionStepTargetScopeKind.Unspecified;
+
+    private static ProcessDefinitionRouteTargetKind ParseRouteTargetKind(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionRouteTargetKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionRouteTargetKind.NextStep;
+
+    private static ProcessDefinitionArtifactKind ParseArtifactKind(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionArtifactKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionArtifactKind.Unspecified;
+
+    private static string ResolveStepIcon(ProcessDefinitionStepKind kind)
+        => kind switch
+        {
+            ProcessDefinitionStepKind.Decision => "alt_route",
+            ProcessDefinitionStepKind.Review => "rate_review",
+            ProcessDefinitionStepKind.Approval => "verified",
+            ProcessDefinitionStepKind.Subprocess => "account_tree",
+            ProcessDefinitionStepKind.End => "flag",
+            _ => "task_alt"
+        };
+
+    private static string ResolveLintTone(ProcessDefinitionStepLintProjection lint)
+    {
+        if (lint.HasBlockingIssues)
+        {
+            return "danger";
+        }
+
+        return lint.HasWarningsOrErrors ? "warning" : "success";
+    }
+
+    private static string ResolveLintText(ProcessDefinitionStepLintProjection lint)
+    {
+        if (lint.HasBlockingIssues)
+        {
+            return $"{lint.Issues.Count(issue => issue.Severity == ProcessDefinitionStepLintSeverity.Error)} blocking";
+        }
+
+        return lint.HasWarningsOrErrors ? $"{lint.Issues.Count} step lint issue(s)" : "Step lint clear";
+    }
+
+    private static string ResolveLintIssueTone(ProcessDefinitionStepLintSeverity severity)
+        => severity switch
+        {
+            ProcessDefinitionStepLintSeverity.Error => "danger",
+            ProcessDefinitionStepLintSeverity.Warning => "warning",
+            ProcessDefinitionStepLintSeverity.Info => "info",
+            _ => "neutral"
+        };
+
+    private static ButtonStyle ResolveCommandButtonStyle(ProcessDefinitionStepCommandKind kind)
+        => kind switch
+        {
+            ProcessDefinitionStepCommandKind.SaveStep => ButtonStyle.Success,
+            ProcessDefinitionStepCommandKind.AddBranchOutcome => ButtonStyle.Light,
+            ProcessDefinitionStepCommandKind.AddArtifactExpectation => ButtonStyle.Info,
+            ProcessDefinitionStepCommandKind.MapSubprocess => ButtonStyle.Light,
+            _ => ButtonStyle.Light
+        };
+
+    private static string BuildCommandTestId(ProcessDefinitionStepCommandKind kind)
+        => kind switch
+        {
+            ProcessDefinitionStepCommandKind.SaveStep => "processes-step-save",
+            ProcessDefinitionStepCommandKind.AddBranchOutcome => "processes-step-command-add-branch-outcome",
+            ProcessDefinitionStepCommandKind.AddArtifactExpectation => "processes-step-command-add-artifact-expectation",
+            ProcessDefinitionStepCommandKind.MapSubprocess => "processes-step-command-map-subprocess",
+            _ => $"processes-step-command-{kind.ToString().ToLowerInvariant()}"
+        };
+
+    private static string BuildStepItemTestId(ProcessDefinitionStepKey stepKey)
+        => $"processes-step-{NormalizeTestId(stepKey.Value)}";
+
+    private static string BuildOperationTestId(ProcessDefinitionStepOperationKind operation)
+        => $"processes-step-operation-{NormalizeTestId(operation.ToString())}";
+
+    private static string BuildBranchTestId(ProcessDefinitionBranchOutcomeKey key)
+        => $"processes-step-branch-{NormalizeTestId(key.Value)}";
+
+    private static string BuildBranchTitleTestId(ProcessDefinitionBranchOutcomeKey key)
+        => $"processes-step-branch-title-{NormalizeTestId(key.Value)}";
+
+    private static string BuildBranchRouteTargetTestId(ProcessDefinitionBranchOutcomeKey key)
+        => $"processes-step-branch-route-target-{NormalizeTestId(key.Value)}";
+
+    private static string BuildBranchLoopBudgetTestId(ProcessDefinitionBranchOutcomeKey key)
+        => $"processes-step-branch-loop-budget-{NormalizeTestId(key.Value)}";
+
+    private static string BuildArtifactTestId(ProcessDefinitionArtifactExpectationKey key)
+        => $"processes-step-artifact-{NormalizeTestId(key.Value)}";
+
+    private static string BuildArtifactTitleTestId(ProcessDefinitionArtifactExpectationKey key)
+        => $"processes-step-artifact-title-{NormalizeTestId(key.Value)}";
+
+    private static string BuildArtifactKindTestId(ProcessDefinitionArtifactExpectationKey key)
+        => $"processes-step-artifact-kind-{NormalizeTestId(key.Value)}";
+
+    private static string BuildArtifactRetentionTestId(ProcessDefinitionArtifactExpectationKey key)
+        => $"processes-step-artifact-retention-{NormalizeTestId(key.Value)}";
+
+    private static string NormalizeTestId(string value)
+    {
+        var normalized = new string(value
+            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+            .ToArray());
+        return normalized.Trim('-');
+    }
+}

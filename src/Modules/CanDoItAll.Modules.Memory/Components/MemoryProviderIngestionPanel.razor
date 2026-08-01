@@ -1,0 +1,77 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-ingestion">
+    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Ingestion" />
+    <TextBlock TextStyle="TextStyle.Subtitle1"
+               Value="@(CanRun ? "Manual source snapshot" : "Ingestion unavailable")" />
+    <TextBlock TextStyle="TextStyle.Body2"
+               Value="@MemoryProviderUiAvailability.ManualIngestionDiagnostic(Provider)" />
+
+    <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
+        <FormField Text="Title">
+            <TextBox Value="@Editor.Title"
+                     ValueChanged="@(value => Editor.Title = value)"
+                     data-testid="memory-ui-ingestion-title" />
+        </FormField>
+        <FormField Text="Category">
+            <TextBox Value="@Editor.SourceCategory"
+                     ValueChanged="@(value => Editor.SourceCategory = value)"
+                     data-testid="memory-ui-ingestion-category" />
+        </FormField>
+        <FormField Text="Tags">
+            <TextBox Value="@Editor.Tags"
+                     ValueChanged="@(value => Editor.Tags = value)"
+                     data-testid="memory-ui-ingestion-tags" />
+        </FormField>
+    </Grid>
+    <FormField Text="Content">
+        <TextArea Value="@Editor.ContentText"
+                  ValueChanged="@(value => Editor.ContentText = value)"
+                  Rows="7"
+                  data-testid="memory-ui-ingestion-content" />
+    </FormField>
+    @if (CanRun)
+    {
+        <Button Text="Enqueue ingestion"
+                Icon="upload_file"
+                ButtonStyle="ButtonStyle.Primary"
+                Size="ButtonSize.Small"
+                Click="OnEnqueue"
+                Disabled="@IsBusy"
+                IsBusy="@IsBusy"
+                data-testid="memory-ui-ingestion-submit" />
+    }
+
+    @if (Result is not null)
+    {
+        <MemoryActionResult Status="@Result.Status.ToString()" Diagnostic="@Result.Diagnostic" />
+        <div class="memory-ui-facts">
+            <MemoryProviderFact Label="Operation" Value="@Result.OperationId.Value.ToString("D")" />
+            <MemoryProviderFact Label="Snapshot" Value="@Result.CapturedSnapshotId" />
+            <MemoryProviderFact Label="Job" Value="@Result.JobId.ToString("D")" />
+        </div>
+        @if (Result.Operation is not null)
+        {
+            <MemoryOperationFacts Operation="@Result.Operation" />
+        }
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter, EditorRequired]
+    public MemoryManualIngestionEditorModel Editor { get; set; } = new();
+
+    [Parameter]
+    public MemoryProviderManualIngestionUiResult? Result { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback OnEnqueue { get; set; }
+
+    private bool CanRun => MemoryProviderUiAvailability.CanRunManualIngestion(Provider);
+}

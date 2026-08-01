@@ -1,0 +1,25 @@
+{
+  "Kind": "checklist-resource",
+  "Key": "agent-delegation-checklist",
+  "DisplayName": "Agent delegation checklist",
+  "Scope": "local",
+  "ProcessKey": "ai-assisted-change-delivery",
+  "OwnerRoleKey": "model-risk-approver",
+  "Phase": "ai-delegation",
+  "Summary": "Checks whether AI delegation boundaries, refusal logic, and human-oversight assumptions are explicit before AI-assisted execution proceeds.",
+  "EntryCriteria": "An AI-assisted step or AI-generated output path is proposed for real process use.",
+  "ExitCriteria": "Delegation boundary, review obligations, and stop conditions are explicit and staffed.",
+  "Checks": [
+    "Allowed and forbidden task types are documented.",
+    "Required human review points are explicit.",
+    "Prompt package and model identity are versioned.",
+    "Refusal and escalation behavior are defined.",
+    "Evaluation evidence exists for the intended use boundary."
+  ],
+  "EvidenceExpectations": [
+    "Prompt package",
+    "Evaluation benchmark report",
+    "AI approval note"
+  ],
+  "DocPath": "processes/ai-assisted-change-delivery/checklists/agent-delegation-checklist.md"
+}

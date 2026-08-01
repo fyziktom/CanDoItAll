@@ -1,0 +1,130 @@
+.agent-catalog-panel {
+    min-width: 0;
+}
+
+.agent-catalog-panel__hero {
+    border-bottom: 1px solid rgb(226 232 240);
+    padding-bottom: 0.85rem;
+}
+
+.agent-catalog-panel__toolbar {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem 1rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.agent-catalog-panel__heading {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.agent-catalog-panel__toolbar-controls {
+    align-items: center;
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.agent-catalog-panel__search {
+    align-items: center;
+    display: flex;
+    flex: 1 1 14rem;
+    gap: 0.5rem;
+    max-width: 36rem;
+    min-width: min(100%, 12rem);
+}
+
+.agent-catalog-panel__search-input {
+    flex: 1 1 14rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.agent-catalog-panel__grid {
+    align-items: stretch;
+}
+
+.agent-catalog-panel__workspace {
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.agent-catalog-panel__team-panel {
+    align-content: start;
+    align-self: start;
+    background: rgb(248 250 252);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+    padding: 1rem;
+    width: 100%;
+}
+
+.agent-catalog-panel__team-actions {
+    border-bottom: 1px solid rgb(226 232 240);
+    padding-bottom: 0.9rem;
+}
+
+.agent-catalog-panel__section-title {
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-catalog-panel__agent-results {
+    min-width: 0;
+    width: 100%;
+}
+
+.agent-catalog-panel__agent-scroll {
+    --agent-catalog-card-row-height: 15rem;
+
+    max-height: min(calc((var(--agent-catalog-card-row-height) * 3) + 2rem), calc(100vh - 17rem));
+    min-width: 0;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+}
+
+@media (min-width: 1024px) {
+    .agent-catalog-panel__team-panel {
+        max-height: 46rem;
+        overflow: auto;
+        position: sticky;
+        top: 1rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .agent-catalog-panel__toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .agent-catalog-panel__toolbar-controls {
+        justify-content: flex-start;
+    }
+
+    .agent-catalog-panel__search {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .agent-catalog-panel__agent-scroll {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+}

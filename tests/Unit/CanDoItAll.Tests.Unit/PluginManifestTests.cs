@@ -1,0 +1,481 @@
+using System.Reflection;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Plugins.Abstractions;
+using CanDoItAll.SharedKernel.Configuration;
+
+namespace CanDoItAll.Tests.Unit;
+
+public sealed class PluginManifestTests
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public void PluginAbstractions_ids_normalize_and_serialize_as_scalars()
+    {
+        var pluginId = new PluginId("  Vendor.Sample_Plugin  ");
+        var packageId = new PluginPackageId(" Vendor.Sample.Package ");
+        var connectionId = new PluginConnectionId(Guid.Parse("45f5e2db-f7be-4f24-8a16-52ddab19d6d1"));
+        var connectionKey = new PluginConnectionKey(" Api-Key ");
+        var rendererKey = new PluginRendererKey(" Settings.Renderer ");
+
+        var json = JsonSerializer.Serialize(new IdentifierEnvelope(
+            pluginId,
+            packageId,
+            connectionId,
+            connectionKey,
+            rendererKey), JsonOptions);
+        var roundTrip = JsonSerializer.Deserialize<IdentifierEnvelope>(json, JsonOptions);
+
+        Assert.Contains("\"pluginId\":\"vendor.sample_plugin\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"packageId\":\"vendor.sample.package\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"connectionId\":\"45f5e2db-f7be-4f24-8a16-52ddab19d6d1\"", json, StringComparison.Ordinal);
+        Assert.NotNull(roundTrip);
+        Assert.Equal(pluginId, new PluginId("vendor.sample_plugin"));
+        Assert.Equal(pluginId, roundTrip.PluginId);
+        Assert.Equal(packageId, roundTrip.PackageId);
+        Assert.Equal(connectionId, roundTrip.ConnectionId);
+        Assert.Equal(connectionKey, roundTrip.ConnectionKey);
+        Assert.Equal(rendererKey, roundTrip.RendererKey);
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_duplicate_executor_renderer_and_connection_keys()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor("sample.exec", "settings.renderer"),
+                CreateExecutor("SAMPLE.EXEC", "settings.renderer")
+            ],
+            settings: new PluginSettingsDescriptor(ConfigurationSchema.Empty(),
+            [
+                new PluginSettingsRendererDescriptor(new PluginRendererKey("settings.renderer"), "Settings", "SampleSettingsRenderer", PluginRendererTrustLevel.Bundled),
+                new PluginSettingsRendererDescriptor(new PluginRendererKey("SETTINGS.RENDERER"), "Settings copy", "SampleSettingsRenderer", PluginRendererTrustLevel.Bundled)
+            ]),
+            connections:
+            [
+                CreateConnection("api"),
+                CreateConnection("API")
+            ],
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer | PluginCapabilityKind.SecretReference);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.DuplicateWorkflowExecutorId);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.DuplicateRendererKey);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.DuplicateConnectionKey);
+    }
+
+    [Fact]
+    public void PluginManifest_validator_requires_declared_capabilities()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors: [CreateExecutor("sample.exec", "settings.renderer")],
+            settings: new PluginSettingsDescriptor(ConfigurationSchema.Empty(),
+            [
+                new PluginSettingsRendererDescriptor(new PluginRendererKey("settings.renderer"), "Settings", "SampleSettingsRenderer", PluginRendererTrustLevel.Bundled)
+            ]),
+            connections: [CreateConnection("api")],
+            oauth2: new PluginOAuth2Descriptor(
+                new PluginConnectionKey("oauth"),
+                new Uri("https://example.test/oauth/authorize"),
+                new Uri("https://example.test/oauth/token"),
+                ["files.read"]),
+            capabilities: PluginCapabilityKind.None);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains("workflow executors", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains("settings renderers", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains("OAuth2", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains("secret-backed connections", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PluginManifest_validator_requires_declared_bundled_renderer_for_custom_executor_settings()
+    {
+        var customExecutor = CreateExecutor("sample.exec", "settings.renderer") with
+        {
+            SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+        };
+        var missingRenderer = CreateDescriptor(
+            workflowExecutors: [customExecutor],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+        var untrustedRenderer = CreateDescriptor(
+            workflowExecutors: [customExecutor],
+            settings: new PluginSettingsDescriptor(
+                ConfigurationSchema.Empty(),
+                [
+                    new PluginSettingsRendererDescriptor(
+                        new PluginRendererKey("settings.renderer"),
+                        "Settings",
+                        "SampleSettingsRenderer",
+                        PluginRendererTrustLevel.RemotePackage)
+                ]),
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer);
+
+        var missingResult = PluginManifestValidator.Validate(missingRenderer);
+        var untrustedResult = PluginManifestValidator.Validate(untrustedRenderer);
+
+        Assert.Contains(
+            missingResult.Issues,
+            issue => issue.Code == PluginManifestValidationIssueCode.InvalidSettingsRendererContract &&
+                     issue.Message.Contains("not declared", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            missingResult.Issues,
+            issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability &&
+                     issue.Message.Contains("custom workflow executor settings renderers", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            untrustedResult.Issues,
+            issue => issue.Code == PluginManifestValidationIssueCode.InvalidSettingsRendererContract &&
+                     issue.Message.Contains("bundled", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PluginManifest_validator_accepts_bundled_renderer_for_custom_executor_settings()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor("sample.exec", "settings.renderer") with
+                {
+                    SettingsPresentationMode = WorkflowExecutorSettingsPresentationMode.CustomRenderer
+                }
+            ],
+            settings: new PluginSettingsDescriptor(
+                ConfigurationSchema.Empty(),
+                [
+                    new PluginSettingsRendererDescriptor(
+                        new PluginRendererKey("settings.renderer"),
+                        "Settings",
+                        "SampleSettingsRenderer",
+                        PluginRendererTrustLevel.Bundled)
+                ]),
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.True(result.Succeeded, string.Join(Environment.NewLine, result.Issues.Select(issue => issue.Message)));
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_executor_permission_policy_without_manifest_capabilities()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor(
+                    "sample.exec",
+                    "settings.renderer") with
+                {
+                    PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                        WorkflowExecutorCapabilityFlags.UsesNetwork |
+                        WorkflowExecutorCapabilityFlags.UsesSecrets |
+                        WorkflowExecutorCapabilityFlags.RunsHostCommand |
+                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                        WorkflowExecutorApprovalRequirement.AlwaysRequired),
+                    DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Fake mode")
+                }
+            ],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains(nameof(PluginCapabilityKind.HttpClient), StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains(nameof(PluginCapabilityKind.SecretReference), StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains(nameof(PluginCapabilityKind.HostCommand), StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingConnectionMetadata);
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_external_write_without_approval_and_deterministic_mismatch()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor(
+                    "sample.write",
+                    "settings.renderer") with
+                {
+                    PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                        WorkflowExecutorCapabilityFlags.WritesExternalData |
+                        WorkflowExecutorCapabilityFlags.UsesNetwork |
+                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                        WorkflowExecutorApprovalRequirement.NotRequired)
+                }
+            ],
+            connections: [CreateConnection("api")],
+            capabilities:
+                PluginCapabilityKind.WorkflowExecutor |
+                PluginCapabilityKind.HttpClient |
+                PluginCapabilityKind.SecretReference);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.InconsistentPermissionPolicy && issue.Message.Contains("approval", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.InconsistentPermissionPolicy && issue.Message.Contains("deterministic", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PluginManifest_validator_allows_unattended_idempotent_external_marker()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor(
+                    "sample.mark-processed",
+                    "settings.renderer") with
+                {
+                    PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                        WorkflowExecutorCapabilityFlags.WritesExternalData |
+                        WorkflowExecutorCapabilityFlags.UsesNetwork |
+                        WorkflowExecutorCapabilityFlags.UsesSecrets |
+                        WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                        WorkflowExecutorApprovalRequirement.NotRequired),
+                    SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+                        "$.externalSideEffectReceipt.idempotencyKey",
+                        "test-receipt/v1"),
+                    DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Fake marker mode")
+                }
+            ],
+            connections: [CreateConnection("api")],
+            capabilities:
+                PluginCapabilityKind.WorkflowExecutor |
+                PluginCapabilityKind.HttpClient |
+                PluginCapabilityKind.SecretReference);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.True(result.Succeeded, string.Join(Environment.NewLine, result.Issues.Select(issue => issue.Message)));
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_duplicate_catalog_ids_and_unsupported_capabilities()
+    {
+        var unsupportedCapability = (PluginCapabilityKind)(1 << 20);
+        var descriptors = new[]
+        {
+            CreateDescriptor(
+                id: "sample.plugin",
+                packageId: "sample.package",
+                capabilities: unsupportedCapability),
+            CreateDescriptor(
+                id: "SAMPLE.PLUGIN",
+                packageId: "SAMPLE.PACKAGE",
+                capabilities: PluginCapabilityKind.None)
+        };
+
+        var result = PluginManifestValidator.ValidateCatalog(descriptors);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.UnsupportedCapability);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.DuplicatePluginId);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.DuplicatePackageId);
+    }
+
+    [Fact]
+    public void PluginManifest_descriptor_round_trips_with_scalar_identifiers()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors: [CreateExecutor("sample.exec", "settings.renderer")],
+            settings: new PluginSettingsDescriptor(ConfigurationSchema.Empty(),
+            [
+                new PluginSettingsRendererDescriptor(new PluginRendererKey("settings.renderer"), "Settings", "SampleSettingsRenderer", PluginRendererTrustLevel.Bundled)
+            ]),
+            connections: [CreateConnection("api")],
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer | PluginCapabilityKind.SecretReference) with
+        {
+            Tags = [PluginDescriptorTags.Email, PluginDescriptorTags.Workflow]
+        };
+
+        var json = JsonSerializer.Serialize(descriptor, JsonOptions);
+        var roundTrip = JsonSerializer.Deserialize<PluginDescriptor>(json, JsonOptions);
+
+        Assert.Contains("\"id\":\"sample.plugin\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"packageId\":\"sample.package\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"tags\":[\"email\",\"workflow\"]", json, StringComparison.Ordinal);
+        Assert.NotNull(roundTrip);
+        Assert.Equal(descriptor.Id, roundTrip.Id);
+        Assert.Equal(descriptor.Package!.PackageId, roundTrip.Package!.PackageId);
+        Assert.Equal(descriptor.Tags, roundTrip.Tags);
+        Assert.Equal(descriptor.WorkflowExecutors[0].ExecutorId, roundTrip.WorkflowExecutors[0].ExecutorId);
+        Assert.Equal(descriptor.Settings.Renderers[0].RendererKey, roundTrip.Settings.Renderers[0].RendererKey);
+        Assert.Equal(descriptor.Connections[0].Key, roundTrip.Connections[0].Key);
+    }
+
+    [Fact]
+    public void PluginManifest_executor_metadata_round_trips_defaults_and_simulation()
+    {
+        var executor = CreateExecutor("sample.exec", "settings.renderer") with
+        {
+            DefaultSettingsJson = "{\"enabled\":true}",
+            Simulation = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+                "{\"simulated\":true}",
+                "Test simulation.")
+        };
+        var descriptor = CreateDescriptor(
+            workflowExecutors: [executor],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+
+        var json = JsonSerializer.Serialize(descriptor, JsonOptions);
+        var roundTrip = JsonSerializer.Deserialize<PluginDescriptor>(json, JsonOptions)!;
+
+        Assert.Equal(executor.DefaultSettingsJson, roundTrip.WorkflowExecutors[0].DefaultSettingsJson);
+        Assert.Equal(executor.Simulation, roundTrip.WorkflowExecutors[0].Simulation);
+    }
+
+    [Fact]
+    public void PluginManifest_old_executor_json_uses_compatible_metadata_defaults()
+    {
+        const string json = """
+            {
+              "executorId": "legacy.exec",
+              "name": "Legacy",
+              "description": "Legacy manifest executor.",
+              "category": 9,
+              "settingsRendererKey": "legacy.settings",
+              "settingsSchema": { "version": "1.0", "fields": [] },
+              "inputShape": { "kind": 0, "schemaJson": "", "description": "" },
+              "resultShape": { "kind": 0, "schemaJson": "", "description": "" },
+              "defaultPolicy": { "timeoutSeconds": 60, "maxRetryAttempts": 0, "retryDelayMilliseconds": 0, "requiresApproval": false }
+            }
+            """;
+
+        var executor = JsonSerializer.Deserialize<PluginWorkflowExecutorDescriptor>(json, JsonOptions)!;
+
+        Assert.Equal("{}", executor.DefaultSettingsJson);
+        Assert.Equal(WorkflowExecutorSettingsPresentationMode.Schema, executor.SettingsPresentationMode);
+        Assert.Equal(WorkflowExecutorSimulationDescriptor.None, executor.Simulation);
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_malformed_executor_defaults_and_simulation()
+    {
+        var executor = CreateExecutor("sample.exec", "settings.renderer") with
+        {
+            DefaultSettingsJson = "{invalid",
+            Simulation = WorkflowExecutorSimulationDescriptor.JsonTemplate(
+                "{also-invalid",
+                "Invalid test simulation.")
+        };
+        var descriptor = CreateDescriptor(
+            workflowExecutors: [executor],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.Equal(
+            2,
+            result.Issues.Count(issue => issue.Code == PluginManifestValidationIssueCode.InvalidWorkflowExecutorJson));
+    }
+
+    [Fact]
+    public void PluginAbstractions_public_contracts_do_not_reference_IServiceProvider_or_implementation_modules()
+    {
+        var assembly = typeof(PluginDescriptor).Assembly;
+        var forbiddenPublicReferences = assembly.GetExportedTypes()
+            .SelectMany(GetPublicMemberTypes)
+            .Where(ContainsServiceProvider)
+            .ToList();
+        var referencedAssemblyNames = assembly.GetReferencedAssemblies()
+            .Select(reference => reference.Name ?? string.Empty)
+            .ToList();
+
+        Assert.Empty(forbiddenPublicReferences);
+        Assert.DoesNotContain(referencedAssemblyNames, name => name.StartsWith("CanDoItAll.Modules.", StringComparison.Ordinal));
+        Assert.DoesNotContain("CanDoItAll.AgentFramework.Core", referencedAssemblyNames);
+        Assert.DoesNotContain("CanDoItAll.AgentFramework.Maf", referencedAssemblyNames);
+        Assert.DoesNotContain("CanDoItAll.Infrastructure", referencedAssemblyNames);
+    }
+
+    private static PluginDescriptor CreateDescriptor(
+        string id = "sample.plugin",
+        string packageId = "sample.package",
+        IReadOnlyList<PluginWorkflowExecutorDescriptor>? workflowExecutors = null,
+        PluginSettingsDescriptor? settings = null,
+        IReadOnlyList<PluginConnectionDescriptor>? connections = null,
+        PluginOAuth2Descriptor? oauth2 = null,
+        PluginCapabilityKind capabilities = PluginCapabilityKind.None)
+        => new(
+            new PluginId(id),
+            "Sample plugin",
+            "Sample plugin for contract tests.",
+            "1.0.0",
+            "CanDoItAll",
+            PluginSourceKind.Bundled,
+            PluginTrustLevel.Bundled,
+            "1.0.0",
+            capabilities,
+            workflowExecutors ?? [],
+            settings ?? PluginSettingsDescriptor.Empty,
+            connections ?? [],
+            new PluginPackageDescriptor(
+                new PluginPackageId(packageId),
+                "1.0.0",
+                "1.0.0",
+                "sha256",
+                "signature"),
+            oauth2);
+
+    private static PluginWorkflowExecutorDescriptor CreateExecutor(
+        string executorId,
+        string rendererKey)
+        => new(
+            new WorkflowExecutorId(executorId),
+            "Sample executor",
+            "Sample executor for contract tests.",
+            WorkflowExecutorCategoryKind.Utility,
+            new PluginRendererKey(rendererKey),
+            ConfigurationSchema.Empty(),
+            WorkflowValueShape.Text,
+            new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON"),
+            WorkflowExecutorExecutionPolicy.Default);
+
+    private static PluginConnectionDescriptor CreateConnection(string key)
+        => new(
+            new PluginConnectionKey(key),
+            "API",
+            "API connection.",
+            PluginConnectionAuthKind.ApiKey,
+            ConfigurationSchema.Empty());
+
+    private static IEnumerable<Type> GetPublicMemberTypes(Type type)
+    {
+        foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+        {
+            yield return property.PropertyType;
+        }
+
+        foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
+        {
+            yield return method.ReturnType;
+            foreach (var parameter in method.GetParameters())
+            {
+                yield return parameter.ParameterType;
+            }
+        }
+    }
+
+    private static bool ContainsServiceProvider(Type type)
+    {
+        if (type == typeof(IServiceProvider))
+        {
+            return true;
+        }
+
+        return type.IsGenericType && type.GetGenericArguments().Any(ContainsServiceProvider);
+    }
+
+    public sealed record IdentifierEnvelope(
+        PluginId PluginId,
+        PluginPackageId PackageId,
+        PluginConnectionId ConnectionId,
+        PluginConnectionKey ConnectionKey,
+        PluginRendererKey RendererKey);
+}

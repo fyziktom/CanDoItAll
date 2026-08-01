@@ -1,0 +1,446 @@
+@implements IAsyncDisposable
+@inject IProjectFilesPilotCoordinator Coordinator
+@inject IFileToolsBrowseItemActionService ItemActionService
+@inject FileInteractionComponentComposition InteractionComposition
+@inject IJSRuntime JSRuntime
+@inject ILogger<ProjectFilesDialog> Logger
+
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Project workspace"
+            Title="@DialogTitle"
+            Subtitle="@DialogSubtitle"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="project-files-dialog"
+            OnClose="CloseAsync">
+        <HeaderActions>
+            @if (browserSnapshot?.Search is { } search)
+            {
+                <StatusBadge Tone="neutral" Text="@($"{browserSnapshot.Items.Count} visible")" />
+                <StatusBadge Tone="info" Text="@($"{search.ScannedItems} inspected")" />
+                <StatusBadge Tone="neutral" Text="@($"{search.RetainedItems} retained")" />
+            }
+        </HeaderActions>
+        <ChildContent>
+            @if (isLoading)
+            {
+                <LoadingState Eyebrow="Authorized source"
+                              Title="Opening project files"
+                              Description="Resolving the current project scope and its bounded file source." />
+            }
+            else if (!string.IsNullOrWhiteSpace(openError))
+            {
+                <EmptyState Eyebrow="Project files unavailable"
+                            Title="Unable to open this project file scope"
+                            Description="@openError">
+                    <Actions>
+                        <Button Text="Retry"
+                                data-testid="project-files-retry"
+                                Click="RetryAsync" />
+                    </Actions>
+                </EmptyState>
+            }
+            else if (interaction is not null)
+            {
+                <Stack GapScale="LayoutGap.Small">
+                    @if (!string.IsNullOrWhiteSpace(activationError))
+                    {
+                        <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                            @activationError
+                        </Alert>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                    {
+                        <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                            @actionFeedback
+                        </Alert>
+                    }
+                    <FileInteraction Request="interaction.Request"
+                                     ContentSource="interaction.Session.ContentSource"
+                                     OpenExternallyRequested="OpenInteractionExternallyCallback"
+                                     OpenExternallyLabel="Open in preferred app"
+                                     AllowModeSwitch="false"
+                                     MaximumContentBytes="@(4 * 1024 * 1024)"
+                                     AriaLabel="@($"Read-only project file {interaction.Request.FileName}")" />
+                </Stack>
+            }
+            else if (workspace is not null)
+            {
+                @if (!string.IsNullOrWhiteSpace(activationError))
+                {
+                    <Alert AlertStyle="AlertStyle.Danger"
+                           Variant="Variant.Outlined"
+                           data-testid="project-files-activation-error">
+                        @activationError
+                    </Alert>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                {
+                    <Alert AlertStyle="AlertStyle.Info"
+                           Variant="Variant.Outlined"
+                           data-testid="project-files-action-feedback">
+                        @actionFeedback
+                    </Alert>
+                }
+
+                <FileBrowser Session="workspace.Browser"
+                             HostActionCatalog="hostActionCatalog"
+                             AriaLabel="@($"Files for {workspace.ProjectName}")"
+                             DisplayMode="FileBrowserDisplayMode.Compact"
+                             InitialViewMode="FileBrowserViewMode.List"
+                             SearchDebounceMilliseconds="280"
+                             SnapshotChanged="HandleSnapshotChanged"
+                             ItemInvoked="ActivateAsync"
+                             ActionRequested="HandleActionRequestedAsync" />
+            }
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private ProjectFilesPilotWorkspace? workspace;
+    private ProjectFilesPilotInteraction? interaction;
+    private FileBrowserItemKey? interactionItemKey;
+    private IFileBrowserHostActionCatalog? hostActionCatalog;
+    private FileToolsHostActionRunner? actionRunner;
+    private CancellationTokenSource? operation;
+    private FileBrowserSnapshot? browserSnapshot;
+    private Guid? activeProjectId;
+    private string? openError;
+    private string? activationError;
+    private string? actionFeedback;
+    private bool isLoading;
+    private bool disposed;
+
+    private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+
+    private EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback
+        => workspace is not null &&
+           interactionItemKey is { } itemKey &&
+           SupportsLocalOpen(workspace, itemKey.SourceId)
+            ? EventCallback.Factory.Create<FileInteractionRequest>(this, OpenInteractionExternallyAsync)
+            : default;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback Closed { get; set; }
+
+    private string DialogTitle => interaction?.Request.FileName ?? $"Files · {ProjectName}";
+
+    private string DialogSubtitle => interaction is null
+        ? "Browse and search this project's authorized text-file source. Activate a file to replace browsing with a read-only interaction."
+        : "Read-only content is authorized independently from the disposed browser session.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            await ResetAsync();
+            return;
+        }
+
+        if (activeProjectId == ProjectId)
+        {
+            return;
+        }
+
+        await OpenAsync();
+    }
+
+    private async Task OpenAsync()
+    {
+        await ResetAsync();
+        activeProjectId = ProjectId;
+        openError = null;
+        activationError = null;
+        actionFeedback = null;
+        isLoading = true;
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        CancellationTokenSource currentOperation = operation;
+        try
+        {
+            ProjectFilesPilotWorkspace opened = await Coordinator.OpenAsync(
+                ProjectId,
+                ProjectName,
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                await opened.DisposeAsync();
+                return;
+            }
+
+            workspace = opened;
+            hostActionCatalog = new DefaultFileToolsHostActionCatalog(
+                opened.GetActionAvailability,
+                ItemActionService.IsLocalLaunchAvailable);
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            openError = SafeMessage(exception, "Unable to open project files.");
+        }
+        finally
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private Task RetryAsync() => OpenAsync();
+
+    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
+            SupportsLocalOpen(workspace, args.Item.Key.SourceId))
+        {
+            await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+            return;
+        }
+
+        activationError = null;
+        actionFeedback = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        ProjectFilesPilotInteraction? activated = null;
+        try
+        {
+            activated = await Coordinator.ActivateAsync(
+                workspace,
+                args.Item.Key,
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            interaction = activated;
+            interactionItemKey = args.Item.Key;
+            activated = null;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            activationError = SafeMessage(exception, "Unable to open the selected file.");
+        }
+        finally
+        {
+            if (activated is not null)
+            {
+                await activated.DisposeAsync();
+            }
+        }
+    }
+
+    private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)
+    {
+        if (workspace is null || args.Origin != FileBrowserActionOrigin.Host)
+        {
+            return;
+        }
+
+        switch (args.ActionId)
+        {
+            case FileBrowserActionIds.Open:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+                break;
+            case FileToolsBrowseHostActionIds.OpenContainingFolder:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenContainingFolder);
+                break;
+            case FileBrowserActionIds.Download:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.Download);
+                break;
+            default:
+                activationError = "The selected project file action is not supported by this host.";
+                break;
+        }
+    }
+
+    private async Task OpenInteractionExternallyAsync(FileInteractionRequest request)
+    {
+        if (interaction is null ||
+            interactionItemKey is not { } itemKey ||
+            request.File != interaction.Request.File)
+        {
+            return;
+        }
+
+        await ExecuteFileActionAsync(itemKey, FileToolsHostAction.OpenInPreferredApplication);
+    }
+
+    private async Task ExecuteFileActionAsync(
+        FileBrowserItemKey itemKey,
+        FileToolsHostAction action)
+    {
+        if (workspace is null)
+        {
+            return;
+        }
+
+        ProjectFilesPilotWorkspace currentWorkspace = workspace;
+
+        activationError = null;
+        actionFeedback = null;
+        CancellationTokenSource currentOperation = ReplaceOperation();
+        try
+        {
+            FileToolsBrowseItemActionResult result = await ActionRunner.ExecuteAsync(
+                action,
+                (localAction, cancellationToken) => ItemActionService.LaunchAsync(
+                    currentWorkspace.Scope,
+                    itemKey,
+                    localAction,
+                    cancellationToken),
+                cancellationToken => ItemActionService.AuthorizeDownloadAsync(
+                    currentWorkspace.Scope,
+                    itemKey,
+                    cancellationToken),
+                currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (result.IsSuccess)
+            {
+                actionFeedback = result.Message;
+            }
+            else
+            {
+                activationError = result.Message;
+            }
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Authorized project file action failed. ProjectId={ProjectId} Action={Action} FailureType={FailureType}.",
+                currentWorkspace.ProjectId,
+                action,
+                exception.GetType().Name);
+            activationError = SafeMessage(
+                exception,
+                action == FileToolsHostAction.Download
+                    ? "Unable to download the selected project file."
+                    : "Unable to open the selected project file locally.");
+        }
+    }
+
+    private bool SupportsLocalOpen(
+        ProjectFilesPilotWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+        => ItemActionService.IsLocalLaunchAvailable &&
+           currentWorkspace.GetActionAvailability(sourceId).SupportsLocalOpen;
+
+    private void HandleSnapshotChanged(FileBrowserSnapshot snapshot)
+    {
+        browserSnapshot = snapshot;
+        if (snapshot.Search is not { } search || snapshot.IsBusy)
+        {
+            return;
+        }
+
+        Logger.LogInformation(
+            "Project file search completed with {ReturnedItems} returned, {InspectedItems} inspected, {RetainedItems} retained, {RetainedBytes} retained bytes, {DurationMs} duration milliseconds, and partial={IsPartial}.",
+            snapshot.Items.Count,
+            search.ScannedItems,
+            search.RetainedItems,
+            search.RetainedBytes,
+            search.Elapsed.TotalMilliseconds,
+            search.IsPartial);
+    }
+
+    private async Task CloseAsync()
+    {
+        await ResetAsync();
+        await Closed.InvokeAsync();
+    }
+
+    private CancellationTokenSource ReplaceOperation()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        return operation;
+    }
+
+    private async ValueTask ResetAsync()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = null;
+        isLoading = false;
+        activeProjectId = null;
+        openError = null;
+        activationError = null;
+        actionFeedback = null;
+        browserSnapshot = null;
+        if (interaction is not null)
+        {
+            await interaction.DisposeAsync();
+            interaction = null;
+        }
+
+        interactionItemKey = null;
+
+        if (workspace is not null)
+        {
+            await workspace.DisposeAsync();
+            workspace = null;
+        }
+
+        hostActionCatalog = null;
+    }
+
+    private static string SafeMessage(Exception exception, string fallback)
+        => exception switch
+        {
+            FileBrowserProviderException providerException => providerException.Error.Message,
+            FileAccessDeniedException deniedException => deniedException.Message,
+            _ => fallback
+        };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetime.Cancel();
+        await ResetAsync();
+        if (actionRunner is not null)
+        {
+            await actionRunner.DisposeAsync();
+            actionRunner = null;
+        }
+
+        lifetime.Dispose();
+    }
+}

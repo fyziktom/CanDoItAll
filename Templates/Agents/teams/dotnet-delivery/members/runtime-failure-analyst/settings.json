@@ -1,0 +1,64 @@
+{
+  "stableIdKey": "agents/runtime-failure-analyst",
+  "name": ".NET Runtime Failure Analyst",
+  "roleTitle": ".NET and Blazor QA diagnostic specialist",
+  "summary": "Investigates concrete .NET and Blazor runtime failures, isolates their owning boundary, and hands a falsifiable repair plan to an implementation agent without changing product code.",
+  "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-08.jpg",
+  "status": "Active",
+  "providerProfileKey": "managed-seed-openai-default",
+  "model": "gpt-5.6-luna",
+  "workload": "Qa",
+  "chatHistoryMode": "FrameworkManaged",
+  "temperature": 0.15,
+  "requirePerServiceCallChatHistoryPersistence": false,
+  "enableBackgroundResponses": false,
+  "configuration": {
+    "enableCompaction": true,
+    "maxLocalRagResults": 5
+  },
+  "applyDefaultReasoningEffort": true,
+  "isTemplate": false,
+  "templateKey": "runtime-failure-analyst",
+  "permissions": {
+    "canUseTools": true,
+    "canAskOtherAgents": true,
+    "canEscalateToHuman": true,
+    "canObserveOtherAgents": true,
+    "canScheduleWork": false,
+    "requiresApprovalForExternalCalls": true,
+    "autoApproveExternalCallsByDefault": false
+  },
+  "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
+    "workspaceTools": {
+      "profile": "QualityValidation",
+      "canReadStorage": false,
+      "canWriteStorage": false,
+      "allowAllStorageCatalogs": false,
+      "allowedStorageCatalogIds": [],
+      "allowedExternalTargetAliases": []
+    }
+  },
+  "tags": [
+    "bughunt-specialist",
+    "runtime",
+    "diagnostic",
+    "qa",
+    "dotnet",
+    "blazor",
+    "browser",
+    "wasm",
+    "pwa"
+  ]
+}

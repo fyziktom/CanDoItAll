@@ -1,0 +1,27 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "qa-lane-validation-note",
+  "DisplayName": "QA lane validation note",
+  "Scope": "local",
+  "ProcessKey": "branching-code-review",
+  "ArtifactKind": "Evidence",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Targeted QA lane note for review-routed changes that require extra regression or browser validation before merge.",
+  "AllowedFutureUsageSummary": "Reusable for merge approval and release readiness if the change proceeds.",
+  "ValidationRequirementSummary": "Must name tested flows, proof depth, and unresolved quality risks.",
+  "OwnerRoleKey": "qa-lead",
+  "DocPath": "processes/branching-code-review/artifacts/qa-lane-validation-note.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "qa-lane-validation-note",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must name tested flows, proof depth, and unresolved quality risks."
+  }
+}

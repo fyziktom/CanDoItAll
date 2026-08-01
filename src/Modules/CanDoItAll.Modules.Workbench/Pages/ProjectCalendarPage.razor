@@ -1,0 +1,434 @@
+@page "/projects/{ProjectId:guid}/calendar"
+@* codex-capsule
+kind: page
+name: ProjectCalendarPage
+summary: Hosts the project calendar surface and opens linked artifacts from scheduled events.
+owns: project-calendar, selected-event-panel
+deps: ProjectWorkbenchService, NavigationManager
+risks: stale-event-selection, wrong-artifact-route
+tests: component:ProjectCalendarPageTests, e2e:workbench-calendar
+*@
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure
+@using CanDoItAll.Modules.Workbench.ProjectStructure
+@inject ProjectWorkbenchService ProjectWorkbenchService
+@inject NavigationManager Navigation
+
+<PageTitle>Project Calendar</PageTitle>
+
+<ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
+                                          ProjectName="@(surface?.ProjectName ?? "Requested project")"
+                                          ActiveView="ProjectStructureAgentChatView.Calendar"
+                                          SelectedEntityReferences="@SelectedAgentContextEntities"
+                                          ContextNavigationIdentity="@AgentChatNavigationFence"
+                                          ContextAccessState="@agentChatContextAccessState"
+                                          RefreshRequested="HandleAgentExecutionCompletedAsync" />
+
+@if (unavailableState is not null)
+{
+    <PageScaffold MaxWidthClass="max-w-full">
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="Project calendar unavailable"
+                        Description="The requested project is not available in the active database profile." />
+        </Header>
+        <ChildContent>
+            <EmptyState Eyebrow="Switched profile"
+                        Title="@unavailableState.Title"
+                        Description="@unavailableState.Description">
+                <Actions>
+                    <Button Text="Open projects"
+                            Click="OpenUnavailableRouteAsync" />
+                </Actions>
+            </EmptyState>
+        </ChildContent>
+    </PageScaffold>
+}
+else if (surface is null)
+{
+    <PageScaffold MaxWidthClass="max-w-full">
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="Project calendar"
+                        Description="Loading the linked schedule surface." />
+        </Header>
+        <ChildContent>
+            <LoadingState Eyebrow="Loading"
+                          Title="Preparing the calendar"
+                          Description="The project events surface is restoring the saved view and selection state." />
+        </ChildContent>
+    </PageScaffold>
+}
+else
+{
+    <PageScaffold MaxWidthClass="max-w-full">
+        <Header>
+            <PageHeader Eyebrow="Workbench"
+                        Title="@($"{surface.ProjectName} calendar")"
+                        Description="Review phase windows, validation activity, tests, and custom milestones in one linked schedule surface."
+                        Compact="true">
+                <Stats>
+                    <CompactStat Label="events" Value="@surface.Events.Count.ToString()" TooltipText="Scheduled project items on the current calendar surface." />
+                    <CompactStat Label="linked artifacts" Value="@surface.Events.Count(item => !string.IsNullOrWhiteSpace(item.Route)).ToString()" TooltipText="Events that can open a related artifact directly." Tone="info" />
+                    <CompactStat Label="selected" Value="@SelectedEventLabel" TooltipText="Current event focus for the detail pane." />
+                    <CompactStat Label="statuses" Value="@surface.Events.Select(item => item.Status).Distinct(StringComparer.OrdinalIgnoreCase).Count().ToString()" TooltipText="Distinct status labels in the current schedule." />
+                </Stats>
+            </PageHeader>
+        </Header>
+
+        <ChildContent>
+            <div class="space-y-5">
+                <SectionCard Title="Project calendar" Description="The JavaScript calendar wrapper owns rendering while selection, view persistence, and artifact opening stay typed in .NET.">
+                    <CanvasCalendar Surface="canvasSurface"
+                                    HostClass="min-h-[36rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                    SelectionChanged="HandleEventSelectedAsync"
+                                    StateChanged="HandleViewStateChangedAsync" />
+                </SectionCard>
+
+                <SectionCard Title="Selected event" Description="Calendar items open their linked artifacts inside the internal workbench.">
+                    @if (selectedEvent is null)
+                    {
+                        <EmptyState Eyebrow="No selection"
+                                    Title="Choose an event"
+                                    Description="Select an event on the calendar to inspect its timing, state, and linked artifact route." />
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-lg font-semibold text-slate-950">@selectedEvent.Title</p>
+                                    <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]" style="@($"background:{selectedEvent.AccentColor}18;color:{selectedEvent.AccentColor}")">@selectedEvent.ObjectType</span>
+                                </div>
+                                <p class="text-sm text-slate-600">@selectedEvent.Status</p>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Start</p>
+                                    <p class="mt-2 text-sm font-semibold text-slate-950">@selectedEvent.StartUtc.LocalDateTime:g</p>
+                                </div>
+                                <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">End</p>
+                                    <p class="mt-2 text-sm font-semibold text-slate-950">@selectedEvent.EndUtc.LocalDateTime:g</p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-[1.2rem] bg-slate-50 px-4 py-3">
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Route</p>
+                                <p class="mt-2 break-all text-sm text-slate-700">@selectedEvent.Route</p>
+                            </div>
+
+                            <button type="button"
+                                    class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                                    @onclick="() => Navigation.NavigateTo(selectedEvent.Route)">
+                                Open linked artifact
+                            </button>
+                        </div>
+                    }
+                </SectionCard>
+            </div>
+
+            <SectionCard Title="Calendar boundary validation"
+                         Description="These extracted calendar boundaries stay on the typed `CanvasCalendarSurface` contract so the page can validate editor, navigation, export, and time-grid behavior without growing a second runtime.">
+                <div class="grid gap-5 2xl:grid-cols-3">
+                    <CalendarSelectionPanel Snapshot="@SelectionPanelSnapshot" />
+                    <CalendarEventEditorModal Snapshot="@EventEditorSnapshot" />
+                    <CalendarCrudBridge Snapshot="@CrudBridgeSnapshot" />
+                </div>
+
+                <div class="mt-5 grid gap-5 xl:grid-cols-3">
+                    <CalendarMiniMonthNavigator Snapshot="@MiniMonthSnapshot" />
+                    <CalendarExportMenu Snapshot="@ExportMenuSnapshot" />
+                    <CanvasBoundaryCard TestHookId="project-calendar-state-parser"
+                                               Label="Project calendar state parser"
+                                               Title="Persisted calendar state now resolves through one typed parser"
+                                               Summary="The page no longer probes raw JSON for selected event, scope, view, and timezone values. Those defaults and migrations now normalize through `ProjectCalendarStateParser`."
+                                               StatePill="@currentViewState.View"
+                                               Metrics="@StateParserMetrics">
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected date</p>
+                                <p class="mt-2 text-sm text-slate-950">@currentViewState.SelectedDate</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Timezone</p>
+                                <p class="mt-2 text-sm text-slate-950">@currentViewState.Timezone</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scope</p>
+                                <p class="mt-2 text-sm text-slate-950">@currentViewState.Scope</p>
+                            </div>
+                            <div class="rounded-[1.4rem] border border-slate-200 bg-white/85 px-4 py-4">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selected event</p>
+                                <p class="mt-2 text-sm text-slate-950">@StateParserSelectedEventLabel</p>
+                            </div>
+                        </div>
+                    </CanvasBoundaryCard>
+                </div>
+
+                <div class="mt-5">
+                    <CalendarTimeGridRenderer Snapshot="@TimeGridSnapshot" />
+                </div>
+            </SectionCard>
+        </ChildContent>
+    </PageScaffold>
+}
+
+@code {
+    [Parameter]
+    public Guid ProjectId { get; set; }
+
+    private ProjectCalendarSurface? surface;
+    private CanvasCalendarSurface? canvasSurface;
+    private ProjectCalendarViewState currentViewState = ProjectCalendarViewState.Empty;
+    private Guid? selectedEventId;
+    private ProjectWorkbenchUnavailableState? unavailableState;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private long surfaceReloadGeneration;
+
+    private ProjectCalendarEvent? selectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
+    private IReadOnlyList<AgentChatContextEntityReference> SelectedAgentContextEntities
+        => selectedEvent is { } calendarEvent && !string.IsNullOrWhiteSpace(calendarEvent.NodeKey)
+            ? [new AgentChatContextEntityReference("project-node", calendarEvent.NodeKey, calendarEvent.Title)]
+            : [];
+    private string SelectedEventLabel => selectedEvent?.ObjectType.ToString() ?? "None";
+    private string StateParserSelectedEventLabel => currentViewState.SelectedEventId?.ToString("D") ?? "None";
+    private CanvasCalendarSurface ValidationSurface => BuildValidationSurface();
+    private CalendarSelectionPanelSnapshot SelectionPanelSnapshot => CalendarSelectionPanelFactory.Create(ValidationSurface);
+    private CalendarEventEditorModalSnapshot EventEditorSnapshot => CalendarEventEditorModalFactory.Create(ValidationSurface);
+    private CalendarCrudBridgeSnapshot CrudBridgeSnapshot => CalendarCrudBridgeFactory.Create(ValidationSurface);
+    private CalendarMiniMonthNavigatorSnapshot MiniMonthSnapshot => CalendarMiniMonthNavigatorFactory.Create(ValidationSurface);
+    private CalendarExportMenuSnapshot ExportMenuSnapshot => CalendarExportMenuFactory.Create(ValidationSurface);
+    private CalendarTimeGridRendererSnapshot TimeGridSnapshot => CalendarTimeGridRendererFactory.Create(ValidationSurface);
+    private IReadOnlyList<string> StateParserMetrics =>
+    [
+        $"{currentViewState.View} normalized view",
+        $"{currentViewState.Scope} scope",
+        string.IsNullOrWhiteSpace(currentViewState.SelectedDate) ? "No selected date" : currentViewState.SelectedDate,
+        string.IsNullOrWhiteSpace(surface?.ViewStateJson) ? "No persisted JSON" : "Persisted JSON restored"
+    ];
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri);
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var requestedProjectId = ProjectId;
+        var reloadGeneration = Interlocked.Increment(ref surfaceReloadGeneration);
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        try
+        {
+            var loadResult = await ProjectWorkbenchService.TryGetCalendarAsync(requestedProjectId);
+            if (!IsCurrentSurfaceReload(requestedProjectId, reloadGeneration))
+            {
+                return;
+            }
+
+            if (!loadResult.IsSuccess || loadResult.Surface is null)
+            {
+                unavailableState = loadResult.UnavailableState;
+                surface = null;
+                canvasSurface = null;
+                selectedEventId = null;
+                currentViewState = ProjectCalendarViewState.Empty;
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                return;
+            }
+
+            unavailableState = null;
+            surface = loadResult.Surface;
+            currentViewState = ProjectCalendarStateParser.Parse(surface.ViewStateJson);
+            selectedEventId = ResolveSelectedEventId(
+                surface.Events,
+                selectedEventId,
+                currentViewState.SelectedEventId);
+            currentViewState = currentViewState with { SelectedEventId = selectedEventId };
+            canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState);
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        }
+        catch
+        {
+            if (IsCurrentSurfaceReload(requestedProjectId, reloadGeneration))
+            {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            }
+
+            throw;
+        }
+    }
+
+    private Task OpenUnavailableRouteAsync()
+    {
+        Navigation.NavigateTo(unavailableState?.SafeRoute ?? "/projects");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleEventSelectedAsync(CanvasCalendarSelectionChangedEventArgs args)
+    {
+        selectedEventId = Guid.TryParse(args.SelectedEvent?.EventId, out var parsed) &&
+                          surface?.Events.Any(item => item.Id == parsed) == true
+            ? parsed
+            : null;
+        if (surface is not null)
+        {
+            currentViewState = currentViewState with { SelectedEventId = selectedEventId };
+            canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleViewStateChangedAsync(CanvasCalendarStateChangedEventArgs args)
+    {
+        currentViewState = ProjectCalendarStateParser.FromStateChanged(args);
+        if (surface is not null)
+        {
+            surface = surface with { ViewStateJson = args.StateJson };
+            selectedEventId = ResolveSelectedEventId(
+                surface.Events,
+                currentViewState.SelectedEventId,
+                selectedEventId);
+            currentViewState = currentViewState with { SelectedEventId = selectedEventId };
+            canvasSurface = ProjectCalendarAdapter.BuildSurface(surface, currentViewState with { SelectedEventId = selectedEventId });
+        }
+
+        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "calendar", args.StateJson);
+    }
+
+    private async Task HandleAgentExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (!string.Equals(
+                notification.Source.Kind.Value,
+                ProjectStructureAgentChatContextBuilder.SourceKind,
+                StringComparison.Ordinal) ||
+            !Guid.TryParse(notification.Source.Id.Value, out var sourceProjectId) ||
+            sourceProjectId != ProjectId)
+        {
+            return;
+        }
+
+        var reloadTask = LoadAsync();
+        await InvokeAsync(StateHasChanged);
+        await reloadTask;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsCurrentSurfaceReload(Guid projectId, long reloadGeneration)
+        => projectId == ProjectId &&
+           reloadGeneration == Volatile.Read(ref surfaceReloadGeneration);
+
+    private static Guid? ResolveSelectedEventId(
+        IReadOnlyList<ProjectCalendarEvent> events,
+        Guid? preferredEventId,
+        Guid? fallbackEventId)
+    {
+        if (preferredEventId.HasValue && events.Any(item => item.Id == preferredEventId.Value))
+        {
+            return preferredEventId;
+        }
+
+        if (fallbackEventId.HasValue && events.Any(item => item.Id == fallbackEventId.Value))
+        {
+            return fallbackEventId;
+        }
+
+        return events.FirstOrDefault()?.Id;
+    }
+
+    private CanvasCalendarSurface BuildValidationSurface()
+    {
+        if (canvasSurface is null)
+        {
+            return new CanvasCalendarSurface();
+        }
+
+        var previewEvents = canvasSurface.Events
+            .Select((item, index) =>
+            {
+                var start = item.StartUtc ?? DateTimeOffset.UtcNow.AddHours(index + 8);
+                var end = item.EndUtc ?? start.AddHours(1);
+                return new CanvasCalendarEvent
+                {
+                    Id = item.Id,
+                    EventId = string.IsNullOrWhiteSpace(item.EventId) ? item.Id : item.EventId,
+                    Title = item.Title,
+                    Description = item.Description,
+                    StartUtc = start,
+                    EndUtc = end,
+                    AllDay = item.AllDay,
+                    Timezone = string.IsNullOrWhiteSpace(item.Timezone) ? "UTC" : item.Timezone,
+                    TimezoneName = string.IsNullOrWhiteSpace(item.TimezoneName) ? "UTC" : item.TimezoneName,
+                    Location = item.Location,
+                    LocationLabel = string.IsNullOrWhiteSpace(item.LocationLabel) ? item.Category : item.LocationLabel,
+                    LocationAddress = item.LocationAddress,
+                    Category = item.Category,
+                    Color = string.IsNullOrWhiteSpace(item.Color) ? "#0f172a" : item.Color,
+                    ReadOnly = false,
+                    EventType = string.IsNullOrWhiteSpace(item.EventType) ? "Milestone" : item.EventType,
+                    Status = string.IsNullOrWhiteSpace(item.Status) ? "Planned" : item.Status,
+                    Notes = string.IsNullOrWhiteSpace(item.Notes) ? $"Linked artifact: {item.Description}" : item.Notes,
+                    LinkedPlaylists = item.LinkedPlaylists.Count > 0
+                        ? item.LinkedPlaylists
+                        : new List<CanvasCalendarPlaylist>
+                        {
+                            new()
+                            {
+                                PlaylistId = $"playlist-{index + 1}",
+                                Title = $"Review playlist {index + 1}",
+                                Subtitle = "Prompt and validation handoff",
+                                Purpose = "Support the selected milestone",
+                                Status = "Ready"
+                            }
+                        },
+                    ChecklistRows = item.ChecklistRows.Count > 0
+                        ? item.ChecklistRows
+                        : new List<CanvasCalendarChecklistRow>
+                        {
+                            new() { Label = "Confirm schedule", Status = "Done", Note = "Window approved with the project owner." },
+                            new() { Label = "Review dependencies", Status = "Pending", Note = "Check linked prompt and validation artifacts." }
+                        },
+                    LinkedPlaylistCount = item.LinkedPlaylists.Count > 0 ? item.LinkedPlaylists.Count : 1,
+                    ChecklistItemCount = item.ChecklistRows.Count > 0 ? item.ChecklistRows.Count : 2
+                };
+            })
+            .ToList();
+
+        return new CanvasCalendarSurface
+        {
+            SurfaceId = $"{canvasSurface.SurfaceId}:validation",
+            Events = previewEvents,
+            InitialView = canvasSurface.InitialView,
+            SelectedDate = string.IsNullOrWhiteSpace(canvasSurface.SelectedDate)
+                ? previewEvents.FirstOrDefault()?.StartUtc?.ToString("yyyy-MM-dd") ?? string.Empty
+                : canvasSurface.SelectedDate,
+            SelectedEventId = canvasSurface.SelectedEventId,
+            Timezone = string.IsNullOrWhiteSpace(canvasSurface.Timezone) ? "UTC" : canvasSurface.Timezone,
+            Locale = string.IsNullOrWhiteSpace(canvasSurface.Locale) ? "en-US" : canvasSurface.Locale,
+            WeekStartsOn = canvasSurface.WeekStartsOn,
+            SlotMinutes = canvasSurface.SlotMinutes,
+            BusinessHoursStart = canvasSurface.BusinessHoursStart,
+            BusinessHoursEnd = canvasSurface.BusinessHoursEnd,
+            MiniMonthCount = Math.Max(canvasSurface.MiniMonthCount, 1),
+            AllowCreate = true,
+            AllowEdit = true,
+            AllowDelete = true,
+            AllowDragDrop = true,
+            AllowResize = true,
+            EnableListExport = true,
+            WorkspaceModal = true,
+            EventTypes = canvasSurface.EventTypes.Count > 0 ? canvasSurface.EventTypes : ["Milestone", "Validation", "Prompt"],
+            EventStatuses = canvasSurface.EventStatuses.Count > 0 ? canvasSurface.EventStatuses : ["Planned", "In progress", "Ready"],
+            TimeZoneOptions = canvasSurface.TimeZoneOptions.Count > 0 ? canvasSurface.TimeZoneOptions : ["UTC", "America/New_York"],
+            ViewStateJson = canvasSurface.ViewStateJson
+        };
+    }
+}
+
+

@@ -1,0 +1,58 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<FormSection Title="MCP remote HTTP transport"
+             Description="Only remote HTTP MCP servers are executable. Authentication is an optional environment-backed complete header value.">
+    <Alert AlertStyle="AlertStyle.Info">
+        Descriptor kind: <strong>remote-http</strong>. Internal-hosted MCP descriptors are not offered by this runtime.
+    </Alert>
+    <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
+        <FormField Text="MCP server key">
+            <TextBox Value="@Transport.ServerKey"
+                     ValueChanged="@(value => Transport.ServerKey = value)"
+                     data-testid="memory-ui-editor-mcp-server-key" />
+        </FormField>
+        <FormField Text="MCP display name">
+            <TextBox Value="@Transport.DisplayName"
+                     ValueChanged="@(value => Transport.DisplayName = value)"
+                     data-testid="memory-ui-editor-mcp-display-name" />
+        </FormField>
+        <FormField Text="MCP description">
+            <TextBox Value="@Transport.Description"
+                     ValueChanged="@(value => Transport.Description = value)"
+                     data-testid="memory-ui-editor-mcp-description" />
+        </FormField>
+        <FormField Text="Remote endpoint">
+            <TextBox Value="@Transport.RemoteEndpoint"
+                     ValueChanged="@(value => Transport.RemoteEndpoint = value)"
+                     data-testid="memory-ui-editor-mcp-endpoint" />
+        </FormField>
+        <FormField Text="Authentication header">
+            <TextBox Value="@Transport.AuthHeaderName"
+                     ValueChanged="@(value => Transport.AuthHeaderName = value)"
+                     data-testid="memory-ui-editor-mcp-auth-header" />
+        </FormField>
+        <FormField Text="Authentication value environment variable">
+            <TextBox Value="@Transport.AuthHeaderEnvironmentVariable"
+                     ValueChanged="@(value => Transport.AuthHeaderEnvironmentVariable = value)"
+                     Placeholder="CANDOITALL_MEMORY_MCP_TOKEN"
+                     data-testid="memory-ui-editor-mcp-auth-environment-variable" />
+        </FormField>
+        <FormField Text="Context query tool">
+            <TextBox Value="@Transport.ContextQueryTool"
+                     ValueChanged="@(value => Transport.ContextQueryTool = value)"
+                     data-testid="memory-ui-editor-mcp-query-tool" />
+        </FormField>
+        <FormField Text="Operation status tool">
+            <TextBox Value="@Transport.OperationStatusTool"
+                     ValueChanged="@(value => Transport.OperationStatusTool = value)"
+                     data-testid="memory-ui-editor-mcp-status-tool" />
+        </FormField>
+    </Grid>
+    <TextBlock TextStyle="TextStyle.Caption"
+               Value="The environment variable must contain the complete header value, for example: Bearer &lt;token&gt;." />
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public MemoryProviderMcpTransportEditorModel Transport { get; set; } = new();
+}

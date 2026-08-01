@@ -1,0 +1,1618 @@
+@page "/crm-hr/workforce"
+@implements IDisposable
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+@using Microsoft.Extensions.Logging
+@inject HrService HrService
+@inject PartyDirectoryService PartyDirectoryService
+@inject IPartyOrganizationAffiliationService AffiliationService
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+@inject ILogger<CrmHrWorkforcePage> Logger
+
+<PageTitle>CRM / HR Workforce</PageTitle>
+
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
+                                 ContextNavigationIdentity="@AgentChatNavigationFence"
+                                 ContextAccessState="@agentChatContextAccessState" />
+
+<PageScaffold MaxWidthClass="max-w-full"
+              FillHeight="true">
+    <Header>
+        <PageHeader Eyebrow="CRM / HR"
+                    Title="Workforce workspace"
+                    Description="Keep worker identity, delivery-unit structure, manager lines, and commercial staffing metadata on the shared party model instead of splitting people ops and delivery records."
+                    Compact="true">
+            <Actions>
+                <PageHeaderActionButton Icon="asset"
+                                        Label="Open directory"
+                                        TooltipText="Open the shared party directory."
+                                        Click="OpenDirectory" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium"
+               FillHeight="true"
+               Class="min-h-0 flex-1 overflow-hidden">
+            <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Workforce" />
+
+            <SurfaceCard Class="flex min-h-0 flex-1 flex-col overflow-hidden"
+                         data-testid="crmhr-workforce-catalog">
+                <Stack GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.Stretch"
+                       FillHeight="true"
+                       Class="min-h-0 flex-1 overflow-hidden">
+                    <ListPanelHeader Title="Workforce records"
+                                     Description="Search and page through workers and delivery units. Open a card to manage its profile, skills, allocations, and history."
+                                     Count="Server-paged">
+                        <Actions>
+                            <Button Text="New delivery unit"
+                                    Icon="add"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@isDeliveryUnitSaving"
+                                    IsBusy="@isDeliveryUnitSaving"
+                                    Click="OpenDeliveryUnitDialog"
+                                    data-testid="crmhr-workforce-new-delivery-unit" />
+                        </Actions>
+                    </ListPanelHeader>
+                    <WorkforceRecordBrowser @key="workforceBrowserVersion"
+                                            SelectedPartyId="selectedWorkspace?.PartyId"
+                                            SelectionChanged="SelectPartyAsync"
+                                            LoadFailed="HandleWorkforceBrowserLoadFailedAsync"
+                                            PageSize="12"
+                                            ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
+                                            GridMode="PagedRecordGridMode.BoundedCatalog"
+                                            FillHeight="true"
+                                            SearchPlaceholder="Search workforce name, summary, organization, or title"
+                                            DataTestId="crmhr-workforce"
+                                            OptionTestId="crmhr-workforce-item" />
+                </Stack>
+            </SurfaceCard>
+
+            @if (isRecordDialogOpen && selectedWorkspace is not null)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Workforce record"
+                        Title="@selectedWorkspace.DisplayName"
+                        Subtitle="Profile, skills, allocation-driven availability, and workforce history."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        CloseOnBackdrop="false"
+                        TestId="crmhr-workforce-record-dialog"
+                        OnClose="CloseRecordDialogAsync">
+                    <ChildContent>
+                        <SurfaceCard Soft="true">
+                            <Split Gap="LayoutGap.Medium"
+                                   Wrap="FlexWrap.Wrap">
+                                <div class="min-w-0">
+                                    <p class="cda-eyebrow">Selected workforce record</p>
+                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@selectedWorkspace.DisplayName</h2>
+                                    @if (!string.IsNullOrWhiteSpace(selectedWorkspace.Summary))
+                                    {
+                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@selectedWorkspace.Summary</p>
+                                    }
+                                    <p class="mt-2 text-sm font-medium text-slate-700"
+                                       data-testid="crmhr-workforce-availability-message">
+                                        @SelectedAvailabilityMessage
+                                    </p>
+                                </div>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="@SelectedClassificationTone"
+                                                 Text="@SelectedClassificationLabel"
+                                                 data-testid="crmhr-workforce-classification" />
+                                    <StatusBadge Tone="@ResolveLifecycleTone(selectedWorkspace.LifecycleStatus)"
+                                                 Text="@selectedWorkspace.LifecycleStatus.ToString()"
+                                                 data-testid="crmhr-workforce-lifecycle" />
+                                    @if (selectedWorkspace.Profile.Id.HasValue)
+                                    {
+                                        <StatusBadge Tone="@ResolveStatusTone(profileEditor.Status)"
+                                                     Text="@profileEditor.Status" />
+                                    }
+                                    @if (SelectedAvailabilityState is { } availabilityState)
+                                    {
+                                        <StatusBadge Tone="@ResolveAvailabilityTone(availabilityState)"
+                                                     Text="@availabilityState.ToString()" />
+                                    }
+                                </Cluster>
+                            </Split>
+                        </SurfaceCard>
+
+                        @if (SelectedIsExternalContactWithoutProfile && !isProfileCreationRequested)
+                        {
+                            <SurfaceCard Soft="true" data-testid="crmhr-workforce-no-staffable-profile">
+                                <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Start">
+                                    <div>
+                                        <p class="cda-eyebrow">External contact</p>
+                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">No staffable profile</h3>
+                                        <p class="mt-2 text-sm leading-6 text-slate-700">
+                                            This person can participate in project work, but has no employee, contractor, or freelancer profile. Creating staffing, rate, skill, or capacity data is a deliberate action.
+                                        </p>
+                                    </div>
+                                    <Button Text="Create staffable profile"
+                                            Icon="person_add"
+                                            ButtonStyle="ButtonStyle.Warning"
+                                            Click="RequestProfileCreation"
+                                            data-testid="crmhr-workforce-create-profile" />
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                        else
+                        {
+                        <Tabs SelectedIndex="@selectedDetailTabIndex"
+                              SelectedIndexChanged="HandleDetailTabChangedAsync"
+                              RenderMode="TabRenderMode.Server"
+                              Variant="TabsVariant.WorkspaceSecondary"
+                              OverflowMode="TabsOverflowMode.Wrap"
+                              AriaLabel="Workforce record sections"
+                              data-testid="crmhr-workforce-tabs">
+                            <TabsItem Text="Overview"
+                                      Icon="dashboard"
+                                      data-testid="crmhr-workforce-tab-overview">
+                                <Stack GapScale="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Stretch">
+                                    <SensitiveDataCallout IsSensitive="selectedWorkspace.IsSensitive"
+                                                         LastChangedBy="@selectedWorkspace.LastChangedBy"
+                                                         UpdatedAtUtc="selectedWorkspace.UpdatedAtUtc"
+                                                         DataTestId="crmhr-workforce-sensitive-callout"
+                                                         StandardDescription="Use this summary before staffing or line-management changes so ownership and broad visibility stay explicit."
+                                                         SensitiveDescription="Sensitive workforce records stay out of global search while still preserving assignment, manager, and capacity context for trusted operators." />
+
+                                    <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Home unit</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-home-unit">@FormatValue(selectedWorkspace.HomeUnitName)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Manager</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-manager">@FormatValue(selectedWorkspace.ManagerName)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Primary email</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryEmail)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Primary phone</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(selectedWorkspace.PrimaryPhone)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Available now</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-available">@FormatOptionalPercent(SelectedAvailablePercent)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Next availability</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950"
+                                               data-testid="crmhr-workforce-summary-next-availability">@(HasSelectedAvailabilityDetails ? FormatDate(SelectedNextAvailabilityOn) : "Not loaded")</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Contract end</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatDate(selectedWorkspace.Profile.EndDate)</p>
+                                        </SurfaceCard>
+                                        <SurfaceCard Soft="true">
+                                            <p class="cda-eyebrow">Searchable skills</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@FormatValue(BuildSkillCoverage(selectedWorkspace.Skills))</p>
+                                        </SurfaceCard>
+                                    </Grid>
+                                </Stack>
+                            </TabsItem>
+
+                            <TabsItem Text="Profile"
+                                      Icon="badge"
+                                      data-testid="crmhr-workforce-tab-profile">
+                            <EditForm id="crmhr-workforce-profile-form"
+                                      Model="profileEditor"
+                                      OnValidSubmit="SaveWorkforceProfileAsync">
+                                <FormSection Title="Workforce profile"
+                                             Description="Keep employment type, commercial rate context, and org-structure metadata attached to the same Party identity used by CRM and project flows.">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                                        <div>
+                                            <label class="cda-field-label">Workforce kind</label>
+                                            <InputSelect @bind-Value="profileEditor.WorkforceKind"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-kind">
+                                                @foreach (var workforceKind in AvailableWorkforceKinds)
+                                                {
+                                                    <option value="@workforceKind">@workforceKind</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Status</label>
+                                            <InputSelect @bind-Value="profileEditor.Status"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-status">
+                                                @foreach (var status in WorkforceStatuses)
+                                                {
+                                                    <option value="@status">@status</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Employee code</label>
+                                            <InputText @bind-Value="profileEditor.EmployeeCode"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-employee-code" />
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
+                                        <div>
+                                            <label class="cda-field-label">Job title</label>
+                                            <InputText @bind-Value="profileEditor.JobTitle"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-job-title" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Discipline</label>
+                                            <InputText @bind-Value="profileEditor.Discipline"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-discipline" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Seniority</label>
+                                            <InputSelect @bind-Value="profileEditor.Seniority"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-seniority">
+                                                @foreach (var seniority in SeniorityValues)
+                                                {
+                                                    <option value="@seniority">@seniority</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
+                                        <PartyPicker Label="Home unit"
+                                                     TestIdPrefix="crmhr-workforce-home-unit"
+                                                     SelectedPartyId="@profileEditor.HomeUnitPartyId"
+                                                     SelectedPartyIdChanged="HandleHomeUnitChangedAsync"
+                                                     ExcludedPartyId="@selectedWorkspace.PartyId"
+                                                     AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
+                                                     InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)" />
+                                        <PartyPicker Label="Manager"
+                                                     TestIdPrefix="crmhr-workforce-manager"
+                                                     SelectedPartyId="@profileEditor.ManagerPartyId"
+                                                     SelectedPartyIdChanged="HandleManagerChangedAsync"
+                                                     ExcludedPartyId="@selectedWorkspace.PartyId"
+                                                     AllowedScope="PartyRecordScope.People"
+                                                     InitialScope="PartyRecordScope.People" />
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
+                                        <div>
+                                            <label class="cda-field-label">Start date</label>
+                                            <InputDate @bind-Value="profileEditor.StartDate"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-start-date" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">End date</label>
+                                            <InputDate @bind-Value="profileEditor.EndDate"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-end-date" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Capacity hours / week</label>
+                                            <InputNumber @bind-Value="profileEditor.CapacityHoursPerWeek"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-capacity" />
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
+                                        <div>
+                                            <label class="cda-field-label">Location</label>
+                                            <InputText @bind-Value="profileEditor.Location"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-location" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Time zone</label>
+                                            <InputText @bind-Value="profileEditor.TimeZone"
+                                                       class="cda-input"
+                                                       data-testid="crmhr-workforce-timezone" />
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4" Class="mt-5">
+                                        <div>
+                                            <label class="cda-field-label">Internal cost rate</label>
+                                            <InputNumber @bind-Value="profileEditor.InternalCostRate"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-internal-rate" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">External billing rate</label>
+                                            <InputNumber @bind-Value="profileEditor.ExternalBillingRate"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-external-rate" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Rate unit</label>
+                                            <InputSelect @bind-Value="profileEditor.RateUnit"
+                                                         class="cda-input"
+                                                         data-testid="crmhr-workforce-rate-unit">
+                                                <option value="@ProjectResourceRateUnit.Hour">Per hour</option>
+                                                <option value="@ProjectResourceRateUnit.ManDay">Per man-day</option>
+                                            </InputSelect>
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Rate currency</label>
+                                            <InputText @bind-Value="profileEditor.RateCurrencyCode"
+                                                       class="cda-input"
+                                                       maxlength="3"
+                                                       data-testid="crmhr-workforce-rate-currency" />
+                                        </div>
+                                    </Grid>
+
+                                    <div class="mt-5">
+                                        <label class="cda-field-label">Notes</label>
+                                        <InputTextArea @bind-Value="profileEditor.Notes"
+                                                       class="cda-input cda-input--textarea min-h-[9rem]"
+                                                       data-testid="crmhr-workforce-notes" />
+                                    </div>
+
+                                </FormSection>
+                            </EditForm>
+                            </TabsItem>
+
+                            <TabsItem Text="Skills"
+                                      Icon="psychology"
+                                      BadgeText="@selectedWorkspace.Skills.Count.ToString()"
+                                      data-testid="crmhr-workforce-tab-skills">
+                                <SkillMatrixPanel SkillCatalog="selectedWorkspace.SkillCatalog"
+                                                  Skills="selectedWorkspace.Skills"
+                                                  SkillDraft="skillEditor"
+                                                  SkillDefinitionDraft="skillDefinitionEditor"
+                                                  SavePartySkill="SavePartySkillAsync"
+                                                  SaveSkillDefinition="SaveSkillDefinitionAsync"
+                                                  DeletePartySkill="DeletePartySkillAsync" />
+                            </TabsItem>
+
+                            <TabsItem Text="Allocations"
+                                      Icon="view_timeline"
+                                      BadgeText="@AllocationBadgeText"
+                                      data-testid="crmhr-workforce-tab-allocations">
+                                <div data-testid="crmhr-workforce-allocations-panel">
+                                    @if (isCapacityWorkspaceLoading)
+                                    {
+                                        <SurfaceCard Soft="true"
+                                                     data-testid="crmhr-workforce-allocations-loading">
+                                            <p class="cda-eyebrow">Loading allocation workspace</p>
+                                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                                Reading capacity blocks, project assignments, and the allocation timeline for this record.
+                                            </p>
+                                        </SurfaceCard>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(capacityWorkspaceError))
+                                    {
+                                        <SurfaceCard Soft="true"
+                                                     data-testid="crmhr-workforce-allocations-error">
+                                            <p class="cda-eyebrow text-rose-700">Allocation workspace unavailable</p>
+                                            <p class="mt-2 text-sm leading-6 text-slate-700">@capacityWorkspaceError</p>
+                                            <Button Text="Retry"
+                                                    Icon="refresh"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Class="mt-4"
+                                                    Click="RetryCapacityWorkspaceAsync" />
+                                        </SurfaceCard>
+                                    }
+                                    else if (capacityWorkspace is { } loadedCapacityWorkspace)
+                                    {
+                                        <CapacityTimelinePanel CapacitySummary="loadedCapacityWorkspace.CapacitySummary"
+                                                               CapacityBlocks="loadedCapacityWorkspace.CapacityBlocks"
+                                                               ProjectAllocations="loadedCapacityWorkspace.ProjectAllocations"
+                                                               CapacityBlockDraft="capacityBlockEditor"
+                                                               SaveCapacityBlock="SaveCapacityBlockAsync"
+                                                               DeleteCapacityBlock="DeleteCapacityBlockAsync"
+                                                               OpenProject="OpenProjectAsync" />
+                                    }
+                                </div>
+                            </TabsItem>
+
+                            <TabsItem Text="History"
+                                      Icon="history"
+                                      BadgeText="@activityPage.TotalCount.ToString()"
+                                      data-testid="crmhr-workforce-tab-history">
+                                <div data-testid="crmhr-workforce-timeline">
+                                    @if (!string.IsNullOrWhiteSpace(historyLoadError))
+                                    {
+                                        <SurfaceCard Soft="true" data-testid="crmhr-workforce-history-error">
+                                            <p class="cda-eyebrow text-rose-700">History unavailable</p>
+                                            <p class="mt-2 text-sm leading-6 text-slate-700">@historyLoadError</p>
+                                            <Button Text="Retry"
+                                                    Icon="refresh"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Class="mt-4"
+                                                    Click="RetryHistoryAsync" />
+                                        </SurfaceCard>
+                                    }
+                                    else
+                                    {
+                                        <InteractionTimeline Page="activityPage"
+                                                             IsLoading="@isHistoryLoading"
+                                                             PageRequested="HandleHistoryPageRequestedAsync"
+                                                             DataTestId="crmhr-workforce-history"
+                                                             Eyebrow="Workforce history"
+                                                             Title="Recent staffing, lifecycle, and audit activity"
+                                                             Description="Workforce profile saves, archive/reactivate events, recruiting transitions, and related CRM-HR changes stay visible here for the selected party."
+                                                             EmptyEyebrow="No workforce history"
+                                                             EmptyTitle="No saved history for this record"
+                                                             EmptyDescription="Save a workforce profile or related CRM-HR workflow to build the shared audit trail." />
+                                    }
+                                </div>
+                            </TabsItem>
+                        </Tabs>
+                        }
+                    </ChildContent>
+                    <Footer>
+                        <Split Breakpoint="LayoutBreakpoint.None"
+                               Gap="LayoutGap.Medium"
+                               AlignItems="AlignItems.Center"
+                               JustifyContent="JustifyContent.SpaceBetween"
+                               Wrap="FlexWrap.Wrap">
+                            <Button Text="Open directory record"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="OpenDirectory" />
+                            <Cluster Gap="LayoutGap.Small">
+                                <Button Text="Close"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="CloseRecordDialogAsync"
+                                        data-testid="crmhr-workforce-record-close" />
+                                @if (selectedDetailTabIndex == ProfileTabIndex)
+                                {
+                                    <Button Text="Save workforce profile"
+                                            Click="SaveWorkforceProfileAsync"
+                                            data-testid="crmhr-workforce-save-button" />
+                                }
+                            </Cluster>
+                        </Split>
+                    </Footer>
+                </Dialog>
+            }
+
+            @if (isDeliveryUnitDialogOpen)
+            {
+                <Dialog IsOpen="true"
+                        Eyebrow="Workforce"
+                        Title="New delivery unit"
+                        Subtitle="Create an organization unit with delivery semantics without displacing the workforce list."
+                        Size="ModalSize.Compact"
+                        DenseChrome="true"
+                        ShowCloseButton="@(!isDeliveryUnitSaving)"
+                        CloseOnBackdrop="@(!isDeliveryUnitSaving)"
+                        TestId="crmhr-workforce-delivery-unit-dialog"
+                        OnClose="CloseDeliveryUnitDialogAsync">
+                    <ChildContent>
+                        <EditForm Model="deliveryUnitEditor" OnValidSubmit="CreateDeliveryUnitAsync">
+                            <Stack GapScale="LayoutGap.Medium">
+                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                    <FormField Text="Unit name">
+                                        <InputText @bind-Value="deliveryUnitEditor.Name"
+                                                   class="cda-input"
+                                                   data-testid="crmhr-delivery-unit-name" />
+                                    </FormField>
+                                    <FormField Text="External code">
+                                        <InputText @bind-Value="deliveryUnitEditor.ExternalCode"
+                                                   class="cda-input"
+                                                   data-testid="crmhr-delivery-unit-code" />
+                                    </FormField>
+                                </Grid>
+
+                                <FormField Text="Summary">
+                                    <InputTextArea @bind-Value="deliveryUnitEditor.Summary"
+                                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                                   data-testid="crmhr-delivery-unit-summary" />
+                                </FormField>
+
+                                <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                                    <Button Text="Cancel"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Disabled="@isDeliveryUnitSaving"
+                                            Click="CloseDeliveryUnitDialogAsync" />
+                                    <Button Text="Create delivery unit"
+                                            Type="submit"
+                                            Disabled="@isDeliveryUnitSaving"
+                                            IsBusy="@isDeliveryUnitSaving"
+                                            data-testid="crmhr-delivery-unit-save-button" />
+                                </Cluster>
+                            </Stack>
+                        </EditForm>
+                    </ChildContent>
+                </Dialog>
+            }
+
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [SupplyParameterFromQuery(Name = "partyId")]
+    public Guid? PartyIdQuery { get; set; }
+
+    private const int OverviewTabIndex = 0;
+    private const int ProfileTabIndex = 1;
+    private const int SkillsTabIndex = 2;
+    private const int AllocationsTabIndex = 3;
+    private const int HistoryTabIndex = 4;
+
+    private static readonly IReadOnlyList<string> WorkforceStatuses =
+    [
+        "Planned",
+        "Active",
+        "Leave",
+        "Inactive",
+        "Alumni"
+    ];
+
+    private static readonly IReadOnlyList<string> SeniorityValues =
+    [
+        string.Empty,
+        "Associate",
+        "Mid",
+        "Senior",
+        "Lead",
+        "Principal"
+    ];
+
+    private readonly DeliveryUnitQuickCreateModel deliveryUnitEditor = new();
+    private readonly SkillDefinitionEditorModel skillDefinitionEditor = new()
+    {
+        IsActive = true
+    };
+    private CrmActivityHistoryPage activityPage = CrmActivityHistoryPage.Empty();
+    private WorkforceProfileWorkspaceModel? selectedWorkspace;
+    private IReadOnlyList<PartyOrganizationAffiliationListItemModel> selectedAffiliations = [];
+    private WorkforceRecordClassification selectedClassification =
+        WorkforceRecordClassification.ExternalContact;
+    private WorkforceCapacityWorkspaceModel? capacityWorkspace;
+    private Task<WorkforceCapacityWorkspaceModel?>? capacityWorkspaceLoadTask;
+    private Guid? capacityWorkspaceLoadPartyId;
+    private long capacityWorkspaceLoadWorkforceGeneration;
+    private Task? historyLoadTask;
+    private Guid? historyLoadPartyId;
+    private Guid? historyLoadedPartyId;
+    private long historyLoadWorkforceGeneration;
+    private CancellationTokenSource? deliveryUnitSaveCancellation;
+    private WorkforceProfileEditorModel profileEditor = new();
+    private PartySkillEditorModel skillEditor = CreatePartySkillEditor(Guid.Empty);
+    private CapacityBlockEditorModel capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
+    private string capacityWorkspaceError = string.Empty;
+    private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    private long workforceLoadGeneration;
+    private long deliveryUnitDialogGeneration;
+    private int selectedDetailTabIndex = OverviewTabIndex;
+    private int workforceBrowserVersion;
+    private bool isCapacityWorkspaceLoading;
+    private bool isHistoryLoading;
+    private bool isRecordDialogOpen;
+    private bool isProfileCreationRequested;
+    private bool isDeliveryUnitDialogOpen;
+    private bool isDeliveryUnitSaving;
+    private bool isDisposed;
+    private string historyLoadError = string.Empty;
+
+    private AgentChatContextSurface AgentChatSurface => selectedWorkspace is { } workspace &&
+                                                         (!PartyIdQuery.HasValue || PartyIdQuery.Value == workspace.PartyId)
+        ? CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface(
+            workspace.PartyId,
+            workspace.DisplayName,
+            workspace.LifecycleStatus,
+            workspace.Profile.Id.HasValue ? SelectedAvailabilityState : null,
+            hasWorkforceProfile: workspace.Profile.Id.HasValue,
+            availabilityLoaded: HasSelectedAvailabilityDetails)
+        : CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface();
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            [new("partyId", PartyIdQuery?.ToString("D"))]);
+
+    private WorkforceAvailabilityState? SelectedAvailabilityState
+        => capacityWorkspace?.CapacitySummary.AvailabilityState;
+
+    private bool HasSelectedAvailabilityDetails
+        => capacityWorkspace is not null;
+
+    private decimal? SelectedAvailablePercent
+        => capacityWorkspace?.CapacitySummary.AvailablePercent;
+
+    private DateOnly? SelectedNextAvailabilityOn
+        => capacityWorkspace?.CapacitySummary.NextAvailabilityOn;
+
+    private string SelectedAvailabilityMessage
+        => SelectedIsExternalContactWithoutProfile
+            ? "No staffable profile. Capacity and availability are not inferred for an external contact."
+            : capacityWorkspace?.CapacitySummary.AvailabilityMessage
+           ?? "Capacity details are available from the Allocations tab.";
+
+    private bool SelectedIsExternalContactWithoutProfile
+        => selectedWorkspace is { PartyType: PartyType.Person } workspace &&
+           !workspace.Profile.Id.HasValue &&
+           selectedClassification == WorkforceRecordClassification.ExternalContact;
+
+    private string SelectedClassificationLabel
+        => WorkforceRecordPresentation.ResolveClassificationLabel(selectedClassification);
+
+    private string SelectedClassificationTone
+        => WorkforceRecordPresentation.ResolveClassificationTone(selectedClassification);
+
+    private string AllocationBadgeText
+        => capacityWorkspace?.ProjectAllocations.Count.ToString() ?? string.Empty;
+
+    private IReadOnlyList<WorkforceKind> AvailableWorkforceKinds
+        => selectedWorkspace is null
+            ? Enum.GetValues<WorkforceKind>()
+            : selectedWorkspace.PartyType == PartyType.Person
+                ? [WorkforceKind.Employee, WorkforceKind.Contractor, WorkforceKind.Freelancer]
+                : [WorkforceKind.DeliveryUnit];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var requestedPartyId = PartyIdQuery;
+        if (requestedPartyId != selectedWorkspace?.PartyId)
+        {
+            isRecordDialogOpen = false;
+        }
+
+        var request = BeginWorkforceLoad(
+            requestedPartyId,
+            WorkforceLoadBinding.RouteBound,
+            expectedSelectedPartyId: null);
+        var outcome = await LoadAndCommitWorkforceAsync(request);
+        if (outcome == WorkforceLoadOutcome.Stale)
+        {
+            return;
+        }
+
+        agentChatContextAccessState = outcome == WorkforceLoadOutcome.Ready
+            ? AgentChatContextAccessState.Ready
+            : AgentChatContextAccessState.Failed;
+        isRecordDialogOpen = outcome == WorkforceLoadOutcome.Ready &&
+                             requestedPartyId.HasValue &&
+                             selectedWorkspace is not null;
+
+        if (outcome == WorkforceLoadOutcome.Ready && selectedDetailTabIndex == AllocationsTabIndex)
+        {
+            await EnsureCapacityWorkspaceLoadedAsync();
+        }
+    }
+
+    private WorkforceLoadRequest BeginWorkforceLoad(
+        Guid? requestedPartyId,
+        WorkforceLoadBinding binding,
+        Guid? expectedSelectedPartyId)
+    {
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        return new WorkforceLoadRequest(
+            Interlocked.Increment(ref workforceLoadGeneration),
+            requestedPartyId,
+            PartyIdQuery,
+            expectedSelectedPartyId,
+            binding);
+    }
+
+    private async Task<WorkforceLoadOutcome> LoadAndCommitWorkforceAsync(
+        WorkforceLoadRequest request)
+    {
+        try
+        {
+            var snapshot = await LoadWorkforceSnapshotAsync(request.RequestedPartyId);
+            if (!IsCurrentWorkforceLoad(request))
+            {
+                return WorkforceLoadOutcome.Stale;
+            }
+
+            CommitWorkforceSnapshot(snapshot);
+            return snapshot.RequestedPartyFound
+                ? WorkforceLoadOutcome.Ready
+                : WorkforceLoadOutcome.Missing;
+        }
+        catch when (!IsCurrentWorkforceLoad(request))
+        {
+            return WorkforceLoadOutcome.Stale;
+        }
+        catch
+        {
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            throw;
+        }
+    }
+
+    private async Task<WorkforceLoadSnapshot> LoadWorkforceSnapshotAsync(Guid? requestedPartyId)
+    {
+        if (!requestedPartyId.HasValue)
+        {
+            return WorkforceLoadSnapshot.Empty(requestedPartyFound: true);
+        }
+
+        var workspace = await HrService.GetWorkforceProfileWorkspaceAsync(requestedPartyId.Value);
+        if (workspace is null)
+        {
+            return WorkforceLoadSnapshot.Empty(requestedPartyFound: false);
+        }
+
+        var affiliations = workspace.PartyType == PartyType.Person
+            ? await AffiliationService.ListAsync(workspace.PartyId)
+            : [];
+        return new WorkforceLoadSnapshot(
+            workspace,
+            affiliations,
+            RequestedPartyFound: true);
+    }
+
+    private void CommitWorkforceSnapshot(WorkforceLoadSnapshot snapshot)
+    {
+        if (snapshot.Workspace is null)
+        {
+            ClearWorkforceSelection();
+            return;
+        }
+
+        var isPartySelectionChanged = selectedWorkspace?.PartyId != snapshot.Workspace.PartyId;
+        if (isPartySelectionChanged)
+        {
+            selectedDetailTabIndex = OverviewTabIndex;
+            InvalidateCapacityWorkspace();
+        }
+
+        InvalidateHistory();
+        selectedAffiliations = snapshot.Affiliations;
+        ApplyLoadedWorkspace(snapshot.Workspace);
+    }
+
+    private bool IsCurrentWorkforceLoad(WorkforceLoadRequest request)
+        => !isDisposed &&
+           request.Generation == Volatile.Read(ref workforceLoadGeneration) &&
+           PartyIdQuery == request.RoutePartyId &&
+           (request.Binding == WorkforceLoadBinding.RouteBound ||
+            selectedWorkspace?.PartyId == request.ExpectedSelectedPartyId);
+
+    private void ApplyLoadedWorkspace(WorkforceProfileWorkspaceModel workspace)
+    {
+        selectedWorkspace = workspace;
+        selectedClassification = WorkforceRecordPresentation.ResolveSelectedClassification(
+            workspace,
+            selectedAffiliations);
+        isProfileCreationRequested = false;
+        profileEditor = new WorkforceProfileEditorModel
+        {
+            Id = workspace.Profile.Id,
+            PartyId = workspace.Profile.PartyId,
+            WorkforceKind = workspace.Profile.WorkforceKind,
+            EmployeeCode = workspace.Profile.EmployeeCode,
+            JobTitle = workspace.Profile.JobTitle,
+            Discipline = workspace.Profile.Discipline,
+            Seniority = workspace.Profile.Seniority,
+            HomeUnitPartyId = workspace.Profile.HomeUnitPartyId,
+            ManagerPartyId = workspace.Profile.ManagerPartyId,
+            StartDate = workspace.Profile.StartDate,
+            EndDate = workspace.Profile.EndDate,
+            Location = workspace.Profile.Location,
+            TimeZone = workspace.Profile.TimeZone,
+            InternalCostRate = workspace.Profile.InternalCostRate,
+            ExternalBillingRate = workspace.Profile.ExternalBillingRate,
+            RateUnit = workspace.Profile.RateUnit,
+            RateCurrencyCode = workspace.Profile.RateCurrencyCode,
+            CapacityHoursPerWeek = workspace.Profile.CapacityHoursPerWeek,
+            Status = workspace.Profile.Status,
+            Notes = workspace.Profile.Notes,
+            LastChangedBy = workspace.Profile.LastChangedBy
+        };
+        skillEditor = CreatePartySkillEditor(workspace.PartyId);
+        capacityBlockEditor = CreateCapacityBlockEditor(workspace.PartyId);
+
+    }
+
+    private async Task<bool> ReloadAfterActionAsync(WorkforceActionStamp action)
+    {
+        if (!IsCurrentWorkforceAction(action))
+        {
+            return false;
+        }
+
+        var request = BeginWorkforceLoad(
+            action.SelectedPartyId ?? action.RoutePartyId,
+            WorkforceLoadBinding.ActionRefresh,
+            action.SelectedPartyId);
+        var outcome = await LoadAndCommitWorkforceAsync(request);
+        agentChatContextAccessState = outcome switch
+        {
+            WorkforceLoadOutcome.Ready => AgentChatContextAccessState.Ready,
+            WorkforceLoadOutcome.Missing => AgentChatContextAccessState.Failed,
+            _ => agentChatContextAccessState
+        };
+
+        if (outcome == WorkforceLoadOutcome.Ready)
+        {
+            InvalidateCapacityWorkspace();
+            if (selectedDetailTabIndex == AllocationsTabIndex)
+            {
+                await EnsureCapacityWorkspaceLoadedAsync();
+            }
+            else if (selectedDetailTabIndex == HistoryTabIndex)
+            {
+                await EnsureHistoryLoadedAsync();
+            }
+        }
+
+        return outcome == WorkforceLoadOutcome.Ready;
+    }
+
+    private WorkforceActionStamp CaptureWorkforceAction()
+        => new(
+            Volatile.Read(ref workforceLoadGeneration),
+            PartyIdQuery,
+            selectedWorkspace?.PartyId);
+
+    private bool TryCaptureSelectedWorkforceAction(out WorkforceActionStamp action)
+    {
+        action = CaptureWorkforceAction();
+        return action.SelectedPartyId.HasValue &&
+               IsCurrentWorkforceAction(action);
+    }
+
+    private bool IsCurrentWorkforceAction(WorkforceActionStamp action)
+        => !isDisposed &&
+           action.Generation == Volatile.Read(ref workforceLoadGeneration) &&
+           PartyIdQuery == action.RoutePartyId &&
+           selectedWorkspace?.PartyId == action.SelectedPartyId;
+
+    private void ClearWorkforceSelection()
+    {
+        selectedWorkspace = null;
+        selectedAffiliations = [];
+        selectedClassification = WorkforceRecordClassification.ExternalContact;
+        isProfileCreationRequested = false;
+        selectedDetailTabIndex = OverviewTabIndex;
+        InvalidateCapacityWorkspace();
+        InvalidateHistory();
+        profileEditor = new();
+        skillEditor = CreatePartySkillEditor(Guid.Empty);
+        capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
+    }
+
+    private Task SelectPartyAsync(Guid partyId)
+    {
+        if (PartyIdQuery == partyId && selectedWorkspace?.PartyId == partyId)
+        {
+            isRecordDialogOpen = true;
+            return Task.CompletedTask;
+        }
+
+        Interlocked.Increment(ref workforceLoadGeneration);
+        isRecordDialogOpen = false;
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        Navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId}");
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRecordDialogAsync()
+    {
+        if (!isRecordDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        Interlocked.Increment(ref workforceLoadGeneration);
+        isRecordDialogOpen = false;
+        ClearWorkforceSelection();
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        Navigation.NavigateTo("/crm-hr/workforce", replace: true);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleWorkforceBrowserLoadFailedAsync(Exception exception)
+    {
+        Logger.LogError(exception, "Failed to load the server-paged workforce browser.");
+        NotificationService.Error(
+            "Workforce directory unavailable",
+            "The workforce query failed. Retry after checking the active CRM-HR data source.");
+        return Task.CompletedTask;
+    }
+
+    private Task HandleHomeUnitChangedAsync(Guid? partyId)
+    {
+        profileEditor.HomeUnitPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleManagerChangedAsync(Guid? partyId)
+    {
+        profileEditor.ManagerPartyId = partyId;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleDetailTabChangedAsync(int index)
+    {
+        selectedDetailTabIndex = index;
+        if (index == AllocationsTabIndex)
+        {
+            await EnsureCapacityWorkspaceLoadedAsync();
+        }
+        else if (index == HistoryTabIndex)
+        {
+            await EnsureHistoryLoadedAsync();
+        }
+    }
+
+    private Task RequestProfileCreation()
+    {
+        if (!SelectedIsExternalContactWithoutProfile)
+        {
+            return Task.CompletedTask;
+        }
+
+        isProfileCreationRequested = true;
+        selectedDetailTabIndex = ProfileTabIndex;
+        return Task.CompletedTask;
+    }
+
+    private async Task EnsureHistoryLoadedAsync()
+    {
+        if (selectedWorkspace is not { } workspace ||
+            historyLoadedPartyId == workspace.PartyId)
+        {
+            return;
+        }
+
+        var partyId = workspace.PartyId;
+        var workforceGeneration = Volatile.Read(ref workforceLoadGeneration);
+        if (historyLoadTask is null ||
+            historyLoadPartyId != partyId ||
+            historyLoadWorkforceGeneration != workforceGeneration)
+        {
+            historyLoadPartyId = partyId;
+            historyLoadWorkforceGeneration = workforceGeneration;
+            isHistoryLoading = true;
+            historyLoadError = string.Empty;
+            historyLoadTask = LoadHistoryAsync(partyId, workforceGeneration);
+        }
+
+        await historyLoadTask;
+    }
+
+    private async Task LoadHistoryAsync(Guid partyId, long workforceGeneration)
+    {
+        try
+        {
+            var page = await PartyDirectoryService.SearchPartyActivityAsync(
+                new CrmActivityHistoryQuery(partyId));
+            if (!IsCurrentHistoryRequest(partyId, workforceGeneration))
+            {
+                return;
+            }
+
+            activityPage = page;
+            historyLoadedPartyId = partyId;
+        }
+        catch when (!IsCurrentHistoryRequest(partyId, workforceGeneration))
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Failed to load workforce history for party {PartyId}.", partyId);
+            historyLoadError = "Workforce history could not be loaded.";
+        }
+        finally
+        {
+            if (IsTrackedHistoryRequest(partyId, workforceGeneration))
+            {
+                isHistoryLoading = false;
+                historyLoadTask = null;
+            }
+        }
+    }
+
+    private async Task HandleHistoryPageRequestedAsync(int pageIndex)
+    {
+        if (selectedWorkspace is not { } workspace ||
+            pageIndex < 0 ||
+            pageIndex >= activityPage.TotalPages)
+        {
+            return;
+        }
+
+        var partyId = workspace.PartyId;
+        var workforceGeneration = Volatile.Read(ref workforceLoadGeneration);
+        isHistoryLoading = true;
+        historyLoadError = string.Empty;
+        try
+        {
+            var page = await PartyDirectoryService.SearchPartyActivityAsync(
+                new CrmActivityHistoryQuery(
+                    partyId,
+                    pageIndex,
+                    activityPage.PageSize));
+            if (!IsCurrentHistoryRequest(partyId, workforceGeneration))
+            {
+                return;
+            }
+
+            activityPage = page;
+        }
+        catch when (!IsCurrentHistoryRequest(partyId, workforceGeneration))
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Failed to load workforce history page {PageIndex} for party {PartyId}.",
+                pageIndex,
+                partyId);
+            historyLoadError = "The requested workforce history page could not be loaded.";
+        }
+        finally
+        {
+            if (IsCurrentHistoryRequest(partyId, workforceGeneration))
+            {
+                isHistoryLoading = false;
+            }
+        }
+    }
+
+    private bool IsCurrentHistoryRequest(Guid partyId, long workforceGeneration)
+        => !isDisposed &&
+           selectedWorkspace?.PartyId == partyId &&
+           workforceGeneration == Volatile.Read(ref workforceLoadGeneration);
+
+    private bool IsTrackedHistoryRequest(Guid partyId, long workforceGeneration)
+        => historyLoadPartyId == partyId &&
+           historyLoadWorkforceGeneration == workforceGeneration;
+
+    private async Task RetryHistoryAsync()
+    {
+        InvalidateHistory();
+        await EnsureHistoryLoadedAsync();
+    }
+
+    private void InvalidateHistory()
+    {
+        activityPage = CrmActivityHistoryPage.Empty();
+        historyLoadTask = null;
+        historyLoadPartyId = null;
+        historyLoadedPartyId = null;
+        historyLoadWorkforceGeneration = 0;
+        isHistoryLoading = false;
+        historyLoadError = string.Empty;
+    }
+
+    private async Task EnsureCapacityWorkspaceLoadedAsync()
+    {
+        if (selectedWorkspace is not { } workspace ||
+            capacityWorkspace?.PartyId == workspace.PartyId)
+        {
+            return;
+        }
+
+        var partyId = workspace.PartyId;
+        var workforceGeneration = Volatile.Read(ref workforceLoadGeneration);
+        if (capacityWorkspaceLoadTask is null ||
+            capacityWorkspaceLoadPartyId != partyId ||
+            capacityWorkspaceLoadWorkforceGeneration != workforceGeneration)
+        {
+            capacityWorkspaceLoadPartyId = partyId;
+            capacityWorkspaceLoadWorkforceGeneration = workforceGeneration;
+            capacityWorkspaceLoadTask = HrService.GetWorkforceCapacityWorkspaceAsync(partyId);
+            isCapacityWorkspaceLoading = true;
+            capacityWorkspaceError = string.Empty;
+        }
+
+        var loadTask = capacityWorkspaceLoadTask;
+        workforceGeneration = capacityWorkspaceLoadWorkforceGeneration;
+
+        try
+        {
+            var loadedWorkspace = await loadTask;
+            if (!IsCurrentCapacityRequest(loadTask, partyId, workforceGeneration))
+            {
+                return;
+            }
+
+            if (loadedWorkspace is null)
+            {
+                capacityWorkspaceError = "The selected workforce record no longer exists.";
+                return;
+            }
+
+            capacityWorkspace = loadedWorkspace;
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrentCapacityRequest(loadTask, partyId, workforceGeneration))
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Failed to load workforce capacity workspace for party {PartyId}.",
+                partyId);
+            capacityWorkspaceError = "Capacity and allocation data could not be loaded. Retry the request or inspect the application logs.";
+            NotificationService.Error("Allocation workspace load failed", capacityWorkspaceError);
+        }
+        finally
+        {
+            if (IsTrackedCapacityRequest(loadTask, partyId))
+            {
+                capacityWorkspaceLoadTask = null;
+                capacityWorkspaceLoadPartyId = null;
+                capacityWorkspaceLoadWorkforceGeneration = 0;
+                isCapacityWorkspaceLoading = false;
+            }
+        }
+    }
+
+    private bool IsCurrentCapacityRequest(
+        Task<WorkforceCapacityWorkspaceModel?> loadTask,
+        Guid partyId,
+        long workforceGeneration)
+        => !isDisposed &&
+           ReferenceEquals(capacityWorkspaceLoadTask, loadTask) &&
+           capacityWorkspaceLoadPartyId == partyId &&
+           selectedWorkspace?.PartyId == partyId &&
+           workforceGeneration == Volatile.Read(ref workforceLoadGeneration);
+
+    private bool IsTrackedCapacityRequest(
+        Task<WorkforceCapacityWorkspaceModel?> loadTask,
+        Guid partyId)
+        => ReferenceEquals(capacityWorkspaceLoadTask, loadTask) &&
+           capacityWorkspaceLoadPartyId == partyId;
+
+    private async Task RetryCapacityWorkspaceAsync()
+    {
+        InvalidateCapacityWorkspace();
+        await EnsureCapacityWorkspaceLoadedAsync();
+    }
+
+    private void InvalidateCapacityWorkspace()
+    {
+        capacityWorkspace = null;
+        capacityWorkspaceLoadTask = null;
+        capacityWorkspaceLoadPartyId = null;
+        capacityWorkspaceLoadWorkforceGeneration = 0;
+        capacityWorkspaceError = string.Empty;
+        isCapacityWorkspaceLoading = false;
+    }
+
+    private void OpenDeliveryUnitDialog()
+    {
+        if (isDeliveryUnitSaving)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref deliveryUnitDialogGeneration);
+        isDeliveryUnitDialogOpen = true;
+    }
+
+    private Task CloseDeliveryUnitDialogAsync()
+    {
+        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving)
+        {
+            return Task.CompletedTask;
+        }
+
+        isDeliveryUnitDialogOpen = false;
+        Interlocked.Increment(ref deliveryUnitDialogGeneration);
+        return Task.CompletedTask;
+    }
+
+    private void OpenDirectory()
+    {
+        if (selectedWorkspace is null)
+        {
+            Navigation.NavigateTo("/crm-hr/directory");
+            return;
+        }
+
+        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId}");
+    }
+
+    private Task OpenProjectAsync(Guid projectId)
+    {
+        Navigation.NavigateTo($"/projects?projectId={projectId}");
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveWorkforceProfileAsync()
+    {
+        if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
+        var result = await HrService.SaveWorkforceProfileAsync(profileEditor);
+        if (result.IsFailure)
+        {
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Workforce profile save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
+        NotificationService.Success("Workforce profile saved", "Workforce profile saved.");
+    }
+
+    private async Task SaveSkillDefinitionAsync()
+    {
+        var action = CaptureWorkforceAction();
+        var result = await HrService.SaveSkillDefinitionAsync(skillDefinitionEditor);
+        if (result.IsFailure)
+        {
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Skill definition save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!IsCurrentWorkforceAction(action))
+        {
+            return;
+        }
+
+        skillDefinitionEditor.Name = string.Empty;
+        skillDefinitionEditor.Category = string.Empty;
+        skillDefinitionEditor.Description = string.Empty;
+        skillDefinitionEditor.IsActive = true;
+
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
+        NotificationService.Success("Skill definition saved", "Skill definition saved.");
+    }
+
+    private async Task SavePartySkillAsync()
+    {
+        if (!TryCaptureSelectedWorkforceAction(out var action) ||
+            action.SelectedPartyId is not Guid partyId)
+        {
+            return;
+        }
+
+        skillEditor.PartyId = partyId;
+        var result = await HrService.SavePartySkillAsync(skillEditor);
+        if (result.IsFailure)
+        {
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Skill save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!IsCurrentWorkforceAction(action))
+        {
+            return;
+        }
+
+        skillEditor = CreatePartySkillEditor(partyId);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
+        NotificationService.Success("Skill saved", "Skill saved.");
+    }
+
+    private async Task DeletePartySkillAsync(Guid partySkillId)
+    {
+        if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
+        await HrService.DeletePartySkillAsync(partySkillId);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
+        NotificationService.Success("Skill removed", "Skill removed.");
+    }
+
+    private async Task SaveCapacityBlockAsync()
+    {
+        if (!TryCaptureSelectedWorkforceAction(out var action) ||
+            action.SelectedPartyId is not Guid partyId)
+        {
+            return;
+        }
+
+        capacityBlockEditor.PartyId = partyId;
+        var result = await HrService.SaveCapacityBlockAsync(capacityBlockEditor);
+        if (result.IsFailure)
+        {
+            if (IsCurrentWorkforceAction(action))
+            {
+                NotificationService.Error("Capacity block save failed", string.Join(" ", result.Errors.Select(error => error.Message)));
+            }
+
+            return;
+        }
+
+        if (!IsCurrentWorkforceAction(action))
+        {
+            return;
+        }
+
+        capacityBlockEditor = CreateCapacityBlockEditor(partyId);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
+        NotificationService.Success("Capacity block saved", "Capacity block saved.");
+    }
+
+    private async Task DeleteCapacityBlockAsync(Guid capacityBlockId)
+    {
+        if (!TryCaptureSelectedWorkforceAction(out var action))
+        {
+            return;
+        }
+
+        await HrService.DeleteCapacityBlockAsync(capacityBlockId);
+        if (!await ReloadAfterActionAsync(action))
+        {
+            return;
+        }
+
+        NotificationService.Success("Capacity block removed", "Capacity block removed.");
+    }
+
+    private async Task CreateDeliveryUnitAsync()
+    {
+        if (!isDeliveryUnitDialogOpen || isDeliveryUnitSaving)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(deliveryUnitEditor.Name))
+        {
+            NotificationService.Warning("Delivery unit not created", "Delivery unit name is required.");
+            return;
+        }
+
+        var dialogGeneration = Volatile.Read(ref deliveryUnitDialogGeneration);
+        using var saveCancellation = new CancellationTokenSource();
+        deliveryUnitSaveCancellation = saveCancellation;
+        isDeliveryUnitSaving = true;
+
+        try
+        {
+            var saveResult = await PartyDirectoryService.SavePartyAsync(new PartyEditorModel
+            {
+                PartyType = PartyType.OrganizationUnit,
+                LifecycleStatus = PartyLifecycleStatus.Active,
+                DisplayName = deliveryUnitEditor.Name.Trim(),
+                ExternalCode = deliveryUnitEditor.ExternalCode.Trim(),
+                Summary = deliveryUnitEditor.Summary.Trim(),
+                LastChangedBy = "crm-hr-ui",
+                Roles =
+                [
+                    new PartyRoleAssignmentEditorModel
+                    {
+                        RoleKind = PartyRoleKind.DeliveryUnit,
+                        Title = "Delivery unit",
+                        IsPrimary = true
+                    }
+                ]
+            }, saveCancellation.Token);
+            if (saveResult.IsFailure)
+            {
+                if (IsCurrentDeliveryUnitSave(dialogGeneration, saveCancellation))
+                {
+                    NotificationService.Error("Delivery unit create failed", string.Join(" ", saveResult.Errors.Select(error => error.Message)));
+                }
+
+                return;
+            }
+
+            if (!IsCurrentDeliveryUnitSave(dialogGeneration, saveCancellation))
+            {
+                return;
+            }
+
+            deliveryUnitEditor.Name = string.Empty;
+            deliveryUnitEditor.ExternalCode = string.Empty;
+            deliveryUnitEditor.Summary = string.Empty;
+            isDeliveryUnitDialogOpen = false;
+            Interlocked.Increment(ref deliveryUnitDialogGeneration);
+
+            Interlocked.Increment(ref workforceLoadGeneration);
+            workforceBrowserVersion++;
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            Navigation.NavigateTo($"/crm-hr/workforce?partyId={saveResult.Value:D}");
+            NotificationService.Success("Delivery unit created", "Delivery unit created.");
+        }
+        catch (OperationCanceledException) when (saveCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        finally
+        {
+            if (ReferenceEquals(deliveryUnitSaveCancellation, saveCancellation))
+            {
+                deliveryUnitSaveCancellation = null;
+                isDeliveryUnitSaving = false;
+            }
+        }
+    }
+
+    private bool IsCurrentDeliveryUnitSave(
+        long dialogGeneration,
+        CancellationTokenSource saveCancellation)
+        => isDeliveryUnitDialogOpen &&
+           isDeliveryUnitSaving &&
+           !saveCancellation.IsCancellationRequested &&
+           ReferenceEquals(deliveryUnitSaveCancellation, saveCancellation) &&
+           dialogGeneration == Volatile.Read(ref deliveryUnitDialogGeneration);
+
+    private static string ResolveKindTone(WorkforceKind? workforceKind)
+    {
+        return workforceKind switch
+        {
+            WorkforceKind.Employee => "success",
+            WorkforceKind.Contractor => "warning",
+            WorkforceKind.Freelancer => "info",
+            WorkforceKind.DeliveryUnit => "primary",
+            _ => "base"
+        };
+    }
+
+    private static string ResolveLifecycleTone(PartyLifecycleStatus lifecycleStatus)
+    {
+        return lifecycleStatus switch
+        {
+            PartyLifecycleStatus.Active => "success",
+            PartyLifecycleStatus.Candidate or PartyLifecycleStatus.Prospect => "info",
+            PartyLifecycleStatus.Former or PartyLifecycleStatus.Inactive => "warning",
+            PartyLifecycleStatus.Archived => "neutral",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveStatusTone(string status)
+    {
+        return status switch
+        {
+            "Active" => "success",
+            "Leave" => "warning",
+            "Inactive" => "danger",
+            "Alumni" => "info",
+            _ => "base"
+        };
+    }
+
+    private static string ResolveAvailabilityTone(WorkforceAvailabilityState availabilityState)
+    {
+        return availabilityState switch
+        {
+            WorkforceAvailabilityState.Overallocated => "danger",
+            WorkforceAvailabilityState.Bench => "success",
+            WorkforceAvailabilityState.NearAvailable => "warning",
+            _ => "info"
+        };
+    }
+
+    private static string FormatValue(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+    }
+
+    private static string FormatDate(DateOnly? value)
+    {
+        return value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "Not set";
+    }
+
+    private static string FormatOptionalPercent(decimal? value)
+    {
+        return value.HasValue ? $"{value.Value:0.##}%" : "Not loaded";
+    }
+
+    private static string BuildSkillCoverage(IReadOnlyList<PartySkillItemModel> skills)
+    {
+        return string.Join(", ", skills.Select(item => item.SkillName));
+    }
+
+    private static PartySkillEditorModel CreatePartySkillEditor(Guid partyId)
+    {
+        return new PartySkillEditorModel
+        {
+            PartyId = partyId,
+            Proficiency = SkillProficiencyLevel.Basic,
+            LastValidatedOn = DateOnly.FromDateTime(DateTime.UtcNow)
+        };
+    }
+
+    private static CapacityBlockEditorModel CreateCapacityBlockEditor(Guid partyId)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        return new CapacityBlockEditorModel
+        {
+            PartyId = partyId,
+            BlockKind = CapacityBlockKind.Leave,
+            StartDate = today,
+            EndDate = today,
+            Percentage = 100m
+        };
+    }
+
+    private enum WorkforceLoadBinding
+    {
+        RouteBound,
+        ActionRefresh
+    }
+
+    private enum WorkforceLoadOutcome
+    {
+        Ready,
+        Missing,
+        Stale
+    }
+
+    private readonly record struct WorkforceLoadRequest(
+        long Generation,
+        Guid? RequestedPartyId,
+        Guid? RoutePartyId,
+        Guid? ExpectedSelectedPartyId,
+        WorkforceLoadBinding Binding);
+
+    private readonly record struct WorkforceActionStamp(
+        long Generation,
+        Guid? RoutePartyId,
+        Guid? SelectedPartyId);
+
+    private sealed record WorkforceLoadSnapshot(
+        WorkforceProfileWorkspaceModel? Workspace,
+        IReadOnlyList<PartyOrganizationAffiliationListItemModel> Affiliations,
+        bool RequestedPartyFound)
+    {
+        public static WorkforceLoadSnapshot Empty(bool requestedPartyFound)
+            => new(
+                Workspace: null,
+                Affiliations: [],
+                RequestedPartyFound: requestedPartyFound);
+    }
+
+    private sealed class DeliveryUnitQuickCreateModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string ExternalCode { get; set; } = string.Empty;
+        public string Summary { get; set; } = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        deliveryUnitSaveCancellation?.Cancel();
+        Interlocked.Increment(ref workforceLoadGeneration);
+        Interlocked.Increment(ref deliveryUnitDialogGeneration);
+    }
+}

@@ -1,0 +1,51 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-operations">
+    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operations" />
+    <TextBlock TextStyle="TextStyle.Subtitle1" Value="Operation status" />
+    @if (ActionResult is not null)
+    {
+        <MemoryActionResult Status="@ActionResult.Status.ToString()" Diagnostic="@ActionResult.Diagnostic" />
+    }
+
+    @if (Operations.Count > 0)
+    {
+        <Stack Orientation="Orientation.Vertical" Gap="LayoutGap.Medium" Class="memory-ui-ledger-list">
+            @foreach (var operation in Operations)
+            {
+                <MemoryOperationLedgerRow Operation="@operation"
+                                          CanRefreshStatus="@MemoryProviderUiAvailability.CanRefreshOperationStatus(Provider)"
+                                          CanCancel="@MemoryProviderUiAvailability.CanCancelOperation(Provider)"
+                                          IsBusy="@IsBusy"
+                                          OnRefreshStatus="OnRefreshStatus"
+                                          OnCancelOperation="OnCancelOperation" />
+            }
+        </Stack>
+    }
+    else
+    {
+        <EmptyState Eyebrow="No operations"
+                    Title="No operation rows for the selected provider"
+                    Description="Run a supported query to create an operation status row." />
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MemoryProviderOperationUiRecord> Operations { get; set; } = [];
+
+    [Parameter]
+    public MemoryProviderOperationUiResult? ActionResult { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<MemoryOperationId> OnRefreshStatus { get; set; }
+
+    [Parameter]
+    public EventCallback<MemoryOperationId> OnCancelOperation { get; set; }
+}

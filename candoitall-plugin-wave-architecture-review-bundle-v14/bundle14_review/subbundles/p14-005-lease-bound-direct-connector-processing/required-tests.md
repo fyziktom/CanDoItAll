@@ -1,4 +1,0 @@
-# Required tests
-
-- `Direct_process_async_claims_a_lease_before_execution`
-- `Concurrent_direct_process_calls_do_not_execute_the_same_command_twice`

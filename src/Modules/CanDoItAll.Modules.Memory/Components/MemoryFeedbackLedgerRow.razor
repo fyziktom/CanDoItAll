@@ -1,0 +1,16 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<article class="memory-ui-ledger-row">
+    <strong>@Feedback.Outcome</strong>
+    <StatusBadge Tone="@MemoryUiFormatting.LedgerTone(Feedback.Status)" Text="@Feedback.Status.ToString()" />
+    <p class="memory-ui-muted">@Feedback.Stage / @Feedback.MatchState</p>
+    @if (!string.IsNullOrWhiteSpace(Feedback.UnmatchedReason))
+    {
+        <p class="memory-ui-muted">@Feedback.UnmatchedReason</p>
+    }
+</article>
+
+@code {
+    [Parameter]
+    public MemoryProviderFeedbackUiRecord Feedback { get; set; } = default!;
+}

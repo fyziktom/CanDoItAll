@@ -1,0 +1,123 @@
+using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.SharedKernel;
+
+namespace CanDoItAll.Tests.Unit;
+
+public sealed class ProjectStructureNodeHelpersTests
+{
+    [Fact]
+    public void BuildSimpleNoteTitle_uses_first_non_empty_line_and_truncates()
+    {
+        var text = $"""
+
+            {new string('a', 80)}
+            second line
+            """;
+
+        var title = ProjectStructureNodeHelpers.BuildSimpleNoteTitle(text);
+
+        Assert.Equal($"{new string('a', 61)}...", title);
+    }
+
+    [Fact]
+    public void ResolveAttachmentPreviewKind_returns_text_document_for_inline_text_asset()
+    {
+        var node = CreateNode(
+            objectType: ProjectObjectType.File,
+            objectSubtype: "markdown",
+            notes: "# Notes",
+            route: "/files/note.md");
+
+        var kind = ProjectStructureNodeHelpers.ResolveAttachmentPreviewKind(node);
+
+        Assert.Equal(AttachmentPreviewKind.TextDocument, kind);
+        Assert.False(ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node));
+    }
+
+    [Fact]
+    public void Unsigned_route_alone_is_not_a_managed_attachment()
+    {
+        var node = CreateNode(
+            objectType: ProjectObjectType.File,
+            route: "/managed-files/report.pdf",
+            mediaOriginalFileName: "report.pdf");
+
+        Assert.False(ProjectStructureNodeHelpers.HasManagedAttachment(node));
+        Assert.False(ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node));
+    }
+
+    [Theory]
+    [InlineData(ProjectObjectType.ImageAsset, "image/png", "asset.png", true)]
+    [InlineData(ProjectObjectType.File, "application/pdf", "report.pdf", true)]
+    [InlineData(ProjectObjectType.VideoAsset, "video/mp4", "clip.mp4", true)]
+    [InlineData(ProjectObjectType.File, "text/plain", "notes.txt", true)]
+    public void Storage_backed_attachments_use_direct_FileInteraction_for_every_type(
+        ProjectObjectType objectType,
+        string mediaType,
+        string fileName,
+        bool expected)
+    {
+        var node = CreateNode(
+            objectType: objectType,
+            route: $"/managed-files/{fileName}",
+            mediaRelativePath: fileName,
+            mediaContentType: mediaType,
+            mediaOriginalFileName: fileName);
+
+        Assert.Equal(expected, ProjectStructureNodeHelpers.UsesDirectFileInteractionPreview(node));
+    }
+
+    [Fact]
+    public void ResolveMarkerLabel_summarizes_more_than_three_markers()
+    {
+        var node = CreateNode(markers:
+        [
+            new ProjectNodeMarker("question", "sky", "Question"),
+            new ProjectNodeMarker("risk", "danger", "Risk"),
+            new ProjectNodeMarker("idea", "accent", "Idea"),
+            new ProjectNodeMarker("pause", "warn", "Paused")
+        ]);
+
+        var label = ProjectStructureNodeHelpers.ResolveMarkerLabel(node);
+
+        Assert.Equal("Question, Risk, Idea +1", label);
+    }
+
+    private static ProjectStructureNode CreateNode(
+        ProjectObjectType objectType = ProjectObjectType.Note,
+        string objectSubtype = "",
+        string title = "Node",
+        string notes = "",
+        string route = "",
+        string mediaRelativePath = "",
+        string mediaContentType = "",
+        string mediaOriginalFileName = "",
+        IReadOnlyList<ProjectNodeMarker>? markers = null)
+        => new(
+            Id: "custom:test",
+            ParentId: null,
+            ObjectType: objectType,
+            ObjectSubtype: objectSubtype,
+            Title: title,
+            Subtitle: string.Empty,
+            Status: "Ready",
+            Notes: notes,
+            Route: route,
+            ArtifactKind: string.Empty,
+            ArtifactId: null,
+            MediaRelativePath: mediaRelativePath,
+            MediaContentType: mediaContentType,
+            MediaOriginalFileName: mediaOriginalFileName,
+            X: 0,
+            Y: 0,
+            VisualProfile: new ProjectObjectVisualProfile("rectangle", "#000000", "note", string.Empty),
+            Badges: [],
+            ProgressMode: string.Empty,
+            ProgressPercent: 0,
+            MarkerIcon: string.Empty,
+            MarkerTone: string.Empty,
+            MarkerLabel: string.Empty,
+            Markers: markers ?? [],
+            Priority: 0);
+}

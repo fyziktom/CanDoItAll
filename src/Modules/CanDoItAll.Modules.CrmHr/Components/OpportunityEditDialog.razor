@@ -1,0 +1,116 @@
+@if (IsOpen && Opportunity is not null)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Opportunity"
+            Title="Edit opportunity"
+            Subtitle="@($"{Opportunity.AccountDisplayName} · {Opportunity.Title}")"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="crmhr-opportunity-edit-dialog"
+            OnClose="HandleCloseAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <PanelCard Soft="true"
+                               data-testid="crmhr-opportunity-edit-message">
+                        <TextBlock TextStyle="TextStyle.Body1"
+                                   Value="@Message" />
+                    </PanelCard>
+                }
+
+                <EditForm id="crmhr-opportunity-edit-form"
+                          Model="draft"
+                          OnValidSubmit="HandleSaveAsync">
+                    <OpportunityEditor Model="draft"
+                                       SourceOpportunity="Opportunity"
+                                       Section="OpportunityEditorSection.All"
+                                       AccountDisplayName="@Opportunity.AccountDisplayName"
+                                       RelationshipStageLabel="@Opportunity.RelationshipStage"
+                                       StageHistory="Opportunity.StageHistory"
+                                       LoadFailed="LoadFailed" />
+                </EditForm>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <SmallText Text="Changes are isolated until Save opportunity succeeds." />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Cancel"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="IsBusy"
+                            Click="HandleCloseAsync"
+                            data-testid="crmhr-opportunity-edit-cancel" />
+                    <Button Text="Save opportunity"
+                            Type="submit"
+                            form="crmhr-opportunity-edit-form"
+                            Disabled="IsBusy"
+                            IsBusy="IsBusy"
+                            data-testid="crmhr-opportunity-save-button" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private CrmOpportunityEditorModel draft = new();
+    private Guid? loadedOpportunityId;
+    private bool wasOpen;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public CrmOpportunityDetailModel? Opportunity { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public EventCallback<CrmOpportunityEditorModel> Save { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen &&
+            Opportunity is not null &&
+            (!wasOpen || loadedOpportunityId != Opportunity.Id))
+        {
+            draft = OpportunityEditorDrafts.FromDetail(Opportunity);
+            loadedOpportunityId = Opportunity.Id;
+        }
+
+        wasOpen = IsOpen;
+    }
+
+    private Task HandleSaveAsync()
+    {
+        return Save.InvokeAsync(draft);
+    }
+
+    private async Task HandleCloseAsync()
+    {
+        if (Opportunity is not null)
+        {
+            draft = OpportunityEditorDrafts.FromDetail(Opportunity);
+        }
+
+        loadedOpportunityId = null;
+        wasOpen = false;
+        await Close.InvokeAsync();
+    }
+}

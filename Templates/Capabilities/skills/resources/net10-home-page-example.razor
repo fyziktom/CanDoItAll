@@ -1,0 +1,49 @@
+@page "/"
+@using System.Globalization
+
+<h1>Sample Request</h1>
+
+<form method="get">
+    <input type="text" name="name" value="@NameText" />
+    <select name="category" value="@SelectedCategory">
+        <option value="standard">Standard</option>
+        <option value="priority">Priority</option>
+        <option value="deferred">Deferred</option>
+    </select>
+    <input type="number" step="1" min="1" name="quantity" value="@QuantityText" />
+    <button type="submit">Preview</button>
+    <a href="/">Clear</a>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(SummaryMessage))
+{
+    <p>@SummaryMessage</p>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "name")]
+    public string? Name { get; set; }
+
+    [SupplyParameterFromQuery(Name = "category")]
+    public string? Category { get; set; }
+
+    [SupplyParameterFromQuery(Name = "quantity")]
+    public int? Quantity { get; set; }
+
+    private string SelectedCategory => Category is "priority" or "deferred" ? Category : "standard";
+    private string NameText => Name ?? string.Empty;
+    private string QuantityText => Quantity?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private string SummaryMessage
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Name) || !Quantity.HasValue)
+            {
+                return string.Empty;
+            }
+
+            return $"Request summary: {Quantity.Value.ToString(CultureInfo.InvariantCulture)} {SelectedCategory} item(s) for {Name}.";
+        }
+    }
+}

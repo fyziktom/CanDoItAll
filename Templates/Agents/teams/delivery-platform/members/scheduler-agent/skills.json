@@ -1,0 +1,9 @@
+{
+  "capabilityKeys": [
+    "scheduler-agent-inline-skill",
+    "scheduler-workflow-targets-search",
+    "scheduler-workflow-schedules-search",
+    "scheduler-workflow-schedule-create"
+  ],
+  "notes": "Privileged managed Scheduler Agent capability set. Runtime tools verify the immutable agent identity and exact capability assignments. Process scheduling is intentionally excluded pending its application-boundary refactor."
+}

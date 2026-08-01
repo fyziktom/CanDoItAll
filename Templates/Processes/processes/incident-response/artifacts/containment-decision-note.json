@@ -1,0 +1,27 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "containment-decision-note",
+  "DisplayName": "Containment decision note",
+  "Scope": "local",
+  "ProcessKey": "incident-response",
+  "ArtifactKind": "Decision",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Decision note that explains the chosen immediate containment or mitigation path during incident response.",
+  "AllowedFutureUsageSummary": "Reusable for diagnosis, approval escalation, and post-incident review.",
+  "ValidationRequirementSummary": "Must describe the chosen containment path, expected effect, and residual uncertainty.",
+  "OwnerRoleKey": "triage-lead",
+  "DocPath": "processes/incident-response/artifacts/containment-decision-note.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "containment-decision-note",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must describe the chosen containment path, expected effect, and residual uncertainty."
+  }
+}

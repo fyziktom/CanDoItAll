@@ -1,0 +1,262 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
+@inject ICrmFinancialSnapshotQueryService Financials
+@inject Microsoft.Extensions.Logging.ILogger<CrmFinancialsPanel> Logger
+
+<Stack GapScale="LayoutGap.Large"
+       data-testid="crmhr-financials-panel">
+    @if (isLoading)
+    {
+        <LoadingState Eyebrow="Financials"
+                      Title="Loading commercial results"
+                      Description="Reading closed-won opportunity history for this account." />
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <EmptyState Eyebrow="Financials unavailable"
+                    Title="Commercial results could not be loaded"
+                    Description="@loadError">
+            <Actions>
+                <Button Text="Retry"
+                        Icon="refresh"
+                        Click="LoadAsync"
+                        data-testid="crmhr-financials-retry" />
+            </Actions>
+        </EmptyState>
+    }
+    else
+    {
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(11rem,1fr))"
+              data-testid="crmhr-financials-metrics">
+            @if (snapshot.SoldTotals.Count == 0)
+            {
+                <MetricCard Label="Sold"
+                            Value="No recognized sales" />
+            }
+            else
+            {
+                @foreach (var total in snapshot.SoldTotals)
+                {
+                    <MetricCard Label="@($"Sold · {total.CurrencyCode}")"
+                                Value="@FormatAmount(total)" />
+                }
+            }
+
+            <MetricCard Label="Bought"
+                        Value="Unavailable" />
+            <MetricCard Label="Overdue invoices"
+                        Value="Unavailable" />
+            <MetricCard Label="Incomplete won records"
+                        Value="@snapshot.IncompleteWonOpportunityCount.ToString("N0")" />
+        </Grid>
+
+        @if (snapshot.IncompleteWonOpportunityCount > 0)
+        {
+            <SurfaceCard Soft="true"
+                         data-testid="crmhr-financials-incomplete">
+                <Cluster Gap="LayoutGap.Small"
+                         AlignItems="AlignItems.Center">
+                    <StatusBadge Tone="warning"
+                                 Text="@($"{snapshot.IncompleteWonOpportunityCount:N0} incomplete")" />
+                    <TextBlock Value="Closed-won opportunities without a valid recognition amount, currency, and Won timestamp are excluded from totals." />
+                </Cluster>
+            </SurfaceCard>
+        }
+
+        <Split Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween">
+            <div>
+                <TextBlock TextStyle="TextStyle.Eyebrow"
+                           Value="Recognized sold value" />
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="Closed-won opportunity history" />
+            </div>
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Monthly"
+                        ButtonStyle="@(period == FinancialChartPeriod.Month ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Variant="Variant.Outlined"
+                        Size="ButtonSize.Small"
+                        Click="@(() => SetPeriod(FinancialChartPeriod.Month))"
+                        data-testid="crmhr-financials-month" />
+                <Button Text="Yearly"
+                        ButtonStyle="@(period == FinancialChartPeriod.Year ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Variant="Variant.Outlined"
+                        Size="ButtonSize.Small"
+                        Click="@(() => SetPeriod(FinancialChartPeriod.Year))"
+                        data-testid="crmhr-financials-year" />
+            </Cluster>
+        </Split>
+
+        @if (snapshot.SoldAvailability == FinancialDataAvailability.Available)
+        {
+            <CdaChart Title="@ChartTitle"
+                      Description="Amounts are grouped by currency and dated by the first UTC transition to Won."
+                      Series="@SoldSeries"
+                      Options="@SoldChartOptions"
+                      Height="340"
+                      EmptyText="No defensible sold values are available."
+                      data-testid="crmhr-financials-sold-chart" />
+        }
+        else
+        {
+            <EmptyState Eyebrow="No recognized sales"
+                        Title="No closed-won values are available"
+                        Description="Sales appear after an opportunity has an amount, currency, and recorded transition to Won." />
+        }
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsLg="2">
+            <SurfaceCard data-testid="crmhr-financials-distribution-unavailable">
+                <EmptyState Eyebrow="Sold versus bought"
+                            Title="Distribution unavailable"
+                            Description="Purchase-side opportunity data does not exist yet, so a sold-versus-bought ratio would be misleading." />
+            </SurfaceCard>
+            <SurfaceCard data-testid="crmhr-financials-invoices-unavailable">
+                <EmptyState Eyebrow="Invoices"
+                            Title="Overdue status unavailable"
+                            Description="Invoice due dates and payment status will appear here when invoice persistence is introduced." />
+            </SurfaceCard>
+        </Grid>
+    }
+</Stack>
+
+@code {
+    private static readonly CdaChartOptions SoldChartOptions = new()
+    {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        YAxisTitle = "Closed-won amount",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = true,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        ValuePrecision = 2,
+        TooltipPrecision = 2,
+        Palette = CdaChartPalette.Calm
+    };
+
+    private CancellationTokenSource? operation;
+    private CrmAccountFinancialSnapshot snapshot = CrmAccountFinancialSnapshot.Empty(Guid.Empty);
+    private FinancialChartPeriod period = FinancialChartPeriod.Month;
+    private Guid? loadedAccountId;
+    private string? loadError;
+    private bool isLoading = true;
+    private bool disposed;
+
+    [Parameter]
+    public Guid AccountPartyId { get; set; }
+
+    private string ChartTitle => period == FinancialChartPeriod.Month
+        ? "Sold value by month"
+        : "Sold value by year";
+
+    private IReadOnlyList<CdaChartSeries> SoldSeries => BuildSoldSeries();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedAccountId == AccountPartyId)
+        {
+            return;
+        }
+
+        loadedAccountId = AccountPartyId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        operation?.Cancel();
+        operation?.Dispose();
+        operation = new CancellationTokenSource();
+        var currentOperation = operation;
+        isLoading = true;
+        loadError = null;
+
+        try
+        {
+            var loaded = await Financials.GetAsync(AccountPartyId, currentOperation.Token);
+            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
+            {
+                return;
+            }
+
+            snapshot = loaded;
+        }
+        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                Logger.LogError(
+                    exception,
+                    "CRM financial snapshot load failed for account {AccountPartyId}.",
+                    AccountPartyId);
+                loadError = "The financial projection is unavailable. Retry after checking the CRM data source.";
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(operation, currentOperation))
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private void SetPeriod(FinancialChartPeriod value)
+    {
+        period = value;
+    }
+
+    private IReadOnlyList<CdaChartSeries> BuildSoldSeries()
+    {
+        var values = period == FinancialChartPeriod.Month
+            ? snapshot.MonthlySold
+            : snapshot.YearlySold;
+        return values
+            .GroupBy(value => value.CurrencyCode, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => new CdaChartSeries
+            {
+                Name = group.Key,
+                Type = CdaChartType.Bar,
+                Points = group
+                    .OrderBy(value => value.PeriodStart)
+                    .Select(value => new CdaChartPoint(
+                        period == FinancialChartPeriod.Month
+                            ? value.PeriodStart.ToString("MMM yyyy")
+                            : value.PeriodStart.Year.ToString(),
+                        value.Amount))
+                    .ToArray()
+            })
+            .ToArray();
+    }
+
+    private static string FormatAmount(CrmCurrencyAmount value)
+    {
+        return $"{value.Amount:N2} {value.CurrencyCode}";
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        disposed = true;
+        operation?.Cancel();
+        operation?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    private enum FinancialChartPeriod
+    {
+        Month,
+        Year
+    }
+}

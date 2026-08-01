@@ -1,5 +1,0 @@
-# Required tests
-
-- `Concurrent_message_publish_with_same_dedupe_key_returns_single_envelope`
-- `Concurrent_ingress_accept_with_same_external_message_returns_single_envelope`
-- `Concurrent_connector_enqueue_with_same_idempotency_key_returns_single_command`

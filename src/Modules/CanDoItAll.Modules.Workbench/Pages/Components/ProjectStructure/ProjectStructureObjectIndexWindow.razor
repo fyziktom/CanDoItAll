@@ -1,0 +1,375 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.Modules.Workbench
+@using CanDoItAll.SharedKernel
+
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      BodyClass="project-structure-object-index-window__body"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="560"
+                      MinWidth="320"
+                      MinHeight="280"
+                      MaxWidth="520"
+                      MaxHeight="760"
+                      State="@State"
+                      StateChanged="StateChanged">
+    @if (IsLoaded)
+    {
+        <div class="project-structure-object-index-window"
+             data-testid="project-structure-object-index-content">
+            <div class="project-structure-object-index-window__toolbar">
+                <input type="search"
+                       class="cda-input project-structure-object-index-window__search"
+                       placeholder="Search nodes, status, or type"
+                       aria-label="Search project object index"
+                       value="@SearchText"
+                       @oninput="HandleSearchChangedAsync"
+                       data-testid="project-structure-object-index-search" />
+                <div class="project-structure-object-index-window__badges"
+                     aria-label="Project object index summary">
+                    <StatusBadge Tone="info" Text="@VisibleNodeCountLabel" />
+                    <StatusBadge Tone="neutral" Text="@SelectedNodeCountLabel" />
+                </div>
+            </div>
+
+            @if (FilteredNodes.Count == 0)
+            {
+                <div class="project-structure-object-index-window__empty"
+                     data-testid="project-structure-object-index-empty">
+                    No nodes match the current search.
+                </div>
+            }
+            else
+            {
+                <div class="project-structure-object-index-window__tree-scroller"
+                     data-testid="project-structure-object-index-tree-scroller">
+                    <TreeView Items="@OutlineNodes"
+                              AriaLabel="Project object index"
+                              Class="project-structure-object-index-window__tree"
+                              OnSelect="OnSelectNode"
+                              OnToggle="HandleIgnoredToggleAsync"
+                              OnContextMenu="HandleNodeContextMenuAsync" />
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="project-structure-object-index-window__unloaded"
+             data-testid="project-structure-object-index-unloaded">
+            Object index loading is paused.
+        </div>
+    }
+</CanvasFloatingWindow>
+
+@if (outlineContextMenu is not null)
+{
+    <button type="button"
+            class="project-structure-outline-context-menu__scrim"
+            aria-label="Close outline context menu"
+            @onclick="CloseOutlineContextMenu" />
+    <div class="project-structure-outline-context-menu"
+         data-testid="project-structure-outline-context-menu"
+         style="@BuildOutlineContextMenuStyle(outlineContextMenu)">
+        <div class="project-structure-outline-context-menu__header">
+            <span class="project-structure-outline-context-menu__eyebrow">Node actions</span>
+            <strong class="project-structure-outline-context-menu__title">@outlineContextMenu.NodeTitle</strong>
+        </div>
+        <div class="project-structure-outline-context-menu__actions">
+            @foreach (var action in outlineContextMenu.Actions)
+            {
+                <button type="button"
+                        class="project-structure-outline-context-menu__action"
+                        data-tone="@action.Tone"
+                        data-testid="@($"project-structure-outline-context-action-{BuildActionTestId(action.ActionId)}")"
+                        @onclick="@(() => ExecuteOutlineContextActionAsync(action.ActionId))">
+                    <Icon Name="@action.Icon" />
+                    <span>@action.Label</span>
+                </button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private sealed record OutlineContextMenuState(
+        string NodeId,
+        string NodeTitle,
+        IReadOnlyList<string> TargetNodeIds,
+        double ClientX,
+        double ClientY,
+        IReadOnlyList<ProjectStructureSupportPanelContextAction> Actions);
+
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter]
+    public bool IsLoaded { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectStructureNode> Nodes { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSelectNode { get; set; }
+
+    [Parameter]
+    public Func<ProjectStructureNode, IReadOnlyList<ProjectStructureSupportPanelContextAction>> ResolveContextActions { get; set; }
+        = _ => [];
+
+    [Parameter]
+    public EventCallback<ProjectStructureSupportPanelContextActionRequest> OnExecuteNodeContextAction { get; set; }
+
+    [Parameter]
+    public double DefaultWidth { get; set; } = 380;
+
+    private int SelectedCount => SelectedNodeIds.Count;
+
+    private string VisibleNodeCountLabel
+        => HasSearch
+            ? $"{FilteredNodes.Count} of {Nodes.Count} nodes"
+            : $"{Nodes.Count} nodes";
+
+    private string SelectedNodeCountLabel
+        => $"{SelectedCount} selected";
+
+    private bool HasSearch
+        => !string.IsNullOrWhiteSpace(SearchText);
+
+    private OutlineContextMenuState? outlineContextMenu;
+
+    private IReadOnlyList<ProjectStructureNode> FilteredNodes
+        => Nodes
+            .Where(MatchesSearch)
+            .ToList();
+
+    private IReadOnlyList<TreeViewNode> OutlineNodes
+        => FilteredNodes
+            .Select(node => new TreeViewNode
+            {
+                Id = node.Id,
+                Text = node.Title,
+                Icon = ResolveOutlineIcon(node),
+                Tooltip = $"{ProjectStructureCanvasCatalog.ResolveNodeLabel(node)} - {node.Status}",
+                IsSelected = SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal),
+                BadgeText = node.Status,
+                DataTestId = BuildOutlineNodeTestId(node.Id)
+            })
+            .ToList();
+
+    private Task HandleIgnoredToggleAsync(string _)
+        => Task.CompletedTask;
+
+    private Task HandleSearchChangedAsync(ChangeEventArgs args)
+        => SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private bool MatchesSearch(ProjectStructureNode node)
+    {
+        if (!HasSearch)
+        {
+            return true;
+        }
+
+        var search = SearchText.Trim();
+        return node.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               node.Status.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               ProjectStructureCanvasCatalog.ResolveNodeLabel(node).Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               (!string.IsNullOrWhiteSpace(node.Subtitle) && node.Subtitle.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+               (!string.IsNullOrWhiteSpace(node.ObjectSubtype) && node.ObjectSubtype.Contains(search, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task HandleNodeContextMenuAsync(TreeViewNodeContextMenuRequest request)
+    {
+        var node = Nodes.FirstOrDefault(candidate => string.Equals(candidate.Id, request.NodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            outlineContextMenu = null;
+            return;
+        }
+
+        var targetNodeIds = ResolveContextTargetNodeIds(node.Id);
+        var actions = ResolveContextActions(node)
+            .Where(action => !string.IsNullOrWhiteSpace(action.ActionId) && !string.IsNullOrWhiteSpace(action.Label))
+            .ToList();
+        if (targetNodeIds.Count > 1)
+        {
+            actions = actions
+                .Where(action => string.Equals(action.ActionId, "delete", StringComparison.OrdinalIgnoreCase))
+                .Select(action => action with { Label = "Delete selected" })
+                .ToList();
+        }
+
+        if (actions.Count == 0)
+        {
+            outlineContextMenu = null;
+            return;
+        }
+
+        outlineContextMenu = new OutlineContextMenuState(
+            node.Id,
+            targetNodeIds.Count == 1 ? node.Title : $"{targetNodeIds.Count} selected nodes",
+            targetNodeIds,
+            request.ClientX,
+            request.ClientY,
+            actions);
+        if (targetNodeIds.Count == 1)
+        {
+            await OnSelectNode.InvokeAsync(node.Id);
+        }
+    }
+
+    private void CloseOutlineContextMenu()
+        => outlineContextMenu = null;
+
+    private async Task ExecuteOutlineContextActionAsync(string actionId)
+    {
+        if (outlineContextMenu is null || string.IsNullOrWhiteSpace(actionId))
+        {
+            return;
+        }
+
+        var request = new ProjectStructureSupportPanelContextActionRequest(
+            outlineContextMenu.NodeId,
+            actionId,
+            outlineContextMenu.TargetNodeIds);
+        outlineContextMenu = null;
+        await OnExecuteNodeContextAction.InvokeAsync(request);
+    }
+
+    private IReadOnlyList<string> ResolveContextTargetNodeIds(string nodeId)
+    {
+        if (SelectedNodeIds.Count > 1 &&
+            SelectedNodeIds.Contains(nodeId, StringComparer.Ordinal))
+        {
+            return SelectedNodeIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+        }
+
+        return [nodeId];
+    }
+
+    private static string BuildOutlineContextMenuStyle(OutlineContextMenuState state)
+        => $"left:min(max(0.75rem, {Math.Round(state.ClientX)}px), calc(100vw - 21rem));top:min(max(0.75rem, {Math.Round(state.ClientY)}px), calc(100vh - 24rem));max-height:min(24rem, calc(100vh - 1.5rem));";
+
+    private static string BuildActionTestId(string actionId)
+    {
+        var sanitized = string.Concat(
+            actionId
+                .Trim()
+                .ToLowerInvariant()
+                .Select(character => char.IsLetterOrDigit(character) ? character : '-'));
+
+        while (sanitized.Contains("--", StringComparison.Ordinal))
+        {
+            sanitized = sanitized.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        sanitized = sanitized.Trim('-');
+        return string.IsNullOrWhiteSpace(sanitized) ? "action" : sanitized;
+    }
+
+    private static string ResolveOutlineIcon(ProjectStructureNode node)
+    {
+        return node.ObjectType switch
+        {
+            ProjectObjectType.ProjectRoot => "folder",
+            ProjectObjectType.Phase => "phase",
+            ProjectObjectType.Milestone => "date",
+            ProjectObjectType.Decision => "choice",
+            ProjectObjectType.ProjectBlock => "block",
+            ProjectObjectType.Meeting => "meeting",
+            ProjectObjectType.Recording => "recording",
+            ProjectObjectType.Transcript => "transcript",
+            ProjectObjectType.Participant => "people",
+            ProjectObjectType.WorkItem => "task",
+            ProjectObjectType.PromptFlow => "flow",
+            ProjectObjectType.PromptSession => "session",
+            ProjectObjectType.PromptStep => "step",
+            ProjectObjectType.Repository => "repo",
+            ProjectObjectType.File => ResolveFileIcon(node.ObjectSubtype),
+            ProjectObjectType.ImageAsset => "image",
+            ProjectObjectType.VideoAsset => "video",
+            ProjectObjectType.Link => "link",
+            ProjectObjectType.Connector => "plug",
+            ProjectObjectType.Script => "draw",
+            ProjectObjectType.Environment => "runtime",
+            ProjectObjectType.Infrastructure => "infra",
+            ProjectObjectType.ValidationRun => "qa",
+            ProjectObjectType.TestPlan => "test",
+            ProjectObjectType.TestEvidence => "evidence",
+            ProjectObjectType.SecretReference => "shield",
+            _ => "section"
+        };
+    }
+
+    private static string ResolveFileIcon(string? objectSubtype)
+    {
+        return objectSubtype?.Trim().ToLowerInvariant() switch
+        {
+            "pdf" => "pdf",
+            "excel" => "excel",
+            "docx" => "docx",
+            "markdown" => "markdown",
+            "mermaid" => "mermaid",
+            "screenshot" => "screenshot",
+            "log" => "log",
+            "json" => "json",
+            "text" => "text",
+            "archive" => "archive",
+            "audio" => "audio",
+            _ => "file"
+        };
+    }
+
+    private static string BuildOutlineNodeTestId(string nodeId)
+    {
+        var buffer = new char[nodeId.Length];
+        for (var index = 0; index < nodeId.Length; index++)
+        {
+            var character = nodeId[index];
+            buffer[index] = char.IsLetterOrDigit(character)
+                ? char.ToLowerInvariant(character)
+                : '-';
+        }
+
+        return $"project-structure-outline-node-{new string(buffer)}";
+    }
+}

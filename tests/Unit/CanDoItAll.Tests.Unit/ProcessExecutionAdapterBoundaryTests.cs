@@ -1,0 +1,344 @@
+using CanDoItAll.Git;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Drivers.Standard;
+
+namespace CanDoItAll.Tests.Unit;
+
+public sealed class ProcessExecutionAdapterBoundaryTests
+{
+    [Fact]
+    public async Task Adapter_strategy_preserves_typed_execution_safety_attestation()
+    {
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var attestation = ProcessExecutionSafetyAttestation.FailedBeforeRecordedSideEffects(
+            ProcessExecutionRunId.New(),
+            runId,
+            stepId,
+            new ProcessExecutionExecutorId(Guid.NewGuid()),
+            "sha256:" + new string('a', 64));
+        var driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
+            StandardProcessAdapterDescriptors.WorkflowAdapter,
+            new ProcessExecutionAdapterResult(
+                StrategyOutcome.NeedsManager,
+                [],
+                [],
+                [
+                    new ProcessExecutionAdapterDiagnostic(
+                        new StrategyDiagnosticCode(
+                            ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects),
+                        StrategyDiagnosticSensitivity.Normal,
+                        "sha256:stable-diagnostic",
+                        "The execution failed before recorded side effects.",
+                        RestrictedEvidenceReference: null,
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent)
+                    {
+                        ExecutionSafetyAttestation = attestation
+                    }
+                ],
+                [],
+                "The execution requires bounded rework.",
+                "sha256:result")
+            {
+                ExecutionRunId = attestation.ExecutionRunId
+            });
+        var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(
+            driver,
+            ProcessDriverLayer.Platform);
+        var factory = Assert.Single(package.StrategyFactories);
+        var binding = NewBinding(package.Descriptor.DriverId, factory.Descriptor);
+        var strategy = await factory.CreateAsync(binding);
+
+        var result = await strategy.ExecuteAsync(new ProcessStrategyExecutionContext(
+            runId,
+            stepId,
+            binding,
+            binding.Inputs)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        });
+
+        Assert.Equal(attestation, Assert.Single(result.Diagnostics).ExecutionSafetyAttestation);
+        Assert.Equal(attestation.ExecutionRunId, result.ExecutionRunId);
+    }
+
+    [Fact]
+    public async Task Adapter_strategy_normalizes_restricted_diagnostics_into_result_envelope()
+    {
+        var driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
+            StandardProcessAdapterDescriptors.WorkflowAdapter,
+            new ProcessExecutionAdapterResult(
+                StrategyOutcome.NeedsManager,
+                [],
+                [],
+                [
+                    new ProcessExecutionAdapterDiagnostic(
+                        new StrategyDiagnosticCode("workflow.raw-transcript"),
+                        StrategyDiagnosticSensitivity.Restricted,
+                        "sha256:raw",
+                        "Workflow failed with a retriable infrastructure error.",
+                        "restricted://workflow/run-1",
+                        ProcessDiagnosticRetrySafety.SafeToRetry,
+                        ProcessDiagnosticIdempotencyClassification.Idempotent)
+                ],
+                [new ManagerSignal(new ManagerSignalCode("manager.review"), "sha256:signal", "Manager review required.")],
+                "Workflow adapter completed with a restricted diagnostic.",
+                "sha256:result"));
+        var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(driver, ProcessDriverLayer.Platform);
+        var factory = Assert.Single(package.StrategyFactories);
+        var binding = NewBinding(package.Descriptor.DriverId, factory.Descriptor);
+        var requiredSlotId = ArtifactSlotId.New();
+        var producedSlotId = ArtifactSlotId.New();
+        var stepContract = new ProcessStepExecutionContract(
+            [
+                new RequiredArtifactInputRef(
+                    requiredSlotId,
+                    ProcessArtifactInputAvailability.Available,
+                    ProcessStepInstanceId.New(),
+                    ArtifactInstanceId.New(),
+                    "sha256:artifact",
+                    "sha256:connected-input")
+            ],
+            [new ExpectedProducedArtifactRef(producedSlotId)],
+            ["workspace_pwsh_run_script"],
+            "sha256:contract");
+        var dispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid());
+
+        var strategy = await factory.CreateAsync(binding);
+        var result = await strategy.ExecuteAsync(new ProcessStrategyExecutionContext(
+            ProcessRunId.New(),
+            ProcessStepInstanceId.New(),
+            binding,
+            binding.Inputs,
+            stepContract)
+        {
+            DispatchClaimIdentity = dispatchClaimIdentity
+        });
+
+        var request = Assert.Single(driver.Requests);
+        Assert.Equal(ProcessExecutionAdapterKind.Workflow, request.Kind);
+        Assert.Equal(stepContract, request.StepContract);
+        Assert.Equal(dispatchClaimIdentity, request.DispatchClaimIdentity);
+        Assert.Contains(
+            request.ContextFacets,
+            facet => facet.Key == new ProcessExecutionContextFacetKey("process.step.contract") &&
+                     facet.ValueHash == stepContract.ContractHash);
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(StrategyDiagnosticSensitivity.Restricted, diagnostic.Sensitivity);
+        Assert.Equal("restricted://workflow/run-1", diagnostic.RestrictedEvidenceReference);
+        Assert.Equal(ProcessDiagnosticRetrySafety.SafeToRetry, diagnostic.RetrySafety);
+        Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
+        Assert.Equal("Workflow adapter completed with a restricted diagnostic.", result.UserSafeSummary);
+        Assert.Equal("sha256:result", result.ResultHash);
+    }
+
+    [Fact]
+    public async Task Step_execution_driver_contract_dispatches_through_typed_adapter_request()
+    {
+        var expectedResult = ProcessExecutionAdapterResult.Succeeded("workflow completed", "sha256:workflow");
+        IProcessStepExecutionDriver driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
+            StandardProcessAdapterDescriptors.WorkflowAdapter,
+            expectedResult);
+        var binding = NewBinding(
+            driver.Descriptor.DriverId,
+            driver.Descriptor.Strategy);
+        var request = new ProcessExecutionAdapterRequest(
+            ProcessRunId.New(),
+            ProcessStepInstanceId.New(),
+            driver.Descriptor.Adapter.Kind,
+            new ProcessExecutionAdapterOperationKey("adapter.workflow.standard.execute"),
+            binding,
+            binding.Inputs,
+            [])
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+
+        var result = await driver.ExecuteStepAsync(request);
+
+        Assert.Equal(expectedResult, result);
+        Assert.Equal(StandardProcessAdapterDriverIds.Workflow, driver.Descriptor.DriverId);
+        Assert.Equal(StandardProcessAdapterDescriptors.WorkflowAdapter, driver.Descriptor.Adapter);
+    }
+
+    [Fact]
+    public void Layered_driver_slice_orders_foundation_before_adapter_driver()
+    {
+        var driver = new RecordingStepExecutionDriver(
+            StandardProcessAdapterDriverIds.Workflow,
+            StandardProcessAdapterDescriptors.WorkflowAdapter,
+            ProcessExecutionAdapterResult.Succeeded("workflow completed", "sha256:workflow"));
+        var packages = StandardProcessAdapterDriverPackageFactory.CreateLayeredPackages(driver);
+        var catalog = new ProcessDriverCatalog(packages);
+
+        var result = catalog.Match(new ProcessCapabilityRequest(
+            new HashSet<CapabilityTag> { StandardProcessAdapterCapabilities.WorkflowExecution },
+            new HashSet<CapabilityTag>(),
+            new HashSet<CapabilityTag>()));
+
+        Assert.True(result.Succeeded, string.Join(", ", result.Diagnostics));
+        Assert.Equal(
+            [
+                StandardProcessAdapterDriverIds.Foundation.Value,
+                StandardProcessAdapterDriverIds.Workflow.Value
+            ],
+            result.OrderedDrivers.Select(driver => driver.DriverId.Value));
+    }
+
+    [Fact]
+    public async Task Mutation_audit_reports_unauthorized_paths_using_git_wrapper()
+    {
+        var executor = new RecordingGitCommandExecutor(
+            new GitCommandResult(true, 0, " M src/Allowed/file.cs\n M secrets.txt\n", string.Empty, "git status --short"),
+            new GitCommandResult(true, 0, "diff --git a/secrets.txt b/secrets.txt\n+secret\n", string.Empty, "git diff --"));
+        var client = new GitRepositoryClient(new GitRepositoryPath(FindRepositoryRoot()), executor);
+        var service = new ProcessAdapterMutationAuditService();
+
+        var report = await service.AuditAsync(
+            client,
+            new ProcessAdapterMutationAuditRequest(
+                ProcessRunId.New(),
+                ProcessStepInstanceId.New(),
+                [new ProcessAdapterMutationScope("src/Allowed")],
+                [new ProcessAdapterMutationScope("src/Forbidden")],
+                string.Empty),
+            CancellationToken.None);
+
+        Assert.Equal(ProcessAdapterMutationAuditOutcome.UnauthorizedPathMutation, report.Outcome);
+        Assert.Contains(report.Findings, finding => finding.RepositoryRelativePath == "secrets.txt");
+        Assert.StartsWith("sha256:", report.RestrictedDiffReference, StringComparison.Ordinal);
+        Assert.Equal(["git status --short", "git diff"], executor.SanitizedCommands);
+    }
+
+    [Fact]
+    public void Core_and_runtime_do_not_reference_concrete_adapter_apis()
+    {
+        var root = FindRepositoryRoot();
+        var blockedTerms = new[]
+        {
+            "CanDoItAll.Processes.Drivers.Standard",
+            nameof(IProcessExecutionAdapter),
+            nameof(ProcessExecutionAdapterRequest),
+            "ProcessExecutionAdapterKind."
+        };
+
+        var findings = new[]
+        {
+            Path.Combine(root, "src", "Processes", "CanDoItAll.Processes.Core"),
+            Path.Combine(root, "src", "Processes", "CanDoItAll.Processes.Runtime")
+        }
+        .SelectMany(directory => Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+        .SelectMany(path => FindTermMatches(root, path, blockedTerms))
+        .ToArray();
+
+        Assert.True(
+            findings.Length == 0,
+            "Core/Runtime must not reference concrete adapter APIs: " + string.Join(", ", findings));
+    }
+
+    private static ProcessStrategyBindingSnapshot NewBinding(
+        DriverId driverId,
+        ProcessStrategyDescriptor descriptor)
+    {
+        return new ProcessStrategyBindingSnapshot(
+            driverId,
+            descriptor.StrategyId,
+            descriptor.StrategyVersion,
+            "factory/1.0",
+            "runtime/1.0",
+            "runtime/2.x",
+            "sha256:binding",
+            [new StrategyBindingInput(new StrategyBindingInputKey("operation"), "sha256:operation")]);
+    }
+
+    private static IEnumerable<string> FindTermMatches(
+        string root,
+        string path,
+        IReadOnlyList<string> terms)
+    {
+        var text = File.ReadAllText(path);
+        foreach (var term in terms)
+        {
+            if (text.Contains(term, StringComparison.Ordinal))
+            {
+                yield return $"{Path.GetRelativePath(root, path)} contains {term}";
+            }
+        }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate repository root.");
+    }
+
+    private sealed class RecordingExecutionAdapter(
+        ProcessExecutionAdapterDescriptor descriptor,
+        ProcessExecutionAdapterResult result) : IProcessExecutionAdapter
+    {
+        public ProcessExecutionAdapterDescriptor Descriptor { get; } = descriptor;
+
+        public List<ProcessExecutionAdapterRequest> Requests { get; } = [];
+
+        public ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
+            ProcessExecutionAdapterRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class RecordingStepExecutionDriver(
+        DriverId driverId,
+        ProcessExecutionAdapterDescriptor adapterDescriptor,
+        ProcessExecutionAdapterResult result) : IProcessStepExecutionDriver
+    {
+        public ProcessStepExecutionDriverDescriptor Descriptor { get; } = new(
+            driverId,
+            adapterDescriptor,
+            adapterDescriptor.Strategy);
+
+        public List<ProcessExecutionAdapterRequest> Requests { get; } = [];
+
+        public ValueTask<ProcessExecutionAdapterResult> ExecuteStepAsync(
+            ProcessExecutionAdapterRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class RecordingGitCommandExecutor(params GitCommandResult[] results) : IGitCommandExecutor
+    {
+        private readonly Queue<GitCommandResult> queuedResults = new(results);
+
+        public List<string> SanitizedCommands { get; } = [];
+
+        public Task<GitCommandResult> ExecuteAsync(
+            GitCommandSpec spec,
+            CancellationToken cancellationToken = default)
+        {
+            SanitizedCommands.Add(spec.SanitizedCommand);
+            return Task.FromResult(queuedResults.Dequeue());
+        }
+    }
+}

@@ -1,5 +1,0 @@
-# Required tests
-
-- `Parallel_dispatchers_do_not_process_the_same_delivery_twice`
-- `Parallel_connector_outbox_workers_do_not_process_the_same_command_twice`
-- `Abandoned_delivery_lease_can_be_reclaimed`

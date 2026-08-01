@@ -1,0 +1,13 @@
+{
+  "capabilityKeys": [
+    "workflow-curator-agent-inline-skill",
+    "workflow-curator-catalog-search",
+    "workflow-curator-definition-editor-get",
+    "workflow-curator-authoring-options-get",
+    "workflow-curator-draft-create",
+    "workflow-curator-draft-update",
+    "workflow-curator-node-update",
+    "workflow-curator-lifecycle-change"
+  ],
+  "notes": "Privileged managed Workflow Curator capability set. Identity-gated curator tools verify the immutable agent identity and every exact catalog assignment; generic workflow runtime tools provide governed run operations."
+}

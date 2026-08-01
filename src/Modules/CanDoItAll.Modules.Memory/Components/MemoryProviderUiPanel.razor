@@ -1,0 +1,13 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<SurfaceCard data-testid="memory-ui-provider-ui">
+    <MemoryProviderUiSurfaceHost Provider="@Provider" Surfaces="@Surfaces" />
+</SurfaceCard>
+
+@code {
+    [Parameter]
+    public MemoryProviderManagementProfile? Provider { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MemoryProviderUiSurfaceProjection> Surfaces { get; set; } = [];
+}

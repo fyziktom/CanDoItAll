@@ -1,0 +1,20 @@
+<Cluster Gap="LayoutGap.Small"
+         Wrap="FlexWrap.Wrap"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="agent-execution-activity-status"
+         data-activity-operation-id="@StreamId.OperationId.ToString()">
+    <StatusBadge Tone="@StatusTone"
+                 Text="@StatusLabel"
+                 data-testid="agent-execution-activity-phase" />
+    @if (HasSequenceGap)
+    {
+        <StatusBadge Tone="warning"
+                     Text="Earlier updates skipped"
+                     data-testid="agent-execution-activity-gap" />
+    }
+    <TextBlock TextStyle="TextStyle.Caption"
+               Value="@StatusMessage"
+               data-testid="agent-execution-activity-message" />
+</Cluster>

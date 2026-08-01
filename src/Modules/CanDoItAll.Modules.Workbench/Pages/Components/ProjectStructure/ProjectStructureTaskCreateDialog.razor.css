@@ -1,0 +1,17 @@
+.project-structure-task-create-dialog {
+    min-width: 0;
+}
+
+.project-structure-task-create-dialog__wide-field {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+    .project-structure-task-create-dialog__grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .project-structure-task-create-dialog__wide-field {
+        grid-column: auto;
+    }
+}

@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <MicrosoftAgentsAIStableVersion>1.15.0</MicrosoftAgentsAIStableVersion>
+    <MicrosoftAgentsAIPreviewVersion>1.15.0-preview.260722.1</MicrosoftAgentsAIPreviewVersion>
+  </PropertyGroup>
+</Project>

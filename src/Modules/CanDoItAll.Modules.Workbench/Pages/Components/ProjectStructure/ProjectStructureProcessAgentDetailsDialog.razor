@@ -1,0 +1,208 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+<div class="project-structure-agent-details"
+     data-testid="project-structure-process-assignment-agent-details-content">
+    <section class="project-structure-agent-details__hero">
+        <Avatar Alt="@Candidate.DisplayName"
+                ImageUrl="@ResolveCandidateImageUrl(Candidate)"
+                FallbackText="@BuildInitials(Candidate.DisplayName)"
+                DefaultImageSeed="@Candidate.DisplayName"
+                Size="AvatarSize.Large"
+                Shape="AvatarShape.Rounded" />
+        <div>
+            <div class="project-structure-agent-details__eyebrow">Readonly assignment profile</div>
+            <h3>@Candidate.DisplayName</h3>
+            <p>@ResolveSummary()</p>
+            <div class="project-structure-agent-details__chips">
+                <span>@Candidate.ScoreLabel</span>
+                <span>@Candidate.CandidateKindLabel</span>
+                <span>@Candidate.ExecutorKind</span>
+                @if (!string.IsNullOrWhiteSpace(Candidate.AgentStatusLabel))
+                {
+                    <span>@Candidate.AgentStatusLabel</span>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="project-structure-agent-details__grid">
+        <section class="project-structure-agent-details__panel">
+            <h4>Assignment</h4>
+            <dl>
+                <div>
+                    <dt>Process role</dt>
+                    <dd>@Role.DisplayName</dd>
+                </div>
+                <div>
+                    <dt>Role requirement</dt>
+                    <dd>@(Role.IsRequired ? "Required" : "Optional")</dd>
+                </div>
+                <div>
+                    <dt>Selection state</dt>
+                    <dd>@(Candidate.IsSelected ? "Selected" : Candidate.IsRecommended ? "Recommended candidate" : "Available candidate")</dd>
+                </div>
+                <div>
+                    <dt>Source</dt>
+                    <dd>@ResolveSource()</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="project-structure-agent-details__panel">
+            <h4>Runtime</h4>
+            <dl>
+                <div>
+                    <dt>Provider</dt>
+                    <dd>@ResolveProvider()</dd>
+                </div>
+                <div>
+                    <dt>Model</dt>
+                    <dd>@ResolveModel()</dd>
+                </div>
+                <div>
+                    <dt>Agent role</dt>
+                    <dd>@ResolveAgentRole()</dd>
+                </div>
+                <div>
+                    <dt>Workload</dt>
+                    <dd>@ResolveWorkload()</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="project-structure-agent-details__panel">
+            <h4>Tools</h4>
+            @if (ResolveToolNames().Count == 0)
+            {
+                <p>No explicit tool capabilities are configured for this agent.</p>
+            }
+            else
+            {
+                <div class="project-structure-agent-details__tag-list">
+                    @foreach (var tool in ResolveToolNames())
+                    {
+                        <span>@tool</span>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="project-structure-agent-details__panel">
+            <h4>Skills</h4>
+            @if (ResolveSkillNames().Count == 0)
+            {
+                <p>No explicit skills are configured for this agent.</p>
+            }
+            else
+            {
+                <div class="project-structure-agent-details__tag-list">
+                    @foreach (var skill in ResolveSkillNames())
+                    {
+                        <span>@skill</span>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+
+    <section class="project-structure-agent-details__panel project-structure-agent-details__panel--wide">
+        <h4>Recommendation</h4>
+        <div class="project-structure-agent-details__notes">
+            <p>@ResolveRecommendation()</p>
+            <p>@ResolveAvailability()</p>
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartRoleState Role { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ProjectStructureProcessStartCandidateState Candidate { get; set; } = default!;
+
+    private string ResolveSummary()
+    {
+        if (!string.IsNullOrWhiteSpace(Candidate.AgentSummary))
+        {
+            return Candidate.AgentSummary;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Candidate.RecommendationSummary))
+        {
+            return Candidate.RecommendationSummary;
+        }
+
+        return "No agent summary is available for this assignment candidate.";
+    }
+
+    private string ResolveProvider()
+        => string.IsNullOrWhiteSpace(Candidate.AgentProviderName)
+            ? "Provider not configured"
+            : Candidate.AgentProviderName;
+
+    private string ResolveModel()
+        => string.IsNullOrWhiteSpace(Candidate.AgentModel)
+            ? "Model not configured"
+            : Candidate.AgentModel;
+
+    private string ResolveAgentRole()
+        => string.IsNullOrWhiteSpace(Candidate.AgentRoleTitle)
+            ? Candidate.ExecutorKind
+            : Candidate.AgentRoleTitle;
+
+    private string ResolveWorkload()
+        => string.IsNullOrWhiteSpace(Candidate.AgentWorkloadLabel)
+            ? "Workload not configured"
+            : Candidate.AgentWorkloadLabel;
+
+    private string ResolveSource()
+        => string.IsNullOrWhiteSpace(Candidate.SourceRegistryKey)
+            ? "No source registry key"
+            : Candidate.SourceRegistryKey;
+
+    private string ResolveRecommendation()
+        => string.IsNullOrWhiteSpace(Candidate.RecommendationSummary)
+            ? "No recommendation note is attached to this candidate."
+            : Candidate.RecommendationSummary;
+
+    private string ResolveAvailability()
+        => string.IsNullOrWhiteSpace(Candidate.AvailabilitySummary)
+            ? "No availability note is attached to this candidate."
+            : Candidate.AvailabilitySummary;
+
+    private IReadOnlyList<string> ResolveToolNames()
+        => Candidate.ToolNames?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+           ?? [];
+
+    private IReadOnlyList<string> ResolveSkillNames()
+        => Candidate.SkillNames?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+           ?? [];
+
+    private static string? ResolveCandidateImageUrl(ProjectStructureProcessStartCandidateState candidate)
+        => string.IsNullOrWhiteSpace(candidate.AgentAvatarImageUrl)
+            ? null
+            : candidate.AgentAvatarImageUrl;
+
+    private static string BuildInitials(string value)
+    {
+        var segments = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .ToList();
+
+        return segments.Count == 0
+            ? "AI"
+            : string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
+    }
+}

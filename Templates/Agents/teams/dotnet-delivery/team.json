@@ -1,0 +1,33 @@
+{
+  "key": "dotnet-delivery",
+  "stableIdKey": "agent-teams/dotnet-delivery",
+  "name": ".NET Delivery Team",
+  "description": "Specialists for C#, ASP.NET Core, Blazor, and .NET validation work.",
+  "settings": {
+    "defaultProviderPolicy": "member-settings",
+    "membershipMode": "managed-default-seed",
+    "instructionsSource": "member-folders"
+  },
+  "members": [
+    {
+      "key": "dotnet-solution-architect",
+      "relativePath": "members/dotnet-solution-architect"
+    },
+    {
+      "key": "dotnet-application-developer",
+      "relativePath": "members/dotnet-application-developer"
+    },
+    {
+      "key": "blazor-application-developer",
+      "relativePath": "members/blazor-application-developer"
+    },
+    {
+      "key": "dotnet-qa-review-lead",
+      "relativePath": "members/dotnet-qa-review-lead"
+    },
+    {
+      "key": "runtime-failure-analyst",
+      "relativePath": "members/runtime-failure-analyst"
+    }
+  ]
+}

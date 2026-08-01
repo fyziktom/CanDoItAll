@@ -1,0 +1,35 @@
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="agents-feed-defaults-confirmation-content">
+    <TextBlock TextStyle="TextStyle.Body1"
+               Value="Load the managed default agents and providers again?" />
+
+    <Alert AlertStyle="AlertStyle.Warning">
+        This reruns catalog repair and may recreate or update managed agents, providers, capabilities, workflows, and CRM-HR projections.
+    </Alert>
+
+    <Cluster Gap="LayoutGap.Small"
+             Wrap="FlexWrap.Wrap"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                ButtonStyle="ButtonStyle.Light"
+                Click="CancelAsync"
+                data-testid="agents-feed-defaults-cancel" />
+        <Button Text="Load defaults"
+                Icon="cloud_sync"
+                ButtonStyle="ButtonStyle.Warning"
+                Click="ConfirmAsync"
+                data-testid="agents-feed-defaults-confirm" />
+    </Cluster>
+</Stack>
+
+@code {
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private Task ConfirmAsync()
+        => DialogReference?.CloseAsync(true) ?? Task.CompletedTask;
+
+    private Task CancelAsync()
+        => DialogReference?.CloseAsync(false) ?? Task.CompletedTask;
+}

@@ -1,0 +1,15 @@
+{
+  "Kind": "process-validation-template",
+  "Key": "validation-review-packet-complete",
+  "DisplayName": "Review packet complete",
+  "Scope": "shared",
+  "ProcessKey": "",
+  "Severity": "Error",
+  "OwnerRoleKey": "review-lead",
+  "Gate": "Review router",
+  "Summary": "Blocks route selection when the pull request packet omits key evidence or changed-surface context.",
+  "PassCriteria": "The pull request packet names changed surfaces, proof, rollback notes, and reviewer asks clearly enough to choose a governed lane.",
+  "FailCriteria": "Any route would rely on guesswork because the packet omits changed-surface, proof, rollback, or reviewer-context data.",
+  "EscalationRule": "Return the workflow to the author and do not normalize the packet implicitly.",
+  "DocPath": "shared/validations/validation-review-packet-complete.md"
+}

@@ -1,0 +1,182 @@
+using Microsoft.EntityFrameworkCore;
+
+namespace CanDoItAll.Modules.Plugins;
+
+public static class PluginSchemaInitializer
+{
+    public static async Task EnsureAsync(DbContext dbContext, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        if (!dbContext.Database.IsRelational())
+        {
+            return;
+        }
+
+        var provider = dbContext.Database.ProviderName ?? string.Empty;
+        if (provider.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
+        {
+            await EnsurePostgreSqlAsync(dbContext, cancellationToken);
+            return;
+        }
+
+        throw new NotSupportedException($"Plugin schema initialization only supports PostgreSQL relational providers. Provider '{provider}' is not supported.");
+    }
+
+    private static async Task EnsurePostgreSqlAsync(DbContext dbContext, CancellationToken cancellationToken)
+    {
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "Plugins_CapabilityGrants" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_Plugins_CapabilityGrants" PRIMARY KEY,
+                "PluginId" character varying(180) NOT NULL,
+                "Capability" integer NOT NULL,
+                "RecipeId" character varying(180) NOT NULL,
+                "ScopeKind" character varying(40) NOT NULL,
+                "ScopeKey" character varying(180) NOT NULL,
+                "State" character varying(40) NOT NULL,
+                "RiskKind" character varying(40) NOT NULL,
+                "Reason" character varying(600) NOT NULL,
+                "UpdatedBy" character varying(180) NOT NULL,
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "UpdatedAtUtc" timestamp with time zone NOT NULL,
+                "ConcurrencyToken" uuid NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "Plugins_Connections" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_Plugins_Connections" PRIMARY KEY,
+                "PluginId" character varying(180) NOT NULL,
+                "ConnectionKey" character varying(180) NOT NULL,
+                "DisplayName" character varying(240) NOT NULL,
+                "SettingsJson" TEXT NOT NULL,
+                "IsEnabled" boolean NOT NULL,
+                "HealthStatus" character varying(180) NOT NULL,
+                "UpdatedBy" character varying(180) NOT NULL,
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "UpdatedAtUtc" timestamp with time zone NOT NULL,
+                "ConcurrencyToken" uuid NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "Plugins_OAuthConnections" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_Plugins_OAuthConnections" PRIMARY KEY,
+                "ConnectionId" uuid NOT NULL,
+                "PluginId" character varying(180) NOT NULL,
+                "ConnectionKey" character varying(180) NOT NULL,
+                "ProviderKey" character varying(180) NOT NULL,
+                "TokenVaultKey" character varying(260) NOT NULL,
+                "Status" character varying(40) NOT NULL,
+                "AccountDisplay" character varying(320) NOT NULL,
+                "GrantedScopesJson" TEXT NOT NULL,
+                "AccessTokenExpiresAtUtc" timestamp with time zone NULL,
+                "RefreshTokenExpiresAtUtc" timestamp with time zone NULL,
+                "LastErrorCode" character varying(160) NOT NULL,
+                "LastErrorDescription" character varying(600) NOT NULL,
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "UpdatedAtUtc" timestamp with time zone NOT NULL,
+                "ConcurrencyToken" uuid NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "Plugins_OAuthSessions" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_Plugins_OAuthSessions" PRIMARY KEY,
+                "StateHash" character varying(128) NOT NULL,
+                "PluginId" character varying(180) NOT NULL,
+                "ConnectionId" uuid NOT NULL,
+                "ConnectionKey" character varying(180) NOT NULL,
+                "ProviderKey" character varying(180) NOT NULL,
+                "CodeVerifierVaultKey" character varying(260) NOT NULL,
+                "RedirectUri" character varying(1000) NOT NULL,
+                "ReturnPath" character varying(1000) NOT NULL,
+                "RequestedScopesJson" TEXT NOT NULL,
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "ExpiresAtUtc" timestamp with time zone NOT NULL,
+                "CompletedAtUtc" timestamp with time zone NULL,
+                "Status" character varying(40) NOT NULL,
+                "ErrorCode" character varying(160) NOT NULL,
+                "ErrorDescription" character varying(600) NOT NULL,
+                "ConcurrencyToken" uuid NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "Plugins_Logs" (
+                "Id" uuid NOT NULL CONSTRAINT "PK_Plugins_Logs" PRIMARY KEY,
+                "PluginId" character varying(180) NOT NULL,
+                "PackageId" character varying(180) NOT NULL,
+                "WorkflowExecutorId" character varying(180) NOT NULL,
+                "StreamKind" character varying(40) NOT NULL,
+                "OperationKind" character varying(80) NOT NULL,
+                "Severity" character varying(40) NOT NULL,
+                "Status" character varying(80) NOT NULL,
+                "Message" character varying(1200) NOT NULL,
+                "DetailsJson" TEXT NOT NULL,
+                "CorrelationId" character varying(180) NOT NULL,
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "ConcurrencyToken" uuid NOT NULL
+            );
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_Plugins_CapabilityGrants_PluginId_Capability_RecipeId_ScopeKind_ScopeKey"
+            ON "Plugins_CapabilityGrants" ("PluginId", "Capability", "RecipeId", "ScopeKind", "ScopeKey");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_CapabilityGrants_PluginId_State_UpdatedAtUtc"
+            ON "Plugins_CapabilityGrants" ("PluginId", "State", "UpdatedAtUtc");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_Connections_PluginId_ConnectionKey"
+            ON "Plugins_Connections" ("PluginId", "ConnectionKey");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_Plugins_OAuthConnections_ConnectionId"
+            ON "Plugins_OAuthConnections" ("ConnectionId");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_OAuthConnections_PluginId_ConnectionKey"
+            ON "Plugins_OAuthConnections" ("PluginId", "ConnectionKey");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_Plugins_OAuthSessions_StateHash"
+            ON "Plugins_OAuthSessions" ("StateHash");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_OAuthSessions_PluginId_ConnectionId_Status"
+            ON "Plugins_OAuthSessions" ("PluginId", "ConnectionId", "Status");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_Logs_StreamKind_PluginId_CreatedAtUtc"
+            ON "Plugins_Logs" ("StreamKind", "PluginId", "CreatedAtUtc");
+            """,
+            cancellationToken);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            CREATE INDEX IF NOT EXISTS "IX_Plugins_Logs_PackageId_CreatedAtUtc"
+            ON "Plugins_Logs" ("PackageId", "CreatedAtUtc");
+            """,
+            cancellationToken);
+    }
+}

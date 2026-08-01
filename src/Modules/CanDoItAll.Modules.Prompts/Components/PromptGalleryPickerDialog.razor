@@ -1,0 +1,147 @@
+@inject IPromptGalleryService Gallery
+@inject DialogService DialogService
+@inject NotificationService Notifications
+
+<PromptGallerySearchList @ref="searchList"
+                         Consumer="@Consumer"
+                         Provider="@Provider"
+                         Model="@Model"
+                         Compact="true"
+                         PageSize="@PageSize"
+                         AllowEdit="@AllowEdit"
+                         SelectText="Insert"
+                         Selected="ResolveSelectionAsync"
+                         EditRequested="HandleEditRequestedAsync" />
+
+@code {
+    private PromptGallerySearchList? searchList;
+    private bool itemDetailsDirty;
+
+    [Parameter]
+    public PromptGalleryConsumer Consumer { get; set; } = PromptGalleryConsumer.Chat;
+
+    [Parameter]
+    public string? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 15;
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<Guid> EditRequested { get; set; }
+
+    private async Task ResolveSelectionAsync(PromptGallerySearchItem item)
+    {
+        var detailsResult = await Gallery.GetItemAsync(item.Id);
+        if (!detailsResult.IsSuccess || detailsResult.Value is not { } details)
+        {
+            Notifications.Warning("Prompt item unavailable", DescribeErrors(detailsResult.Errors));
+            return;
+        }
+
+        PromptGallerySelection selection;
+        if (details.CurrentVersionNumber > 0)
+        {
+            var versionResult = await Gallery.GetVersionSnapshotAsync(details.Id, details.CurrentVersionNumber);
+            if (!versionResult.IsSuccess || versionResult.Value is not { } version)
+            {
+                Notifications.Warning("Prompt version unavailable", DescribeErrors(versionResult.Errors));
+                return;
+            }
+
+            selection = new PromptGallerySelection(
+                details.Id,
+                version.PromptVersionId,
+                version.VersionNumber,
+                version.Title,
+                version.Summary,
+                version.Kind,
+                version.Content,
+                details.Tags,
+                details.SupportedModels,
+                version.Recommendations);
+        }
+        else
+        {
+            selection = new PromptGallerySelection(
+                details.Id,
+                VersionId: null,
+                VersionNumber: null,
+                details.Title,
+                details.Summary,
+                details.Kind,
+                details.DraftContent,
+                details.Tags,
+                details.SupportedModels,
+                details.Recommendations);
+        }
+
+        await DialogService.CloseAsync(selection);
+    }
+
+    private async Task HandleEditRequestedAsync(Guid itemId)
+    {
+        if (!EditRequested.HasDelegate)
+        {
+            await OpenItemDetailsAsync(itemId);
+            return;
+        }
+
+        await DialogService.CloseAsync();
+        await EditRequested.InvokeAsync(itemId);
+    }
+
+    private async Task OpenItemDetailsAsync(Guid itemId)
+    {
+        itemDetailsDirty = false;
+        _ = await DialogService.OpenAsync<PromptGalleryItemEditor>(
+            "Prompt details",
+            new Dictionary<string, object?>
+            {
+                [nameof(PromptGalleryItemEditor.ItemId)] = itemId,
+                [nameof(PromptGalleryItemEditor.Saved)] = EventCallback.Factory.Create<Guid>(
+                    this,
+                    (Guid savedItemId) => HandleItemSavedAsync(savedItemId)),
+                [nameof(PromptGalleryItemEditor.Cancelled)] = EventCallback.Factory.Create(
+                    this,
+                    () => CloseItemDetailsAsync())
+            },
+            new DialogOptions
+            {
+                Eyebrow = "Prompt gallery",
+                Subtitle = "Review or edit this canonical prompt without leaving the current workflow or chat.",
+                Size = ModalSize.Full,
+                DenseChrome = true,
+                CloseOnBackdrop = false,
+                TestId = "prompt-gallery-item-details-dialog",
+                AriaLabel = "Prompt Gallery item details"
+            });
+        if (itemDetailsDirty)
+        {
+            itemDetailsDirty = false;
+            if (searchList is not null)
+            {
+                await searchList.RefreshAsync();
+            }
+        }
+    }
+
+    private Task HandleItemSavedAsync(Guid itemId)
+    {
+        itemDetailsDirty = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseItemDetailsAsync()
+        => DialogService.CloseAsync();
+
+    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+        => errors.Count == 0
+            ? "The prompt item could not be loaded."
+            : string.Join(" ", errors.Select(error => error.Message));
+}

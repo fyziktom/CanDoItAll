@@ -1,0 +1,390 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Modules.Projects
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject IAgentChatExecutionNotificationHub ExecutionNotificationHub
+@inject IAgentReferenceDataProvider ReferenceDataProvider
+@inject IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator
+@inject ILogger<ProjectsAgentChatContextProvider> Logger
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProjectSummary> ProjectSummaries { get; set; } = default!;
+
+    [Parameter]
+    public Guid? SelectedProjectId { get; set; }
+
+    [Parameter]
+    public ProjectsAgentChatView ActiveView { get; set; } = ProjectsAgentChatView.Cards;
+
+    [Parameter, EditorRequired]
+    public AgentChatNavigationIdentity ContextNavigationIdentity { get; set; }
+
+    [Parameter]
+    public AgentChatContextAccessState ContextAccessState { get; set; } = AgentChatContextAccessState.Ready;
+
+    [Parameter]
+    public EventCallback<AgentChatExecutionCompleted> RefreshRequested { get; set; }
+
+    private readonly CancellationTokenSource disposalCts = new();
+    private IReadOnlyList<AgentDefinition> agents = [];
+    private IAgentChatContextScopeLease? scopeLease;
+    private IAgentChatContextFragmentLease? portfolioFragmentLease;
+    private IAgentChatContextFragmentLease? selectionFragmentLease;
+    private IAgentChatExecutionNotificationSubscription? notificationSubscription;
+    private AgentChatContextSource? activeSource;
+    private ProjectSummary? activeProject;
+    private Guid? activeProjectId;
+    private string portfolioFragmentContent = string.Empty;
+    private string selectionFragmentContent = string.Empty;
+    private AgentChatContextScope? activeScope;
+    private AgentChatContextAccessState accessState = AgentChatContextAccessState.Loading;
+    private long agentAccessGeneration;
+    private bool hasActiveContext;
+    private bool isDisposed;
+
+    protected override void OnInitialized()
+    {
+        ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ValidateParameters();
+        var selection = ResolveSelection();
+        var selectedProjectId = selection?.Project.Id;
+        if (!hasActiveContext || activeProjectId != selectedProjectId)
+        {
+            await ActivateContextAsync(selection);
+            return;
+        }
+
+        activeProject = selection?.Project;
+        UpdatePortfolioFragment();
+        UpdateSelectionFragment(selection);
+        UpdateScope();
+        scopeLease?.SynchronizeNavigation(ContextNavigationIdentity);
+    }
+
+    private async Task ActivateContextAsync(ProjectsAgentChatSelection? selection)
+    {
+        DisposeContext();
+        if (accessState == AgentChatContextAccessState.Failed)
+        {
+            agents = [];
+            accessState = AgentChatContextAccessState.Loading;
+        }
+
+        hasActiveContext = true;
+        activeProject = selection?.Project;
+        activeProjectId = activeProject?.Id;
+        var scopeId = AgentChatContextScopeId.Create();
+        var scope = ProjectsAgentChatContextBuilder.BuildScope(
+            scopeId,
+            activeProject,
+            agents,
+            EffectiveAccessState,
+            ActiveView);
+        activeSource = scope.Source;
+        scopeLease = ContextRegistry.ActivateScope(scope);
+        scopeLease.SynchronizeNavigation(ContextNavigationIdentity);
+        activeScope = scope;
+
+        var portfolioFragment = ProjectsAgentChatContextBuilder.BuildPortfolioFragment();
+        portfolioFragmentLease = ContextRegistry.RegisterFragment(scopeId, portfolioFragment);
+        portfolioFragmentContent = portfolioFragment.Content;
+        RegisterSelectionFragment(scopeId, selection);
+        notificationSubscription = ExecutionNotificationHub.Subscribe(
+            scope.Source,
+            HandleExecutionCompletedAsync);
+
+        if (accessState != AgentChatContextAccessState.Loading)
+        {
+            return;
+        }
+
+        var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+        await LoadAgentAccessAsync(activeProjectId, scopeId, loadGeneration);
+    }
+
+    private async Task LoadAgentAccessAsync(
+        Guid? expectedProjectId,
+        AgentChatContextScopeId scopeId,
+        long loadGeneration)
+    {
+        try
+        {
+            var referenceData = await ReferenceDataProvider.GetAsync(
+                new AgentReferenceDataRequest(
+                    AgentReferenceDataSections.Agents,
+                    IncludeAgentTemplates: false,
+                    ActiveAgentsOnly: true),
+                disposalCts.Token);
+            if (!IsCurrentLoad(expectedProjectId, scopeId, loadGeneration))
+            {
+                return;
+            }
+
+            agents = referenceData.Agents;
+            accessState = AgentChatContextAccessState.Ready;
+            UpdateScope();
+        }
+        catch (OperationCanceledException) when (disposalCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrentLoad(expectedProjectId, scopeId, loadGeneration))
+            {
+                return;
+            }
+
+            Logger.LogError(
+                exception,
+                "Unable to resolve Projects agent-chat access. ProjectId={ProjectId} FailureType={FailureType}.",
+                expectedProjectId,
+                exception.GetType().Name);
+            agents = [];
+            accessState = AgentChatContextAccessState.Failed;
+            UpdateScope();
+        }
+    }
+
+    private bool IsCurrentLoad(
+        Guid? expectedProjectId,
+        AgentChatContextScopeId scopeId,
+        long loadGeneration)
+    {
+        return !isDisposed &&
+               hasActiveContext &&
+               activeProjectId == expectedProjectId &&
+               scopeLease?.ScopeId == scopeId &&
+               loadGeneration == Volatile.Read(ref agentAccessGeneration);
+    }
+
+    private void UpdateScope()
+    {
+        if (scopeLease is null)
+        {
+            return;
+        }
+
+        var scope = ProjectsAgentChatContextBuilder.BuildScope(
+            scopeLease.ScopeId,
+            activeProject,
+            agents,
+            EffectiveAccessState,
+            ActiveView);
+        if (activeScope is not null && AreEquivalent(activeScope, scope))
+        {
+            return;
+        }
+
+        scopeLease.Update(scope);
+        activeScope = scope;
+        activeSource = scope.Source;
+    }
+
+    private void UpdatePortfolioFragment()
+    {
+        var fragment = ProjectsAgentChatContextBuilder.BuildPortfolioFragment();
+        if (string.Equals(portfolioFragmentContent, fragment.Content, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        portfolioFragmentLease?.Update(fragment);
+        portfolioFragmentContent = fragment.Content;
+    }
+
+    private void UpdateSelectionFragment(ProjectsAgentChatSelection? selection)
+    {
+        if (selection is null)
+        {
+            selectionFragmentLease?.Dispose();
+            selectionFragmentLease = null;
+            selectionFragmentContent = string.Empty;
+            return;
+        }
+
+        var fragment = ProjectsAgentChatContextBuilder.BuildSelectionFragment(selection);
+        if (selectionFragmentLease is null)
+        {
+            if (scopeLease is null)
+            {
+                return;
+            }
+
+            selectionFragmentLease = ContextRegistry.RegisterFragment(scopeLease.ScopeId, fragment);
+            selectionFragmentContent = fragment.Content;
+            return;
+        }
+
+        if (string.Equals(selectionFragmentContent, fragment.Content, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        selectionFragmentLease.Update(fragment);
+        selectionFragmentContent = fragment.Content;
+    }
+
+    private void RegisterSelectionFragment(
+        AgentChatContextScopeId scopeId,
+        ProjectsAgentChatSelection? selection)
+    {
+        if (selection is null)
+        {
+            return;
+        }
+
+        var fragment = ProjectsAgentChatContextBuilder.BuildSelectionFragment(selection);
+        selectionFragmentLease = ContextRegistry.RegisterFragment(scopeId, fragment);
+        selectionFragmentContent = fragment.Content;
+    }
+
+    private ProjectsAgentChatSelection? ResolveSelection()
+    {
+        if (!SelectedProjectId.HasValue)
+        {
+            return null;
+        }
+
+        var selectedProject = ProjectSummaries.FirstOrDefault(project => project.Id == SelectedProjectId.Value);
+        return selectedProject is null
+            ? null
+            : ProjectsAgentChatContextBuilder.BuildSelection(selectedProject);
+    }
+
+    private Task HandleExecutionCompletedAsync(AgentChatExecutionCompleted notification)
+    {
+        if (isDisposed || activeSource is null || notification.Source != activeSource)
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() => RefreshRequested.InvokeAsync(notification));
+    }
+
+    private void HandleReferenceDataInvalidated(object? sender, EventArgs eventArgs)
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            if (isDisposed || !hasActiveContext || scopeLease is null)
+            {
+                return;
+            }
+
+            var loadGeneration = Interlocked.Increment(ref agentAccessGeneration);
+            agents = [];
+            accessState = AgentChatContextAccessState.Loading;
+            UpdateScope();
+            await LoadAgentAccessAsync(activeProjectId, scopeLease.ScopeId, loadGeneration);
+        });
+    }
+
+    private void ValidateParameters()
+    {
+        ArgumentNullException.ThrowIfNull(ProjectSummaries);
+        if (ContextNavigationIdentity.IsEmpty)
+        {
+            throw new ArgumentException(
+                "A Projects agent-chat navigation identity is required.",
+                nameof(ContextNavigationIdentity));
+        }
+
+        if (!Enum.IsDefined(ContextAccessState))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ContextAccessState),
+                ContextAccessState,
+                "The Projects position access state is undefined.");
+        }
+    }
+
+    private AgentChatContextAccessState EffectiveAccessState
+        => (accessState, ContextAccessState) switch
+        {
+            (AgentChatContextAccessState.Failed, _) or
+            (_, AgentChatContextAccessState.Failed)
+                => AgentChatContextAccessState.Failed,
+            (AgentChatContextAccessState.Loading, _) or
+            (_, AgentChatContextAccessState.Loading)
+                => AgentChatContextAccessState.Loading,
+            _ => AgentChatContextAccessState.Ready
+        };
+
+    private static bool AreEquivalent(
+        AgentChatContextScope left,
+        AgentChatContextScope right)
+    {
+        return left.Source == right.Source &&
+               string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal) &&
+               Equals(left.WorkspaceScope, right.WorkspaceScope) &&
+               left.AccessMode == right.AccessMode &&
+               left.AccessState == right.AccessState &&
+               left.AgentAccess.SequenceEqual(right.AgentAccess) &&
+               AreEquivalent(left.SurfacePosition, right.SurfacePosition);
+    }
+
+    private static bool AreEquivalent(
+        AgentChatSurfacePosition? left,
+        AgentChatSurfacePosition? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        return left is not null &&
+               right is not null &&
+               string.Equals(left.Module, right.Module, StringComparison.Ordinal) &&
+               string.Equals(left.Surface, right.Surface, StringComparison.Ordinal) &&
+               string.Equals(left.View, right.View, StringComparison.Ordinal) &&
+               string.Equals(left.Route, right.Route, StringComparison.Ordinal) &&
+               Equals(left.PrimarySelection, right.PrimarySelection) &&
+               left.SelectedEntities.SequenceEqual(right.SelectedEntities) &&
+               left.Facts.SequenceEqual(right.Facts);
+    }
+
+    private void DisposeContext()
+    {
+        Interlocked.Increment(ref agentAccessGeneration);
+        notificationSubscription?.Dispose();
+        notificationSubscription = null;
+        activeSource = null;
+        selectionFragmentLease?.Dispose();
+        selectionFragmentLease = null;
+        portfolioFragmentLease?.Dispose();
+        portfolioFragmentLease = null;
+        scopeLease?.Dispose();
+        scopeLease = null;
+        activeProject = null;
+        activeProjectId = null;
+        activeScope = null;
+        portfolioFragmentContent = string.Empty;
+        selectionFragmentContent = string.Empty;
+        hasActiveContext = false;
+    }
+
+    public void Dispose()
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        isDisposed = true;
+        ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
+        disposalCts.Cancel();
+        DisposeContext();
+        disposalCts.Dispose();
+        agents = [];
+    }
+}

@@ -1,0 +1,144 @@
+workflows:
+  - key: file-to-mermaid-graph-asset
+    name: File To Mermaid Graph Asset
+    description: Loads one or more input files, creates a Mermaid diagram in Markdown from the source content, and stores the diagram brief under the selected project-structure node.
+    routingInstructions: |-
+      Return route as `diagram`.
+      Build markdown that starts with a short source summary, then includes one Mermaid fenced code block.
+      Prefer `flowchart TD` for process or dependency descriptions, `sequenceDiagram` for request/response flows, and `classDiagram` for class-oriented source material.
+      The Mermaid must be syntactically conservative: quote labels with punctuation, keep node ids simple, and avoid unsupported custom icons.
+      Preserve projectId from project.id when top-level projectId is absent. Preserve nodeId from runContext.workflowNodeId when top-level nodeId is absent.
+      Include source file names, assumptions, and open gaps after the diagram.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-graph-sources
+          kind: Executor
+          name: Load graph sources
+          x: 340
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 12
+              maxCharactersPerFile: 18000
+              maxTotalCharacters: 120000
+              allowedExtensions:
+                - .md
+                - .txt
+                - .json
+                - .yaml
+                - .yml
+                - .csv
+                - .cs
+                - .razor
+                - .ts
+                - .tsx
+                - .js
+                - .jsx
+                - .py
+          instructions: Load explicit project-structure, workspace, or absolute file sources into bounded text for Mermaid generation.
+        - { id: create-mermaid, kind: LlmCall, name: Create Mermaid diagram, x: 640, y: 220 }
+        - id: store-mermaid-asset
+          kind: Executor
+          name: Store Mermaid asset
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Mermaid graph from source file
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+          instructions: Store the Mermaid markdown result under the selected project-structure workflow node.
+        - { id: end, kind: End, name: End, x: 1240, y: 220 }
+      edges:
+        - { source: start, target: ingest-graph-sources }
+        - { source: ingest-graph-sources, target: create-mermaid }
+        - { source: create-mermaid, target: store-mermaid-asset }
+        - { source: store-mermaid-asset, target: end }
+
+  - key: source-code-file-summary-to-project
+    name: Source Code File Summary To Project
+    description: Loads source-code files, creates a concise implementation summary with risks and follow-up tasks, and stores the result under the selected project-structure node.
+    routingInstructions: |-
+      Return route as `summarized`.
+      Summarize what the source code does, important public types or functions, external dependencies, side effects, likely extension points, risks, and suggested tests.
+      Do not invent behavior that is not present in the loaded source text.
+      If source ingestion reports truncation or extraction errors, call that out in markdown.
+      Preserve projectId from project.id when top-level projectId is absent. Preserve nodeId from runContext.workflowNodeId when top-level nodeId is absent.
+      The markdown field must include sections: Overview, Important entry points, Data and side effects, Risks, Suggested follow-up.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: ingest-code-sources
+          kind: Executor
+          name: Load source code
+          x: 340
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: true
+              includeSelectedNodePaths: true
+              includeParentSubtreePaths: true
+              recursiveFolders: true
+              allowAbsoluteInputPaths: true
+              maxFiles: 16
+              maxCharactersPerFile: 20000
+              maxTotalCharacters: 140000
+              allowedExtensions:
+                - .cs
+                - .razor
+                - .cshtml
+                - .ts
+                - .tsx
+                - .js
+                - .jsx
+                - .py
+                - .go
+                - .java
+                - .json
+                - .yaml
+                - .yml
+                - .md
+                - .txt
+          instructions: Load source code file and folder inputs into bounded text for summary.
+        - { id: summarize-code, kind: LlmCall, name: Summarize source code, x: 640, y: 220 }
+        - id: store-code-summary
+          kind: Executor
+          name: Store code summary
+          x: 950
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Source code summary
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+          instructions: Store the source-code summary markdown under the selected project-structure workflow node.
+        - { id: end, kind: End, name: End, x: 1240, y: 220 }
+      edges:
+        - { source: start, target: ingest-code-sources }
+        - { source: ingest-code-sources, target: summarize-code }
+        - { source: summarize-code, target: store-code-summary }
+        - { source: store-code-summary, target: end }

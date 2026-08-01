@@ -1,0 +1,28 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "product-assessment",
+  "DisplayName": "Product evidence assessment",
+  "Scope": "local",
+  "ProcessKey": "business-plan-development",
+  "ArtifactKind": "Evidence",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Observed product or app assessment that separates source evidence, capabilities, workflow value, limitations, and assumptions.",
+  "AllowedFutureUsageSummary": "Reusable for business-plan, financial, marketing, and future product-improvement decisions.",
+  "ValidationRequirementSummary": "Must distinguish observed behavior from inferred customer, market, or revenue claims.",
+  "OwnerRoleKey": "business-strategist",
+  "DocPath": "processes/business-plan-development/artifacts/product-assessment.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "product-assessment",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must distinguish observed behavior from inferred customer, market, or revenue claims."
+  }
+}
+

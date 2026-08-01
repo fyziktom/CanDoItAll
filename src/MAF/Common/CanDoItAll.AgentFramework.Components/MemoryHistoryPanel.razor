@@ -1,0 +1,38 @@
+<SectionCard Title="Memory history"
+             Description="Persistent notes and durable facts for the selected agent.">
+    @if (Entries.Count == 0)
+    {
+        <EmptyState Eyebrow="Memory"
+                    Title="No memory items yet"
+                    Description="Save architecture notes, preferences, facts, or follow-ups to build reusable context." />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var entry in Entries.OrderByDescending(item => item.CreatedAtUtc))
+            {
+                <SelectionListItem Title="@entry.Title"
+                                   Eyebrow="@entry.Kind.ToString()"
+                                   Meta="@($"{entry.Source} / importance {entry.Importance}")"
+                                   Summary="@entry.Content"
+                                   IsSelected="@(SelectedMemoryId == entry.Id)"
+                                   OnSelect="@(async () => await MemorySelected.InvokeAsync(entry.Id))">
+                    <Status>
+                        <StatusBadge Tone="info" Text="@entry.CreatedAtUtc.LocalDateTime.ToString("g")" />
+                    </Status>
+                </SelectionListItem>
+            }
+        </Stack>
+    }
+</SectionCard>
+
+@code {
+    [Parameter]
+    public required IReadOnlyList<AgentMemoryRecord> Entries { get; set; }
+
+    [Parameter]
+    public Guid? SelectedMemoryId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> MemorySelected { get; set; }
+}

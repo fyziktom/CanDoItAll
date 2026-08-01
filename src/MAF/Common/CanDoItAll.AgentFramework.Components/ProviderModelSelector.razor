@@ -1,0 +1,291 @@
+@namespace CanDoItAll.AgentFramework.Components
+
+<div class="@Class" data-testid="@TestId">
+    <FormField Text="@Label">
+        <Stack GapScale="LayoutGap.Small">
+            <DropDown TValue="string"
+                      Data="@modelChoices"
+                      TextProperty="@nameof(ProviderModelSelectorOption.Text)"
+                      ValueProperty="@nameof(ProviderModelSelectorOption.Value)"
+                      Value="@selectedChoiceValue"
+                      ValueChanged="HandleChoiceChangedAsync"
+                      Disabled="@(Disabled || isOverrideEnabled)"
+                      data-testid="@ChoiceTestId" />
+
+            <label class="cda-inline-option">
+                <CheckBox TValue="bool"
+                          Value="@isOverrideEnabled"
+                          ValueChanged="HandleOverrideChangedAsync"
+                          Disabled="@Disabled"
+                          aria-label="Override model name"
+                          data-testid="@OverrideTestId" />
+                <span>Override model name</span>
+            </label>
+
+            @if (isOverrideEnabled)
+            {
+                <input class="cda-input"
+                       value="@customModelName"
+                       @oninput="HandleCustomModelInputAsync"
+                       @onchange="HandleCustomModelInputAsync"
+                       disabled="@Disabled"
+                       placeholder="@CustomModelPlaceholder"
+                       data-testid="@CustomModelTestId" />
+            }
+        </Stack>
+    </FormField>
+</div>
+
+@code {
+    private const string ProviderDefaultChoiceValue = "__provider_default__";
+
+    private readonly List<ProviderModelSelectorOption> modelChoices = [];
+    private string selectedChoiceValue = ProviderDefaultChoiceValue;
+    private string customModelName = string.Empty;
+    private string? previousProviderFingerprint;
+    private string? previousValue;
+    private bool hasSyncedParameters;
+    private bool suppressNextParameterSync;
+    private bool isOverrideEnabled;
+
+    [Parameter]
+    public ProviderProfile? Provider { get; set; }
+
+    [Parameter]
+    public string? ProviderName { get; set; }
+
+    [Parameter]
+    public string? ProviderDefaultModel { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<string>? ModelOptions { get; set; }
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> Change { get; set; }
+
+    [Parameter]
+    public bool UseEmptyValueForProviderDefault { get; set; } = true;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = "Model";
+
+    [Parameter]
+    public string CustomModelPlaceholder { get; set; } = "Enter model name";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public string? ChoiceTestId { get; set; }
+
+    [Parameter]
+    public string? OverrideTestId { get; set; }
+
+    [Parameter]
+    public string? CustomModelTestId { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        RebuildModelChoices();
+
+        var providerFingerprint = ResolveProviderFingerprint();
+        var currentValue = NormalizeModel(Value);
+        var providerChanged = !string.Equals(previousProviderFingerprint, providerFingerprint, StringComparison.Ordinal);
+        var valueChangedExternally = !suppressNextParameterSync &&
+                                     !string.Equals(previousValue, currentValue, StringComparison.Ordinal);
+
+        if (!hasSyncedParameters || providerChanged || valueChangedExternally)
+        {
+            ApplyExternalValue(currentValue);
+        }
+
+        previousProviderFingerprint = providerFingerprint;
+        previousValue = currentValue;
+        hasSyncedParameters = true;
+        suppressNextParameterSync = false;
+    }
+
+    public static string NormalizeProviderDefaultModel(string? value, ProviderProfile? provider)
+        => NormalizeProviderDefaultModel(value, provider?.DefaultModel);
+
+    public static string NormalizeProviderDefaultModel(string? value, string? providerDefaultModel)
+        => NormalizeModel(value);
+
+    private void RebuildModelChoices()
+    {
+        var providerDefault = ResolveProviderDefaultModel();
+        var defaultLabel = string.IsNullOrWhiteSpace(providerDefault)
+            ? "Provider default"
+            : $"Provider default ({providerDefault})";
+
+        modelChoices.Clear();
+        modelChoices.Add(new ProviderModelSelectorOption(ProviderDefaultChoiceValue, defaultLabel));
+
+        foreach (var option in ResolveModelOptions())
+        {
+            if (!string.IsNullOrWhiteSpace(providerDefault) &&
+                string.Equals(option, providerDefault, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            modelChoices.Add(new ProviderModelSelectorOption(option, option));
+        }
+    }
+
+    private IReadOnlyList<string> ResolveModelOptions()
+    {
+        var models = ModelOptions ?? Provider?.SuggestedModels ?? [];
+        return models
+            .Where(model => !string.IsNullOrWhiteSpace(model))
+            .Select(model => model.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void ApplyExternalValue(string currentValue)
+    {
+        if (TryResolveKnownChoice(currentValue, out var choiceValue))
+        {
+            selectedChoiceValue = choiceValue;
+            isOverrideEnabled = false;
+            customModelName = string.IsNullOrWhiteSpace(currentValue)
+                ? ResolveProviderDefaultModel()
+                : currentValue;
+            return;
+        }
+
+        selectedChoiceValue = ProviderDefaultChoiceValue;
+        isOverrideEnabled = true;
+        customModelName = currentValue;
+    }
+
+    private bool TryResolveKnownChoice(string currentValue, out string choiceValue)
+    {
+        if (string.IsNullOrWhiteSpace(currentValue) ||
+            !UseEmptyValueForProviderDefault && IsProviderDefaultModel(currentValue))
+        {
+            choiceValue = ProviderDefaultChoiceValue;
+            return true;
+        }
+
+        var modelChoice = modelChoices
+            .FirstOrDefault(choice => string.Equals(choice.Value, currentValue, StringComparison.OrdinalIgnoreCase));
+        if (modelChoice is not null)
+        {
+            choiceValue = modelChoice.Value;
+            return true;
+        }
+
+        choiceValue = ProviderDefaultChoiceValue;
+        return false;
+    }
+
+    private bool IsProviderDefaultModel(string value)
+    {
+        var providerDefault = ResolveProviderDefaultModel();
+        return !string.IsNullOrWhiteSpace(providerDefault) &&
+               string.Equals(value.Trim(), providerDefault, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task HandleChoiceChangedAsync(string? choiceValue)
+    {
+        selectedChoiceValue = string.IsNullOrWhiteSpace(choiceValue)
+            ? ProviderDefaultChoiceValue
+            : choiceValue;
+        isOverrideEnabled = false;
+        var nextValue = string.Equals(selectedChoiceValue, ProviderDefaultChoiceValue, StringComparison.Ordinal)
+            ? ResolveProviderDefaultEmittedValue()
+            : selectedChoiceValue;
+        customModelName = string.IsNullOrWhiteSpace(nextValue)
+            ? ResolveProviderDefaultModel()
+            : nextValue;
+
+        await EmitValueAsync(nextValue);
+    }
+
+    private async Task HandleOverrideChangedAsync(bool value)
+    {
+        isOverrideEnabled = value;
+        if (isOverrideEnabled)
+        {
+            if (string.IsNullOrWhiteSpace(customModelName))
+            {
+                customModelName = ResolveSelectedModelName();
+            }
+
+            await EmitValueAsync(customModelName);
+            return;
+        }
+
+        selectedChoiceValue = ProviderDefaultChoiceValue;
+        var nextValue = ResolveProviderDefaultEmittedValue();
+        customModelName = ResolveProviderDefaultModel();
+        await EmitValueAsync(nextValue);
+    }
+
+    private async Task HandleCustomModelChangedAsync(string? value)
+    {
+        customModelName = NormalizeModel(value);
+        await EmitValueAsync(customModelName);
+    }
+
+    private Task HandleCustomModelInputAsync(ChangeEventArgs args)
+        => HandleCustomModelChangedAsync(args.Value?.ToString());
+
+    private async Task EmitValueAsync(string? value)
+    {
+        var normalizedValue = NormalizeModel(value);
+        suppressNextParameterSync = true;
+        previousValue = normalizedValue;
+        await ValueChanged.InvokeAsync(normalizedValue);
+        await Change.InvokeAsync(normalizedValue);
+    }
+
+    private string ResolveSelectedModelName()
+    {
+        if (!string.Equals(selectedChoiceValue, ProviderDefaultChoiceValue, StringComparison.Ordinal))
+        {
+            return selectedChoiceValue;
+        }
+
+        return ResolveProviderDefaultModel();
+    }
+
+    private string ResolveProviderDefaultEmittedValue()
+        => UseEmptyValueForProviderDefault ? string.Empty : ResolveProviderDefaultModel();
+
+    private string ResolveProviderDefaultModel()
+        => NormalizeModel(ProviderDefaultModel ?? Provider?.DefaultModel);
+
+    private string ResolveProviderName()
+        => NormalizeModel(ProviderName ?? Provider?.Name);
+
+    private string ResolveProviderFingerprint()
+    {
+        var modelOptions = string.Join('\u001f', ResolveModelOptions());
+        return string.Join(
+            "|",
+            Provider?.Id.ToString("D") ?? string.Empty,
+            ResolveProviderName(),
+            ResolveProviderDefaultModel(),
+            modelOptions);
+    }
+
+    private static string NormalizeModel(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private sealed record ProviderModelSelectorOption(string Value, string Text);
+}

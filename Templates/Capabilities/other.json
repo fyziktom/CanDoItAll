@@ -1,0 +1,103 @@
+{
+  "capabilities": [
+    {
+      "kind": "rag",
+      "key": "workspace-source-rag",
+      "displayName": "Workspace Source RAG",
+      "description": "Injects local source, skills, and sample workload files while excluding planning bundles and generated runtime artifacts.",
+      "stableId": "rag:workspace-source:v1",
+      "stableGuidKey": "capabilities/workspace-source-rag",
+      "endpointOrPath": ".",
+      "operationClassifications": [
+        "read"
+      ],
+      "excludePathsSource": "workspaceRagDefault",
+      "configuration": {
+        "ragRoot": ".",
+        "extensions": [
+          ".cs",
+          ".md",
+          ".razor",
+          ".json",
+          ".ps1",
+          ".yaml",
+          ".yml",
+          ".csv",
+          ".tsv",
+          ".txt",
+          ".eml"
+        ],
+        "excludePaths": [],
+        "searchTime": "BeforeAIInvoke",
+        "maxResults": 5,
+        "maxFilesToScan": 256,
+        "minQueryTerms": 2,
+        "minMatchedTerms": 2,
+        "minScore": 2
+      }
+    },
+    {
+      "kind": "rag",
+      "key": "architecture-source-rag",
+      "displayName": "Architecture Source RAG",
+      "description": "Injects only source and project-definition files for architecture reviews so persisted chat data and generated artifacts do not dominate the context.",
+      "stableId": "rag:architecture-source:v1",
+      "stableGuidKey": "capabilities/architecture-source-rag",
+      "endpointOrPath": ".",
+      "operationClassifications": [
+        "read"
+      ],
+      "configuration": {
+        "ragRoot": ".",
+        "extensions": [
+          ".cs",
+          ".razor",
+          ".csproj",
+          ".sln",
+          ".slnx",
+          ".props",
+          ".targets"
+        ],
+        "excludePaths": [
+          "data",
+          "artifacts",
+          "output",
+          ".playwright-cli",
+          ".vs",
+          "tools",
+          "src/CanDoItAll.AgentFramework.Sandbox/Components/Pages"
+        ],
+        "searchTime": "BeforeAIInvoke",
+        "maxResults": 4,
+        "maxFilesToScan": 256,
+        "minQueryTerms": 2,
+        "minMatchedTerms": 2,
+        "minScore": 2
+      }
+    },
+    {
+      "kind": "ai-context",
+      "key": "mail-triage-context",
+      "displayName": "Mail Triage Context",
+      "description": "System reminder that mail work should classify urgency, next actions, and reply drafts clearly.",
+      "stableId": "context:mail-triage:v1",
+      "stableGuidKey": "capabilities/mail-triage-context",
+      "message": "When handling mail-oriented work, identify urgency, the next concrete action, and a draft reply before you close the task.",
+      "operationClassifications": [
+        "read"
+      ]
+    },
+    {
+      "kind": "ai-context",
+      "key": "research-briefing-context",
+      "displayName": "Research Briefing Context",
+      "description": "System reminder to cite concrete repo evidence and distinguish proven behavior from inference.",
+      "stableId": "context:research-briefing:v1",
+      "stableGuidKey": "capabilities/research-briefing-context",
+      "message": "When researching or comparing options, cite the concrete provider, skill, route, capability, or file you used before making product-level claims.",
+      "operationClassifications": [
+        "read"
+      ]
+    }
+  ]
+}

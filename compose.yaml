@@ -1,0 +1,44 @@
+# Development-only PostgreSQL. The installed Windows web app uses the separate
+# tools/install/Install-CanDoItAllWebAppDatabase.ps1 lifecycle.
+name: ${COMPOSE_PROJECT_NAME:-candoitall-app}
+
+x-bounded-logging: &bounded-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:${POSTGRES_IMAGE_TAG:-16-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-candoitall_development}
+      POSTGRES_USER: ${POSTGRES_USER:-candoitall}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    secrets:
+      - db-password
+    ports:
+      - "${CDA_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
+    cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+    pids_limit: ${POSTGRES_PID_LIMIT:-256}
+    stop_grace_period: 60s
+    restart: "no"
+    logging: *bounded-logging
+
+secrets:
+  db-password:
+    environment: POSTGRES_PASSWORD
+
+volumes:
+  db-data:

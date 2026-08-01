@@ -1,0 +1,609 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using System.Globalization
+@using CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@inject DialogService DialogService
+
+<Stack GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch"
+       Class="project-structure-gantt-task-dialog"
+       data-testid="project-structure-gantt-task-dialog-content">
+    @if (ResourceWarnings.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-gantt-task-resource-warning">
+            @string.Join(" ", ResourceWarnings)
+        </Alert>
+    }
+
+    @if (!CanChangeDirectAssignee)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-gantt-task-assignee-readonly">
+            This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task details and workflow or process attachments can still be saved.
+        </Alert>
+    }
+
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
+          Gap="LayoutGap.Medium"
+          Class="project-structure-gantt-task-dialog__schedule-grid">
+        <FormField Text="Task title"
+                   Class="project-structure-gantt-task-dialog__title-field">
+            <TextBox Value="@title"
+                     ValueChanged="HandleTitleChangedAsync"
+                     Placeholder="Describe the task"
+                     Immediate="true"
+                     data-testid="project-structure-gantt-task-title" />
+        </FormField>
+
+        <FormField Text="Delivery length (hours)">
+            <input type="number"
+                   class="project-structure-gantt-task-dialog__input"
+                   min="0.25"
+                   max="8760"
+                   step="0.25"
+                   value="@FormatDurationHours()"
+                   aria-label="Task length in hours"
+                   disabled="@IsScheduleReadOnly"
+                   data-testid="project-structure-gantt-task-duration"
+                   @onchange="HandleDurationChanged" />
+        </FormField>
+
+        <FormField Text="Start (UTC)">
+            <input type="datetime-local"
+                   class="project-structure-gantt-task-dialog__input"
+                   value="@FormatDateTimeLocal(startUtc)"
+                   aria-label="Task start in UTC"
+                   disabled="@IsScheduleReadOnly"
+                   data-testid="project-structure-gantt-task-start"
+                   @onchange="HandleStartChanged" />
+        </FormField>
+
+        <FormField Text="End (UTC)">
+            <input type="datetime-local"
+                   class="project-structure-gantt-task-dialog__input"
+                   value="@FormatDateTimeLocal(endUtc)"
+                   aria-label="Task end in UTC"
+                   disabled="@IsScheduleReadOnly"
+                   data-testid="project-structure-gantt-task-end"
+                   @onchange="HandleEndChanged" />
+        </FormField>
+    </Grid>
+
+    <SurfaceCard Soft="true"
+                 Class="project-structure-gantt-task-dialog__presets">
+        <Cluster Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.Wrap"
+                 AlignItems="AlignItems.Center">
+            <TextBlock TextStyle="TextStyle.Note"
+                       Value="Quick delivery" />
+            @foreach (var preset in DurationPresets)
+            {
+                <Button Text="@preset.Label"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Outlined"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@IsScheduleReadOnly"
+                        data-testid="@($"project-structure-gantt-task-preset-{preset.Hours:0.##}")"
+                        Click="@(() => ApplyDurationPreset(preset.Hours))" />
+            }
+            <TextBlock TextStyle="TextStyle.Note"
+                       Value="@(FormatScheduleSummary())"
+                       Class="project-structure-gantt-task-dialog__schedule-summary" />
+        </Cluster>
+    </SurfaceCard>
+
+    @if (IsScheduleReadOnly)
+    {
+        <Alert AlertStyle="AlertStyle.Info"
+               data-testid="project-structure-gantt-task-schedule-readonly">
+            This task has a projected schedule. Add authoritative start and end dates from the project structure before changing its delivery interval.
+        </Alert>
+    }
+
+    @if (IsEditMode)
+    {
+        <FormField Text="Actual progress (%)">
+            <input type="number"
+                   class="project-structure-gantt-task-dialog__input"
+                   min="0"
+                   max="100"
+                   step="1"
+                   value="@progressPercent"
+                   aria-label="Actual task progress percent"
+                   data-testid="project-structure-gantt-task-progress"
+                   @onchange="HandleProgressChanged" />
+        </FormField>
+
+        <ProjectStructureTaskExecutionEditor @ref="executionEditor"
+                                             Value="@execution"
+                                             ValueChanged="HandleExecutionChangedAsync"
+                                             DataTestId="project-structure-gantt-task-execution" />
+    }
+
+    <ProjectStructureTaskEstimateEditor @ref="estimateEditor"
+                                        Value="@estimate"
+                                        ValueChanged="HandleEstimateChangedAsync"
+                                        DefaultCurrencyCode="@DefaultCurrencyCode"
+                                        ExpectedCostReadOnly="@(!ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(execution.State))"
+                                        DataTestId="project-structure-gantt-task-estimate" />
+
+    <Stack GapScale="LayoutGap.Small"
+           AlignItems="AlignItems.Stretch">
+        <Cluster Gap="LayoutGap.Small"
+                 AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Wrap="FlexWrap.Wrap">
+            <Stack GapScale="LayoutGap.XSmall">
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="Optional task resource" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="Choose a person or agent as the direct assignee, or attach a workflow or process definition. Definition resources are additive and do not replace the assignee." />
+            </Stack>
+            @if (CanClearSelectedResource)
+            {
+                <Button Text="Clear selection"
+                        Icon="close"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Text"
+                        ButtonStyle="ButtonStyle.Base"
+                        data-testid="project-structure-gantt-task-resource-clear"
+                        Click="ClearResourceAsync" />
+            }
+        </Cluster>
+
+        <ProjectStructureTaskResourcePicker Options="@ResourceOptions"
+                                            SelectedResource="@selectedResource"
+                                            SelectionChanged="SelectResourceAsync"
+                                            AllowedKinds="@SelectableResourceKinds"
+                                            SearchPlaceholder="Search people, agents, workflows, and processes"
+                                            EmptyDescription="Change the resource-type filters, clear the search, or save without selecting a resource."
+                                            OptionTestIdPrefix="project-structure-gantt-task-resource"
+                                            DataTestId="project-structure-gantt-task-resource-picker" />
+
+        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                   ProjectId="@ProjectId"
+                                                   SelectedResource="@selectedResource"
+                                                   Estimate="@estimate"
+                                                   EstimateChanged="HandleEstimateChangedAsync"
+                                                   ExecutionState="@execution.State"
+                                                   QuoteResolver="@QuoteResolver"
+                                                   DataTestId="project-structure-gantt-task-resource-cost" />
+    </Stack>
+
+    @if (!string.IsNullOrWhiteSpace(validationError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-gantt-task-validation-error">
+            @validationError
+        </Alert>
+    }
+
+    <Cluster Gap="LayoutGap.Small"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                data-testid="project-structure-gantt-task-cancel"
+                Click="CancelAsync" />
+        <Button Text="@(IsEditMode ? "Save task" : "Create task")"
+                Icon="@(IsEditMode ? "save" : "add_task")"
+                ButtonStyle="ButtonStyle.Info"
+                data-testid="project-structure-gantt-task-submit"
+                Click="SubmitAsync" />
+    </Cluster>
+</Stack>
+
+@code {
+    private const decimal DefaultDurationHours = 8m;
+    private const decimal MaximumDurationHours = 8760m;
+    private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
+    private static readonly (string Label, decimal Hours)[] DurationPresets =
+    [
+        ("1 h", 1m),
+        ("4 h", 4m),
+        ("1 d", 8m),
+        ("1 w", 40m)
+    ];
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> AllResourceKinds =
+        Enum.GetValues<ProjectStructureTaskResourceKind>().ToHashSet();
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> DefinitionResourceKinds =
+        new HashSet<ProjectStructureTaskResourceKind>
+        {
+            ProjectStructureTaskResourceKind.Workflow,
+            ProjectStructureTaskResourceKind.Process
+        };
+
+    private bool initialized;
+    private string title = "New task";
+    private DateTimeOffset startUtc;
+    private DateTimeOffset endUtc;
+    private int progressPercent;
+    private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
+    private ProjectTaskExecutionSnapshot execution = ProjectTaskExecutionSnapshot.NotStarted;
+    private ProjectStructureTaskEstimateEditor? estimateEditor;
+    private ProjectStructureTaskExecutionEditor? executionEditor;
+    private ProjectStructureTaskResourceCostEstimator? costEstimator;
+    private ProjectStructureTaskResourceSelection? initialAssignee;
+    private ProjectStructureTaskResourceSelection? proposedAssignee;
+    private ProjectStructureTaskResourceSelection? resourceToAttach;
+    private ProjectStructureTaskResourceSelection? selectedResource;
+    private ProjectTaskEstimate? estimateBeforeDefinitionSelection;
+    private ProjectTaskEstimate? estimateBeforeDirectAssigneeSelection;
+    private string validationError = string.Empty;
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset DefaultStartUtc { get; set; }
+
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset DefaultEndUtc { get; set; }
+
+    [Parameter]
+    public ProjectTaskEstimate DefaultEstimate { get; set; } = new(
+        DefaultDurationHours,
+        ProjectWorkItemEffortUnit.Hours,
+        null,
+        string.Empty);
+
+    [Parameter]
+    public string DefaultCurrencyCode { get; set; } = "USD";
+
+    [Parameter]
+    public ProjectStructureGanttTaskEditModel? EditModel { get; set; }
+
+    [Parameter]
+    public string? AfterTaskNodeId { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ProjectStructureTaskResourceOption> ResourceOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> ResourceWarnings { get; set; } = [];
+
+    [Parameter]
+    public Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? QuoteResolver { get; set; }
+
+    private bool IsEditMode => EditModel is not null;
+
+    private bool IsScheduleReadOnly => EditModel?.ScheduleReadOnly == true;
+
+    private bool CanChangeDirectAssignee => EditModel?.CanChangeDirectAssignee != false;
+
+    private bool CanClearSelectedResource =>
+        selectedResource is not null &&
+        (resourceToAttach is not null || CanChangeDirectAssignee);
+
+    private IReadOnlySet<ProjectStructureTaskResourceKind> SelectableResourceKinds =>
+        CanChangeDirectAssignee ? AllResourceKinds : DefinitionResourceKinds;
+
+    private decimal DurationHours => (decimal)(endUtc - startUtc).TotalHours;
+
+    protected override void OnParametersSet()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+        if (EditModel is not null)
+        {
+            title = EditModel.Title;
+            startUtc = EditModel.StartUtc.ToUniversalTime();
+            endUtc = EditModel.EndUtc.ToUniversalTime();
+            progressPercent = Math.Clamp(EditModel.ProgressPercent, 0, 100);
+            estimate = EditModel.Estimate;
+            execution = EditModel.Execution ?? ProjectTaskExecutionSnapshot.Unknown;
+            initialAssignee = EditModel.Assignee;
+            proposedAssignee = EditModel.Assignee;
+            selectedResource = EditModel.Assignee;
+            return;
+        }
+
+        startUtc = DefaultStartUtc.ToUniversalTime();
+        endUtc = DefaultEndUtc > DefaultStartUtc
+            ? DefaultEndUtc.ToUniversalTime()
+            : startUtc.AddHours((double)DefaultDurationHours);
+        estimate = DefaultEstimate;
+    }
+
+    private Task HandleTitleChangedAsync(string? value)
+    {
+        title = value ?? string.Empty;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void HandleStartChanged(ChangeEventArgs args)
+    {
+        if (!TryParseUtc(args.Value, out var nextStart))
+        {
+            validationError = "Enter a valid UTC start date and time.";
+            return;
+        }
+
+        var duration = endUtc - startUtc;
+        startUtc = nextStart;
+        endUtc = startUtc + (duration > TimeSpan.Zero ? duration : TimeSpan.FromHours((double)DefaultDurationHours));
+        validationError = string.Empty;
+    }
+
+    private void HandleEndChanged(ChangeEventArgs args)
+    {
+        if (!TryParseUtc(args.Value, out var nextEnd))
+        {
+            validationError = "Enter a valid UTC end date and time.";
+            return;
+        }
+
+        if (nextEnd <= startUtc)
+        {
+            validationError = "End must be later than start.";
+            return;
+        }
+
+        endUtc = nextEnd;
+        validationError = string.Empty;
+    }
+
+    private void HandleDurationChanged(ChangeEventArgs args)
+    {
+        if (!TryParseDuration(args.Value, out var hours))
+        {
+            validationError = $"Length must be between 0.25 and {MaximumDurationHours:0} hours.";
+            return;
+        }
+
+        ApplyDurationPreset(hours);
+    }
+
+    private void HandleProgressChanged(ChangeEventArgs args)
+    {
+        if (!int.TryParse(
+                Convert.ToString(args.Value, CultureInfo.InvariantCulture),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var value) || value is < 0 or > 100)
+        {
+            validationError = "Actual progress must be between 0 and 100 percent.";
+            return;
+        }
+
+        progressPercent = value;
+        validationError = string.Empty;
+    }
+
+    private Task HandleEstimateChangedAsync(ProjectTaskEstimate value)
+    {
+        estimate = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleExecutionChangedAsync(ProjectTaskExecutionSnapshot value)
+    {
+        execution = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void ApplyDurationPreset(decimal hours)
+    {
+        endUtc = startUtc.AddHours((double)hours);
+        validationError = string.Empty;
+    }
+
+    private async Task SelectResourceAsync(ProjectStructureTaskResourceSelection selection)
+    {
+        if (!CanChangeDirectAssignee &&
+            selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+        {
+            return;
+        }
+
+        selectedResource = selection;
+        if (selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+        {
+            RestoreEstimateBeforeDefinitionSelection();
+            if (proposedAssignee != selection)
+            {
+                estimateBeforeDirectAssigneeSelection ??= estimate;
+            }
+
+            proposedAssignee = selection;
+            resourceToAttach = null;
+        }
+        else
+        {
+            estimateBeforeDefinitionSelection ??= estimate;
+            resourceToAttach = selection;
+        }
+
+        if (costEstimator is not null)
+        {
+            await costEstimator.EstimateSelectedAsync(selection, estimate);
+        }
+    }
+
+    private async Task ClearResourceAsync()
+    {
+        if (resourceToAttach is not null)
+        {
+            resourceToAttach = null;
+            selectedResource = proposedAssignee;
+            RestoreEstimateBeforeDefinitionSelection();
+            if (proposedAssignee is not null && costEstimator is not null)
+            {
+                await costEstimator.EstimateSelectedAsync(proposedAssignee, estimate);
+            }
+
+            return;
+        }
+
+        if (!CanChangeDirectAssignee)
+        {
+            return;
+        }
+
+        proposedAssignee = null;
+        selectedResource = null;
+        RestoreEstimateBeforeDirectAssigneeSelection();
+    }
+
+    private void RestoreEstimateBeforeDefinitionSelection()
+    {
+        if (estimateBeforeDefinitionSelection is not { } previousEstimate)
+        {
+            return;
+        }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDefinitionSelection = null;
+    }
+
+    private void RestoreEstimateBeforeDirectAssigneeSelection()
+    {
+        if (estimateBeforeDirectAssigneeSelection is not { } previousEstimate)
+        {
+            return;
+        }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDirectAssigneeSelection = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        var normalizedTitle = title.Trim();
+        if (normalizedTitle.Length == 0)
+        {
+            validationError = "Task title is required.";
+            return;
+        }
+
+        if (normalizedTitle.Length > 200)
+        {
+            validationError = "Task title cannot exceed 200 characters.";
+            return;
+        }
+
+        if (endUtc <= startUtc || DurationHours is < 0.25m or > MaximumDurationHours)
+        {
+            validationError = $"Length must be between 0.25 and {MaximumDurationHours:0} hours.";
+            return;
+        }
+
+        var estimateError = string.Empty;
+        if (estimateEditor is null || !estimateEditor.TryGetValue(out estimate, out estimateError))
+        {
+            validationError = string.IsNullOrWhiteSpace(estimateError)
+                ? "The task estimate is not ready."
+                : estimateError;
+            return;
+        }
+
+        if (EditModel is not null)
+        {
+            var executionError = string.Empty;
+            if (executionEditor is null ||
+                !executionEditor.TryGetValue(out execution, out executionError))
+            {
+                validationError = string.IsNullOrWhiteSpace(executionError)
+                    ? "The task execution state is not ready."
+                    : executionError;
+                return;
+            }
+
+            var editResult = new ProjectStructureTaskEditDialogResult(
+                EditModel.TaskId,
+                normalizedTitle,
+                startUtc,
+                endUtc,
+                progressPercent,
+                estimate,
+                CanChangeDirectAssignee && proposedAssignee != initialAssignee,
+                proposedAssignee,
+                resourceToAttach,
+                execution);
+            if (DialogReference is null)
+            {
+                await DialogService.CloseAsync(editResult);
+                return;
+            }
+
+            await DialogReference.CloseAsync(editResult);
+            return;
+        }
+
+        var result = new ProjectStructureTaskCreateRequest(
+            normalizedTitle,
+            startUtc,
+            endUtc,
+            AfterTaskNodeId,
+            selectedResource,
+            estimate);
+        if (DialogReference is null)
+        {
+            await DialogService.CloseAsync(result);
+            return;
+        }
+
+        await DialogReference.CloseAsync(result);
+    }
+
+    private Task CancelAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync()
+            : DialogReference.CloseAsync();
+
+    private string FormatDurationHours()
+        => DurationHours.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private string FormatScheduleSummary()
+        => $"{DurationHours:0.##} h · {DurationHours / 8m:0.##} man-day(s)";
+
+    private static string FormatDateTimeLocal(DateTimeOffset value)
+        => value.ToUniversalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture);
+
+    private static bool TryParseUtc(object? value, out DateTimeOffset result)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture);
+        if (DateTimeOffset.TryParse(
+                text,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
+        {
+            result = parsed.ToUniversalTime();
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
+    private static bool TryParseDuration(object? value, out decimal hours)
+    {
+        return decimal.TryParse(
+                   value?.ToString(),
+                   NumberStyles.Number,
+                   CultureInfo.InvariantCulture,
+                   out hours) &&
+               hours is >= 0.25m and <= MaximumDurationHours;
+    }
+
+}

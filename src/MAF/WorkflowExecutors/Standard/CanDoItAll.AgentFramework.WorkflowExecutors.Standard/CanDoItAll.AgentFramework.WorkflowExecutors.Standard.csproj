@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

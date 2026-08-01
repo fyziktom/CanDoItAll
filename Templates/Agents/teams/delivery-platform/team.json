@@ -1,0 +1,69 @@
+{
+  "key": "delivery-platform",
+  "stableIdKey": "agent-teams/delivery-platform",
+  "name": "Delivery Platform Team",
+  "description": "Default governance, implementation, validation, review, security, release, and staffing agents for governed delivery.",
+  "settings": {
+    "defaultProviderPolicy": "member-settings",
+    "membershipMode": "managed-default-seed",
+    "instructionsSource": "member-folders"
+  },
+  "members": [
+    {
+      "key": "portfolio-architect",
+      "relativePath": "members/portfolio-architect"
+    },
+    {
+      "key": "programming-workspace-analyst",
+      "relativePath": "members/programming-workspace-analyst"
+    },
+    {
+      "key": "delivery-qa-observer",
+      "relativePath": "members/delivery-qa-observer"
+    },
+    {
+      "key": "code-review-lead",
+      "relativePath": "members/code-review-lead"
+    },
+    {
+      "key": "ui-review-lead",
+      "relativePath": "members/ui-review-lead"
+    },
+    {
+      "key": "security-reviewer",
+      "relativePath": "members/security-reviewer"
+    },
+    {
+      "key": "release-readiness-manager",
+      "relativePath": "members/release-readiness-manager"
+    },
+    {
+      "key": "delivery-manager",
+      "relativePath": "members/delivery-manager"
+    },
+    {
+      "key": "hr-staffing-manager",
+      "relativePath": "members/hr-staffing-manager"
+    },
+    {
+      "key": "hr-agent",
+      "relativePath": "members/hr-agent"
+    },
+    {
+      "key": "prompts-curator-agent",
+      "relativePath": "members/prompts-curator-agent"
+    },
+    {
+      "key": "workflow-curator-agent",
+      "relativePath": "members/workflow-curator-agent"
+    },
+    {
+      "key": "capability-curator-agent",
+      "relativePath": "members/capability-curator-agent"
+    },
+    {
+      "key": "scheduler-agent",
+      "relativePath": "members/scheduler-agent"
+    }
+  ]
+}

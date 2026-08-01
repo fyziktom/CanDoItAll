@@ -1,0 +1,12 @@
+.agent-runtime-details-dialog {
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+@media (max-width: 960px) {
+    .agent-runtime-details-dialog ::deep .cda-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

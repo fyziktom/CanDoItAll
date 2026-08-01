@@ -1,0 +1,438 @@
+﻿@page "/test-lab"
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+@inject TestLabService TestLabService
+@inject ProjectsService ProjectsService
+@inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
+@inject NotificationService NotificationService
+
+<PageTitle>Test Lab</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Test Lab"
+                    Title="Tests, evidence, and execution results"
+                    Description="Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="plans" Value="@plans.Count.ToString()" TooltipText="Persisted test plans." />
+                <CompactStat Label="visible" Value="@FilteredPlans.Count.ToString()" TooltipText="Plans matching the current filters." Tone="info" />
+                <CompactStat Label="cases" Value="@plans.Sum(item => item.CaseCount).ToString()" TooltipText="Tracked test cases across all plans." />
+                <CompactStat Label="evidence" Value="@plans.Sum(item => item.EvidenceCount).ToString()" TooltipText="Linked evidence records across all plans." />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="add"
+                                        Label="New test plan"
+                                        TooltipText="Create a new test plan."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <ListDetailShell ListPaneWidth="25rem">
+            <ListHeader>
+                <ListPanelHeader Title="Test plans"
+                                 Description="Select a plan to continue editing it, or start a new plan with structured sections."
+                                 Count="@($"{FilteredPlans.Count} plan(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@($"{FilteredPlans.Count} matching plan(s)")">
+                            <input @bind="planSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search test plans" />
+                            <InputSelect @bind-Value="projectFilter" class="cda-input">
+                                <option value="">All projects</option>
+                                @foreach (var project in projects.OrderBy(item => item.Name))
+                                {
+                                    <option value="@project.Id.ToString()">@project.Name</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="phaseFilter" class="cda-input">
+                                <option value="">All phases</option>
+                                @foreach (var phase in plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
+                                {
+                                    <option value="@phase">@phase</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="resultFilter" class="cda-input">
+                                <option value="">All latest results</option>
+                                @foreach (var status in Enum.GetValues<TestCaseStatus>())
+                                {
+                                    <option value="@status.ToString()">@status</option>
+                                }
+                            </InputSelect>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+
+            <ListContent>
+                @if (FilteredPlans.Count == 0)
+                {
+                    <EmptyState Eyebrow="No plans"
+                                Title="Create the first test plan"
+                                Description="Plans appear here after they have been saved with coverage, evidence, and run data.">
+                        <Actions>
+                            <Button Text="New test plan" Click="CreateNewAsync" />
+                        </Actions>
+                    </EmptyState>
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var plan in FilteredPlans)
+                        {
+                            <SelectionListItem Title="@plan.Title"
+                                               Eyebrow="@plan.Phase"
+                                               Meta="@BuildPlanMeta(plan)"
+                                               Summary="@BuildPlanSummary(plan)"
+                                               IsSelected="@(editor.Id == plan.Id)"
+                                               OnSelect="@(() => EditAsync(plan.Id))">
+                                <Status>
+                                    <StatusBadge Tone="@ResolveStatusTone(plan.LatestResult)" Text="@(plan.LatestResult?.ToString() ?? "No run")" />
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </Stack>
+                }
+            </ListContent>
+
+            <DetailHeader>
+                <Stack GapScale="LayoutGap.Medium">
+                    <Split Gap="LayoutGap.Medium">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Plan editor</p>
+                            <h2 class="text-xl font-semibold text-slate-950">@EditorTitle</h2>
+                            <p class="text-sm leading-6 text-slate-600">Coverage, cases, evidence, and run history stay in one detail pane with predictable sections.</p>
+                        </Stack>
+                        <Cluster Gap="LayoutGap.Small">
+                            <StatusBadge Tone="info" Text="@($"{editor.Cases.Count} case(s)")" />
+                            <StatusBadge Tone="neutral" Text="@($"{editor.Evidence.Count} evidence")" />
+                            <StatusBadge Tone="@ResolveStatusTone(LatestRunResult)" Text="@(LatestRunResult?.ToString() ?? "No run")" />
+                        </Cluster>
+                    </Split>
+
+                    <SecondaryTabs Items="DetailTabs" SelectedKey="@detailTab" SelectedKeyChanged="HandleDetailTabChanged" />
+                </Stack>
+            </DetailHeader>
+
+            <DetailContent>
+                <EditForm Model="editor" OnValidSubmit="SaveAsync">
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                        @if (string.Equals(detailTab, "overview", StringComparison.Ordinal))
+                        {
+                            <FormSection Title="Plan overview" Description="Anchor the plan to the correct project and phase before editing cases and evidence.">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <div>
+                                        <label class="cda-field-label">Project</label>
+                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
+                                            <option value="">None</option>
+                                            @foreach (var project in projects)
+                                            {
+                                                <option value="@project.Id">@project.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Phase</label>
+                                        <InputText @bind-Value="editor.Phase" class="cda-input" />
+                                    </div>
+                                </Grid>
+
+                                <div class="max-w-xl">
+                                    <label class="cda-field-label">Responsible party</label>
+                                    <InputSelect @bind-Value="editor.ResponsiblePartyId" class="cda-input" data-testid="testlab-responsible-party-select">
+                                        <option value="">None</option>
+                                        @foreach (var option in responsiblePartyOptions)
+                                        {
+                                            <option value="@option.PartyId">@option.DisplayName</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">Title</label>
+                                        <InputText @bind-Value="editor.Title" class="cda-input" data-testid="testlab-title-input" />
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">Coverage goal</label>
+                                    <InputTextArea @bind-Value="editor.CoverageGoal" class="cda-input cda-input--textarea min-h-24" />
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">Playwright spec path</label>
+                                    <InputText @bind-Value="editor.PlaywrightSpecPath" class="cda-input" />
+                                </div>
+                            </FormSection>
+                        }
+                        else if (string.Equals(detailTab, "cases", StringComparison.Ordinal))
+                        {
+                            <FormSection Title="Test cases" Description="Track which scenarios are planned, implemented, blocked, or already passing."
+                                         Actions="CaseActions">
+                                @if (editor.Cases.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No cases"
+                                                Title="Add the first case"
+                                                Description="Use cases to capture the stories or features the plan needs to cover." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var testCase in editor.Cases)
+                                        {
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
+                                                <InputText @bind-Value="testCase.Name" class="cda-input" />
+                                                <InputText @bind-Value="testCase.StoryOrFeature" class="cda-input" />
+                                                <InputSelect @bind-Value="testCase.Status" class="cda-input">
+                                                    @foreach (var status in Enum.GetValues<TestCaseStatus>())
+                                                    {
+                                                        <option value="@status">@status</option>
+                                                    }
+                                                </InputSelect>
+                                                <InputText @bind-Value="testCase.Notes" class="cda-input" />
+                                            </Grid>
+                                        }
+                                    </Stack>
+                                }
+                            </FormSection>
+                        }
+                        else if (string.Equals(detailTab, "evidence", StringComparison.Ordinal))
+                        {
+                            <FormSection Title="Evidence" Description="Store screenshot paths, artifact references, and notes alongside the plan."
+                                         Actions="EvidenceActions">
+                                @if (editor.Evidence.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No evidence"
+                                                Title="Add the first evidence record"
+                                                Description="Evidence records keep screenshots, logs, or other artifacts tied to the plan." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var evidence in editor.Evidence)
+                                        {
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
+                                                <InputText @bind-Value="evidence.EvidenceLabel" class="cda-input" />
+                                                <InputText @bind-Value="evidence.ArtifactPath" class="cda-input" />
+                                                <InputText @bind-Value="evidence.EvidenceKind" class="cda-input" />
+                                                <InputText @bind-Value="evidence.Notes" class="cda-input" />
+                                            </Grid>
+                                        }
+                                    </Stack>
+                                }
+                            </FormSection>
+                        }
+                        else
+                        {
+                            <FormSection Title="Execution runs" Description="Keep the latest run results and notes inside the same plan instead of a separate tracker."
+                                         Actions="RunActions">
+                                @if (editor.Runs.Count == 0)
+                                {
+                                    <EmptyState Eyebrow="No runs"
+                                                Title="Record the first run"
+                                                Description="Run history appears here after at least one execution record has been added." />
+                                }
+                                else
+                                {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var run in editor.Runs)
+                                        {
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
+                                                <InputDate @bind-Value="run.ExecutedAtUtc" class="cda-input" />
+                                                <InputText @bind-Value="run.Runner" class="cda-input" />
+                                                <InputSelect @bind-Value="run.Result" class="cda-input">
+                                                    @foreach (var status in Enum.GetValues<TestCaseStatus>())
+                                                    {
+                                                        <option value="@status">@status</option>
+                                                    }
+                                                </InputSelect>
+                                                <InputText @bind-Value="run.Summary" class="cda-input" />
+                                            </Grid>
+                                        }
+                                    </Stack>
+                                }
+                            </FormSection>
+                        }
+
+                        <StickyActionFooter StatusLabel="Plan save state">
+                            <SecondaryActions>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
+                            </SecondaryActions>
+                            <PrimaryActions>
+                                <Button Text="Save plan" Type="submit" data-testid="testlab-save-button" />
+                            </PrimaryActions>
+                        </StickyActionFooter>
+                    </Stack>
+                </EditForm>
+            </DetailContent>
+        </ListDetailShell>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [SupplyParameterFromQuery(Name = "planId")]
+    public Guid? PlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public Guid? ProjectIdQuery { get; set; }
+
+    private IReadOnlyList<ProjectSummary> projects = [];
+    private IReadOnlyList<TestPlanSummary> plans = [];
+    private IReadOnlyList<ProjectPartyOption> responsiblePartyOptions = [];
+    private TestPlanEditorModel editor = new();
+    private string planSearch = string.Empty;
+    private string projectFilter = string.Empty;
+    private string phaseFilter = string.Empty;
+    private string resultFilter = string.Empty;
+    private string detailTab = "overview";
+
+    private IReadOnlyList<TestPlanSummary> FilteredPlans => plans
+        .Where(plan =>
+            (string.IsNullOrWhiteSpace(planSearch) ||
+             plan.Title.Contains(planSearch, StringComparison.OrdinalIgnoreCase) ||
+             plan.Phase.Contains(planSearch, StringComparison.OrdinalIgnoreCase) ||
+             ResolveProjectName(plan.ProjectId).Contains(planSearch, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(projectFilter) || string.Equals(plan.ProjectId?.ToString(), projectFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(phaseFilter) || string.Equals(plan.Phase, phaseFilter, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(resultFilter) ||
+             string.Equals(plan.LatestResult?.ToString(), resultFilter, StringComparison.OrdinalIgnoreCase)))
+        .OrderByDescending(plan => plan.UpdatedAtUtc)
+        .ToList();
+
+    private IReadOnlyList<SecondaryTabItem> DetailTabs =>
+    [
+        new("overview", "Overview"),
+        new("cases", "Cases", editor.Cases.Count.ToString()),
+        new("evidence", "Evidence", editor.Evidence.Count.ToString()),
+        new("runs", "Runs", editor.Runs.Count.ToString())
+    ];
+
+    private string EditorTitle => string.IsNullOrWhiteSpace(editor.Title) ? "New test plan" : editor.Title;
+
+    private TestCaseStatus? LatestRunResult => editor.Runs.OrderByDescending(run => run.ExecutedAtUtc).FirstOrDefault()?.Result;
+
+    private RenderFragment CaseActions => @<Button Text="Add case" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddCaseAsync" />;
+
+    private RenderFragment EvidenceActions => @<Button Text="Add evidence" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddEvidenceAsync" />;
+
+    private RenderFragment RunActions => @<Button Text="Add run" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddRunAsync" />;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync(PlanIdQuery, ProjectIdQuery);
+
+    private async Task LoadAsync(Guid? planId = null, Guid? projectId = null)
+    {
+        projects = await ProjectsService.ListAsync();
+        plans = await TestLabService.ListAsync();
+        editor = planId.HasValue ? await TestLabService.GetAsync(planId.Value) : new TestPlanEditorModel { ProjectId = projectId };
+        await LoadResponsiblePartyOptionsAsync();
+        detailTab = "overview";
+    }
+
+    private async Task CreateNewAsync()
+    {
+        editor = new TestPlanEditorModel { ProjectId = ProjectIdQuery };
+        detailTab = "overview";
+        await LoadResponsiblePartyOptionsAsync();
+    }
+
+    private async Task EditAsync(Guid id)
+    {
+        editor = await TestLabService.GetAsync(id);
+        await LoadResponsiblePartyOptionsAsync();
+        detailTab = "overview";
+    }
+
+    private Task AddCaseAsync()
+    {
+        editor.Cases.Add(new TestCaseEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private Task AddEvidenceAsync()
+    {
+        editor.Evidence.Add(new TestEvidenceEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private Task AddRunAsync()
+    {
+        editor.Runs.Add(new TestRunEditorModel());
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            var result = await TestLabService.SaveAsync(editor);
+            plans = await TestLabService.ListAsync();
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning("Test plan was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+
+            editor = await TestLabService.GetAsync(result.Value);
+            NotificationService.Success("Test plan saved", "Test plan saved.");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Test plan save failed", exception.Message);
+        }
+    }
+
+    private Task HandleDetailTabChanged(string key)
+    {
+        detailTab = key;
+        return Task.CompletedTask;
+    }
+
+    private void ResetFilters()
+    {
+        planSearch = string.Empty;
+        projectFilter = string.Empty;
+        phaseFilter = string.Empty;
+        resultFilter = string.Empty;
+    }
+
+    private string BuildPlanMeta(TestPlanSummary plan)
+        => $"{ResolveProjectName(plan.ProjectId)} / {plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)";
+
+    private static string BuildPlanSummary(TestPlanSummary plan) => $"Updated {plan.UpdatedAtUtc.LocalDateTime:g}";
+
+    private string ResolveProjectName(Guid? projectId)
+        => projectId.HasValue
+            ? projects.FirstOrDefault(project => project.Id == projectId.Value)?.Name ?? "No project"
+            : "No project";
+
+    private async Task LoadResponsiblePartyOptionsAsync()
+    {
+        responsiblePartyOptions = editor.ProjectId.HasValue
+            ? await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(editor.ProjectId.Value)
+            : [];
+
+        if (editor.ResponsiblePartyId.HasValue && responsiblePartyOptions.All(option => option.PartyId != editor.ResponsiblePartyId.Value))
+        {
+            var responsibleParty = await ProjectPartyIntegrationBridge.GetPartyOptionAsync(editor.ResponsiblePartyId.Value);
+            if (responsibleParty is not null)
+            {
+                responsiblePartyOptions = responsiblePartyOptions.Append(responsibleParty)
+                    .DistinctBy(option => option.PartyId)
+                    .OrderBy(option => option.DisplayName)
+                    .ToList();
+            }
+        }
+    }
+
+    private static string ResolveStatusTone(TestCaseStatus? status) => status switch
+    {
+        TestCaseStatus.Passed => "success",
+        TestCaseStatus.Failed => "danger",
+        TestCaseStatus.Blocked => "warning",
+        TestCaseStatus.Implemented => "info",
+        _ => "neutral"
+    };
+}
+
+

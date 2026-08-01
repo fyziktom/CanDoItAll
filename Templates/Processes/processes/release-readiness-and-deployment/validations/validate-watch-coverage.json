@@ -1,0 +1,15 @@
+{
+  "Kind": "validation-resource",
+  "Key": "validate-watch-coverage",
+  "DisplayName": "Validate cutover watch coverage",
+  "Scope": "local",
+  "ProcessKey": "release-readiness-and-deployment",
+  "Severity": "high",
+  "OwnerRoleKey": "change-manager",
+  "Gate": "deployment",
+  "Summary": "Confirms the first live risk window has real staffed monitoring and decision coverage.",
+  "PassCriteria": "Named watchers, approvers, and escalation paths cover the critical deployment horizon.",
+  "FailCriteria": "Deployment depends on unstated availability or placeholder coverage.",
+  "EscalationRule": "Escalate to release approver and service owner before go-live.",
+  "DocPath": "processes/release-readiness-and-deployment/validations/validate-watch-coverage.md"
+}

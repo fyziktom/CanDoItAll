@@ -1,0 +1,342 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-runtime-command-writeback",
+  "DisplayName": ".NET runtime command project-structure writeback",
+  "Summary": "Creates durable runtime-capable Run app and Run tests project-structure nodes under the current process run node.",
+  "ValueStatement": "Makes local run and validation commands runnable from project structure for QA, screenshots, release handoff, and future process replay.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Delivery governance",
+  "InterfaceContractSummary": "Parent process supplies project structure context, upstream artifacts, current run identity, and target repository boundary; this subprocess returns durable managed artifacts and project-structure writeback receipts where applicable.",
+  "GovernanceNotes": "Every step declares explicit operations and target scope so role permissions remain bounded and product mutation cannot leak into planning, review, validation, screenshot, or writeback work.",
+  "ChangeSummary": "Adds .NET-specific delivery subprocess coverage for multi-team software delivery hardening.",
+  "GovernancePolicySummary": "No subprocess may silently change product files unless its step explicitly allows product target mutation.",
+  "ConstitutionRuleSummary": "Typed process artifacts, subprocess relationships, and project-structure nodes are the source of truth for delivery replay.",
+  "OperatingModeSummary": "Governed live execution inside a parent software-delivery run.",
+  "SimulationReadinessSummary": "Small enough for deterministic process projection and rich enough for live run validation.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [
+    "scope-boundary-packet",
+    "project-structure-context-brief",
+    "architecture-decision-record",
+    "implementation-change-set",
+    "test-evidence-pack",
+    "regression-evidence-pack",
+    "implementation-plan"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Share of completed runs with Run command, Run app, and Run tests nodes present.",
+    "Number of screenshot or QA reruns that can reuse recorded commands without chat recovery."
+  ],
+  "Risks": [
+    "Commands are stored only in chat and cannot be replayed.",
+    "Run app is omitted for non-runnable targets instead of carrying an explicit not-applicable reason.",
+    "Project-structure writes are attempted by an implementation role."
+  ],
+  "TailoringRules": [
+    "For backend API/service apps, Run app should start the API/service and name the health or smoke URL when known.",
+    "For Blazor SSR, Blazor WebAssembly, and Blazor WASM PWA, Run app must support browser screenshot capture.",
+    "For libraries, create Run app with a not-applicable reason and Run tests with the smallest reliable test command."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "runtime-command-recorder",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Runtime command recorder",
+      "Purpose": "Resolve and write runtime command nodes for the current process run.",
+      "StaffingIntent": "Manager-capable agent with project-structure write access.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 60,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "qa-command-reviewer",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Runtime command reviewer",
+      "Purpose": "Confirm command nodes are useful for validation and screenshot reruns.",
+      "StaffingIntent": "QA reviewer with .NET command and runtime proof experience.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 30,
+      "CanvasX": 900,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "resolve-dotnet-run-commands",
+      "Title": "Resolve .NET run and test commands",
+      "Subtitle": "Run app and run tests",
+      "Notes": "Read current project structure, architecture handoff, implementation evidence, and QA proof to determine the product root, app type, runtime project, test project, working directory, environment variables, ports, and stop behavior. Treat the step brief Process run id, Managed artifact root, CurrentProcessRunId, CurrentProcessRunNodeId, CurrentManagedArtifactRoot, ParentProcessRunId, ProcessRunNodeId, ParentProcessRunNodeId, and TargetProcessRunNodeId as typed launch context: Current* identifies this subprocess and ProcessRunNodeId/ParentProcessRunNodeId/TargetProcessRunNodeId identify the parent process-run node that will receive durable Run command nodes. Produce a manifest with planned runtime-capable project-structure node payloads for Run app and Run tests. Run app must plan an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the app is runnable. Run tests, build, and utility commands must plan a Script node with subtype console or powershell and script metadata for command, arguments, and working directory. Do not plan runnable commands as ProjectBlock + delivery nodes. Do not call project-structure mutation tools in this resolve step. If the delivery target is a class library or otherwise non-runnable, the planned Run app payload must still carry a not-applicable reason rather than being omitted. Do not block only because the parent process-run node is projection-backed or not returned by a direct persisted-node read; record the target node id from launch variables and let the writeback step verify or create durable project-structure receipts.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Architecture handoff, implementation evidence, QA evidence, and project-structure run node context.",
+      "OutputContractSummary": "Typed manifest for planned runtime-capable Run app and Run tests project-structure node payloads.",
+      "EvidenceContractSummary": "App type, command strings, working directories, ports, environment notes, and no-run-app rationale when applicable.",
+      "DecisionRightsSummary": "Recorder may block when commands cannot be resolved from current run evidence.",
+      "ExceptionPolicySummary": "Block on missing product root, missing test command, contradictory runtime target, or no target process-run node id in ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId. Do not block in this resolve step solely because a process-run node is projection-backed or unreadable through one project-structure read path.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "runtime-command-recorder",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can write process-run project nodes."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "dotnet-run-command-manifest",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET run command manifest",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by screenshot capture, QA reruns, release handoff, and future process-run replay.",
+          "ValidationRequirementSummary": "Must include target process-run node id, current subprocess run id, current subprocess managed artifact root, product root, app type, planned Run command parent title, planned Run app title and command or not-applicable reason, planned Run tests title and command, working directories, environment/port notes, stop/cleanup guidance, and confirmation that no project-structure mutation was attempted in this resolve step."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/resolve-dotnet-run-commands.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/resolve-dotnet-run-commands.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "write-run-command-nodes",
+      "Title": "Write Run command project nodes",
+      "Subtitle": "Process-run runtime receipts",
+      "Notes": "Create or reuse an organizational runtime command group under the current process run node, then create or update child nodes Run app and Run tests as runtime-capable project-structure nodes. Prefer ProcessRunNodeId, ParentProcessRunNodeId, or TargetProcessRunNodeId from launch variables as the parent node id; do not fall back to ProjectNodeId or project root when one of those process-run nodes is present in project structure. If a grouping node is needed, use a non-runnable operations organizer such as ProjectBlock + operations; do not create a ProjectBlock + delivery node named like a runnable command. Run app must be an Environment node with subtype dotnet-runtime, dotnet-watch, or dotnet-release when the target is runnable, with metadata.environment.projectPath populated as an absolute project file/folder path or paired with metadata.environment.workingDirectory when projectPath is relative. Include launch profile, protocol, and localhost URL when known. Run tests, build, and utility commands must be Script nodes with subtype console or powershell, with script metadata for command, arguments, and working directory. Put runtime metadata in the metadataJson string passed to project_structure_node_create, not only in node notes: Run app uses {\"environment\":{\"projectPath\":\"<project-or-folder-path>\",\"workingDirectory\":\"<working-directory>\",\"arguments\":\"<optional-dotnet-arguments>\",\"launchProfile\":\"<optional-profile>\",\"protocol\":\"<optional-http-or-https>\",\"applicationUrl\":\"<optional-localhost-url>\"}}; Run tests uses {\"script\":{\"command\":\"dotnet\",\"arguments\":\"test <solution-or-project>\",\"workingDirectory\":\"<working-directory>\"}}. Do not create runnable command nodes as ProjectBlock + delivery or any other delivery block. You must call project_structure_node_create for the durable runtime command writeback and then project_structure_read to read back the created or reused Run app and Run tests nodes before completing this step; do not return Completed with only intended node payloads, created node ids, placeholder node ids, verified-with-project_structure_read text, or pending writeback receipt text. Each child node must include command, working directory, app type, source evidence, and any required environment or cleanup notes. After writing each runnable node, read back the node metadata with project_structure_read and record a launcher-compatibility receipt: object type, subtype, project path or command, arguments, working directory, and whether ProjectStructureRuntimeLauncher.Resolve can create a launch plan. Write the required receipt artifact for this step at artifacts/process-runs/<current-process-run-id>/steps/run-command-node-receipts.md; do not use runtime-command-handoff.md for this step because the handoff belongs to the downstream runtime-command-handoff step. If a runnable Run app or Run tests node cannot be made launcher-compatible, return Blocked with the missing field and why instead of returning Completed with a non-working node. Use project-structure write tools only through this externally controlled step; do not mutate product files.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "runtime-command-node-create",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_node_create",
+            "Activation": "Always",
+            "Purpose": "AcceptanceProof",
+            "Reason": "Runtime command writeback must create or update launcher-compatible command nodes."
+          },
+          {
+            "Key": "runtime-command-node-readback",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_read",
+            "Activation": "Always",
+            "Purpose": "AcceptanceProof",
+            "Reason": "Runtime command writeback must read back launcher metadata before completion."
+          }
+        ]
+      },
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": ".NET run command manifest and current process run project-structure node.",
+      "OutputContractSummary": "Runtime-capable Run app and Run tests nodes under the process run node, plus a grouping node only when needed for organization.",
+      "EvidenceContractSummary": "Project-structure write/read receipts, node ids, commands, launcher-compatibility receipts, and unresolved blockers written to steps/run-command-node-receipts.md.",
+      "DecisionRightsSummary": "Recorder can complete only after durable project-structure receipts exist.",
+      "ExceptionPolicySummary": "Artifact recovery: block when required Run command node receipts are missing, invalid, or not materialized before branch routing. Block with exact missing tool or failed write receipt if project-structure nodes cannot be created.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "resolve-dotnet-run-commands",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "runtime-command-recorder",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-dotnet-run-commands",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "runtime-command-recorder",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Runtime command writeback remains with the delivery manager role, not implementation."
+        },
+        {
+          "RoleKey": "qa-command-reviewer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "QA reviews command usefulness without writing product files."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "run-command-node-receipts",
+          "TemplateKey": "implementation-plan",
+          "Title": "Run command project-structure node receipts",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by screenshots, QA reruns, release, and later delivery replay.",
+          "ValidationRequirementSummary": "Must include Run command parent node id, Run app child node id, Run tests child node id, project id, process run node id, commands, working directories, write and read receipt ids, launcher-compatibility receipts from typed metadata, blocker status, and the exact artifact path steps/run-command-node-receipts.md."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "dotnet-run-command-manifest",
+          "SourceStepKey": "resolve-dotnet-run-commands"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/write-run-command-nodes.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/write-run-command-nodes.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 2,
+      "Key": "runtime-command-handoff",
+      "Title": "Hand off runtime command nodes",
+      "Subtitle": "Run command evidence index",
+      "Notes": "Summarize the Run command parent, Run app node, Run tests node, command values, command applicability, launcher-compatibility receipts, and any unresolved blockers for parent release approval and screenshot capture. This step writes managed artifacts only. If a runnable command node was not launcher-compatible, the handoff must state what field or tool access is missing and why the parent should request repair instead of treating the node as accepted runtime proof.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Run command node receipts and command manifest.",
+      "OutputContractSummary": "Parent-ready runtime command handoff.",
+      "EvidenceContractSummary": "Node ids, commands, command applicability, launcher-compatibility receipts, and blockers.",
+      "DecisionRightsSummary": "Delivery manager may close only when Run app and Run tests node status is explicit.",
+      "ExceptionPolicySummary": "Do not close without receipts for Run command, Run app, and Run tests nodes.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "write-run-command-nodes",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "write-run-command-nodes",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "runtime-command-recorder",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager owns the parent-ready command handoff."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "runtime-command-handoff",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET runtime command handoff",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent release approval and later run analysis.",
+          "ValidationRequirementSummary": "Must reference the Run command parent node, Run app node, Run tests node, command manifest, storage receipts, launcher-compatibility receipts, and unresolved blockers or not-applicable reasons."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "run-command-node-receipts",
+          "SourceStepKey": "write-run-command-nodes"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/runtime-command-handoff.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-runtime-command-writeback/steps/runtime-command-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+@page "/prompt-gallery"
+@implements IDisposable
+@inject IPromptGalleryCuratorLauncher CuratorLauncher
+@inject NotificationService Notifications
+
+<PageTitle>Prompt Gallery</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Shared prompt library"
+                    Title="Prompt gallery"
+                    Description="Browse, filter, version, and maintain the canonical prompts and prompt parts reused by workflows, agents, processes, roles, and chat."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="search" Value="Paged" TooltipText="Search is delegated to the active Gallery search driver." Tone="info" />
+                <CompactStat Label="versions" Value="Immutable" TooltipText="Final versions remain stable when a draft changes." Tone="success" />
+                <CompactStat Label="projection" Value="Optional" TooltipText="A projection driver can replace standard database search without changing Gallery consumers." />
+            </Stats>
+            <Actions>
+                @if (CuratorLauncher.IsAvailable)
+                {
+                    <AgentAvatarActionButton AgentName="@CuratorDisplayName"
+                                             AvatarImageUrl="@curatorPresentation?.AvatarImageUrl"
+                                             FallbackText="PC"
+                                             Label="@($"Open {CuratorDisplayName}")"
+                                             Click="OpenCuratorAsync"
+                                             Disabled="@(isOpeningCurator || isLoadingCuratorPresentation)"
+                                             TestId="prompt-gallery-prompts-curator-open"
+                                             TooltipTestId="prompt-gallery-prompts-curator-tooltip" />
+                }
+                <PageHeaderActionButton Icon="add"
+                                        Label="New item"
+                                        TooltipText="Create a reusable prompt or prompt part."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="CreateNewAsync" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <PromptGallerySearchList @key="listKey"
+                                 PageSize="25"
+                                 Compact="false"
+                                 AllowEdit="true"
+                                 ShowSelectAction="false"
+                                 EditRequested="OpenEditorAsync" />
+    </ChildContent>
+</PageScaffold>
+
+<Dialog IsOpen="@editorOpen"
+        Eyebrow="Prompt gallery"
+        Title="@EditorTitle"
+        Subtitle="Edit canonical content and portable model recommendations."
+        Size="ModalSize.Full"
+        DenseChrome="true"
+        CloseOnBackdrop="false"
+        TestId="prompt-gallery-editor-dialog"
+        OnClose="CloseEditorAsync">
+    <ChildContent>
+        <PromptGalleryItemEditor ItemId="@selectedItemId"
+                                 Saved="HandleSavedAsync"
+                                 Cancelled="CloseEditorAsync" />
+    </ChildContent>
+</Dialog>
+
+@code {
+    private Guid listKey = Guid.NewGuid();
+    private Guid? selectedItemId;
+    private Guid? openedQueryItemId;
+    private bool editorDirty;
+    private bool editorOpen;
+    private bool isOpeningCurator;
+    private bool isLoadingCuratorPresentation;
+    private PromptGalleryCuratorPresentation? curatorPresentation;
+    private IPromptGalleryCuratorContextLease? curatorContextLease;
+
+    [SupplyParameterFromQuery(Name = "promptId")]
+    public Guid? PromptIdQuery { get; set; }
+
+    private string EditorTitle => selectedItemId.HasValue ? "Edit Gallery item" : "New Gallery item";
+
+    private string CuratorDisplayName => curatorPresentation?.Name ?? "Prompts Curator Agent";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CuratorLauncher.IsAvailable)
+        {
+            curatorContextLease ??= CuratorLauncher.ActivateContext();
+            curatorContextLease.SynchronizeNavigation();
+
+            await LoadCuratorPresentationAsync();
+        }
+
+        if (!PromptIdQuery.HasValue || openedQueryItemId == PromptIdQuery)
+        {
+            return;
+        }
+
+        openedQueryItemId = PromptIdQuery;
+        selectedItemId = PromptIdQuery;
+        editorDirty = false;
+        editorOpen = true;
+    }
+
+    private Task CreateNewAsync()
+    {
+        selectedItemId = null;
+        editorDirty = false;
+        editorOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task OpenEditorAsync(Guid itemId)
+    {
+        selectedItemId = itemId;
+        editorDirty = false;
+        editorOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenCuratorAsync()
+    {
+        if (isOpeningCurator || isLoadingCuratorPresentation || !CuratorLauncher.IsAvailable)
+        {
+            return;
+        }
+
+        isOpeningCurator = true;
+        try
+        {
+            await LoadCuratorPresentationAsync();
+            if (curatorPresentation is null)
+            {
+                return;
+            }
+
+            await CuratorLauncher.OpenAsync();
+            Notifications.Success("Chat ready", "Opened a new chat with Prompts Curator Agent.");
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Unable to open Prompts Curator", exception.Message);
+        }
+        finally
+        {
+            isOpeningCurator = false;
+        }
+    }
+
+    private async Task LoadCuratorPresentationAsync()
+    {
+        if (curatorPresentation is not null || isLoadingCuratorPresentation)
+        {
+            return;
+        }
+
+        isLoadingCuratorPresentation = true;
+        try
+        {
+            curatorPresentation = await CuratorLauncher.GetPresentationAsync();
+        }
+        catch (Exception exception)
+        {
+            Notifications.Error("Unable to load Prompts Curator", exception.Message);
+        }
+        finally
+        {
+            isLoadingCuratorPresentation = false;
+        }
+    }
+
+    private Task HandleSavedAsync(Guid itemId)
+    {
+        selectedItemId = itemId;
+        editorDirty = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseEditorAsync()
+    {
+        editorOpen = false;
+        selectedItemId = null;
+        if (editorDirty)
+        {
+            listKey = Guid.NewGuid();
+            editorDirty = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        curatorContextLease?.Dispose();
+        curatorContextLease = null;
+    }
+}

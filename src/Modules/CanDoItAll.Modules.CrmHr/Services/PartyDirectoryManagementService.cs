@@ -1,0 +1,1990 @@
+using System.Text;
+using System.Text.Json;
+using System.Linq.Expressions;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
+
+namespace CanDoItAll.Modules.CrmHr;
+
+public sealed class PartyDirectoryManagementService(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IClock clock,
+    PartyDirectoryService partyDirectoryService)
+{
+    private const string PartyNotFoundErrorCode = "crmhr.party.not-found";
+    private const string RelationshipInvalidErrorCode = "crmhr.party.relationship-invalid";
+    private const string RelationshipDuplicateErrorCode = "crmhr.party.relationship-duplicate";
+    private const string RelationshipPartyNotFoundErrorCode = "crmhr.party.relationship-party-not-found";
+    private const int MaximumCsvContentLength = 1_000_000;
+    private const int MaximumPreviewRowCount = 250;
+    private const int MaximumDuplicateCandidatesPerRow = 20;
+    private const int MaximumPreviewDuplicateCandidates = MaximumPreviewRowCount * MaximumDuplicateCandidatesPerRow;
+
+    private static readonly string[] ExportColumns =
+    [
+        "DisplayName",
+        "PartyType",
+        "LifecycleStatus",
+        "ExternalCode",
+        "LegalName",
+        "PreferredName",
+        "Summary",
+        "Tags",
+        "Region",
+        "CountryCode",
+        "TimeZone",
+        "IsSensitive",
+        "Roles",
+        "ContactPoints",
+        "Addresses"
+    ];
+
+    public async Task<IReadOnlyList<PartyRelationshipListItemModel>> ListRelationshipsAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var relationships = await dbContext.Set<PartyRelationship>()
+            .Where(item => item.SourcePartyId == partyId || item.TargetPartyId == partyId)
+            .ToListAsync(cancellationToken);
+
+        var endpointPartyIds = relationships
+            .SelectMany(item => new[] { item.SourcePartyId, item.TargetPartyId })
+            .Distinct()
+            .ToList();
+
+        var partiesById = await dbContext.Set<Party>()
+            .Where(item => endpointPartyIds.Contains(item.Id))
+            .Select(item => new { item.Id, item.DisplayName, item.PartyType })
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        foreach (var relationship in relationships)
+        {
+            var missingPartyIds = new[] { relationship.SourcePartyId, relationship.TargetPartyId }
+                .Where(endpointPartyId => !partiesById.ContainsKey(endpointPartyId))
+                .ToArray();
+            if (missingPartyIds.Length == 0)
+            {
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"Party relationship '{relationship.Id}' references missing party record(s): {string.Join(", ", missingPartyIds.Select(id => id.ToString("D")))}.");
+        }
+
+        return relationships
+            .Select(item =>
+            {
+                var isOutgoing = item.SourcePartyId == partyId;
+                var relatedPartyId = isOutgoing ? item.TargetPartyId : item.SourcePartyId;
+                var relatedParty = partiesById[relatedPartyId];
+
+                return new PartyRelationshipListItemModel(
+                    item.Id,
+                    relatedPartyId,
+                    relatedParty.DisplayName,
+                    relatedParty.PartyType,
+                    item.RelationshipKind,
+                    isOutgoing,
+                    item.IsPrimary,
+                    item.StartDateUtc,
+                    item.EndDateUtc,
+                    item.Notes);
+            })
+            .OrderBy(item => item.RelatedPartyDisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.RelationshipKind)
+            .ThenBy(item => item.RelatedPartyId)
+            .ThenBy(item => item.Id)
+            .ToList();
+    }
+
+    public async Task<Result> SaveRelationshipsAsync(
+        Guid partyId,
+        IReadOnlyList<PartyRelationshipEditorModel> relationships,
+        string actor,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(relationships);
+
+        var invalidRelationships = relationships
+            .Where(item => item.RelatedPartyId == Guid.Empty || item.RelatedPartyId == partyId)
+            .ToList();
+        if (invalidRelationships.Count > 0)
+        {
+            return Result.Failure(Error.Validation(
+                "Relationships must target another saved party.",
+                RelationshipInvalidErrorCode));
+        }
+
+        var preparedRelationships = relationships
+            .Select(relationship =>
+            {
+                var sourcePartyId = relationship.IsOutgoing ? partyId : relationship.RelatedPartyId;
+                var targetPartyId = relationship.IsOutgoing ? relationship.RelatedPartyId : partyId;
+                return (Relationship: relationship, SourcePartyId: sourcePartyId, TargetPartyId: targetPartyId);
+            })
+            .ToList();
+        var relationshipIdentities =
+            new HashSet<(Guid SourcePartyId, Guid TargetPartyId, PartyRelationshipKind RelationshipKind)>();
+        foreach (var preparedRelationship in preparedRelationships)
+        {
+            var identity = (
+                preparedRelationship.SourcePartyId,
+                preparedRelationship.TargetPartyId,
+                preparedRelationship.Relationship.RelationshipKind);
+            if (relationshipIdentities.Add(identity))
+            {
+                continue;
+            }
+
+            return Result.Failure(Error.Validation(
+                "Duplicate relationships with the same source, target, and kind are not allowed.",
+                RelationshipDuplicateErrorCode));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var requiredPartyIds = preparedRelationships
+            .Select(item => item.Relationship.RelatedPartyId)
+            .Append(partyId)
+            .Distinct()
+            .ToArray();
+        var existingPartyIds = await dbContext.Set<Party>()
+            .Where(item => requiredPartyIds.Contains(item.Id))
+            .Select(item => item.Id)
+            .ToHashSetAsync(cancellationToken);
+        if (!existingPartyIds.Contains(partyId))
+        {
+            return Result.Failure(Error.Failure("The selected party was not found.", PartyNotFoundErrorCode));
+        }
+
+        var missingRelatedPartyIds = preparedRelationships
+            .Select(item => item.Relationship.RelatedPartyId)
+            .Distinct()
+            .Where(relatedPartyId => !existingPartyIds.Contains(relatedPartyId))
+            .OrderBy(relatedPartyId => relatedPartyId)
+            .ToList();
+        if (missingRelatedPartyIds.Count > 0)
+        {
+            return Result.Failure(Error.Validation(
+                $"One or more related parties were not found: {string.Join(", ", missingRelatedPartyIds.Select(id => id.ToString("D")))}.",
+                RelationshipPartyNotFoundErrorCode));
+        }
+
+        var existingRelationships = await dbContext.Set<PartyRelationship>()
+            .Where(item => item.SourcePartyId == partyId || item.TargetPartyId == partyId)
+            .ToListAsync(cancellationToken);
+        dbContext.Set<PartyRelationship>().RemoveRange(existingRelationships);
+
+        foreach (var preparedRelationship in preparedRelationships)
+        {
+            var relationship = preparedRelationship.Relationship;
+
+            dbContext.Set<PartyRelationship>().Add(new PartyRelationship
+            {
+                Id = relationship.Id ?? Guid.NewGuid(),
+                SourcePartyId = preparedRelationship.SourcePartyId,
+                TargetPartyId = preparedRelationship.TargetPartyId,
+                RelationshipKind = relationship.RelationshipKind,
+                IsPrimary = relationship.IsPrimary,
+                StartDateUtc = relationship.StartDateUtc,
+                EndDateUtc = relationship.EndDateUtc,
+                Notes = relationship.Notes.Trim()
+            });
+        }
+
+        dbContext.Set<CrmHrAuditEntry>().Add(new CrmHrAuditEntry
+        {
+            EntityType = nameof(Party),
+            EntityId = partyId,
+            Action = "RelationshipsSaved",
+            Summary = $"Saved {preparedRelationships.Count} relationship(s).",
+            DetailJson = JsonSerializer.Serialize(new { RelationshipCount = preparedRelationships.Count }),
+            Actor = ResolveActor(actor),
+            CreatedAtUtc = clock.GetUtcNow()
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<IReadOnlyList<PartyDuplicateCandidateModel>> FindPotentialDuplicatesAsync(
+        Guid partyId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var party = await dbContext.Set<Party>()
+            .Where(item => item.Id == partyId)
+            .Select(item => new
+            {
+                item.Id,
+                item.DisplayName,
+                item.LegalName,
+                item.PreferredName,
+                item.ExternalCode
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (party is null)
+        {
+            return [];
+        }
+
+        var contactValues = await dbContext.Set<PartyContactPoint>()
+            .Where(item => item.PartyId == partyId)
+            .Select(item => item.NormalizedValue)
+            .ToListAsync(cancellationToken);
+
+        return await FindPotentialDuplicatesCoreAsync(
+            dbContext,
+            party.DisplayName,
+            party.LegalName,
+            party.PreferredName,
+            party.ExternalCode,
+            contactValues,
+            party.Id,
+            cancellationToken);
+    }
+
+    public async Task<Result<PartyMergeSummaryModel>> MergePartyAsync(
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        string actor,
+        string? reason,
+        CancellationToken cancellationToken = default)
+    {
+        if (retainedPartyId == mergedPartyId)
+        {
+            return Result<PartyMergeSummaryModel>.Failure(Error.Validation(
+                "A party cannot be merged into itself.",
+                "crmhr.party.merge-same-party"));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        var parties = await dbContext.Set<Party>()
+            .Where(item => item.Id == retainedPartyId || item.Id == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        var retainedParty = parties.SingleOrDefault(item => item.Id == retainedPartyId);
+        var mergedParty = parties.SingleOrDefault(item => item.Id == mergedPartyId);
+        if (retainedParty is null || mergedParty is null)
+        {
+            return Result<PartyMergeSummaryModel>.Failure(Error.Failure(
+                "One or both selected parties were not found.",
+                "crmhr.party.merge-not-found"));
+        }
+
+        if (retainedParty.PartyType != mergedParty.PartyType)
+        {
+            return Result<PartyMergeSummaryModel>.Failure(Error.Validation(
+                "Only parties of the same type can be merged.",
+                "crmhr.party.merge-type-mismatch"));
+        }
+
+        retainedParty.DisplayName = PreferExisting(retainedParty.DisplayName, mergedParty.DisplayName);
+        retainedParty.LegalName = PreferExisting(retainedParty.LegalName, mergedParty.LegalName);
+        retainedParty.PreferredName = PreferExisting(retainedParty.PreferredName, mergedParty.PreferredName);
+        retainedParty.ExternalCode = PreferExisting(retainedParty.ExternalCode, mergedParty.ExternalCode);
+        retainedParty.Summary = PreferExisting(retainedParty.Summary, mergedParty.Summary);
+        retainedParty.Region = PreferExisting(retainedParty.Region, mergedParty.Region);
+        retainedParty.CountryCode = PreferExisting(retainedParty.CountryCode, mergedParty.CountryCode);
+        retainedParty.TimeZone = PreferExisting(retainedParty.TimeZone, mergedParty.TimeZone);
+        retainedParty.IsSensitive = retainedParty.IsSensitive || mergedParty.IsSensitive;
+        retainedParty.Notes = CombineText(
+            retainedParty.Notes,
+            $"Merged party '{mergedParty.DisplayName}' on {clock.GetUtcNow():u}.{Environment.NewLine}{reason}".Trim());
+        retainedParty.TagsJson = JsonSerializer.Serialize(
+            DeserializeTags(retainedParty.TagsJson)
+                .Concat(DeserializeTags(mergedParty.TagsJson))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList());
+        retainedParty.UpdatedAtUtc = clock.GetUtcNow();
+        retainedParty.LastChangedBy = ResolveActor(actor);
+
+        await MergeRoleAssignmentsAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergeContactPointsAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergeAddressesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergeRelationshipsAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergePartySkillsAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergeAiAgentProfilesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergeWorkforceProfilesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await MergePartyOrganizationAffiliationsAsync(
+            dbContext,
+            retainedPartyId,
+            mergedPartyId,
+            ResolveActor(actor),
+            clock.GetUtcNow(),
+            cancellationToken);
+        await ReassignDirectPartyReferencesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+        await ReassignOptionalPartyReferencesAsync(dbContext, retainedPartyId, mergedPartyId, cancellationToken);
+
+        dbContext.Set<Party>().Remove(mergedParty);
+        dbContext.Set<CrmHrAuditEntry>().Add(new CrmHrAuditEntry
+        {
+            EntityType = nameof(Party),
+            EntityId = retainedPartyId,
+            Action = "MergedDuplicate",
+            Summary = $"Merged duplicate party '{mergedParty.DisplayName}' into '{retainedParty.DisplayName}'.",
+            DetailJson = JsonSerializer.Serialize(new
+            {
+                RetainedPartyId = retainedPartyId,
+                MergedPartyId = mergedPartyId,
+                Reason = reason
+            }),
+            Actor = ResolveActor(actor),
+            IsSensitive = retainedParty.IsSensitive,
+            CreatedAtUtc = clock.GetUtcNow()
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return Result<PartyMergeSummaryModel>.Success(new PartyMergeSummaryModel(
+            retainedPartyId,
+            mergedPartyId,
+            $"Merged '{mergedParty.DisplayName}' into '{retainedParty.DisplayName}'."));
+    }
+
+    public async Task<string> ExportPartiesCsvAsync(
+        IReadOnlyCollection<Guid> partyIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(partyIds);
+        if (partyIds.Count == 0)
+        {
+            return string.Join(",", ExportColumns) + Environment.NewLine;
+        }
+
+        return await ExportPartiesCsvCoreAsync(partyIds, cancellationToken);
+    }
+
+    public Task<string> ExportAllPartiesCsvAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return ExportPartiesCsvCoreAsync(null, cancellationToken);
+    }
+
+    private async Task<string> ExportPartiesCsvCoreAsync(
+        IReadOnlyCollection<Guid>? partyIds,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        IQueryable<Party> partyQuery = dbContext.Set<Party>().AsNoTracking();
+        IQueryable<PartyRoleAssignment> roleQuery = dbContext.Set<PartyRoleAssignment>().AsNoTracking();
+        IQueryable<PartyContactPoint> contactPointQuery = dbContext.Set<PartyContactPoint>().AsNoTracking();
+        IQueryable<PartyAddress> addressQuery = dbContext.Set<PartyAddress>().AsNoTracking();
+        if (partyIds is not null)
+        {
+            partyQuery = partyQuery.Where(item => partyIds.Contains(item.Id));
+            roleQuery = roleQuery.Where(item => partyIds.Contains(item.PartyId));
+            contactPointQuery = contactPointQuery.Where(item => partyIds.Contains(item.PartyId));
+            addressQuery = addressQuery.Where(item => partyIds.Contains(item.PartyId));
+        }
+
+        var parties = await partyQuery
+            .OrderBy(item => item.DisplayName)
+            .ToListAsync(cancellationToken);
+        var roles = await roleQuery.ToListAsync(cancellationToken);
+        var contactPoints = await contactPointQuery
+            .OrderBy(item => item.PartyId)
+            .ThenBy(item => item.ContactType)
+            .ThenByDescending(item => item.IsPrimary)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var addresses = await addressQuery.ToListAsync(cancellationToken);
+
+        var rolesByPartyId = roles.GroupBy(item => item.PartyId).ToDictionary(group => group.Key, group => group.ToList());
+        var contactsByPartyId = contactPoints.GroupBy(item => item.PartyId).ToDictionary(group => group.Key, group => group.ToList());
+        var addressesByPartyId = addresses.GroupBy(item => item.PartyId).ToDictionary(group => group.Key, group => group.ToList());
+
+        var builder = new StringBuilder();
+        AppendCsvRow(builder, ExportColumns);
+        foreach (var party in parties)
+        {
+            AppendCsvRow(
+                builder,
+                party.DisplayName,
+                party.PartyType.ToString(),
+                party.LifecycleStatus.ToString(),
+                party.ExternalCode,
+                party.LegalName,
+                party.PreferredName,
+                party.Summary,
+                string.Join(", ", DeserializeTags(party.TagsJson)),
+                party.Region,
+                party.CountryCode,
+                party.TimeZone,
+                party.IsSensitive.ToString(),
+                SerializeRoleAssignments(rolesByPartyId.GetValueOrDefault(party.Id) ?? []),
+                SerializeContactPoints(contactsByPartyId.GetValueOrDefault(party.Id) ?? []),
+                SerializeAddresses(addressesByPartyId.GetValueOrDefault(party.Id) ?? []));
+        }
+
+        return builder.ToString();
+    }
+
+    public async Task<Result<PartyCsvImportPreviewModel>> PreviewImportAsync(
+        string csvContent,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(csvContent))
+        {
+            return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                "Paste CSV content before previewing the import.",
+                "crmhr.party.import-empty"));
+        }
+
+        if (csvContent.Length > MaximumCsvContentLength)
+        {
+            return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                $"CSV preview is limited to {MaximumCsvContentLength:N0} characters. Split the file into smaller imports.",
+                "crmhr.party.import-content-limit"));
+        }
+
+        var rows = ParseCsv(csvContent);
+        if (rows.Count < 2)
+        {
+            return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                "The CSV content must include a header row and at least one data row.",
+                "crmhr.party.import-no-data"));
+        }
+
+        if (rows.Count - 1 > MaximumPreviewRowCount)
+        {
+            return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                $"CSV preview is limited to {MaximumPreviewRowCount} data rows. Split the file into smaller imports.",
+                "crmhr.party.import-preview-limit"));
+        }
+
+        var headerMap = BuildHeaderMap(rows[0]);
+        var previewRows = new List<PartyCsvImportPreviewRowModel>();
+        var preparedRows = new List<PreparedImportRow>();
+        for (var rowIndex = 1; rowIndex < rows.Count; rowIndex++)
+        {
+            var cells = rows[rowIndex];
+            if (cells.All(string.IsNullOrWhiteSpace))
+            {
+                continue;
+            }
+
+            var messages = new List<string>();
+            var party = BuildImportParty(cells, headerMap, messages);
+            if (party is null)
+            {
+                previewRows.Add(new PartyCsvImportPreviewRowModel
+                {
+                    RowNumber = rowIndex + 1,
+                    Messages = messages,
+                    CanImport = false
+                });
+                continue;
+            }
+            previewRows.Add(new PartyCsvImportPreviewRowModel
+            {
+                RowNumber = rowIndex + 1,
+                Party = party,
+                Messages = messages,
+                CanImport = messages.Count == 0
+            });
+            preparedRows.Add(new PreparedImportRow(previewRows.Count - 1, party));
+        }
+
+        if (preparedRows.Count > 0)
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            IReadOnlyList<IReadOnlyList<PartyDuplicateCandidateModel>> duplicateCandidatesByInput;
+            try
+            {
+                duplicateCandidatesByInput = await FindPotentialDuplicatesForInputsAsync(
+                    dbContext,
+                    preparedRows.Select(item => PartyDuplicateLookupInput.FromParty(item.Party)).ToList(),
+                    excludePartyId: null,
+                    cancellationToken);
+            }
+            catch (DuplicateAnalysisLimitException exception)
+            {
+                return Result<PartyCsvImportPreviewModel>.Failure(Error.Validation(
+                    exception.Message,
+                    "crmhr.party.import-duplicate-limit"));
+            }
+
+            for (var index = 0; index < preparedRows.Count; index++)
+            {
+                var preparedRow = preparedRows[index];
+                var existingRow = previewRows[preparedRow.PreviewRowIndex];
+                var duplicateCandidates = duplicateCandidatesByInput[index];
+                var messages = existingRow.Messages.ToList();
+                if (duplicateCandidates.Count > 0)
+                {
+                    messages.Add($"Potential duplicates detected: {string.Join(", ", duplicateCandidates.Select(item => item.DisplayName))}.");
+                }
+
+                previewRows[preparedRow.PreviewRowIndex] = new PartyCsvImportPreviewRowModel
+                {
+                    RowNumber = existingRow.RowNumber,
+                    Party = existingRow.Party,
+                    Messages = messages,
+                    DuplicateCandidates = duplicateCandidates,
+                    CanImport = messages.Count == 0
+                };
+            }
+        }
+
+        return Result<PartyCsvImportPreviewModel>.Success(new PartyCsvImportPreviewModel
+        {
+            Rows = previewRows
+        });
+    }
+
+    public async Task<Result<int>> ApplyImportAsync(
+        IReadOnlyList<PartyCsvImportPreviewRowModel> rows,
+        string actor,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        var importableRows = rows.Where(item => item.CanImport).ToList();
+        if (importableRows.Count == 0)
+        {
+            return Result<int>.Failure(Error.Validation(
+                "There are no importable rows in the current preview.",
+                "crmhr.party.import-no-ready-rows"));
+        }
+
+        if (importableRows.Count > MaximumPreviewRowCount)
+        {
+            return Result<int>.Failure(Error.Validation(
+                $"CSV import is limited to {MaximumPreviewRowCount} rows per apply operation.",
+                "crmhr.party.import-apply-limit"));
+        }
+
+        foreach (var row in importableRows)
+        {
+            row.Party.LastChangedBy = ResolveActor(actor);
+        }
+
+        return await partyDirectoryService.ImportPartiesAtomicallyAsync(
+            importableRows.Select(item => item.Party).ToList(),
+            ResolveActor(actor),
+            cancellationToken);
+    }
+
+    private static async Task MergeRoleAssignmentsAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var retainedRoles = await dbContext.Set<PartyRoleAssignment>()
+            .Where(item => item.PartyId == retainedPartyId)
+            .ToListAsync(cancellationToken);
+        var mergedRoles = await dbContext.Set<PartyRoleAssignment>()
+            .Where(item => item.PartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+
+        var keys = retainedRoles
+            .Select(BuildRoleAssignmentKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var mergedRole in mergedRoles)
+        {
+            var key = BuildRoleAssignmentKey(mergedRole);
+            if (!keys.Add(key))
+            {
+                var retainedRole = retainedRoles.First(item => string.Equals(BuildRoleAssignmentKey(item), key, StringComparison.OrdinalIgnoreCase));
+                retainedRole.IsPrimary = retainedRole.IsPrimary || mergedRole.IsPrimary;
+                retainedRole.ValidFromUtc = MinDate(retainedRole.ValidFromUtc, mergedRole.ValidFromUtc);
+                retainedRole.ValidToUtc = MaxDate(retainedRole.ValidToUtc, mergedRole.ValidToUtc);
+                retainedRole.Notes = CombineText(retainedRole.Notes, mergedRole.Notes);
+                dbContext.Set<PartyRoleAssignment>().Remove(mergedRole);
+                continue;
+            }
+
+            mergedRole.PartyId = retainedPartyId;
+            retainedRoles.Add(mergedRole);
+        }
+    }
+
+    private static async Task MergeContactPointsAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var retainedContactPoints = await dbContext.Set<PartyContactPoint>()
+            .Where(item => item.PartyId == retainedPartyId)
+            .OrderBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var mergedContactPoints = await dbContext.Set<PartyContactPoint>()
+            .Where(item => item.PartyId == mergedPartyId)
+            .OrderBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var retainedPrimaryContactIds = retainedContactPoints
+            .Where(item => item.IsPrimary)
+            .Select(item => item.Id)
+            .ToHashSet();
+
+        var keys = retainedContactPoints
+            .Select(BuildContactPointKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var mergedContactPoint in mergedContactPoints)
+        {
+            mergedContactPoint.NormalizedValue = NormalizeContactValue(mergedContactPoint.ContactType, mergedContactPoint.Value);
+            var key = BuildContactPointKey(mergedContactPoint);
+            if (!keys.Add(key))
+            {
+                var retainedContactPoint = retainedContactPoints.First(item => string.Equals(BuildContactPointKey(item), key, StringComparison.OrdinalIgnoreCase));
+                retainedContactPoint.IsPrimary = retainedContactPoint.IsPrimary || mergedContactPoint.IsPrimary;
+                retainedContactPoint.IsPublic = retainedContactPoint.IsPublic && mergedContactPoint.IsPublic;
+                retainedContactPoint.TagsJson = JsonSerializer.Serialize(
+                    DeserializeTags(retainedContactPoint.TagsJson)
+                        .Concat(DeserializeTags(mergedContactPoint.TagsJson))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList());
+                retainedContactPoint.Notes = CombineText(retainedContactPoint.Notes, mergedContactPoint.Notes);
+                dbContext.Set<PartyContactPoint>().Remove(mergedContactPoint);
+                continue;
+            }
+
+            mergedContactPoint.PartyId = retainedPartyId;
+            retainedContactPoints.Add(mergedContactPoint);
+        }
+
+        NormalizeContactPrimariesAfterMerge(retainedContactPoints, retainedPrimaryContactIds);
+    }
+
+    private static async Task MergeAddressesAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var retainedAddresses = await dbContext.Set<PartyAddress>()
+            .Where(item => item.PartyId == retainedPartyId)
+            .ToListAsync(cancellationToken);
+        var mergedAddresses = await dbContext.Set<PartyAddress>()
+            .Where(item => item.PartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+
+        var keys = retainedAddresses
+            .Select(BuildAddressKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var mergedAddress in mergedAddresses)
+        {
+            var key = BuildAddressKey(mergedAddress);
+            if (!keys.Add(key))
+            {
+                var retainedAddress = retainedAddresses.First(item => string.Equals(BuildAddressKey(item), key, StringComparison.OrdinalIgnoreCase));
+                retainedAddress.IsPrimary = retainedAddress.IsPrimary || mergedAddress.IsPrimary;
+                retainedAddress.Notes = CombineText(retainedAddress.Notes, mergedAddress.Notes);
+                dbContext.Set<PartyAddress>().Remove(mergedAddress);
+                continue;
+            }
+
+            mergedAddress.PartyId = retainedPartyId;
+            retainedAddresses.Add(mergedAddress);
+        }
+    }
+
+    private static async Task MergeRelationshipsAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var relationships = await dbContext.Set<PartyRelationship>()
+            .Where(item =>
+                item.SourcePartyId == retainedPartyId
+                || item.TargetPartyId == retainedPartyId
+                || item.SourcePartyId == mergedPartyId
+                || item.TargetPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+
+        var dedupeMap =
+            new Dictionary<(Guid SourcePartyId, Guid TargetPartyId, PartyRelationshipKind RelationshipKind), PartyRelationship>();
+        foreach (var relationship in relationships)
+        {
+            if (relationship.SourcePartyId == mergedPartyId)
+            {
+                relationship.SourcePartyId = retainedPartyId;
+            }
+
+            if (relationship.TargetPartyId == mergedPartyId)
+            {
+                relationship.TargetPartyId = retainedPartyId;
+            }
+
+            if (relationship.SourcePartyId == relationship.TargetPartyId)
+            {
+                dbContext.Set<PartyRelationship>().Remove(relationship);
+                continue;
+            }
+
+            var key = (
+                relationship.SourcePartyId,
+                relationship.TargetPartyId,
+                relationship.RelationshipKind);
+            if (!dedupeMap.TryAdd(key, relationship))
+            {
+                var retainedRelationship = dedupeMap[key];
+                retainedRelationship.IsPrimary = retainedRelationship.IsPrimary || relationship.IsPrimary;
+                retainedRelationship.StartDateUtc = MinDate(retainedRelationship.StartDateUtc, relationship.StartDateUtc);
+                retainedRelationship.EndDateUtc = MaxDate(retainedRelationship.EndDateUtc, relationship.EndDateUtc);
+                retainedRelationship.Notes = CombineText(retainedRelationship.Notes, relationship.Notes);
+                dbContext.Set<PartyRelationship>().Remove(relationship);
+            }
+        }
+    }
+
+    private static void NormalizeContactPrimariesAfterMerge(
+        IReadOnlyList<PartyContactPoint> contactPoints,
+        IReadOnlySet<Guid> retainedPrimaryContactIds)
+    {
+        foreach (var contactTypeGroup in contactPoints.GroupBy(item => item.ContactType))
+        {
+            var orderedContacts = contactTypeGroup
+                .OrderBy(item => item.Id)
+                .ToArray();
+            var selectedPrimary = orderedContacts
+                .FirstOrDefault(item => retainedPrimaryContactIds.Contains(item.Id))
+                ?? orderedContacts.FirstOrDefault(item => item.IsPrimary);
+
+            foreach (var contactPoint in orderedContacts)
+            {
+                contactPoint.IsPrimary = selectedPrimary is not null &&
+                    contactPoint.Id == selectedPrimary.Id;
+            }
+        }
+    }
+
+    private static async Task MergePartySkillsAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var retainedSkills = await dbContext.Set<PartySkill>()
+            .Where(item => item.PartyId == retainedPartyId)
+            .ToListAsync(cancellationToken);
+        var mergedSkills = await dbContext.Set<PartySkill>()
+            .Where(item => item.PartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+
+        var retainedBySkillId = retainedSkills.ToDictionary(item => item.SkillId);
+        foreach (var mergedSkill in mergedSkills)
+        {
+            if (retainedBySkillId.TryGetValue(mergedSkill.SkillId, out var retainedSkill))
+            {
+                if ((int)mergedSkill.Proficiency > (int)retainedSkill.Proficiency)
+                {
+                    retainedSkill.Proficiency = mergedSkill.Proficiency;
+                }
+
+                retainedSkill.YearsExperience = Math.Max(retainedSkill.YearsExperience, mergedSkill.YearsExperience);
+                retainedSkill.CertificationStatus = PreferExisting(retainedSkill.CertificationStatus, mergedSkill.CertificationStatus);
+                retainedSkill.LastValidatedAtUtc = MaxDate(retainedSkill.LastValidatedAtUtc, mergedSkill.LastValidatedAtUtc);
+                retainedSkill.Notes = CombineText(retainedSkill.Notes, mergedSkill.Notes);
+                dbContext.Set<PartySkill>().Remove(mergedSkill);
+                continue;
+            }
+
+            mergedSkill.PartyId = retainedPartyId;
+            retainedBySkillId[mergedSkill.SkillId] = mergedSkill;
+        }
+    }
+
+    private static async Task MergeAiAgentProfilesAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var profiles = await dbContext.Set<AiAgentProfile>()
+            .Where(item => item.PartyId == retainedPartyId || item.PartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+
+        var retainedProfile = profiles.SingleOrDefault(item => item.PartyId == retainedPartyId);
+        var mergedProfile = profiles.SingleOrDefault(item => item.PartyId == mergedPartyId);
+        if (mergedProfile is null)
+        {
+            return;
+        }
+
+        if (retainedProfile is null)
+        {
+            mergedProfile.PartyId = retainedPartyId;
+            return;
+        }
+
+        retainedProfile.ProviderProfileId ??= mergedProfile.ProviderProfileId;
+        retainedProfile.DefaultModel = PreferExisting(retainedProfile.DefaultModel, mergedProfile.DefaultModel);
+        retainedProfile.OwnerPartyId ??= mergedProfile.OwnerPartyId;
+        retainedProfile.ExecutionMode = retainedProfile.ExecutionMode == AiExecutionMode.Remote
+            ? retainedProfile.ExecutionMode
+            : mergedProfile.ExecutionMode;
+        retainedProfile.ValidationStatus = retainedProfile.ValidationStatus == AiValidationStatus.Draft
+            ? mergedProfile.ValidationStatus
+            : retainedProfile.ValidationStatus;
+        retainedProfile.LastReviewedAtUtc = MaxDate(retainedProfile.LastReviewedAtUtc, mergedProfile.LastReviewedAtUtc);
+        retainedProfile.CapabilityJson = JsonSerializer.Serialize(
+            DeserializeStringArray(retainedProfile.CapabilityJson)
+                .Concat(DeserializeStringArray(mergedProfile.CapabilityJson))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList());
+        retainedProfile.Notes = CombineText(retainedProfile.Notes, mergedProfile.Notes);
+        dbContext.Set<AiAgentProfile>().Remove(mergedProfile);
+    }
+
+    private static async Task MergeWorkforceProfilesAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var profiles = await dbContext.Set<WorkforceProfile>()
+            .Where(item =>
+                item.PartyId == retainedPartyId ||
+                item.PartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        var retainedProfile = profiles
+            .SingleOrDefault(item => item.PartyId == retainedPartyId);
+        var mergedProfile = profiles
+            .SingleOrDefault(item => item.PartyId == mergedPartyId);
+        if (mergedProfile is null)
+        {
+            return;
+        }
+
+        if (retainedProfile is null)
+        {
+            mergedProfile.PartyId = retainedPartyId;
+            return;
+        }
+
+        retainedProfile.EmployeeCode = PreferExisting(
+            retainedProfile.EmployeeCode,
+            mergedProfile.EmployeeCode);
+        retainedProfile.JobTitle = PreferExisting(
+            retainedProfile.JobTitle,
+            mergedProfile.JobTitle);
+        retainedProfile.Discipline = PreferExisting(
+            retainedProfile.Discipline,
+            mergedProfile.Discipline);
+        retainedProfile.Seniority = PreferExisting(
+            retainedProfile.Seniority,
+            mergedProfile.Seniority);
+        retainedProfile.HomeUnitPartyId ??= mergedProfile.HomeUnitPartyId;
+        retainedProfile.ManagerPartyId ??= mergedProfile.ManagerPartyId;
+        retainedProfile.StartDateUtc = MinDate(
+            retainedProfile.StartDateUtc,
+            mergedProfile.StartDateUtc);
+        retainedProfile.EndDateUtc = MergeOpenEndedEndDate(
+            retainedProfile.EndDateUtc,
+            mergedProfile.EndDateUtc);
+        retainedProfile.Location = PreferExisting(
+            retainedProfile.Location,
+            mergedProfile.Location);
+        retainedProfile.TimeZone = PreferExisting(
+            retainedProfile.TimeZone,
+            mergedProfile.TimeZone);
+        retainedProfile.InternalCostRate ??= mergedProfile.InternalCostRate;
+        retainedProfile.ExternalBillingRate ??=
+            mergedProfile.ExternalBillingRate;
+        retainedProfile.RateCurrencyCode = PreferExisting(
+            retainedProfile.RateCurrencyCode,
+            mergedProfile.RateCurrencyCode);
+        retainedProfile.Status = PreferExisting(
+            retainedProfile.Status,
+            mergedProfile.Status);
+        retainedProfile.ExtendedDataJson = PreferExisting(
+            retainedProfile.ExtendedDataJson,
+            mergedProfile.ExtendedDataJson);
+        retainedProfile.Notes = CombineText(
+            retainedProfile.Notes,
+            mergedProfile.Notes);
+        dbContext.Set<WorkforceProfile>().Remove(mergedProfile);
+    }
+
+    private static async Task MergePartyOrganizationAffiliationsAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        string actor,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var affectedPersonIds = await dbContext
+            .Set<PartyOrganizationAffiliation>()
+            .Where(item =>
+                item.PersonPartyId == retainedPartyId ||
+                item.PersonPartyId == mergedPartyId ||
+                item.OrganizationPartyId == retainedPartyId ||
+                item.OrganizationPartyId == mergedPartyId ||
+                item.OrganizationUnitPartyId == retainedPartyId ||
+                item.OrganizationUnitPartyId == mergedPartyId ||
+                item.ManagerPartyId == retainedPartyId ||
+                item.ManagerPartyId == mergedPartyId)
+            .Select(item => item.PersonPartyId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (affectedPersonIds.Count == 0)
+        {
+            return;
+        }
+
+        if (affectedPersonIds.Remove(mergedPartyId))
+        {
+            affectedPersonIds.Add(retainedPartyId);
+        }
+
+        var affiliations = await dbContext
+            .Set<PartyOrganizationAffiliation>()
+            .Where(item =>
+                affectedPersonIds.Contains(item.PersonPartyId) ||
+                item.PersonPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        var retainedPrimaryIds = affiliations
+            .Where(item =>
+                item.PersonPartyId == retainedPartyId &&
+                item.IsPrimary)
+            .Select(item => item.Id)
+            .ToHashSet();
+
+        var groupedAffiliations = affiliations
+            .GroupBy(item => BuildMergedAffiliationKey(
+                item,
+                retainedPartyId,
+                mergedPartyId))
+            .ToList();
+        var removedToRetainedAffiliationIds = new Dictionary<Guid, Guid>();
+        foreach (var group in groupedAffiliations)
+        {
+            var ordered = group
+                .OrderByDescending(item => item.IsPrimary)
+                .ThenBy(item => CountMergedPartyReferences(
+                    item,
+                    mergedPartyId))
+                .ThenBy(item => item.CreatedAtUtc)
+                .ThenBy(item => item.Id)
+                .ToArray();
+            var retainedAffiliation = ordered[0];
+            foreach (var duplicate in ordered.Skip(1))
+            {
+                MergeAffiliationValues(
+                    retainedAffiliation,
+                    duplicate,
+                    retainedPartyId,
+                    mergedPartyId,
+                    actor,
+                    now);
+                removedToRetainedAffiliationIds[duplicate.Id] =
+                    retainedAffiliation.Id;
+                dbContext
+                    .Set<PartyOrganizationAffiliation>()
+                    .Remove(duplicate);
+            }
+        }
+
+        if (removedToRetainedAffiliationIds.Count > 0)
+        {
+            var removedIds = removedToRetainedAffiliationIds.Keys.ToArray();
+            var assignments = await dbContext
+                .Set<ProjectPartyAssignment>()
+                .Where(item =>
+                    item.PartyOrganizationAffiliationId.HasValue &&
+                    removedIds.Contains(
+                        item.PartyOrganizationAffiliationId.Value))
+                .ToListAsync(cancellationToken);
+            foreach (var assignment in assignments)
+            {
+                assignment.PartyOrganizationAffiliationId =
+                    removedToRetainedAffiliationIds[
+                        assignment.PartyOrganizationAffiliationId!.Value];
+            }
+
+            // Remove duplicate business keys before changing the surviving
+            // endpoint identifiers. This avoids transient unique-key clashes.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var survivingAffiliations = affiliations
+            .Where(item =>
+                !removedToRetainedAffiliationIds.ContainsKey(item.Id))
+            .ToArray();
+        var todayUtc = new DateTimeOffset(
+            now.UtcDateTime.Year,
+            now.UtcDateTime.Month,
+            now.UtcDateTime.Day,
+            0,
+            0,
+            0,
+            TimeSpan.Zero);
+        var clearedPrimaryBeforeEndpointRewrite = false;
+        foreach (var futurePersonGroup in survivingAffiliations
+                     .GroupBy(item => ReplacePartyId(
+                         item.PersonPartyId,
+                         retainedPartyId,
+                         mergedPartyId)))
+        {
+            var selectedPrimary = futurePersonGroup
+                .Where(item =>
+                    item.IsPrimary &&
+                    (!item.ValidFromUtc.HasValue ||
+                     item.ValidFromUtc.Value <= todayUtc) &&
+                    (!item.ValidToUtc.HasValue ||
+                     item.ValidToUtc.Value >= todayUtc))
+                .OrderByDescending(item =>
+                    retainedPrimaryIds.Contains(item.Id))
+                .ThenByDescending(item => item.ValidFromUtc)
+                .ThenByDescending(item => item.UpdatedAtUtc)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
+            foreach (var affiliation in futurePersonGroup.Where(item =>
+                         item.IsPrimary &&
+                         (selectedPrimary is null ||
+                          item.Id != selectedPrimary.Id)))
+            {
+                affiliation.IsPrimary = false;
+                affiliation.LastChangedBy = actor;
+                affiliation.UpdatedAtUtc = now;
+                clearedPrimaryBeforeEndpointRewrite = true;
+            }
+        }
+
+        if (clearedPrimaryBeforeEndpointRewrite)
+        {
+            // PostgreSQL enforces one primary per person with an immediate
+            // partial unique index. Persist the losing primary first so an
+            // endpoint rewrite cannot transiently create two primary rows.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        foreach (var affiliation in survivingAffiliations)
+        {
+            var changed = ReplacePartyReference(
+                affiliation,
+                retainedPartyId,
+                mergedPartyId);
+            if (affiliation.ManagerPartyId == affiliation.PersonPartyId)
+            {
+                affiliation.ManagerPartyId = null;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                affiliation.LastChangedBy = actor;
+                affiliation.UpdatedAtUtc = now;
+            }
+        }
+
+        foreach (var personGroup in survivingAffiliations
+                     .GroupBy(item => item.PersonPartyId))
+        {
+            var selectedPrimary = personGroup
+                .Where(item =>
+                    item.IsPrimary &&
+                    (!item.ValidFromUtc.HasValue ||
+                     item.ValidFromUtc.Value <= todayUtc) &&
+                    (!item.ValidToUtc.HasValue ||
+                     item.ValidToUtc.Value >= todayUtc))
+                .OrderByDescending(item =>
+                    retainedPrimaryIds.Contains(item.Id))
+                .ThenByDescending(item => item.ValidFromUtc)
+                .ThenByDescending(item => item.UpdatedAtUtc)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
+            foreach (var affiliation in personGroup)
+            {
+                var shouldBePrimary =
+                    selectedPrimary is not null &&
+                    affiliation.Id == selectedPrimary.Id;
+                if (affiliation.IsPrimary == shouldBePrimary)
+                {
+                    continue;
+                }
+
+                affiliation.IsPrimary = shouldBePrimary;
+                affiliation.LastChangedBy = actor;
+                affiliation.UpdatedAtUtc = now;
+            }
+        }
+    }
+
+    private static AffiliationMergeKey BuildMergedAffiliationKey(
+        PartyOrganizationAffiliation affiliation,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+    {
+        return new AffiliationMergeKey(
+            ReplacePartyId(
+                affiliation.PersonPartyId,
+                retainedPartyId,
+                mergedPartyId),
+            ReplacePartyId(
+                affiliation.OrganizationPartyId,
+                retainedPartyId,
+                mergedPartyId),
+            affiliation.AffiliationKind,
+            affiliation.ValidFromUtc,
+            affiliation.ValidToUtc);
+    }
+
+    private static int CountMergedPartyReferences(
+        PartyOrganizationAffiliation affiliation,
+        Guid mergedPartyId)
+    {
+        var count = 0;
+        count += affiliation.PersonPartyId == mergedPartyId ? 1 : 0;
+        count += affiliation.OrganizationPartyId == mergedPartyId ? 1 : 0;
+        count += affiliation.OrganizationUnitPartyId == mergedPartyId ? 1 : 0;
+        count += affiliation.ManagerPartyId == mergedPartyId ? 1 : 0;
+        return count;
+    }
+
+    private static void MergeAffiliationValues(
+        PartyOrganizationAffiliation retained,
+        PartyOrganizationAffiliation merged,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        string actor,
+        DateTimeOffset now)
+    {
+        retained.IsPrimary = retained.IsPrimary || merged.IsPrimary;
+        retained.JobTitle = PreferExisting(
+            retained.JobTitle,
+            merged.JobTitle);
+        retained.EmployeeCode = PreferExisting(
+            retained.EmployeeCode,
+            merged.EmployeeCode);
+        retained.OrganizationUnitPartyId ??= ReplaceOptionalPartyId(
+            merged.OrganizationUnitPartyId,
+            retainedPartyId,
+            mergedPartyId);
+        retained.ManagerPartyId ??= ReplaceOptionalPartyId(
+            merged.ManagerPartyId,
+            retainedPartyId,
+            mergedPartyId);
+        retained.Notes = CombineText(retained.Notes, merged.Notes);
+        retained.CreatedAtUtc = retained.CreatedAtUtc <= merged.CreatedAtUtc
+            ? retained.CreatedAtUtc
+            : merged.CreatedAtUtc;
+        retained.UpdatedAtUtc = now;
+        retained.LastChangedBy = actor;
+    }
+
+    private static bool ReplacePartyReference(
+        PartyOrganizationAffiliation affiliation,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+    {
+        var changed = false;
+        if (affiliation.PersonPartyId == mergedPartyId)
+        {
+            affiliation.PersonPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        if (affiliation.OrganizationPartyId == mergedPartyId)
+        {
+            affiliation.OrganizationPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        if (affiliation.OrganizationUnitPartyId == mergedPartyId)
+        {
+            affiliation.OrganizationUnitPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        if (affiliation.ManagerPartyId == mergedPartyId)
+        {
+            affiliation.ManagerPartyId = retainedPartyId;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static Guid ReplacePartyId(
+        Guid partyId,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+        => partyId == mergedPartyId ? retainedPartyId : partyId;
+
+    private static Guid? ReplaceOptionalPartyId(
+        Guid? partyId,
+        Guid retainedPartyId,
+        Guid mergedPartyId)
+        => partyId == mergedPartyId ? retainedPartyId : partyId;
+
+    private static async Task ReassignDirectPartyReferencesAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        await ReassignPartyIdAsync(dbContext.Set<PartyConfidentialNote>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+        await ReassignPartyIdAsync(dbContext.Set<CapacityBlock>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+        await ReassignPartyIdAsync(dbContext.Set<RecruitmentApplication>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+        await ReassignPartyIdAsync(dbContext.Set<OnboardingTask>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+        await ReassignPartyIdAsync(dbContext.Set<ProjectPartyAssignment>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+        await ReassignPartyIdAsync(dbContext.Set<InteractionPartyLink>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+        await ReassignPartyIdAsync(dbContext.Set<OpportunityPartyLink>(), item => item.PartyId == mergedPartyId, item => item.PartyId = retainedPartyId, cancellationToken);
+    }
+
+    private static async Task ReassignOptionalPartyReferencesAsync(
+        AppDbContext dbContext,
+        Guid retainedPartyId,
+        Guid mergedPartyId,
+        CancellationToken cancellationToken)
+    {
+        var interactionRecords = await dbContext.Set<InteractionRecord>()
+            .Where(item => item.NextActionOwnerPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var interactionRecord in interactionRecords)
+        {
+            interactionRecord.NextActionOwnerPartyId = retainedPartyId;
+        }
+
+        var opportunities = await dbContext.Set<Opportunity>()
+            .Where(item =>
+                item.AccountPartyId == mergedPartyId
+                || item.OwnerPartyId == mergedPartyId
+                || item.DeliveryUnitPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var opportunity in opportunities)
+        {
+            if (opportunity.AccountPartyId == mergedPartyId)
+            {
+                opportunity.AccountPartyId = retainedPartyId;
+            }
+
+            if (opportunity.OwnerPartyId == mergedPartyId)
+            {
+                opportunity.OwnerPartyId = retainedPartyId;
+            }
+
+            if (opportunity.DeliveryUnitPartyId == mergedPartyId)
+            {
+                opportunity.DeliveryUnitPartyId = retainedPartyId;
+            }
+        }
+
+        var workforceProfiles = await dbContext.Set<WorkforceProfile>()
+            .Where(item => item.HomeUnitPartyId == mergedPartyId || item.ManagerPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var workforceProfile in workforceProfiles)
+        {
+            if (workforceProfile.HomeUnitPartyId == mergedPartyId)
+            {
+                workforceProfile.HomeUnitPartyId = retainedPartyId;
+            }
+
+            if (workforceProfile.ManagerPartyId == mergedPartyId)
+            {
+                workforceProfile.ManagerPartyId = retainedPartyId;
+            }
+        }
+
+        var staffingRequests = await dbContext.Set<StaffingRequest>()
+            .Where(item => item.RequestedByPartyId == mergedPartyId || item.DeliveryUnitPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var staffingRequest in staffingRequests)
+        {
+            if (staffingRequest.RequestedByPartyId == mergedPartyId)
+            {
+                staffingRequest.RequestedByPartyId = retainedPartyId;
+            }
+
+            if (staffingRequest.DeliveryUnitPartyId == mergedPartyId)
+            {
+                staffingRequest.DeliveryUnitPartyId = retainedPartyId;
+            }
+        }
+
+        var recruitmentApplications = await dbContext.Set<RecruitmentApplication>()
+            .Where(item =>
+                item.TargetUnitPartyId == mergedPartyId
+                || item.RecruiterPartyId == mergedPartyId
+                || item.HiringManagerPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var recruitmentApplication in recruitmentApplications)
+        {
+            if (recruitmentApplication.TargetUnitPartyId == mergedPartyId)
+            {
+                recruitmentApplication.TargetUnitPartyId = retainedPartyId;
+            }
+
+            if (recruitmentApplication.RecruiterPartyId == mergedPartyId)
+            {
+                recruitmentApplication.RecruiterPartyId = retainedPartyId;
+            }
+
+            if (recruitmentApplication.HiringManagerPartyId == mergedPartyId)
+            {
+                recruitmentApplication.HiringManagerPartyId = retainedPartyId;
+            }
+        }
+
+        var recruitmentInterviews = await dbContext.Set<RecruitmentInterview>()
+            .Where(item => item.InterviewerPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var recruitmentInterview in recruitmentInterviews)
+        {
+            recruitmentInterview.InterviewerPartyId = retainedPartyId;
+        }
+
+        var onboardingTasks = await dbContext.Set<OnboardingTask>()
+            .Where(item => item.OwnerPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var onboardingTask in onboardingTasks)
+        {
+            onboardingTask.OwnerPartyId = retainedPartyId;
+        }
+
+        var aiAgentProfiles = await dbContext.Set<AiAgentProfile>()
+            .Where(item => item.OwnerPartyId == mergedPartyId)
+            .ToListAsync(cancellationToken);
+        foreach (var aiAgentProfile in aiAgentProfiles)
+        {
+            aiAgentProfile.OwnerPartyId = retainedPartyId;
+        }
+    }
+
+    private static async Task ReassignPartyIdAsync<TEntity>(
+        DbSet<TEntity> set,
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> assign,
+        CancellationToken cancellationToken)
+        where TEntity : class
+    {
+        var entities = await set.Where(predicate).ToListAsync(cancellationToken);
+        foreach (var entity in entities)
+        {
+            assign(entity);
+        }
+    }
+
+    private async Task<IReadOnlyList<PartyDuplicateCandidateModel>> FindPotentialDuplicatesCoreAsync(
+        AppDbContext dbContext,
+        string displayName,
+        string legalName,
+        string preferredName,
+        string externalCode,
+        IEnumerable<string> normalizedContactValues,
+        Guid? excludePartyId,
+        CancellationToken cancellationToken)
+    {
+        var lookup = new PartyDuplicateLookupInput(
+            displayName,
+            legalName,
+            preferredName,
+            externalCode,
+            normalizedContactValues);
+        var candidates = await FindPotentialDuplicatesForInputsAsync(
+            dbContext,
+            [lookup],
+            excludePartyId,
+            cancellationToken);
+        return candidates[0];
+    }
+
+    private static async Task<IReadOnlyList<IReadOnlyList<PartyDuplicateCandidateModel>>> FindPotentialDuplicatesForInputsAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<PartyDuplicateLookupInput> inputs,
+        Guid? excludePartyId,
+        CancellationToken cancellationToken)
+    {
+        if (inputs.Count == 0)
+        {
+            return [];
+        }
+
+        var normalizedNames = inputs
+            .SelectMany(input => input.NormalizedNames)
+            .ToHashSet(StringComparer.Ordinal);
+        var normalizedExternalCodes = inputs
+            .Select(input => input.NormalizedExternalCode)
+            .Where(value => !string.IsNullOrEmpty(value))
+            .ToHashSet(StringComparer.Ordinal);
+        var normalizedContacts = inputs
+            .SelectMany(input => input.NormalizedContactValues)
+            .ToHashSet(StringComparer.Ordinal);
+        if (normalizedNames.Count == 0 && normalizedExternalCodes.Count == 0 && normalizedContacts.Count == 0)
+        {
+            return inputs.Select(_ => (IReadOnlyList<PartyDuplicateCandidateModel>)[]).ToList();
+        }
+
+        var candidateParties = await dbContext.Set<Party>()
+            .AsNoTracking()
+            .Where(item => !excludePartyId.HasValue || item.Id != excludePartyId.Value)
+            .Where(item =>
+                normalizedNames.Contains(item.NormalizedDisplayName)
+                || normalizedNames.Contains(item.NormalizedLegalName)
+                || normalizedNames.Contains(item.NormalizedPreferredName)
+                || normalizedExternalCodes.Contains(item.NormalizedExternalCode)
+                || dbContext.Set<PartyContactPoint>().Any(contactPoint =>
+                    contactPoint.PartyId == item.Id
+                    && normalizedContacts.Contains(contactPoint.NormalizedValue)))
+            .OrderBy(item => item.DisplayName)
+            .ThenBy(item => item.Id)
+            .Take(MaximumPreviewDuplicateCandidates + 1)
+            .Select(item => new DuplicatePartyProjection(
+                item.Id,
+                item.DisplayName,
+                item.PartyType,
+                item.LifecycleStatus,
+                item.Summary,
+                item.NormalizedDisplayName,
+                item.NormalizedLegalName,
+                item.NormalizedPreferredName,
+                item.NormalizedExternalCode))
+            .ToListAsync(cancellationToken);
+        if (candidateParties.Count > MaximumPreviewDuplicateCandidates)
+        {
+            throw new DuplicateAnalysisLimitException(
+                $"Duplicate analysis matched more than {MaximumPreviewDuplicateCandidates} directory records. Narrow the import batch before previewing it.");
+        }
+
+        var candidatePartyIds = candidateParties.Select(item => item.Id).ToArray();
+        var matchingContactsByPartyId = candidatePartyIds.Length == 0 || normalizedContacts.Count == 0
+            ? new Dictionary<Guid, HashSet<string>>()
+            : (await dbContext.Set<PartyContactPoint>()
+                .AsNoTracking()
+                .Where(item => candidatePartyIds.Contains(item.PartyId) && normalizedContacts.Contains(item.NormalizedValue))
+                .Select(item => new { item.PartyId, item.NormalizedValue })
+                .ToListAsync(cancellationToken))
+                .GroupBy(item => item.PartyId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(item => item.NormalizedValue).ToHashSet(StringComparer.Ordinal));
+
+        return inputs
+            .Select(input => BuildDuplicateCandidates(input, candidateParties, matchingContactsByPartyId))
+            .ToList();
+    }
+
+    private sealed record PreparedImportRow(int PreviewRowIndex, PartyEditorModel Party);
+
+    private sealed record DuplicatePartyProjection(
+        Guid Id,
+        string DisplayName,
+        PartyType PartyType,
+        PartyLifecycleStatus LifecycleStatus,
+        string Summary,
+        string NormalizedDisplayName,
+        string NormalizedLegalName,
+        string NormalizedPreferredName,
+        string NormalizedExternalCode);
+
+    private sealed record DuplicateCandidateScore(PartyDuplicateCandidateModel Candidate, int Score);
+
+    private readonly record struct AffiliationMergeKey(
+        Guid PersonPartyId,
+        Guid OrganizationPartyId,
+        PartyOrganizationAffiliationKind AffiliationKind,
+        DateTimeOffset? ValidFromUtc,
+        DateTimeOffset? ValidToUtc);
+
+    private sealed class DuplicateAnalysisLimitException(string message) : Exception(message);
+
+    private sealed class PartyDuplicateLookupInput
+    {
+        public PartyDuplicateLookupInput(
+            string displayName,
+            string legalName,
+            string preferredName,
+            string externalCode,
+            IEnumerable<string> normalizedContactValues)
+        {
+            NormalizedNames = new[]
+                {
+                    NormalizeName(displayName),
+                    NormalizeName(legalName),
+                    NormalizeName(preferredName)
+                }
+                .Where(value => !string.IsNullOrEmpty(value))
+                .ToHashSet(StringComparer.Ordinal);
+            NormalizedExternalCode = NormalizeExternalCode(externalCode);
+            NormalizedContactValues = normalizedContactValues
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim().ToLowerInvariant())
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        public HashSet<string> NormalizedNames { get; }
+
+        public string NormalizedExternalCode { get; }
+
+        public HashSet<string> NormalizedContactValues { get; }
+
+        public static PartyDuplicateLookupInput FromParty(PartyEditorModel party)
+        {
+            return new PartyDuplicateLookupInput(
+                party.DisplayName,
+                party.LegalName,
+                party.PreferredName,
+                party.ExternalCode,
+                party.ContactPoints.Select(item => item.NormalizedValue));
+        }
+    }
+
+    private static IReadOnlyList<PartyDuplicateCandidateModel> BuildDuplicateCandidates(
+        PartyDuplicateLookupInput input,
+        IReadOnlyList<DuplicatePartyProjection> candidateParties,
+        IReadOnlyDictionary<Guid, HashSet<string>> matchingContactsByPartyId)
+    {
+        return candidateParties
+            .Select(party =>
+            {
+                var reasons = new List<string>();
+                var score = 0;
+                if (!string.IsNullOrEmpty(input.NormalizedExternalCode)
+                    && string.Equals(input.NormalizedExternalCode, party.NormalizedExternalCode, StringComparison.Ordinal))
+                {
+                    reasons.Add("matching external code");
+                    score += 4;
+                }
+
+                if (input.NormalizedNames.Contains(party.NormalizedDisplayName)
+                    || input.NormalizedNames.Contains(party.NormalizedLegalName)
+                    || input.NormalizedNames.Contains(party.NormalizedPreferredName))
+                {
+                    reasons.Add("matching normalized name");
+                    score += 2;
+                }
+
+                if (matchingContactsByPartyId.TryGetValue(party.Id, out var partyContacts)
+                    && partyContacts.Overlaps(input.NormalizedContactValues))
+                {
+                    reasons.Add("matching contact value");
+                    score += 3;
+                }
+
+                return new DuplicateCandidateScore(
+                    new PartyDuplicateCandidateModel(
+                        party.Id,
+                        party.DisplayName,
+                        party.PartyType,
+                        party.LifecycleStatus,
+                        party.Summary,
+                        reasons),
+                    score);
+            })
+            .Where(item => item.Score > 0)
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Candidate.Id)
+            .Take(MaximumDuplicateCandidatesPerRow)
+            .Select(item => item.Candidate)
+            .ToList();
+    }
+
+    private static PartyEditorModel? BuildImportParty(
+        IReadOnlyList<string> cells,
+        IReadOnlyDictionary<string, int> headerMap,
+        List<string> messages)
+    {
+        var displayName = GetCell(cells, headerMap, "DisplayName").Trim();
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            messages.Add("DisplayName is required.");
+        }
+
+        if (!Enum.TryParse<PartyType>(GetCell(cells, headerMap, "PartyType"), ignoreCase: true, out var partyType))
+        {
+            messages.Add("PartyType is invalid.");
+        }
+
+        if (!Enum.TryParse<PartyLifecycleStatus>(GetCell(cells, headerMap, "LifecycleStatus"), ignoreCase: true, out var lifecycleStatus))
+        {
+            messages.Add("LifecycleStatus is invalid.");
+        }
+
+        var roles = ParseRoles(GetCell(cells, headerMap, "Roles"), messages);
+        var contactPoints = ParseContactPoints(GetCell(cells, headerMap, "ContactPoints"), messages);
+        var addresses = ParseAddresses(GetCell(cells, headerMap, "Addresses"), messages);
+        if (messages.Count > 0)
+        {
+            return null;
+        }
+
+        return new PartyEditorModel
+        {
+            DisplayName = displayName,
+            PartyType = partyType,
+            LifecycleStatus = lifecycleStatus,
+            ExternalCode = GetCell(cells, headerMap, "ExternalCode").Trim(),
+            LegalName = GetCell(cells, headerMap, "LegalName").Trim(),
+            PreferredName = GetCell(cells, headerMap, "PreferredName").Trim(),
+            Summary = GetCell(cells, headerMap, "Summary").Trim(),
+            Tags = GetCell(cells, headerMap, "Tags")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList(),
+            Region = GetCell(cells, headerMap, "Region").Trim(),
+            CountryCode = GetCell(cells, headerMap, "CountryCode").Trim(),
+            TimeZone = GetCell(cells, headerMap, "TimeZone").Trim(),
+            IsSensitive = bool.TryParse(GetCell(cells, headerMap, "IsSensitive"), out var isSensitive) && isSensitive,
+            Roles = roles,
+            ContactPoints = contactPoints,
+            Addresses = addresses,
+            ExtendedDataJson = "{}",
+            LastChangedBy = "crm-hr-import"
+        };
+    }
+
+    private static List<PartyRoleAssignmentEditorModel> ParseRoles(string rawValue, List<string> messages)
+    {
+        var roles = new List<PartyRoleAssignmentEditorModel>();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return roles;
+        }
+
+        foreach (var segment in rawValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = segment.Split('|');
+            if (parts.Length < 1 || !Enum.TryParse<PartyRoleKind>(parts[0], ignoreCase: true, out var roleKind))
+            {
+                messages.Add($"Role segment '{segment}' is invalid.");
+                continue;
+            }
+
+            roles.Add(new PartyRoleAssignmentEditorModel
+            {
+                RoleKind = roleKind,
+                Title = parts.Length > 1 ? parts[1].Trim() : roleKind.ToString(),
+                IsPrimary = parts.Length > 2 && bool.TryParse(parts[2], out var isPrimary) && isPrimary
+            });
+        }
+
+        return roles;
+    }
+
+    private static List<PartyContactPointEditorModel> ParseContactPoints(string rawValue, List<string> messages)
+    {
+        var contactPoints = new List<PartyContactPointEditorModel>();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return contactPoints;
+        }
+
+        foreach (var segment in rawValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = segment.Split('|');
+            if (parts.Length < 3 || !Enum.TryParse<PartyContactType>(parts[0], ignoreCase: true, out var contactType))
+            {
+                messages.Add($"Contact point segment '{segment}' is invalid.");
+                continue;
+            }
+
+            var value = parts[2].Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                messages.Add($"Contact point segment '{segment}' is missing a value.");
+                continue;
+            }
+
+            contactPoints.Add(new PartyContactPointEditorModel
+            {
+                ContactType = contactType,
+                Label = parts[1].Trim(),
+                Value = value,
+                NormalizedValue = NormalizeContactValue(contactType, value),
+                IsPrimary = parts.Length > 3 && bool.TryParse(parts[3], out var isPrimary) && isPrimary,
+                IsPublic = parts.Length <= 4 || !bool.TryParse(parts[4], out var isPublic) || isPublic,
+                Tags = parts.Length > 5
+                    ? parts[5]
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                    : []
+            });
+        }
+
+        return contactPoints;
+    }
+
+    private static List<PartyAddressEditorModel> ParseAddresses(string rawValue, List<string> messages)
+    {
+        var addresses = new List<PartyAddressEditorModel>();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return addresses;
+        }
+
+        foreach (var segment in rawValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = segment.Split('|');
+            if (parts.Length < 6)
+            {
+                messages.Add($"Address segment '{segment}' is invalid.");
+                continue;
+            }
+
+            var line1 = parts[1].Trim();
+            if (string.IsNullOrWhiteSpace(line1))
+            {
+                messages.Add($"Address segment '{segment}' is missing line 1.");
+                continue;
+            }
+
+            addresses.Add(new PartyAddressEditorModel
+            {
+                AddressType = parts[0].Trim(),
+                Line1 = line1,
+                Line2 = parts[2].Trim(),
+                City = parts[3].Trim(),
+                Region = parts[4].Trim(),
+                PostalCode = parts[5].Trim(),
+                CountryCode = parts.Length > 6 ? parts[6].Trim() : string.Empty,
+                IsPrimary = parts.Length > 7 && bool.TryParse(parts[7], out var isPrimary) && isPrimary
+            });
+        }
+
+        return addresses;
+    }
+
+    private static string SerializeRoleAssignments(IReadOnlyList<PartyRoleAssignment> roles)
+    {
+        return string.Join(';', roles.Select(item => $"{item.RoleKind}|{item.Title}|{item.IsPrimary}"));
+    }
+
+    private static string SerializeContactPoints(IReadOnlyList<PartyContactPoint> contactPoints)
+    {
+        return string.Join(
+            ';',
+            contactPoints.Select(item =>
+                $"{item.ContactType}|{item.Label}|{item.Value}|{item.IsPrimary}|{item.IsPublic}|{string.Join(',', DeserializeTags(item.TagsJson))}"));
+    }
+
+    private static string SerializeAddresses(IReadOnlyList<PartyAddress> addresses)
+    {
+        return string.Join(';', addresses.Select(item => $"{item.AddressType}|{item.Line1}|{item.Line2}|{item.City}|{item.Region}|{item.PostalCode}|{item.CountryCode}|{item.IsPrimary}"));
+    }
+
+    private static List<IReadOnlyList<string>> ParseCsv(string csvContent)
+    {
+        var rows = new List<IReadOnlyList<string>>();
+        using var reader = new StringReader(csvContent.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n'));
+        string? line;
+        while ((line = reader.ReadLine()) is not null)
+        {
+            rows.Add(ParseCsvLine(line));
+        }
+
+        return rows;
+    }
+
+    private static IReadOnlyList<string> ParseCsvLine(string line)
+    {
+        var cells = new List<string>();
+        var builder = new StringBuilder();
+        var inQuotes = false;
+
+        for (var index = 0; index < line.Length; index++)
+        {
+            var character = line[index];
+            if (character == '"')
+            {
+                if (inQuotes && index + 1 < line.Length && line[index + 1] == '"')
+                {
+                    builder.Append('"');
+                    index++;
+                    continue;
+                }
+
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (character == ',' && !inQuotes)
+            {
+                cells.Add(builder.ToString());
+                builder.Clear();
+                continue;
+            }
+
+            builder.Append(character);
+        }
+
+        cells.Add(builder.ToString());
+        return cells;
+    }
+
+    private static IReadOnlyDictionary<string, int> BuildHeaderMap(IReadOnlyList<string> headerRow)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < headerRow.Count; index++)
+        {
+            var header = headerRow[index].Trim();
+            if (!string.IsNullOrWhiteSpace(header))
+            {
+                map[header] = index;
+            }
+        }
+
+        return map;
+    }
+
+    private static string GetCell(IReadOnlyList<string> cells, IReadOnlyDictionary<string, int> headerMap, string columnName)
+    {
+        return headerMap.TryGetValue(columnName, out var columnIndex) && columnIndex < cells.Count
+            ? cells[columnIndex]
+            : string.Empty;
+    }
+
+    private static void AppendCsvRow(StringBuilder builder, params string?[] values)
+    {
+        builder.AppendLine(string.Join(",", values.Select(EscapeCsv)));
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        var resolvedValue = value ?? string.Empty;
+        if (!resolvedValue.Contains(',') && !resolvedValue.Contains('"') && !resolvedValue.Contains('\n'))
+        {
+            return resolvedValue;
+        }
+
+        return $"\"{resolvedValue.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+    }
+
+    private static string NormalizeName(string value)
+    {
+        return new string(value
+            .Trim()
+            .ToLowerInvariant()
+            .Where(char.IsLetterOrDigit)
+            .ToArray());
+    }
+
+    private static string NormalizeExternalCode(string value)
+    {
+        return value.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeContactValue(PartyContactType contactType, string value)
+    {
+        var trimmedValue = value.Trim();
+        return contactType switch
+        {
+            PartyContactType.Email or PartyContactType.Website or PartyContactType.Messaging or PartyContactType.Social => trimmedValue.ToLowerInvariant(),
+            PartyContactType.Phone => new string(trimmedValue.Where(character => char.IsDigit(character) || character == '+').ToArray()),
+            _ => trimmedValue.ToLowerInvariant()
+        };
+    }
+
+    private static string ResolveActor(string actor)
+    {
+        return string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
+    }
+
+    private static string PreferExisting(string currentValue, string incomingValue)
+    {
+        return string.IsNullOrWhiteSpace(currentValue) ? incomingValue.Trim() : currentValue.Trim();
+    }
+
+    private static string CombineText(string currentValue, string incomingValue)
+    {
+        if (string.IsNullOrWhiteSpace(incomingValue))
+        {
+            return currentValue.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(currentValue))
+        {
+            return incomingValue.Trim();
+        }
+
+        if (currentValue.Contains(incomingValue, StringComparison.Ordinal))
+        {
+            return currentValue.Trim();
+        }
+
+        return $"{currentValue.Trim()}{Environment.NewLine}{Environment.NewLine}{incomingValue.Trim()}";
+    }
+
+    private static string BuildRoleAssignmentKey(PartyRoleAssignment roleAssignment)
+    {
+        return $"{roleAssignment.RoleKind}|{NormalizeName(roleAssignment.Title)}";
+    }
+
+    private static string BuildContactPointKey(PartyContactPoint contactPoint)
+    {
+        return $"{contactPoint.ContactType}|{contactPoint.NormalizedValue}";
+    }
+
+    private static string BuildAddressKey(PartyAddress address)
+    {
+        return $"{NormalizeName(address.AddressType)}|{NormalizeName(address.Line1)}|{NormalizeName(address.City)}|{NormalizeName(address.Region)}|{NormalizeName(address.PostalCode)}|{NormalizeName(address.CountryCode)}";
+    }
+
+    private static DateTimeOffset? MinDate(DateTimeOffset? left, DateTimeOffset? right)
+    {
+        return left switch
+        {
+            null => right,
+            _ when right is null => left,
+            _ => left <= right ? left : right
+        };
+    }
+
+    private static DateTimeOffset? MaxDate(DateTimeOffset? left, DateTimeOffset? right)
+    {
+        return left switch
+        {
+            null => right,
+            _ when right is null => left,
+            _ => left >= right ? left : right
+        };
+    }
+
+    private static DateTimeOffset? MergeOpenEndedEndDate(
+        DateTimeOffset? left,
+        DateTimeOffset? right)
+    {
+        if (!left.HasValue || !right.HasValue)
+        {
+            return null;
+        }
+
+        return left.Value >= right.Value ? left : right;
+    }
+
+    private static void AddIfNotBlank(ICollection<string> target, string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            target.Add(value);
+        }
+    }
+
+    private static List<string> DeserializeTags(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static List<string> DeserializeStringArray(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+}

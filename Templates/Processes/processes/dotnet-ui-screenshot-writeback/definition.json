@@ -1,0 +1,1116 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-ui-screenshot-writeback",
+  "DisplayName": ".NET UI screenshot project-structure writeback",
+  "Summary": "Captures UI screenshots when a .NET delivery target has browser-visible UI and stores accepted screenshots under a Screenshots parent node below the process run node.",
+  "ValueStatement": "Gives UI delivery runs durable visual proof while making backend-only/no-UI applicability explicit.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Delivery governance",
+  "InterfaceContractSummary": "Parent process supplies project structure context, upstream artifacts, current run identity, and target repository boundary; this subprocess returns durable managed artifacts and project-structure writeback receipts where applicable.",
+  "GovernanceNotes": "Every step declares explicit operations and target scope so role permissions remain bounded and product mutation cannot leak into planning, review, validation, screenshot, or writeback work.",
+  "ChangeSummary": "Adds .NET-specific delivery subprocess coverage for multi-team software delivery hardening.",
+  "GovernancePolicySummary": "No subprocess may silently change product files unless its step explicitly allows product target mutation.",
+  "ConstitutionRuleSummary": "Typed process artifacts, subprocess relationships, and project-structure nodes are the source of truth for delivery replay.",
+  "OperatingModeSummary": "Governed live execution inside a parent software-delivery run.",
+  "SimulationReadinessSummary": "Small enough for deterministic process projection and rich enough for live run validation.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [
+    "scope-boundary-packet",
+    "project-structure-context-brief",
+    "architecture-decision-record",
+    "implementation-change-set",
+    "test-evidence-pack",
+    "regression-evidence-pack",
+    "implementation-plan"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Share of UI deliveries with stored Screenshots node assets.",
+    "Number of no-UI targets with explicit no-screenshot evidence.",
+    "Screenshot storage failures caught before release approval."
+  ],
+  "Risks": [
+    "UI screenshots remain only in run artifacts and are not linked under the process run node.",
+    "Backend-only work wastes time launching browsers instead of recording no-UI evidence.",
+    "Blank or wrong-route screenshots are stored as accepted proof."
+  ],
+  "TailoringRules": [
+    "Blazor Server/SSR, Blazor WebAssembly, and Blazor WASM PWA require route-level screenshot candidates.",
+    "Backend-only API/service, worker, console, and library targets record no-UI evidence instead of browser screenshots.",
+    "Screenshots are stored under a Screenshots parent node below the current process run node, not under unrelated delivery blocks."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "screenshot-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Screenshot writeback manager",
+      "Purpose": "Resolve screenshot applicability and parent handoff.",
+      "StaffingIntent": "Manager-capable agent with project-structure context.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "screenshot-capture-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "UI screenshot capture agent",
+      "Purpose": "Start or reuse the app, capture browser proof, and write screenshot files.",
+      "StaffingIntent": "QA agent with runtime and browser screenshot capability.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 900,
+      "CanvasY": 40
+    },
+    {
+      "Key": "screenshot-review-storage-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Screenshot review and storage agent",
+      "Purpose": "Inspect screenshots and store accepted image assets under Screenshots.",
+      "StaffingIntent": "QA agent with image inspection and project-structure write access.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 1760,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "resolve-ui-screenshot-applicability",
+      "Title": "Resolve UI screenshot applicability",
+      "Subtitle": "UI routes or no-UI evidence",
+      "Notes": "Classify UI applicability from the architecture handoff, project structure, and current-run evidence. Prefer a recorded Run app node. When it is absent, use the runtime-forwarded typed bootstrap decision or a grounded product inspection to identify the declared runnable project file; aliases are optional convenience values, not topology inference. Record a launch-required manifest when a UI target has no live URL. Resolve the deterministic process-run writeback target from TargetProcessRunNodeId, ParentProcessRunNodeId, ProcessRunNodeId, then CurrentProcessRunNodeId. A missing Screenshots child is normal create-or-reuse work owned by store-ui-screenshots, not unavailable writeback or capture work. Record explicit no-UI evidence only when the declared target has no browser-visible surface.",
+      "CapabilityScope": {
+        "Directives": [
+          {
+            "Kind": "Deny",
+            "Target": {
+              "Kind": "CapabilityIdentity",
+              "Value": "Skill",
+              "SecondaryValue": "development-image-analysis-guidance-inline-skill"
+            },
+            "Reason": "Applicability planning must not load software-delivery image-analysis guidance before screenshot evidence exists."
+          },
+          {
+            "Kind": "Deny",
+            "Target": {
+              "Kind": "CapabilityTag",
+              "Value": "development"
+            },
+            "Reason": "Applicability planning is management/review work and suppresses development-only capabilities."
+          }
+        ],
+        "InstructionFragments": [
+          {
+            "Key": "pre-qa-screenshot-applicability-context",
+            "Title": "Pre-QA screenshot applicability context",
+            "Content": "This screenshot subprocess may run before QA validation. Do not require upstream QA evidence to resolve applicability; use architecture, implementation, acceptance-plan, project-structure, and grounded product context. Runtime command nodes are optional when the child can directly launch the grounded app project.",
+            "Placement": "AppendToStepBrief"
+          }
+        ]
+      },
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Architecture handoff, implementation and acceptance-plan context, optional runtime command nodes, route nodes, process run node context, and optional verified upstream runtime/browser evidence when available.",
+      "OutputContractSummary": "Screenshot applicability manifest with UI routes or explicit no-UI evidence.",
+      "EvidenceContractSummary": "App type, UI/no-UI decision, route list, viewport set, runtime command references or degraded runtime evidence, missing-reference warnings, and the deterministic process-run writeback target with the Screenshots child marked existing or create-required.",
+      "DecisionRightsSummary": "Manager may block when UI applicability or route targets are ambiguous.",
+      "ExceptionPolicySummary": "Block only when UI applicability is contradictory, route targets are empty for a UI app, no concrete launch/browser evidence exists for a UI app, or no-UI evidence is missing for a non-UI target. Missing command nodes or process-run node access are warnings when concrete QA/runtime evidence is available.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can assess screenshot scope."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-target-manifest",
+          "TemplateKey": "project-structure-context-brief",
+          "Title": ".NET UI screenshot target manifest",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by screenshot capture, storage, QA, and release approval.",
+          "ValidationRequirementSummary": "Must include app type, UI/no-UI decision, the deterministic process-run writeback target, whether the Screenshots child exists or is create-required storage work, base URL or no-UI reason, route list, viewport set, Run app and Run tests node references when available, and exact upstream QA/runtime evidence paths for degraded mode."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/resolve-ui-screenshot-applicability.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/resolve-ui-screenshot-applicability.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "capture-ui-screenshots",
+      "Title": "Capture UI screenshots when required",
+      "Subtitle": "Current-run browser proof",
+      "Notes": "For a UI target, prefer the recorded Run app node. Otherwise read runtime-forwarded typed bootstrap context for the declared runnable project file, use an agreeing launch alias when available, and use grounded product inspection only as a last resort. Do not construct a conventional solution, project, or directory path. workspace_dotnet_run requires a declared runnable project file, never a solution or directory. Capture current-run browser navigation, snapshot, screenshot, console, and cleanup receipts. Begin DOM assertions from the same-run browser snapshot and record selector or locator provenance from that snapshot, a same-run DOM enumeration, or an exact product source read. A zero match from an ungrounded selector is inconclusive, not evidence of absence. Reconcile evaluated state with the same-run snapshot and screenshot; omit an unsupported structured claim or recapture it with an observed locator when they conflict. browser_evaluate is optional and does not replace required snapshot or screenshot receipts. A visible defect that remains grounded after reconciliation is evidence for QA and must continue to assessment, not become a capture retry or a no-UI claim. Capture does not own project-structure writeback: a create-required Screenshots child is normal work for store-ui-screenshots and must not be reported as missing current-run evidence, a fallback, limitation, warning, blocker, or capture next action. Return Completed with ui-capture-complete when capture and cleanup receipts are complete. Return Blocked only when a concrete launch, browser, route, access, policy, or provider boundary prevents grounded evidence.",
+      "CapabilityScope": {
+        "RequiredReceipts": [
+          {
+            "Key": "capture-ui-runtime-start",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_run",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-capture-complete"
+            ],
+            "Reason": "UI screenshot capture must start or reuse the .NET app before browser proof."
+          },
+          {
+            "Key": "capture-ui-browser-navigate",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_navigate",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-capture-complete"
+            ],
+            "Reason": "UI screenshot capture must navigate to the concrete route before accepting browser proof."
+          },
+          {
+            "Key": "capture-ui-browser-state",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_snapshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-capture-complete"
+            ],
+            "Reason": "UI screenshot capture must record durable browser state for the route."
+          },
+          {
+            "Key": "capture-ui-browser-screenshot",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_take_screenshot",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-capture-complete"
+            ],
+            "Reason": "UI screenshot capture must produce current-run screenshot evidence."
+          },
+          {
+            "Key": "capture-ui-browser-console",
+            "Kind": "RuntimeToolName",
+            "ToolName": "browser_console_messages",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-capture-complete"
+            ],
+            "Reason": "UI screenshot capture must collect console diagnostics for the browser route."
+          },
+          {
+            "Key": "capture-ui-runtime-stop",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_dotnet_stop",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-capture-complete"
+            ],
+            "Reason": "UI screenshot capture must clean up any app process it started."
+          }
+        ]
+      },
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Screenshot target manifest, Run app command node reference when available, or verified upstream runtime URL/browser evidence from the manifest.",
+      "OutputContractSummary": "Screenshot files and browser evidence for UI targets, or explicit no-UI receipt for non-UI targets.",
+      "EvidenceContractSummary": "Current-run browser_take_screenshot files, durable browser_snapshot evidence, optional browser_evaluate state output with selector or locator provenance from the same-run snapshot, DOM enumeration, or exact product source, reconciliation of structured claims with the same-run snapshot and screenshot, route URLs, browser_console_messages output, runtime command references or cited degraded runtime evidence, workspace_dotnet_run startup receipt, workspace_dotnet_stop cleanup receipt when this step started the app, or no-UI evidence. Zero matches from ungrounded selectors are inconclusive and must be omitted or recaptured with an observed locator.",
+      "DecisionRightsSummary": "Capture agent can block on failed app launch, fatal browser errors, or missing required routes.",
+      "ExceptionPolicySummary": "Do not substitute stale screenshots, chat-only claims, or screenshots from another process run.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "resolve-ui-screenshot-applicability",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "ExecutorPreferredSpecializationTags": [
+        "browser",
+        "dotnet"
+      ],
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-ui-screenshot-applicability",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-capture-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to an agent that can record the applicable evidence disposition; a UI target requires runtime and browser screenshot capability."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-files",
+          "TemplateKey": "",
+          "Title": ".NET UI screenshot files",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by screenshot storage, QA, release, and future layout analysis.",
+          "ValidationRequirementSummary": "For ui-capture-complete, must include one readable screenshot per required route and viewport and reconcile any structured visual claim with the same-run snapshot. An ungrounded selector with zero matches cannot establish absence. For no-ui-evidence-recorded, must include the explicit no-UI applicability rationale and no browser-launch claim."
+        },
+        {
+          "Key": "ui-browser-evidence",
+          "TemplateKey": "",
+          "Title": ".NET UI browser evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by QA and failure triage.",
+          "ValidationRequirementSummary": "For ui-capture-complete, must include actual URLs, viewport, wait condition, console messages, screenshot paths, runtime command reference or cited degraded runtime evidence, cleanup receipt, selector or locator provenance for every DOM assertion, and reconciliation with the same-run snapshot and screenshot. A conflicting ungrounded claim must be omitted or recaptured with an observed locator. For no-ui-evidence-recorded, must include explicit no-UI applicability rationale."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "ui-screenshot-target-manifest",
+          "SourceStepKey": "resolve-ui-screenshot-applicability"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "ui-capture-complete",
+          "Title": "UI capture complete",
+          "Description": "Current-run browser and screenshot evidence was captured for the declared UI routes."
+        },
+        {
+          "Key": "no-ui-evidence-recorded",
+          "Title": "No-UI evidence recorded",
+          "Description": "The target has no browser-visible UI and the explicit no-UI evidence makes browser capture inapplicable."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/capture-ui-screenshots.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/capture-ui-screenshots.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [],
+        "RequiredReceipts": [
+          {
+            "Key": "start-app",
+            "ToolName": "workspace_dotnet_run",
+            "Predicate": "current-run app startup receipt for UI targets",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "navigate",
+            "ToolName": "browser_navigate",
+            "Predicate": "browser navigation receipt for each required route",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "snapshot",
+            "ToolName": "browser_snapshot",
+            "Predicate": "browser state snapshot receipt for each required route",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "screenshot",
+            "ToolName": "browser_take_screenshot",
+            "Predicate": "fresh screenshot receipt for each required route and viewport",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "console",
+            "ToolName": "browser_console_messages",
+            "Predicate": "browser console receipt for each required route",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "stop-app",
+            "ToolName": "workspace_dotnet_stop",
+            "Predicate": "cleanup receipt for any app process started by this step",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "ui-screenshot-files",
+            "MaterializationMode": "RuntimeManaged"
+          },
+          {
+            "ArtifactExpectationKey": "ui-browser-evidence",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.ui-screenshot.capture",
+          "PlanKind": "RuntimeScreenshotCapture",
+          "Operations": [
+            {
+              "Key": "start-app",
+              "ToolName": "workspace_dotnet_run",
+              "RequiredReceiptKey": "start-app",
+              "ArgumentsSummary": "Start the app from the grounded app project file when needed.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "navigate",
+              "ToolName": "browser_navigate",
+              "RequiredReceiptKey": "navigate",
+              "ArgumentsSummary": "Navigate each required route.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "snapshot",
+              "ToolName": "browser_snapshot",
+              "RequiredReceiptKey": "snapshot",
+              "ArgumentsSummary": "Capture browser state for each route.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "screenshot",
+              "ToolName": "browser_take_screenshot",
+              "RequiredReceiptKey": "screenshot",
+              "ArgumentsSummary": "Capture fresh PNG screenshots.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "console",
+              "ToolName": "browser_console_messages",
+              "RequiredReceiptKey": "console",
+              "ArgumentsSummary": "Collect browser console messages.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "stop-app",
+              "ToolName": "workspace_dotnet_stop",
+              "RequiredReceiptKey": "stop-app",
+              "ArgumentsSummary": "Stop any process started by this step.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "start-app",
+              "ToolName": "workspace_dotnet_run",
+              "Predicate": "current-run app startup receipt for UI targets",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "navigate",
+              "ToolName": "browser_navigate",
+              "Predicate": "browser navigation receipt for each required route",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "snapshot",
+              "ToolName": "browser_snapshot",
+              "Predicate": "browser state snapshot receipt for each required route",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "screenshot",
+              "ToolName": "browser_take_screenshot",
+              "Predicate": "fresh screenshot receipt for each required route and viewport",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "console",
+              "ToolName": "browser_console_messages",
+              "Predicate": "browser console receipt for each required route",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "stop-app",
+              "ToolName": "workspace_dotnet_stop",
+              "Predicate": "cleanup receipt for any app process started by this step",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": []
+        }
+      }
+    },
+    {
+      "Order": 2,
+      "Key": "store-ui-screenshots",
+      "Title": "Store screenshots under process run node",
+      "Subtitle": "Screenshots project-structure parent",
+      "Notes": "Create or reuse a Screenshots parent node under the current process run node. Resolve the writeback parent from TargetProcessRunNodeId, ParentProcessRunNodeId, ProcessRunNodeId, then CurrentProcessRunNodeId, and use a focused project_structure_read with that node id or subtree root. Do not fall back to ProjectNodeId or project root when a process-run target is present. For UI targets, inspect each screenshot, distinguish accepted visual proof from a grounded visual discrepancy, and create image asset nodes under Screenshots for accepted screenshots and diagnostic rejected screenshots. workspace_inspect_image and workspace_analyze_image are required runtime tool receipts only for ui-evidence-stored; call both for every accepted or rejected screenshot and ground the visual reason in the provider-backed result instead of dimensions, filenames, or chat-only descriptions. When source visual target ImageAsset nodes exist, resolve them with project_structure_read, project_structure_asset_get, or project_structure_asset_content_get, then call workspace_analyze_images with the ordered source-target and delivered screenshot paths. If target content is inaccessible, return Blocked with the node id, media path, and failed receipt. Include a Visual target comparison naming the source asset, delivered screenshot, method, and disposition. For UI screenshots, project_structure_node_create and project_structure_asset_create are required runtime tool receipts only for ui-evidence-stored: create or reuse Screenshots with objectType ProjectBlock, objectSubtype delivery, and parentNodeKey set to the process-run node; create one ImageAsset with objectSubtype screenshot per image using its exact sourceWorkspacePath plus explicit sourceFileName and sourceContentType. Label visual discrepancies as diagnostic rejected evidence. Do not infer these tools are unavailable from memory or prompt text. Do not read binary images as text or base64 when sourceWorkspacePath is available; after an invalid base64 upload, retry once with sourceWorkspacePath. Do not write Status: Completed until node creation or reuse and every asset creation succeeds. There is no successful managed-only storage outcome for a UI target. If a write tool is unavailable, denied, or fails, retain a diagnostic failure receipt and return Blocked instead of completing. A visual discrepancy is not a storage blocker: preserve its diagnostic asset for assessment. For an explicitly no-UI target, carry forward the no-UI receipt as managed evidence, select no-ui-evidence-recorded, and do not manufacture images or browser receipts. A missing tool is not no-UI evidence. Do not mutate product files.",
+      "CapabilityScope": {
+        "Directives": [],
+        "InstructionFragments": [
+          {
+            "Key": "development-ui-screenshot-image-analysis",
+            "Title": "Development UI screenshot image analysis",
+            "Content": "Use generic workspace image tools only as software-delivery visual evidence for this step: inspect screenshot readability, route correctness, blank/error states, visible UI behavior, and ordered source-target comparisons against project visual target ImageAssets. Do not treat this as generic image interpretation.",
+            "Placement": "AppendToStepBrief"
+          }
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "store-ui-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-evidence-stored"
+            ],
+            "Reason": "Screenshot storage must inspect image files before accepting or rejecting them."
+          },
+          {
+            "Key": "store-ui-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-evidence-stored"
+            ],
+            "Reason": "Screenshot storage must ground visual decisions in provider-backed image analysis."
+          },
+          {
+            "Key": "store-ui-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-evidence-stored"
+            ],
+            "Reason": "Screenshot storage must compare delivered screenshots with source visual targets when target images exist."
+          },
+          {
+            "Key": "store-ui-screenshots-parent",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_node_create",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-evidence-stored"
+            ],
+            "Reason": "Accepted UI screenshots must be stored under a Screenshots parent node when project-structure writeback is available."
+          },
+          {
+            "Key": "store-ui-screenshot-asset",
+            "Kind": "RuntimeToolName",
+            "ToolName": "project_structure_asset_create",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "ui-evidence-stored"
+            ],
+            "Reason": "Accepted UI screenshots must be written as ImageAsset nodes when project-structure writeback is available."
+          }
+        ]
+      },
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Screenshot files, browser evidence, and screenshot target manifest.",
+      "OutputContractSummary": "Screenshots parent node under the process run node and image asset storage receipts that distinguish accepted proof from diagnostic rejected evidence.",
+      "EvidenceContractSummary": "Screenshots parent node id from project_structure_node_create and one image asset id from project_structure_asset_create per UI screenshot, with accepted or diagnostic rejected disposition, plus workspace_inspect_image, workspace_analyze_image, and when source visual targets exist workspace_analyze_images receipt refs, Visual target comparison details, rejected images, and no-UI receipt when applicable. Failed UI writeback is a blocked diagnostic, not a completed storage alternative.",
+      "DecisionRightsSummary": "Storage reviewer can preserve unusable screenshots as diagnostic evidence; the later evidence-assessment step owns the explicit disposition that QA consumes.",
+      "ExceptionPolicySummary": "Artifact recovery: block when required Screenshots storage receipts are missing, invalid, or not materialized before branch routing, or when a capture, image-analysis, project-structure, access, policy, or provider failure prevents durable evidence. Do not block merely because a screenshot shows a grounded visual discrepancy; preserve the rejected evidence and let the assessment step emit the observed-defect disposition. If project-structure writeback tools are available, do not complete until project_structure_node_create and project_structure_asset_create are attempted and successful for each UI screenshot. If project_structure_asset_create or project_structure_node_create is unavailable or denied, return Blocked with the missing tool or operation allowance instead of completing silently.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "screenshot-review-storage-agent",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-ui-screenshot-applicability",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "capture-ui-screenshots",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-review-storage-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to an agent that can record the applicable evidence disposition; UI evidence requires image review and project-structure asset write access."
+        },
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Manager reviews storage receipts and no-UI disposition."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "screenshots-node-storage-receipts",
+          "TemplateKey": "",
+          "Title": "Screenshots project-structure storage receipts",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent release approval, project inspection, and later visual review.",
+          "ValidationRequirementSummary": "For ui-evidence-stored, must include the process run node id, Screenshots parent node id, one image asset node id per UI screenshot, explicit accepted or diagnostic rejected disposition for every asset, route and viewport metadata, sourceWorkspacePath, workspace_inspect_image and workspace_analyze_image receipt refs, rejected screenshot reasons, Visual target comparison details, and workspace_analyze_images receipt refs when source visual target ImageAssets exist. A writeback failure must return Blocked with its diagnostic receipt. For no-ui-evidence-recorded, must include explicit no-UI applicability evidence without browser, image-analysis, or image-asset claims."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "ui-screenshot-target-manifest",
+          "SourceStepKey": "resolve-ui-screenshot-applicability"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-files",
+          "SourceStepKey": "capture-ui-screenshots"
+        },
+        {
+          "ArtifactExpectationKey": "ui-browser-evidence",
+          "SourceStepKey": "capture-ui-screenshots"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "ui-evidence-stored",
+          "Title": "UI screenshot evidence stored",
+          "Description": "Durable accepted or diagnostic UI screenshot evidence and its storage receipts were recorded."
+        },
+        {
+          "Key": "no-ui-evidence-recorded",
+          "Title": "No-UI evidence recorded",
+          "Description": "The target has no browser-visible UI and durable no-UI evidence was recorded without browser or image-asset work."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/store-ui-screenshots.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/store-ui-screenshots.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
+      "ExecutionClass": "AgentWithToolPlanGuard",
+      "ExecutionContract": {
+        "ExecutionClass": "AgentWithToolPlanGuard",
+        "RequiredRuntimeToolNames": [],
+        "RequiredReceipts": [
+          {
+            "Key": "inspect-image",
+            "ToolName": "workspace_inspect_image",
+            "Predicate": "inspect every accepted or rejected screenshot",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "analyze-image",
+            "ToolName": "workspace_analyze_image",
+            "Predicate": "provider-backed analysis for visual acceptance claims when available",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "compare-images",
+            "ToolName": "workspace_analyze_images",
+            "Predicate": "ordered source-target comparison when source visual targets exist and are accessible",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "create-screenshots-node",
+            "ToolName": "project_structure_node_create",
+            "Predicate": "create or reuse the Screenshots project-structure parent when accepted UI screenshots exist",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "create-image-asset",
+            "ToolName": "project_structure_asset_create",
+            "Predicate": "create one image asset per accepted screenshot when project-structure writeback is available",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "screenshots-node-storage-receipts",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ],
+        "DeterministicToolPlan": {
+          "PlanKey": "dotnet.ui-screenshot.store",
+          "PlanKind": "ScreenshotStorageWriteback",
+          "Operations": [
+            {
+              "Key": "inspect-image",
+              "ToolName": "workspace_inspect_image",
+              "RequiredReceiptKey": "inspect-image",
+              "ArgumentsSummary": "Inspect every screenshot before acceptance.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "analyze-image",
+              "ToolName": "workspace_analyze_image",
+              "RequiredReceiptKey": "analyze-image",
+              "ArgumentsSummary": "Analyze visual content when available.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "compare-images",
+              "ToolName": "workspace_analyze_images",
+              "RequiredReceiptKey": "compare-images",
+              "ArgumentsSummary": "Compare source targets when available.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "create-screenshots-node",
+              "ToolName": "project_structure_node_create",
+              "RequiredReceiptKey": "create-screenshots-node",
+              "ArgumentsSummary": "Create or reuse Screenshots parent node.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            },
+            {
+              "Key": "create-image-asset",
+              "ToolName": "project_structure_asset_create",
+              "RequiredReceiptKey": "create-image-asset",
+              "ArgumentsSummary": "Create image assets for accepted screenshots.",
+              "IdempotencyPolicyKey": "current-run-repeatable"
+            }
+          ],
+          "RequiredReceipts": [
+            {
+              "Key": "inspect-image",
+              "ToolName": "workspace_inspect_image",
+              "Predicate": "inspect every accepted or rejected screenshot",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "analyze-image",
+              "ToolName": "workspace_analyze_image",
+              "Predicate": "provider-backed analysis for visual acceptance claims when available",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "compare-images",
+              "ToolName": "workspace_analyze_images",
+              "Predicate": "ordered source-target comparison when source visual targets exist and are accessible",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "create-screenshots-node",
+              "ToolName": "project_structure_node_create",
+              "Predicate": "create or reuse the Screenshots project-structure parent when accepted UI screenshots exist",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            },
+            {
+              "Key": "create-image-asset",
+              "ToolName": "project_structure_asset_create",
+              "Predicate": "create one image asset per accepted screenshot when project-structure writeback is available",
+              "RequireSuccessfulExit": true,
+              "RequireCurrentRun": true
+            }
+          ],
+          "ReadbackChecks": []
+        }
+      }
+    },
+    {
+      "Order": 3,
+      "Key": "assess-ui-screenshot-evidence",
+      "Title": "Assess UI screenshot evidence disposition",
+      "Subtitle": "Accepted proof or observed visual defect",
+      "Notes": "Read the screenshot target manifest, stored screenshot receipts, current-run browser and image-analysis evidence when the target has a UI, and any source visual target comparison. For UI evidence, perform the image inspection and analysis for this current execution before selecting the disposition; upstream descriptions and asset ids alone are not proof. Select visual-accepted when UI screenshots satisfy the declared route and visual target. Select visual-defect-observed, not Blocked, when captured current-run evidence demonstrates a blank, error, wrong-route, scaffold, unstyled, non-interactive, or source-target-mismatched UI. Select no-ui-evidence-recorded only when the applicability manifest explicitly classifies the target as having no browser-visible UI and cites its evidence; do not demand browser, image-analysis, or image-asset receipts for that disposition. A missing browser, image tool, or storage tool for a UI target is not no-UI evidence. The completed disposition must name the applicable evidence so parent QA can independently validate and choose its normal quality branch. Return Blocked only when a capture, image-analysis, access, policy, or provider failure prevents the applicable grounded disposition; a product discrepancy by itself is not an execution blocker. This step does not change the product and does not direct a product fix.",
+      "CapabilityScope": {
+        "Directives": [],
+        "InstructionFragments": [
+          {
+            "Key": "development-ui-screenshot-disposition",
+            "Title": "Development UI screenshot disposition",
+            "Content": "Use current-execution image inspection and analysis to distinguish accepted visual proof from an observed visual defect when the target has a UI. For an explicit no-UI target, record no-ui-evidence-recorded only from the applicability evidence, without inventing browser or image-analysis evidence. A missing UI tool does not prove no UI. A visual defect is evidence for QA, not a reason to report this evidence-assessment step as blocked.",
+            "Placement": "AppendToStepBrief"
+          }
+        ],
+        "RequiredReceipts": [
+          {
+            "Key": "assess-ui-inspect-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_inspect_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "visual-accepted",
+              "visual-defect-observed"
+            ],
+            "Reason": "Screenshot evidence assessment must inspect every dispositioned UI screenshot."
+          },
+          {
+            "Key": "assess-ui-analyze-image",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_image",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "visual-accepted",
+              "visual-defect-observed"
+            ],
+            "Reason": "Screenshot evidence assessment must use provider-backed analysis for visual disposition."
+          },
+          {
+            "Key": "assess-ui-compare-images",
+            "Kind": "RuntimeToolName",
+            "ToolName": "workspace_analyze_images",
+            "Activation": "WhenLaunchContextDeclaresTool",
+            "ApplicableBranchOutcomeKeys": [
+              "visual-accepted",
+              "visual-defect-observed"
+            ],
+            "Reason": "Screenshot evidence assessment must compare accessible source visual targets with delivered screenshots."
+          }
+        ]
+      },
+      "StepKind": "Decision",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Screenshot target manifest and durable screenshot storage receipts, including current-run browser and image-analysis evidence.",
+      "OutputContractSummary": "A recorded disposition that is accepted UI proof, an observed visual defect, or explicit no-UI evidence for parent QA.",
+      "EvidenceContractSummary": "Exact screenshot and route refs, accepted or diagnostic asset ids, current-run image inspection and analysis receipts and source-target comparison for UI evidence, or explicit no-UI evidence when browser capture is inapplicable, plus the chosen disposition rationale.",
+      "DecisionRightsSummary": "The screenshot review specialist records the evidence disposition; the screenshot manager reviews that the parent can act on it without treating product evidence as an infrastructure blocker.",
+      "ExceptionPolicySummary": "Block only when the applicable durable evidence cannot be produced or read because of a concrete tool, access, policy, or provider failure. Complete with visual-defect-observed when UI evidence itself shows a product defect, and with no-ui-evidence-recorded when browser capture is inapplicable.",
+      "TargetLeadHours": 1,
+      "DependsOnStepKey": "store-ui-screenshots",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "screenshot-review-storage-agent",
+      "ExecutorPreferredSpecializationTags": [
+        "browser",
+        "dotnet",
+        "qa"
+      ],
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 3760,
+      "BranchCanvasY": -520,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "store-ui-screenshots",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-review-storage-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind to an agent able to ground the applicable evidence disposition; UI dispositions require current-run image inspection and analysis capability."
+        },
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "The manager reviews whether the visual disposition is sufficiently grounded for parent QA."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-evidence-disposition",
+          "TemplateKey": "",
+          "Title": ".NET UI screenshot evidence disposition",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by the screenshot handoff and parent QA for independent validation and defect triage.",
+          "ValidationRequirementSummary": "Must state exactly visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. UI dispositions must cite screenshot, route, current-run inspection and analysis receipts, and source-target comparison when applicable. A no-ui-evidence-recorded disposition must cite explicit no-UI rationale without inventing browser or image-analysis proof. A visual-defect-observed record must name the observed visual state without claiming the product was accepted."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "ui-screenshot-target-manifest",
+          "SourceStepKey": "resolve-ui-screenshot-applicability"
+        },
+        {
+          "ArtifactExpectationKey": "screenshots-node-storage-receipts",
+          "SourceStepKey": "store-ui-screenshots"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "visual-accepted",
+          "Title": "Visual evidence accepted",
+          "Description": "Current-run visual evidence satisfies the declared UI target."
+        },
+        {
+          "Key": "visual-defect-observed",
+          "Title": "Visual defect observed",
+          "Description": "Current-run evidence records a concrete product visual discrepancy for parent QA to validate and triage.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
+        },
+        {
+          "Key": "no-ui-evidence-recorded",
+          "Title": "No-UI evidence recorded",
+          "Description": "Explicit no-UI evidence makes browser capture and image analysis inapplicable while preserving the non-UI QA path."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/assess-ui-screenshot-evidence.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/assess-ui-screenshot-evidence.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "BranchDecision",
+      "ExecutionContract": {
+        "ExecutionClass": "BranchDecision",
+        "RequiredRuntimeToolNames": [],
+        "RequiredReceipts": [
+          {
+            "Key": "inspect-image",
+            "ToolName": "workspace_inspect_image",
+            "Predicate": "current-run inspection for every dispositioned UI screenshot",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "analyze-image",
+            "ToolName": "workspace_analyze_image",
+            "Predicate": "current-run provider-backed analysis for the selected visual disposition",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          },
+          {
+            "Key": "compare-images",
+            "ToolName": "workspace_analyze_images",
+            "Predicate": "current-run source-target comparison when an accessible source visual target exists",
+            "RequireSuccessfulExit": true,
+            "RequireCurrentRun": true
+          }
+        ],
+        "ProducedArtifactSlots": [
+          {
+            "ArtifactExpectationKey": "ui-screenshot-evidence-disposition",
+            "MaterializationMode": "RuntimeManaged"
+          }
+        ]
+      }
+    },
+    {
+      "Order": 4,
+      "Key": "screenshot-handoff",
+      "Title": "Hand off screenshot writeback evidence",
+      "Subtitle": "Parent-ready visual proof",
+      "Notes": "Summarize screenshot applicability, captured routes, Screenshots parent node id, accepted and diagnostic image asset node ids, no-UI evidence, and concrete tool or access blockers for parent QA. Copy the exact evidence-assessment Branch outcome key: visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. visual-defect-observed and no-ui-evidence-recorded are completed evidence handoffs for QA, not child no-go outcomes and not instructions to alter the product. no-ui-evidence-recorded must cite the explicit applicability classification and does not replace non-browser QA. This step writes managed process artifacts only.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Screenshot storage receipts, target manifest, and the explicit visual evidence disposition.",
+      "OutputContractSummary": "Parent-ready screenshot writeback handoff carrying the exact UI or no-UI evidence disposition.",
+      "EvidenceContractSummary": "Applicability, node ids, accepted and diagnostic asset ids for UI evidence, route evidence, image-analysis receipts when applicable, no-UI status, exact disposition, and concrete execution blockers.",
+      "DecisionRightsSummary": "Manager may hand off visual-accepted, visual-defect-observed, or no-ui-evidence-recorded when it is durably grounded; only genuine evidence-production failures remain blocked.",
+      "ExceptionPolicySummary": "Do not close with missing Screenshots storage or evidence-disposition records for UI targets. Do not convert a grounded visual-defect-observed or no-ui-evidence-recorded disposition into a blocked child outcome.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "assess-ui-screenshot-evidence",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 4580,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "assess-ui-screenshot-evidence",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager owns parent-ready screenshot handoff."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-writeback-handoff",
+          "TemplateKey": "",
+          "Title": ".NET UI screenshot writeback handoff",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent release approval, project structure inspection, and run analysis.",
+          "ValidationRequirementSummary": "Must reference UI/no-UI applicability, process run node id, Screenshots parent node id, accepted and diagnostic image asset node ids and route metadata for UI evidence, storage and current-run image-analysis receipts when applicable, and one exact Branch outcome key: visual-accepted, visual-defect-observed, or no-ui-evidence-recorded. A visual-defect-observed handoff must name the observed discrepancy and its evidence without claiming acceptance. A no-ui-evidence-recorded handoff must cite explicit no-UI rationale without inventing browser or image-analysis proof."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "screenshots-node-storage-receipts",
+          "SourceStepKey": "store-ui-screenshots"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-evidence-disposition",
+          "SourceStepKey": "assess-ui-screenshot-evidence"
+        }
+      ],
+      "BranchOutcomes": [
+        {
+          "Key": "visual-accepted",
+          "Title": "Visual evidence accepted",
+          "Description": "The child hands parent QA current-run visual evidence that was accepted."
+        },
+        {
+          "Key": "visual-defect-observed",
+          "Title": "Visual defect observed",
+          "Description": "The child hands parent QA grounded current-run visual discrepancy evidence for independent validation and triage.",
+          "AllowsCompletedOutcomeWithOpenIssues": true
+        },
+        {
+          "Key": "no-ui-evidence-recorded",
+          "Title": "No-UI evidence recorded",
+          "Description": "The child hands parent QA explicit evidence that browser capture is inapplicable for the target."
+        }
+      ],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/screenshot-handoff.md"
+      ],
+      "ExecutionGuidanceRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/screenshot-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
+      "ExecutionClass": "AgentReasoningOnly"
+    }
+  ]
+}
+

@@ -1,0 +1,9 @@
+# Run the .NET quality repair subprocess
+
+Launch and observe `dotnet-quality-repair` with `project_structure_process_subprocess_launch`. Pass the concrete QA disposition, reviewed implementation evidence, exact failed command or runtime/browser evidence, architecture decision record, acceptance-driven validation plan, and approved product boundary into the child request.
+
+Pass the required `scope-boundary-packet` as authoritative child context. Preserve literal `ProductAcceptanceCriteriaContract` ids when present and require the child diagnosis and validation to map the repair target back to the criterion-to-proof plan. Only criteria with `kind=ProductAcceptance` and `required=true` are repair acceptance obligations. Preserve `kind=DeliveryPlanning` items as nonblocking context; they cannot produce a no-go or human-confirmation escalation unless a separate typed decision gate explicitly requests that decision. The QA defect packet may narrow the immediate repair action, but it must not replace or discard required ProductAcceptance obligations. A proof-only correction is valid only when current product-source and behavioral evidence already closes those obligations.
+
+This parent step does not diagnose the defect, mutate product files, run validation, launch the product, or capture browser proof. Those responsibilities belong to distinct child roles. Persist `ParentDeferredOutcomeJson` while the child is active, return the deferred outcome, and do not wait silently or create a duplicate child run.
+
+Accept only a child artifact from `quality-repair-handoff`, `quality-repair-handoff-after-bughunt`, or `quality-repair-handoff-after-final-repair`. These represent acceptance after the first, second, or third bounded mutation opportunity respectively. Treat only `quality-repair-no-go` as blocker evidence for manager escalation, never as a repaired change set. A completed child run without a mapped accepted handoff is not successful repair proof.

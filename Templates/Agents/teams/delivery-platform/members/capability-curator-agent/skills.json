@@ -1,0 +1,14 @@
+{
+  "capabilityKeys": [
+    "capability-curator-agent-inline-skill",
+    "capability-curator-catalog-search",
+    "capability-curator-editor-get",
+    "capability-curator-assignment-editor-get",
+    "capability-curator-save",
+    "capability-curator-tool-setup-test",
+    "capability-curator-mcp-setup-test",
+    "capability-curator-assignment-update",
+    "capability-curator-verify"
+  ],
+  "notes": "Privileged managed Capability Curator capability set. Identity-gated tools verify the immutable agent identity and every exact catalog assignment before invocation."
+}

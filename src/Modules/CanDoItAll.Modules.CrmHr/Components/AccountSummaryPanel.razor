@@ -1,0 +1,107 @@
+@if (Account is null)
+{
+    <EmptyState Eyebrow="No account selected"
+                Title="Choose an account from the list"
+                Description="CRM details, connected records, recent interactions, and overdue follow-ups appear here after you select an organization.">
+        <Actions>
+            <Button Text="Open directory"
+                    Click="OpenDirectory" />
+        </Actions>
+    </EmptyState>
+}
+else
+{
+    <SurfaceCard>
+        <Stack GapScale="LayoutGap.Medium">
+            <Split Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Start"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <div class="min-w-0">
+                    <p class="cda-eyebrow">Account record</p>
+                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@Account.DisplayName</h2>
+                    @if (!string.IsNullOrWhiteSpace(Account.Summary))
+                    {
+                        <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-600">@Account.Summary</p>
+                    }
+                </div>
+
+                <Stack GapScale="LayoutGap.Small">
+                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                        <StatusBadge Tone="@ResolveStageTone(Account.Profile.RelationshipStage)" Text="@Account.Profile.RelationshipStage.ToString()" />
+                        <StatusBadge Tone="@ResolveLifecycleTone(Account.LifecycleStatus)" Text="@Account.LifecycleStatus.ToString()" />
+                    </Cluster>
+                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                        <Button Text="Open directory record"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="OpenDirectory" />
+                        @if (Account.Profile.RelationshipStage != CrmAccountRelationshipStage.ActiveCustomer)
+                        {
+                            <Button Text="Convert to active customer"
+                                    Size="ButtonSize.Small"
+                                    Click="MarkActiveCustomer"
+                                    data-testid="crmhr-account-convert-active-button" />
+                        }
+                    </Cluster>
+                </Stack>
+            </Split>
+
+            <CompactStatStrip>
+                <CompactStat Label="email"
+                             Value="@(string.IsNullOrWhiteSpace(Account.PrimaryEmail) ? "Not set" : Account.PrimaryEmail)"
+                             TooltipText="Primary email from the shared party record." />
+                <CompactStat Label="phone"
+                             Value="@(string.IsNullOrWhiteSpace(Account.PrimaryPhone) ? "Not set" : Account.PrimaryPhone)"
+                             TooltipText="Primary phone from the shared party record." />
+                <CompactStat Label="roles"
+                             Value="@(Account.Roles.Count == 0 ? "None" : string.Join(", ", Account.Roles))"
+                             TooltipText="CRM-facing roles on the shared party record." />
+                <CompactStat Label="connections"
+                             Value="@Account.ConnectedRecords.Count.ToString()"
+                             TooltipText="People and other directory records connected to this account." />
+                <CompactStat Label="opportunities"
+                             Value="@Account.OpportunityCount.ToString()"
+                             TooltipText="Opportunities currently attached to this account."
+                             Tone="info" />
+                <CompactStat Label="tags"
+                             Value="@Account.Tags.Count.ToString()"
+                             TooltipText="Tags currently attached to this account." />
+            </CompactStatStrip>
+        </Stack>
+    </SurfaceCard>
+}
+
+@code {
+    [Parameter]
+    public CrmAccountWorkspaceModel? Account { get; set; }
+
+    [Parameter]
+    public EventCallback OpenDirectory { get; set; }
+
+    [Parameter]
+    public EventCallback MarkActiveCustomer { get; set; }
+
+    private static string ResolveLifecycleTone(PartyLifecycleStatus lifecycleStatus)
+    {
+        return lifecycleStatus switch
+        {
+            PartyLifecycleStatus.Active => "success",
+            PartyLifecycleStatus.Prospect => "info",
+            PartyLifecycleStatus.Inactive or PartyLifecycleStatus.Former => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveStageTone(CrmAccountRelationshipStage stage)
+    {
+        return stage switch
+        {
+            CrmAccountRelationshipStage.ActiveCustomer => "success",
+            CrmAccountRelationshipStage.Prospect => "info",
+            CrmAccountRelationshipStage.DormantCustomer => "warning",
+            CrmAccountRelationshipStage.LostCustomer => "danger",
+            _ => "neutral"
+        };
+    }
+}

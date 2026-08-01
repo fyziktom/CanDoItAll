@@ -1,0 +1,32 @@
+.agent-team-details-dialog {
+    min-width: 0;
+}
+
+.agent-team-details-dialog__title {
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0.25rem 0 0;
+}
+
+.agent-team-details-dialog__field {
+    color: rgb(51 65 85);
+    display: grid;
+    font-size: 0.82rem;
+    font-weight: 700;
+    gap: 0.35rem;
+    line-height: 1.35;
+    width: 100%;
+}
+
+.agent-team-details-dialog__input,
+.agent-team-details-dialog__textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    width: 100%;
+}
+
+.agent-team-details-dialog__textarea {
+    min-height: 7rem;
+    resize: vertical;
+}

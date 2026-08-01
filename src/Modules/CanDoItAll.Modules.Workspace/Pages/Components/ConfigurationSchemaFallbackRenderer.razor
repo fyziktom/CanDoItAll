@@ -1,0 +1,64 @@
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.SharedKernel.Configuration
+
+@if (Schema.Fields.Count == 0)
+{
+    <p class="cda-body-muted" data-testid="@($"{TestIdPrefix}-empty")">No configuration fields are defined.</p>
+}
+else
+{
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2" data-testid="@TestIdPrefix">
+        @foreach (var field in Schema.Fields)
+        {
+            <div>
+                <ConnectorConfigFieldEditor Field="field"
+                                            State="State"
+                                            Secrets="Secrets"
+                                            InputClass="cda-input"
+                                            TestId="@BuildFieldTestId(field)"
+                                            StateChanged="HandleStateChangedAsync" />
+                @foreach (var issue in ResolveIssues(field))
+                {
+                    <p class="workflow-canvas-error">@issue.Message</p>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required ConfigurationSchema Schema { get; set; }
+
+    [Parameter]
+    public required ConfigurationState State { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
+
+    [Parameter]
+    public ConfigurationValidationResult? Validation { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationState> StateChanged { get; set; }
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "configuration-field";
+
+    private string BuildFieldTestId(ConfigurationFieldDescriptor field)
+    {
+        return $"{TestIdPrefix}-{field.Key}";
+    }
+
+    private IReadOnlyList<ConfigurationValidationIssue> ResolveIssues(ConfigurationFieldDescriptor field)
+    {
+        return Validation?.Issues
+            .Where(issue => string.Equals(issue.FieldKey, field.Key, StringComparison.OrdinalIgnoreCase))
+            .ToArray() ?? [];
+    }
+
+    private async Task HandleStateChangedAsync(ConfigurationState state)
+    {
+        await StateChanged.InvokeAsync(state);
+    }
+}

@@ -1,0 +1,784 @@
+@namespace CanDoItAll.Modules.Resources
+@implements IAsyncDisposable
+@inject IResourceFileSourceCatalog SourceCatalog
+@inject ResourceFileBrowseCoordinator BrowseCoordinator
+@inject ResourceStorageObjectInteractionService InteractionService
+@inject IFileToolsBrowseItemActionService ItemActionService
+@inject FileInteractionComponentComposition InteractionComposition
+@inject IJSRuntime JSRuntime
+@inject ILogger<ResourceFileBrowsePane> Logger
+
+<section class="resources-file-browse-pane" data-testid="resources-browse-pane">
+    @if (isLoadingCatalog)
+    {
+        <LoadingState Eyebrow="Authorized file sources"
+                      Title="Resolving current Resources sources"
+                      Description="Loading project files and enabled filesystem, IPFS, and FTP storage sources." />
+    }
+    else if (!string.IsNullOrWhiteSpace(catalogError))
+    {
+        <EmptyState Eyebrow="Sources unavailable"
+                    Title="Unable to load Resources browse"
+                    Description="@catalogError">
+            <Actions>
+                <Button Text="Retry" Icon="refresh" Click="LoadCatalogAsync" />
+            </Actions>
+        </EmptyState>
+    }
+    else if (catalog is not null)
+    {
+        <ListDetailShell ListPaneWidth="22rem">
+            <ListHeader>
+                <ListPanelHeader Title="Authorized sources"
+                                 Description="Sources are derived from current project and storage configuration."
+                                 Count="@($"{catalog.Sources.Count} source(s)")">
+                    <Actions>
+                        <Button Text="Refresh"
+                                Icon="refresh"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@isOpeningSource"
+                                data-testid="resources-browse-refresh"
+                                Click="RefreshCatalogAsync" />
+                    </Actions>
+                </ListPanelHeader>
+            </ListHeader>
+            <ListContent>
+                <Stack GapScale="LayoutGap.Large">
+                    @foreach (ResourceFileSourceClass sourceClass in Enum.GetValues<ResourceFileSourceClass>())
+                    {
+                        ResourceFileSourceDescriptor[] group = catalog.Sources
+                            .Where(source => source.SourceClass == sourceClass)
+                            .ToArray();
+                        <Stack GapScale="LayoutGap.Small" data-testid="@($"resources-source-group-{sourceClass.ToString().ToLowerInvariant()}")">
+                            <Split Gap="LayoutGap.Small">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="@SourceClassLabel(sourceClass)" />
+                                <StatusBadge Tone="neutral" Text="@group.Length.ToString()" />
+                            </Split>
+                            @if (group.Length == 0)
+                            {
+                                <TextBlock TextStyle="TextStyle.Caption" Value="No authorized sources in this class." />
+                            }
+                            else
+                            {
+                                @foreach (ResourceFileSourceDescriptor source in group)
+                                {
+                                    <SelectionListItem Title="@source.DisplayName"
+                                                       Eyebrow="@SourceClassLabel(source.SourceClass)"
+                                                       Meta="@source.Detail"
+                                                       Summary="@SourceSummary(source)"
+                                                       IsSelected="@(workspace?.Source.Key == source.Key)"
+                                                       data-testid="@($"resources-source-{source.Key.Value}")"
+                                                       OnSelect="@(() => SelectSourceAsync(source.Key))">
+                                        <Status>
+                                            @if (source.HealthStatus.HasValue)
+                                            {
+                                                <StatusBadge Tone="@HealthTone(source.HealthStatus.Value)"
+                                                             Text="@source.HealthStatus.Value.ToString()" />
+                                            }
+                                        </Status>
+                                    </SelectionListItem>
+                                }
+                            }
+                        </Stack>
+                    }
+                </Stack>
+            </ListContent>
+            <DetailHeader>
+                <Split Gap="LayoutGap.Medium">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Storage browser" />
+                        <h2 class="cda-title-xl">@(interaction?.Request.FileName ?? workspace?.Source.DisplayName ?? "Select a source")</h2>
+                        <TextBlock TextStyle="TextStyle.Body2" Value="@DetailDescription" />
+                    </Stack>
+                    <Cluster Gap="LayoutGap.Small">
+                        @if (workspace is not null)
+                        {
+                            <StatusBadge Tone="info" Text="@SourceClassLabel(workspace.Source.SourceClass)" />
+                            <StatusBadge Tone="neutral" Text="@($"revision {ShortRevision(workspace.Revision)}")" />
+                        }
+                        <StatusBadge Tone="neutral" Text="Read only" />
+                    </Cluster>
+                </Split>
+            </DetailHeader>
+            <DetailContent>
+                @if (isOpeningSource)
+                {
+                    <LoadingState Eyebrow="Current authority"
+                                  Title="Opening file source"
+                                  Description="Re-resolving the current source binding and provider revision." />
+                }
+                else if (!string.IsNullOrWhiteSpace(sourceError))
+                {
+                    <EmptyState Eyebrow="Source unavailable"
+                                Title="Unable to open the selected source"
+                                Description="@sourceError">
+                        <Actions>
+                            @if (selectedSourceKey.HasValue)
+                            {
+                                <Button Text="Retry" Click="@(() => OpenSourceAsync(selectedSourceKey.Value))" />
+                            }
+                        </Actions>
+                    </EmptyState>
+                }
+                else if (interaction is not null)
+                {
+                    <Stack GapScale="LayoutGap.Small" Class="h-full min-h-0 w-full overflow-hidden">
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Back to source"
+                                    Icon="arrow_back"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="CloseInteractionAsync" />
+                            <StatusBadge Tone="info" Text="Governed reopen" />
+                        </Cluster>
+                        @if (!string.IsNullOrWhiteSpace(actionError))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                                @actionError
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                        {
+                            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                                @actionFeedback
+                            </Alert>
+                        }
+                        <FileInteraction Request="interaction.Request"
+                                         ContentSource="interaction.Session.ContentSource"
+                                         OpenExternallyRequested="OpenInteractionExternallyCallback"
+                                         OpenExternallyLabel="Open in preferred app"
+                                         AllowModeSwitch="false"
+                                         MaximumContentBytes="@(16 * 1024 * 1024)"
+                                         AriaLabel="@($"Read-only storage object {interaction.Request.FileName}")" />
+                    </Stack>
+                }
+                else if (workspace is not null)
+                {
+                    <Stack GapScale="LayoutGap.Small" Class="h-full min-h-0 w-full overflow-hidden">
+                        @if (!string.IsNullOrWhiteSpace(promotionStatus))
+                        {
+                            <Alert AlertStyle="AlertStyle.Success" data-testid="resources-promotion-success">
+                                <Split Gap="LayoutGap.Small">
+                                    <TextBlock TextStyle="TextStyle.Body2" Value="@promotionStatus" />
+                                    @if (promotedResourceId.HasValue)
+                                    {
+                                        <Button Text="Open stored object"
+                                                Icon="open_in_new"
+                                                Size="ButtonSize.Small"
+                                                data-testid="resources-open-stored-object"
+                                                Click="OpenPromotedResourceAsync" />
+                                    }
+                                </Split>
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(actionError))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger"
+                                   Variant="Variant.Outlined"
+                                   data-testid="resources-file-action-error">
+                                @actionError
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(actionFeedback))
+                        {
+                            <Alert AlertStyle="AlertStyle.Info"
+                                   Variant="Variant.Outlined"
+                                   data-testid="resources-file-action-feedback">
+                                @actionFeedback
+                            </Alert>
+                        }
+                        <FileBrowser Session="workspace.Browser"
+                                     HostActionCatalog="hostActionCatalog"
+                                     Class="w-full flex-1 min-h-0"
+                                     AriaLabel="@($"Resources files from {workspace.Source.DisplayName}")"
+                                     DisplayMode="FileBrowserDisplayMode.Standard"
+                                     InitialViewMode="FileBrowserViewMode.List"
+                                     SearchDebounceMilliseconds="280"
+                                     ItemInvoked="ActivateAsync"
+                                     ActionRequested="HandleActionRequestedAsync" />
+                    </Stack>
+                }
+                else
+                {
+                    <EmptyState Eyebrow="Browse storage"
+                                Title="Choose an authorized file source"
+                                Description="Open a project, filesystem, IPFS, or FTP source to browse its current storage objects." />
+                }
+            </DetailContent>
+        </ListDetailShell>
+    }
+</section>
+
+<ResourceStorageObjectPromotionDialog @ref="promotionDialog"
+                                      Promoted="HandlePromotionCompletedAsync" />
+
+@code {
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? sourceOpenCancellation;
+    private ResourceFileSourceCatalogSnapshot? catalog;
+    private ResourceFileBrowseWorkspace? workspace;
+    private ResourceStorageObjectInteraction? interaction;
+    private IFileBrowserHostActionCatalog? hostActionCatalog;
+    private FileToolsHostActionRunner? actionRunner;
+    private ResourceStorageObjectPromotionDialog? promotionDialog;
+    private ResourceFileSelection? pendingPromotionSelection;
+    private ResourceFileInteractionLaunchContext? interactionLaunchContext;
+    private ResourceFileSourceKey? selectedSourceKey;
+    private Guid? promotedResourceId;
+    private string? catalogError;
+    private string? sourceError;
+    private string? promotionStatus;
+    private string? actionError;
+    private string? actionFeedback;
+    private bool isLoadingCatalog;
+    private bool isOpeningSource;
+    private bool disposed;
+    private long sourceOpenGeneration;
+
+    private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+
+    private EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback
+        => CanOpenInteractionExternally()
+            ? EventCallback.Factory.Create<FileInteractionRequest>(this, OpenInteractionExternallyAsync)
+            : default;
+
+    [Parameter]
+    public EventCallback<Guid> ResourcePromoted { get; set; }
+
+    [Parameter]
+    public EventCallback<ResourceBrowseAgentChatPosition?> PositionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<ResourceBrowseAgentChatContextState> ContextStateChanged { get; set; }
+
+    private string DetailDescription => interaction is not null
+        ? "The persisted stable occurrence was re-resolved against the current source and actor."
+        : workspace is not null
+            ? "Invoke a file to promote it through the governed storage-object connector."
+            : "Project and external storage sources remain separate from the resource registry.";
+
+    protected override Task OnInitializedAsync() => LoadCatalogAsync();
+
+    private async Task LoadCatalogAsync()
+    {
+        isLoadingCatalog = true;
+        catalogError = null;
+        await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Loading);
+        try
+        {
+            catalog = await SourceCatalog.LoadAsync(lifetime.Token);
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Resources file-source catalog could not be loaded. FailureType={FailureType}.",
+                exception.GetType().Name);
+            catalogError = SafeMessage(exception, "Unable to load current Resources file sources.");
+        }
+        finally
+        {
+            isLoadingCatalog = false;
+        }
+
+        if (lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(catalogError))
+        {
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Failed);
+        }
+        else if (!selectedSourceKey.HasValue)
+        {
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Ready());
+        }
+    }
+
+    private async Task RefreshCatalogAsync()
+    {
+        ResourceFileSourceKey? reopen = selectedSourceKey;
+        await LoadCatalogAsync();
+        if (catalog is not null && reopen.HasValue && catalog.Sources.Any(source => source.Key == reopen.Value))
+        {
+            await OpenSourceAsync(reopen.Value);
+            return;
+        }
+
+        InvalidateSourceOpen();
+        await DisposeWorkspaceAsync();
+        selectedSourceKey = null;
+        await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Ready());
+    }
+
+    private async Task OpenSourceAsync(ResourceFileSourceKey sourceKey)
+    {
+        long generation = Interlocked.Increment(ref sourceOpenGeneration);
+        var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        CancellationTokenSource? supersededCancellation = sourceOpenCancellation;
+        sourceOpenCancellation = operationCancellation;
+        supersededCancellation?.Cancel();
+
+        isOpeningSource = true;
+        sourceError = null;
+        actionError = null;
+        actionFeedback = null;
+        selectedSourceKey = sourceKey;
+        await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Loading);
+        await DisposeInteractionAsync();
+        await DisposeWorkspaceAsync();
+
+        ResourceFileBrowseWorkspace? openedWorkspace = null;
+        ResourceFileBrowseWorkspace? committedWorkspace = null;
+        try
+        {
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                return;
+            }
+
+            openedWorkspace = await OpenWorkspaceAsync(sourceKey, operationCancellation.Token);
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                return;
+            }
+
+            committedWorkspace = openedWorkspace;
+            workspace = committedWorkspace;
+            openedWorkspace = null;
+            hostActionCatalog = new DefaultFileToolsHostActionCatalog(
+                ResolveActionAvailability,
+                ItemActionService.IsLocalLaunchAvailable);
+            var projectId = workspace.Source.Key.TryGetProjectId(out var sourceProjectId)
+                ? sourceProjectId
+                : (Guid?)null;
+            var projectName = projectId.HasValue
+                ? catalog?.Projects.FirstOrDefault(project => project.Id == projectId.Value)?.Name
+                : null;
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                await DisposeWorkspaceIfOwnedAsync(committedWorkspace);
+                return;
+            }
+
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Ready(
+                new ResourceBrowseAgentChatPosition(
+                    new ResourceBrowseAgentChatSourceId(workspace.Source.Key.Value),
+                    workspace.Source.SourceClass.ToString(),
+                    workspace.Source.DisplayName,
+                    projectId,
+                    projectName)));
+        }
+        catch (OperationCanceledException) when (operationCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (!IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                return;
+            }
+
+            Logger.LogWarning(
+                "Resources file source could not be opened. SourceKey={SourceKey} FailureType={FailureType}.",
+                sourceKey.Value,
+                exception.GetType().Name);
+            sourceError = SafeMessage(exception, "Unable to open the selected Resources file source.");
+            await PublishContextStateAsync(ResourceBrowseAgentChatContextState.Failed);
+        }
+        finally
+        {
+            if (openedWorkspace is not null)
+            {
+                await openedWorkspace.DisposeAsync();
+            }
+
+            if (IsCurrentSourceOpen(generation, sourceKey, operationCancellation))
+            {
+                sourceOpenCancellation = null;
+                isOpeningSource = false;
+            }
+
+            operationCancellation.Dispose();
+        }
+    }
+
+    private async Task PublishContextStateAsync(ResourceBrowseAgentChatContextState state)
+    {
+        await ContextStateChanged.InvokeAsync(state);
+        await PositionChanged.InvokeAsync(state.Position);
+    }
+
+    private bool IsCurrentSourceOpen(
+        long generation,
+        ResourceFileSourceKey sourceKey,
+        CancellationTokenSource operationCancellation)
+        => !disposed &&
+           Volatile.Read(ref sourceOpenGeneration) == generation &&
+           selectedSourceKey == sourceKey &&
+           ReferenceEquals(sourceOpenCancellation, operationCancellation);
+
+    internal virtual ValueTask<ResourceFileBrowseWorkspace> OpenWorkspaceAsync(
+        ResourceFileSourceKey sourceKey,
+        CancellationToken cancellationToken)
+        => BrowseCoordinator.OpenAsync(sourceKey, cancellationToken);
+
+    private void InvalidateSourceOpen()
+    {
+        Interlocked.Increment(ref sourceOpenGeneration);
+        CancellationTokenSource? pendingCancellation = sourceOpenCancellation;
+        sourceOpenCancellation = null;
+        pendingCancellation?.Cancel();
+        isOpeningSource = false;
+    }
+
+    private Task SelectSourceAsync(ResourceFileSourceKey sourceKey)
+    {
+        promotionStatus = null;
+        promotedResourceId = null;
+        pendingPromotionSelection = null;
+        interactionLaunchContext = null;
+        return OpenSourceAsync(sourceKey);
+    }
+
+    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
+            SupportsLocalOpen(workspace, args.Item.Key.SourceId))
+        {
+            await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+            return;
+        }
+
+        BeginPromotion(args);
+    }
+
+    private void BeginPromotion(FileBrowserItemInvokedEventArgs args)
+    {
+        if (workspace is null || args.Item.IsContainer)
+        {
+            return;
+        }
+
+        pendingPromotionSelection = new ResourceFileSelection(
+            workspace.Source.Key,
+            workspace.Source.Scope,
+            args.Item.Key);
+        promotionDialog?.Open(
+            workspace.Source.Key.Value,
+            workspace.Source.DisplayName,
+            workspace.Source.Key.TryGetProjectId(out Guid sourceProjectId) ? sourceProjectId : null,
+            args.Item,
+            (catalog?.Projects ?? []).ToDictionary(project => project.Id, project => project.Name));
+    }
+
+    private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)
+    {
+        if (workspace is null || args.Origin != FileBrowserActionOrigin.Host)
+        {
+            return;
+        }
+
+        switch (args.ActionId)
+        {
+            case FileBrowserActionIds.Open:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
+                break;
+            case FileToolsBrowseHostActionIds.OpenContainingFolder:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenContainingFolder);
+                break;
+            case FileBrowserActionIds.Download:
+                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.Download);
+                break;
+            default:
+                actionError = "The selected Resources file action is not supported by this host.";
+                break;
+        }
+    }
+
+    private async Task ExecuteFileActionAsync(
+        FileBrowserItemKey itemKey,
+        FileToolsHostAction action)
+    {
+        if (workspace is null)
+        {
+            return;
+        }
+
+        ResourceFileBrowseWorkspace currentWorkspace = workspace;
+
+        actionError = null;
+        actionFeedback = null;
+        try
+        {
+            FileToolsBrowseItemActionResult result = await ActionRunner.ExecuteAsync(
+                action,
+                (localAction, cancellationToken) => ItemActionService.LaunchAsync(
+                    currentWorkspace.Source.Scope,
+                    itemKey,
+                    localAction,
+                    cancellationToken),
+                cancellationToken => ItemActionService.AuthorizeDownloadAsync(
+                    currentWorkspace.Source.Scope,
+                    itemKey,
+                    cancellationToken),
+                lifetime.Token);
+            if (result.IsSuccess)
+            {
+                actionFeedback = result.Message;
+            }
+            else
+            {
+                actionError = result.Message;
+            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Authorized Resources file action failed. SourceKey={SourceKey} Action={Action} FailureType={FailureType}.",
+                currentWorkspace.Source.Key.Value,
+                action,
+                exception.GetType().Name);
+            actionError = SafeMessage(
+                exception,
+                action == FileToolsHostAction.Download
+                    ? "Unable to download the selected Resources file."
+                    : "Unable to open the selected Resources file locally.");
+        }
+    }
+
+    private async Task HandlePromotionCompletedAsync(ResourceStorageObjectPromotionUiResult completed)
+    {
+        if (!ResourceFileSourceKey.TryParse(completed.SourceKey, out ResourceFileSourceKey sourceKey))
+        {
+            throw new InvalidOperationException("The completed storage-object promotion returned an invalid source identity.");
+        }
+
+        ResourceFileSelection? promotedSelection =
+            pendingPromotionSelection is { } pending && pending.SourceKey == sourceKey
+                ? pending
+                : null;
+        pendingPromotionSelection = null;
+        promotedResourceId = completed.ResourceId;
+        promotionStatus = completed.Created
+            ? $"Storage object saved. Source revision is now {completed.ScopeRevision}."
+            : "This storage object is already registered in the selected project.";
+        await ResourcePromoted.InvokeAsync(completed.ResourceId);
+        await OpenSourceAsync(sourceKey);
+        if (promotedSelection is not null && CanRetainInteractionLaunch(promotedSelection))
+        {
+            interactionLaunchContext = new ResourceFileInteractionLaunchContext(
+                completed.ResourceId,
+                promotedSelection.Scope,
+                promotedSelection.ItemKey);
+        }
+    }
+
+    private async Task OpenPromotedResourceAsync()
+    {
+        if (!promotedResourceId.HasValue)
+        {
+            return;
+        }
+
+        sourceError = null;
+        await DisposeInteractionAsync();
+        try
+        {
+            interaction = await InteractionService.OpenAsync(promotedResourceId.Value, lifetime.Token);
+            if (interactionLaunchContext?.ResourceId != interaction.ResourceId)
+            {
+                interactionLaunchContext = null;
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "Promoted storage-object resource could not be reopened. ResourceId={ResourceId} FailureType={FailureType}.",
+                promotedResourceId,
+                exception.GetType().Name);
+            sourceError = SafeMessage(exception, "Unable to reopen the stored object with current authority.");
+        }
+    }
+
+    private async Task CloseInteractionAsync()
+    {
+        await DisposeInteractionAsync();
+        if (selectedSourceKey.HasValue && workspace is null)
+        {
+            await OpenSourceAsync(selectedSourceKey.Value);
+        }
+    }
+
+    private async Task OpenInteractionExternallyAsync(FileInteractionRequest request)
+    {
+        if (interaction is null ||
+            interactionLaunchContext is not { } launchContext ||
+            launchContext.ResourceId != interaction.ResourceId ||
+            workspace is null ||
+            request.File != interaction.Request.File ||
+            !CanRetainInteractionLaunch(new ResourceFileSelection(
+                workspace.Source.Key,
+                launchContext.Scope,
+                launchContext.ItemKey)))
+        {
+            return;
+        }
+
+        await ExecuteFileActionAsync(
+            launchContext.ItemKey,
+            FileToolsHostAction.OpenInPreferredApplication);
+    }
+
+    private bool CanOpenInteractionExternally()
+    {
+        if (interaction is null ||
+            interactionLaunchContext is not { } launchContext ||
+            launchContext.ResourceId != interaction.ResourceId ||
+            workspace is null)
+        {
+            return false;
+        }
+
+        return CanRetainInteractionLaunch(new ResourceFileSelection(
+            workspace.Source.Key,
+            launchContext.Scope,
+            launchContext.ItemKey));
+    }
+
+    private bool CanRetainInteractionLaunch(ResourceFileSelection selection)
+        => workspace is not null &&
+           workspace.Source.Key == selection.SourceKey &&
+           workspace.Source.Scope == selection.Scope &&
+           workspace.Browser.Snapshot.Sources.Any(source => source.Id == selection.ItemKey.SourceId) &&
+           SupportsLocalOpen(workspace, selection.ItemKey.SourceId);
+
+    private FileToolsBrowseSourceActionAvailability ResolveActionAvailability(FileBrowserSourceId sourceId)
+        => workspace is not null &&
+           workspace.Browser.Snapshot.Sources.Any(source => source.Id == sourceId)
+            ? workspace.ActionAvailability
+            : default;
+
+    private bool SupportsLocalOpen(
+        ResourceFileBrowseWorkspace currentWorkspace,
+        FileBrowserSourceId sourceId)
+        => ItemActionService.IsLocalLaunchAvailable &&
+           currentWorkspace.Browser.Snapshot.Sources.Any(source => source.Id == sourceId) &&
+           currentWorkspace.ActionAvailability.SupportsLocalOpen;
+
+    private async ValueTask DisposeWorkspaceAsync()
+    {
+        ResourceFileBrowseWorkspace? currentWorkspace = workspace;
+        workspace = null;
+        hostActionCatalog = null;
+        interactionLaunchContext = null;
+        pendingPromotionSelection = null;
+        if (currentWorkspace is null)
+        {
+            return;
+        }
+
+        await currentWorkspace.DisposeAsync();
+    }
+
+    private async ValueTask DisposeWorkspaceIfOwnedAsync(ResourceFileBrowseWorkspace ownedWorkspace)
+    {
+        if (ReferenceEquals(workspace, ownedWorkspace))
+        {
+            workspace = null;
+            hostActionCatalog = null;
+            interactionLaunchContext = null;
+            pendingPromotionSelection = null;
+        }
+
+        await ownedWorkspace.DisposeAsync();
+    }
+
+    private async ValueTask DisposeInteractionAsync()
+    {
+        if (interaction is null)
+        {
+            return;
+        }
+
+        await interaction.DisposeAsync();
+        interaction = null;
+    }
+
+    private static string SourceClassLabel(ResourceFileSourceClass sourceClass)
+        => sourceClass switch
+        {
+            ResourceFileSourceClass.Project => "Projects",
+            ResourceFileSourceClass.FileSystem => "Filesystem",
+            ResourceFileSourceClass.Ipfs => "IPFS",
+            ResourceFileSourceClass.Ftp => "FTP",
+            _ => throw new ArgumentOutOfRangeException(nameof(sourceClass))
+        };
+
+    private static string SourceSummary(ResourceFileSourceDescriptor source)
+        => source.StorageId.HasValue ? $"Storage {source.StorageId.Value.ToString("N")[..8]}" : "Managed project root";
+
+    private static string HealthTone(StorageHealthStatus health)
+        => health switch
+        {
+            StorageHealthStatus.Healthy => "success",
+            StorageHealthStatus.Degraded => "warning",
+            StorageHealthStatus.Unavailable => "danger",
+            _ => "neutral"
+        };
+
+    private static string ShortRevision(string revision)
+        => revision.Length <= 12 ? revision : revision[..12];
+
+    private static string SafeMessage(Exception exception, string fallback)
+        => exception switch
+        {
+            FileBrowserProviderException providerException => providerException.Error.Message,
+            FileAccessDeniedException deniedException => deniedException.Message,
+            ResourcePromotionException promotionException => promotionException.Message,
+            _ => fallback
+        };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        InvalidateSourceOpen();
+        lifetime.Cancel();
+        await DisposeInteractionAsync();
+        await DisposeWorkspaceAsync();
+        if (actionRunner is not null)
+        {
+            await actionRunner.DisposeAsync();
+            actionRunner = null;
+        }
+
+        lifetime.Dispose();
+    }
+
+    private sealed record ResourceFileSelection(
+        ResourceFileSourceKey SourceKey,
+        FileToolsSemanticScope Scope,
+        FileBrowserItemKey ItemKey);
+
+    private sealed record ResourceFileInteractionLaunchContext(
+        Guid ResourceId,
+        FileToolsSemanticScope Scope,
+        FileBrowserItemKey ItemKey);
+}

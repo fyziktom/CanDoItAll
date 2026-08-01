@@ -1,0 +1,670 @@
+@namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.Processes.Projections
+
+<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-role-editor">
+    <Split Gap="LayoutGap.Small">
+        <Stack GapScale="LayoutGap.Tiny">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Roles" />
+            <h3 class="text-sm font-semibold text-slate-900">Role responsibilities</h3>
+        </Stack>
+        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+            <StatusBadge Tone="info" Text="@($"{RoleEditor.Roles.Count} role(s)")" />
+            <StatusBadge Tone="@ResolveLintTone(RoleEditor.Lint)" Text="@ResolveLintText(RoleEditor.Lint)" />
+            @foreach (var command in RoleEditor.Commands.Where(command => command.Kind == ProcessDefinitionRoleCommandKind.AddRole))
+            {
+                <Button Text="@command.Text"
+                        Icon="@command.Icon"
+                        ButtonStyle="@ResolveCommandButtonStyle(command.Kind)"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!command.IsEnabled || Disabled)"
+                        IsBusy="@Disabled"
+                        Click="@(() => ExecuteAsync(command.Kind))"
+                        title="@command.DisabledReason"
+                        data-testid="@BuildRoleCommandTestId(command.Kind)" />
+            }
+        </Cluster>
+    </Split>
+
+    @if (!string.IsNullOrWhiteSpace(commandNotice) || RoleEditor.LastCommandReceipt is not null)
+    {
+        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-role-editor-receipt">
+            @(RoleEditor.LastCommandReceipt is null ? commandNotice : $"{RoleEditor.LastCommandReceipt.Status}: {RoleEditor.LastCommandReceipt.Summary}")
+        </p>
+    }
+
+    <div class="process-role-card-grid mt-5" data-testid="processes-role-card-grid">
+        @if (RoleEditor.Roles.Count == 0)
+        {
+            <EmptyState Eyebrow="No roles"
+                        Title="No roles are defined"
+                        Description="Add a role from a template before editing step bindings." />
+        }
+        else
+        {
+            @foreach (var role in RoleEditor.Roles)
+            {
+                <article class="process-role-card"
+                         data-testid="processes-role-card">
+                    <div class="process-role-card__identity">
+                        <span class="process-role-card__icon" aria-hidden="true">
+                            <Icon Name="badge" />
+                        </span>
+                        <h4 class="process-role-card__title">@role.DisplayName</h4>
+                        <p class="process-role-card__summary">@role.Summary</p>
+                    </div>
+                    <Cluster Gap="LayoutGap.XSmall" Class="process-role-card__badges">
+                        <StatusBadge Tone="neutral" Text="@role.Draft.PreferredExecutorKind.ToString()" />
+                        <StatusBadge Tone="info" Text="@($"{role.StepBindingCount} binding(s)")" />
+                        @if (role.Draft.IsRequired)
+                        {
+                            <StatusBadge Tone="success" Text="Required" />
+                        }
+                    </Cluster>
+                    <Button Text="Details"
+                            Icon="open_in_new"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Class="process-role-card__details"
+                            Disabled="@Disabled"
+                            Click="@(() => OpenRoleDetailsAsync(role.RoleKey))"
+                            data-testid="@BuildRoleItemTestId(role.RoleKey)" />
+                </article>
+            }
+        }
+    </div>
+
+    @if (RoleEditor.Lint.HasWarningsOrErrors)
+    {
+        <div class="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-role-lint-panel">
+            @foreach (var issue in RoleEditor.Lint.Issues)
+            {
+                <div class="border-t border-slate-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                        <StatusBadge Tone="@ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
+                        <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
+                        <span class="text-xs text-slate-500">@issue.Code</span>
+                    </Cluster>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
+                    <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                </div>
+            }
+        </div>
+    }
+
+</div>
+
+@if (roleDetailDialogOpen && ActiveDialogRole is { } activeRole)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Role details"
+            Title="@activeRole.DisplayName"
+            Subtitle="@activeRole.Summary"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="processes-role-details-dialog"
+            OnClose="CloseRoleDetailsAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium" data-testid="processes-role-editor-form">
+                <div class="process-role-dialog-hero">
+                    <span class="process-role-dialog-hero__icon" aria-hidden="true">
+                        <Icon Name="badge" />
+                    </span>
+                    <h3>@activeRole.DisplayName</h3>
+                    <Cluster Gap="LayoutGap.XSmall" Class="justify-center flex-wrap">
+                        <StatusBadge Tone="neutral" Text="@activeRole.Draft.PreferredExecutorKind.ToString()" />
+                        <StatusBadge Tone="info" Text="@($"{activeRole.StepBindingCount} binding(s)")" />
+                        <StatusBadge Tone="@ResolveOverrideTone(roleOverrideStatus)" Text="@roleOverrideStatus.ToString()" />
+                    </Cluster>
+                </div>
+
+                <Grid Gap="LayoutGap.Medium" ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                    <Stack GapScale="LayoutGap.Small" Class="process-role-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity and staffing" />
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-display-name-input">Display name</label>
+                        <input id="processes-role-display-name-input"
+                               class="cda-input"
+                               value="@roleDisplayName"
+                               @oninput="args => roleDisplayName = ReadChangeValue(args)"
+                               data-testid="processes-role-display-name" />
+
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-purpose-input">Purpose</label>
+                        <textarea id="processes-role-purpose-input"
+                                  class="cda-input cda-input--textarea process-role-dialog-textarea"
+                                  value="@rolePurpose"
+                                  @oninput="args => rolePurpose = ReadChangeValue(args)"
+                                  data-testid="processes-role-purpose"></textarea>
+
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-staffing-input">Staffing intent</label>
+                        <textarea id="processes-role-staffing-input"
+                                  class="cda-input cda-input--textarea process-role-dialog-textarea"
+                                  value="@roleStaffingIntent"
+                                  @oninput="args => roleStaffingIntent = ReadChangeValue(args)"
+                                  data-testid="processes-role-staffing-intent"></textarea>
+
+                        <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <label class="text-xs font-semibold text-slate-500" for="processes-role-executor-kind-input">Executor kind</label>
+                                <select id="processes-role-executor-kind-input"
+                                        class="cda-input"
+                                        value="@roleExecutorKind"
+                                        @onchange="UpdateRoleExecutorKind"
+                                        data-testid="processes-role-executor-kind">
+                                    @foreach (var option in ExecutorKindOptions)
+                                    {
+                                        <option value="@option">@option.ToString()</option>
+                                    }
+                                </select>
+                            </Stack>
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <label class="text-xs font-semibold text-slate-500" for="processes-role-project-assignment-input">Project role</label>
+                                <select id="processes-role-project-assignment-input"
+                                        class="cda-input"
+                                        value="@roleProjectAssignment"
+                                        @onchange="args => roleProjectAssignment = ParseProjectAssignment(args)"
+                                        data-testid="processes-role-project-assignment">
+                                    @foreach (var option in ProjectAssignmentOptions)
+                                    {
+                                        <option value="@option">@option.ToString()</option>
+                                    }
+                                </select>
+                            </Stack>
+                        </Grid>
+
+                        @if (roleExecutorKind == ProcessDefinitionRoleExecutorKind.Workflow)
+                        {
+                            <Stack GapScale="LayoutGap.Small" data-testid="processes-role-workflow-binding">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow binding" />
+                                <TextBlock TextStyle="TextStyle.Body2"
+                                           Value="Choose one workflow definition. Leave the version empty to use that workflow's latest active version, or enter an exact saved version." />
+                                <Grid Gap="LayoutGap.Small" ColumnTemplateLg="minmax(0,1fr) minmax(0,1fr)">
+                                    <FormField Text="Workflow definition id">
+                                        <TextBox Value="@roleWorkflowDefinitionIdInput"
+                                                 ValueChanged="UpdateWorkflowDefinitionId"
+                                                 aria-invalid="@(roleWorkflowDefinitionIdError is not null)"
+                                                 data-testid="processes-role-workflow-id" />
+                                        @if (roleWorkflowDefinitionIdError is not null)
+                                        {
+                                            <TextBlock TextStyle="TextStyle.Note"
+                                                       Value="@roleWorkflowDefinitionIdError"
+                                                       Class="font-semibold text-red-700"
+                                                       role="alert"
+                                                       data-testid="processes-role-workflow-id-error" />
+                                        }
+                                    </FormField>
+                                    <FormField Text="Exact version id (optional)">
+                                        <TextBox Value="@roleWorkflowVersionIdInput"
+                                                 ValueChanged="UpdateWorkflowVersionId"
+                                                 aria-invalid="@(roleWorkflowVersionIdError is not null)"
+                                                 data-testid="processes-role-workflow-version-id" />
+                                        @if (roleWorkflowVersionIdError is not null)
+                                        {
+                                            <TextBlock TextStyle="TextStyle.Note"
+                                                       Value="@roleWorkflowVersionIdError"
+                                                       Class="font-semibold text-red-700"
+                                                       role="alert"
+                                                       data-testid="processes-role-workflow-version-id-error" />
+                                        }
+                                    </FormField>
+                                </Grid>
+                            </Stack>
+                        }
+
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-allocation-input">Default allocation percent</label>
+                        <input id="processes-role-allocation-input"
+                               type="number"
+                               min="0"
+                               max="100"
+                               class="cda-input"
+                               value="@roleDefaultAllocationPercent"
+                               @oninput="args => roleDefaultAllocationPercent = ParseInt(args)"
+                               data-testid="processes-role-allocation" />
+
+                        <Cluster Gap="LayoutGap.Medium" Class="flex-wrap">
+                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox"
+                                       checked="@roleIsRequired"
+                                       @onchange="args => roleIsRequired = ParseBool(args)"
+                                       data-testid="processes-role-required" />
+                                Required
+                            </label>
+                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox"
+                                       checked="@roleAllowsFallback"
+                                       @onchange="args => roleAllowsFallback = ParseBool(args)"
+                                       data-testid="processes-role-fallback" />
+                                Fallback
+                            </label>
+                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox"
+                                       checked="@roleRequiresApproval"
+                                       @onchange="args => roleRequiresApproval = ParseBool(args)"
+                                       data-testid="processes-role-approval" />
+                                Approval
+                            </label>
+                        </Cluster>
+                    </Stack>
+
+                    <Stack GapScale="LayoutGap.Small" Class="process-role-dialog-section" data-testid="processes-role-template-and-bindings">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template and bindings" />
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-template-action-input">Apply template</label>
+                        <select id="processes-role-template-action-input"
+                                class="cda-input"
+                                value="@selectedTemplateActionKey"
+                                @onchange="args => selectedTemplateActionKey = ReadChangeValue(args)"
+                                data-testid="processes-role-template-action">
+                            @foreach (var template in RoleEditor.TemplateActions)
+                            {
+                                <option value="@template.ActionKey.Value">@template.Label</option>
+                            }
+                        </select>
+
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-template-source-input">Template source</label>
+                        <input id="processes-role-template-source-input"
+                               class="cda-input"
+                               value="@roleTemplateSourceKey"
+                               @oninput="args => roleTemplateSourceKey = ReadChangeValue(args)"
+                               data-testid="processes-role-template-source" />
+
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-template-snapshot-input">Template snapshot</label>
+                        <input id="processes-role-template-snapshot-input"
+                               class="cda-input"
+                               value="@roleTemplateSnapshotName"
+                               @oninput="args => roleTemplateSnapshotName = ReadChangeValue(args)"
+                               data-testid="processes-role-template-snapshot" />
+
+                        <label class="text-xs font-semibold text-slate-500" for="processes-role-snapshot-summary-input">Snapshot summary</label>
+                        <textarea id="processes-role-snapshot-summary-input"
+                                  class="cda-input cda-input--textarea process-role-dialog-textarea"
+                                  value="@roleSnapshotSummary"
+                                  @oninput="args => roleSnapshotSummary = ReadChangeValue(args)"
+                                  data-testid="processes-role-snapshot-summary"></textarea>
+
+                        <div class="process-role-bindings" data-testid="processes-role-step-bindings">
+                            <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                <StatusBadge Tone="neutral" Text="@($"{RoleEditor.StepRoleBindings.Count(binding => binding.RoleKey == selectedRoleKey)} step binding(s)")" />
+                                <StatusBadge Tone="@ResolveOverrideTone(roleOverrideStatus)" Text="@roleOverrideStatus.ToString()" />
+                            </Cluster>
+                            @foreach (var binding in RoleEditor.StepRoleBindings.Where(binding => binding.RoleKey == selectedRoleKey).Take(4))
+                            {
+                                <div class="process-role-bindings__row">
+                                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                                        <StatusBadge Tone="neutral" Text="@binding.ResponsibilityKind.ToString()" />
+                                        <span class="text-xs font-semibold text-slate-500">@binding.StepTitle</span>
+                                        <span class="text-xs text-slate-500">fallback @binding.FallbackOrder</span>
+                                    </Cluster>
+                                    <p class="mt-2 text-xs leading-5 text-slate-500">@binding.RebindPolicySummary</p>
+                                </div>
+                            }
+                        </div>
+                    </Stack>
+                </Grid>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster Gap="LayoutGap.Small" Class="flex-wrap justify-end">
+                @foreach (var command in RoleEditor.Commands.Where(command => command.Kind != ProcessDefinitionRoleCommandKind.AddRole))
+                {
+                    <Button Text="@command.Text"
+                            Icon="@command.Icon"
+                            ButtonStyle="@ResolveCommandButtonStyle(command.Kind)"
+                            Size="ButtonSize.Small"
+                            Disabled="@IsCommandDisabled(command)"
+                            IsBusy="@Disabled"
+                            Click="@(() => ExecuteAsync(command.Kind))"
+                            title="@ResolveCommandDisabledReason(command)"
+                            data-testid="@BuildRoleCommandTestId(command.Kind)" />
+                }
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseRoleDetailsAsync" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ProcessDefinitionRoleEditorProjection RoleEditor { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ProcessWorkspaceShellScope Scope { get; set; } = default!;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<ProcessDefinitionRoleEditorCommand> ExecuteCommand { get; set; }
+
+    private ProcessDefinitionRoleEditorVersionToken? syncedVersionToken;
+    private ProcessDefinitionRoleKey? selectedRoleKey;
+    private bool roleDetailDialogOpen;
+    private string? commandNotice;
+    private string selectedTemplateActionKey = string.Empty;
+    private string roleDisplayName = string.Empty;
+    private string rolePurpose = string.Empty;
+    private string roleStaffingIntent = string.Empty;
+    private string roleTemplateSourceKey = string.Empty;
+    private string roleTemplateSnapshotName = string.Empty;
+    private string roleSnapshotSummary = string.Empty;
+    private ProcessDefinitionRoleExecutorKind roleExecutorKind = ProcessDefinitionRoleExecutorKind.Person;
+    private ProcessDefinitionRoleProjectAssignmentKind roleProjectAssignment = ProcessDefinitionRoleProjectAssignmentKind.Unspecified;
+    private ProcessDefinitionRoleTemplateOverrideStatus roleOverrideStatus = ProcessDefinitionRoleTemplateOverrideStatus.None;
+    private Guid? roleWorkflowDefinitionId;
+    private Guid? roleWorkflowVersionId;
+    private string roleWorkflowDefinitionIdInput = string.Empty;
+    private string roleWorkflowVersionIdInput = string.Empty;
+    private string? roleWorkflowDefinitionIdError;
+    private string? roleWorkflowVersionIdError;
+    private bool roleIsRequired;
+    private bool roleAllowsFallback;
+    private bool roleRequiresApproval;
+    private int roleDefaultAllocationPercent;
+
+    private static readonly ProcessDefinitionRoleExecutorKind[] ExecutorKindOptions =
+    [
+        ProcessDefinitionRoleExecutorKind.Person,
+        ProcessDefinitionRoleExecutorKind.Agent,
+        ProcessDefinitionRoleExecutorKind.PersonOrAgent,
+        ProcessDefinitionRoleExecutorKind.AiAgent,
+        ProcessDefinitionRoleExecutorKind.Workflow
+    ];
+
+    private static readonly ProcessDefinitionRoleProjectAssignmentKind[] ProjectAssignmentOptions =
+    [
+        ProcessDefinitionRoleProjectAssignmentKind.Unspecified,
+        ProcessDefinitionRoleProjectAssignmentKind.Manager,
+        ProcessDefinitionRoleProjectAssignmentKind.TechnicalContact,
+        ProcessDefinitionRoleProjectAssignmentKind.Reviewer,
+        ProcessDefinitionRoleProjectAssignmentKind.TeamMember,
+        ProcessDefinitionRoleProjectAssignmentKind.CustomerContact,
+        ProcessDefinitionRoleProjectAssignmentKind.AiAgent,
+        ProcessDefinitionRoleProjectAssignmentKind.Developer,
+        ProcessDefinitionRoleProjectAssignmentKind.Architect
+    ];
+
+    protected override void OnParametersSet()
+    {
+        if (syncedVersionToken == RoleEditor.VersionToken &&
+            selectedRoleKey == RoleEditor.SelectedRoleKey)
+        {
+            return;
+        }
+
+        syncedVersionToken = RoleEditor.VersionToken;
+        selectedRoleKey = RoleEditor.SelectedRoleKey;
+        commandNotice = RoleEditor.LastCommandReceipt?.Summary;
+        selectedTemplateActionKey = RoleEditor.TemplateActions.FirstOrDefault()?.ActionKey.Value ?? string.Empty;
+        if (roleDetailDialogOpen)
+        {
+            SyncSelectedRole();
+        }
+    }
+
+    private ProcessDefinitionRoleProjection? ActiveDialogRole
+        => selectedRoleKey is { } roleKey
+            ? RoleEditor.Roles.FirstOrDefault(candidate => candidate.RoleKey == roleKey)
+            : RoleEditor.SelectedRole;
+
+    private Task OpenRoleDetailsAsync(ProcessDefinitionRoleKey roleKey)
+    {
+        selectedRoleKey = roleKey;
+        selectedTemplateActionKey = RoleEditor.TemplateActions.FirstOrDefault()?.ActionKey.Value ?? string.Empty;
+        SyncSelectedRole();
+        roleDetailDialogOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseRoleDetailsAsync()
+    {
+        roleDetailDialogOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private void SyncSelectedRole()
+    {
+        var role = selectedRoleKey is { } roleKey
+            ? RoleEditor.Roles.FirstOrDefault(candidate => candidate.RoleKey == roleKey)
+            : RoleEditor.SelectedRole;
+        if (role is null)
+        {
+            return;
+        }
+
+        var draft = role.Draft;
+        roleDisplayName = draft.DisplayName;
+        rolePurpose = draft.Purpose;
+        roleStaffingIntent = draft.StaffingIntent;
+        roleExecutorKind = draft.PreferredExecutorKind == ProcessDefinitionRoleExecutorKind.Unspecified
+            ? ProcessDefinitionRoleExecutorKind.Person
+            : draft.PreferredExecutorKind;
+        roleWorkflowDefinitionId = draft.WorkflowPreference.WorkflowDefinitionId;
+        roleWorkflowVersionId = draft.WorkflowPreference.WorkflowVersionId;
+        roleWorkflowDefinitionIdInput = FormatGuid(roleWorkflowDefinitionId);
+        roleWorkflowVersionIdInput = FormatGuid(roleWorkflowVersionId);
+        ValidateWorkflowInputs();
+        roleProjectAssignment = draft.PreferredProjectAssignmentRole;
+        roleIsRequired = draft.IsRequired;
+        roleAllowsFallback = draft.AllowsFallback;
+        roleRequiresApproval = draft.RequiresExplicitApproval;
+        roleDefaultAllocationPercent = draft.DefaultAllocationPercent;
+        roleTemplateSourceKey = draft.RoleTemplateSourceKey;
+        roleTemplateSnapshotName = draft.RoleTemplateSnapshotName;
+        roleSnapshotSummary = draft.SnapshotSummary;
+        roleOverrideStatus = draft.OverrideStatus;
+    }
+
+    private async Task ExecuteAsync(ProcessDefinitionRoleCommandKind commandKind)
+    {
+        var draft = CreateDraft();
+        ProcessDefinitionRoleTemplateActionKey? templateActionKey = string.IsNullOrWhiteSpace(selectedTemplateActionKey)
+            ? null
+            : new ProcessDefinitionRoleTemplateActionKey(selectedTemplateActionKey);
+        var command = new ProcessDefinitionRoleEditorCommand(
+            Scope,
+            RoleEditor.DefinitionKey,
+            commandKind,
+            RoleEditor.VersionToken,
+            draft,
+            templateActionKey);
+        await ExecuteCommand.InvokeAsync(command);
+    }
+
+    private ProcessDefinitionRoleDraftProjection CreateDraft()
+    {
+        var roleKey = selectedRoleKey ?? RoleEditor.SelectedRole?.RoleKey ?? new ProcessDefinitionRoleKey("role-draft");
+        return new ProcessDefinitionRoleDraftProjection(
+            roleKey,
+            roleDisplayName,
+            rolePurpose,
+            roleStaffingIntent,
+            roleExecutorKind,
+            new ProcessDefinitionWorkflowPreferenceProjection(
+                ProcessDefinitionRoleWorkflowPreferenceKind.SpecificWorkflow,
+                roleExecutorKind == ProcessDefinitionRoleExecutorKind.Workflow
+                    ? roleWorkflowDefinitionId
+                    : null,
+                roleExecutorKind == ProcessDefinitionRoleExecutorKind.Workflow
+                    ? roleWorkflowVersionId
+                    : null,
+                FormatWorkflowPreference()),
+            roleProjectAssignment,
+            roleIsRequired,
+            roleAllowsFallback,
+            roleRequiresApproval,
+            roleDefaultAllocationPercent,
+            roleTemplateSourceKey,
+            roleTemplateSnapshotName,
+            roleSnapshotSummary,
+            roleOverrideStatus,
+            string.IsNullOrWhiteSpace(roleTemplateSourceKey)
+                ? "Local role override without a global template source."
+                : $"Local override tracks {roleTemplateSourceKey}.");
+    }
+
+    private static string ReadChangeValue(ChangeEventArgs args)
+        => args.Value?.ToString() ?? string.Empty;
+
+    private static bool ParseBool(ChangeEventArgs args)
+        => args.Value is bool value && value;
+
+    private static int ParseInt(ChangeEventArgs args)
+        => int.TryParse(ReadChangeValue(args), out var parsed) ? parsed : 0;
+
+    private void UpdateRoleExecutorKind(ChangeEventArgs args)
+    {
+        roleExecutorKind = Enum.TryParse<ProcessDefinitionRoleExecutorKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionRoleExecutorKind.Person;
+        ValidateWorkflowInputs();
+    }
+
+    private void UpdateWorkflowDefinitionId(string value)
+    {
+        roleWorkflowDefinitionIdInput = value;
+        ValidateWorkflowInputs();
+    }
+
+    private void UpdateWorkflowVersionId(string value)
+    {
+        roleWorkflowVersionIdInput = value;
+        ValidateWorkflowInputs();
+    }
+
+    private void ValidateWorkflowInputs()
+    {
+        roleWorkflowDefinitionId = ParseWorkflowIdentifier(
+            roleWorkflowDefinitionIdInput,
+            isRequired: roleExecutorKind == ProcessDefinitionRoleExecutorKind.Workflow,
+            "Workflow definition id",
+            out roleWorkflowDefinitionIdError);
+        roleWorkflowVersionId = ParseWorkflowIdentifier(
+            roleWorkflowVersionIdInput,
+            isRequired: false,
+            "Workflow version id",
+            out roleWorkflowVersionIdError);
+    }
+
+    private static Guid? ParseWorkflowIdentifier(
+        string value,
+        bool isRequired,
+        string displayName,
+        out string? error)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            error = isRequired ? $"{displayName} is required." : null;
+            return null;
+        }
+
+        if (!Guid.TryParse(value, out var parsed) || parsed == Guid.Empty)
+        {
+            error = $"{displayName} must be a non-empty GUID.";
+            return null;
+        }
+
+        error = null;
+        return parsed;
+    }
+
+    private bool IsCommandDisabled(ProcessDefinitionRoleCommandProjection command)
+        => !command.IsEnabled ||
+           Disabled ||
+           command.Kind == ProcessDefinitionRoleCommandKind.SaveRole && HasWorkflowInputErrors;
+
+    private string? ResolveCommandDisabledReason(ProcessDefinitionRoleCommandProjection command)
+        => command.Kind == ProcessDefinitionRoleCommandKind.SaveRole && HasWorkflowInputErrors
+            ? roleWorkflowDefinitionIdError ?? roleWorkflowVersionIdError
+            : command.DisabledReason;
+
+    private bool HasWorkflowInputErrors
+        => roleExecutorKind == ProcessDefinitionRoleExecutorKind.Workflow &&
+           (roleWorkflowDefinitionIdError is not null || roleWorkflowVersionIdError is not null);
+
+    private string FormatWorkflowPreference()
+    {
+        if (roleExecutorKind != ProcessDefinitionRoleExecutorKind.Workflow ||
+            roleWorkflowDefinitionId is not { } workflowDefinitionId)
+        {
+            return "Select a workflow";
+        }
+
+        return roleWorkflowVersionId is { } workflowVersionId
+            ? $"Workflow {workflowDefinitionId:D}, version {workflowVersionId:D}"
+            : $"Workflow {workflowDefinitionId:D}, latest active version";
+    }
+
+    private static string FormatGuid(Guid? value)
+        => value?.ToString("D") ?? string.Empty;
+
+    private static ProcessDefinitionRoleProjectAssignmentKind ParseProjectAssignment(ChangeEventArgs args)
+        => Enum.TryParse<ProcessDefinitionRoleProjectAssignmentKind>(ReadChangeValue(args), out var parsed)
+            ? parsed
+            : ProcessDefinitionRoleProjectAssignmentKind.Unspecified;
+
+    private static string ResolveLintTone(ProcessDefinitionRoleLintProjection lint)
+    {
+        if (lint.HasBlockingIssues)
+        {
+            return "danger";
+        }
+
+        return lint.HasWarningsOrErrors ? "warning" : "success";
+    }
+
+    private static string ResolveLintText(ProcessDefinitionRoleLintProjection lint)
+    {
+        if (lint.HasBlockingIssues)
+        {
+            return $"{lint.Issues.Count(issue => issue.Severity == ProcessDefinitionRoleLintSeverity.Error)} blocking";
+        }
+
+        return lint.HasWarningsOrErrors ? $"{lint.Issues.Count} role lint issue(s)" : "Role lint clear";
+    }
+
+    private static string ResolveLintIssueTone(ProcessDefinitionRoleLintSeverity severity)
+        => severity switch
+        {
+            ProcessDefinitionRoleLintSeverity.Error => "danger",
+            ProcessDefinitionRoleLintSeverity.Warning => "warning",
+            ProcessDefinitionRoleLintSeverity.Info => "info",
+            _ => "neutral"
+        };
+
+    private static string ResolveOverrideTone(ProcessDefinitionRoleTemplateOverrideStatus status)
+        => status switch
+        {
+            ProcessDefinitionRoleTemplateOverrideStatus.AppliedFromTemplate => "info",
+            ProcessDefinitionRoleTemplateOverrideStatus.LocallyCustomized => "warning",
+            ProcessDefinitionRoleTemplateOverrideStatus.ConflictMetadataAvailable => "danger",
+            _ => "neutral"
+        };
+
+    private static ButtonStyle ResolveCommandButtonStyle(ProcessDefinitionRoleCommandKind kind)
+        => kind switch
+        {
+            ProcessDefinitionRoleCommandKind.AddRole => ButtonStyle.Primary,
+            ProcessDefinitionRoleCommandKind.SaveRole => ButtonStyle.Success,
+            ProcessDefinitionRoleCommandKind.ApplyTemplate => ButtonStyle.Info,
+            ProcessDefinitionRoleCommandKind.DeleteRole => ButtonStyle.Danger,
+            _ => ButtonStyle.Light
+        };
+
+    private static string BuildRoleCommandTestId(ProcessDefinitionRoleCommandKind kind)
+        => kind switch
+        {
+            ProcessDefinitionRoleCommandKind.AddRole => "processes-role-add",
+            ProcessDefinitionRoleCommandKind.SaveRole => "processes-role-save",
+            ProcessDefinitionRoleCommandKind.ApplyTemplate => "processes-role-apply-template",
+            ProcessDefinitionRoleCommandKind.DeleteRole => "processes-role-delete",
+            _ => $"processes-role-command-{kind.ToString().ToLowerInvariant()}"
+        };
+
+    private static string BuildRoleItemTestId(ProcessDefinitionRoleKey roleKey)
+    {
+        var normalized = new string(roleKey.Value
+            .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+            .ToArray());
+        return $"processes-role-{normalized}";
+    }
+}

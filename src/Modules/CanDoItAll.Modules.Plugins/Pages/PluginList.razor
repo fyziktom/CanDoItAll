@@ -1,0 +1,51 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using Microsoft.AspNetCore.Components
+
+<div class="h-full min-h-0 overflow-y-auto pr-1"
+     style="scrollbar-gutter:stable;"
+     data-testid="plugins-tree-scroll">
+    <TreeView Items="@TreeNodes"
+              Style="TreeViewStyle.Workbench"
+              AriaLabel="Plugins grouped by descriptor tags"
+              EmptyText="No plugins are registered."
+              OnSelect="HandleTreeSelectAsync"
+              OnToggle="OnNodeToggled" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PluginCatalogItem> Catalog { get; set; } = [];
+
+    [Parameter]
+    public PluginCatalogItem? SelectedPlugin { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlySet<string> ExpandedNodeIds { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    [Parameter, EditorRequired]
+    public EventCallback<PluginCatalogItem> OnPluginSelected { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<string> OnNodeToggled { get; set; }
+
+    private IReadOnlyList<TreeViewNode> TreeNodes
+        => PluginCatalogTreeNodeBuilder.Build(Catalog, SelectedPlugin?.PluginId, ExpandedNodeIds);
+
+    private async Task HandleTreeSelectAsync(string nodeId)
+    {
+        if (!PluginCatalogTreeNodeBuilder.TryReadPluginId(nodeId, out var pluginId))
+        {
+            return;
+        }
+
+        var plugin = Catalog.FirstOrDefault(item => item.PluginId == pluginId);
+        if (plugin is null)
+        {
+            return;
+        }
+
+        await OnPluginSelected.InvokeAsync(plugin);
+    }
+}

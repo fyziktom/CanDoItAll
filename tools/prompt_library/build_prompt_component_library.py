@@ -98,7 +98,7 @@ class ComponentDefinition:
     def phase_rules(self) -> str:
         return "|".join(self.phases)
 
-    def to_factory_seed(self) -> dict:
+    def to_gallery_seed(self) -> dict:
         return {
             "id": self.id,
             "key": self.key,
@@ -145,7 +145,7 @@ class FlowDefinition:
     def prompt_type_rules(self) -> str:
         return "|".join(self.prompt_types)
 
-    def to_factory_seed(self, block_lookup: dict[str, ComponentDefinition]) -> dict:
+    def to_gallery_seed(self, block_lookup: dict[str, ComponentDefinition]) -> dict:
         block_ids = [block_lookup[key].id for key in self.block_keys]
         return {
             "id": self.id,
@@ -184,7 +184,7 @@ class BlueprintDefinition:
     def id(self) -> str:
         return str(uuid.uuid5(UUID_NAMESPACE, f"blueprint:{self.key}"))
 
-    def to_factory_seed(self, flows: dict[str, FlowDefinition]) -> dict:
+    def to_gallery_seed(self, flows: dict[str, FlowDefinition]) -> dict:
         return {
             "id": self.id,
             "key": self.key,
@@ -2401,32 +2401,13 @@ def build_stack_components() -> list[ComponentDefinition]:
             - design schemas and indexes around actual query paths,
             - respect transaction and migration safety,
             - be explicit about JSON, array, text search, or extension usage,
-            - confirm cross-environment behavior if the app also supports SQLite or in-memory testing.
+            - confirm behavior in explicit in-memory test overrides where relevant.
             """,
             tags=stable_tags("postgresql", "database", "schema"),
             prompt_types=["architecture", "plan", "implementation", "migration", "performance", "validation"],
             blueprints=["architecture-spec", "implementation-plan", "feature-implementation", "performance-hardening", "validation-audit"],
             phases=["architecture", "planning", "implementation", "verification"],
             stack_tags=["postgresql", "database"],
-        ),
-        component(
-            key="stack-sqlite",
-            name="Stack: SQLite",
-            group="stack-profiles",
-            block_kind="Instruction",
-            summary="Applies SQLite-specific guidance for local, test, or offline data scenarios.",
-            template="""
-            ## SQLite Guidance
-            For SQLite-backed work:
-            - remember the differences from PostgreSQL in typing, concurrency, and feature support,
-            - keep schema and query choices compatible with the intended runtime role,
-            - use it deliberately for local, test, or offline scenarios rather than as a silent stand-in.
-            """,
-            tags=stable_tags("sqlite", "database", "offline"),
-            prompt_types=["architecture", "plan", "implementation", "migration", "testing", "validation"],
-            blueprints=["architecture-spec", "implementation-plan", "feature-implementation", "validation-audit", "test-strategy-and-automation"],
-            phases=["architecture", "planning", "implementation", "verification"],
-            stack_tags=["sqlite", "database"],
         ),
         component(
             key="stack-efcore",
@@ -2669,20 +2650,20 @@ def build_toolbox_components() -> list[ComponentDefinition]:
         ),
         component(
             key="toolbox-cross-db-compat-check",
-            name="Toolbox: Cross-DB Compatibility Check",
+            name="Toolbox: Persistence Compatibility Check",
             group="toolbox-snippets",
             block_kind="Testing",
-            summary="Adds compatibility checks across PostgreSQL, SQLite, or other supported data stores.",
+            summary="Adds compatibility checks across PostgreSQL and explicit test-provider overrides.",
             template="""
-            ## Cross-Database Compatibility
-            Validate this data-layer change across the supported database providers.
+            ## Persistence Compatibility
+            Validate this data-layer change across the supported runtime and test providers.
 
             At minimum:
             - note which providers were tested,
             - identify provider-specific behavior or skipped coverage,
-            - avoid assuming PostgreSQL and SQLite behave identically.
+            - avoid assuming in-memory test behavior proves PostgreSQL translation or concurrency.
             """,
-            tags=stable_tags("toolbox", "database", "compatibility", "postgresql", "sqlite"),
+            tags=stable_tags("toolbox", "database", "compatibility", "postgresql"),
             prompt_types=["implementation", "migration", "testing", "validation"],
             blueprints=["feature-implementation", "implementation-plan", "test-strategy-and-automation", "validation-audit"],
             phases=["verification", "delivery"],
@@ -2888,7 +2869,7 @@ def build_flows() -> list[FlowDefinition]:
         FlowDefinition(
             key="data-layer-change-crossdb",
             name="Data-Layer Change with Cross-DB Proof",
-            summary="Flow for EF Core, PostgreSQL, SQLite, and migration-heavy work.",
+            summary="Flow for EF Core, PostgreSQL, and migration-heavy work.",
             prompt_types=["architecture", "plan", "implementation", "migration", "testing", "validation"],
             block_keys=["mission-exact-goal", "current-state-audit", "dependency-inventory", "data-model-and-migration-design", "risk-register", "implementation-plan-step-by-step", "rollback-and-recovery-plan", "implement-in-small-slices", "mandatory-unit-tests", "mandatory-integration-tests", "final-audit"],
             agent_sequence=[
@@ -2970,10 +2951,10 @@ def build_blueprints() -> list[BlueprintDefinition]:
 
 def build_simulations() -> list[SimulationCase]:
     return [
-        SimulationCase("candoitall-branch-aware-prompt-flow", "CanDoItAll Branch-Aware Prompt Flow Visualization", "Add branch-aware prompt-run visualization and lineage-aware validation to the existing .NET/Blazor Prompt Factory and Workbench.", "architecture-review-plan-implement-validate", [".net", "blazor", "efcore", "sqlite", "postgresql", "tailwind", "playwright", "offline-first"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "architecture-analysis", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-dotnet-solution", "stack-blazor-webapp", "stack-tailwind-css", "stack-efcore", "stack-sqlite", "stack-postgresql", "stack-playwright-mcp", "stack-offline-first-sync", "toolbox-run-unit-tests-docker", "toolbox-run-ui-tests-docker"], ["role-architecture-lead", "role-senior-reviewer", "role-implementation-planner", "role-implementation-lead", "role-test-validation-lead"], ["architecture", "ui", "cross-db", "docker-tests"]),
+        SimulationCase("candoitall-branch-aware-prompt-flow", "CanDoItAll Branch-Aware Prompt Flow Visualization", "Add branch-aware prompt-run visualization and lineage-aware validation to the existing .NET/Blazor Prompt Factory and Workbench.", "architecture-review-plan-implement-validate", [".net", "blazor", "efcore", "postgresql", "tailwind", "playwright", "offline-first"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "architecture-analysis", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-dotnet-solution", "stack-blazor-webapp", "stack-tailwind-css", "stack-efcore", "stack-postgresql", "stack-playwright-mcp", "stack-offline-first-sync", "toolbox-run-unit-tests-docker", "toolbox-run-ui-tests-docker"], ["role-architecture-lead", "role-senior-reviewer", "role-implementation-planner", "role-implementation-lead", "role-test-validation-lead"], ["architecture", "ui", "postgresql", "docker-tests"]),
         SimulationCase("php-canvas-calendar-recurring-events", "PHP Canvas Calendar Recurring Events and Drag/Drop", "Extend a PHP app with canvas-first recurring events, drag/drop, and Outlook-like dense layouts validated in a real browser.", "ui-canvas-feature-delivery", ["php", "html", "javascript", "css", "canvas", "playwright"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "architecture-analysis", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-php-webapp", "stack-html-js-css", "stack-canvas-html-js", "stack-playwright-mcp", "toolbox-use-playwright-mcp-now", "toolbox-capture-browser-artifacts"], ["role-ui-ux-engineer", "role-implementation-planner", "role-implementation-lead", "role-test-validation-lead"], ["canvas-interaction", "browser-proof", "accessibility"]),
-        SimulationCase("safe-refactor-context-assembly", "Safe Refactor of Prompt Factory Context Assembly", "Refactor the CanDoItAll prompt context assembly pipeline for lower coupling while preserving behavior and locking regressions with Docker tests.", "audit-plan-refactor-review", [".net", "blazor", "efcore", "sqlite", "playwright"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-dotnet-solution", "stack-blazor-webapp", "stack-efcore", "stack-sqlite", "stack-playwright-mcp", "toolbox-run-unit-tests-docker", "toolbox-run-integration-tests-docker", "toolbox-cache-downloads-mobile-data"], ["role-refactor-specialist", "role-implementation-planner", "role-senior-reviewer"], ["regression-proof", "docker", "backward-compatibility"]),
-        SimulationCase("offline-sync-entitlements-feature", "Offline Entitlements and Sync-Ready Account Feature", "Add an offline-first entitlements and sync-ready account workflow spanning API, EF Core, PostgreSQL, SQLite, and Blazor UI.", "fullstack-offline-feature", [".net", "blazor", "efcore", "postgresql", "sqlite", "offline-first", "playwright"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "architecture-analysis", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-dotnet-solution", "stack-blazor-webapp", "stack-efcore", "stack-postgresql", "stack-sqlite", "stack-offline-first-sync", "stack-playwright-mcp", "toolbox-cross-db-compat-check", "toolbox-db-migration-dry-run", "toolbox-run-integration-tests-docker"], ["role-architecture-lead", "role-senior-reviewer", "role-implementation-planner", "role-implementation-lead", "role-test-validation-lead"], ["sync", "cross-db", "migration", "offline-proof"]),
+        SimulationCase("safe-refactor-context-assembly", "Safe Refactor of Prompt Factory Context Assembly", "Refactor the CanDoItAll prompt context assembly pipeline for lower coupling while preserving behavior and locking regressions with Docker tests.", "audit-plan-refactor-review", [".net", "blazor", "efcore", "postgresql", "playwright"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-dotnet-solution", "stack-blazor-webapp", "stack-efcore", "stack-postgresql", "stack-playwright-mcp", "toolbox-run-unit-tests-docker", "toolbox-run-integration-tests-docker", "toolbox-cache-downloads-mobile-data"], ["role-refactor-specialist", "role-implementation-planner", "role-senior-reviewer"], ["regression-proof", "docker", "backward-compatibility"]),
+        SimulationCase("offline-sync-entitlements-feature", "Offline Entitlements and Sync-Ready Account Feature", "Add an offline-first entitlements and sync-ready account workflow spanning API, EF Core, PostgreSQL, and Blazor UI.", "fullstack-offline-feature", [".net", "blazor", "efcore", "postgresql", "offline-first", "playwright"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "architecture-analysis", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-dotnet-solution", "stack-blazor-webapp", "stack-efcore", "stack-postgresql", "stack-offline-first-sync", "stack-playwright-mcp", "toolbox-cross-db-compat-check", "toolbox-db-migration-dry-run", "toolbox-run-integration-tests-docker"], ["role-architecture-lead", "role-senior-reviewer", "role-implementation-planner", "role-implementation-lead", "role-test-validation-lead"], ["sync", "postgresql", "migration", "offline-proof"]),
         SimulationCase("m5stack-midi-piezo-hit-engine", "M5Stack MIDI Piezo Hit Engine Refinement", "Refine a piezo-first hit engine on M5Stack with better timing, telemetry, and host-side validation.", "embedded-midi-firmware-tuning", ["arduino", "m5stack", "midi", "audio", ".net", "blazor"], ["session-framing", "mission-scope", "context-discovery", "guardrails", "workflow-orchestration", "architecture-analysis", "planning-checklists", "implementation-execution", "validation-review", "output-handoff", "stack-profiles", "toolbox-snippets"], ["stack-arduino-firmware", "stack-m5stack", "stack-midi-audio", "stack-dotnet-solution", "stack-blazor-webapp", "toolbox-generate-fixtures-and-seed-data", "toolbox-create-manual-qa-checklist"], ["role-embedded-midi-engineer", "role-implementation-planner", "role-test-validation-lead"], ["timing", "hardware-constraints", "telemetry", "manual-hardware-checks"]),
     ]
 
@@ -3270,7 +3251,7 @@ def write_docs(groups: list[GroupDefinition], components: list[ComponentDefiniti
         - {len(blueprints)} blueprint types
         - {len(flows)} flow templates
         - {len(simulations)} simulation cases with coverage validation
-        - import-friendly JSON seed files aligned to `CanDoItAll.Modules.Factory`
+        - import-friendly JSON seed files aligned to the Prompt Gallery importer
         - markdown snippet files for each component
         - an Excel catalog at `output/spreadsheet/prompt-component-library.xlsx`
 
@@ -3438,9 +3419,9 @@ def main() -> None:
 
     pack_analysis = analyze_prompt_packs()
     group_catalog = build_group_summary_rows(groups, components)
-    blocks_seed = [component_def.to_factory_seed() for component_def in components]
-    flow_seed = [flow.to_factory_seed(component_lookup) for flow in flows]
-    blueprint_seed = [item.to_factory_seed(flow_lookup) for item in blueprints]
+    blocks_seed = [component_def.to_gallery_seed() for component_def in components]
+    flow_seed = [flow.to_gallery_seed(component_lookup) for flow in flows]
+    blueprint_seed = [item.to_gallery_seed(flow_lookup) for item in blueprints]
     manifest = {"version": 1, "generatedBy": "tools/prompt_library/build_prompt_component_library.py", "componentCount": len(components), "flowCount": len(flows), "blueprintCount": len(blueprints), "simulationCount": len(simulations), "recommendedComponentCount": sum(1 for item in components if item.recommended), "toolboxComponentCount": sum(1 for item in components if item.toolbox_eligible)}
 
     write_json(OUTPUT_ROOT / "manifest.json", manifest)

@@ -1,0 +1,106 @@
+@inject IPartyRecordQueryService PartyRecordQueryService
+
+<PagedRecordPickerDialog TKey="Guid"
+                         TFilter="PartyRecordScope"
+                         IsOpen="@IsOpen"
+                         Loader="LoadPageAsync"
+                         InitialFilter="@InitialScope"
+                         FilterOptions="@scopeOptions"
+                         InitialSelection="@InitialSelection"
+                         SelectionConfirmed="@SelectionConfirmed"
+                         OnClose="@OnClose"
+                         LoadFailed="@LoadFailed"
+                         Eyebrow="@Eyebrow"
+                         Title="@Title"
+                         Subtitle="@Subtitle"
+                         SearchPlaceholder="Search name, code, or summary"
+                         TagPlaceholder="Filter by all selected tags"
+                         FilterAriaLabel="Party type"
+                         LoadingEyebrow="Directory"
+                         LoadingTitle="Loading parties"
+                         EmptyEyebrow="No parties"
+                         EmptyTitle="No directory records match"
+                         EmptyDescription="Change the search, tags, or party type."
+                         DataTestId="@DataTestId" />
+
+@code {
+    private IReadOnlyList<PagedRecordFilterOption<PartyRecordScope>> scopeOptions = [];
+    private PartyRecordScope? configuredAllowedScope;
+    private PartyRecordScope? configuredInitialScope;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public Guid? SelectedPartyId { get; set; }
+
+    [Parameter]
+    public PartyRecordScope AllowedScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public PartyRecordScope InitialScope { get; set; } = PartyRecordScope.All;
+
+    [Parameter]
+    public Guid? ExcludedPartyId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> SelectionConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<Exception> LoadFailed { get; set; }
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Directory";
+
+    [Parameter]
+    public string Title { get; set; } = "Choose a party";
+
+    [Parameter]
+    public string Subtitle { get; set; } = "Search the directory without loading every record into the form.";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "crmhr-party-picker";
+
+    private PagedRecordSelection<Guid>? InitialSelection => SelectedPartyId.HasValue
+        ? new PagedRecordSelection<Guid>(SelectedPartyId.Value)
+        : null;
+
+    protected override void OnParametersSet()
+    {
+        if (configuredAllowedScope == AllowedScope &&
+            configuredInitialScope == InitialScope)
+        {
+            return;
+        }
+
+        scopeOptions = PartyRecordPresentation.BuildScopeOptions(AllowedScope, InitialScope);
+        configuredAllowedScope = AllowedScope;
+        configuredInitialScope = InitialScope;
+    }
+
+    private async Task<PagedRecordPage<Guid>> LoadPageAsync(
+        PagedRecordRequest<PartyRecordScope> request,
+        CancellationToken cancellationToken)
+    {
+        var scope = PartyRecordPresentation.ConstrainScope(request.Filter, AllowedScope);
+
+        var result = await PartyRecordQueryService.SearchAsync(
+            new PartyRecordQuery(
+                request.SearchText,
+                request.Tags,
+                scope,
+                request.PageIndex,
+                request.PageSize,
+                ExcludedPartyId),
+            cancellationToken);
+
+        return new PagedRecordPage<Guid>(
+            result.Items.Select(PartyRecordPresentation.ToOption).ToList(),
+            result.PageIndex,
+            result.PageSize,
+            result.TotalCount);
+    }
+}

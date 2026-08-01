@@ -1,0 +1,27 @@
+{
+  "Kind": "process-artifact-template",
+  "Key": "repair-brief",
+  "DisplayName": "Repair brief",
+  "Scope": "local",
+  "ProcessKey": "branching-code-review",
+  "ArtifactKind": "Brief",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Internal",
+  "DefaultRetentionDays": 365,
+  "Summary": "Focused repair brief issued when the review router sends the change back for a bounded repair pass.",
+  "AllowedFutureUsageSummary": "Reusable between repair loops until the next routing decision is made.",
+  "ValidationRequirementSummary": "Must state the repair scope, blocking findings, and what evidence is required on resubmission.",
+  "OwnerRoleKey": "review-lead",
+  "DocPath": "processes/branching-code-review/artifacts/repair-brief.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "repair-brief",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must state the repair scope, blocking findings, and what evidence is required on resubmission."
+  }
+}

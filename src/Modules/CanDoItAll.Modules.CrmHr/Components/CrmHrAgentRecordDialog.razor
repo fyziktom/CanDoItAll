@@ -1,0 +1,297 @@
+@if (IsOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="CRM / HR agent"
+            Title="@DialogTitle"
+            Subtitle="Business governance and the current AgentFramework projection in one read-only workspace."
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="crmhr-agent-record-dialog"
+            OnClose="Close">
+        <ChildContent>
+            @if (IsLoading)
+            {
+                <LoadingState Eyebrow="Agent projection"
+                              Title="Loading CRM-HR agent details"
+                              Description="The business profile and cached technical catalog record are being joined." />
+            }
+            else if (Item is null || Workspace is null)
+            {
+                <EmptyState Eyebrow="Projection unavailable"
+                            Title="The linked agent could not be loaded"
+                            Description="Close this dialog and refresh the projected agent catalog before trying again." />
+            }
+            else
+            {
+                <Tabs SelectedIndex="@selectedTabIndex"
+                      SelectedIndexChanged="HandleTabChangedAsync"
+                      RenderMode="TabRenderMode.Server"
+                      Variant="TabsVariant.WorkspaceSecondary"
+                      BorderMode="TabsBorderMode.Soft"
+                      OverflowMode="TabsOverflowMode.Wrap"
+                      AriaLabel="CRM-HR agent record sections"
+                      data-testid="crmhr-agent-record-tabs">
+                    <TabsItem Text="Overview"
+                              Icon="smart_toy"
+                              data-testid="crmhr-agent-record-tab-overview">
+                        <Stack GapScale="LayoutGap.Large">
+                            <SurfaceCard>
+                                <Split Gap="LayoutGap.Medium"
+                                       AlignItems="AlignItems.Start"
+                                       JustifyContent="JustifyContent.SpaceBetween"
+                                       Wrap="FlexWrap.Wrap">
+                                    <div class="min-w-0">
+                                        <p class="cda-eyebrow">Agent summary</p>
+                                        <h2 class="mt-1 text-lg font-semibold text-slate-950">@Item.Agent.Name</h2>
+                                        <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                            @FormatValue(Item.Agent.RoleTitle)
+                                        </p>
+                                        <p class="mt-3 text-sm leading-6 text-slate-600">@FormatValue(Item.Agent.Summary)</p>
+                                    </div>
+                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                        <StatusBadge Tone="@ResolveAgentStatusTone(Item.Agent.Status)"
+                                                     Text="@Item.Agent.Status.ToString()" />
+                                        <StatusBadge Tone="info"
+                                                     Text="@AgentWorkloadDisplay.ResolveLabel(Item.Agent.Workload)" />
+                                        <StatusBadge Tone="@ResolveValidationTone(Workspace.Profile.ValidationStatus)"
+                                                     Text="@Workspace.Profile.ValidationStatus.ToString()" />
+                                    </Cluster>
+                                </Split>
+                            </SurfaceCard>
+
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Provider</p>
+                                    <p class="mt-2 text-sm font-medium text-slate-950"
+                                       data-testid="crmhr-agent-summary-provider">@ProviderName</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Model</p>
+                                    <p class="mt-2 text-sm font-medium text-slate-950">@FormatValue(Item.Agent.Model)</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Capabilities</p>
+                                    <p class="mt-2 text-sm font-medium text-slate-950"
+                                       data-testid="crmhr-agent-summary-capabilities">@Item.Agent.Capabilities.Count</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Owner / steward</p>
+                                    <p class="mt-2 text-sm font-medium text-slate-950"
+                                       data-testid="crmhr-agent-summary-owner">@FormatValue(Workspace.OwnerName)</p>
+                                </SurfaceCard>
+                            </Grid>
+
+                            @if (visibleTags.Count > 0)
+                            {
+                                <SurfaceCard Soft="true">
+                                    <p class="cda-eyebrow">Technical tags</p>
+                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="mt-3">
+                                        @foreach (var tag in visibleTags)
+                                        {
+                                            <StatusBadge Tone="neutral" Text="@tag" />
+                                        }
+                                    </Cluster>
+                                </SurfaceCard>
+                            }
+                        </Stack>
+                    </TabsItem>
+
+                    <TabsItem Text="CRM profile"
+                              Icon="badge"
+                              data-testid="crmhr-agent-record-tab-profile">
+                        <Stack GapScale="LayoutGap.Large">
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Lifecycle</p>
+                                    <p class="mt-2 text-sm font-medium text-slate-950">@Workspace.LifecycleStatus</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Validation</p>
+                                    <p class="mt-2 text-sm font-medium text-slate-950">@Workspace.Profile.ValidationStatus</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary email</p>
+                                    <p class="mt-2 text-sm text-slate-700">@FormatValue(Workspace.PrimaryEmail)</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Primary phone</p>
+                                    <p class="mt-2 text-sm text-slate-700">@FormatValue(Workspace.PrimaryPhone)</p>
+                                </SurfaceCard>
+                            </Grid>
+
+                            <SurfaceCard Soft="true">
+                                <p class="cda-eyebrow">Business notes</p>
+                                <p class="mt-3 text-sm leading-6 text-slate-700">@FormatValue(Workspace.Profile.Notes)</p>
+                            </SurfaceCard>
+                        </Stack>
+                    </TabsItem>
+
+                    <TabsItem Text="Technical projection"
+                              Icon="hub"
+                              data-testid="crmhr-agent-record-tab-projection">
+                        <Stack GapScale="LayoutGap.Large">
+                            <SurfaceCard Soft="true">
+                                <p class="cda-eyebrow">Source of truth</p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-950">AgentFramework owns this runtime</h3>
+                                <p class="mt-3 text-sm leading-6 text-slate-600">
+                                    CRM-HR consumes the invalidation-aware catalog snapshot. Instructions, provider selection,
+                                    model, capabilities, and runtime policy remain editable only in AgentFramework.
+                                </p>
+                            </SurfaceCard>
+
+                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Binding</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">@BindingSummary</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Execution mode</p>
+                                    <p class="mt-2 text-sm text-slate-700">@Workspace.Profile.ExecutionMode</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Chat history</p>
+                                    <p class="mt-2 text-sm text-slate-700">@Item.Agent.ChatHistoryMode</p>
+                                </SurfaceCard>
+                                <SurfaceCard Soft="true">
+                                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Projection updated</p>
+                                    <p class="mt-2 text-sm text-slate-700">@FormatTimestamp(Item.ProjectionUpdatedAtUtc)</p>
+                                </SurfaceCard>
+                            </Grid>
+
+                            @if (Item.Agent.Capabilities.Count > 0)
+                            {
+                                <SurfaceCard Soft="true">
+                                    <p class="cda-eyebrow">Capabilities</p>
+                                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" Class="mt-3">
+                                        @foreach (var capability in Item.Agent.Capabilities)
+                                        {
+                                            <StatusBadge Tone="neutral" Text="@capability.CapabilityKey" />
+                                        }
+                                    </Cluster>
+                                </SurfaceCard>
+                            }
+                        </Stack>
+                    </TabsItem>
+
+                    <TabsItem Text="Evidence & readiness"
+                              Icon="fact_check"
+                              data-testid="crmhr-agent-record-tab-evidence">
+                        <AgentRecruitingEvidencePanel CandidateAgentId="Item.Agent.Id" />
+                    </TabsItem>
+                </Tabs>
+            }
+        </ChildContent>
+        <Footer>
+            <Split Breakpoint="LayoutBreakpoint.None"
+                   Gap="LayoutGap.Medium"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   Wrap="FlexWrap.Wrap">
+                <SmallText Text="Technical edits remain in AgentFramework; CRM-HR owns business governance and contacts." />
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Open technical record"
+                            Icon="smart_toy"
+                            Disabled="@(Item is null || Workspace is null)"
+                            Click="OpenTechnicalRecord"
+                            data-testid="crmhr-agent-open-technical-record" />
+                    <Button Text="Open directory record"
+                            Icon="asset"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(Item is null || Workspace is null)"
+                            Click="OpenDirectoryRecord"
+                            data-testid="crmhr-agent-open-directory-record" />
+                    <Button Text="Close"
+                            ButtonStyle="ButtonStyle.Light"
+                            Click="Close"
+                            data-testid="crmhr-agent-record-close" />
+                </Cluster>
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private Guid? renderedPartyId;
+    private IReadOnlyList<string> visibleTags = [];
+    private int selectedTabIndex;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public AiAgentDirectoryItemModel? Item { get; set; }
+
+    [Parameter]
+    public AiAgentWorkspaceModel? Workspace { get; set; }
+
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    [Parameter]
+    public EventCallback OpenTechnicalRecord { get; set; }
+
+    [Parameter]
+    public EventCallback OpenDirectoryRecord { get; set; }
+
+    private string DialogTitle => Item?.Agent.Name
+        ?? Workspace?.DisplayName
+        ?? "Loading agent";
+
+    private string ProviderName => FormatValue(Item?.Provider?.Name);
+
+    private string BindingSummary => string.IsNullOrWhiteSpace(Workspace?.BindingSummary)
+        ? Workspace?.BindingStatus.ToString() ?? "Not available"
+        : Workspace.BindingSummary;
+
+    protected override void OnParametersSet()
+    {
+        if (Item?.PartyId == renderedPartyId)
+        {
+            return;
+        }
+
+        renderedPartyId = Item?.PartyId;
+        visibleTags = Item?.Agent.Tags
+            .Where(tag => !AgentSpecialTags.IsFavorite(tag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
+        selectedTabIndex = 0;
+    }
+
+    private Task HandleTabChangedAsync(int index)
+    {
+        selectedTabIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private static string ResolveAgentStatusTone(AgentLifecycleStatus status)
+        => status switch
+        {
+            AgentLifecycleStatus.Active => "success",
+            AgentLifecycleStatus.Suspended => "warning",
+            AgentLifecycleStatus.Archived => "neutral",
+            _ => "info"
+        };
+
+    private static string ResolveValidationTone(AiValidationStatus status)
+        => status switch
+        {
+            AiValidationStatus.ReviewRequired => "warning",
+            AiValidationStatus.Approved => "success",
+            AiValidationStatus.Suspended => "danger",
+            AiValidationStatus.Draft => "base",
+            _ => "neutral"
+        };
+
+    private static string FormatValue(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+
+    private static string FormatTimestamp(DateTimeOffset? value)
+        => value?.LocalDateTime.ToString("g") ?? "Not available";
+}

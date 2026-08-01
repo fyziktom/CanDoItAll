@@ -1,0 +1,349 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.Projects
+
+<SurfaceCard data-testid="crmhr-assignment-page">
+    <Stack GapScale="LayoutGap.Medium">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <div class="min-w-0">
+                <p class="cda-eyebrow">Project relationships</p>
+                <h2 class="mt-1 text-lg font-semibold text-slate-950">Recorded assignments</h2>
+                <p class="mt-1 text-sm text-slate-600">
+                    @if (string.IsNullOrWhiteSpace(ProjectName)) {
+                        <text>Choose a project to manage its commercial and staffing relationships.</text>
+                    } else {
+                        <text>@TotalCount assignment(s) for @ProjectName</text>
+                    }
+                </p>
+            </div>
+
+            <TooltipTarget Text="Create a project assignment"
+                           Position="TooltipPosition.Bottom"
+                           TestId="crmhr-assignment-create-tooltip">
+                <Button Icon="add"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Size="ButtonSize.Small"
+                        Class="cda-button--quick"
+                        Disabled="@(!CanCreate || isPreparingCreate)"
+                        IsBusy="@isPreparingCreate"
+                        aria-label="Create project assignment"
+                        data-testid="crmhr-assignment-create-button"
+                        Click="OpenCreateDialogAsync" />
+            </TooltipTarget>
+        </Split>
+
+        @if (string.IsNullOrWhiteSpace(ProjectName)) {
+            <EmptyState Eyebrow="No project selected"
+                        Title="Choose a project to manage relationships"
+                        Description="The project selector remains available above the workspace tabs." />
+        } else {
+            <CompactFilterBar ResultText="@($"{TotalCount} matching assignment(s)")">
+                <input value="@SearchText"
+                       @oninput="HandleSearchInputAsync"
+                       class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
+                       style="width: auto; flex: 1 1 24rem;"
+                       placeholder="Search party, role, node, or notes"
+                       data-testid="crmhr-assignment-search" />
+                <InputSelect TValue="ProjectPartyAssignmentRole?"
+                             Value="@RoleFilter"
+                             ValueChanged="HandleRoleFilterChangedAsync"
+                             ValueExpression="@(() => RoleFilter)"
+                             class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                             style="width: 13rem; flex: 0 1 13rem;"
+                             data-testid="crmhr-assignment-role-filter">
+                    <option value="">All roles</option>
+                    @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
+                        <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
+                    }
+                </InputSelect>
+            </CompactFilterBar>
+
+            <Stack GapScale="LayoutGap.Medium"
+                   data-testid="crmhr-assignment-list">
+                @if (Assignments.Count == 0) {
+                    <EmptyState Eyebrow="No matching assignments"
+                                Title="Adjust the relationship filters"
+                                Description="Create an assignment or broaden the current search and role filter." />
+                } else {
+                    <PagedCardGrid TItem="ProjectPartyAssignmentDetail"
+                                   Items="Assignments"
+                                   PageSize="@PageSize"
+                                   PageIndex="@PageIndex"
+                                   TotalCount="@TotalCount"
+                                   PageChanged="PageChanged"
+                                   TestIdPrefix="crmhr-assignment-list">
+                        <ItemTemplate Context="assignment">
+                            <ProjectAssignmentRecordCard Assignment="assignment"
+                                                         ProjectName="@ProjectName"
+                                                         TestIdPrefix="crmhr-assignment"
+                                                         ShowDetails="ShowDetailsAsync"
+                                                         Delete="DeleteAssignment" />
+                        </ItemTemplate>
+                    </PagedCardGrid>
+                }
+            </Stack>
+        }
+    </Stack>
+</SurfaceCard>
+
+<Dialog IsOpen="@isCreateDialogOpen"
+        Eyebrow="Project relationship"
+        Title="Create assignment"
+        Subtitle="@ProjectName"
+        Size="ModalSize.Wide"
+        DenseChrome="true"
+        TestId="crmhr-assignment-create-dialog"
+        OnClose="CloseCreateDialogAsync">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Large">
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnsLg="2">
+                <FormField Text="Assignment role">
+                    <InputSelect @bind-Value="Draft.Role"
+                                 class="cda-input"
+                                 data-testid="crmhr-assignment-role">
+                        @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
+                            <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Node key">
+                    <InputText @bind-Value="Draft.NodeKey"
+                               class="cda-input"
+                               data-testid="crmhr-assignment-node-key" />
+                </FormField>
+            </Grid>
+
+            <PartyPicker Label="Party"
+                         TestIdPrefix="crmhr-assignment-party"
+                         SelectedPartyId="Draft.PartyId"
+                         SelectedPartyIdChanged="HandlePartyChanged" />
+
+            <PartyAffiliationPicker PartyId="Draft.PartyId"
+                                    SelectedAffiliationId="Draft.PartyAffiliationId"
+                                    SelectedAffiliationIdChanged="HandleAffiliationChanged"
+                                    TestIdPrefix="crmhr-assignment-affiliation" />
+
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnsLg="3">
+                <FormField Text="Allocation %">
+                    <InputNumber @bind-Value="Draft.AllocationPercent"
+                                 class="cda-input"
+                                 data-testid="crmhr-assignment-allocation" />
+                </FormField>
+                <FormField Text="Starts on">
+                    <InputDate @bind-Value="Draft.StartsOn"
+                               class="cda-input"
+                               data-testid="crmhr-assignment-starts-on" />
+                </FormField>
+                <FormField Text="Ends on">
+                    <InputDate @bind-Value="Draft.EndsOn"
+                               class="cda-input"
+                               data-testid="crmhr-assignment-ends-on" />
+                </FormField>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnsLg="2">
+                <FormField Text="Notes">
+                    <InputTextArea @bind-Value="Draft.Notes"
+                                   class="cda-input cda-input--textarea min-h-24"
+                                   data-testid="crmhr-assignment-notes" />
+                </FormField>
+                <label class="inline-flex items-center gap-2 self-start text-sm text-slate-700">
+                    <InputCheckbox @bind-Value="Draft.IsPrimary"
+                                   data-testid="crmhr-assignment-primary" />
+                    <span>Mark as primary</span>
+                </label>
+            </Grid>
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <Button ButtonStyle="ButtonStyle.Light"
+                    Text="Reset"
+                    Disabled="@isSaving"
+                    data-testid="crmhr-assignment-reset-button"
+                    Click="ResetDraft" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Text="Cancel"
+                        Disabled="@isSaving"
+                        Click="CloseCreateDialogAsync" />
+                <Button Text="Save assignment"
+                        Disabled="@isSaving"
+                        IsBusy="@isSaving"
+                        data-testid="crmhr-assignment-save-button"
+                        Click="HandleSaveAsync" />
+            </Cluster>
+        </Split>
+    </Footer>
+</Dialog>
+
+<ProjectAssignmentDetailsDialog Assignment="selectedAssignment"
+                                TaskDetails="selectedTaskDetails"
+                                ProjectName="@ProjectName"
+                                IsTaskLoading="isTaskDetailsLoading"
+                                OnClose="CloseDetailsDialog"
+                                OpenStructure="OpenStructure"
+                                OpenGantt="OpenGantt" />
+
+@code {
+    private bool isCreateDialogOpen;
+    private bool isPreparingCreate;
+    private bool isSaving;
+    private ProjectPartyAssignmentDetail? selectedAssignment;
+    private ProjectNodeDetails? selectedTaskDetails;
+    private bool isTaskDetailsLoading;
+    private long detailsLoadGeneration;
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool CanCreate { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentUpsertRequest Draft { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyList<ProjectPartyAssignmentDetail> Assignments { get; set; } = [];
+
+    [Parameter]
+    public int PageIndex { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = ProjectPartyAssignmentQueryLimits.DefaultPageSize;
+
+    [Parameter]
+    public int TotalCount { get; set; }
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public ProjectPartyAssignmentRole? RoleFilter { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectPartyAssignmentRole?> RoleFilterChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<Task<bool>> PrepareCreate { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<Task<bool>> SaveDraft { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<ProjectPartyAssignmentDetail, Task<ProjectNodeDetails?>> LoadTaskDetails { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback ResetDraft { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> DeleteAssignment { get; set; }
+
+    [Parameter]
+    public EventCallback OpenStructure { get; set; }
+
+    [Parameter]
+    public EventCallback OpenGantt { get; set; }
+
+    private async Task OpenCreateDialogAsync() {
+        if (!CanCreate || isPreparingCreate || isCreateDialogOpen) {
+            return;
+        }
+
+        isPreparingCreate = true;
+        try {
+            isCreateDialogOpen = await PrepareCreate();
+        } finally {
+            isPreparingCreate = false;
+        }
+    }
+
+    private Task CloseCreateDialogAsync() {
+        if (!isSaving) {
+            isCreateDialogOpen = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleSaveAsync() {
+        if (isSaving) {
+            return;
+        }
+
+        isSaving = true;
+        try {
+            if (await SaveDraft()) {
+                isCreateDialogOpen = false;
+            }
+        } finally {
+            isSaving = false;
+        }
+    }
+
+    private async Task ShowDetailsAsync(ProjectPartyAssignmentDetail assignment) {
+        var loadGeneration = ++detailsLoadGeneration;
+        selectedAssignment = assignment;
+        selectedTaskDetails = null;
+        isTaskDetailsLoading = !string.IsNullOrWhiteSpace(assignment.NodeKey);
+
+        if (!isTaskDetailsLoading) {
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+        try {
+            var taskDetails = await LoadTaskDetails(assignment);
+            if (loadGeneration == detailsLoadGeneration && selectedAssignment?.Id == assignment.Id) {
+                selectedTaskDetails = taskDetails;
+            }
+        } finally {
+            if (loadGeneration == detailsLoadGeneration) {
+                isTaskDetailsLoading = false;
+            }
+        }
+    }
+
+    private Task CloseDetailsDialog() {
+        detailsLoadGeneration++;
+        selectedAssignment = null;
+        selectedTaskDetails = null;
+        isTaskDetailsLoading = false;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePartyChanged(Guid? partyId) {
+        Draft.PartyId = partyId ?? Guid.Empty;
+        Draft.PartyAffiliationId = null;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAffiliationChanged(Guid? affiliationId) {
+        Draft.PartyAffiliationId = affiliationId;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSearchInputAsync(ChangeEventArgs args) {
+        return SearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleRoleFilterChangedAsync(ProjectPartyAssignmentRole? role) {
+        return RoleFilterChanged.InvokeAsync(role);
+    }
+}

@@ -1,0 +1,27 @@
+{
+  "Kind": "artifact-resource",
+  "Key": "containment-plan",
+  "DisplayName": "Containment plan",
+  "Scope": "local",
+  "ProcessKey": "incident-response",
+  "ArtifactKind": "Decision",
+  "DefaultTrustRequirement": "ReviewRequired",
+  "DefaultSensitivityLevel": "Confidential",
+  "DefaultRetentionDays": 730,
+  "Summary": "Explicit containment plan selected during the incident, including decision trade-offs and monitoring expectations.",
+  "AllowedFutureUsageSummary": "Reusable for incident execution, post-incident review, and improvement planning only.",
+  "ValidationRequirementSummary": "Must distinguish immediate containment from long-term fix.",
+  "OwnerRoleKey": "triage-lead",
+  "DocPath": "processes/incident-response/artifacts/containment-plan.md",
+  "SemanticAcceptanceContract": {
+    "AcceptanceMode": "SemanticReview",
+    "FileExistenceIsSufficient": false,
+    "RequiredArtifactSlotKey": "containment-plan",
+    "RequiredEvidenceKinds": [
+      "structured-finalizer-output",
+      "reviewed-managed-artifact",
+      "semantic-validation-summary"
+    ],
+    "RequiredReviewSummary": "Must distinguish immediate containment from long-term fix."
+  }
+}
