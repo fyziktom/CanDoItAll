@@ -75,7 +75,7 @@ $requiredFiles = @(
     ".gitattributes",
     ".gitignore",
     ".env.example",
-    ".github\workflows\ci.yml",
+    ".github\workflows-disabled\ci.yml",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
@@ -228,11 +228,25 @@ foreach ($pattern in $forbiddenTrackedPatterns) {
     }
 }
 
+$activeWorkflowDirectory = Join-Path $repositoryRoot ".github\workflows"
+$activeGitHubWorkflows = @(
+    Get-ChildItem -LiteralPath $activeWorkflowDirectory -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -match '^\.ya?ml$' }
+)
+if ($activeGitHubWorkflows.Count -gt 0) {
+    $errors.Add(
+        "GitHub CI is temporarily disabled, but active workflow files exist: $($activeGitHubWorkflows.Name -join ', ')")
+}
+
 $rootReadmePath = Join-Path $repositoryRoot "README.md"
 if (Test-Path -LiteralPath $rootReadmePath -PathType Leaf) {
     $rootReadme = Get-Content -LiteralPath $rootReadmePath -Raw
-    if ($rootReadme -notmatch 'actions/workflows/ci\.yml/badge\.svg\?branch=main&event=push') {
-        $errors.Add("README.md is missing the canonical CI badge.")
+    if ($rootReadme -match 'actions/workflows/.+?/badge\.svg') {
+        $errors.Add("README.md must not display a CI badge while GitHub CI is disabled.")
+    }
+
+    if ($rootReadme -notmatch 'img\.shields\.io/badge/license-MIT-blue\.svg') {
+        $errors.Add("README.md is missing the canonical MIT license badge.")
     }
 
     if ($rootReadme -notmatch 'https://aicandoitall\.com') {
@@ -287,8 +301,8 @@ if (Test-Path -LiteralPath $packageJsonPath -PathType Leaf) {
         $errors.Add("package.json must declare private=true because this repository is not an npm package.")
     }
 
-    if ($packageJson.license -ne "SEE LICENSE IN LICENSE") {
-        $errors.Add("package.json license metadata does not point to the repository LICENSE.")
+    if ($packageJson.license -ne "MIT") {
+        $errors.Add("package.json must declare the MIT SPDX license expression.")
     }
 }
 

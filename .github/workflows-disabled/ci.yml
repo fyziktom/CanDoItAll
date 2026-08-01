@@ -1,3 +1,5 @@
+# Temporarily disabled. Move this file back to .github/workflows/ci.yml when
+# GitHub CI is ready to be restored.
 name: CI
 
 on:

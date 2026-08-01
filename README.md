@@ -1,8 +1,7 @@
 # CanDoItAll
 
-[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![License](https://img.shields.io/badge/license-MIT--derived%20with%20website%20link-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ![aicandoitall](https://aicandoitall.com/assets/images/product/gallery/framework-development-paths.png)
 
@@ -103,6 +102,9 @@ dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Categ
 & .\tools\install\tests\Test-CanDoItAllWebAppInstallScripts.ps1
 ```
 
+GitHub-hosted CI is temporarily disabled. Run the applicable checks locally before
+publishing changes.
+
 The filtered command is the routine repository gate. Environment-dependent and extended
 test lanes are documented in [Testing](docs/testing.md).
 
@@ -156,10 +158,7 @@ The root npm package is private and exists only to run Tailwind commands.
 
 ## License And Contributions
 
-This repository uses the
-[MIT-Derived License with CanDoItAll Website Link Requirement](LICENSE). Redistributions
-of the software or a substantial portion of it in source or binary form must include at
-least one link to [aicandoitall.com](https://aicandoitall.com). The
+This repository is licensed under the [MIT License](LICENSE). The
 [third-party notices](THIRD-PARTY-NOTICES.md) preserve the copyright and license terms
 for external material redistributed by the application.
 
