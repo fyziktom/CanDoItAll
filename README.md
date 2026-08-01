@@ -1,8 +1,9 @@
 # CanDoItAll
 
-[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![License](https://img.shields.io/badge/license-MIT--derived%20with%20website%20link-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+![aicandoitall](https://aicandoitall.com/assets/images/product/gallery/framework-development-paths.png)
 
 CanDoItAll is a local-first .NET 10 Blazor application for governed project delivery,
 durable process execution, workforce coordination, and AI-agent automation. Product
@@ -43,11 +44,41 @@ This repository does not own:
 
 - the .NET SDK selected by [`global.json`](global.json)
 - PostgreSQL 16 or a compatible supported server
-- Docker Desktop or another Compose v2 runtime when using the included database service
+- Docker Desktop or another Compose v2 runtime when using the development database service
 - Node.js and npm when rebuilding application Tailwind output
-- PowerShell 7 for repository automation
+- PowerShell 7 for repository automation; the Windows installer and generated launcher
+  remain compatible with Windows PowerShell 5.1
 
-## Quick Start
+## Install The Windows Web App
+
+The Windows installer publishes a self-contained web app and prepares a dedicated
+PostgreSQL database for that installation:
+
+```powershell
+& .\tools\install\Install-CanDoItAllWebApp.ps1 -StartAfterInstall
+```
+
+When a working Linux Docker engine is available, database setup uses the isolated
+`candoitall-webapp-db` container and `candoitall-webapp-db-data` volume on
+`127.0.0.1:55432`. This is one installer-managed container/volume resource set, not a
+second Compose project. If Docker is unavailable, the installer downloads the pinned
+Windows x64 PostgreSQL 16 archive from EDB and runs a per-user native cluster beneath a
+short local, non-UNC install root. Both paths create the same `candoitall` database and
+non-superuser application role; the launcher starts the selected backend and supplies the
+exact connection settings to the app. Generated passwords are protected for the current
+Windows user and are not stored in the repository or install manifest.
+
+Database setup can also be repaired or rerun independently:
+
+```powershell
+& .\tools\install\Install-CanDoItAllWebAppDatabase.ps1
+```
+
+The legacy `tools\Install-CanDoItAllWebApp.ps1` entry point remains as a compatibility
+wrapper. See [installed web app operations](docs/operations/installed-web-app.md) for
+paths, engine selection, lifecycle, and recovery details.
+
+## Development Quick Start
 
 Run from the repository root:
 
@@ -68,16 +99,21 @@ dotnet restore .\CanDoItAll.slnx
 dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
 dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
 & .\tools\Validation\Test-Documentation.ps1
+& .\tools\install\tests\Test-CanDoItAllWebAppInstallScripts.ps1
 ```
+
+GitHub-hosted CI is temporarily disabled. Run the applicable checks locally before
+publishing changes.
 
 The filtered command is the routine repository gate. Environment-dependent and extended
 test lanes are documented in [Testing](docs/testing.md).
 
 ## Containers
 
-The base Compose model owns the local PostgreSQL dependency only. It publishes PostgreSQL
-on loopback, stores authoritative data in a named volume, and preserves that volume on
-normal shutdown.
+The base Compose model owns only the local **development** PostgreSQL dependency. It is
+not the installed web app database. It publishes PostgreSQL on loopback, stores
+authoritative development data in a named volume, and preserves that volume on normal
+shutdown.
 
 ```powershell
 docker compose --env-file .env.example config --quiet
@@ -92,17 +128,7 @@ See [container operations](docs/operations/containers.md) and
 
 The main dependency direction is:
 
-```mermaid
-flowchart LR
-    Web["Web host and API"] --> Composition["Composition root"]
-    Composition --> Modules["Product modules"]
-    Modules --> Application["Application services"]
-    Application --> Domain["Domain contracts and runtime"]
-    Composition --> Adapters["MAF, providers, plugins, and integration adapters"]
-    Adapters --> Application
-    Composition --> Infrastructure["Infrastructure and PostgreSQL"]
-    Infrastructure --> Domain
-```
+![architecture](https://aicandoitall.com/assets/images/diagrams/framework-layers.svg)
 
 Start with:
 
@@ -132,10 +158,7 @@ The root npm package is private and exists only to run Tailwind commands.
 
 ## License And Contributions
 
-This repository uses the
-[MIT-Derived License with CanDoItAll Website Link Requirement](LICENSE). Redistributions
-of the software or a substantial portion of it in source or binary form must include at
-least one link to [aicandoitall.com](https://aicandoitall.com). The
+This repository is licensed under the [MIT License](LICENSE). The
 [third-party notices](THIRD-PARTY-NOTICES.md) preserve the copyright and license terms
 for external material redistributed by the application.
 

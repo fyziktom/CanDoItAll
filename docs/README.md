@@ -17,10 +17,11 @@ authoritative.
 ## Development And Operations
 
 - [Development runtime](development-runtime.md)
+- [Installed Windows web app](operations/installed-web-app.md)
 - [Testing](testing.md)
 - [Secure configuration](secure-configuration.md)
 - [Container operations](operations/containers.md)
-- [Backup and restore](operations/backup-and-restore.md)
+- [Development PostgreSQL backup and restore](operations/backup-and-restore.md)
 - [Process agent operator runbook](process-agent-operator-runbook.md)
 
 ## Integration Contracts

@@ -22,7 +22,18 @@ The authoritative project and package dependency list is in [CanDoItAll.Web.cspr
 
 The web host should orchestrate startup, endpoint mapping, and Blazor rendering. Keep non-trivial product behavior in modules or application services.
 
-Development and Visual Studio `http`/`https` launch profiles are PostgreSQL-first. They target `127.0.0.1:5432/candoitall_development` with the tracked development credentials and keep development workspace/control-plane files under `%LOCALAPPDATA%\CanDoItAll`. Use `tools/dev/Ensure-DevelopmentPostgres.ps1` to prepare native PostgreSQL, or `docker compose up -d postgres` for the repository-managed database.
+Development and Visual Studio `http`/`https` launch profiles are PostgreSQL-first. They
+target `127.0.0.1:5432/candoitall_development` with the tracked development credentials
+and keep development workspace/control-plane files under `%LOCALAPPDATA%\CanDoItAll`.
+Use `tools/dev/Ensure-DevelopmentPostgres.ps1` to prepare native development PostgreSQL,
+or `docker compose up -d --wait db` for the repository-managed development database.
+
+The installed Windows web app does not use that Compose service. Its canonical
+`tools/install/Install-CanDoItAllWebApp.ps1` entry point prepares an isolated database,
+using either one installer-managed Docker container/volume set or a per-user native
+cluster. The generated launcher supplies the exact `Database__Provider` and
+`Database__ConnectionString` overrides. See
+[`docs/operations/installed-web-app.md`](../../../docs/operations/installed-web-app.md).
 
 The host registers the experimental generic Memory runtime with zero enabled providers
 and disabled memory workers by default. Qdrant and native Cognitive Memory are not

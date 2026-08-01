@@ -1,3 +1,5 @@
+# Temporarily disabled. Move this file back to .github/workflows/ci.yml when
+# GitHub CI is ready to be restored.
 name: CI
 
 on:
@@ -44,6 +46,10 @@ jobs:
       - name: Validate documentation and repository structure
         shell: pwsh
         run: .\tools\Validation\Test-Documentation.ps1
+
+      - name: Validate installed web app setup scripts
+        shell: powershell
+        run: .\tools\install\tests\Test-CanDoItAllWebAppInstallScripts.ps1
 
   containers:
     runs-on: ubuntu-latest
