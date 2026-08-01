@@ -1,3 +1,5 @@
+# Development-only PostgreSQL. The installed Windows web app uses the separate
+# tools/install/Install-CanDoItAllWebAppDatabase.ps1 lifecycle.
 name: ${COMPOSE_PROJECT_NAME:-candoitall-app}
 
 x-bounded-logging: &bounded-logging

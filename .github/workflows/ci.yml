@@ -45,6 +45,10 @@ jobs:
         shell: pwsh
         run: .\tools\Validation\Test-Documentation.ps1
 
+      - name: Validate installed web app setup scripts
+        shell: powershell
+        run: .\tools\install\tests\Test-CanDoItAllWebAppInstallScripts.ps1
+
   containers:
     runs-on: ubuntu-latest
     timeout-minutes: 10

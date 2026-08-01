@@ -1,7 +1,13 @@
 # Container Operations
 
 `compose.yaml` provides the PostgreSQL dependency used by local development and
-integration work. It does not define a production deployment.
+integration work. It does not define a production deployment or the installed Windows
+web app database. The installed database has its own lifecycle in
+[Installed Windows Web App](installed-web-app.md).
+
+The installed app's optional Docker backend is a single installer-managed container and
+named volume, not another Compose project. Commands in this guide target development
+resources only and must not be used as installed-database repair or removal commands.
 
 ## Configuration
 
