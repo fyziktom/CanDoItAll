@@ -4,6 +4,8 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License](https://img.shields.io/badge/license-MIT--derived%20with%20website%20link-blue.svg)](LICENSE)
 
+![aicandoitall](https://aicandoitall.com/assets/images/product/gallery/framework-development-paths.png)
+
 CanDoItAll is a local-first .NET 10 Blazor application for governed project delivery,
 durable process execution, workforce coordination, and AI-agent automation. Product
 information is available at [aicandoitall.com](https://aicandoitall.com); this repository
@@ -124,17 +126,7 @@ See [container operations](docs/operations/containers.md) and
 
 The main dependency direction is:
 
-```mermaid
-flowchart LR
-    Web["Web host and API"] --> Composition["Composition root"]
-    Composition --> Modules["Product modules"]
-    Modules --> Application["Application services"]
-    Application --> Domain["Domain contracts and runtime"]
-    Composition --> Adapters["MAF, providers, plugins, and integration adapters"]
-    Adapters --> Application
-    Composition --> Infrastructure["Infrastructure and PostgreSQL"]
-    Infrastructure --> Domain
-```
+![architecture](https://aicandoitall.com/assets/images/diagrams/framework-layers.svg)
 
 Start with:
 
