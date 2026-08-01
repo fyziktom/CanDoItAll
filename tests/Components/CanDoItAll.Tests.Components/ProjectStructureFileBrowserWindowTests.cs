@@ -10,6 +10,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -91,6 +92,46 @@ public sealed class ProjectStructureFileBrowserWindowTests
             Assert.NotNull(cut.FindComponent<FileBrowser>());
             Assert.Empty(cut.FindAll("input[aria-label='Include subprojects']"));
         });
+    }
+
+    [Fact]
+    public void Node_collection_window_exposes_the_host_authorized_explorer_action()
+    {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        Guid projectId = Guid.NewGuid();
+        var scope = new FileToolsSemanticScope(
+            FileToolsSemanticScopeKind.ProjectNode,
+            new FileToolsSemanticScopeId("node:v2:collection:11111111111111111111111111111111:Zm9sZGVy"),
+            "Run artifacts");
+        RegisterServices(
+            context,
+            new ProjectFileScopeSet(
+                projectId,
+                [
+                    new FileToolsSemanticScope(
+                        FileToolsSemanticScopeKind.Project,
+                        new FileToolsSemanticScopeId(projectId.ToString("N")),
+                        "Delivery")
+                ],
+                new string('c', 64)),
+            new StaticNodeFileScopeProvider(scope));
+        bool opened = false;
+
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
+            .Add(component => component.WindowId, "project-structure.fileBrowser")
+            .Add(
+                component => component.Request,
+                new ProjectStructureNodeFileCollectionRequest(projectId, "run-output", "Run artifacts"))
+            .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true })
+            .Add(component => component.CanOpenRootInExplorer, true)
+            .Add(
+                component => component.OpenRootInExplorer,
+                EventCallback.Factory.Create(this, () => opened = true)));
+
+        cut.WaitForElement("[data-testid='project-structure-file-browser-open-root-explorer']").Click();
+
+        Assert.True(opened);
     }
 
     [Fact]

@@ -14,6 +14,9 @@ public partial class ProjectStructurePage
     [Inject]
     private ProjectStructureCanvasTaskDialogCoordinator CanvasTaskDialogCoordinator { get; set; } = default!;
 
+    [Inject]
+    private ProjectStructureTextAssetDialogCoordinator TextAssetDialogCoordinator { get; set; } = default!;
+
     private Task ToggleSelectionWindowAsync()
         => ToggleWindowAsync(SelectionWindowKey);
 
@@ -79,6 +82,24 @@ public partial class ProjectStructurePage
             taskNode,
             editModel.Request,
             deferredCompletionCts.Token);
+
+    private Task OpenTextAssetCreateDialogAsync(
+        ProjectStructureCreateLeafDefinition definition,
+        CanvasWorkbenchCreateActionRequest createRequest)
+        => TextAssetDialogCoordinator.OpenCreateAsync(
+            new ProjectStructureTextAssetDialogContext(ProjectId, CreateTextAssetNodeAsync),
+            definition,
+            createRequest,
+            deferredCompletionCts.Token);
+
+    private Task<ProjectStructureNode?> CreateTextAssetNodeAsync(
+        ProjectStructureCreateLeafDefinition definition,
+        CanvasWorkbenchCreateActionRequest createRequest,
+        ProjectObjectMediaPayload media)
+        => CreateObjectAsync(
+            definition,
+            createRequest,
+            request => request with { Media = media });
 
     private ProjectStructureCanvasTaskDialogContext CreateCanvasTaskDialogContext()
         => new(

@@ -223,6 +223,117 @@ public sealed class ProjectStructureFileScopeResolverTests
         Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
     }
 
+    [Fact]
+    public void Projected_collection_scope_key_round_trips()
+    {
+        Guid projectId = Guid.NewGuid();
+        string nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(
+            Guid.NewGuid(),
+            "artifacts/process-runs/run");
+        var expected = ProjectStructureNodeFileScopeKey.CreateProjected(
+            ProjectStructureNodeFileScopeMode.Collection,
+            projectId,
+            nodeKey);
+
+        bool parsed = ProjectStructureNodeFileScopeKey.TryParse(expected.ToScopeId(), out var actual);
+
+        Assert.True(parsed);
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void CanBrowseFiles_accepts_only_governed_projected_process_run_folders()
+    {
+        Guid runId = Guid.NewGuid();
+        string root = $"artifacts/process-runs/{runId:D}";
+        ProjectStructureNode governedFolder = CreateProjectedFolderNode(runId, root);
+
+        Assert.True(ProjectStructureFileActions.CanBrowseFiles(governedFolder));
+        Assert.False(ProjectStructureFileActions.CanBrowseFiles(governedFolder with
+        {
+            ArtifactKind = "external-folder"
+        }));
+        Assert.False(ProjectStructureFileActions.CanBrowseFiles(governedFolder with
+        {
+            IsSystemManaged = false
+        }));
+        Assert.False(ProjectStructureFileActions.CanBrowseFiles(governedFolder with
+        {
+            MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+            {
+                File = new ProjectFileMetadata
+                {
+                    FileSubtype = ProjectFileSubtype.Folder,
+                    ExternalPath = $"artifacts/process-runs/{Guid.NewGuid():D}"
+                }
+            })
+        }));
+    }
+
+    [Fact]
+    public async Task ResolveNodeCollectionAsync_authorizes_current_projected_process_run_folder()
+    {
+        Guid runId = Guid.NewGuid();
+        string root = $"artifacts/process-runs/{runId:D}";
+        await using var fixture = await ResolverFixture.CreateProjectedCollectionAsync(runId, root);
+
+        FileToolsSemanticScope scope = await fixture.Sut.ResolveNodeCollectionAsync(
+            fixture.ProjectId,
+            fixture.NodeKey);
+        FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
+
+        Assert.Equal(ResolverFixture.StorageId, binding.StorageId);
+        Assert.Equal(root, binding.Root.Value);
+        Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
+        Assert.Contains(":v2:collection:", scope.Id.Value, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(@"C:\workspace\process-runs")]
+    [InlineData("artifacts/process-runs/../secret")]
+    public async Task ResolveNodeCollectionAsync_rejects_hostile_projected_folder_path(string root)
+    {
+        await using var fixture = await ResolverFixture.CreateProjectedCollectionAsync(Guid.NewGuid(), root);
+
+        FileBrowserProviderException exception = await Assert.ThrowsAsync<FileBrowserProviderException>(
+            () => fixture.Sut.ResolveNodeCollectionAsync(fixture.ProjectId, fixture.NodeKey).AsTask());
+
+        Assert.Equal(FileBrowserErrorCode.Forbidden, exception.Error.Code);
+    }
+
+    [Fact]
+    public async Task ResolveNodeCollectionAsync_rejects_projected_folder_bound_to_another_run()
+    {
+        Guid runId = Guid.NewGuid();
+        string root = $"artifacts/process-runs/{runId:D}";
+        await using var fixture = await ResolverFixture.CreateProjectedCollectionAsync(
+            runId,
+            root,
+            artifactId: Guid.NewGuid());
+
+        FileBrowserProviderException exception = await Assert.ThrowsAsync<FileBrowserProviderException>(
+            () => fixture.Sut.ResolveNodeCollectionAsync(fixture.ProjectId, fixture.NodeKey).AsTask());
+
+        Assert.Equal(FileBrowserErrorCode.Forbidden, exception.Error.Code);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_stale_projected_folder_scope()
+    {
+        Guid runId = Guid.NewGuid();
+        string root = $"artifacts/process-runs/{runId:D}";
+        await using var fixture = await ResolverFixture.CreateProjectedCollectionAsync(runId, root);
+        FileToolsSemanticScope scope = await fixture.Sut.ResolveNodeCollectionAsync(
+            fixture.ProjectId,
+            fixture.NodeKey);
+
+        fixture.RemoveProjection();
+        FileBrowserProviderException exception = await Assert.ThrowsAsync<FileBrowserProviderException>(
+            () => fixture.Sut.ResolveAsync(scope).AsTask());
+
+        Assert.Equal(FileBrowserErrorCode.Conflict, exception.Error.Code);
+    }
+
     [Theory]
     [InlineData(@"C:\workspace\reports")]
     [InlineData("../../reports")]
@@ -266,22 +377,54 @@ public sealed class ProjectStructureFileScopeResolverTests
         Assert.Equal(FileBrowserErrorCode.NotFound, exception.Error.Code);
     }
 
+    private static ProjectStructureNode CreateProjectedFolderNode(Guid runId, string root)
+    {
+        var record = new ProjectObjectRecord
+        {
+            NodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId, root),
+            ParentNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId),
+            ObjectType = ProjectObjectType.File,
+            ObjectSubtype = "folder",
+            Title = "Run artifacts",
+            MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+            {
+                File = new ProjectFileMetadata
+                {
+                    FileSubtype = ProjectFileSubtype.Folder,
+                    ExternalPath = root
+                }
+            }),
+            Binding = ProjectStructureProjectionBindingFactory.Create(
+                "/projects/project/structure",
+                ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind,
+                runId),
+            IsSystemManaged = true
+        };
+        return ProjectWorkbenchNodeMapper.MapStructureNode(record);
+    }
+
     private sealed class ResolverFixture : IAsyncDisposable
     {
         public static readonly Guid StorageId = Guid.Parse("4a94a2c2-c6df-41ac-91ce-d5c851995303");
         private readonly DbContextOptions<AppDbContext> options;
+        private readonly MutableProjectionContributor? projectionContributor;
 
         private ResolverFixture(
             DbContextOptions<AppDbContext> options,
             Guid projectId,
-            string nodeKey)
+            string nodeKey,
+            MutableProjectionContributor? projectionContributor = null)
         {
             this.options = options;
+            this.projectionContributor = projectionContributor;
             ProjectId = projectId;
             NodeKey = nodeKey;
+            IReadOnlyList<IProjectStructureProjectionContributor> projectionContributors = projectionContributor is null
+                ? []
+                : [projectionContributor];
             Sut = new ProjectStructureFileScopeResolver(
                 new TestDbContextFactory(options),
-                new ProjectStructureAssemblyService([], new SystemClock()),
+                new ProjectStructureAssemblyService(projectionContributors, new SystemClock()),
                 new StaticStorageCatalog(CreateStorage(isReadOnly: false)));
         }
 
@@ -290,6 +433,14 @@ public sealed class ProjectStructureFileScopeResolverTests
         public string NodeKey { get; }
 
         public ProjectStructureFileScopeResolver Sut { get; }
+
+        public void RemoveProjection()
+        {
+            if (projectionContributor is not null)
+            {
+                projectionContributor.IsEnabled = false;
+            }
+        }
 
         public static async Task<ResolverFixture> CreateAsync(
             ProjectObjectType objectType,
@@ -362,10 +513,63 @@ public sealed class ProjectStructureFileScopeResolverTests
             return new ResolverFixture(options, projectId, nodeKey);
         }
 
+        public static Task<ResolverFixture> CreateProjectedCollectionAsync(
+            Guid runId,
+            string root,
+            Guid? artifactId = null)
+        {
+            AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
+            var options = AppDbContextTestOptionsBuilder.Create()
+                .UseInMemoryDatabase($"project-structure-projected-file-collection-{Guid.NewGuid():N}")
+                .Options;
+            Guid projectId = Guid.NewGuid();
+            string nodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId, root);
+            var contributor = new MutableProjectionContributor(new ProjectObjectRecord
+            {
+                ProjectId = projectId,
+                NodeKey = nodeKey,
+                ObjectType = ProjectObjectType.File,
+                ObjectSubtype = "folder",
+                Title = "Run artifacts",
+                MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                {
+                    File = new ProjectFileMetadata
+                    {
+                        FileSubtype = ProjectFileSubtype.Folder,
+                        ExternalPath = root
+                    }
+                }),
+                Binding = ProjectStructureProjectionBindingFactory.Create(
+                    $"/projects/{projectId:D}/structure",
+                    ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind,
+                    artifactId ?? runId),
+                ParentNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId)
+            });
+            return Task.FromResult(new ResolverFixture(options, projectId, nodeKey, contributor));
+        }
+
         public async ValueTask DisposeAsync()
         {
             await using var dbContext = new AppDbContext(options);
             await dbContext.Database.EnsureDeletedAsync();
+        }
+    }
+
+    private sealed class MutableProjectionContributor(ProjectObjectRecord node)
+        : IProjectStructureProjectionContributor
+    {
+        public bool IsEnabled { get; set; } = true;
+
+        public Task ContributeAsync(
+            ProjectStructureProjectionContext context,
+            CancellationToken cancellationToken)
+        {
+            if (IsEnabled)
+            {
+                context.AddNode(node);
+            }
+
+            return Task.CompletedTask;
         }
     }
 

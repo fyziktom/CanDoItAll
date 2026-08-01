@@ -40,18 +40,33 @@
                 <StatusBadge Tone="neutral"
                              Text="Compact" />
             </Cluster>
-            @if (Request is ProjectStructureProjectFileCollectionRequest)
-            {
-                <label class="project-structure-file-browser-window__subprojects">
-                    <CheckBox TValue="bool"
-                              Value="@includeSubprojects"
-                              ValueChanged="HandleIncludeSubprojectsChangedAsync"
-                              Disabled="@isLoading"
-                              aria-label="Include subprojects" />
-                    <TextBlock TextStyle="TextStyle.Caption"
-                               Value="Include subprojects" />
-                </label>
-            }
+            <Cluster Gap="LayoutGap.XSmall"
+                     AlignItems="AlignItems.Center"
+                     Wrap="FlexWrap.Wrap">
+                @if (CanOpenRootInExplorer)
+                {
+                    <Button Text="Open in Explorer"
+                            Icon="folder_open"
+                            Size="ButtonSize.Small"
+                            Variant="Variant.Outlined"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="@isLoading"
+                            data-testid="project-structure-file-browser-open-root-explorer"
+                            Click="OpenRootInExplorer" />
+                }
+                @if (Request is ProjectStructureProjectFileCollectionRequest)
+                {
+                    <label class="project-structure-file-browser-window__subprojects">
+                        <CheckBox TValue="bool"
+                                  Value="@includeSubprojects"
+                                  ValueChanged="HandleIncludeSubprojectsChangedAsync"
+                                  Disabled="@isLoading"
+                                  aria-label="Include subprojects" />
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="Include subprojects" />
+                    </label>
+                }
+            </Cluster>
         </Split>
 
         @if (isLoading)
@@ -168,6 +183,12 @@
 
     [Parameter, EditorRequired]
     public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+
+    [Parameter]
+    public bool CanOpenRootInExplorer { get; set; }
+
+    [Parameter]
+    public EventCallback OpenRootInExplorer { get; set; }
 
     private string WindowSummary => interaction is not null
         ? "Authorized read-only file"

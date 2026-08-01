@@ -57,7 +57,8 @@ internal readonly record struct ProjectStructureNodeFileScopeKey
         Guid projectId,
         string nodeKey)
     {
-        if (mode != ProjectStructureNodeFileScopeMode.KnownFile)
+        if (mode is not ProjectStructureNodeFileScopeMode.KnownFile and
+            not ProjectStructureNodeFileScopeMode.Collection)
         {
             throw new ArgumentOutOfRangeException(nameof(mode));
         }
@@ -120,7 +121,6 @@ internal readonly record struct ProjectStructureNodeFileScopeKey
 
         if (!string.Equals(parts[1], "v2", StringComparison.Ordinal) ||
             parts.Length != 5 ||
-            mode != ProjectStructureNodeFileScopeMode.KnownFile ||
             !Guid.TryParseExact(parts[3], "N", out Guid projectId) ||
             projectId == Guid.Empty ||
             !TryDecodeNodeKey(parts[4], out string nodeKey))

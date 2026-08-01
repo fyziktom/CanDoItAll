@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -517,6 +518,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var fileInteractionCoordinator = scope.ServiceProvider
             .GetRequiredService<ProjectStructureKnownFileInteractionCoordinator>();
+        var nodeFileScopeProvider = scope.ServiceProvider
+            .GetRequiredService<IProjectStructureNodeFileScopeProvider>();
+        var nodeStorageBindingSource = scope.ServiceProvider
+            .GetServices<IFileToolsStorageBindingSource>()
+            .Single(source => source.ScopeKind == FileToolsSemanticScopeKind.ProjectNode);
         var runtimeToolProvider = scope.ServiceProvider
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
@@ -633,9 +639,18 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(ProjectObjectType.File, outputNode.ObjectType);
         Assert.Equal("folder", outputNode.ObjectSubtype);
         Assert.Equal(runNodeId, outputNode.ParentId);
-        Assert.Equal("process-run-output-folder", outputNode.ArtifactKind);
+        Assert.Equal(ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind, outputNode.ArtifactKind);
         Assert.Equal(runId.Value, outputNode.ArtifactId);
         Assert.Contains(managedArtifactRoot, outputNode.Notes, StringComparison.Ordinal);
+        ProjectObjectMetadataEnvelope outputMetadata = ProjectObjectMetadataSerializer.Parse(outputNode.MetadataJson);
+        Assert.Equal(ProjectFileSubtype.Folder, outputMetadata.File?.FileSubtype);
+        Assert.Equal(managedArtifactRoot, outputMetadata.File?.ExternalPath);
+        FileToolsSemanticScope outputScope = await nodeFileScopeProvider.ResolveNodeCollectionAsync(
+            projectId,
+            outputNode.Id);
+        FileToolsStorageBinding outputBinding = Assert.Single(
+            await nodeStorageBindingSource.ResolveAsync(outputScope));
+        Assert.Equal(managedArtifactRoot, outputBinding.Root.Value);
         var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));
         Assert.Equal(ProjectObjectType.Note, summaryNode.ObjectType);
         Assert.Equal("process-summary", summaryNode.ObjectSubtype);

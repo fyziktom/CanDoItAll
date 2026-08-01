@@ -20,6 +20,47 @@ public sealed class ProjectNodeKindRegistryTests
     }
 
     [Fact]
+    public void Folder_file_kind_has_typed_metadata_and_visual_profile()
+    {
+        var metadata = ProjectNodeKindRegistry.NormalizeMetadata(
+            ProjectObjectType.File,
+            "folder",
+            new ProjectObjectMetadataEnvelope(),
+            string.Empty,
+            null);
+        var profile = ProjectNodeKindRegistry.ResolveVisualProfile(
+            ProjectObjectType.File,
+            "folder",
+            string.Empty);
+
+        Assert.Equal(ProjectFileSubtype.Folder, metadata.File?.FileSubtype);
+        Assert.Equal("Folder", ProjectNodeKindRegistry.ResolveLabel(ProjectObjectType.File, "folder"));
+        Assert.Equal("FD", profile.Icon);
+    }
+
+    [Fact]
+    public void Mermaid_metadata_prefers_the_stored_source_fact_over_descriptive_notes()
+    {
+        var media = new SavedMediaDescriptor(
+            "managed-files/project-media/files/diagram.mmd",
+            "/files/diagram.mmd",
+            "text/vnd.mermaid",
+            "diagram.mmd",
+            ProjectObjectType.File.ToString(),
+            "{}",
+            MermaidDiagramKind.SequenceDiagram);
+
+        ProjectObjectMetadataEnvelope metadata = ProjectNodeKindRegistry.NormalizeMetadata(
+            ProjectObjectType.File,
+            "mermaid",
+            new ProjectObjectMetadataEnvelope(),
+            "gantt purpose notes must not define the source kind",
+            media);
+
+        Assert.Equal(MermaidDiagramKind.SequenceDiagram, metadata.File?.MermaidDiagramKind);
+    }
+
+    [Fact]
     public void CanReclassify_allows_note_promotions_and_same_family_subtype_changes()
     {
         Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Note, string.Empty, ProjectObjectType.WorkItem, "task"));

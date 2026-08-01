@@ -485,6 +485,7 @@ internal static class ProjectNodeKindRegistry
                     metadata.Repository.RepositoryMode = ProjectRepositoryMode.LocalRepository;
                 }),
 
+            File("folder", "Folder", Profile("rect", "#2563eb", "FD", "Folder", ProjectObjectPaletteKeys.Primary), ProjectFileSubtype.Folder),
             File("pdf", "PDF", Profile("rect", "#dc2626", "PDF", "PDF", ProjectObjectPaletteKeys.Danger), ProjectFileSubtype.Pdf),
             File("excel", "Excel", Profile("rect", "#16a34a", "XLS", "Excel", ProjectObjectPaletteKeys.Success), ProjectFileSubtype.Excel),
             File("docx", "Docx", Profile("rect", "#2563eb", "DOC", "Docx", ProjectObjectPaletteKeys.Info), ProjectFileSubtype.Docx),
@@ -806,7 +807,13 @@ internal static class ProjectNodeKindRegistry
                 metadata.File ??= new ProjectFileMetadata();
                 metadata.File.FileSubtype = fileSubtype;
                 afterNormalize?.Invoke(metadata);
-                if (fileSubtype == ProjectFileSubtype.Mermaid && !string.IsNullOrWhiteSpace(context.Notes))
+                if (fileSubtype == ProjectFileSubtype.Mermaid && context.Media is not null)
+                {
+                    metadata.File.MermaidDiagramKind = context.Media.MermaidDiagramKind;
+                }
+                else if (fileSubtype == ProjectFileSubtype.Mermaid &&
+                         metadata.File.MermaidDiagramKind == MermaidDiagramKind.Unknown &&
+                         !string.IsNullOrWhiteSpace(context.Notes))
                 {
                     metadata.File.MermaidDiagramKind = ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(context.Notes);
                 }

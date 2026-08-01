@@ -134,6 +134,7 @@ public enum ProjectAiReferenceKind
 public enum ProjectFileSubtype
 {
     Unknown,
+    Folder,
     Pdf,
     Excel,
     Docx,

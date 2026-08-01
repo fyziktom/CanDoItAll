@@ -356,7 +356,8 @@ internal sealed record SavedMediaDescriptor(
     string ContentType,
     string OriginalFileName,
     string ArtifactKind,
-    string StorageObjectReferenceJson);
+    string StorageObjectReferenceJson,
+    MermaidDiagramKind MermaidDiagramKind);
 
 /* codex-capsule
 kind: service
@@ -532,9 +533,14 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             : hasRequestedPosition
                 ? (request.X!.Value, request.Y!.Value)
                 : ProjectWorkbenchGraphConventions.GetDefaultPosition(request.ObjectType, existingCount + 1);
-        var media = await SaveMediaAsync(projectId, request.ObjectType, request.Media, cancellationToken);
-        var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
         var normalizedObjectSubtype = ProjectObjectSubtypePolicy.Normalize(request.ObjectType, request.ObjectSubtype);
+        var media = await SaveMediaAsync(
+            projectId,
+            request.ObjectType,
+            normalizedObjectSubtype,
+            request.Media,
+            cancellationToken);
+        var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
         var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, normalizedObjectSubtype, request.MetadataJson, null, request.Notes, media);
         metadataJson = ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(
             request.ObjectType,
@@ -1154,7 +1160,12 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
-        var savedMedia = await SaveMediaAsync(projectId, node.ObjectType, media, cancellationToken)
+        var savedMedia = await SaveMediaAsync(
+                projectId,
+                node.ObjectType,
+                node.ObjectSubtype,
+                media,
+                cancellationToken)
             ?? throw new InvalidOperationException($"Replacement media for project object '{nodeKey}' could not be saved.");
         node.Binding = ResolveCreateBinding(projectId, node.ObjectType, savedMedia, null);
 
@@ -1625,6 +1636,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
     private async Task<SavedMediaDescriptor?> SaveMediaAsync(
         Guid projectId,
         ProjectObjectType objectType,
+        string objectSubtype,
         ProjectObjectMediaPayload? media,
         CancellationToken cancellationToken)
     {
@@ -1665,6 +1677,12 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 $"Uploaded project assets are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
         }
 
+        MermaidDiagramKind mermaidDiagramKind = ResolveMermaidDiagramKind(
+            objectType,
+            objectSubtype,
+            bytes,
+            cancellationToken);
+
         var extension = Path.GetExtension(media.FileName);
         var safeExtension = string.IsNullOrWhiteSpace(extension)
             ? objectType == ProjectObjectType.ImageAsset ? ".png" : ".bin"
@@ -1699,7 +1717,30 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             storageObjectReference.ContentType,
             media.FileName,
             objectType.ToString(),
-            storageReference);
+            storageReference,
+            mermaidDiagramKind);
+    }
+
+    private static MermaidDiagramKind ResolveMermaidDiagramKind(
+        ProjectObjectType objectType,
+        string objectSubtype,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken)
+    {
+        if (objectType != ProjectObjectType.File ||
+            !string.Equals(objectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase))
+        {
+            return MermaidDiagramKind.Unknown;
+        }
+
+        try
+        {
+            return ProjectTextAssetContentPolicy.DetectMermaidDiagramKind(content, cancellationToken);
+        }
+        catch (ProjectAssetCreationException exception)
+        {
+            throw new InvalidDataException("Mermaid asset content is invalid.", exception);
+        }
     }
 
     private static ProjectNodeBindingState ResolveCreateBinding(
@@ -1886,5 +1927,4 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         return builder.Trim('-');
     }
 }
-
 

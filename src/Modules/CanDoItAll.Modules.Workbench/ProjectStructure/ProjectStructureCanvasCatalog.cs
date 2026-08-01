@@ -25,7 +25,8 @@ internal sealed record ProjectStructureCreateLeafDefinition(
     bool ShowDefaultTextFields = true,
     string SubmitLabel = "Create",
     IReadOnlyList<CanvasWorkbenchInputField>? InputFields = null,
-    IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null);
+    IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null,
+    bool AllowsFileUpload = false);
 
 public sealed record ProjectStructureMutationTypeOption(
     string ActionId,
@@ -145,6 +146,21 @@ internal static partial class ProjectStructureCanvasCatalog
                 item.ObjectType == objectType &&
                 string.IsNullOrWhiteSpace(item.ObjectSubtype))!;
         return definition is not null;
+    }
+
+    internal static bool IsTextAssetAuthoringDefinition(ProjectStructureCreateLeafDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (definition.ObjectType != ProjectObjectType.File)
+        {
+            return false;
+        }
+
+        return ProjectNodeKindRegistry.ResolveFileSubtype(definition.ObjectType, definition.ObjectSubtype) is
+            ProjectFileSubtype.Text or
+            ProjectFileSubtype.Json or
+            ProjectFileSubtype.Markdown or
+            ProjectFileSubtype.Mermaid;
     }
 
     public static CanvasWorkbenchAction BuildComposerAction(ProjectStructureCreateLeafDefinition definition)
@@ -441,7 +457,7 @@ internal static partial class ProjectStructureCanvasCatalog
             RequiresFile = definition.RequiresFile,
             AcceptedFileTypes = definition.AcceptedFileTypes,
             FilePrompt = definition.FilePrompt,
-            SupportsDragDrop = definition.RequiresFile,
+            SupportsDragDrop = definition.RequiresFile || definition.AllowsFileUpload,
             InputFields = definition.InputFields?.ToList() ?? [],
             DefaultInputValues = definition.DefaultInputValues?.ToList() ?? []
         };
@@ -669,5 +685,4 @@ internal static partial class ProjectStructureCanvasCatalog
         return normalized;
     }
 }
-
 

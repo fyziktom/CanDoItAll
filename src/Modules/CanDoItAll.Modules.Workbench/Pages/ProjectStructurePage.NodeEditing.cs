@@ -23,10 +23,20 @@ public partial class ProjectStructurePage
             return ResolveProjectInspectorActions(node);
         }
 
-        var actions = new List<ProjectStructureInspectorAction>
+        if (IsReadOnlyProjectedFileCollection(node))
         {
-            new(ProjectStructureActionCatalogAdapter.EditActionId, "Edit", "draw", "accent")
-        };
+            return ResolveReadOnlyFileCollectionInspectorActions(node);
+        }
+
+        var actions = new List<ProjectStructureInspectorAction>();
+        if (CanEditNode(node))
+        {
+            actions.Add(new ProjectStructureInspectorAction(
+                ProjectStructureActionCatalogAdapter.EditActionId,
+                "Edit",
+                "draw",
+                "accent"));
+        }
 
         if (ProjectStructureFileActions.CanBrowseFiles(node))
         {
@@ -116,6 +126,38 @@ public partial class ProjectStructurePage
         actions.Add(new ProjectStructureInspectorAction("delete", "Delete", "delete", "danger"));
         return actions;
     }
+
+    private IReadOnlyList<ProjectStructureInspectorAction> ResolveReadOnlyFileCollectionInspectorActions(
+        ProjectStructureNode node)
+    {
+        var actions = new List<ProjectStructureInspectorAction>
+        {
+            new(
+                ProjectStructureFileActions.BrowseFilesId,
+                ProjectStructureFileActions.BrowseFilesLabel,
+                ProjectStructureFileActions.BrowseFilesIcon,
+                ProjectStructureFileActions.BrowseFilesTone),
+            new("copy-id", "Copy id", "copy", "ghost"),
+            new("copy-info", "Copy info", "copy", "primary")
+        };
+
+        if (CanShowLocalOpen(node))
+        {
+            actions.Insert(1, new ProjectStructureInspectorAction(
+                "open-local",
+                "Open in Explorer",
+                "folder_open",
+                "primary"));
+        }
+
+        return actions;
+    }
+
+    private static bool IsReadOnlyProjectedFileCollection(ProjectStructureNode node)
+        => node.IsSystemManaged &&
+           node.ObjectType == ProjectObjectType.File &&
+           string.Equals(node.ObjectSubtype, "folder", StringComparison.OrdinalIgnoreCase) &&
+           ProjectStructureFileActions.CanBrowseFiles(node);
 
     private static IReadOnlyList<ProjectStructureInspectorAction> ResolveProjectInspectorActions(ProjectStructureNode node)
     {
@@ -408,9 +450,17 @@ public partial class ProjectStructurePage
                 : $"/projects?projectId={projectId:D}";
         }
 
-        return string.IsNullOrWhiteSpace(node.Route)
+        if (string.IsNullOrWhiteSpace(node.Route))
+        {
+            return null;
+        }
+
+        string route = node.Route.Trim();
+        string currentStructureRoute = $"/projects/{ProjectId:D}/structure";
+        return node.IsSystemManaged &&
+               string.Equals(route.TrimEnd('/'), currentStructureRoute, StringComparison.OrdinalIgnoreCase)
             ? null
-            : node.Route.Trim();
+            : route;
     }
 
     private static bool IsCanonicalTaskNode(ProjectStructureNode node)
