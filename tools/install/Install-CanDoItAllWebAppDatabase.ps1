@@ -837,7 +837,7 @@ function Remove-StaleDockerInitializerContainers {
 }
 
 function Get-DockerVolumeState {
-    $probeScript = 'if [ -f /var/lib/postgresql/data/PG_VERSION ]; then exit 0; fi; if [ -z "$(find /var/lib/postgresql/data -mindepth 1 -maxdepth 1 -print -quit)" ]; then exit 10; fi; exit 20'
+    $probeScript = 'if [ -f /var/lib/postgresql/data/PG_VERSION ]; then exit 0; fi; if find /var/lib/postgresql/data -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then exit 20; fi; exit 10'
     $result = Invoke-DockerProbe -Arguments @(
         "run",
         "--rm",
@@ -1291,7 +1291,7 @@ function Invoke-DockerClientPsql {
     }
 
     $pgPassName = if ($Credential -eq "admin") { "admin.pgpass" } else { "app.pgpass" }
-    $shellCommand = "cp /input/$pgPassName /tmp/pgpass; chmod 600 /tmp/pgpass; export PGPASSFILE=/tmp/pgpass; exec psql `"`$@`""
+    $shellCommand = "cp /input/$pgPassName /tmp/pgpass; chmod 600 /tmp/pgpass; export PGPASSFILE=/tmp/pgpass; exec psql `$@"
     $arguments = @(
         "run",
         "--rm",
@@ -1565,7 +1565,7 @@ function Invoke-DockerDatabaseSetup {
             "-d",
             $ConfiguredDatabaseName,
             "-c",
-            "select current_user || '|' || current_database();"
+            "select/**/current_user||'|'||current_database();"
         ) `
         -SensitiveOutput)
 
