@@ -17,6 +17,7 @@ public sealed class LiveLocalOllamaThinkingEffortIntegrationTests
     ];
     private static readonly IReadOnlyList<string> PreferredGptOssModels =
     [
+        "gptoss20b64k:latest",
         "gptoss32k:latest",
         "gpt-oss:20b"
     ];
@@ -204,13 +205,18 @@ public sealed class LiveLocalOllamaThinkingEffortIntegrationTests
                 [],
                 "Reply with OK.",
                 ModelParameterConfigurationJson:
-                    CreateRequestConfiguration(AgentReasoningEffortLevel.Low)),
+                    CreateRequestConfiguration(
+                        AgentReasoningEffortLevel.High,
+                        AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens)),
             timeout.Token);
 
         Assert.Equal(selectedGptOssModel.Model, gptOssResult.Model);
+        Assert.False(
+            string.IsNullOrWhiteSpace(gptOssResult.ResponseText),
+            $"Ollama model '{selectedGptOssModel.Model}' returned no visible answer with High thinking effort.");
         Assert.True(
             gptOssResult.OutputTokens > 0,
-            $"Ollama model '{selectedGptOssModel.Model}' reported no output tokens with Low thinking effort.");
+            $"Ollama model '{selectedGptOssModel.Model}' reported no output tokens with High thinking effort.");
 
         var negativeCapability = Assert.IsType<ProviderModelThinkingEffortCapability>(
             selectedNonThinkingModel.ThinkingEffortCapability);
@@ -343,13 +349,15 @@ public sealed class LiveLocalOllamaThinkingEffortIntegrationTests
         return preferredModels.Count;
     }
 
-    private static string CreateRequestConfiguration(AgentReasoningEffortLevel effort)
+    private static string CreateRequestConfiguration(
+        AgentReasoningEffortLevel effort,
+        int maxOutputTokens = 16)
     {
         var configuration = new JsonObject
         {
             [AgentThinkingEffortPolicy.ModelParametersConfigurationPropertyName] = new JsonObject
             {
-                [AgentProviderModelParameterPolicy.MaxOutputTokensConfigurationPropertyName] = 16
+                [AgentProviderModelParameterPolicy.MaxOutputTokensConfigurationPropertyName] = maxOutputTokens
             }
         };
         return AgentThinkingEffortPolicy.WriteAgentOverride(configuration.ToJsonString(), effort);

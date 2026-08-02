@@ -640,7 +640,7 @@ public sealed class ConcreteProviderDriverTests
         var request = Assert.Single(handler.Requests);
         using var body = JsonDocument.Parse(request.Body);
         Assert.Equal(
-            AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
+            8192,
             body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
         Assert.False(body.RootElement.TryGetProperty("think", out _));
     }

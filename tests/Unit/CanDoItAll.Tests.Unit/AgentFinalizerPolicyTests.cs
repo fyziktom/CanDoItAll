@@ -1741,6 +1741,7 @@ public sealed class AgentFinalizerPolicyTests
             forceOmitTemperature: false,
             agentConfigurationJson: """{"modelParameters":{"reasoningEffort":"high"}}""");
 
+        Assert.Equal(8192, options.MaxOutputTokens);
         Assert.Equal("high", options.AdditionalProperties![OllamaOption.Think.Name]);
     }
 

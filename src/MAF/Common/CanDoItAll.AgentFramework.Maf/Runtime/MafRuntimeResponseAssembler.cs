@@ -247,14 +247,26 @@ internal static class MafRuntimeResponseAssembler
     {
         if (!string.IsNullOrWhiteSpace(response.Text) ||
             pendingApprovals.Count > 0 ||
-            CountToolCalls(response) > 0 ||
-            ClampTokenCount(response.Usage?.OutputTokenCount) > 0)
+            CountToolCalls(response) > 0)
         {
             return;
         }
 
+        var outputTokenCount = ClampTokenCount(response.Usage?.OutputTokenCount);
+        if (response.FinishReason == ChatFinishReason.Length)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' model '{model}' exhausted its output-token budget after reporting {outputTokenCount} output tokens without returning usable text, tool calls, or approvals. Lower the thinking effort or reduce the prompt and tool context. If this run used a lower explicit maximum, increase it up to the supported limit.");
+        }
+
+        if (outputTokenCount > 0)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' model '{model}' reported {outputTokenCount} output tokens, but returned only non-actionable reasoning or metadata without usable text, tool calls, or approvals.");
+        }
+
         throw new InvalidOperationException(
-            $"Provider '{provider.Name}' model '{model}' completed without returning text, tool calls, approvals, or output tokens.");
+            $"Provider '{provider.Name}' model '{model}' completed without returning usable text, tool calls, or approvals.");
     }
 
     public static bool ShouldContinueBackgroundRun(

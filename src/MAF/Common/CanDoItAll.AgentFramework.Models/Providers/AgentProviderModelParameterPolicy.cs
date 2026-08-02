@@ -5,15 +5,16 @@ namespace CanDoItAll.AgentFramework.Models;
 
 public static class AgentProviderModelParameterPolicy
 {
+    private const int DefaultMaxOutputTokens = 8192;
+
     public const string ModelParametersConfigurationPropertyName = AgentThinkingEffortPolicy.ModelParametersConfigurationPropertyName;
     public const string ReasoningEffortConfigurationPropertyName = AgentThinkingEffortPolicy.ReasoningEffortConfigurationPropertyName;
     public const string MaxOutputTokensConfigurationPropertyName = "maxOutputTokens";
     public const string OllamaNumPredictConfigurationPropertyName = "numPredict";
     public const string OllamaNumPredictSnakeConfigurationPropertyName = "num_predict";
-    public const int DefaultOllamaMaxOutputTokens = 2048;
+    public const int DefaultOllamaMaxOutputTokens = DefaultMaxOutputTokens;
 
     private const int MinMaxOutputTokens = 1;
-    private const int DefaultMaxOutputTokens = 8192;
     private const int OpenAiMaxOutputTokens = 128_000;
 
     public static bool ShouldOmitTemperature(

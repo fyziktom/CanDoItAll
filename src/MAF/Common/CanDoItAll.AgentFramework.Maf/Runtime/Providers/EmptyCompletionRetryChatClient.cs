@@ -22,7 +22,7 @@ internal sealed class EmptyCompletionRetryChatClient(
     {
         var materializedMessages = messages as IReadOnlyList<ChatMessage> ?? messages.ToList();
         var firstResponse = await base.GetResponseAsync(materializedMessages, options, cancellationToken);
-        if (!IsExactEmptyCompletion(firstResponse))
+        if (!IsRetryableNonActionableCompletion(firstResponse))
         {
             return firstResponse;
         }
@@ -46,9 +46,9 @@ internal sealed class EmptyCompletionRetryChatClient(
         MergeUsage(firstResponse, secondResponse);
         Report(
             2,
-            IsExactEmptyCompletion(secondResponse)
-                ? ProviderEmptyCompletionOutcome.Exhausted
-                : ProviderEmptyCompletionOutcome.Recovered);
+            HasActionableOutput(secondResponse)
+                ? ProviderEmptyCompletionOutcome.Recovered
+                : ProviderEmptyCompletionOutcome.Exhausted);
         return secondResponse;
     }
 
@@ -59,25 +59,25 @@ internal sealed class EmptyCompletionRetryChatClient(
     {
         var materializedMessages = messages as IReadOnlyList<ChatMessage> ?? messages.ToList();
         var bufferedUpdates = new List<ChatResponseUpdate>();
-        var firstAttemptIsExactEmpty = true;
+        var firstAttemptIsRetryable = true;
 
         await foreach (var update in base
                            .GetStreamingResponseAsync(materializedMessages, options, cancellationToken)
                            .WithCancellation(cancellationToken))
         {
-            if (!firstAttemptIsExactEmpty)
+            if (!firstAttemptIsRetryable)
             {
                 yield return update;
                 continue;
             }
 
             bufferedUpdates.Add(update);
-            if (IsPotentialEmptyCompletionUpdate(update))
+            if (IsPotentiallyRetryableUpdate(update))
             {
                 continue;
             }
 
-            firstAttemptIsExactEmpty = false;
+            firstAttemptIsRetryable = false;
             foreach (var bufferedUpdate in bufferedUpdates)
             {
                 yield return bufferedUpdate;
@@ -86,7 +86,7 @@ internal sealed class EmptyCompletionRetryChatClient(
             bufferedUpdates.Clear();
         }
 
-        if (!firstAttemptIsExactEmpty)
+        if (!firstAttemptIsRetryable)
         {
             yield break;
         }
@@ -124,30 +124,29 @@ internal sealed class EmptyCompletionRetryChatClient(
                 contents: [new UsageContent(firstAttemptUsage)]);
         }
 
-        var secondAttemptIsExactEmpty = true;
+        var secondAttemptHasActionableOutput = false;
         await foreach (var update in base
                            .GetStreamingResponseAsync(materializedMessages, options, cancellationToken)
                            .WithCancellation(cancellationToken))
         {
-            secondAttemptIsExactEmpty &= IsPotentialEmptyCompletionUpdate(update);
+            secondAttemptHasActionableOutput |= HasActionableOutput(update);
             yield return update;
         }
 
         Report(
             2,
-            secondAttemptIsExactEmpty
-                ? ProviderEmptyCompletionOutcome.Exhausted
-                : ProviderEmptyCompletionOutcome.Recovered);
+            secondAttemptHasActionableOutput
+                ? ProviderEmptyCompletionOutcome.Recovered
+                : ProviderEmptyCompletionOutcome.Exhausted);
     }
 
-    private static bool IsExactEmptyCompletion(ChatResponse response)
+    private static bool IsRetryableNonActionableCompletion(ChatResponse response)
     {
         ArgumentNullException.ThrowIfNull(response);
 
         if (!string.IsNullOrWhiteSpace(response.Text) ||
             response.ContinuationToken is not null ||
-            !IsRetryableFinishReason(response.FinishReason) ||
-            HasPositiveOutputTokens(response.Usage))
+            !IsRetryableFinishReason(response.FinishReason))
         {
             return false;
         }
@@ -157,11 +156,26 @@ internal sealed class EmptyCompletionRetryChatClient(
             .All(IsNonMaterialContent);
     }
 
-    private static bool IsPotentialEmptyCompletionUpdate(ChatResponseUpdate update)
+    private static bool IsPotentiallyRetryableUpdate(ChatResponseUpdate update)
     {
         return update.ContinuationToken is null &&
                IsRetryableFinishReason(update.FinishReason) &&
                update.Contents.All(IsNonMaterialContent);
+    }
+
+    private static bool HasActionableOutput(ChatResponse response)
+    {
+        return !string.IsNullOrWhiteSpace(response.Text) ||
+               response.ContinuationToken is not null ||
+               response.Messages
+                   .SelectMany(message => message.Contents)
+                   .Any(content => !IsNonMaterialContent(content));
+    }
+
+    private static bool HasActionableOutput(ChatResponseUpdate update)
+    {
+        return update.ContinuationToken is not null ||
+               update.Contents.Any(content => !IsNonMaterialContent(content));
     }
 
     private static bool IsRetryableFinishReason(ChatFinishReason? finishReason)
@@ -179,14 +193,10 @@ internal sealed class EmptyCompletionRetryChatClient(
         return content switch
         {
             TextContent text => string.IsNullOrWhiteSpace(text.Text),
-            UsageContent usage => !HasPositiveOutputTokens(usage.Details),
+            TextReasoningContent => true,
+            UsageContent => true,
             _ => false
         };
-    }
-
-    private static bool HasPositiveOutputTokens(UsageDetails? usage)
-    {
-        return usage?.OutputTokenCount is > 0;
     }
 
     private static UsageDetails? AggregateUsage(IEnumerable<ChatResponseUpdate> updates)
@@ -229,7 +239,7 @@ internal sealed class EmptyCompletionRetryChatClient(
         {
             case ProviderEmptyCompletionOutcome.Retrying:
                 logger?.LogWarning(
-                    "Provider {ProviderName} model {Model} transport {Transport} returned an exact empty completion on attempt {Attempt}/{MaximumAttempts}; retrying once before any tool execution.",
+                    "Provider {ProviderName} model {Model} transport {Transport} returned a non-actionable completion on attempt {Attempt}/{MaximumAttempts}; retrying once before any tool execution.",
                     provider.Name,
                     model,
                     provider.Transport,
@@ -238,7 +248,7 @@ internal sealed class EmptyCompletionRetryChatClient(
                 break;
             case ProviderEmptyCompletionOutcome.Recovered:
                 logger?.LogWarning(
-                    "Provider {ProviderName} model {Model} transport {Transport} recovered from an exact empty completion on attempt {Attempt}/{MaximumAttempts}.",
+                    "Provider {ProviderName} model {Model} transport {Transport} recovered from a non-actionable completion on attempt {Attempt}/{MaximumAttempts}.",
                     provider.Name,
                     model,
                     provider.Transport,
@@ -247,7 +257,7 @@ internal sealed class EmptyCompletionRetryChatClient(
                 break;
             case ProviderEmptyCompletionOutcome.Exhausted:
                 logger?.LogWarning(
-                    "Provider {ProviderName} model {Model} transport {Transport} returned exact empty completions for {Attempt}/{MaximumAttempts} attempts; the terminal runtime guard will reject the response.",
+                    "Provider {ProviderName} model {Model} transport {Transport} returned non-actionable completions for {Attempt}/{MaximumAttempts} attempts; the terminal runtime guard will reject the response.",
                     provider.Name,
                     model,
                     provider.Transport,
@@ -256,7 +266,7 @@ internal sealed class EmptyCompletionRetryChatClient(
                 break;
             case ProviderEmptyCompletionOutcome.SuppressedUnsafeTools:
                 logger?.LogWarning(
-                    "Provider {ProviderName} model {Model} transport {Transport} returned an exact empty completion on attempt {Attempt}/{MaximumAttempts}; retry was suppressed because the request included provider-executed or unknown tools.",
+                    "Provider {ProviderName} model {Model} transport {Transport} returned a non-actionable completion on attempt {Attempt}/{MaximumAttempts}; retry was suppressed because the request included provider-executed or unknown tools.",
                     provider.Name,
                     model,
                     provider.Transport,
@@ -265,7 +275,7 @@ internal sealed class EmptyCompletionRetryChatClient(
                 break;
             case ProviderEmptyCompletionOutcome.SuppressedBackground:
                 logger?.LogWarning(
-                    "Provider {ProviderName} model {Model} transport {Transport} returned an exact empty completion on attempt {Attempt}/{MaximumAttempts}; retry was suppressed because background responses are enabled for this agent.",
+                    "Provider {ProviderName} model {Model} transport {Transport} returned a non-actionable completion on attempt {Attempt}/{MaximumAttempts}; retry was suppressed because background responses are enabled for this agent.",
                     provider.Name,
                     model,
                     provider.Transport,

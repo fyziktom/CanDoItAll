@@ -544,6 +544,84 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public void MafRuntimeResponseAssembler_rejects_positive_usage_without_actionable_output()
+    {
+        var response = new AgentResponse(
+            new ChatMessage(
+                ChatRole.Assistant,
+                [new TextReasoningContent("I should inspect the structure.")]))
+        {
+            FinishReason = ChatFinishReason.Stop,
+            Usage = new UsageDetails
+            {
+                InputTokenCount = 10_194,
+                OutputTokenCount = 937,
+                TotalTokenCount = 11_131
+            }
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(
+                CreateProviderProfile(),
+                "gptoss20b64k",
+                response,
+                []));
+
+        Assert.Contains("reported 937 output tokens", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("non-actionable reasoning or metadata", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafRuntimeResponseAssembler_reports_exhausted_output_budget()
+    {
+        var response = new AgentResponse(
+            new ChatMessage(
+                ChatRole.Assistant,
+                [new TextReasoningContent("unfinished reasoning")]))
+        {
+            FinishReason = ChatFinishReason.Length,
+            Usage = new UsageDetails
+            {
+                InputTokenCount = 8_007,
+                OutputTokenCount = 8_192,
+                TotalTokenCount = 16_199
+            }
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(
+                CreateProviderProfile(),
+                "gptoss20b64k",
+                response,
+                []));
+
+        Assert.Contains("exhausted its output-token budget", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("8192 output tokens", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafRuntimeResponseAssembler_accepts_visible_text_with_usage()
+    {
+        var response = new AgentResponse(
+            new ChatMessage(ChatRole.Assistant, "Manager summary"))
+        {
+            FinishReason = ChatFinishReason.Stop,
+            Usage = new UsageDetails
+            {
+                InputTokenCount = 8_007,
+                OutputTokenCount = 2_648,
+                TotalTokenCount = 10_655
+            }
+        };
+
+        MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(
+            CreateProviderProfile(),
+            "gptoss20b64k",
+            response,
+            []);
+    }
+
+    [Fact]
     public void MafRuntimeSessionPersistenceDriver_skips_governed_process_steps_without_pending_approvals()
     {
         var driver = new MafRuntimeSessionPersistenceDriver();

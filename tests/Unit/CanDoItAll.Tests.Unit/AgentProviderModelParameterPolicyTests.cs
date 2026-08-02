@@ -779,13 +779,21 @@ public sealed class AgentProviderModelParameterPolicyTests
         var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
             "{}",
             string.Empty);
+        var providerOverride = AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
+            "{\"modelParameters\":{\"numPredict\":512}}",
+            string.Empty);
+        var agentOverride = AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
+            "{\"modelParameters\":{\"numPredict\":512}}",
+            "{\"modelParameters\":{\"maxOutputTokens\":256}}");
         var provider = CreateProvider(ProviderKind.Ollama, "qwen3.5:2b");
         var effort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
             provider,
             "qwen3.5:2b",
             "{}");
 
-        Assert.Equal(AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens, maxOutputTokens);
+        Assert.Equal(8192, maxOutputTokens);
+        Assert.Equal(512, providerOverride);
+        Assert.Equal(256, agentOverride);
         Assert.Null(effort);
     }
 
