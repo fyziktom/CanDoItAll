@@ -52,6 +52,19 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
             Assert.Same(
                 decorator,
                 decorator.GetService<EmptyCompletionRetryChatClient>());
+            var compatibilityDecorator = agent.GetService<OpenAiChatCompletionsCompatibilityChatClient>();
+            if (providerKind == ProviderKind.OpenAi &&
+                transport == ProviderTransportKind.ChatCompletions)
+            {
+                Assert.NotNull(compatibilityDecorator);
+                Assert.Same(
+                    compatibilityDecorator,
+                    compatibilityDecorator.GetService<OpenAiChatCompletionsCompatibilityChatClient>());
+            }
+            else
+            {
+                Assert.Null(compatibilityDecorator);
+            }
         }
         finally
         {

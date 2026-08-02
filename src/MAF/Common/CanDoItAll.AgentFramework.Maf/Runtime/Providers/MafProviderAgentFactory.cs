@@ -269,9 +269,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
-            ProviderTransportKind.Responses when frameworkManagedHistory => AddEmptyCompletionRecovery(
+            ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
                         .AsIChatClientWithStoredOutputDisabled(
@@ -287,7 +287,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
             _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
         };
@@ -322,9 +322,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
-            ProviderTransportKind.Responses when frameworkManagedHistory => AddEmptyCompletionRecovery(
+            ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
                         .AsIChatClientWithStoredOutputDisabled(
@@ -340,7 +340,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
             _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
         };
@@ -362,17 +362,22 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
             new OllamaApiClient(httpClient, model, jsonSerializerContext: null),
             AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(provider.ConfigurationJson, string.Empty),
             AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(provider.ConfigurationJson, string.Empty));
-        return AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services)
+        return AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services)
             .AsAIAgent(options: options);
     }
 
-    private static IChatClient AddEmptyCompletionRecovery(
+    private static IChatClient AddRuntimePolicies(
         IChatClient chatClient,
         ProviderProfile provider,
         string model,
         bool allowBackgroundResponses,
         IServiceProvider services)
     {
+        chatClient = AddOpenAiChatCompletionsCompatibility(
+            chatClient,
+            provider,
+            model,
+            services);
         if (chatClient.GetService<EmptyCompletionRetryChatClient>() is not null)
         {
             throw new InvalidOperationException(
@@ -387,6 +392,34 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
             provider,
             model,
             allowBackgroundResponses,
+            logger);
+    }
+
+    private static IChatClient AddOpenAiChatCompletionsCompatibility(
+        IChatClient chatClient,
+        ProviderProfile provider,
+        string model,
+        IServiceProvider services)
+    {
+        if (provider.Kind != ProviderKind.OpenAi ||
+            provider.Transport != ProviderTransportKind.ChatCompletions)
+        {
+            return chatClient;
+        }
+
+        if (chatClient.GetService<OpenAiChatCompletionsCompatibilityChatClient>() is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' model '{model}' already contains OpenAI Chat Completions compatibility handling.");
+        }
+
+        var logger = services
+            .GetService<ILoggerFactory>()
+            ?.CreateLogger<OpenAiChatCompletionsCompatibilityChatClient>();
+        return new OpenAiChatCompletionsCompatibilityChatClient(
+            chatClient,
+            provider,
+            model,
             logger);
     }
 

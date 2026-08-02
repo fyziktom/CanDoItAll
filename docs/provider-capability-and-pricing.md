@@ -50,7 +50,11 @@ Use this matrix together with provider health and the selected model. A capabili
 OpenAI-like providers are OpenAI and Azure OpenAI.
 
 - GPT-5, o1, o3, and o4 model families omit temperature unless explicitly overridden by policy.
-- Reasoning effort applies to those model families over Responses or Chat Completions transport.
+- Reasoning effort generally applies to those model families over Responses or
+  Chat Completions transport. Request-shape compatibility can narrow it: OpenAI
+  Chat Completions requests for `gpt-5.6-terra` that include function tools use
+  explicit `none`. Select a Responses provider profile to retain configured
+  reasoning with those tools.
 - Agent configuration takes precedence over provider configuration.
 - Accepted values are `none`, `low`, `medium`, `high`, `xhigh` (including the documented aliases), and `max`.
 - `max` is restricted to GPT-5.6 models.
