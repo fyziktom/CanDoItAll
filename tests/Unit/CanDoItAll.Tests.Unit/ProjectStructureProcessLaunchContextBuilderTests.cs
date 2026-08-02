@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 
@@ -176,7 +177,7 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     }
 
     [Fact]
-    public void Build_prefers_direct_metadata_over_direct_text_and_ancestor_metadata()
+    public void Build_prefers_direct_typed_metadata_over_ancestor_typed_metadata()
     {
         var projectId = Guid.NewGuid();
         var rootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
@@ -189,7 +190,6 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             "focus",
             ancestor.Id,
             "Focus",
-            notes: @"Text fallback C:\products\text.",
             metadataJson: CreateProjectBlockMetadata(productRoot: @" C:\products\direct "));
         var surface = CreateSurface(projectId, ancestor, focus);
 
@@ -220,6 +220,310 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
         Assert.Equal(@"C:\products\ancestor", result.OutputRoot);
     }
 
+    [Fact]
+    public void Build_resolves_output_root_only_from_the_selected_ancestor_branch()
+    {
+        var projectId = Guid.NewGuid();
+        var rootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
+        var unrelatedBranch = CreateNode(
+            "unrelated-branch",
+            rootNodeId,
+            "Unrelated branch",
+            y: 0,
+            metadataJson: CreateProjectBlockMetadata(outputRoot: @"C:\products\unrelated"));
+        var selectedBranch = CreateNode(
+            "selected-branch",
+            rootNodeId,
+            "Selected branch",
+            y: 10,
+            metadataJson: CreateProjectBlockMetadata(outputRoot: @"C:\products\selected"));
+        var focus = CreateNode(
+            "runtime",
+            selectedBranch.Id,
+            "PowerShell runtime",
+            objectType: ProjectObjectType.Environment,
+            objectSubtype: "powershell-runtime");
+        var surface = CreateSurface(projectId, unrelatedBranch, selectedBranch, focus);
+
+        var result = ProjectStructureProcessLaunchContextBuilder.Build(surface, focus);
+
+        Assert.Equal(@"C:\products\selected", result.OutputRoot);
+    }
+
+    [Fact]
+    public void CTX_AUTH_001_Output_root_authority_resolver_uses_only_the_current_selected_branch()
+    {
+        var projectId = Guid.NewGuid();
+        var rootNodeId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
+        var unrelatedBranch = CreateNode(
+            "unrelated-branch",
+            rootNodeId,
+            "Unrelated branch",
+            metadataJson: CreateProjectBlockMetadata(outputRoot: @"C:\products\unrelated"));
+        var selectedBranch = CreateNode(
+            "selected-branch",
+            rootNodeId,
+            "Selected branch",
+            metadataJson: CreateProjectBlockMetadata(outputRoot: @"C:\products\selected"));
+        var focus = CreateNode(
+            "runtime",
+            selectedBranch.Id,
+            "PowerShell runtime",
+            objectType: ProjectObjectType.Environment,
+            objectSubtype: "powershell-runtime",
+            metadataJson: ProjectObjectMetadataSerializer.Serialize(
+                new ProjectObjectMetadataEnvelope
+                {
+                    Environment = new ProjectEnvironmentMetadata
+                    {
+                        WorkingDirectory = @"C:\products\unrelated"
+                    }
+                }));
+        var surface = CreateSurface(projectId, unrelatedBranch, selectedBranch, focus);
+
+        var outputRoot = ProjectStructureOutputRootAuthorityResolver.ResolveProcessOutputRoot(
+            surface,
+            focus);
+        var missingSelectionRoot = ProjectStructureOutputRootAuthorityResolver.ResolveProcessOutputRoot(
+            surface,
+            focus with { Id = "runtime-not-in-current-surface" });
+
+        Assert.Equal(@"C:\products\selected", outputRoot);
+        Assert.Equal(string.Empty, missingSelectionRoot);
+    }
+
+    [Fact]
+    public void Chat_discovery_requires_the_current_surface()
+    {
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface: null,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Empty(roots);
+    }
+
+    [Fact]
+    public void Chat_discovery_accepts_the_bounded_calculator_root()
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+        var surface = CreateSurface(projectId, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Equal(
+            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
+            roots);
+    }
+
+    [Fact]
+    public void Chat_discovery_returns_no_grant_when_project_block_root_fields_conflict()
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test",
+                repositoryRoot: @"C:\programovani\dotnet\unrelated-app"));
+        var surface = CreateSurface(projectId, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Empty(roots);
+    }
+
+    [Fact]
+    public void Chat_discovery_uses_the_nearest_canonical_typed_owner()
+    {
+        var projectId = Guid.NewGuid();
+        var outer = CreateNode(
+            "outer",
+            null,
+            "Outer",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: @"C:\programovani\dotnet\outer-app"));
+        var owner = CreateNode(
+            "owner",
+            outer.Id,
+            "Owner",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+        var focus = CreateNode(
+            "focus",
+            owner.Id,
+            "Runtime",
+            objectType: ProjectObjectType.Environment,
+            objectSubtype: "dotnet-watch");
+        var surface = CreateSurface(projectId, outer, owner, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Equal(
+            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
+            roots);
+    }
+
+    [Fact]
+    public void Chat_discovery_returns_no_grant_for_missing_declared_parent()
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            "missing-owner",
+            "Focus",
+            objectType: ProjectObjectType.Note,
+            objectSubtype: "context");
+        var surface = CreateSurface(projectId, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Empty(roots);
+    }
+
+    [Fact]
+    public void Chat_discovery_ignores_generic_hierarchy_links_for_authority()
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+        var surface = new ProjectStructureSurface(
+            projectId,
+            "Launch context test",
+            [focus],
+            [
+                new ProjectStructureLink(
+                    "missing-owner",
+                    focus.Id,
+                    ProjectObjectLinkKind.Contains,
+                    IsUserAuthored: false)
+            ],
+            ViewStateJson: null);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Equal(
+            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
+            roots);
+    }
+
+    [Theory]
+    [InlineData(@"C:\")]
+    [InlineData(@"D:\")]
+    [InlineData(@"C:\Users")]
+    [InlineData(@"C:\Users\another-user")]
+    [InlineData(@"C:\Documents and Settings\another-user\project")]
+    [InlineData(@"C:\Windows\System32\drivers")]
+    [InlineData(@"C:\Program Files\Vendor\Product")]
+    public void Chat_discovery_rejects_overly_broad_implicit_roots(string root)
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(outputRoot: root));
+        var surface = CreateSurface(projectId, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Empty(roots);
+    }
+
+    [Theory]
+    [InlineData(@"C:\src", "external-target/C/src")]
+    [InlineData(@"C:\projects", "external-target/C/projects")]
+    [InlineData(@"D:\Calculator", "external-target/D/Calculator")]
+    [InlineData(@"C:\src\Product", "external-target/C/src/Product")]
+    [InlineData(@"D:\repos\App", "external-target/D/repos/App")]
+    public void Chat_discovery_accepts_bounded_non_protected_project_roots(
+        string root,
+        string expectedAlias)
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(outputRoot: root));
+        var surface = CreateSurface(projectId, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Equal([expectedAlias], roots);
+    }
+
+    [Fact]
+    public void Chat_discovery_rejects_the_user_profile_root()
+    {
+        var projectId = Guid.NewGuid();
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(
+                outputRoot: Environment.GetFolderPath(
+                    Environment.SpecialFolder.UserProfile)));
+        var surface = CreateSurface(projectId, focus);
+
+        var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+            surface,
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+
+        Assert.Empty(roots);
+    }
+
+    [Theory]
+    [InlineData(ProjectBlockRootField.OutputRoot)]
+    [InlineData(ProjectBlockRootField.ProductRoot)]
+    [InlineData(ProjectBlockRootField.TargetRoot)]
+    [InlineData(ProjectBlockRootField.RepositoryRoot)]
+    [InlineData(ProjectBlockRootField.WorkspaceRoot)]
+    public void Build_reads_typed_project_block_root_fields(ProjectBlockRootField field)
+    {
+        var expectedRoot = $@"C:\products\{field}";
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Focus",
+            metadataJson: CreateProjectBlockMetadata(field, $" {expectedRoot} "));
+
+        var result = ProjectStructureProcessLaunchContextBuilder.Build(null, focus);
+
+        Assert.Equal(expectedRoot, result.OutputRoot);
+    }
+
     [Theory]
     [InlineData("outputRoot")]
     [InlineData("productRoot")]
@@ -227,21 +531,71 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     [InlineData("targetPath")]
     [InlineData("repositoryRoot")]
     [InlineData("workspaceRoot")]
-    public void Build_reads_established_output_root_metadata_keys(string key)
+    public void Build_does_not_promote_arbitrary_nested_metadata_keys_to_output_root(string key)
     {
-        var expectedRoot = $@"C:\products\{key}";
         var metadataJson = JsonSerializer.Serialize(new
         {
             nested = new Dictionary<string, string>
             {
-                [key] = $" {expectedRoot} "
+                [key] = $@"C:\products\{key}"
             }
         });
         var focus = CreateNode("focus", null, "Focus", metadataJson: metadataJson);
 
         var result = ProjectStructureProcessLaunchContextBuilder.Build(null, focus);
 
-        Assert.Equal(expectedRoot, result.OutputRoot);
+        Assert.Equal(string.Empty, result.OutputRoot);
+    }
+
+    [Theory]
+    [InlineData("outputRoot")]
+    [InlineData("productRoot")]
+    [InlineData("targetRoot")]
+    [InlineData("targetPath")]
+    [InlineData("repositoryRoot")]
+    [InlineData("workspaceRoot")]
+    public void Build_does_not_promote_arbitrary_top_level_metadata_keys_to_output_root(string key)
+    {
+        var metadataJson = JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            [key] = $@"C:\products\{key}"
+        });
+        var focus = CreateNode("focus", null, "Focus", metadataJson: metadataJson);
+
+        var result = ProjectStructureProcessLaunchContextBuilder.Build(null, focus);
+
+        Assert.Equal(string.Empty, result.OutputRoot);
+    }
+
+    [Fact]
+    public void Build_does_not_promote_title_subtitle_or_notes_paths_to_output_root()
+    {
+        var focus = CreateNode(
+            "focus",
+            null,
+            @"Title C:\products\title",
+            subtitle: @"Subtitle C:\products\subtitle",
+            notes: @"Notes C:\products\notes");
+
+        var result = ProjectStructureProcessLaunchContextBuilder.Build(null, focus);
+
+        Assert.Equal(string.Empty, result.OutputRoot);
+    }
+
+    [Fact]
+    public void Build_requires_project_block_node_type_for_typed_project_block_root_metadata()
+    {
+        var focus = CreateNode(
+            "focus",
+            null,
+            "Runtime",
+            objectType: ProjectObjectType.Environment,
+            objectSubtype: "dotnet-runtime",
+            metadataJson: CreateProjectBlockMetadata(outputRoot: @"C:\products\unexpected"));
+
+        var result = ProjectStructureProcessLaunchContextBuilder.Build(null, focus);
+
+        Assert.Equal(string.Empty, result.OutputRoot);
     }
 
     [Fact]
@@ -311,6 +665,21 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             });
     }
 
+    private static string CreateProjectBlockMetadata(
+        ProjectBlockRootField field,
+        string value)
+    {
+        return field switch
+        {
+            ProjectBlockRootField.OutputRoot => CreateProjectBlockMetadata(outputRoot: value),
+            ProjectBlockRootField.ProductRoot => CreateProjectBlockMetadata(productRoot: value),
+            ProjectBlockRootField.TargetRoot => CreateProjectBlockMetadata(targetRoot: value),
+            ProjectBlockRootField.RepositoryRoot => CreateProjectBlockMetadata(repositoryRoot: value),
+            ProjectBlockRootField.WorkspaceRoot => CreateProjectBlockMetadata(workspaceRoot: value),
+            _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unsupported project-block root field.")
+        };
+    }
+
     private static ProjectStructureNode CreateNode(
         string id,
         string? parentId,
@@ -354,4 +723,13 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             [],
             0,
             MetadataJson: metadataJson);
+
+    public enum ProjectBlockRootField
+    {
+        OutputRoot,
+        ProductRoot,
+        TargetRoot,
+        RepositoryRoot,
+        WorkspaceRoot
+    }
 }

@@ -344,6 +344,706 @@ public sealed class WorkspaceFileServiceTests
         }
     }
 
+    [Fact]
+    public void UnzipArchive_rejects_existing_reparse_point_in_destination_tree()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        var sourceDirectory = Path.Combine(workspaceRoot, "source", "linked");
+        var destinationDirectory = Path.Combine(workspaceRoot, "expanded");
+        var outsideDirectory = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceOutside.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(sourceDirectory);
+        Directory.CreateDirectory(destinationDirectory);
+        Directory.CreateDirectory(outsideDirectory);
+        File.WriteAllText(Path.Combine(sourceDirectory, "escaped.txt"), "must stay contained");
+        ZipFile.CreateFromDirectory(Path.Combine(workspaceRoot, "source"), Path.Combine(workspaceRoot, "archive.zip"));
+        Directory.CreateSymbolicLink(Path.Combine(destinationDirectory, "linked"), outsideDirectory);
+
+        try
+        {
+            var service = new WorkspaceFileService(workspaceRoot);
+
+            var result = service.UnzipArchive("archive.zip", "expanded", overwrite: true);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("reparse-point traversal", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.False(File.Exists(Path.Combine(outsideDirectory, "escaped.txt")));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(Path.Combine(destinationDirectory, "linked"));
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                Directory.Delete(outsideDirectory, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_scans_managed_project_authority_once_without_climbing_parent_directories()
+    {
+        var parentRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProjectPlacementBoundary.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(parentRoot, "workspace");
+        var sourceRoot = Path.Combine(workspaceRoot, "src");
+        Directory.CreateDirectory(sourceRoot);
+        var scannedRoots = new List<string>();
+
+        try
+        {
+            var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+            var service = new WorkspaceFileMutationService(
+                pathPolicy,
+                new WorkspaceFileReceiptWriter(workspaceRoot),
+                root =>
+                {
+                    scannedRoots.Add(Path.GetFullPath(root));
+                    return [];
+                });
+
+            var result = service.WriteTextFile("src/Feature.cs", "internal sealed class Feature {}", overwrite: true);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal([Path.GetFullPath(workspaceRoot)], scannedRoots);
+            Assert.DoesNotContain(
+                scannedRoots,
+                root => string.Equals(root, Path.GetFullPath(parentRoot), StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(parentRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_project_file_guard_does_not_inspect_parent_of_managed_authority()
+    {
+        var parentRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProjectFilePlacementBoundary.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(parentRoot, "workspace");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "nested"));
+        File.WriteAllText(Path.Combine(parentRoot, "Parent.csproj"), "<Project />");
+        var scannedRoots = new List<string>();
+
+        try
+        {
+            var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+            var service = new WorkspaceFileMutationService(
+                pathPolicy,
+                new WorkspaceFileReceiptWriter(workspaceRoot),
+                root =>
+                {
+                    scannedRoots.Add(Path.GetFullPath(root));
+                    return [];
+                });
+
+            var result = service.WriteTextFile(
+                "nested/NewProject.csproj",
+                "<Project Sdk=\"Microsoft.NET.Sdk\" />",
+                overwrite: true);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal([Path.GetFullPath(workspaceRoot)], scannedRoots);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(parentRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_scans_explicit_external_authority_once_without_climbing_its_parent()
+    {
+        var parentRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ExternalProjectPlacementBoundary.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(parentRoot, "workspace");
+        var authorityRoot = Path.Combine(parentRoot, "calculator");
+        var sourceRoot = Path.Combine(authorityRoot, "src");
+        Directory.CreateDirectory(workspaceRoot);
+        Directory.CreateDirectory(sourceRoot);
+        var targetPath = Path.Combine(sourceRoot, "Feature.cs");
+        var targetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(targetPath);
+        var authorityAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(authorityRoot);
+        var scannedRoots = new List<string>();
+
+        try
+        {
+            Assert.NotNull(targetAlias);
+            Assert.NotNull(authorityAlias);
+            var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+            var service = new WorkspaceFileMutationService(
+                pathPolicy,
+                new WorkspaceFileReceiptWriter(workspaceRoot),
+                root =>
+                {
+                    scannedRoots.Add(Path.GetFullPath(root));
+                    return [];
+                });
+
+            var result = service.WriteTextFile(
+                targetAlias!,
+                "internal sealed class Feature {}",
+                overwrite: true,
+                authorityRootPath: authorityAlias);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal([Path.GetFullPath(authorityRoot)], scannedRoots);
+            Assert.DoesNotContain(
+                scannedRoots,
+                root => string.Equals(root, Path.GetFullPath(parentRoot), StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(parentRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_rejects_nested_project_file_without_creating_it()
+    {
+        using var workspace = new TemporaryWorkspace();
+        File.WriteAllText(Path.Combine(workspace.RootPath, "Host.csproj"), "<Project />");
+
+        var result = workspace.Files.WriteTextFile(
+            "nested/Child.csproj",
+            "<Project />");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("nested project", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(Path.Combine(workspace.RootPath, "nested", "Child.csproj")));
+    }
+
+    [Fact]
+    public void AppendTextFile_rejects_nested_project_creation_and_forbidden_shim_content()
+    {
+        using var workspace = new TemporaryWorkspace();
+        File.WriteAllText(Path.Combine(workspace.RootPath, "Host.csproj"), "<Project />");
+        var safeFilePath = Path.Combine(workspace.RootPath, "Existing.cs");
+        const string originalContent = "namespace Product;\n";
+        File.WriteAllText(safeFilePath, originalContent);
+
+        var nestedProject = workspace.Files.AppendTextFile(
+            "nested/Child.csproj",
+            "<Project />");
+        var forbiddenShim = workspace.Files.AppendTextFile(
+            "Existing.cs",
+            "namespace Xunit; public sealed class FactAttribute : Attribute;");
+
+        Assert.False(nestedProject.Succeeded);
+        Assert.False(forbiddenShim.Succeeded);
+        Assert.False(File.Exists(Path.Combine(workspace.RootPath, "nested", "Child.csproj")));
+        Assert.Equal(originalContent, File.ReadAllText(safeFilePath));
+    }
+
+    [Fact]
+    public void WriteTextFile_commit_failure_restores_existing_file_and_cleans_transaction_artifacts()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetPath = Path.Combine(workspace.RootPath, "target.txt");
+        File.WriteAllText(targetPath, "old content");
+        var mutationService = CreateMutationServiceWithFailingFileCommit(workspace.RootPath);
+
+        Assert.Throws<IOException>(() =>
+            mutationService.WriteTextFile("target.txt", "new content", overwrite: true));
+
+        Assert.Equal("old content", File.ReadAllText(targetPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void AppendTextFile_commit_failure_restores_existing_file_and_cleans_transaction_artifacts()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetPath = Path.Combine(workspace.RootPath, "target.txt");
+        File.WriteAllText(targetPath, "old content");
+        var mutationService = CreateMutationServiceWithFailingFileCommit(workspace.RootPath);
+
+        Assert.Throws<IOException>(() =>
+            mutationService.AppendTextFile("target.txt", " appended content"));
+
+        Assert.Equal("old content", File.ReadAllText(targetPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void WriteTextFile_new_target_commit_failure_does_not_delete_concurrent_writer_file()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetPath = Path.Combine(workspace.RootPath, "target.txt");
+        var mutationService = new WorkspaceFileMutationService(
+            new WorkspacePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath),
+            _ => [],
+            WorkspaceFileMutationService.DeleteDirectoryTree,
+            commitStagedFile: request =>
+            {
+                File.WriteAllText(request.DestinationPath, "concurrent content");
+                return WorkspaceStagedFileCommitAttempt.NotCommitted(
+                    new IOException("Injected concurrent destination race."));
+            });
+
+        Assert.Throws<IOException>(() =>
+            mutationService.WriteTextFile("target.txt", "new content", overwrite: true));
+
+        Assert.Equal("concurrent content", File.ReadAllText(targetPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void AppendTextFile_rejects_result_over_byte_budget_without_changing_large_file()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetPath = Path.Combine(workspace.RootPath, "large.txt");
+        var originalContent = new string('a', WorkspaceFileLimits.MaxTextMutationBytes);
+        File.WriteAllText(targetPath, originalContent);
+
+        var result = workspace.Files.AppendTextFile("large.txt", "x");
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Failed", result.Receipt.Outcome);
+        Assert.Contains("text-mutation limit", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(originalContent, File.ReadAllText(targetPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void AppendTextFile_rejects_concurrent_change_before_replace_without_lost_update()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetPath = Path.Combine(workspace.RootPath, "Target.cs");
+        File.WriteAllText(targetPath, "internal sealed class Original {}\n");
+        var mutationService = new WorkspaceFileMutationService(
+            new WorkspacePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath),
+            _ =>
+            {
+                File.WriteAllText(targetPath, "internal sealed class Concurrent {}\n");
+                return [];
+            });
+
+        var result = mutationService.AppendTextFile(
+            "Target.cs",
+            "internal sealed class Appended {}\n");
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Failed", result.Receipt.Outcome);
+        Assert.Contains("could not be verified unchanged", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("internal sealed class Concurrent {}\n", File.ReadAllText(targetPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void CopyPath_rejects_nested_project_in_directory_tree_without_destination_residue()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "seed")).FullName;
+        File.WriteAllText(Path.Combine(sourceRoot, "Host.csproj"), "<Project />");
+        Directory.CreateDirectory(Path.Combine(sourceRoot, "nested"));
+        File.WriteAllText(Path.Combine(sourceRoot, "nested", "Child.csproj"), "<Project />");
+
+        var result = workspace.Files.CopyPath("seed", "copied");
+
+        Assert.False(result.Succeeded);
+        Assert.True(File.Exists(Path.Combine(sourceRoot, "nested", "Child.csproj")));
+        Assert.False(Directory.Exists(Path.Combine(workspace.RootPath, "copied")));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void CopyPath_project_layout_verification_denial_preserves_source_and_existing_destination()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "source")).FullName;
+        var sourcePath = Path.Combine(sourceRoot, "Feature.cs");
+        File.WriteAllText(sourcePath, "internal sealed class NewFeature {}");
+        var destinationRoot = Directory.CreateDirectory(
+            Path.Combine(workspace.RootPath, "destination")).FullName;
+        var destinationPath = Path.Combine(destinationRoot, "Feature.cs");
+        File.WriteAllText(destinationPath, "internal sealed class ExistingFeature {}");
+        var mutationService = new WorkspaceFileMutationService(
+            new WorkspacePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath),
+            _ => throw new UnauthorizedAccessException("native access detail"));
+
+        var result = mutationService.CopyPath(
+            "source/Feature.cs",
+            "destination/Feature.cs",
+            overwrite: true);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Cannot verify the destination project layout", result.Message, StringComparison.Ordinal);
+        Assert.Contains("no content changed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("native access detail", result.Message, StringComparison.Ordinal);
+        Assert.Equal("internal sealed class NewFeature {}", File.ReadAllText(sourcePath));
+        Assert.Equal("internal sealed class ExistingFeature {}", File.ReadAllText(destinationPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void MovePath_rejects_forbidden_shim_in_directory_tree_and_preserves_source()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "seed")).FullName;
+        var shimPath = Path.Combine(sourceRoot, "TestingFallback.cs");
+        File.WriteAllText(
+            shimPath,
+            "namespace NUnit.Framework; public sealed class TestAttribute : Attribute;");
+
+        var result = workspace.Files.MovePath("seed", "moved");
+
+        Assert.False(result.Succeeded);
+        Assert.True(File.Exists(shimPath));
+        Assert.False(Directory.Exists(Path.Combine(workspace.RootPath, "moved")));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void UnzipArchive_rejects_nested_project_entries_without_partial_extraction()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var archivePath = Path.Combine(workspace.RootPath, "nested-project.zip");
+        using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+        {
+            WriteArchiveEntry(archive, "Host.csproj", "<Project />");
+            WriteArchiveEntry(archive, "nested/Child.csproj", "<Project />");
+        }
+
+        var result = workspace.Files.UnzipArchive("nested-project.zip", "expanded");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("nested project", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(Directory.Exists(Path.Combine(workspace.RootPath, "expanded")));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void CopyPath_late_source_read_failure_preserves_existing_destination_and_cleans_staging()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "source")).FullName;
+        var lockedSourcePath = Path.Combine(sourceRoot, "locked.txt");
+        File.WriteAllText(lockedSourcePath, "new content");
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "destination")).FullName;
+        var existingPath = Path.Combine(destinationRoot, "existing.txt");
+        File.WriteAllText(existingPath, "old content");
+        using var lockedSource = new FileStream(
+            lockedSourcePath,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+
+        Assert.ThrowsAny<IOException>(() =>
+            workspace.Files.CopyPath("source", "destination", overwrite: true));
+
+        Assert.Equal("old content", File.ReadAllText(existingPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void ZipPath_late_source_read_failure_preserves_existing_archive_and_cleans_staging()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "source")).FullName;
+        var lockedSourcePath = Path.Combine(sourceRoot, "locked.txt");
+        File.WriteAllText(lockedSourcePath, "new content");
+        var archivePath = Path.Combine(workspace.RootPath, "archive.zip");
+        var oldArchive = new byte[] { 1, 2, 3, 4 };
+        File.WriteAllBytes(archivePath, oldArchive);
+        using var lockedSource = new FileStream(
+            lockedSourcePath,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+
+        Assert.ThrowsAny<IOException>(() =>
+            workspace.Files.ZipPath("source", "archive.zip", overwrite: true));
+
+        Assert.Equal(oldArchive, File.ReadAllBytes(archivePath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void UnzipArchive_late_destination_read_failure_preserves_existing_tree_and_cleans_staging()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var archivePath = Path.Combine(workspace.RootPath, "payload.zip");
+        using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+        {
+            WriteArchiveEntry(archive, "payload.txt", "new content");
+        }
+
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "destination")).FullName;
+        var existingPath = Path.Combine(destinationRoot, "existing.txt");
+        File.WriteAllText(existingPath, "old content");
+        using var lockedDestination = new FileStream(
+            existingPath,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+
+        Assert.ThrowsAny<IOException>(() =>
+            workspace.Files.UnzipArchive("payload.zip", "destination", overwrite: true));
+
+        lockedDestination.Dispose();
+        Assert.Equal("old content", File.ReadAllText(existingPath));
+        Assert.False(File.Exists(Path.Combine(destinationRoot, "payload.txt")));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Fact]
+    public void CommitStagedDirectory_partial_backup_cleanup_failure_keeps_committed_destination()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var destinationRoot = Directory.CreateDirectory(
+            Path.Combine(workspace.RootPath, "destination")).FullName;
+        File.WriteAllText(Path.Combine(destinationRoot, "old-a.txt"), "old a");
+        File.WriteAllText(Path.Combine(destinationRoot, "old-b.txt"), "old b");
+        var stagingRoot = Directory.CreateDirectory(
+            Path.Combine(workspace.RootPath, ".destination.candoitall-stage-test")).FullName;
+        File.WriteAllText(Path.Combine(stagingRoot, "new.txt"), "new content");
+
+        var result = WorkspaceFileMutationService.CommitStagedDirectory(
+            stagingRoot,
+            destinationRoot,
+            overwrite: true,
+            PartiallyDeleteThenFail);
+
+        Assert.True(result.HasCleanupWarning);
+        Assert.Contains(".candoitall-backup-", result.RetainedCleanupArtifact, StringComparison.Ordinal);
+        Assert.Equal("new content", File.ReadAllText(Path.Combine(destinationRoot, "new.txt")));
+        Assert.False(File.Exists(Path.Combine(destinationRoot, "old-a.txt")));
+        Assert.Single(
+            FindTransactionArtifacts(workspace.RootPath),
+            path => Path.GetFileName(path).Contains(".candoitall-backup-", StringComparison.Ordinal));
+
+        static void PartiallyDeleteThenFail(string backupPath)
+        {
+            File.Delete(Directory.EnumerateFiles(backupPath).First());
+            throw new IOException("Injected backup cleanup failure.");
+        }
+    }
+
+    [Fact]
+    public void MovePath_partial_backup_cleanup_failure_keeps_moved_source_committed()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.RootPath, "source")).FullName;
+        File.WriteAllText(Path.Combine(sourceRoot, "new.txt"), "new content");
+        var destinationRoot = Directory.CreateDirectory(
+            Path.Combine(workspace.RootPath, "destination")).FullName;
+        File.WriteAllText(Path.Combine(destinationRoot, "old-a.txt"), "old a");
+        File.WriteAllText(Path.Combine(destinationRoot, "old-b.txt"), "old b");
+        var mutationService = new WorkspaceFileMutationService(
+            new WorkspacePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath),
+            _ => [],
+            PartiallyDeleteThenFail);
+
+        var result = mutationService.MovePath("source", "destination", overwrite: true);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Equal("Succeeded", result.Receipt.Outcome);
+        Assert.Contains("committed successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("retained cleanup artifact", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(Directory.Exists(sourceRoot));
+        Assert.Equal("new content", File.ReadAllText(Path.Combine(destinationRoot, "new.txt")));
+        Assert.False(File.Exists(Path.Combine(destinationRoot, "old-a.txt")));
+        Assert.Single(
+            FindTransactionArtifacts(workspace.RootPath),
+            path => Path.GetFileName(path).Contains(".candoitall-backup-", StringComparison.Ordinal));
+
+        static void PartiallyDeleteThenFail(string backupPath)
+        {
+            File.Delete(Directory.EnumerateFiles(backupPath).First());
+            throw new IOException("Injected backup cleanup failure.");
+        }
+    }
+
+    [Fact]
+    public void RecursiveDelete_partial_tombstone_cleanup_failure_remains_a_successful_logical_delete()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetRoot = Directory.CreateDirectory(
+            Path.Combine(workspace.RootPath, "obsolete")).FullName;
+        File.WriteAllText(Path.Combine(targetRoot, "old-a.txt"), "old a");
+        File.WriteAllText(Path.Combine(targetRoot, "old-b.txt"), "old b");
+        var mutationService = new WorkspaceFileMutationService(
+            new WorkspacePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath),
+            _ => [],
+            PartiallyDeleteThenFail);
+
+        var result = mutationService.DeletePath("obsolete", recursive: true);
+
+        Assert.True(result.Succeeded, result.Message);
+        Assert.Equal("Succeeded", result.Receipt.Outcome);
+        Assert.Contains("committed successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("retained cleanup artifact", result.Receipt.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(Directory.Exists(targetRoot));
+        Assert.Single(
+            FindTransactionArtifacts(workspace.RootPath),
+            path => Path.GetFileName(path).Contains(".candoitall-tombstone-", StringComparison.Ordinal));
+
+        static void PartiallyDeleteThenFail(string tombstonePath)
+        {
+            File.Delete(Directory.EnumerateFiles(tombstonePath).First());
+            throw new IOException("Injected tombstone cleanup failure.");
+        }
+    }
+
+    [Fact]
+    public void RecursiveDelete_rename_failure_rolls_back_directory_and_cleans_tombstone()
+    {
+        using var workspace = new TemporaryWorkspace();
+        var targetRoot = Directory.CreateDirectory(
+            Path.Combine(workspace.RootPath, "obsolete")).FullName;
+        var targetFile = Path.Combine(targetRoot, "keep.txt");
+        File.WriteAllText(targetFile, "keep content");
+
+        Assert.Throws<IOException>(() =>
+            WorkspaceFileMutationService.CommitRecursiveDirectoryDelete(
+                targetRoot,
+                (sourcePath, tombstonePath) =>
+                {
+                    Directory.Move(sourcePath, tombstonePath);
+                    throw new IOException("Injected rename acknowledgement failure.");
+                }));
+
+        Assert.Equal("keep content", File.ReadAllText(targetFile));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MovePath_cross_volume_preflight_rejects_file_and_directory_without_mutation(
+        bool moveDirectory)
+    {
+        using var workspace = new TemporaryWorkspace();
+        var sourcePath = Path.Combine(workspace.RootPath, "source");
+        var destinationPath = Path.Combine(workspace.RootPath, "destination");
+        if (moveDirectory)
+        {
+            Directory.CreateDirectory(sourcePath);
+            Directory.CreateDirectory(destinationPath);
+            File.WriteAllText(Path.Combine(sourcePath, "content.txt"), "source content");
+            File.WriteAllText(Path.Combine(destinationPath, "content.txt"), "destination content");
+        }
+        else
+        {
+            File.WriteAllText(sourcePath, "source content");
+            File.WriteAllText(destinationPath, "destination content");
+        }
+
+        var mutationService = new WorkspaceFileMutationService(
+            new WorkspacePathPolicy(workspace.RootPath),
+            new WorkspaceFileReceiptWriter(workspace.RootPath),
+            _ => [],
+            WorkspaceFileMutationService.DeleteDirectoryTree,
+            resolveVolumeRoot: path => path.Contains("source", StringComparison.OrdinalIgnoreCase)
+                ? "source-volume"
+                : "destination-volume");
+
+        var result = mutationService.MovePath("source", "destination", overwrite: true);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Failed", result.Receipt.Outcome);
+        Assert.Contains("across filesystem volumes", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace_copy_path", result.Message, StringComparison.Ordinal);
+        Assert.Contains("verify", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace_delete_path", result.Message, StringComparison.Ordinal);
+        Assert.True(moveDirectory ? Directory.Exists(sourcePath) : File.Exists(sourcePath));
+        Assert.Equal(
+            "source content",
+            File.ReadAllText(moveDirectory ? Path.Combine(sourcePath, "content.txt") : sourcePath));
+        Assert.Equal(
+            "destination content",
+            File.ReadAllText(moveDirectory ? Path.Combine(destinationPath, "content.txt") : destinationPath));
+        Assert.Empty(FindTransactionArtifacts(workspace.RootPath));
+    }
+
+    private static void WriteArchiveEntry(ZipArchive archive, string path, string content)
+    {
+        var entry = archive.CreateEntry(path);
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write(content);
+    }
+
+    private static WorkspaceFileMutationService CreateMutationServiceWithFailingFileCommit(
+        string workspaceRoot)
+        => new(
+            new WorkspacePathPolicy(workspaceRoot),
+            new WorkspaceFileReceiptWriter(workspaceRoot),
+            _ => [],
+            WorkspaceFileMutationService.DeleteDirectoryTree,
+            commitStagedFile: _ => WorkspaceStagedFileCommitAttempt.NotCommitted(
+                new IOException("Injected staged-file commit failure.")));
+
+    private static string[] FindTransactionArtifacts(string rootPath)
+        => Directory.EnumerateFileSystemEntries(rootPath, "*", SearchOption.TopDirectoryOnly)
+            .Where(path =>
+                Path.GetFileName(path).Contains(".candoitall-stage-", StringComparison.Ordinal) ||
+                Path.GetFileName(path).Contains(".candoitall-backup-", StringComparison.Ordinal) ||
+                Path.GetFileName(path).Contains(".candoitall-tombstone-", StringComparison.Ordinal))
+            .ToArray();
+
+    private sealed class TemporaryWorkspace : IDisposable
+    {
+        public TemporaryWorkspace()
+        {
+            RootPath = Path.Combine(
+                Path.GetTempPath(),
+                $"CanDoItAll.WorkspacePlacementTests.{Guid.NewGuid():N}");
+            Directory.CreateDirectory(RootPath);
+            Files = new WorkspaceFileService(RootPath);
+        }
+
+        public string RootPath { get; }
+
+        public WorkspaceFileService Files { get; }
+
+        public void Dispose()
+        {
+            if (!Directory.Exists(RootPath))
+            {
+                return;
+            }
+
+            WorkspaceFileMutationService.DeleteDirectoryTree(RootPath);
+        }
+    }
+
     private static ExecutionRunRecord CreateRun()
     {
         var now = DateTimeOffset.UtcNow;

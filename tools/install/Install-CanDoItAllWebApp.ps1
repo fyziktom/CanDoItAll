@@ -870,7 +870,7 @@ function Start-DockerDatabase {
     })
     $portBindings = $inspect.HostConfig.PortBindings
     $portProperty = if ($null -eq $portBindings) { $null } else { $portBindings.PSObject.Properties["5432/tcp"] }
-    $bindings = if ($null -eq $portProperty) { @() } else { @($portProperty.Value) }
+    $bindings = @(if ($null -eq $portProperty) { @() } else { @($portProperty.Value) })
     if ($dataMounts.Count -ne 1 -or
         $bindings.Count -ne 1 -or
         [string]$bindings[0].HostIp -ne [string]$Manifest.host -or

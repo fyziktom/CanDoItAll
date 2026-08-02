@@ -780,11 +780,11 @@ public sealed class MafRuntimeArchitectureServicesTests
         var allowedProvider = new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.allowed-provider"),
-            "allowed_runtime_tool");
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList);
         var deniedProvider = new TestRuntimeToolProvider(
             20,
             CreateDescriptor("tests.denied-provider"),
-            "denied_runtime_tool");
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList);
         var registrations = composer.ComposeRegistrations([allowedProvider, deniedProvider]);
         var allowedProviderTag = RuntimeToolProviderCapabilityTags.CreateProviderKeyTag("tests.allowed-provider");
         var allowOnlyPolicy = new CapabilityAccessPolicy(
@@ -811,13 +811,13 @@ public sealed class MafRuntimeArchitectureServicesTests
             CancellationToken.None);
 
         Assert.Equal(1, result.AttachedToolCount);
-        Assert.Equal(["allowed_runtime_tool"], state.Tools.Select(tool => tool.Name));
+        Assert.Equal([AgentToolInvocationPolicyMetadata.ProcessesRunsList], state.Tools.Select(tool => tool.Name));
         Assert.Equal("tests.allowed-provider", Assert.Single(state.RuntimeToolProviderDescriptors).ProviderKey);
         Assert.Contains(state.EffectiveCapabilityDescriptors, descriptor =>
-            descriptor.RuntimeToolName?.Value == "allowed_runtime_tool" &&
+            descriptor.RuntimeToolName?.Value == AgentToolInvocationPolicyMetadata.ProcessesRunsList &&
             descriptor.Tags.Contains(allowedProviderTag));
         Assert.Contains(state.CapabilityAccessDiagnostics, diagnostic =>
-            diagnostic.Identity.Key.Value == "denied-runtime-tool" &&
+            diagnostic.Identity.Key.Value == AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList.Replace('_', '-') &&
             diagnostic.Category == CapabilityDiagnosticCategory.AccessPolicy);
     }
 
@@ -847,6 +847,7 @@ public sealed class MafRuntimeArchitectureServicesTests
     public void ToolInvocationTraceRecorder_records_completion_state()
     {
         var recorder = new ToolInvocationTraceRecorder();
+        var directReceiptExecutionRunId = Guid.NewGuid();
 
         var sequence = recorder.Start(
             "workspace_write_file",
@@ -858,7 +859,8 @@ public sealed class MafRuntimeArchitectureServicesTests
             sequence,
             succeeded: false,
             "denied",
-            failureMessageSafeForPersistence: true);
+            failureMessageSafeForPersistence: true,
+            directReceiptExecutionRunId: directReceiptExecutionRunId);
 
         var trace = Assert.Single(recorder.Snapshot());
         Assert.Equal("workspace_write_file", trace.ToolName);
@@ -866,6 +868,7 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.False(trace.Succeeded);
         Assert.Equal("denied", trace.FailureMessage);
         Assert.Equal("provider.key", trace.RuntimeToolProviderKey);
+        Assert.Equal(directReceiptExecutionRunId, trace.DirectReceiptExecutionRunId);
     }
 
     [Fact]

@@ -27,6 +27,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
+@inject ProjectAssetCreationService ProjectAssetCreationService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
@@ -196,7 +197,9 @@ else
                             <ProjectStructureFileBrowserWindow WindowId="@FileBrowserWindowKey"
                                                                Request="@CurrentFileBrowserRequest"
                                                                State="@FileBrowserWindowState"
-                                                               StateChanged="HandleFileBrowserWindowStateChangedAsync" />
+                                                               StateChanged="HandleFileBrowserWindowStateChangedAsync"
+                                                               CanOpenRootInExplorer="@CanOpenCurrentFileBrowserNodeInExplorer"
+                                                               OpenRootInExplorer="OpenCurrentFileBrowserNodeInExplorerAsync" />
                         }
                         @if (HealthWindowState.IsVisible)
                         {
@@ -1501,18 +1504,25 @@ else
             return;
         }
 
+        if (CanOpenRelatedProjectStructure(node))
+        {
+            CloseQuickActionDialog();
+            await OpenProjectStructureInNewTabAsync(node);
+            return;
+        }
+
+        if (ProjectStructureFileActions.CanBrowseFiles(node))
+        {
+            CloseQuickActionDialog();
+            await TryHandleFileBrowserActionAsync(ProjectStructureFileActions.BrowseFilesId, node.Id);
+            return;
+        }
+
         if (HasMermaidViewer(node))
         {
             CloseQuickActionDialog();
             await OpenMermaidViewerAsync(node);
             await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (CanOpenRelatedProjectStructure(node))
-        {
-            CloseQuickActionDialog();
-            await OpenProjectStructureInNewTabAsync(node);
             return;
         }
 
@@ -1600,6 +1610,13 @@ else
                 return;
             }
 
+            if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition) &&
+                request.UploadedFile is null)
+            {
+                await OpenTextAssetCreateDialogAsync(definition, request);
+                return;
+            }
+
             if (await TryCreateGeneratedImageAssetAsync(definition, request))
             {
                 return;
@@ -1607,7 +1624,27 @@ else
 
             try
             {
-                await CreateObjectAsync(definition, request);
+                if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition) &&
+                    request.UploadedFile is { } uploadedFile)
+                {
+                    ProjectFileSubtype subtype = ProjectNodeKindRegistry.ResolveFileSubtype(
+                        definition.ObjectType,
+                        definition.ObjectSubtype);
+                    ProjectObjectMediaPayload media = ProjectAssetCreationService.AdaptEncodedTextUpload(
+                        subtype,
+                        uploadedFile.FileName,
+                        uploadedFile.ContentType,
+                        uploadedFile.Base64Data,
+                        deferredCompletionCts.Token);
+                    await CreateObjectAsync(
+                        definition,
+                        request,
+                        createRequest => createRequest with { Media = media });
+                }
+                else
+                {
+                    await CreateObjectAsync(definition, request);
+                }
             }
             catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested)
             {
@@ -1624,7 +1661,7 @@ else
                     request.UploadedFile?.Base64Data.Length ?? 0);
                 NotificationService.Error(
                     "Node could not be created",
-                    exception is InvalidDataException
+                    exception is InvalidDataException or ProjectAssetCreationException
                         ? exception.Message
                         : "The node could not be saved. Check the application logs for details.");
             }
@@ -1701,6 +1738,12 @@ else
                 {
                     CreateMode = action.CreateMode
                 });
+                return;
+            }
+
+            if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition))
+            {
+                await OpenTextAssetCreateDialogAsync(definition, request);
                 return;
             }
 
@@ -1993,6 +2036,13 @@ else
         if (IsTaskCreateAction(action.ActionId))
         {
             await OpenTaskCreateDialogAsync(request);
+            return;
+        }
+
+        if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(action.ActionId, out var textDefinition) &&
+            ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(textDefinition))
+        {
+            await OpenTextAssetCreateDialogAsync(textDefinition, request);
             return;
         }
 
@@ -2954,5 +3004,3 @@ else
     }
 
 }
-
-

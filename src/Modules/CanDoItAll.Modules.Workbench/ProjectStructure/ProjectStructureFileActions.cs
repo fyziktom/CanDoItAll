@@ -21,8 +21,13 @@ internal static class ProjectStructureFileActions
             return true;
         }
 
-        return node.ObjectType == ProjectObjectType.Infrastructure &&
-               node.NodeReferences?.InfrastructureStorageCatalogId is not null;
+        if (node.ObjectType == ProjectObjectType.Infrastructure &&
+            node.NodeReferences?.InfrastructureStorageCatalogId is not null)
+        {
+            return true;
+        }
+
+        return ProjectStructureProcessRunOutputFolderPolicy.TryResolve(node, out _);
     }
 
     public static ProjectStructureNodeActionDescriptor CreateDescriptor()

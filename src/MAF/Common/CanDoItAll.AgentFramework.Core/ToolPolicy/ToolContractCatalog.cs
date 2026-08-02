@@ -48,6 +48,14 @@ public static class ToolContractCatalog
     public const string WorkspaceGitSwitch = "workspace_git_switch";
     public const string LocalMcpLaunch = "local_mcp_launch";
 
+    public const string ProviderHealth = "provider_health";
+    public const string AgentPackageExport = "agent_package_export";
+    public const string StorageCatalogList = "storage_catalog_list";
+    public const string StorageBrowse = "storage_browse";
+    public const string StorageReadTextFile = "storage_read_text_file";
+    public const string StorageWriteTextFile = "storage_write_text_file";
+    public const string StorageDeleteObject = "storage_delete_object";
+
     public const string BrowserNavigate = "browser_navigate";
     public const string BrowserResize = "browser_resize";
     public const string BrowserConsoleMessages = "browser_console_messages";
@@ -154,6 +162,21 @@ public static class ToolContractCatalog
         BrowserWaitFor
     ];
 
+    public static IReadOnlyList<string> RuntimeUtilityToolNames { get; } =
+    [
+        ProviderHealth,
+        AgentPackageExport
+    ];
+
+    public static IReadOnlyList<string> StorageToolNames { get; } =
+    [
+        StorageCatalogList,
+        StorageBrowse,
+        StorageReadTextFile,
+        StorageWriteTextFile,
+        StorageDeleteObject
+    ];
+
     public static IReadOnlyList<string> BrowserEvidenceToolNames { get; } =
     [
         BrowserConsoleMessages,
@@ -198,6 +221,8 @@ public static class ToolContractCatalog
     [
         .. WorkspaceToolNames,
         .. BrowserToolNames,
+        .. RuntimeUtilityToolNames,
+        .. StorageToolNames,
         .. FinalizerToolNames,
         AgentToolInvocationPolicyMetadata.LoadSkill,
         AgentToolInvocationPolicyMetadata.ReadSkillResource,
@@ -306,6 +331,7 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart,
+        AgentToolInvocationPolicyMetadata.ProjectStructureProcessSubprocessLaunch,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowAddOptions,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowDefinitionCreate,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStart,

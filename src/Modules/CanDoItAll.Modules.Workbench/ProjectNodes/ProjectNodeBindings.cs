@@ -264,6 +264,9 @@ internal sealed record ProjectNodeBindingPersistencePlan(
 
 internal static class ProjectNodeBindingStorage
 {
+    private static readonly IReadOnlySet<string> LegacyTopLevelMetadataPropertyNames =
+        new HashSet<string>(["markerSet"], StringComparer.OrdinalIgnoreCase);
+
     public static async Task LoadAsync(
         AppDbContext dbContext,
         IReadOnlyCollection<ProjectObjectRecord> nodes,
@@ -375,10 +378,20 @@ internal static class ProjectNodeBindingStorage
         ValidateSanitizedMetadata(node.ObjectType, node.ObjectSubtype, metadata);
         var references = ExtractReferences(ResolveReferenceCollection(node));
         return new ProjectNodeBindingPersistencePlan(
-            ProjectObjectMetadataSerializer.Serialize(metadata),
+            ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(
+                node.MetadataJson,
+                metadata,
+                ResolveRecognizedTopLevelMetadataPropertyNames(node.ObjectType)),
             ResolveBinding(node),
             references);
     }
+
+    private static IEnumerable<string> ResolveRecognizedTopLevelMetadataPropertyNames(
+        ProjectObjectType objectType)
+        => objectType == ProjectObjectType.ProjectBlock
+            ? LegacyTopLevelMetadataPropertyNames.Concat(
+                ProjectWorkbenchObjectModeling.ProjectBlockRootMetadataKeys)
+            : LegacyTopLevelMetadataPropertyNames;
 
     private static void ValidateSanitizedMetadata(
         ProjectObjectType objectType,

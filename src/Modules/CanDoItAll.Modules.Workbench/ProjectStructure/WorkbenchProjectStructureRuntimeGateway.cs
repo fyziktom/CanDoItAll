@@ -13,7 +13,9 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
     ProjectWorkbenchService projectWorkbenchService,
     ProjectStructureLeaseService leaseService,
     IProjectStructureRuntimeLauncher runtimeLauncher,
+    ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary,
     IProjectStructureLocalFileOpener localFileOpener,
+    IWorkspacePathResolver workspacePathResolver,
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver) : IProjectStructureRuntimeGateway
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -100,12 +102,19 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                         return existingNode;
                     }
 
+                    await EnsureParentAuthorityAllowedAsync(
+                        projectId,
+                        request.ParentNodeKey,
+                        cancellationToken);
                     var objectSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype);
-                    var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                    var metadataJson = runtimeMetadataBoundary.ValidateAndCanonicalizeForAgent(
                         request.ObjectType,
                         objectSubtype,
                         request.Notes,
                         request.MetadataJson);
+                    ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                        metadataJson,
+                        workspacePathResolver.ResolveWorkspaceRoot());
                     var createdNode = await projectWorkbenchService.CreateObjectAsync(
                         projectId,
                         new ProjectObjectCreateRequest(
@@ -162,6 +171,10 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                         return existingNode;
                     }
 
+                    await EnsureParentAuthorityAllowedAsync(
+                        projectId,
+                        request.ParentNodeKey,
+                        cancellationToken);
                     var createdNode = await projectWorkbenchService.CreateObjectAsync(
                         projectId,
                         new ProjectObjectCreateRequest(
@@ -179,6 +192,22 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                 },
                 cancellationToken),
             cancellationToken);
+    }
+
+    private async Task EnsureParentAuthorityAllowedAsync(
+        Guid projectId,
+        string? parentNodeKey,
+        CancellationToken cancellationToken)
+    {
+        var surface = await projectWorkbenchService.GetStructureAsync(
+            projectId,
+            cancellationToken);
+        ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
+            surface.Nodes,
+            string.IsNullOrWhiteSpace(parentNodeKey)
+                ? ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)
+                : parentNodeKey.Trim(),
+            workspacePathResolver.ResolveWorkspaceRoot());
     }
 
     private async Task<ProjectStructureRuntimeNodeSummary?> TryFindExistingIdempotentNodeAsync(
@@ -345,7 +374,11 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
             options.IncludeLayout ? node.X : null,
             options.IncludeLayout ? node.Y : null,
             node.DurationSeconds,
-            MapActionCapabilities(ProjectStructureNodeActionCapabilityResolver.Resolve(node, runtimeLauncher, localFileOpener)));
+            MapActionCapabilities(ProjectStructureNodeActionCapabilityResolver.Resolve(
+                node,
+                runtimeLauncher,
+                localFileOpener,
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution)));
 
     private static ProjectStructureRuntimeLinkSummary MapLink(ProjectStructureLink link)
         => new(link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored);

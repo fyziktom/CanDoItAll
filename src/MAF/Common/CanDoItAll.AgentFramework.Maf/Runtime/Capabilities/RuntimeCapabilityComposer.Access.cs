@@ -24,7 +24,7 @@ internal sealed class RuntimeCapabilityAccessPlanner
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         AgentRuntimeContextIntent contextIntent,
-        bool storageToolsAvailable)
+        RuntimeStorageToolAvailability storageAvailability)
     {
         var catalogDescriptors = capabilities
             .Select(descriptorCatalog.CreateCatalogCapabilityDescriptor)
@@ -34,7 +34,7 @@ internal sealed class RuntimeCapabilityAccessPlanner
             .ToDictionary(pair => pair.First.Identity, pair => pair.Second);
         var configuredWorkspaceDescriptors = RuntimeConfiguredWorkspaceToolDescriptorCatalog.CreateConfiguredWorkspaceToolDescriptors(
             workspaceToolAccess,
-            storageToolsAvailable);
+            storageAvailability);
         var candidates = DistinctCapabilityDescriptors(
             catalogDescriptors.Concat(configuredWorkspaceDescriptors));
         var policies = RuntimeCapabilityAccessPolicyBuilder.BuildRuntimeCapabilityAccessPolicies(workspaceToolAccess, contextIntent);

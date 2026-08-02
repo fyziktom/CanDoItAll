@@ -1708,9 +1708,10 @@ public sealed class WorkflowExecutorTests
                 CanTransformArtifacts = true
             });
 
+        IReadOnlyList<(string ToolName, object Result)> toolResults;
         using (WorkspaceExecutionAuditContext.BeginScope(run))
         {
-            plugin.WriteSpreadsheetWorkbook(
+            var writeResult = plugin.WriteSpreadsheetWorkbook(
                 "margin.xlsx",
                 "Summary",
                 cellWrites:
@@ -1722,11 +1723,27 @@ public sealed class WorkflowExecutorTests
                 ],
                 createWorkbookIfMissing: true,
                 overwrite: true);
-            plugin.InspectWorkbook("margin.xlsx");
-            plugin.ReadSpreadsheetCell("margin.xlsx", "Summary", "B2");
-            plugin.ReadSpreadsheetRange("margin.xlsx", "Summary", "A1:B2");
-            plugin.ListSpreadsheetFunctions("sum", maxResults: 5);
+            var inspectResult = plugin.InspectWorkbook("margin.xlsx");
+            var cellResult = plugin.ReadSpreadsheetCell("margin.xlsx", "Summary", "B2");
+            var rangeResult = plugin.ReadSpreadsheetRange("margin.xlsx", "Summary", "A1:B2");
+            var functionsResult = plugin.ListSpreadsheetFunctions("sum", maxResults: 5);
+            toolResults =
+            [
+                ("workspace_write_spreadsheet", writeResult),
+                ("workspace_spreadsheet_summary", inspectResult),
+                ("workspace_read_spreadsheet_cell", cellResult),
+                ("workspace_read_spreadsheet_range", rangeResult),
+                ("workspace_spreadsheet_function_catalog", functionsResult)
+            ];
         }
+
+        Assert.All(
+            toolResults,
+            item => Assert.Equal(
+                run.Id,
+                MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                    item.ToolName,
+                    item.Result)));
 
         var receiptRoot = Path.Combine(
             temp.Path,

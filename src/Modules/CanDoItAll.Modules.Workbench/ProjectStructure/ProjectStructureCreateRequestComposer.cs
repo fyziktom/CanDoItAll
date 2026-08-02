@@ -115,9 +115,7 @@ internal static class ProjectStructureCreateRequestComposer
                 metadata.File = new ProjectFileMetadata
                 {
                     FileSubtype = ParseEnum(inputValues, "fileSubtype", ProjectNodeKindRegistry.ResolveFileSubtype(ProjectObjectType.File, subtype)),
-                    MermaidDiagramKind = string.Equals(subtype, "mermaid", StringComparison.OrdinalIgnoreCase)
-                        ? ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(notes)
-                        : MermaidDiagramKind.Unknown,
+                    MermaidDiagramKind = MermaidDiagramKind.Unknown,
                     IsClipboardCapture = string.Equals(subtype, "screenshot", StringComparison.OrdinalIgnoreCase),
                     SourceHint = GetValue(inputValues, "sourceHint"),
                     ExternalPath = GetValue(inputValues, "externalPath")

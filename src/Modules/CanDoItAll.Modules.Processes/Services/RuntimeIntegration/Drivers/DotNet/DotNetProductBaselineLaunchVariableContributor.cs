@@ -54,11 +54,12 @@ internal sealed class DotNetProductBaselineLaunchVariableContributor(
         }
 
         var rootStat = workspaceFiles.StatPath(targetAlias);
+        var rootMissing = rootStat.IsKnownMissing() || rootStat.Succeeded && !rootStat.Exists;
         if (!rootStat.Succeeded ||
             !rootStat.Exists ||
             !string.Equals(rootStat.PathKind, "directory", StringComparison.OrdinalIgnoreCase))
         {
-            var rootStatus = rootStat.Succeeded && !rootStat.Exists
+            var rootStatus = rootMissing
                 ? "not-found"
                 : "unavailable";
             variables[VariableName] = SerializeContract(

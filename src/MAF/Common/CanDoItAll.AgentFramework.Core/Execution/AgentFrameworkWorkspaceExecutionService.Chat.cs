@@ -351,6 +351,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Func<ExecutionState, string, string, Task> progressCallback,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeHandoffExecutionOptions? handoffOptions,
+        Action<AgentRuntimeResponse> responseObserved,
         CancellationToken cancellationToken)
     {
         var currentSession = session;
@@ -385,7 +386,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ExecutionState.Preparing,
                 "Auto approval continuation",
                 "Preparing the automatically approved tool continuation.");
-            currentResponse = await runtime.RespondToPendingApprovalsAsync(
+            var continuationResponse = await runtime.RespondToPendingApprovalsAsync(
                 agent,
                 provider,
                 currentSession,
@@ -407,6 +408,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     inputAttachments: null,
                     jsonSchemaOutput: null));
 
+            currentResponse = continuationResponse with
+            {
+                ToolInvocationTraces = AggregateToolInvocationTraces(
+                    currentResponse.ToolInvocationTraces,
+                    continuationResponse.ToolInvocationTraces)
+            };
+            responseObserved(currentResponse);
+
             totalInputTokens += currentResponse.InputTokens;
             totalCachedInputTokens += currentResponse.CachedInputTokens;
             totalOutputTokens += currentResponse.OutputTokens;
@@ -414,6 +423,38 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         return (currentSession, currentResponse, totalInputTokens, totalCachedInputTokens, totalOutputTokens, totalToolCalls);
+    }
+
+    internal static IReadOnlyList<AgentToolInvocationTrace> AggregateToolInvocationTraces(
+        IReadOnlyList<AgentToolInvocationTrace> accumulatedTraces,
+        IReadOnlyList<AgentToolInvocationTrace> continuationTraces)
+    {
+        ArgumentNullException.ThrowIfNull(accumulatedTraces);
+        ArgumentNullException.ThrowIfNull(continuationTraces);
+
+        if (accumulatedTraces.Count == 0 && continuationTraces.Count == 0)
+        {
+            return [];
+        }
+
+        var aggregatedTraces = new List<AgentToolInvocationTrace>(
+            accumulatedTraces.Count + continuationTraces.Count);
+        AppendRebased(accumulatedTraces);
+        AppendRebased(continuationTraces);
+        return aggregatedTraces;
+
+        void AppendRebased(IReadOnlyList<AgentToolInvocationTrace> traces)
+        {
+            foreach (var trace in traces
+                         .OrderBy(item => item.Sequence)
+                         .ThenBy(item => item.StartedAtUtc))
+            {
+                aggregatedTraces.Add(trace with
+                {
+                    Sequence = aggregatedTraces.Count + 1
+                });
+            }
+        }
     }
 
     private static bool ShouldAutoApprovePendingToolCalls(AgentDefinition agent, ChatSessionRecord session)

@@ -285,6 +285,12 @@ internal sealed class WorkspaceCommandProcessRunner
 
     private sealed class ProductTargetMutationAudit
     {
+        private const int MaximumAuditRoots = 32;
+        private const int MaximumAuditEntries = 8192;
+        private const int MaximumAuditDirectories = 4096;
+        private const int MaximumAuditFiles = 2048;
+        private const long MaximumAuditBytes = 100L * 1024 * 1024;
+
         private readonly IReadOnlyList<ProductTargetSnapshot> beforeSnapshots;
 
         private ProductTargetMutationAudit(IReadOnlyList<ProductTargetSnapshot> beforeSnapshots)
@@ -303,12 +309,21 @@ internal sealed class WorkspaceCommandProcessRunner
                 return new ProductTargetMutationAudit([]);
             }
 
-            var pathPolicy = new WorkspacePathPolicy(plan.WorkspaceRootPath);
-            var snapshots = auditScope.AllowedExternalTargetAliases
+            var aliases = auditScope.AllowedExternalTargetAliases
                 .Concat(auditScope.ReadOnlyExternalTargetAliases)
                 .Where(alias => IsProductExternalTargetAlias(alias))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(alias => CaptureSnapshot(pathPolicy, alias))
+                .Take(MaximumAuditRoots + 1)
+                .ToArray();
+            if (aliases.Length > MaximumAuditRoots)
+            {
+                throw new ProductTargetAuditUnavailableException(aliases[MaximumAuditRoots]);
+            }
+
+            var pathPolicy = new WorkspacePathPolicy(plan.WorkspaceRootPath);
+            var budget = new ProductTargetAuditBudget();
+            var snapshots = aliases
+                .Select(alias => CaptureSnapshot(pathPolicy, alias, budget))
                 .ToArray();
             return new ProductTargetMutationAudit(snapshots);
         }
@@ -320,16 +335,45 @@ internal sealed class WorkspaceCommandProcessRunner
                 return processResult;
             }
 
-            var changedAliases = beforeSnapshots
-                .Where(snapshot => snapshot.HasChanged())
-                .Select(snapshot => snapshot.Alias)
-                .ToArray();
-            if (changedAliases.Length == 0)
+            var changedAliases = new List<string>();
+            var inaccessibleAliases = new List<string>();
+            var budget = new ProductTargetAuditBudget();
+            foreach (var snapshot in beforeSnapshots)
+            {
+                try
+                {
+                    if (snapshot.HasChanged(budget))
+                    {
+                        changedAliases.Add(snapshot.Alias);
+                    }
+                }
+                catch (Exception exception) when (
+                    exception is UnauthorizedAccessException or IOException or ProductTargetAuditBoundsExceededException)
+                {
+                    inaccessibleAliases.Add(snapshot.Alias);
+                }
+            }
+
+            if (changedAliases.Count == 0 && inaccessibleAliases.Count == 0)
             {
                 return processResult;
             }
 
-            var failureMessage = $"Post-execution product target audit detected file-system changes under non-mutating governed script roots: {string.Join(", ", changedAliases)}.";
+            var auditFailures = new List<string>(2);
+            if (changedAliases.Count > 0)
+            {
+                auditFailures.Add(
+                    $"detected file-system changes under non-mutating governed script roots: {string.Join(", ", changedAliases)}");
+            }
+
+            if (inaccessibleAliases.Count > 0)
+            {
+                auditFailures.Add(
+                    $"could not complete the post-execution inspection for governed script roots: {string.Join(", ", inaccessibleAliases)}");
+            }
+
+            var failureMessage =
+                $"Post-execution product target audit {string.Join("; and ", auditFailures)}. Treat the command outcome as unverified and inspect the captured diagnostics before retrying.";
             return processResult with
             {
                 ExitCode = processResult.ExitCode == 0 ? 1 : processResult.ExitCode,
@@ -339,74 +383,202 @@ internal sealed class WorkspaceCommandProcessRunner
             };
         }
 
-        private static ProductTargetSnapshot CaptureSnapshot(WorkspacePathPolicy pathPolicy, string alias)
+        private static ProductTargetSnapshot CaptureSnapshot(
+            WorkspacePathPolicy pathPolicy,
+            string alias,
+            ProductTargetAuditBudget budget)
         {
             if (!pathPolicy.TryResolveWorkspacePath(alias, allowWorkspaceRoot: false, out var resolution, out _))
             {
-                return new ProductTargetSnapshot(
-                    alias,
-                    string.Empty,
-                    new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase));
+                throw WorkspaceToolAccessDeniedException.InaccessiblePath(alias);
             }
 
-            return new ProductTargetSnapshot(
-                alias,
-                resolution.FullPath,
-                CaptureFileFingerprints(resolution.FullPath));
+            try
+            {
+                return new ProductTargetSnapshot(
+                    alias,
+                    resolution.FullPath,
+                    CaptureFileFingerprints(resolution.FullPath, budget));
+            }
+            catch (Exception exception) when (
+                exception is UnauthorizedAccessException or IOException)
+            {
+                throw WorkspaceToolAccessDeniedException.InaccessiblePath(alias);
+            }
+            catch (ProductTargetAuditBoundsExceededException)
+            {
+                throw new ProductTargetAuditUnavailableException(alias);
+            }
         }
 
         private static IReadOnlyDictionary<string, ProductTargetFileFingerprint> CaptureFileFingerprints(
-            string rootPath)
+            string rootPath,
+            ProductTargetAuditBudget budget)
         {
             if (string.IsNullOrWhiteSpace(rootPath))
             {
                 return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase);
             }
 
-            if (File.Exists(rootPath))
-            {
-                return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["."] = CreateFingerprint(rootPath)
-                };
-            }
-
-            if (!Directory.Exists(rootPath))
+            var rootIsFile = File.Exists(rootPath);
+            if (!rootIsFile && !Directory.Exists(rootPath))
             {
                 return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase);
             }
 
-            return Directory
-                .EnumerateFiles(
-                    rootPath,
-                    "*",
-                    new EnumerationOptions
+            IEnumerable<string> paths = rootIsFile
+                ? [rootPath]
+                : EnumerateAuditFiles(rootPath, budget);
+            var fingerprints = new Dictionary<string, ProductTargetFileFingerprint>(
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var path in paths)
+            {
+                var key = rootIsFile
+                    ? "."
+                    : WorkspacePathPolicy.NormalizeRelativePath(
+                        Path.GetRelativePath(rootPath, path));
+                fingerprints.Add(key, CreateFingerprint(path, budget));
+            }
+
+            return fingerprints;
+        }
+
+        private static IEnumerable<string> EnumerateAuditFiles(
+            string rootPath,
+            ProductTargetAuditBudget budget)
+        {
+            var pendingDirectories = new Stack<string>();
+            pendingDirectories.Push(rootPath);
+            while (pendingDirectories.TryPop(out var directoryPath))
+            {
+                budget.CountDirectory();
+                foreach (var entryPath in Directory.EnumerateFileSystemEntries(
+                             directoryPath,
+                             "*",
+                             SearchOption.TopDirectoryOnly))
+                {
+                    budget.CountEntry();
+                    var attributes = File.GetAttributes(entryPath);
+                    if ((attributes & FileAttributes.ReparsePoint) != 0)
                     {
-                        RecurseSubdirectories = true,
-                        IgnoreInaccessible = false,
-                        AttributesToSkip = FileAttributes.ReparsePoint
-                    })
-                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    path => WorkspacePathPolicy.NormalizeRelativePath(Path.GetRelativePath(rootPath, path)),
-                    CreateFingerprint,
-                    StringComparer.OrdinalIgnoreCase);
+                        continue;
+                    }
+
+                    if ((attributes & FileAttributes.Directory) != 0)
+                    {
+                        pendingDirectories.Push(entryPath);
+                        continue;
+                    }
+
+                    yield return entryPath;
+                }
+            }
         }
 
-        private static ProductTargetFileFingerprint CreateFingerprint(string path)
+        private static ProductTargetFileFingerprint CreateFingerprint(
+            string path,
+            ProductTargetAuditBudget budget)
         {
-            var fileInfo = new FileInfo(path);
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 81920,
+                options: FileOptions.SequentialScan);
+            var length = stream.Length;
+            budget.CountFile(length);
+            var lastWriteTimeUtc = File.GetLastWriteTimeUtc(path);
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            var buffer = new byte[81920];
+            long remaining = length;
+            while (remaining > 0)
+            {
+                var read = stream.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+                if (read == 0)
+                {
+                    throw new IOException($"File '{path}' changed while its mutation-audit fingerprint was captured.");
+                }
+
+                hash.AppendData(buffer, 0, read);
+                remaining -= read;
+            }
+
+            if (stream.ReadByte() != -1 ||
+                stream.Length != length ||
+                File.GetLastWriteTimeUtc(path) != lastWriteTimeUtc)
+            {
+                throw new IOException($"File '{path}' changed while its mutation-audit fingerprint was captured.");
+            }
+
             return new ProductTargetFileFingerprint(
-                fileInfo.Length,
-                fileInfo.LastWriteTimeUtc,
-                ComputeFileHash(path));
+                length,
+                lastWriteTimeUtc,
+                Convert.ToHexString(hash.GetHashAndReset()));
         }
 
-        private static string ComputeFileHash(string path)
+        private sealed class ProductTargetAuditBudget
         {
-            using var stream = File.OpenRead(path);
-            using var sha256 = SHA256.Create();
-            return Convert.ToHexString(sha256.ComputeHash(stream));
+            private int entries;
+            private int directories;
+            private int files;
+            private long bytes;
+
+            public void CountEntry()
+            {
+                entries++;
+                EnsureWithinLimit(entries, MaximumAuditEntries);
+            }
+
+            public void CountDirectory()
+            {
+                directories++;
+                EnsureWithinLimit(directories, MaximumAuditDirectories);
+            }
+
+            public void CountFile(long length)
+            {
+                if (length < 0 || files >= MaximumAuditFiles || length > MaximumAuditBytes - bytes)
+                {
+                    throw new ProductTargetAuditBoundsExceededException();
+                }
+
+                files++;
+                bytes += length;
+            }
+
+            private static void EnsureWithinLimit(int value, int maximum)
+            {
+                if (value > maximum)
+                {
+                    throw new ProductTargetAuditBoundsExceededException();
+                }
+            }
+        }
+
+        private sealed class ProductTargetAuditBoundsExceededException : Exception
+        {
+        }
+
+        private sealed class ProductTargetAuditUnavailableException : InvalidOperationException, IAgentToolFailure
+        {
+            public ProductTargetAuditUnavailableException(string alias)
+                : base(
+                    $"Governed product target '{NormalizeAlias(alias)}' exceeds the bounded pre-execution mutation audit ({MaximumAuditRoots} roots, {MaximumAuditEntries} entries, {MaximumAuditDirectories} directories, {MaximumAuditFiles} files, or {MaximumAuditBytes / (1024 * 1024)} MiB total). Narrow the grounded product target before retrying; the command was not launched.")
+            {
+            }
+
+            public string ErrorCode => "ProductTargetAuditUnavailable";
+
+            public string SafeMessage => Message;
+
+            public bool IsSafeToExpose => true;
+
+            public bool CanRetryWithCorrectedInput => true;
+
+            private static string NormalizeAlias(string alias)
+                => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(alias)
+                   ?? "external-target/unresolved";
         }
 
         private static bool IsScriptExecutionTool(string toolName)
@@ -457,9 +629,9 @@ internal sealed class WorkspaceCommandProcessRunner
             string RootPath,
             IReadOnlyDictionary<string, ProductTargetFileFingerprint> Files)
         {
-            public bool HasChanged()
+            public bool HasChanged(ProductTargetAuditBudget budget)
             {
-                var afterFiles = CaptureFileFingerprints(RootPath);
+                var afterFiles = CaptureFileFingerprints(RootPath, budget);
                 if (Files.Count != afterFiles.Count)
                 {
                     return true;

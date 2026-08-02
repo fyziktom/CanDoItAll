@@ -609,7 +609,21 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialCachedInputTokens = 3,
-                    ContinuationCachedInputTokens = 2
+                    ContinuationCachedInputTokens = 2,
+                    InitialToolInvocationTraces =
+                    [
+                        CreateToolInvocationTrace(
+                            "workspace_list_files",
+                            ToolInvocationClassification.Read,
+                            sequence: 1)
+                    ],
+                    ContinuationToolInvocationTraces =
+                    [
+                        CreateToolInvocationTrace(
+                            "workspace_read_file",
+                            ToolInvocationClassification.Read,
+                            sequence: 1)
+                    ]
                 });
                 services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
@@ -653,6 +667,100 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.Equal("run-001", usage.ProcessRunId);
         Assert.Equal("step-001", usage.ProcessStepId);
         Assert.Equal(result.ExecutionRunId, usage.ExecutionRunId);
+
+        var traceReceipts = detail.ToolReceipts
+            .Where(receipt => receipt.ToolFamily == "agent-tool-trace")
+            .ToArray();
+        Assert.Equal(2, traceReceipts.Length);
+        Assert.Contains(traceReceipts, receipt => receipt.ToolName == "workspace_list_files");
+        Assert.Contains(traceReceipts, receipt => receipt.ToolName == "workspace_read_file");
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_persists_successful_auto_approval_continuation_traces_when_later_continuation_fails()
+    {
+        var continuationResponse = new AgentRuntimeResponse(
+            ResponseText: "Another approval is pending.",
+            InputTokens: 3,
+            OutputTokens: 4,
+            ToolCalls: 1,
+            RuntimeSessionKey: "runtime-session-key-2",
+            SerializedSessionStateJson: "{}",
+            PendingApprovals:
+            [
+                new PendingToolApprovalRecord(
+                    "approval-002",
+                    "call-002",
+                    "workspace_read_file",
+                    "function",
+                    "Read the project file.",
+                    "{\"path\":\"src/App.csproj\"}")
+            ])
+        {
+            ToolInvocationTraces =
+            [
+                CreateToolInvocationTrace(
+                    "workspace_list_files",
+                    ToolInvocationClassification.Read,
+                    sequence: 1)
+            ]
+        };
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create(
+            "integration-agentframework-auto-approval-continuation-failure-receipts");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialToolInvocationTraces =
+                    [
+                        CreateToolInvocationTrace(
+                            "workspace_stat_path",
+                            ToolInvocationClassification.Read,
+                            sequence: 1)
+                    ],
+                    ContinuationResponses = [continuationResponse],
+                    ContinuationException = new InvalidOperationException(
+                        "Fake provider failed during the later continuation.")
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                    serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<StructuredOutputApprovalRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        await Assert.ThrowsAsync<AgentRunFailedException>(() =>
+            workspaceService.ExecuteRunAsync(
+                new ExecutionRunRequest(
+                    agent.Id,
+                    "Continue approvals until the provider fails.",
+                    AgentExecutionOperationId.New(),
+                    ChatSessionId: null,
+                    Context: CreateProcessStepContext(),
+                    AutoApprovePendingToolCalls: true)));
+
+        var executionRunId = Assert.Single(runtime.ObservedExecutionRunIds);
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(executionRunId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Failed, detail.Run.State);
+        var traceReceipts = detail.ToolReceipts
+            .Where(receipt => receipt.ToolFamily == "agent-tool-trace")
+            .ToArray();
+        Assert.Equal(2, traceReceipts.Length);
+        Assert.Contains(traceReceipts, receipt => receipt.ToolName == "workspace_stat_path");
+        Assert.Contains(traceReceipts, receipt => receipt.ToolName == "workspace_list_files");
     }
 
     [Fact]
@@ -798,6 +906,13 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                     InitialUsageObservations =
                     [
                         CreateUsageObservation(ProviderUsageSourcePhases.AgentRuntime, 31, 4, 9)
+                    ],
+                    InitialToolInvocationTraces =
+                    [
+                        CreateToolInvocationTrace(
+                            "workspace_read_file",
+                            ToolInvocationClassification.Read,
+                            sequence: 1)
                     ]
                 });
                 services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
@@ -832,6 +947,11 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.Equal(9, usage.OutputTokens);
         Assert.Equal(executionRunId, usage.ExecutionRunId);
         Assert.Equal("run-001", usage.ProcessRunId);
+        var receipt = Assert.Single(
+            failedDetail.ToolReceipts,
+            item => item.ToolName == "workspace_read_file");
+        Assert.Equal(executionRunId, receipt.ExecutionRunId);
+        Assert.Equal("agent-tool-trace", receipt.ToolFamily);
     }
 
     [Fact]
@@ -1164,6 +1284,14 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.Contains("last significant tool invocation", exception.Message, StringComparison.Ordinal);
         Assert.NotNull(detail);
         Assert.Equal(ExecutionState.Failed, detail.Run.State);
+        var traceReceipts = detail.ToolReceipts
+            .Where(receipt => receipt.ToolFamily == "agent-tool-trace")
+            .ToArray();
+        Assert.Equal(2, traceReceipts.Length);
+        Assert.Contains(
+            traceReceipts,
+            receipt => receipt.ToolName == AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName);
+        Assert.Contains(traceReceipts, receipt => receipt.ToolName == "workspace_dotnet_test");
         Assert.Contains(
             detail.ExecutionLog,
             entry => entry.Phase == "Finalizer sequencing" &&
@@ -2257,6 +2385,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         public IReadOnlyList<AgentToolInvocationTrace> ContinuationToolInvocationTraces { get; init; } = [];
 
+        public IReadOnlyList<AgentRuntimeResponse> ContinuationResponses { get; init; } = [];
+
+        public Exception? ContinuationException { get; init; }
+
+        private int continuationResponseIndex;
+
         public Task<ProviderHealthResult> TestProviderAsync(
             ProviderProfile provider,
             CancellationToken cancellationToken = default)
@@ -2307,7 +2441,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                 throw new AgentRuntimeUsageException(
                     "Fake runtime failed after provider usage.",
                     new InvalidOperationException("Fake provider failure."),
-                    InitialUsageObservations);
+                    InitialUsageObservations,
+                    InitialToolInvocationTraces);
             }
 
             return Task.FromResult(new AgentRuntimeResponse(
@@ -2349,6 +2484,16 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             }
 
             ContinuationStructuredOutputs.Add(structuredOutput);
+            if (continuationResponseIndex < ContinuationResponses.Count)
+            {
+                return Task.FromResult(ContinuationResponses[continuationResponseIndex++]);
+            }
+
+            if (ContinuationException is not null)
+            {
+                throw ContinuationException;
+            }
+
             return Task.FromResult(new AgentRuntimeResponse(
                 ResponseText: ContinuationResponseText,
                 InputTokens: 5,

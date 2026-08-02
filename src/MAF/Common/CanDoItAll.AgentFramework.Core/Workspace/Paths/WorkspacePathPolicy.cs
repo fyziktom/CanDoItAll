@@ -36,7 +36,7 @@ internal sealed class WorkspacePathPolicy
         {
             if (allowWorkspaceRoot)
             {
-                return true;
+                return TryValidateNoReparseTraversal(workspaceRoot, out validationMessage);
             }
 
             validationMessage = "Provide a workspace-relative path.";
@@ -46,6 +46,12 @@ internal sealed class WorkspacePathPolicy
         var externalAliasResolution = TryResolveExternalTargetAlias(path, out var externalResolution, out var externalValidationMessage);
         if (externalAliasResolution == ExternalTargetAliasResolution.Resolved)
         {
+            if (!TryValidateNoReparseTraversal(externalResolution.FullPath, out validationMessage))
+            {
+                resolution = default;
+                return false;
+            }
+
             resolution = externalResolution;
             return true;
         }
@@ -76,6 +82,12 @@ internal sealed class WorkspacePathPolicy
             return false;
         }
 
+        if (!TryValidateNoReparseTraversal(fullPath, out validationMessage))
+        {
+            resolution = default;
+            return false;
+        }
+
         resolution = CreateWorkspaceResolution(fullPath);
         return true;
     }
@@ -85,6 +97,7 @@ internal sealed class WorkspacePathPolicy
         var externalAliasResolution = TryResolveExternalTargetAlias(path, out var externalResolution, out var externalValidationMessage);
         if (externalAliasResolution == ExternalTargetAliasResolution.Resolved)
         {
+            EnsureNoReparseTraversal(externalResolution.FullPath);
             return externalResolution;
         }
 
@@ -96,12 +109,14 @@ internal sealed class WorkspacePathPolicy
         var fullPath = ResolveWorkspaceFullPath(path);
         if (IsWithinWorkspace(fullPath))
         {
+            EnsureNoReparseTraversal(fullPath);
             return CreateWorkspaceResolution(fullPath);
         }
 
         var normalizedAllowedRoots = NormalizeAllowedExternalRoots(allowedExternalRoots);
         if (normalizedAllowedRoots.Any(root => IsPathWithinRoot(fullPath, root)))
         {
+            EnsureNoReparseTraversal(fullPath);
             var normalizedAbsolutePath = NormalizeAbsolutePath(fullPath);
             return new WorkspacePathResolution(
                 FullPath: fullPath,
@@ -155,6 +170,7 @@ internal sealed class WorkspacePathPolicy
         resolution = string.IsNullOrWhiteSpace(workingDirectory)
             ? CreateWorkspaceResolution(workspaceRoot)
             : ResolveAccessiblePath(workingDirectory, allowedExternalRoots);
+        EnsureNoReparseTraversal(resolution.FullPath);
 
         if (File.Exists(resolution.FullPath))
         {
@@ -169,6 +185,7 @@ internal sealed class WorkspacePathPolicy
             }
 
             Directory.CreateDirectory(resolution.FullPath);
+            EnsureNoReparseTraversal(resolution.FullPath);
         }
 
         return resolution.DisplayPath;
@@ -176,13 +193,13 @@ internal sealed class WorkspacePathPolicy
 
     public bool IsWithinWorkspace(string fullPath)
     {
-        return string.Equals(fullPath, workspaceRoot, StringComparison.OrdinalIgnoreCase)
-            || fullPath.StartsWith(workspaceRootWithSeparator, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(fullPath, workspaceRoot, FileSystemPathComparison)
+            || fullPath.StartsWith(workspaceRootWithSeparator, FileSystemPathComparison);
     }
 
     public string ToRelativePath(string fullPath)
     {
-        if (string.Equals(fullPath, workspaceRoot, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(fullPath, workspaceRoot, FileSystemPathComparison))
         {
             return ".";
         }
@@ -208,7 +225,7 @@ internal sealed class WorkspacePathPolicy
         return allowedExternalRoots?
             .Where(root => !string.IsNullOrWhiteSpace(root))
             .Select(root => ResolveWorkspaceFullPath(root!))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(FileSystemPathComparer)
             .ToList()
             ?? [];
     }
@@ -257,13 +274,13 @@ internal sealed class WorkspacePathPolicy
     {
         var normalizedFullPath = Path.GetFullPath(fullPath);
         var normalizedRoot = Path.GetFullPath(rootPath);
-        if (string.Equals(normalizedFullPath, normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(normalizedFullPath, normalizedRoot, FileSystemPathComparison))
         {
             return true;
         }
 
         var normalizedRootWithSeparator = EnsureTrailingSeparator(normalizedRoot);
-        return normalizedFullPath.StartsWith(normalizedRootWithSeparator, StringComparison.OrdinalIgnoreCase);
+        return normalizedFullPath.StartsWith(normalizedRootWithSeparator, FileSystemPathComparison);
     }
 
     public static string ExpandPortablePath(string path)
@@ -350,6 +367,71 @@ internal sealed class WorkspacePathPolicy
             : path + Path.DirectorySeparatorChar;
     }
 
+    private static StringComparison FileSystemPathComparison => OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
+
+    private static StringComparer FileSystemPathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
+
+    internal static bool TryValidateNoReparseTraversal(string fullPath, out string validationMessage)
+    {
+        try
+        {
+            EnsureNoReparseTraversal(fullPath);
+            validationMessage = string.Empty;
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or UnauthorizedAccessException)
+        {
+            validationMessage = exception is InvalidOperationException
+                ? exception.Message
+                : "The requested path could not be validated against filesystem reparse-point traversal.";
+            return false;
+        }
+    }
+
+    private static void EnsureNoReparseTraversal(string fullPath)
+    {
+        var normalizedFullPath = Path.GetFullPath(fullPath);
+        var rootPath = Path.GetPathRoot(normalizedFullPath);
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            throw new InvalidOperationException("The requested path does not have a filesystem root.");
+        }
+
+        var relativePath = Path.GetRelativePath(rootPath, normalizedFullPath);
+        if (string.Equals(relativePath, ".", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var currentPath = rootPath;
+        foreach (var segment in relativePath.Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            currentPath = Path.Combine(currentPath, segment);
+            FileAttributes attributes;
+            try
+            {
+                attributes = File.GetAttributes(currentPath);
+            }
+            catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+            {
+                break;
+            }
+
+            if (attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                throw new InvalidOperationException(
+                    "Filesystem reparse-point traversal is not allowed for workspace paths.");
+            }
+        }
+    }
+
     private static bool TryBuildExternalTargetAliasFromFullPath(string fullPath, out string aliasPath)
     {
         aliasPath = string.Empty;
@@ -419,6 +501,13 @@ internal sealed class WorkspacePathPolicy
 
         var segments = suffix
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Any(IsDotPathSegment))
+        {
+            validationMessage =
+                $"Path '{path}' uses invalid external-target traversal segments. Use a canonical alias without '.' or '..' segments.";
+            return ExternalTargetAliasResolution.Invalid;
+        }
+
         if (segments.Length == 0 ||
             segments[0].Length != 1 ||
             !char.IsLetter(segments[0][0]))
@@ -452,6 +541,10 @@ internal sealed class WorkspacePathPolicy
             IsWorkspacePath: false);
         return ExternalTargetAliasResolution.Resolved;
     }
+
+    private static bool IsDotPathSegment(string segment)
+        => string.Equals(segment, ".", StringComparison.Ordinal) ||
+           string.Equals(segment, "..", StringComparison.Ordinal);
 
     private string ApplyManagedRootScope(string relativePath)
     {

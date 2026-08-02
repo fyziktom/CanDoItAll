@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Components;
 public sealed class ProjectStructureCanvasCatalogTests
 {
     [Fact]
-    public void Markdown_create_definition_keeps_text_fields_and_file_upload_enabled()
+    public void Markdown_create_definition_allows_upload_without_requiring_an_existing_file()
     {
         var assembly = typeof(ProjectStructureActionCatalogAdapter).Assembly;
         var catalogType = assembly.GetType("CanDoItAll.Modules.Workbench.ProjectStructureCanvasCatalog");
@@ -41,13 +41,14 @@ public sealed class ProjectStructureCanvasCatalogTests
 
         var definitionType = definition!.GetType();
 
-        Assert.True((bool)definitionType.GetProperty("RequiresFile")!.GetValue(definition)!);
+        Assert.False((bool)definitionType.GetProperty("RequiresFile")!.GetValue(definition)!);
+        Assert.True((bool)definitionType.GetProperty("AllowsFileUpload")!.GetValue(definition)!);
         Assert.True((bool)definitionType.GetProperty("ShowDefaultTextFields")!.GetValue(definition)!);
         Assert.Equal(
             ".md,.markdown,.txt,text/markdown,text/plain",
             definitionType.GetProperty("AcceptedFileTypes")!.GetValue(definition));
         Assert.Equal(
-            "Paste markdown below, drop a markdown file here, or choose one.",
+            "Drop a markdown file here or choose one.",
             definitionType.GetProperty("FilePrompt")!.GetValue(definition));
     }
 

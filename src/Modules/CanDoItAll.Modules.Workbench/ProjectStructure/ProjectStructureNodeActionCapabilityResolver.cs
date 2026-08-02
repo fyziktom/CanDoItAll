@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -7,17 +8,28 @@ internal static class ProjectStructureNodeActionCapabilityResolver
     public static ProjectStructureNodeActionCapabilities? Resolve(
         ProjectStructureNode node,
         IProjectStructureRuntimeLauncher runtimeLauncher,
-        IProjectStructureLocalFileOpener localFileOpener)
+        IProjectStructureLocalFileOpener localFileOpener,
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
     {
         var actions = new List<ProjectStructureNodeActionDescriptor>();
         var guidance = new List<string>();
-        var runtimeResolution = runtimeLauncher.Resolve(node);
-        var canLaunchRuntime = runtimeLauncher.IsAvailable && runtimeResolution.IsSuccess && runtimeResolution.Plan is not null;
+        var isRuntimeCapable = IsRuntimeCapable(node);
+        var runtimeResolution = isRuntimeCapable
+            ? runtimeLauncher.Resolve(
+                node.ObjectType,
+                node.ObjectSubtype,
+                node.Notes,
+                node.MetadataJson,
+                pathAuthorityMode)
+            : new ProjectStructureRuntimeLaunchResolution(null, string.Empty);
+        var canLaunchRuntime = isRuntimeCapable &&
+                               runtimeLauncher.IsAvailable &&
+                               runtimeResolution.IsSuccess &&
+                               runtimeResolution.Plan is not null;
         var canOpenInFileExplorer = localFileOpener.IsAvailable && localFileOpener.CanOpen(node);
         var canOpenInNewTab = IsIpfsBackedNode(node) && CanOpenNodeInNewTab(node);
         var canBrowseFiles = ProjectStructureFileActions.CanBrowseFiles(node);
         var storage = ResolveStorage(node);
-
         if (canLaunchRuntime && runtimeResolution.Plan is { } runtimePlan)
         {
             actions.Add(new ProjectStructureNodeActionDescriptor(
@@ -30,8 +42,8 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 "Run as administrator",
                 "Double-click quick-action dialog and node context menu",
                 "Launches the same resolved workspace command in an elevated PowerShell window."));
-            guidance.Add("Runtime nodes always expose both normal and administrator run actions when the launch plan resolves on this host.");
-            guidance.Add("Runtime launch uses PowerShell in the resolved working directory and accepts workspace paths or explicit existing local drive paths.");
+            guidance.Add("Runtime nodes expose normal and administrator shell-handoff actions only when the launch plan and target resolve on this host.");
+            guidance.Add("A shell handoff is not proof that the application started; verify the terminal output after launch.");
 
             return new ProjectStructureNodeActionCapabilities(
                 CanRunNormally: true,
@@ -50,7 +62,14 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         }
 
         BuildFileActions(actions, guidance, canOpenInFileExplorer, canOpenInNewTab, canBrowseFiles);
-        if (actions.Count == 0 && string.IsNullOrWhiteSpace(storage.Provider))
+        if (isRuntimeCapable)
+        {
+            guidance.Add($"Runtime launch is unavailable: {runtimeResolution.Message}");
+        }
+
+        if (actions.Count == 0 &&
+            string.IsNullOrWhiteSpace(storage.Provider) &&
+            !isRuntimeCapable)
         {
             return null;
         }
@@ -70,6 +89,16 @@ internal static class ProjectStructureNodeActionCapabilityResolver
             Actions: actions,
             Guidance: guidance);
     }
+
+    private static bool IsRuntimeCapable(ProjectStructureNode node)
+        => node.ObjectType switch
+        {
+            ProjectObjectType.Script or ProjectObjectType.Environment => true,
+            ProjectObjectType.Infrastructure =>
+                ProjectNodeKindRegistry.ResolveInfrastructureKind(node.ObjectSubtype) ==
+                ProjectInfrastructureKind.DockerMode,
+            _ => false
+        };
 
     private static IReadOnlyList<ProjectStructureNodeActionDescriptor> BuildFileActions(
         List<ProjectStructureNodeActionDescriptor> actions,

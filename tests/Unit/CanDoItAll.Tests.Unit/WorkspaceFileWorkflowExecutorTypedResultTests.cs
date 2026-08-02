@@ -7,6 +7,83 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
 {
     [Fact]
+    public async Task ExecuteAsync_Exists_PreservesAKnownMissingObservation()
+    {
+        var workspaceRoot = CreateWorkspaceRoot();
+        try
+        {
+            var executor = new WorkspaceFileWorkflowExecutor(new WorkspaceFileService(workspaceRoot));
+
+            var result = await ExecuteAsync(
+                executor,
+                new WorkflowStorageFileExecutorSettings
+                {
+                    Operation = WorkflowStorageFileOperation.Exists,
+                    Path = "missing/source.md"
+                });
+
+            var stat = WorkflowExecutorJson.Deserialize<WorkspacePathStatResult>(result.PayloadJson);
+            Assert.False(stat.Succeeded);
+            Assert.False(stat.Exists);
+            Assert.True(stat.IsKnownMissing());
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DryRunDelete_PreservesAKnownMissingObservation()
+    {
+        var workspaceRoot = CreateWorkspaceRoot();
+        try
+        {
+            var executor = new WorkspaceFileWorkflowExecutor(new WorkspaceFileService(workspaceRoot));
+
+            var result = await ExecuteAsync(
+                executor,
+                new WorkflowStorageFileExecutorSettings
+                {
+                    Operation = WorkflowStorageFileOperation.Delete,
+                    Path = "missing/source.md",
+                    DryRun = true
+                });
+
+            Assert.Contains("\"dryRun\":true", result.PayloadJson, StringComparison.Ordinal);
+            Assert.Contains("\"exists\":false", result.PayloadJson, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Exists_DoesNotTreatADeniedPathAsMissing()
+    {
+        var workspaceRoot = CreateWorkspaceRoot();
+        try
+        {
+            var executor = new WorkspaceFileWorkflowExecutor(new WorkspaceFileService(workspaceRoot));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteAsync(
+                executor,
+                new WorkflowStorageFileExecutorSettings
+                {
+                    Operation = WorkflowStorageFileOperation.Exists,
+                    Path = "../outside.md"
+                }));
+
+            Assert.False(string.IsNullOrWhiteSpace(exception.Message));
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_FailedTypedResult_ThrowsExactMessage()
     {
         var workspaceRoot = CreateWorkspaceRoot();
@@ -75,6 +152,38 @@ public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
     private static void AssertOperationResult<T>()
         where T : IWorkspaceToolOperationResult
     {
+    }
+
+    private static async Task<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkspaceFileWorkflowExecutor executor,
+        WorkflowStorageFileExecutorSettings settings)
+    {
+        var settingsJson = WorkflowExecutorJson.Serialize(settings);
+        var node = new WorkflowNode(
+            new WorkflowNodeId("workspace-file"),
+            WorkflowNodeKind.Executor,
+            "workspace-file",
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: executor.Descriptor.InputShape,
+                ResultShape: executor.Descriptor.ResultShape)
+            {
+                ExecutorId = executor.Descriptor.Id,
+                ExecutorSettingsJson = settingsJson
+            });
+        var context = new WorkflowExecutorExecutionContext(
+            Definition: null!,
+            Node: node,
+            Descriptor: executor.Descriptor,
+            SettingsJson: settingsJson,
+            Policy: WorkflowExecutorExecutionPolicy.Default);
+
+        return await executor.ExecuteAsync(context, new WorkflowNodeInput("{}"));
     }
 
     private static string CreateWorkspaceRoot()

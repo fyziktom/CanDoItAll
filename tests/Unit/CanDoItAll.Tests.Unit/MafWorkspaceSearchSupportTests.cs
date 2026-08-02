@@ -5,6 +5,42 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class MafWorkspaceSearchSupportTests
 {
     [Fact]
+    public void EnumerateSearchFiles_keeps_accessible_RAG_context_when_a_sibling_directory_is_denied()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "CanDoItAll.MafWorkspaceSearchSupportTests",
+            Guid.NewGuid().ToString("N"));
+        var accessibleDirectory = Directory.CreateDirectory(
+            Path.Combine(root, "Accessible")).FullName;
+        var deniedDirectory = Directory.CreateDirectory(
+            Path.Combine(root, "Denied")).FullName;
+        var accessibleFile = Path.Combine(accessibleDirectory, "context.md");
+        File.WriteAllText(accessibleFile, "calculator runtime context");
+
+        try
+        {
+            var files = WorkspaceSearchSupport.EnumerateSearchFiles(
+                    root,
+                    extensions: null,
+                    excludedPaths: null,
+                    enumerateDirectoryEntries: Enumerate)
+                .ToArray();
+
+            Assert.Equal([accessibleFile], files);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+
+        IReadOnlyList<string> Enumerate(string directory)
+            => string.Equals(directory, deniedDirectory, StringComparison.OrdinalIgnoreCase)
+                ? throw new UnauthorizedAccessException("Simulated denied RAG directory.")
+                : Directory.EnumerateFileSystemEntries(directory).ToArray();
+    }
+
+    [Fact]
     public void TokenizeRagQuery_RemovesLowSignalExactResponseTerms()
     {
         var terms = WorkspaceSearchSupport.TokenizeRagQuery(

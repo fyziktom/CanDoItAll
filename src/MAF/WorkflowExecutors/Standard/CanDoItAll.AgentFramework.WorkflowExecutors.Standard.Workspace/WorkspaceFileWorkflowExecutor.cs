@@ -20,7 +20,7 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
             WorkflowStorageFileOperation.List => EnsureSucceeded(FilterList(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxResults), settings)),
             WorkflowStorageFileOperation.ListDirectory => EnsureSucceeded(FilterList(files.ListDirectory(EmptyToNull(settings.Path), settings.MaxResults), settings)),
             WorkflowStorageFileOperation.Tree => EnsureSucceeded(FilterList(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxFiles), settings)),
-            WorkflowStorageFileOperation.Exists => EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
+            WorkflowStorageFileOperation.Exists => EnsureStatObserved(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
             WorkflowStorageFileOperation.Stat => EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
             WorkflowStorageFileOperation.ReadText => EnsureSucceeded(files.ReadTextFile(Require(settings.Path, nameof(settings.Path)), settings.MaxCharacters)),
             WorkflowStorageFileOperation.WriteText => EnsureSucceeded(files.WriteTextFile(Require(settings.Path, nameof(settings.Path)), WorkflowInputPayloadText.Resolve(settings.Content, settings.ContentFromInput, input), settings.Overwrite)),
@@ -68,7 +68,7 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
         IWorkspaceFileService files,
         WorkflowStorageFileExecutorSettings settings)
     {
-        var stat = EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path))));
+        var stat = EnsureStatObserved(files.StatPath(Require(settings.Path, nameof(settings.Path))));
         return new
         {
             dryRun = true,
@@ -87,6 +87,16 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
         where T : IWorkspaceToolOperationResult
     {
         if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(result.Message);
+        }
+
+        return result;
+    }
+
+    private static WorkspacePathStatResult EnsureStatObserved(WorkspacePathStatResult result)
+    {
+        if (!result.Succeeded && !result.IsKnownMissing())
         {
             throw new InvalidOperationException(result.Message);
         }
@@ -123,4 +133,3 @@ public sealed class WorkspaceFileWorkflowExecutor(IWorkspaceFileService files) :
         return Regex.IsMatch(normalizedValue, regex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 }
-

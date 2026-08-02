@@ -1,13 +1,60 @@
+using System.Security.Cryptography;
+using System.Text;
 using CanDoItAll.AgentFramework.Models;
-using System.Text.RegularExpressions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
+internal readonly record struct WorkspaceMutationCommitResult(
+    string RetainedCleanupArtifact)
+{
+    public bool HasCleanupWarning => !string.IsNullOrWhiteSpace(RetainedCleanupArtifact);
+
+    public string AppendWarning(string message)
+        => HasCleanupWarning
+            ? $"{message} The mutation committed successfully, but transaction cleanup was incomplete; retained cleanup artifact '{RetainedCleanupArtifact}'."
+            : message;
+}
+
+internal enum WorkspaceStagedFileCommitState
+{
+    NotCommitted,
+    Committed
+}
+
+internal sealed record WorkspaceStagedFileCommitRequest(
+    string StagingPath,
+    string DestinationPath,
+    string? BackupPath,
+    bool ReplacesExistingFile);
+
+internal sealed class WorkspaceStagedFileCommitAttempt
+{
+    private WorkspaceStagedFileCommitAttempt(
+        WorkspaceStagedFileCommitState state,
+        Exception? failure)
+    {
+        State = state;
+        Failure = failure;
+    }
+
+    public WorkspaceStagedFileCommitState State { get; }
+
+    public Exception? Failure { get; }
+
+    public static WorkspaceStagedFileCommitAttempt Committed()
+        => new(WorkspaceStagedFileCommitState.Committed, null);
+
+    public static WorkspaceStagedFileCommitAttempt NotCommitted(Exception failure)
+        => new(
+            WorkspaceStagedFileCommitState.NotCommitted,
+            failure ?? throw new ArgumentNullException(nameof(failure)));
+}
+
 internal sealed class WorkspaceFileMutationService
 {
-    private static readonly Regex TestFrameworkShimNamespaceRegex = new(
-        @"\bnamespace\s+(Microsoft\.VisualStudio\.TestTools\.UnitTesting|Xunit|NUnit\.Framework)\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private readonly record struct WorkspaceFileFingerprint(
+        long Length,
+        string Sha256);
 
     private static readonly HashSet<string> ProjectFileExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,22 +65,69 @@ internal sealed class WorkspaceFileMutationService
         ".vbproj"
     };
 
-    private static readonly HashSet<string> ProjectSourceFileExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".cs",
-        ".cshtml",
-        ".fs",
-        ".razor",
-        ".vb"
-    };
-
     private readonly WorkspacePathPolicy pathPolicy;
     private readonly WorkspaceFileReceiptWriter receiptWriter;
+    private readonly WorkspaceDestinationContentPlacementPolicy destinationContentPlacementPolicy;
+    private readonly Action<string> deleteDirectoryTree;
+    private readonly Func<WorkspaceStagedFileCommitRequest, WorkspaceStagedFileCommitAttempt> commitStagedFile;
+    private readonly Func<string, string?> resolveVolumeRoot;
 
     public WorkspaceFileMutationService(WorkspacePathPolicy pathPolicy, WorkspaceFileReceiptWriter receiptWriter)
+        : this(
+            pathPolicy,
+            receiptWriter,
+            new WorkspaceDestinationContentPlacementPolicy(pathPolicy),
+            DeleteDirectoryTree,
+            CommitStagedFileWithFileSystem,
+            ResolveVolumeRoot)
     {
-        this.pathPolicy = pathPolicy;
-        this.receiptWriter = receiptWriter;
+    }
+
+    internal WorkspaceFileMutationService(
+        WorkspacePathPolicy pathPolicy,
+        WorkspaceFileReceiptWriter receiptWriter,
+        Func<string, IReadOnlyList<string>> enumerateProjectFiles)
+        : this(
+            pathPolicy,
+            receiptWriter,
+            new WorkspaceDestinationContentPlacementPolicy(pathPolicy, enumerateProjectFiles),
+            DeleteDirectoryTree,
+            CommitStagedFileWithFileSystem,
+            ResolveVolumeRoot)
+    {
+    }
+
+    internal WorkspaceFileMutationService(
+        WorkspacePathPolicy pathPolicy,
+        WorkspaceFileReceiptWriter receiptWriter,
+        Func<string, IReadOnlyList<string>> enumerateProjectFiles,
+        Action<string> deleteDirectoryTree,
+        Func<WorkspaceStagedFileCommitRequest, WorkspaceStagedFileCommitAttempt>? commitStagedFile = null,
+        Func<string, string?>? resolveVolumeRoot = null)
+        : this(
+            pathPolicy,
+            receiptWriter,
+            new WorkspaceDestinationContentPlacementPolicy(pathPolicy, enumerateProjectFiles),
+            deleteDirectoryTree,
+            commitStagedFile,
+            resolveVolumeRoot)
+    {
+    }
+
+    internal WorkspaceFileMutationService(
+        WorkspacePathPolicy pathPolicy,
+        WorkspaceFileReceiptWriter receiptWriter,
+        WorkspaceDestinationContentPlacementPolicy destinationContentPlacementPolicy,
+        Action<string>? deleteDirectoryTree = null,
+        Func<WorkspaceStagedFileCommitRequest, WorkspaceStagedFileCommitAttempt>? commitStagedFile = null,
+        Func<string, string?>? resolveVolumeRoot = null)
+    {
+        this.pathPolicy = pathPolicy ?? throw new ArgumentNullException(nameof(pathPolicy));
+        this.receiptWriter = receiptWriter ?? throw new ArgumentNullException(nameof(receiptWriter));
+        this.destinationContentPlacementPolicy = destinationContentPlacementPolicy ?? throw new ArgumentNullException(nameof(destinationContentPlacementPolicy));
+        this.deleteDirectoryTree = deleteDirectoryTree ?? DeleteDirectoryTree;
+        this.commitStagedFile = commitStagedFile ?? CommitStagedFileWithFileSystem;
+        this.resolveVolumeRoot = resolveVolumeRoot ?? ResolveVolumeRoot;
     }
 
     public WorkspaceFileMutationResult CreateDirectory(string path)
@@ -86,7 +180,11 @@ internal sealed class WorkspaceFileMutationService
             startedAtUtc: startedAtUtc);
     }
 
-    public WorkspaceFileMutationResult WriteTextFile(string path, string content, bool overwrite = true)
+    public WorkspaceFileMutationResult WriteTextFile(
+        string path,
+        string content,
+        bool overwrite = true,
+        string? authorityRootPath = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var resolution, out var validationMessage))
@@ -121,52 +219,47 @@ internal sealed class WorkspaceFileMutationService
                 startedAtUtc);
         }
 
-        if (!existedBefore &&
-            TryGetNestedProjectFileWriteMessage(resolution.FullPath, resolution.RelativePath, out var nestedProjectFileMessage))
-        {
-            return CreateMutationFailure(
-                "workspace_write_file",
-                nestedProjectFileMessage,
-                resolution.RelativePath,
-                null,
-                "file",
-                startedAtUtc);
-        }
-
-        if (!existedBefore &&
-            TryGetNestedProjectContainerWriteMessage(resolution.FullPath, resolution.RelativePath, out var nestedProjectContainerMessage))
-        {
-            return CreateMutationFailure(
-                "workspace_write_file",
-                nestedProjectContainerMessage,
-                resolution.RelativePath,
-                null,
-                "file",
-                startedAtUtc);
-        }
-
         var safeContent = content ?? string.Empty;
-        if (TryGetForbiddenFrameworkShimWriteMessage(resolution.FullPath, resolution.RelativePath, safeContent, out var frameworkShimMessage))
+        var contentByteCount = Encoding.UTF8.GetByteCount(safeContent);
+        if (contentByteCount > WorkspaceFileLimits.MaxTextMutationBytes)
         {
             return CreateMutationFailure(
                 "workspace_write_file",
-                frameworkShimMessage,
+                $"Cannot write '{resolution.RelativePath}' because its UTF-8 content exceeds the {WorkspaceFileLimits.MaxTextMutationBytes} byte text-mutation limit. No content changed.",
                 resolution.RelativePath,
                 null,
                 "file",
                 startedAtUtc);
         }
 
-        var directory = Path.GetDirectoryName(resolution.FullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
+        if (destinationContentPlacementPolicy.TryValidate(
+                resolution,
+                authorityRootPath,
+                [new WorkspaceDestinationContentCandidate(
+                    resolution.FullPath,
+                    resolution.RelativePath,
+                    existedBefore,
+                    () => safeContent)],
+                out var placementMessage))
         {
-            Directory.CreateDirectory(directory);
+            return CreateMutationFailure(
+                "workspace_write_file",
+                placementMessage,
+                resolution.RelativePath,
+                null,
+                "file",
+                startedAtUtc);
         }
 
-        File.WriteAllText(resolution.FullPath, safeContent);
+        var commitResult = WriteTextFileAtomically(
+            resolution.FullPath,
+            safeContent,
+            existedBefore,
+            overwrite);
         var message = existedBefore
             ? $"Overwrote '{resolution.RelativePath}' with {safeContent.Length} characters."
             : $"Created '{resolution.RelativePath}' with {safeContent.Length} characters.";
+        message = commitResult.AppendWarning(message);
 
         return CreateMutationSuccess(
             operation: "workspace_write_file",
@@ -182,7 +275,10 @@ internal sealed class WorkspaceFileMutationService
             startedAtUtc: startedAtUtc);
     }
 
-    public WorkspaceFileMutationResult AppendTextFile(string path, string content)
+    public WorkspaceFileMutationResult AppendTextFile(
+        string path,
+        string content,
+        string? authorityRootPath = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var resolution, out var validationMessage))
@@ -201,34 +297,115 @@ internal sealed class WorkspaceFileMutationService
                 startedAtUtc);
         }
 
-        var directory = Path.GetDirectoryName(resolution.FullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
         var existedBefore = File.Exists(resolution.FullPath);
         var safeContent = content ?? string.Empty;
-        File.AppendAllText(resolution.FullPath, safeContent);
-        var message = existedBefore
-            ? $"Appended {safeContent.Length} characters to '{resolution.RelativePath}'."
-            : $"Created '{resolution.RelativePath}' and appended {safeContent.Length} characters.";
+        var appendedBytes = Encoding.UTF8.GetBytes(safeContent);
+        if (appendedBytes.Length > WorkspaceFileLimits.MaxTextMutationBytes)
+        {
+            return CreateMutationFailure(
+                "workspace_append_file",
+                $"Cannot append to '{resolution.RelativePath}' because the appended UTF-8 content exceeds the {WorkspaceFileLimits.MaxTextMutationBytes} byte text-mutation limit. No content changed.",
+                resolution.RelativePath,
+                null,
+                "file",
+                startedAtUtc);
+        }
 
-        return CreateMutationSuccess(
-            operation: "workspace_append_file",
-            message: message,
-            path: resolution.RelativePath,
-            destinationPath: null,
-            pathKind: "file",
-            pathExistedBefore: existedBefore,
-            createdNewPath: !existedBefore,
-            overwroteExistingPath: false,
-            characterCount: safeContent.Length,
-            targetPaths: [resolution.RelativePath],
-            startedAtUtc: startedAtUtc);
+        var directory = Path.GetDirectoryName(resolution.FullPath)
+            ?? throw new InvalidOperationException($"Destination '{resolution.FullPath}' has no containing directory.");
+        Directory.CreateDirectory(directory);
+        var stagingPath = CreateSiblingArtifactPath(resolution.FullPath, "stage");
+        try
+        {
+            if (!TryStageAppend(
+                    resolution.FullPath,
+                    stagingPath,
+                    appendedBytes,
+                    existedBefore,
+                    out var originalFingerprint))
+            {
+                return CreateMutationFailure(
+                    "workspace_append_file",
+                    $"Cannot append to '{resolution.RelativePath}' because the resulting file would exceed the {WorkspaceFileLimits.MaxTextMutationBytes} byte text-mutation limit. No content changed.",
+                    resolution.RelativePath,
+                    null,
+                    "file",
+                    startedAtUtc);
+            }
+
+            if (destinationContentPlacementPolicy.TryValidate(
+                    resolution,
+                    authorityRootPath,
+                    [new WorkspaceDestinationContentCandidate(
+                        resolution.FullPath,
+                        resolution.RelativePath,
+                        existedBefore,
+                        () => ReadBoundedStagedText(stagingPath))],
+                    out var placementMessage))
+            {
+                return CreateMutationFailure(
+                    "workspace_append_file",
+                    placementMessage,
+                    resolution.RelativePath,
+                    null,
+                    "file",
+                    startedAtUtc);
+            }
+
+            if (existedBefore &&
+                (!TryCaptureFingerprint(
+                     resolution.FullPath,
+                     WorkspaceFileLimits.MaxTextMutationBytes,
+                     out var currentFingerprint) ||
+                 currentFingerprint != originalFingerprint))
+            {
+                return CreateMutationFailure(
+                    "workspace_append_file",
+                    $"Cannot append to '{resolution.RelativePath}' because the file could not be verified unchanged while the append was being prepared. It may have changed or become temporarily inaccessible; retry against the current file. No content changed by this operation.",
+                    resolution.RelativePath,
+                    null,
+                    "file",
+                    startedAtUtc);
+            }
+
+            var commitResult = CommitStagedFile(
+                stagingPath,
+                resolution.FullPath,
+                destinationExistedBefore: existedBefore,
+                overwrite: existedBefore,
+                commitStagedFile);
+            var message = existedBefore
+                ? $"Appended {safeContent.Length} characters to '{resolution.RelativePath}'."
+                : $"Created '{resolution.RelativePath}' and appended {safeContent.Length} characters.";
+            message = commitResult.AppendWarning(message);
+
+            return CreateMutationSuccess(
+                operation: "workspace_append_file",
+                message: message,
+                path: resolution.RelativePath,
+                destinationPath: null,
+                pathKind: "file",
+                pathExistedBefore: existedBefore,
+                createdNewPath: !existedBefore,
+                overwroteExistingPath: false,
+                characterCount: safeContent.Length,
+                targetPaths: [resolution.RelativePath],
+                startedAtUtc: startedAtUtc);
+        }
+        finally
+        {
+            if (File.Exists(stagingPath))
+            {
+                File.Delete(stagingPath);
+            }
+        }
     }
 
-    public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false)
+    public WorkspaceFileMutationResult CopyPath(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite = false,
+        string? destinationAuthorityRootPath = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         if (!pathPolicy.TryResolveWorkspacePath(sourcePath, allowWorkspaceRoot: false, out var sourceResolution, out var sourceValidation))
@@ -265,12 +442,6 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
-            var destinationDirectory = Path.GetDirectoryName(destinationResolution.FullPath);
-            if (!string.IsNullOrWhiteSpace(destinationDirectory))
-            {
-                Directory.CreateDirectory(destinationDirectory);
-            }
-
             var existedBefore = File.Exists(destinationResolution.FullPath);
             if (existedBefore && !overwrite)
             {
@@ -283,10 +454,33 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
-            File.Copy(sourceResolution.FullPath, destinationResolution.FullPath, overwrite);
+            if (destinationContentPlacementPolicy.TryValidate(
+                    destinationResolution,
+                    destinationAuthorityRootPath,
+                    [CreateDestinationCandidate(
+                        sourceResolution.FullPath,
+                        destinationResolution.FullPath,
+                        destinationResolution.RelativePath)],
+                    out var placementMessage))
+            {
+                return CreateMutationFailure(
+                    "workspace_copy_path",
+                    placementMessage,
+                    sourceResolution.RelativePath,
+                    destinationResolution.RelativePath,
+                    "file",
+                    startedAtUtc);
+            }
+
+            var commitResult = CopyFileAtomically(
+                sourceResolution.FullPath,
+                destinationResolution.FullPath,
+                existedBefore,
+                overwrite);
             var message = existedBefore
                 ? $"Copied '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}' and replaced the previous file."
                 : $"Copied '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}'.";
+            message = commitResult.AppendWarning(message);
 
             return CreateMutationSuccess(
                 operation: "workspace_copy_path",
@@ -318,8 +512,8 @@ internal sealed class WorkspaceFileMutationService
             if (ProjectFileExtensions.Contains(Path.GetExtension(destinationResolution.FullPath)))
             {
                 return CreateMutationFailure(
-                    "workspace_move_path",
-                    $"Cannot move directory '{sourceResolution.RelativePath}' to project-file path '{destinationResolution.RelativePath}'. That would create a directory named like a `.csproj`; move the actual project file or scaffold from the parent container instead.",
+                    "workspace_copy_path",
+                    $"Cannot copy directory '{sourceResolution.RelativePath}' to project-file path '{destinationResolution.RelativePath}'. That would create a directory named like a `.csproj`; copy the actual project file or scaffold from the parent container instead.",
                     sourceResolution.RelativePath,
                     destinationResolution.RelativePath,
                     "directory",
@@ -349,15 +543,33 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
-            if (existedBefore && overwrite)
+            var destinationCandidates = CreateDirectoryDestinationCandidates(
+                sourceResolution.FullPath,
+                destinationResolution.FullPath,
+                destinationResolution.RelativePath);
+            if (destinationContentPlacementPolicy.TryValidate(
+                    destinationResolution,
+                    destinationAuthorityRootPath,
+                    destinationCandidates,
+                    out var placementMessage))
             {
-                Directory.Delete(destinationResolution.FullPath, recursive: true);
+                return CreateMutationFailure(
+                    "workspace_copy_path",
+                    placementMessage,
+                    sourceResolution.RelativePath,
+                    destinationResolution.RelativePath,
+                    "directory",
+                    startedAtUtc);
             }
 
-            CopyDirectory(sourceResolution.FullPath, destinationResolution.FullPath, overwrite: true);
+            var commitResult = CopyDirectoryAtomically(
+                sourceResolution.FullPath,
+                destinationResolution.FullPath,
+                overwrite);
             var message = existedBefore
                 ? $"Copied directory '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}' and replaced the previous directory."
                 : $"Copied directory '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}'.";
+            message = commitResult.AppendWarning(message);
 
             return CreateMutationSuccess(
                 operation: "workspace_copy_path",
@@ -382,7 +594,11 @@ internal sealed class WorkspaceFileMutationService
             startedAtUtc);
     }
 
-    public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
+    public WorkspaceFileMutationResult MovePath(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite = false,
+        string? destinationAuthorityRootPath = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         if (!pathPolicy.TryResolveWorkspacePath(sourcePath, allowWorkspaceRoot: false, out var sourceResolution, out var sourceValidation))
@@ -406,6 +622,22 @@ internal sealed class WorkspaceFileMutationService
                 startedAtUtc);
         }
 
+        var sourcePathKind = ResolvePathKind(sourceResolution.FullPath);
+        if (sourcePathKind != "missing" &&
+            !ArePathsOnSameVolume(
+                sourceResolution.FullPath,
+                destinationResolution.FullPath,
+                resolveVolumeRoot))
+        {
+            return CreateMutationFailure(
+                "workspace_move_path",
+                $"Cannot move '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}' across filesystem volumes. Copy it with workspace_copy_path, verify the destination, and only then remove the source with workspace_delete_path. No content changed.",
+                sourceResolution.RelativePath,
+                destinationResolution.RelativePath,
+                sourcePathKind,
+                startedAtUtc);
+        }
+
         if (File.Exists(sourceResolution.FullPath))
         {
             if (Directory.Exists(destinationResolution.FullPath))
@@ -419,12 +651,6 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
-            var destinationDirectory = Path.GetDirectoryName(destinationResolution.FullPath);
-            if (!string.IsNullOrWhiteSpace(destinationDirectory))
-            {
-                Directory.CreateDirectory(destinationDirectory);
-            }
-
             var existedBefore = File.Exists(destinationResolution.FullPath);
             if (existedBefore && !overwrite)
             {
@@ -435,6 +661,30 @@ internal sealed class WorkspaceFileMutationService
                     destinationResolution.RelativePath,
                     "file",
                     startedAtUtc);
+            }
+
+            if (destinationContentPlacementPolicy.TryValidate(
+                    destinationResolution,
+                    destinationAuthorityRootPath,
+                    [CreateDestinationCandidate(
+                        sourceResolution.FullPath,
+                        destinationResolution.FullPath,
+                        destinationResolution.RelativePath)],
+                    out var placementMessage))
+            {
+                return CreateMutationFailure(
+                    "workspace_move_path",
+                    placementMessage,
+                    sourceResolution.RelativePath,
+                    destinationResolution.RelativePath,
+                    "file",
+                    startedAtUtc);
+            }
+
+            var destinationDirectory = Path.GetDirectoryName(destinationResolution.FullPath);
+            if (!string.IsNullOrWhiteSpace(destinationDirectory))
+            {
+                Directory.CreateDirectory(destinationDirectory);
             }
 
             File.Move(sourceResolution.FullPath, destinationResolution.FullPath, overwrite);
@@ -469,6 +719,17 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
+            if (ProjectFileExtensions.Contains(Path.GetExtension(destinationResolution.FullPath)))
+            {
+                return CreateMutationFailure(
+                    "workspace_move_path",
+                    $"Cannot move directory '{sourceResolution.RelativePath}' to project-file path '{destinationResolution.RelativePath}'. That would create a directory named like a `.csproj`; move the actual project file or scaffold from the parent container instead.",
+                    sourceResolution.RelativePath,
+                    destinationResolution.RelativePath,
+                    "directory",
+                    startedAtUtc);
+            }
+
             if (IsNestedPath(sourceResolution.FullPath, destinationResolution.FullPath))
             {
                 return CreateMutationFailure(
@@ -492,9 +753,23 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
-            if (existedBefore && overwrite)
+            var destinationCandidates = CreateDirectoryDestinationCandidates(
+                sourceResolution.FullPath,
+                destinationResolution.FullPath,
+                destinationResolution.RelativePath);
+            if (destinationContentPlacementPolicy.TryValidate(
+                    destinationResolution,
+                    destinationAuthorityRootPath,
+                    destinationCandidates,
+                    out var placementMessage))
             {
-                Directory.Delete(destinationResolution.FullPath, recursive: true);
+                return CreateMutationFailure(
+                    "workspace_move_path",
+                    placementMessage,
+                    sourceResolution.RelativePath,
+                    destinationResolution.RelativePath,
+                    "directory",
+                    startedAtUtc);
             }
 
             var destinationDirectory = Path.GetDirectoryName(destinationResolution.FullPath);
@@ -503,10 +778,14 @@ internal sealed class WorkspaceFileMutationService
                 Directory.CreateDirectory(destinationDirectory);
             }
 
-            Directory.Move(sourceResolution.FullPath, destinationResolution.FullPath);
+            var commitResult = MoveDirectoryWithRollback(
+                sourceResolution.FullPath,
+                destinationResolution.FullPath,
+                overwrite);
             var message = existedBefore
                 ? $"Moved directory '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}' and replaced the previous directory."
                 : $"Moved directory '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}'.";
+            message = commitResult.AppendWarning(message);
 
             return CreateMutationSuccess(
                 operation: "workspace_move_path",
@@ -592,10 +871,22 @@ internal sealed class WorkspaceFileMutationService
                     startedAtUtc);
             }
 
-            Directory.Delete(resolution.FullPath, recursive);
+            WorkspaceMutationCommitResult commitResult = default;
+            if (recursive)
+            {
+                commitResult = CommitRecursiveDirectoryDelete(
+                    resolution.FullPath,
+                    deleteDirectoryTree: deleteDirectoryTree);
+            }
+            else
+            {
+                Directory.Delete(resolution.FullPath, recursive: false);
+            }
+
             var message = recursive
                 ? $"Deleted directory '{resolution.RelativePath}' recursively."
                 : $"Deleted empty directory '{resolution.RelativePath}'.";
+            message = commitResult.AppendWarning(message);
 
             return CreateMutationSuccess(
                 operation: "workspace_delete_path",
@@ -703,8 +994,8 @@ internal sealed class WorkspaceFileMutationService
                      new EnumerationOptions
                      {
                          RecurseSubdirectories = true,
-                         IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         IgnoreInaccessible = false,
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             var relativePath = Path.GetRelativePath(sourcePath, directory);
@@ -717,8 +1008,8 @@ internal sealed class WorkspaceFileMutationService
                      new EnumerationOptions
                      {
                          RecurseSubdirectories = true,
-                         IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         IgnoreInaccessible = false,
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
             var relativePath = Path.GetRelativePath(sourcePath, file);
@@ -729,11 +1020,7 @@ internal sealed class WorkspaceFileMutationService
     }
 
     private static bool IsNestedPath(string parentPath, string candidatePath)
-    {
-        var normalizedParent = EnsureTrailingSeparator(Path.GetFullPath(parentPath));
-        var normalizedCandidate = EnsureTrailingSeparator(Path.GetFullPath(candidatePath));
-        return normalizedCandidate.StartsWith(normalizedParent, StringComparison.OrdinalIgnoreCase);
-    }
+        => WorkspacePathPolicy.IsPathWithinRoot(candidatePath, parentPath);
 
     private static bool ContainsProjectFile(string directory)
         => Directory.EnumerateFiles(
@@ -742,223 +1029,500 @@ internal sealed class WorkspaceFileMutationService
                 new EnumerationOptions
                 {
                     RecurseSubdirectories = true,
-                    IgnoreInaccessible = true,
-                    AttributesToSkip = 0
+                    IgnoreInaccessible = false,
+                    AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path)));
 
-    private static bool TryGetForbiddenFrameworkShimWriteMessage(string fullPath, string relativePath, string content, out string message)
+    private static WorkspaceDestinationContentCandidate CreateDestinationCandidate(
+        string sourcePath,
+        string destinationPath,
+        string destinationDisplayPath)
+        => new(
+            destinationPath,
+            destinationDisplayPath,
+            File.Exists(destinationPath),
+            () => File.ReadAllText(sourcePath));
+
+    private static IReadOnlyList<WorkspaceDestinationContentCandidate> CreateDirectoryDestinationCandidates(
+        string sourcePath,
+        string destinationPath,
+        string destinationDisplayPath)
+        => Directory.EnumerateFiles(
+                sourcePath,
+                "*",
+                new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = false,
+                    AttributesToSkip = FileAttributes.ReparsePoint
+                })
+            .Select(sourceFile =>
+            {
+                var relativePath = Path.GetRelativePath(sourcePath, sourceFile);
+                var targetPath = Path.Combine(destinationPath, relativePath);
+                var targetDisplayPath = Path.Combine(destinationDisplayPath, relativePath)
+                    .Replace(Path.DirectorySeparatorChar, '/')
+                    .Replace(Path.AltDirectorySeparatorChar, '/');
+                return CreateDestinationCandidate(sourceFile, targetPath, targetDisplayPath);
+            })
+            .ToArray();
+
+    private static bool TryStageAppend(
+        string destinationPath,
+        string stagingPath,
+        byte[] appendedBytes,
+        bool destinationExistedBefore,
+        out WorkspaceFileFingerprint originalFingerprint)
     {
-        message = string.Empty;
-        if (!string.Equals(Path.GetExtension(fullPath), ".cs", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(content))
+        originalFingerprint = default;
+        using var stagingStream = new FileStream(
+            stagingPath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.SequentialScan);
+        if (destinationExistedBefore)
         {
-            return false;
-        }
-
-        var shimNamespaceMatch = TestFrameworkShimNamespaceRegex.Match(content);
-        if (!shimNamespaceMatch.Success)
-        {
-            return false;
-        }
-
-        message = $"Cannot write C# file '{relativePath}' because it defines local shim types in framework or test-framework namespace '{shimNamespaceMatch.Groups[1].Value}'. Do not fake package, runtime, or test APIs to make validation pass. Fix the real package/project references, repair restore/build diagnostics, or return a concrete blocker.";
-        return true;
-    }
-
-    private static bool TryGetNestedProjectContainerWriteMessage(
-        string fullPath,
-        string relativePath,
-        out string message)
-    {
-        message = string.Empty;
-        if (!IsProjectOwnedFile(fullPath))
-        {
-            return false;
-        }
-
-        var targetFullPath = Path.GetFullPath(fullPath);
-        var targetDirectory = Path.GetDirectoryName(targetFullPath);
-        if (string.IsNullOrWhiteSpace(targetDirectory))
-        {
-            return false;
-        }
-
-        var currentDirectory = Directory.Exists(targetDirectory)
-            ? new DirectoryInfo(targetDirectory)
-            : Directory.GetParent(targetDirectory);
-
-        while (currentDirectory is not null)
-        {
-            if (ContainsTopLevelProjectFile(currentDirectory.FullName))
+            using var sourceStream = new FileStream(
+                destinationPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 81920,
+                FileOptions.SequentialScan);
+            var existingByteLimit = WorkspaceFileLimits.MaxTextMutationBytes - appendedBytes.Length;
+            if (!TryCopyAndFingerprint(
+                    sourceStream,
+                    stagingStream,
+                    existingByteLimit,
+                    out originalFingerprint))
             {
                 return false;
             }
+        }
 
-            if (TryFindSameNamedNestedProject(currentDirectory.FullName, out var existingProjectFile))
+        stagingStream.Write(appendedBytes, 0, appendedBytes.Length);
+        stagingStream.Flush(flushToDisk: true);
+        return true;
+    }
+
+    private static bool TryCaptureFingerprint(
+        string path,
+        long maxBytes,
+        out WorkspaceFileFingerprint fingerprint)
+    {
+        fingerprint = default;
+        try
+        {
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 81920,
+                FileOptions.SequentialScan);
+            return TryCopyAndFingerprint(
+                stream,
+                destination: null,
+                maxBytes,
+                out fingerprint);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryCopyAndFingerprint(
+        Stream source,
+        Stream? destination,
+        long maxBytes,
+        out WorkspaceFileFingerprint fingerprint)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = new byte[81920];
+        long totalBytes = 0;
+        while (true)
+        {
+            var read = source.Read(buffer, 0, buffer.Length);
+            if (read == 0)
             {
-                var existingProjectPath = Path.GetRelativePath(currentDirectory.FullName, existingProjectFile)
-                    .Replace(Path.DirectorySeparatorChar, '/')
-                    .Replace(Path.AltDirectorySeparatorChar, '/');
-                message = $"Cannot create project-owned file '{relativePath}' outside the existing nested project '{existingProjectPath}'. Use the nested host project path, or establish a sibling project through an explicit project-creation operation; do not create a second root project or source tree.";
-                return true;
+                break;
             }
 
-            currentDirectory = currentDirectory.Parent;
-        }
-
-        return false;
-    }
-
-    private static bool TryGetNestedProjectFileWriteMessage(
-        string fullPath,
-        string relativePath,
-        out string message)
-    {
-        message = string.Empty;
-        if (!ProjectFileExtensions.Contains(Path.GetExtension(fullPath)))
-        {
-            return false;
-        }
-
-        var targetFullPath = Path.GetFullPath(fullPath);
-        var targetDirectory = Path.GetDirectoryName(targetFullPath);
-        if (string.IsNullOrWhiteSpace(targetDirectory) ||
-            ContainsTopLevelProjectFile(targetDirectory))
-        {
-            return false;
-        }
-
-        var currentDirectory = Directory.GetParent(targetDirectory);
-        while (currentDirectory is not null)
-        {
-            if (ContainsTopLevelBuildProjectFile(currentDirectory.FullName))
+            totalBytes += read;
+            if (totalBytes > maxBytes)
             {
-                var ancestorRelativePath = Path.GetRelativePath(currentDirectory.FullName, targetFullPath)
-                    .Replace(Path.DirectorySeparatorChar, '/')
-                    .Replace(Path.AltDirectorySeparatorChar, '/');
-                message = $"Cannot create nested project file '{relativePath}' under existing .NET project directory '{currentDirectory.FullName}'. This would create project '{ancestorRelativePath}' inside an already scaffolded host. Repair that host in place, or create a sibling project from the host parent directory.";
-                return true;
+                fingerprint = default;
+                return false;
             }
 
-            currentDirectory = currentDirectory.Parent;
+            hash.AppendData(buffer, 0, read);
+            destination?.Write(buffer, 0, read);
         }
 
-        return false;
+        fingerprint = new WorkspaceFileFingerprint(
+            totalBytes,
+            Convert.ToHexString(hash.GetHashAndReset()));
+        return true;
     }
 
-    private static bool IsProjectOwnedFile(string fullPath)
+    private static string ReadBoundedStagedText(string stagingPath)
     {
-        var extension = Path.GetExtension(fullPath);
-        return ProjectFileExtensions.Contains(extension) ||
-               ProjectSourceFileExtensions.Contains(extension);
+        using var stream = new FileStream(
+            stagingPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 81920,
+            FileOptions.SequentialScan);
+        var buffer = new byte[WorkspaceFileLimits.MaxTextMutationBytes + 1];
+        var totalRead = 0;
+        while (totalRead < buffer.Length)
+        {
+            var read = stream.Read(buffer, totalRead, buffer.Length - totalRead);
+            if (read == 0)
+            {
+                break;
+            }
+
+            totalRead += read;
+        }
+
+        if (totalRead > WorkspaceFileLimits.MaxTextMutationBytes)
+        {
+            throw new IOException("The staged text mutation exceeded its verified byte limit.");
+        }
+
+        var content = Encoding.UTF8.GetString(buffer, 0, totalRead);
+        return content.Length > 0 && content[0] == '\uFEFF'
+            ? content[1..]
+            : content;
     }
 
-    private static bool ContainsTopLevelProjectFile(string directory)
-        => Directory.Exists(directory) &&
-           Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-               .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path)));
-
-    private static bool ContainsTopLevelBuildProjectFile(string directory)
-        => Directory.Exists(directory) &&
-           Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-               .Any(path => string.Equals(Path.GetExtension(path), ".csproj", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(Path.GetExtension(path), ".fsproj", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(Path.GetExtension(path), ".vbproj", StringComparison.OrdinalIgnoreCase));
-
-    private static bool TryFindSameNamedNestedProject(string containerDirectory, out string projectFile)
+    private WorkspaceMutationCommitResult WriteTextFileAtomically(
+        string destinationPath,
+        string content,
+        bool destinationExistedBefore,
+        bool overwrite)
     {
-        projectFile = string.Empty;
-        if (!Directory.Exists(containerDirectory))
+        var destinationDirectory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException($"Destination '{destinationPath}' has no containing directory.");
+        Directory.CreateDirectory(destinationDirectory);
+        var stagingPath = CreateSiblingArtifactPath(destinationPath, "stage");
+
+        try
         {
-            return false;
+            File.WriteAllText(stagingPath, content);
+            return CommitStagedFile(
+                stagingPath,
+                destinationPath,
+                destinationExistedBefore,
+                overwrite,
+                commitStagedFile);
+        }
+        finally
+        {
+            if (File.Exists(stagingPath))
+            {
+                File.Delete(stagingPath);
+            }
+        }
+    }
+
+    private static WorkspaceMutationCommitResult CopyFileAtomically(
+        string sourcePath,
+        string destinationPath,
+        bool destinationExistedBefore,
+        bool overwrite)
+    {
+        var destinationDirectory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException($"Destination '{destinationPath}' has no containing directory.");
+        Directory.CreateDirectory(destinationDirectory);
+        var stagingPath = CreateSiblingArtifactPath(destinationPath, "stage");
+
+        try
+        {
+            File.Copy(sourcePath, stagingPath, overwrite: false);
+            return CommitStagedFile(
+                stagingPath,
+                destinationPath,
+                destinationExistedBefore,
+                overwrite);
+        }
+        finally
+        {
+            if (File.Exists(stagingPath))
+            {
+                File.Delete(stagingPath);
+            }
+        }
+    }
+
+    internal static WorkspaceMutationCommitResult CommitStagedFile(
+        string stagingPath,
+        string destinationPath,
+        bool destinationExistedBefore,
+        bool overwrite,
+        Func<WorkspaceStagedFileCommitRequest, WorkspaceStagedFileCommitAttempt>? commitStagedFile = null,
+        Action<string>? deleteFile = null)
+    {
+        var commitFile = commitStagedFile ?? CommitStagedFileWithFileSystem;
+        var cleanupFile = deleteFile ?? File.Delete;
+        if (destinationExistedBefore && !overwrite)
+        {
+            throw new IOException($"Destination file '{destinationPath}' already exists.");
         }
 
-        var containerName = Path.GetFileName(Path.TrimEndingDirectorySeparator(containerDirectory));
-        if (string.IsNullOrWhiteSpace(containerName))
+        var backupPath = destinationExistedBefore
+            ? CreateSiblingArtifactPath(destinationPath, "backup")
+            : null;
+        var attempt = commitFile(new WorkspaceStagedFileCommitRequest(
+            stagingPath,
+            destinationPath,
+            backupPath,
+            ReplacesExistingFile: destinationExistedBefore));
+        if (attempt.State == WorkspaceStagedFileCommitState.NotCommitted)
         {
-            return false;
+            if (backupPath is not null && File.Exists(backupPath))
+            {
+                File.Delete(backupPath);
+            }
+
+            throw attempt.Failure ?? new IOException("The staged-file commit did not complete.");
         }
 
-        foreach (var candidate in Directory.EnumerateFiles(
-                     containerDirectory,
-                     "*.*",
+        if (backupPath is null)
+        {
+            return default;
+        }
+
+        return CleanupCommittedArtifact(cleanupFile, backupPath);
+    }
+
+    private WorkspaceMutationCommitResult CopyDirectoryAtomically(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite)
+    {
+        var destinationDirectory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException($"Destination '{destinationPath}' has no containing directory.");
+        Directory.CreateDirectory(destinationDirectory);
+        var stagingPath = CreateSiblingArtifactPath(destinationPath, "stage");
+
+        try
+        {
+            CopyDirectory(sourcePath, stagingPath, overwrite: true);
+            return CommitStagedDirectory(
+                stagingPath,
+                destinationPath,
+                overwrite,
+                deleteDirectoryTree);
+        }
+        finally
+        {
+            if (Directory.Exists(stagingPath))
+            {
+                deleteDirectoryTree(stagingPath);
+            }
+        }
+    }
+
+    private WorkspaceMutationCommitResult MoveDirectoryWithRollback(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite)
+    {
+        if (!Directory.Exists(destinationPath))
+        {
+            Directory.Move(sourcePath, destinationPath);
+            return default;
+        }
+
+        if (!overwrite)
+        {
+            throw new IOException($"Destination directory '{destinationPath}' already exists.");
+        }
+
+        var backupPath = CreateSiblingArtifactPath(destinationPath, "backup");
+        Directory.Move(destinationPath, backupPath);
+        try
+        {
+            Directory.Move(sourcePath, destinationPath);
+        }
+        catch
+        {
+            if (!Directory.Exists(destinationPath) && Directory.Exists(backupPath))
+            {
+                Directory.Move(backupPath, destinationPath);
+            }
+
+            throw;
+        }
+
+        return CleanupCommittedArtifact(deleteDirectoryTree, backupPath);
+    }
+
+    internal static WorkspaceMutationCommitResult CommitStagedDirectory(
+        string stagingPath,
+        string destinationPath,
+        bool overwrite,
+        Action<string>? deleteDirectoryTree = null)
+    {
+        if (!Directory.Exists(destinationPath))
+        {
+            Directory.Move(stagingPath, destinationPath);
+            return default;
+        }
+
+        if (!overwrite)
+        {
+            throw new IOException($"Destination directory '{destinationPath}' already exists.");
+        }
+
+        var backupPath = CreateSiblingArtifactPath(destinationPath, "backup");
+        Directory.Move(destinationPath, backupPath);
+        try
+        {
+            Directory.Move(stagingPath, destinationPath);
+        }
+        catch
+        {
+            if (!Directory.Exists(destinationPath) && Directory.Exists(backupPath))
+            {
+                Directory.Move(backupPath, destinationPath);
+            }
+
+            throw;
+        }
+
+        return CleanupCommittedArtifact(
+            deleteDirectoryTree ?? DeleteDirectoryTree,
+            backupPath);
+    }
+
+    internal static WorkspaceMutationCommitResult CommitRecursiveDirectoryDelete(
+        string directoryPath,
+        Action<string, string>? moveDirectory = null,
+        Action<string>? deleteDirectoryTree = null)
+    {
+        var tombstonePath = CreateSiblingArtifactPath(directoryPath, "tombstone");
+        var move = moveDirectory ?? Directory.Move;
+        try
+        {
+            move(directoryPath, tombstonePath);
+        }
+        catch
+        {
+            if (!Directory.Exists(directoryPath) && Directory.Exists(tombstonePath))
+            {
+                Directory.Move(tombstonePath, directoryPath);
+            }
+
+            throw;
+        }
+
+        return CleanupCommittedArtifact(
+            deleteDirectoryTree ?? DeleteDirectoryTree,
+            tombstonePath);
+    }
+
+    private static WorkspaceMutationCommitResult CleanupCommittedArtifact(
+        Action<string> deleteArtifact,
+        string artifactPath)
+    {
+        try
+        {
+            deleteArtifact(artifactPath);
+            return default;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new WorkspaceMutationCommitResult(Path.GetFileName(artifactPath));
+        }
+        catch (IOException)
+        {
+            return new WorkspaceMutationCommitResult(Path.GetFileName(artifactPath));
+        }
+    }
+
+    internal static bool ArePathsOnSameVolume(
+        string sourcePath,
+        string destinationPath,
+        Func<string, string?>? volumeRootResolver = null)
+    {
+        var resolver = volumeRootResolver ?? ResolveVolumeRoot;
+        var sourceRoot = resolver(sourcePath);
+        var destinationRoot = resolver(destinationPath);
+        return !string.IsNullOrWhiteSpace(sourceRoot) &&
+               !string.IsNullOrWhiteSpace(destinationRoot) &&
+               string.Equals(sourceRoot, destinationRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ResolveVolumeRoot(string path)
+        => Path.GetPathRoot(Path.GetFullPath(path));
+
+    private static WorkspaceStagedFileCommitAttempt CommitStagedFileWithFileSystem(
+        WorkspaceStagedFileCommitRequest request)
+    {
+        try
+        {
+            if (request.ReplacesExistingFile)
+            {
+                File.Replace(
+                    request.StagingPath,
+                    request.DestinationPath,
+                    request.BackupPath);
+            }
+            else
+            {
+                File.Move(
+                    request.StagingPath,
+                    request.DestinationPath,
+                    overwrite: false);
+            }
+
+            return WorkspaceStagedFileCommitAttempt.Committed();
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        {
+            return WorkspaceStagedFileCommitAttempt.NotCommitted(exception);
+        }
+    }
+
+    internal static string CreateSiblingArtifactPath(string destinationPath, string purpose)
+    {
+        var parentDirectory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException($"Destination '{destinationPath}' has no containing directory.");
+        var destinationName = Path.GetFileName(Path.TrimEndingDirectorySeparator(destinationPath));
+        return Path.Combine(
+            parentDirectory,
+            $".{destinationName}.candoitall-{purpose}-{Guid.NewGuid():N}");
+    }
+
+    internal static void DeleteDirectoryTree(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(
+                     path,
+                     "*",
                      new EnumerationOptions
                      {
                          RecurseSubdirectories = true,
-                         IgnoreInaccessible = true,
-                         AttributesToSkip = 0
+                         IgnoreInaccessible = false,
+                         AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
-            if (!ProjectFileExtensions.Contains(Path.GetExtension(candidate)))
-            {
-                continue;
-            }
-
-            var projectDirectory = Path.GetDirectoryName(candidate);
-            if (string.IsNullOrWhiteSpace(projectDirectory) ||
-                string.Equals(projectDirectory, containerDirectory, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (string.Equals(Path.GetFileName(projectDirectory), containerName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(Path.GetFileNameWithoutExtension(candidate), containerName, StringComparison.OrdinalIgnoreCase))
-            {
-                projectFile = candidate;
-                return true;
-            }
+            File.SetAttributes(file, FileAttributes.Normal);
         }
 
-        return false;
+        Directory.Delete(path, recursive: true);
     }
 
-    private static bool TryFindNearestProjectDirectory(string fullPath, out string projectDirectory)
-    {
-        var currentDirectory = ResolveProjectDirectorySearchStart(fullPath);
-
-        while (currentDirectory is not null)
-        {
-            if (Directory.Exists(currentDirectory.FullName) &&
-                Directory.EnumerateFiles(currentDirectory.FullName, "*.*", SearchOption.TopDirectoryOnly)
-                .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path))))
-            {
-                projectDirectory = currentDirectory.FullName;
-                return true;
-            }
-
-            currentDirectory = currentDirectory.Parent;
-        }
-
-        projectDirectory = string.Empty;
-        return false;
-    }
-
-    private static DirectoryInfo? ResolveProjectDirectorySearchStart(string fullPath)
-    {
-        if (Directory.Exists(fullPath))
-        {
-            return new DirectoryInfo(fullPath);
-        }
-
-        var searchPath = File.Exists(fullPath) || !string.IsNullOrWhiteSpace(Path.GetExtension(fullPath))
-            ? Path.GetDirectoryName(fullPath)
-            : fullPath;
-
-        return string.IsNullOrWhiteSpace(searchPath)
-            ? null
-            : new DirectoryInfo(searchPath);
-    }
-
-    private static string NormalizeProjectRelativePath(string projectDirectory, string fullPath)
-        => Path.GetRelativePath(projectDirectory, fullPath)
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .Replace(Path.AltDirectorySeparatorChar, '/');
-
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
 }

@@ -103,6 +103,7 @@ internal static class RuntimeCapabilityAccessPolicyBuilder
         if (!normalized.CanReadStorage)
         {
             AddStorageRule(rules, RuntimeStorageToolNames.CatalogList, "read storage");
+            AddStorageRule(rules, RuntimeStorageToolNames.Browse, "read storage");
             AddStorageRule(rules, RuntimeStorageToolNames.ReadTextFile, "read storage");
         }
 

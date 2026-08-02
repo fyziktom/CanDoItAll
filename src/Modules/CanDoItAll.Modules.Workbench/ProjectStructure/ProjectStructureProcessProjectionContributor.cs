@@ -26,7 +26,6 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     private const string ProductRootVariableName = "ProductRoot";
     private const string OutputRootVariableName = "OutputRoot";
     private const string ExternalTargetRootVariableName = "ExternalTargetRoot";
-    private const string ProcessRunOutputFolderArtifactKind = "process-run-output-folder";
     private const string ProcessRunSummaryArtifactKind = "process-run-summary";
     private const string ProcessRunRuntimeArtifactKind = "process-run-runtime";
     private const int MaxProjectedScreenshotCount = 6;
@@ -457,7 +456,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 MetadataJson = BuildRunOutputMetadataJson(outputFolder),
                 Binding = ProjectStructureProjectionBindingFactory.Create(
                     $"/projects/{context.ProjectId:D}/structure",
-                    ProcessRunOutputFolderArtifactKind,
+                    ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind,
                     state.RunId),
                 ParentNodeKey = runNodeKey,
                 CreatedAtUtc = state.UpdatedAtUtc,
@@ -1070,12 +1069,13 @@ internal sealed class ProjectStructureProcessProjectionContributor(
 
     private static string BuildRunOutputMetadataJson(ProcessRunArtifactRootResolution outputFolder)
     {
-        return JsonSerializer.Serialize(new
+        return ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
         {
-            processRunOutput = new
+            File = new ProjectFileMetadata
             {
-                outputFolder.DirectoryPath,
-                Kind = outputFolder.Kind.ToString()
+                FileSubtype = ProjectFileSubtype.Folder,
+                SourceHint = ResolveRunOutputSubtitle(outputFolder.Kind),
+                ExternalPath = outputFolder.DirectoryPath
             }
         });
     }

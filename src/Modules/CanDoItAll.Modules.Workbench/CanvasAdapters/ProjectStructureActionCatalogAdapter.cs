@@ -26,6 +26,11 @@ public sealed class ProjectStructureActionCatalogAdapter
             return BuildProjectContextActions(node);
         }
 
+        if (IsReadOnlyProjectedFileCollection(node))
+        {
+            return BuildReadOnlyFileCollectionContextActions(node, canOpenInFileExplorer);
+        }
+
         var actions = new List<CanvasWorkbenchAction>
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
@@ -577,6 +582,55 @@ public sealed class ProjectStructureActionCatalogAdapter
         return actions;
     }
 
+    private static IReadOnlyList<CanvasWorkbenchAction> BuildReadOnlyFileCollectionContextActions(
+        ProjectStructureNode node,
+        bool canOpenInFileExplorer)
+    {
+        var actions = new List<CanvasWorkbenchAction>
+        {
+            ProjectStructureFileActions.CreateCanvasAction(),
+            new()
+            {
+                ActionId = "copy-id",
+                Label = "Copy id",
+                MenuLabel = "Copy id",
+                Description = "Copy this node id to the clipboard.",
+                Icon = "copy",
+                Tone = "ghost"
+            },
+            new()
+            {
+                ActionId = "copy-info",
+                Label = "Copy info",
+                MenuLabel = "Copy info",
+                Description = "Copy the folder identity and managed path details.",
+                Icon = "copy",
+                Tone = "primary"
+            }
+        };
+
+        if (canOpenInFileExplorer)
+        {
+            actions.Insert(1, new CanvasWorkbenchAction
+            {
+                ActionId = "open-local",
+                Label = "Open in Explorer",
+                MenuLabel = "Explorer",
+                Description = "Open this trusted managed folder in the system file browser.",
+                Icon = "folder_open",
+                Tone = "primary"
+            });
+        }
+
+        return actions;
+    }
+
+    private static bool IsReadOnlyProjectedFileCollection(ProjectStructureNode node)
+        => node.IsSystemManaged &&
+           node.ObjectType == ProjectObjectType.File &&
+           string.Equals(node.ObjectSubtype, "folder", StringComparison.OrdinalIgnoreCase) &&
+           ProjectStructureFileActions.CanBrowseFiles(node);
+
     private static CanvasWorkbenchAction BuildMarkerAction()
         => new()
         {
@@ -625,5 +679,4 @@ public sealed class ProjectStructureActionCatalogAdapter
             ]
         };
 }
-
 

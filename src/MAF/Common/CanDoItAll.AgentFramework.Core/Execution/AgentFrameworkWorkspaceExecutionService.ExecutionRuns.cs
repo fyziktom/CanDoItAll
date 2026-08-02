@@ -517,6 +517,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         structuredOutput,
                         handoffOptions,
+                        response => lastRuntimeResponse = response,
                         runtimeCancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -589,7 +590,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionOutcome,
                     DateTimeOffset.UtcNow);
                 updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
-                var runtimeToolReceipts = CreateRuntimeProviderToolReceipts(run, runtimeResponse);
+                var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
                     prepared.RunApprovals,
@@ -623,7 +624,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
                             UsageObservations: usageObservations,
-                            ToolReceipts: runtimeToolReceipts),
+                            ToolReceipts: toolInvocationTraceReceipts),
                         cancellationToken);
                 }
                 else
@@ -634,7 +635,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
                             UsageObservations: usageObservations,
-                            ToolReceipts: runtimeToolReceipts),
+                            ToolReceipts: toolInvocationTraceReceipts),
                         cancellationToken);
                 }
                 terminalRunPersisted =
@@ -700,6 +701,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
                 _ => failureDisplay!.Message
             };
+            var failureToolInvocationTraces = ResolveFailureToolInvocationTraces(
+                lastRuntimeResponse,
+                exception);
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -712,7 +716,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: 0,
                     OutputTokens: 0,
-                    ToolCalls: 0)
+                    ToolCalls: failureToolInvocationTraces.Count)
                 {
                     ExecutionRunId = run.Id
                 },
@@ -730,6 +734,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     provider,
                     failureMetric,
                     lastRuntimeResponse);
+            var failureToolReceipts = CreateToolInvocationTraceReceipts(
+                run,
+                failureToolInvocationTraces);
 
             var failedRun = run with
             {
@@ -754,7 +761,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Run: failedRun,
                             Session: updatedSession,
                             Metric: failureMetric,
-                            UsageObservations: failureUsageObservations),
+                            UsageObservations: failureUsageObservations,
+                            ToolReceipts: failureToolReceipts),
                         terminalPersistenceToken);
             }
             else
@@ -763,7 +771,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     new ExecutionStateMutation(
                         Run: failedRun,
                         Metric: failureMetric,
-                        UsageObservations: failureUsageObservations),
+                        UsageObservations: failureUsageObservations,
+                        ToolReceipts: failureToolReceipts),
                     terminalPersistenceToken);
             }
             terminalRunPersisted = true;
@@ -1306,6 +1315,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         request.StructuredOutput,
                         handoffOptions,
+                        response => lastRuntimeResponse = response,
                         runtimeCancellationToken);
 
                     runtimeSession = continuation.Session;
@@ -1378,7 +1388,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionOutcome,
                     DateTimeOffset.UtcNow);
                 updatedRun = ApplyPortableJsonSchemaOutputEvidence(updatedRun, portableStructuredOutput);
-                var runtimeToolReceipts = CreateRuntimeProviderToolReceipts(run, runtimeResponse);
+                var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
                     [],
@@ -1412,7 +1422,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
                             UsageObservations: usageObservations,
-                            ToolReceipts: runtimeToolReceipts),
+                            ToolReceipts: toolInvocationTraceReceipts),
                         cancellationToken);
                 }
                 else
@@ -1423,7 +1433,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             RunApprovals: approvalUpdate.RunApprovals,
                             Metric: metric,
                             UsageObservations: usageObservations,
-                            ToolReceipts: runtimeToolReceipts),
+                            ToolReceipts: toolInvocationTraceReceipts),
                         cancellationToken);
                 }
                 terminalRunPersisted =
@@ -1489,6 +1499,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
                 _ => failureDisplay!.Message
             };
+            var failureToolInvocationTraces = ResolveFailureToolInvocationTraces(
+                lastRuntimeResponse,
+                exception);
             var failureMetric = PriceMetric(
                 new AgentRunMetric(
                     Id: Guid.NewGuid(),
@@ -1501,7 +1514,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
                     OutputTokens: 0,
-                    ToolCalls: 0)
+                    ToolCalls: failureToolInvocationTraces.Count)
                 {
                     ExecutionRunId = run.Id
                 },
@@ -1519,6 +1532,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     provider,
                     failureMetric,
                     lastRuntimeResponse);
+            var failureToolReceipts = CreateToolInvocationTraceReceipts(
+                run,
+                failureToolInvocationTraces);
 
             var failedRun = run with
             {
@@ -1542,7 +1558,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Run: failedRun,
                             Session: updatedSession,
                             Metric: failureMetric,
-                            UsageObservations: failureUsageObservations),
+                            UsageObservations: failureUsageObservations,
+                            ToolReceipts: failureToolReceipts),
                         terminalPersistenceToken);
             }
             else
@@ -1551,7 +1568,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     new ExecutionStateMutation(
                         Run: failedRun,
                         Metric: failureMetric,
-                        UsageObservations: failureUsageObservations),
+                        UsageObservations: failureUsageObservations,
+                        ToolReceipts: failureToolReceipts),
                     terminalPersistenceToken);
             }
             terminalRunPersisted = true;

@@ -176,7 +176,7 @@ public sealed partial class ProjectWorkbenchService
             nodeKeyMap);
     }
 
-    private static ProjectObjectRecord CloneNode(
+    private ProjectObjectRecord CloneNode(
         ProjectObjectRecord source,
         Guid id,
         string nodeKey,
@@ -185,6 +185,18 @@ public sealed partial class ProjectWorkbenchService
         DateTimeOffset copiedAtUtc)
     {
         var copyState = ProjectObjectClipboardCopyPolicy.Prepare(source, nodeKeyMap);
+        var runtimeMetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+            source.ObjectType,
+            source.ObjectSubtype,
+            source.Notes,
+            copyState.MetadataJson);
+        var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
+            source.ObjectType,
+            source.ObjectSubtype,
+            runtimeMetadataJson,
+            null,
+            source.Notes,
+            null);
 
         return new ProjectObjectRecord
         {
@@ -201,7 +213,7 @@ public sealed partial class ProjectWorkbenchService
             ProgressPercent = copyState.ProgressPercent,
             MarkersJson = copyState.MarkersJson,
             Priority = source.Priority,
-            MetadataJson = copyState.MetadataJson,
+            MetadataJson = metadataJson,
             ParentNodeKey = parentNodeKey,
             PositionX = source.PositionX,
             PositionY = source.PositionY,

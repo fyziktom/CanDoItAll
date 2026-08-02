@@ -41,6 +41,47 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         Assert.Contains("specific grounded path", validationMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("external-target/C/repositories/demo/../secret")]
+    [InlineData("external-target/C/repositories/demo/./src")]
+    [InlineData("external-target/C/repositories/demo/..")]
+    [InlineData("external-target/C/repositories/demo/.")]
+    [InlineData(@"external-target\C\repositories\demo\..\secret")]
+    public void TryResolveWorkspacePath_rejects_external_target_dot_segments(string aliasPath)
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+
+        var succeeded = policy.TryResolveWorkspacePath(
+            aliasPath,
+            allowWorkspaceRoot: false,
+            out _,
+            out var validationMessage);
+
+        Assert.False(succeeded);
+        Assert.Contains("traversal segments", validationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TryResolveWorkspacePath_rejects_reparse_point_traversal()
+    {
+        var workspaceRoot = CreateDirectory("workspace");
+        var outsideRoot = CreateDirectory("outside");
+        File.WriteAllText(Path.Combine(outsideRoot, "secret.txt"), "secret");
+        var linkedRoot = Path.Combine(workspaceRoot, "linked");
+        Directory.CreateSymbolicLink(linkedRoot, outsideRoot);
+        var policy = new WorkspacePathPolicy(workspaceRoot);
+
+        var succeeded = policy.TryResolveWorkspacePath(
+            "linked/secret.txt",
+            allowWorkspaceRoot: false,
+            out _,
+            out var validationMessage);
+
+        Assert.False(succeeded);
+        Assert.Contains("reparse-point traversal", validationMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void WriteTextFile_writes_to_real_external_target_for_alias_path()
     {
@@ -290,6 +331,23 @@ app.Run();
         var plan = builder.BuildDotnetNew("blazor", "WorkflowApp", force: true);
 
         Assert.Contains("--force", plan.Arguments, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void BuildDotnetNew_fails_closed_when_existing_target_tree_cannot_be_fully_inspected()
+    {
+        var workspaceRoot = CreateDirectory("workspace-inaccessible-target");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps", "WorkflowApp"));
+        var builder = new WorkspaceCommandPlanBuilder(
+            new WorkspacePathPolicy(workspaceRoot),
+            _ => throw new UnauthorizedAccessException(@"C:\private\native-path"));
+
+        var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(
+            () => builder.BuildDotnetNew("blazor", "WorkflowApp", "apps"));
+
+        Assert.Equal(WorkspaceToolAccessDeniedException.FailureCode, exception.ErrorCode);
+        Assert.Contains("apps/WorkflowApp", exception.SafeMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\private\native-path", exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()

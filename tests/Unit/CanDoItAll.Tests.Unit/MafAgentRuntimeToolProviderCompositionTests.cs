@@ -11,6 +11,7 @@ using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +31,6 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         var state = await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), progressMessages);
 
         var tools = ReadTools(state);
-        Assert.Empty(tools);
         Assert.DoesNotContain(tools, tool =>
             tool.Name.StartsWith("processes_", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(progressMessages, message =>
@@ -42,8 +42,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_invokes_fake_providers_in_deterministic_order()
     {
-        var lateProvider = new TestRuntimeToolProvider(20, "late_runtime_tool");
-        var earlyProvider = new TestRuntimeToolProvider(10, "early_runtime_tool");
+        var lateProvider = new TestRuntimeToolProvider(20, AgentToolInvocationPolicyMetadata.ProcessesRunsList);
+        var earlyProvider = new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList);
         var services = new ServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(lateProvider);
         services.AddSingleton<IAgentRuntimeToolProvider>(earlyProvider);
@@ -56,8 +56,11 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
         var toolNames = ReadTools(state)
             .Select(tool => tool.Name)
+            .Where(name => name is AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList or AgentToolInvocationPolicyMetadata.ProcessesRunsList)
             .ToList();
-        Assert.Equal(["early_runtime_tool", "late_runtime_tool"], toolNames);
+        Assert.Equal(
+            [AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList, AgentToolInvocationPolicyMetadata.ProcessesRunsList],
+            toolNames);
         Assert.Single(earlyProvider.Contexts);
         Assert.Single(lateProvider.Contexts);
         Assert.Equal(agent.Id, earlyProvider.Contexts[0].Agent.Id);
@@ -75,7 +78,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_propagates_authoritative_runtime_session_key()
     {
-        var provider = new TestRuntimeToolProvider(10, "runtime_session_probe");
+        var provider = new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesRunsList);
         var services = new ServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(provider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
@@ -97,7 +100,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     {
         var runtimeProvider = new TestRuntimeToolProvider(
             10,
-            "runtime_attachment_probe");
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList);
         var services = new ServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(
@@ -177,7 +180,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             });
 
         Assert.Empty(provider.Contexts);
-        Assert.Empty(ReadTools(state));
+        Assert.DoesNotContain(ReadTools(state), tool => tool.Name == "runtime_tool_should_not_attach");
         Assert.Empty(ReadProviderDescriptors(state));
         Assert.Contains(ReadContextSources(state), source =>
             source.Category == AgentRuntimeContextSourceCategories.RuntimeToolProvider &&
@@ -248,7 +251,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.provider-a"),
-            "provider_descriptor_tool"));
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
         var progressMessages = new List<string>();
 
@@ -316,8 +319,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             10,
             CreateDescriptor("tests.process-provider"),
             "processes_runs_list",
-            "processes_run_start",
-            "unclassified_provider_tool"));
+            "processes_run_start"));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
         var state = await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []);
@@ -333,8 +335,47 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         Assert.Equal(AgentRuntimeToolOperationKind.Mutation, mutationMetadata.OperationKind);
         Assert.True(mutationMetadata.RequiresApprovalByDefault);
 
-        var unknownMetadata = Assert.Single(metadata, item => item.ToolName == "unclassified_provider_tool");
-        Assert.Equal(AgentRuntimeToolOperationKind.Unknown, unknownMetadata.OperationKind);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_rejects_unregistered_internal_tool_even_with_declared_read_metadata()
+    {
+        const string unregisteredToolName = "unclassified_provider_tool";
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.unregistered-provider"),
+            [unregisteredToolName],
+            [
+                new AgentRuntimeToolMetadata(
+                    "tests.unregistered-provider",
+                    unregisteredToolName,
+                    AgentRuntimeToolOperationKind.Read,
+                    requiresApprovalByDefault: false)
+            ]));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []));
+
+        Assert.Contains("without a registered invocation policy classification", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(unregisteredToolName, exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(ToolCapabilityRegistry), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_allows_recognized_dynamic_provider_native_tool_family()
+    {
+        const string providerNativeToolName = "provider_native_test_search";
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(10, providerNativeToolName));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []);
+
+        Assert.Contains(ReadTools(state), tool => tool.Name == providerNativeToolName);
+        var metadata = Assert.Single(ReadToolMetadata(state), item => item.ToolName == providerNativeToolName);
+        Assert.Equal(AgentRuntimeToolOperationKind.HostedProviderNative, metadata.OperationKind);
     }
 
     [Fact]
@@ -344,7 +385,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.metadata-provider"),
-            ["metadata_known_tool"],
+            [AgentToolInvocationPolicyMetadata.ProcessesRunsList],
             [
                 new AgentRuntimeToolMetadata(
                     "tests.metadata-provider",
@@ -365,15 +406,15 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeToolProviderComposition_rejects_duplicate_provider_tool_names()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(10, "duplicate_runtime_tool"));
-        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(20, "duplicate_runtime_tool"));
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesRunsList));
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(20, AgentToolInvocationPolicyMetadata.ProcessesRunsList));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []));
 
         Assert.Contains("Runtime tool provider", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("duplicate_runtime_tool", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(AgentToolInvocationPolicyMetadata.ProcessesRunsList, exception.Message, StringComparison.Ordinal);
         Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
     }
 
@@ -449,7 +490,6 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureRead, toolNames);
         Assert.Contains(AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessStart, toolNames);
         Assert.DoesNotContain(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, toolNames);
-        Assert.Equal(2, toolNames.Count);
     }
 
     [Fact]
@@ -860,6 +900,153 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeWorkspaceTools_read_only_profile_attaches_read_tools_without_mutation_tools()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var readOnlyAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly);
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(readOnlyAccess));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(ToolContractCatalog.WorkspaceListDirectory, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceListFiles, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceSearch, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceReadFile, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceStatPath, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspaceWriteFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspaceCreateDirectory, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspaceDotNetBuild, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspacePowerShellRunScript, toolNames);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeWorkspaceTools_authorized_external_target_attaches_discovery_context_with_discovery_tool()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadFiles = true,
+            AllowedExternalTargetAliases =
+            [
+                "external-target/C/products/calculator"
+            ]
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        Assert.Contains(ReadTools(state), tool => tool.Name == ToolContractCatalog.WorkspaceListFiles);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.SourceId == "effective-external-target-access" &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included &&
+            source.ItemCount == 1);
+        var context = ReadEffectiveExternalTargetContext(state);
+        Assert.Contains(
+            "\"external-target/C/products/calculator\" (read-only with currently attached tools)",
+            context,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("(read/write", context, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeStorageTools_read_access_attaches_bounded_browse_tool()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
+        services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
+        services.AddSingleton<IStorageBrowseDriverRegistry>(new StorageBrowseDriverRegistry([new EmptyStorageBrowseDriver()]));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadStorage = true,
+            AllowAllStorageCatalogs = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(ToolContractCatalog.StorageCatalogList, toolNames);
+        Assert.Contains(ToolContractCatalog.StorageBrowse, toolNames);
+        Assert.Contains(ToolContractCatalog.StorageReadTextFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageWriteTextFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageDeleteObject, toolNames);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeStorageTools_missing_browse_registry_preserves_existing_content_tools()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
+        services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadStorage = true,
+            AllowAllStorageCatalogs = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(ToolContractCatalog.StorageCatalogList, toolNames);
+        Assert.Contains(ToolContractCatalog.StorageReadTextFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageBrowse, toolNames);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeStorageTools_empty_driver_registries_do_not_attach_dead_tools()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
+        services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([]));
+        services.AddSingleton<IStorageBrowseDriverRegistry>(new StorageBrowseDriverRegistry([]));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadStorage = true,
+            CanWriteStorage = true,
+            AllowAllStorageCatalogs = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain(ToolContractCatalog.StorageCatalogList, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageBrowse, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageReadTextFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageWriteTextFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageDeleteObject, toolNames);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeStorageTools_mismatched_browse_provider_does_not_attach_browse_tool()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
+        services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
+        services.AddSingleton<IStorageBrowseDriverRegistry>(
+            new StorageBrowseDriverRegistry([new EmptyStorageBrowseDriver(StorageProviderKind.Ftp)]));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadStorage = true,
+            AllowAllStorageCatalogs = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(ToolContractCatalog.StorageCatalogList, toolNames);
+        Assert.Contains(ToolContractCatalog.StorageReadTextFile, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.StorageBrowse, toolNames);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_skips_configured_tools_when_context_disables_them()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
@@ -877,6 +1064,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
         var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("workspace_read_file", toolNames);
+        Assert.DoesNotContain(ReadContextSources(state), source =>
+            source.SourceId == "effective-external-target-access");
         Assert.Contains(ReadContextSources(state), source =>
             source.Category == AgentRuntimeContextSourceCategories.WorkspaceTools &&
             source.Decision == AgentRuntimeContextSourceDecision.Excluded &&
@@ -1225,6 +1414,21 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 state.GetType().GetProperty("ContextProviders", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
 
+    private static string ReadEffectiveExternalTargetContext(object state)
+    {
+        var provider = Assert.Single(
+            ReadContextProviders(state).OfType<StaticMessageContextProvider>(),
+            candidate => candidate.StateKeys.Contains(
+                StaticMessageContextProvider.EffectiveExternalTargetsStateKey,
+                StringComparer.Ordinal));
+        var messageField = typeof(StaticMessageContextProvider).GetField(
+            "message",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(messageField);
+        var message = Assert.IsType<ChatMessage>(messageField.GetValue(provider));
+        return message.Text ?? string.Empty;
+    }
+
     private static AgentSkillsProviderOptions ReadAgentSkillsProviderOptions(object state)
     {
         var provider = Assert.Single(ReadContextProviders(state), contextProvider =>
@@ -1367,7 +1571,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             capabilities,
             workspaceToolAccess,
             contextIntent,
-            storageToolsAvailable: false);
+            RuntimeStorageToolAvailability.None);
     }
 
     private static IReadOnlyList<CapabilityExposureDescriptor> ReadInitialAllowedCapabilities(object accessPlan)
@@ -1576,6 +1780,82 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
     private sealed record RuntimeToolTestAttachment(string Value) :
         IAgentChatContextAttachment;
+
+    private sealed class EmptyStorageCatalogService : IStorageCatalogService
+    {
+        public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([]);
+
+        public Task<StorageCatalogRecord?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult<StorageCatalogRecord?>(null);
+
+        public Task<StorageCatalogRecord> EnsureBootstrapFileSystemStorageAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<StorageCatalogRecord> SaveAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<StorageRoutingRule>> ListRulesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<StorageRoutingRule>>([]);
+
+        public Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class EmptyStorageBrowseDriver(
+        StorageProviderKind providerKind = StorageProviderKind.FileSystem) : IStorageBrowseDriver
+    {
+        public StorageProviderKind ProviderKind => providerKind;
+
+        public StorageBrowseCapability Capabilities =>
+            StorageBrowseCapability.Browse |
+            StorageBrowseCapability.ProviderNativeOrdering;
+
+        public StorageBrowseWorkBudget MaximumBudget => StorageBrowseWorkBudget.Default;
+
+        public Task<StorageBrowsePage> BrowseAsync(
+            StorageCatalogRecord storage,
+            StorageBrowseRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class EmptyStorageDriver : IStorageDriver
+    {
+        public StorageProviderKind ProviderKind => StorageProviderKind.FileSystem;
+
+        public StorageCapability SupportedCapabilities =>
+            StorageCapability.Read |
+            StorageCapability.Write |
+            StorageCapability.Delete;
+
+        public Task<StorageConnectionTestResult> TestConnectionAsync(
+            StorageCatalogRecord storage,
+            string? secretValue,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<StorageWriteResult> SaveAsync(
+            StorageCatalogRecord storage,
+            StorageWriteRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Stream> OpenReadAsync(
+            StorageCatalogRecord storage,
+            StorageObjectReference reference,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteAsync(
+            StorageCatalogRecord storage,
+            StorageObjectReference reference,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
 
     private sealed class ThrowingRuntimeToolProvider : IAgentRuntimeToolProvider
     {

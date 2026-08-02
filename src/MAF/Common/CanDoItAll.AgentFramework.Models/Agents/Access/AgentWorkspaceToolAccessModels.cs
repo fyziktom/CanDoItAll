@@ -193,6 +193,105 @@ public sealed class AgentWorkspaceToolAccessSettings
     public List<Guid> AllowedStorageCatalogIds { get; set; } = [];
 }
 
+public sealed record EffectiveExternalTargetAccessScope(
+    IReadOnlyList<string> WritableAliases,
+    IReadOnlyList<string> ReadOnlyAliases)
+{
+    public static EffectiveExternalTargetAccessScope Empty { get; } = new([], []);
+
+    public bool CanRead(string? pathOrAlias)
+    {
+        return ResolveMostSpecificMatchLength(pathOrAlias, WritableAliases) >= 0 ||
+               ResolveMostSpecificMatchLength(pathOrAlias, ReadOnlyAliases) >= 0;
+    }
+
+    public bool CanWrite(string? pathOrAlias)
+    {
+        var writableMatchLength = ResolveMostSpecificMatchLength(pathOrAlias, WritableAliases);
+        if (writableMatchLength < 0)
+        {
+            return false;
+        }
+
+        var readOnlyMatchLength = ResolveMostSpecificMatchLength(pathOrAlias, ReadOnlyAliases);
+        return writableMatchLength >= readOnlyMatchLength;
+    }
+
+    public bool HasEffectiveReadOnlyDescendant(string? pathOrAlias)
+    {
+        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(pathOrAlias);
+        if (string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            return false;
+        }
+
+        return ReadOnlyAliases
+            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+            .Where(readOnlyAlias =>
+                !string.IsNullOrWhiteSpace(readOnlyAlias) &&
+                readOnlyAlias.StartsWith(normalizedAlias + "/", StringComparison.OrdinalIgnoreCase))
+            .Any(readOnlyAlias => !CanWrite(readOnlyAlias));
+    }
+
+    private static int ResolveMostSpecificMatchLength(
+        string? pathOrAlias,
+        IReadOnlyList<string> aliases)
+    {
+        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(pathOrAlias);
+        if (string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            return -1;
+        }
+
+        return aliases
+            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+            .Where(rootAlias =>
+                !string.IsNullOrWhiteSpace(rootAlias) &&
+                (string.Equals(normalizedAlias, rootAlias, StringComparison.OrdinalIgnoreCase) ||
+                 normalizedAlias.StartsWith(rootAlias + "/", StringComparison.OrdinalIgnoreCase)))
+            .Select(rootAlias => rootAlias!.Length)
+            .DefaultIfEmpty(-1)
+            .Max();
+    }
+}
+
+public static class EffectiveExternalTargetAccessResolver
+{
+    public static EffectiveExternalTargetAccessScope Resolve(
+        AgentWorkspaceToolAccessSettings? configuredAccess,
+        IReadOnlyList<string>? runWritableAliases = null,
+        IReadOnlyList<string>? runReadOnlyAliases = null)
+    {
+        var configuredWritableAliases = NormalizeAliases(configuredAccess?.AllowedExternalTargetAliases);
+        var invocationWritableAliases = NormalizeAliases(runWritableAliases);
+        var invocationReadOnlyAliases = NormalizeAliases(runReadOnlyAliases);
+        var writableAliases = configuredWritableAliases
+            .Where(configuredAlias =>
+                !AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
+                    configuredAlias,
+                    invocationReadOnlyAliases))
+            .Concat(invocationWritableAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var readOnlyAliases = invocationReadOnlyAliases
+            .Where(alias => !invocationWritableAliases.Contains(alias, StringComparer.OrdinalIgnoreCase))
+            .ToArray();
+
+        return new EffectiveExternalTargetAccessScope(writableAliases, readOnlyAliases);
+    }
+
+    private static IReadOnlyList<string> NormalizeAliases(IEnumerable<string>? aliases)
+    {
+        return aliases?
+            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
+    }
+}
+
 public static class AgentWorkspaceToolAccessMetadata
 {
     private const string RootPropertyName = "workspaceTools";
@@ -478,12 +577,18 @@ public static class AgentWorkspaceToolAccessMetadata
             return null;
         }
 
-        var trimmed = StripEscapedLineBreakPathAnnotations(ExpandPortablePath(pathOrAlias)
-                .Replace('\\', '/')
-                .Trim()
-                .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}'))
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-        trimmed = StripInlineExternalTargetAliasAnnotations(trimmed)
+        var annotationStripped = StripInlineExternalTargetAliasAnnotations(
+            StripEscapedLineBreakPathAnnotations(
+                ExpandPortablePath(pathOrAlias)
+                    .Replace('\\', '/')
+                    .Trim()));
+        if (annotationStripped.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase) &&
+            ContainsDotPathSegment(annotationStripped.TrimEnd(',', ';', ':', ')', ']', '}')))
+        {
+            return null;
+        }
+
+        var trimmed = annotationStripped
             .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
         while (trimmed.Contains("//", StringComparison.Ordinal))
         {
@@ -696,8 +801,18 @@ public static class AgentWorkspaceToolAccessMetadata
         return segments.Length > 2 &&
                string.Equals(segments[0], ExternalTargetAliasRoot, StringComparison.OrdinalIgnoreCase) &&
                segments[1].Length == 1 &&
-               char.IsLetter(segments[1][0]);
+               char.IsLetter(segments[1][0]) &&
+               !segments.Skip(2).Any(IsDotPathSegment);
     }
+
+    private static bool IsDotPathSegment(string segment)
+        => string.Equals(segment, ".", StringComparison.Ordinal) ||
+           string.Equals(segment, "..", StringComparison.Ordinal);
+
+    private static bool ContainsDotPathSegment(string alias)
+        => alias
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(IsDotPathSegment);
 
     private static bool IsAliasWithinRoot(string alias, string rootAlias)
     {

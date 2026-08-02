@@ -23,7 +23,13 @@ internal static class ProjectStructureNodeEditor
         "assigneeRef",
         "repositoryRef",
         "parentParticipantRef",
-        "secretRef"
+        "secretRef",
+        "mermaidText",
+        ProjectStructureCanvasCatalog.ImageProviderProfileFieldKey,
+        ProjectStructureCanvasCatalog.ImageModelFieldKey,
+        ProjectStructureCanvasCatalog.ImageSizeFieldKey,
+        ProjectStructureCanvasCatalog.ImageQualityFieldKey,
+        ProjectStructureCanvasCatalog.ImageOutputFormatFieldKey
     ];
 
     private static readonly HashSet<string> TaskEstimateFieldKeys =
@@ -149,10 +155,6 @@ internal static class ProjectStructureNodeEditor
                 metadata.File ??= new ProjectFileMetadata();
                 metadata.File.SourceHint = ResolveString(inputValues, submittedKeys, "sourceHint", metadata.File.SourceHint);
                 metadata.File.ExternalPath = ResolveString(inputValues, submittedKeys, "externalPath", metadata.File.ExternalPath);
-                if (submittedKeys.Contains("mermaidText"))
-                {
-                    metadata.File.MermaidDiagramKind = ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(notes);
-                }
                 break;
             case ProjectObjectType.Script:
                 metadata.Script ??= new ProjectScriptMetadata();
@@ -289,7 +291,6 @@ internal static class ProjectStructureNodeEditor
             "relativePath" => metadata.Repository?.RelativePath ?? string.Empty,
             "sourceHint" => metadata.File?.SourceHint ?? string.Empty,
             "externalPath" => metadata.File?.ExternalPath ?? string.Empty,
-            "mermaidText" => node.Notes,
             "scriptKind" => ToCamelCaseToken(metadata.Script?.ScriptKind == default ? ProjectNodeKindRegistry.ResolveScriptKind(node.ObjectSubtype) : metadata.Script?.ScriptKind),
             "scriptPath" => metadata.Script?.ScriptPath ?? string.Empty,
             "command" => metadata.Script?.Command ?? string.Empty,
@@ -342,11 +343,6 @@ internal static class ProjectStructureNodeEditor
         if (inputValues.TryGetValue("transcriptText", out var transcriptText))
         {
             return transcriptText;
-        }
-
-        if (inputValues.TryGetValue("mermaidText", out var mermaidText))
-        {
-            return mermaidText;
         }
 
         return definition.ShowDefaultTextFields

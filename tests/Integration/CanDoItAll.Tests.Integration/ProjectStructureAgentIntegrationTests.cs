@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -286,6 +287,85 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task RuntimeGateway_CreateNodeAsync_rejects_a_wrapped_dotnet_script_before_persistence()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var gateway = scope.ServiceProvider.GetRequiredService<IProjectStructureRuntimeGateway>();
+
+        var projectId = await CreateProjectAsync(projects, "Runtime gateway validation boundary");
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            gateway.CreateNodeAsync(
+                projectId,
+                new ProjectStructureRuntimeNodeCreateRequest(
+                    ProjectObjectType.Script,
+                    "Invalid gateway runtime",
+                    "PowerShell",
+                    "The workflow gateway must not bypass runtime validation.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "powershell",
+                    MetadataJson: CreateScriptRuntimeMetadata(
+                        "pwsh",
+                        "-NoProfile -Command \"dotnet watch --project Calculator.csproj run\"")),
+                DefaultRuntimeAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Contains("typed Environment node", exception.Message, StringComparison.Ordinal);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Title == "Invalid gateway runtime");
+    }
+
+    [Fact]
+    public async Task RuntimeGateway_CreateNodeAsync_rejects_an_unscoped_project_block_root_in_an_audited_run()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var gateway = scope.ServiceProvider.GetRequiredService<IProjectStructureRuntimeGateway>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var unscopedRoot = Path.Combine(
+            Path.GetDirectoryName(workspaceRoot) ?? Path.GetPathRoot(workspaceRoot)!,
+            $"unscoped-project-root-{Guid.NewGuid():N}");
+        var metadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            ProjectBlock = new ProjectBlockMetadata
+            {
+                OutputRoot = unscopedRoot
+            }
+        });
+        var projectId = await CreateProjectAsync(projects, "Runtime gateway root authority");
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+            CreateAuditedExecutionRun([]));
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            gateway.CreateNodeAsync(
+                projectId,
+                new ProjectStructureRuntimeNodeCreateRequest(
+                    ProjectObjectType.ProjectBlock,
+                    "Unscoped delivery root",
+                    "Rejected",
+                    "An audited workflow cannot mint its own external target authority.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "delivery",
+                    MetadataJson: metadataJson),
+                DefaultRuntimeAgent));
+
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.DoesNotContain(unscopedRoot, exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Title == "Unscoped delivery root");
+    }
+
+    [Fact]
     public async Task StartProcessNodeAsync_resolves_linked_definition_targets_source_node_and_records_launch_context()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -517,6 +597,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var fileInteractionCoordinator = scope.ServiceProvider
             .GetRequiredService<ProjectStructureKnownFileInteractionCoordinator>();
+        var nodeFileScopeProvider = scope.ServiceProvider
+            .GetRequiredService<IProjectStructureNodeFileScopeProvider>();
+        var nodeStorageBindingSource = scope.ServiceProvider
+            .GetServices<IFileToolsStorageBindingSource>()
+            .Single(source => source.ScopeKind == FileToolsSemanticScopeKind.ProjectNode);
         var runtimeToolProvider = scope.ServiceProvider
             .GetServices<IAgentRuntimeToolProvider>()
             .OfType<ProjectStructureAgentRuntimeToolProvider>()
@@ -633,9 +718,18 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(ProjectObjectType.File, outputNode.ObjectType);
         Assert.Equal("folder", outputNode.ObjectSubtype);
         Assert.Equal(runNodeId, outputNode.ParentId);
-        Assert.Equal("process-run-output-folder", outputNode.ArtifactKind);
+        Assert.Equal(ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind, outputNode.ArtifactKind);
         Assert.Equal(runId.Value, outputNode.ArtifactId);
         Assert.Contains(managedArtifactRoot, outputNode.Notes, StringComparison.Ordinal);
+        ProjectObjectMetadataEnvelope outputMetadata = ProjectObjectMetadataSerializer.Parse(outputNode.MetadataJson);
+        Assert.Equal(ProjectFileSubtype.Folder, outputMetadata.File?.FileSubtype);
+        Assert.Equal(managedArtifactRoot, outputMetadata.File?.ExternalPath);
+        FileToolsSemanticScope outputScope = await nodeFileScopeProvider.ResolveNodeCollectionAsync(
+            projectId,
+            outputNode.Id);
+        FileToolsStorageBinding outputBinding = Assert.Single(
+            await nodeStorageBindingSource.ResolveAsync(outputScope));
+        Assert.Equal(managedArtifactRoot, outputBinding.Root.Value);
         var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));
         Assert.Equal(ProjectObjectType.Note, summaryNode.ObjectType);
         Assert.Equal("process-summary", summaryNode.ObjectSubtype);
@@ -3343,6 +3437,626 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(surface.Nodes, node => node.Title == "Shared");
     }
 
+    [Fact]
+    public async Task AgentService_UpdateNodeMetadataAsync_rejects_an_unverified_dotnet_target_without_mutating_the_node()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+
+        var validProjectDirectory = Path.Combine(workspaceRoot, "runtime-validation", "Calculator");
+        Directory.CreateDirectory(validProjectDirectory);
+        var validProjectPath = Path.Combine(validProjectDirectory, "Calculator.csproj");
+        await File.WriteAllTextAsync(validProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        var projectId = await CreateProjectAsync(projects, "Runtime metadata validation");
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Environment,
+                "Start Calculator",
+                "dotnet watch",
+                "Runs the Calculator application.",
+                $"project:{projectId}",
+                ObjectSubtype: "dotnet-watch",
+                MetadataJson: CreateDotNetRuntimeMetadata(validProjectPath)),
+            DefaultAgent);
+
+        var invalidSolutionRoot = Path.Combine(workspaceRoot, "runtime-validation", "solution-root");
+        var nestedProjectDirectory = Path.Combine(invalidSolutionRoot, "Calculator");
+        Directory.CreateDirectory(nestedProjectDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(nestedProjectDirectory, "Calculator.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        await File.WriteAllTextAsync(Path.Combine(invalidSolutionRoot, "Calculator.slnx"), "<Solution />");
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.UpdateNodeMetadataAsync(
+                projectId,
+                created.Id,
+                new ProjectStructureNodeMetadataInput(CreateDotNetRuntimeMetadata(invalidSolutionRoot)),
+                DefaultAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Contains("exact application project file", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal(validProjectPath, persistedMetadata.Environment!.ProjectPath);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateNodeAsync_persists_the_exact_dotnet_project_and_its_directory()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+
+        var projectDirectory = Path.Combine(workspaceRoot, "runtime-canonicalization", "Calculator");
+        Directory.CreateDirectory(projectDirectory);
+        var projectPath = Path.Combine(projectDirectory, "Calculator.csproj");
+        await File.WriteAllTextAsync(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var requestedMetadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            CreateDotNetRuntimeMetadata(projectDirectory))!;
+        requestedMetadata["runtimeAuditExtension"] = JsonSerializer.SerializeToElement(
+            new Dictionary<string, string>
+            {
+                ["correlationId"] = "runtime-repair-42"
+            });
+
+        var projectId = await CreateProjectAsync(projects, "Canonical runtime metadata");
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Environment,
+                "Start Calculator",
+                "dotnet watch",
+                "Runs the exact Calculator project.",
+                $"project:{projectId}",
+                ObjectSubtype: "dotnet-watch",
+                MetadataJson: JsonSerializer.Serialize(requestedMetadata)),
+            DefaultAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal(projectPath, persistedMetadata.Environment!.ProjectPath);
+        Assert.Equal(projectDirectory, persistedMetadata.Environment.WorkingDirectory);
+        using var persistedJson = JsonDocument.Parse(persistedNode.MetadataJson);
+        Assert.True(
+            persistedJson.RootElement.TryGetProperty("runtimeAuditExtension", out var persistedExtension),
+            persistedNode.MetadataJson);
+        Assert.True(
+            persistedExtension.TryGetProperty("correlationId", out var persistedCorrelationId),
+            persistedNode.MetadataJson);
+        Assert.Equal(
+            "runtime-repair-42",
+            persistedCorrelationId.GetString());
+    }
+
+    [Fact]
+    public async Task AgentService_CreateNodeAsync_rejects_an_unaudited_external_runtime_target()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.AgentRuntime.Unaudited.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        var projectPath = Path.Combine(externalRoot, "Calculator.csproj");
+        await File.WriteAllTextAsync(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        try
+        {
+            var projectId = await CreateProjectAsync(projects, "Unaudited external runtime authority");
+            var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+                agentService.CreateNodeAsync(
+                    projectId,
+                    new ProjectStructureNodeCreateInput(
+                        ProjectObjectType.Environment,
+                        "Rejected external Calculator",
+                        "dotnet watch",
+                        "An agent request without audited path authority must fail closed.",
+                        $"project:{projectId:D}",
+                        ObjectSubtype: "dotnet-watch",
+                        MetadataJson: CreateDotNetRuntimeMetadata(projectPath)),
+                    DefaultAgent));
+
+            Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+            Assert.Contains("not authorized for this agent execution", exception.Message, StringComparison.Ordinal);
+            var surface = await workbench.GetStructureAsync(projectId);
+            Assert.DoesNotContain(surface.Nodes, node => node.Title == "Rejected external Calculator");
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task AgentService_CreateNodeAsync_accepts_an_external_runtime_target_selected_by_the_audited_execution()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.AgentRuntime.Audited.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        var projectPath = Path.Combine(externalRoot, "Calculator.csproj");
+        await File.WriteAllTextAsync(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        try
+        {
+            var projectId = await CreateProjectAsync(projects, "Audited external runtime authority");
+            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot);
+            Assert.False(string.IsNullOrWhiteSpace(externalAlias));
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+                CreateAuditedExecutionRun([externalAlias!]));
+
+            var created = await agentService.CreateNodeAsync(
+                projectId,
+                new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.Environment,
+                    "Authorized external Calculator",
+                    "dotnet watch",
+                    "The selected external target is readable in this audited execution.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "dotnet-watch",
+                    MetadataJson: CreateDotNetRuntimeMetadata(projectPath)),
+                DefaultAgent);
+
+            var surface = await workbench.GetStructureAsync(projectId);
+            var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+            var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+            Assert.Equal(projectPath, persistedMetadata.Environment!.ProjectPath);
+            Assert.Equal(externalRoot, persistedMetadata.Environment.WorkingDirectory);
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task AgentService_GetStructureAsync_gates_external_runtime_capabilities_by_execution_authority()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.AgentRuntime.ReadAuthority.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        var projectPath = Path.Combine(externalRoot, "Calculator.csproj");
+        await File.WriteAllTextAsync(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        try
+        {
+            var projectId = await CreateProjectAsync(projects, "External runtime read authority");
+            var created = await workbench.CreateObjectAsync(
+                projectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.Environment,
+                    "Operator-selected external Calculator",
+                    "dotnet watch",
+                    "The operator selected this external runtime before the agent read.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "dotnet-watch",
+                    MetadataJson: CreateDotNetRuntimeMetadata(projectPath)));
+
+            var unaudited = await agentService.GetStructureAsync(
+                projectId,
+                new ProjectStructureReadRequest(IncludeMetadata: true));
+            var unauditedNode = Assert.Single(unaudited.Nodes, node => node.Id == created.Id);
+            Assert.Equal(
+                projectPath,
+                ProjectObjectMetadataSerializer.Parse(unauditedNode.MetadataJson).Environment!.ProjectPath);
+            Assert.NotNull(unauditedNode.ActionCapabilities);
+            Assert.False(unauditedNode.ActionCapabilities!.CanRunNormally);
+            Assert.False(unauditedNode.ActionCapabilities.CanRunAsAdministrator);
+            Assert.Contains(
+                unauditedNode.ActionCapabilities.Guidance,
+                guidance => guidance.Contains(
+                    "not authorized for this agent execution",
+                    StringComparison.Ordinal));
+
+            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot);
+            Assert.False(string.IsNullOrWhiteSpace(externalAlias));
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+                CreateAuditedExecutionRun([externalAlias!]));
+            var audited = await agentService.GetStructureAsync(
+                projectId,
+                new ProjectStructureReadRequest(IncludeMetadata: true));
+            var auditedNode = Assert.Single(audited.Nodes, node => node.Id == created.Id);
+            Assert.NotNull(auditedNode.ActionCapabilities);
+            Assert.True(auditedNode.ActionCapabilities!.CanRunNormally);
+            Assert.True(auditedNode.ActionCapabilities.CanRunAsAdministrator);
+            Assert.Equal(externalRoot, auditedNode.ActionCapabilities.RuntimeWorkingDirectory);
+            Assert.Contains(projectPath, auditedNode.ActionCapabilities.RuntimeDisplayCommand, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task AgentService_CreateNodeAsync_rejects_a_subtype_and_environment_kind_mismatch()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "Runtime kind consistency");
+        var mismatchedMetadata = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Environment = new ProjectEnvironmentMetadata
+            {
+                EnvironmentKind = ProjectEnvironmentKind.DotNetRuntime,
+                ProjectPath = "Calculator.csproj"
+            }
+        });
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateNodeAsync(
+                projectId,
+                new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.Environment,
+                    "Mismatched runtime",
+                    "dotnet watch",
+                    "Kind and subtype must agree.",
+                    $"project:{projectId}",
+                    ObjectSubtype: "dotnet-watch",
+                    MetadataJson: mismatchedMetadata),
+                DefaultAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Contains("does not match objectSubtype 'dotnet-watch'", exception.Message, StringComparison.Ordinal);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Title == "Mismatched runtime");
+    }
+
+    [Fact]
+    public async Task AgentService_CreateNodeAsync_rejects_a_docker_runtime_without_a_command()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var metadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Infrastructure = new ProjectInfrastructureMetadata
+            {
+                InfrastructureKind = ProjectInfrastructureKind.DockerMode,
+                WorkingDirectory = workspaceRoot
+            }
+        });
+        var projectId = await CreateProjectAsync(projects, "Docker runtime validation");
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateNodeAsync(
+                projectId,
+                new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.Infrastructure,
+                    "Invalid Docker runtime",
+                    "Missing command",
+                    "Docker runtime metadata must be launch-ready.",
+                    $"project:{projectId}",
+                    ObjectSubtype: "docker-mode",
+                    MetadataJson: metadataJson),
+                DefaultAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Contains("runtime command", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Title == "Invalid Docker runtime");
+    }
+
+    [Fact]
+    public async Task AgentService_UpdateNodeMetadataAsync_rejects_dotnet_watch_as_an_opaque_script_repair()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "Opaque runtime repair validation");
+        var originalMetadata = CreateScriptRuntimeMetadata("Write-Output", "ready");
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Script,
+                "Start Calculator",
+                "PowerShell",
+                "A script node that must be reclassified for dotnet watch.",
+                $"project:{projectId}",
+                ObjectSubtype: "powershell",
+                MetadataJson: originalMetadata),
+            DefaultAgent);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.UpdateNodeMetadataAsync(
+                projectId,
+                created.Id,
+                new ProjectStructureNodeMetadataInput(
+                    CreateScriptRuntimeMetadata(
+                        "dotnet watch",
+                        "--project C:\\unverified\\calculator-e2e-test run")),
+                DefaultAgent));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Contains("typed Environment node", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_update", exception.Message, StringComparison.Ordinal);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal("Write-Output", persistedMetadata.Script!.Command);
+        Assert.Equal("ready", persistedMetadata.Script.Arguments);
+    }
+
+    [Fact]
+    public async Task AgentService_UpdateNodeAsync_atomically_reclassifies_a_script_to_a_verified_dotnet_watch_environment()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+
+        var projectDirectory = Path.Combine(workspaceRoot, "runtime-reclassification", "Calculator");
+        Directory.CreateDirectory(projectDirectory);
+        var projectPath = Path.Combine(projectDirectory, "Calculator.csproj");
+        await File.WriteAllTextAsync(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        var projectId = await CreateProjectAsync(projects, "Runtime reclassification");
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.Script,
+                "Start Calculator",
+                "PowerShell",
+                "Legacy runtime script.",
+                $"project:{projectId}",
+                ObjectSubtype: "powershell",
+                MetadataJson: CreateScriptRuntimeMetadata("Write-Output", "legacy")),
+            DefaultAgent);
+        var startUtc = new DateTimeOffset(2026, 8, 1, 18, 0, 0, TimeSpan.Zero);
+
+        var updated = await agentService.UpdateNodeAsync(
+            projectId,
+            created.Id,
+            new ProjectStructureNodeEditInput(
+                "Start Calculator",
+                "dotnet watch",
+                "Runs the verified Calculator application project.",
+                ProjectObjectType.Environment,
+                "dotnet-watch",
+                StartUtc: startUtc,
+                MetadataJson: CreateDotNetRuntimeMetadata(projectPath),
+                DurationSeconds: 90),
+            DefaultAgent);
+
+        Assert.Equal(ProjectObjectType.Environment, updated.ObjectType);
+        Assert.Equal("dotnet-watch", updated.ObjectSubtype);
+        Assert.Equal(startUtc, updated.StartUtc);
+        Assert.Equal(startUtc.AddSeconds(90), updated.EndUtc);
+        Assert.Equal(90, updated.DurationSeconds);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal(projectPath, persistedMetadata.Environment!.ProjectPath);
+        Assert.Null(persistedMetadata.Script);
+        Assert.Equal(startUtc, persistedNode.StartUtc);
+        Assert.Equal(startUtc.AddSeconds(90), persistedNode.EndUtc);
+        Assert.Equal(90, persistedNode.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task ProjectWorkbenchService_CreateObjectAsync_rejects_wrapped_dotnet_watch_without_persisting()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects, "Direct runtime create validation");
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            workbench.CreateObjectAsync(
+                projectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.Script,
+                    "Invalid direct runtime",
+                    "PowerShell",
+                    "The direct workbench path must enforce the runtime boundary.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "powershell",
+                    MetadataJson: CreateScriptRuntimeMetadata(
+                        "pwsh",
+                        "-NoProfile -Command \"dotnet watch --project Calculator.csproj run\""))));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.Contains("typed Environment node", exception.Message, StringComparison.Ordinal);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Title == "Invalid direct runtime");
+    }
+
+    [Fact]
+    public async Task ProjectWorkbenchService_UpdateObjectAsync_rejects_wrapped_dotnet_watch_without_mutating_metadata()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects, "Direct runtime update validation");
+        var originalMetadata = CreateScriptRuntimeMetadata("Write-Output", "ready");
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Script,
+                "Valid direct runtime",
+                "PowerShell",
+                "A direct workbench runtime node.",
+                $"project:{projectId:D}",
+                ObjectSubtype: "powershell",
+                MetadataJson: originalMetadata));
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            workbench.UpdateObjectAsync(
+                projectId,
+                created.Id,
+                new ProjectObjectEditRequest(
+                    created.Title,
+                    created.Subtitle,
+                    created.Notes ?? string.Empty,
+                    created.StartUtc,
+                    created.EndUtc,
+                    CreateScriptRuntimeMetadata(
+                        "pwsh",
+                        "-NoProfile -Command \"dotnet watch --project Calculator.csproj run\""))));
+
+        Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
+        Assert.Contains("typed Environment node", exception.Message, StringComparison.Ordinal);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal("Write-Output", persistedMetadata.Script!.Command);
+        Assert.Equal("ready", persistedMetadata.Script.Arguments);
+    }
+
+    [Fact]
+    public async Task AgentService_ProjectBlock_mutations_reject_unaudited_external_roots_without_mutating()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        var projectId = await CreateProjectAsync(projects, "Agent ProjectBlock root authority");
+        var externalMetadata = CreateProjectBlockMetadata(@"C:\operator\private\unselected-project");
+
+        var createException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateNodeAsync(
+                projectId,
+                new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.ProjectBlock,
+                    "Rejected external root",
+                    "Implementation",
+                    "An unaudited agent request cannot mint external root authority.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "implementation",
+                    MetadataJson: externalMetadata),
+                DefaultAgent));
+
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, createException.ErrorCode);
+
+        var managedMetadata = CreateProjectBlockMetadata(
+            Path.Combine(workspaceRoot, "agent-root-authority", "managed-output"));
+        var created = await agentService.CreateNodeAsync(
+            projectId,
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.ProjectBlock,
+                "Managed root",
+                "Implementation",
+                "This root stays inside the managed workspace.",
+                $"project:{projectId:D}",
+                ObjectSubtype: "implementation",
+                MetadataJson: managedMetadata),
+            DefaultAgent);
+
+        var updateException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.UpdateNodeAsync(
+                projectId,
+                created.Id,
+                new ProjectStructureNodeEditInput(
+                    created.Title,
+                    created.Subtitle,
+                    created.Notes ?? string.Empty,
+                    ProjectObjectType.ProjectBlock,
+                    created.ObjectSubtype,
+                    created.StartUtc,
+                    created.EndUtc,
+                    externalMetadata),
+                DefaultAgent));
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, updateException.ErrorCode);
+
+        var metadataException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.UpdateNodeMetadataAsync(
+                projectId,
+                created.Id,
+                new ProjectStructureNodeMetadataInput(externalMetadata),
+                DefaultAgent));
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, metadataException.ErrorCode);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Title == "Rejected external root");
+        var persistedNode = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+        var persistedMetadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
+        Assert.Equal(
+            Path.Combine(workspaceRoot, "agent-root-authority", "managed-output"),
+            persistedMetadata.ProjectBlock!.OutputRoot);
+    }
+
+    [Fact]
+    public async Task ProjectWorkbenchService_CreateObjectAsync_allows_an_operator_selected_external_project_block_root()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects, "Operator ProjectBlock root authority");
+        const string externalRoot = @"C:\operator\chosen\external-project";
+
+        var created = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Operator-selected root",
+                "Implementation",
+                "Operator UI writes remain an explicit authority-changing path.",
+                $"project:{projectId:D}",
+                ObjectSubtype: "implementation",
+                MetadataJson: CreateProjectBlockMetadata(externalRoot)));
+
+        var metadata = ProjectObjectMetadataSerializer.Parse(created.MetadataJson);
+        Assert.Equal(externalRoot, metadata.ProjectBlock!.OutputRoot);
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(new ProjectEditorModel
@@ -3355,6 +4069,74 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static string CreateDotNetRuntimeMetadata(string projectPath)
+        => ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Environment = new ProjectEnvironmentMetadata
+            {
+                EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                ProjectPath = projectPath,
+                WorkingDirectory = Path.GetDirectoryName(projectPath) ?? string.Empty
+            }
+        });
+
+    private static string CreateScriptRuntimeMetadata(string command, string arguments)
+        => ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            Script = new ProjectScriptMetadata
+            {
+                ScriptKind = ProjectScriptKind.PowerShell,
+                Command = command,
+                Arguments = arguments
+            }
+        });
+
+    private static string CreateProjectBlockMetadata(string outputRoot)
+        => ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+        {
+            ProjectBlock = new ProjectBlockMetadata
+            {
+                OutputRoot = outputRoot
+            }
+        });
+
+    private static ExecutionRunRecord CreateAuditedExecutionRun(
+        IReadOnlyList<string> readOnlyExternalTargetAliases)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var metadataJson = JsonSerializer.Serialize(
+            new Dictionary<string, IReadOnlyList<string>>
+            {
+                [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
+                    readOnlyExternalTargetAliases
+            });
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Project-structure runtime gateway audit",
+            SourceKind: "test",
+            SourceId: "project-structure-runtime-gateway",
+            CorrelationId: Guid.NewGuid().ToString("D"),
+            CausationId: string.Empty,
+            RequestedBy: "integration-test",
+            RequestedByKind: "system",
+            MetadataJson: metadataJson,
+            InputSummary: string.Empty,
+            ResultSummary: string.Empty,
+            ProviderName: "test",
+            Model: "test",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
     }
 
     private static async Task<string> CreatePersistedAssetReferencingPathAsync(

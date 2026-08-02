@@ -156,13 +156,13 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         AgentRuntimeContextIntent contextIntent,
-        bool storageToolsAvailable)
+        RuntimeStorageToolAvailability storageAvailability)
         => capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(
             agent,
             capabilities,
             workspaceToolAccess,
             contextIntent,
-            storageToolsAvailable);
+            storageAvailability);
 
     public async Task<RuntimeCapabilityState> CreateCapabilityStateCoreAsync(
         AgentDefinition agent,
@@ -188,7 +188,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
             var agentConfiguration = MafRuntimeJson.DeserializeConfiguration<AgentRuntimeConfiguration>(agent.ConfigurationJson) ?? new AgentRuntimeConfiguration();
             var workspaceToolAccess = ResolveWorkspaceToolAccessForRuntime(agent);
-            var storageToolsAvailable = HasStorageRuntimePluginServices();
+            var storageAvailability = ResolveStorageToolAvailability();
             var capabilityAccessPlan = TrackResult(
                 "capability.access-plan",
                 () => capabilityAccessPlanner.CreateRuntimeCapabilityAccessPlan(
@@ -196,7 +196,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     capabilities,
                     workspaceToolAccess,
                     contextIntent,
-                    storageToolsAvailable));
+                    storageAvailability));
             var effectiveCapabilities = capabilityAccessPlan.AllowedCatalogCapabilities;
             var composition = TrackResult(
                 "capability.composition",
@@ -266,6 +266,9 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 () => AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements));
 
             TrackAction("capability.deduplicate-tools", () => DeduplicateTools(composition.State.Tools));
+            TrackAction(
+                "capability.effective-external-target-context",
+                () => AttachEffectiveExternalTargetContext(composition.State, workspaceToolAccess));
             return composition.State;
         }
         finally
@@ -311,6 +314,41 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 RecordCompositionMetric(stage, stopwatch.Elapsed);
             }
         }
+    }
+
+    private static void AttachEffectiveExternalTargetContext(
+        RuntimeCapabilityState state,
+        AgentWorkspaceToolAccessSettings configuredAccess)
+    {
+        var recursiveFileDiscoveryAvailable = state.Tools.Any(tool =>
+            string.Equals(tool.Name, ToolContractCatalog.WorkspaceListFiles, StringComparison.OrdinalIgnoreCase));
+        var auditScope = WorkspaceExecutionAuditContext.Current;
+        var accessScope = EffectiveExternalTargetAccessResolver.Resolve(
+            configuredAccess,
+            auditScope?.AllowedExternalTargetAliases,
+            auditScope?.ReadOnlyExternalTargetAliases);
+        var writeOperationsAvailable = auditScope?.ProcessAllowsProductMutation != false &&
+                                       state.Tools.Any(tool =>
+                                           ToolCapabilityRegistry.TryResolve(tool.Name, out var capability) &&
+                                           capability.CanMutateProduct);
+        var content = EffectiveExternalTargetContextBuilder.Build(
+            accessScope,
+            recursiveFileDiscoveryAvailable,
+            writeOperationsAvailable);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        state.ContextProviders.Add(new StaticMessageContextProvider(
+            new ChatMessage(ChatRole.System, content),
+            StaticMessageContextProvider.EffectiveExternalTargetsStateKey));
+        state.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
+            AgentRuntimeContextSourceCategories.WorkspaceTools,
+            "effective-external-target-access",
+            "effective configured and invocation-scoped external targets exposed for structured workspace discovery",
+            accessScope.WritableAliases.Count + accessScope.ReadOnlyAliases.Count,
+            content.Length));
     }
 
     private static async Task<RuntimeCapabilityState> CreateToolFreeCapabilityStateAsync(
@@ -416,10 +454,17 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             capabilityAccessPlan);
     }
 
-    private bool HasStorageRuntimePluginServices()
+    private RuntimeStorageToolAvailability ResolveStorageToolAvailability()
     {
-        return services.GetService(typeof(IStorageCatalogService)) is not null &&
-               services.GetService(typeof(IStorageDriverRegistry)) is not null;
+        var catalogService = services.GetService(typeof(IStorageCatalogService)) as IStorageCatalogService;
+        var driverRegistry = services.GetService(typeof(IStorageDriverRegistry)) as IStorageDriverRegistry;
+        var browseDriverRegistry = services.GetService(typeof(IStorageBrowseDriverRegistry)) as IStorageBrowseDriverRegistry;
+        var registeredContentProviderKinds = driverRegistry?.RegisteredKinds ?? [];
+        var contentToolsAvailable = catalogService is not null && registeredContentProviderKinds.Count > 0;
+        var browseToolAvailable = contentToolsAvailable &&
+                                  browseDriverRegistry is not null &&
+                                  registeredContentProviderKinds.Intersect(browseDriverRegistry.RegisteredKinds).Any();
+        return new RuntimeStorageToolAvailability(contentToolsAvailable, browseToolAvailable);
     }
 
     private ISpreadsheetDocumentService ResolveSpreadsheetDocumentService()
@@ -458,9 +503,10 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     {
         var catalogService = services.GetService(typeof(IStorageCatalogService)) as IStorageCatalogService;
         var driverRegistry = services.GetService(typeof(IStorageDriverRegistry)) as IStorageDriverRegistry;
+        var browseDriverRegistry = services.GetService(typeof(IStorageBrowseDriverRegistry)) as IStorageBrowseDriverRegistry;
         return catalogService is null || driverRegistry is null
             ? null
-            : new StorageRuntimePlugin(catalogService, driverRegistry, accessSettings);
+            : new StorageRuntimePlugin(catalogService, driverRegistry, browseDriverRegistry, accessSettings);
     }
 
     private Task AttachWorkspaceMemoryAsync(

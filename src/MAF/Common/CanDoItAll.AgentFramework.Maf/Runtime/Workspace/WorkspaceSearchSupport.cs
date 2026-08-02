@@ -100,11 +100,16 @@ internal static class WorkspaceSearchSupport
             return terms.Count >= Math.Max(1, minimumTermCount);
         }
 
-        public static IEnumerable<string> EnumerateSearchFiles(string rootPath, HashSet<string>? extensions, HashSet<string>? excludedPaths)
+        public static IEnumerable<string> EnumerateSearchFiles(
+            string rootPath,
+            HashSet<string>? extensions,
+            HashSet<string>? excludedPaths,
+            Func<string, IReadOnlyList<string>>? enumerateDirectoryEntries = null)
         {
             if (File.Exists(rootPath))
             {
-                if (!IsExcludedSearchPath(rootPath, rootPath, excludedPaths))
+                if (IsRegularFile(rootPath) &&
+                    !IsExcludedSearchPath(rootPath, rootPath, excludedPaths))
                 {
                     yield return rootPath;
                 }
@@ -112,27 +117,101 @@ internal static class WorkspaceSearchSupport
                 yield break;
             }
 
-            foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
+            if (!Directory.Exists(rootPath))
             {
-                if (extensions is not null && extensions.Count > 0 && !extensions.Contains(Path.GetExtension(file)))
-                {
-                    continue;
-                }
-
-                if (file.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-                    file.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-                    file.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (IsExcludedSearchPath(rootPath, file, excludedPaths))
-                {
-                    continue;
-                }
-
-                yield return file;
+                yield break;
             }
+
+            var enumerate = enumerateDirectoryEntries ?? EnumerateDirectoryEntries;
+            var pendingDirectories = new Stack<string>();
+            pendingDirectories.Push(rootPath);
+            while (pendingDirectories.TryPop(out var directory))
+            {
+                IReadOnlyList<string> entries;
+                try
+                {
+                    entries = enumerate(directory);
+                }
+                catch (Exception exception) when (
+                    exception is UnauthorizedAccessException or IOException)
+                {
+                    continue;
+                }
+
+                foreach (var entry in entries.Order(StringComparer.OrdinalIgnoreCase))
+                {
+                    FileAttributes attributes;
+                    try
+                    {
+                        attributes = File.GetAttributes(entry);
+                    }
+                    catch (Exception exception) when (
+                        exception is UnauthorizedAccessException or IOException)
+                    {
+                        continue;
+                    }
+
+                    if (attributes.HasFlag(FileAttributes.ReparsePoint) ||
+                        IsExcludedSearchPath(rootPath, entry, excludedPaths))
+                    {
+                        continue;
+                    }
+
+                    if (attributes.HasFlag(FileAttributes.Directory))
+                    {
+                        if (!IsBuildNoiseDirectory(entry))
+                        {
+                            pendingDirectories.Push(entry);
+                        }
+
+                        continue;
+                    }
+
+                    if (extensions is not null &&
+                        extensions.Count > 0 &&
+                        !extensions.Contains(Path.GetExtension(entry)))
+                    {
+                        continue;
+                    }
+
+                    yield return entry;
+                }
+            }
+        }
+
+        private static IReadOnlyList<string> EnumerateDirectoryEntries(string directory)
+            => Directory.EnumerateFileSystemEntries(
+                    directory,
+                    "*",
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = false,
+                        IgnoreInaccessible = false,
+                        AttributesToSkip = FileAttributes.ReparsePoint
+                    })
+                .ToArray();
+
+        private static bool IsRegularFile(string path)
+        {
+            try
+            {
+                var attributes = File.GetAttributes(path);
+                return !attributes.HasFlag(FileAttributes.Directory) &&
+                       !attributes.HasFlag(FileAttributes.ReparsePoint);
+            }
+            catch (Exception exception) when (
+                exception is UnauthorizedAccessException or IOException)
+            {
+                return false;
+            }
+        }
+
+        private static bool IsBuildNoiseDirectory(string path)
+        {
+            var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(path));
+            return name.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                   name.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+                   name.Equals(".git", StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsExcludedSearchPath(string rootPath, string filePath, HashSet<string>? excludedPaths)

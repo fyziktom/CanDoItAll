@@ -144,6 +144,49 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
+    public void Projected_process_run_folder_exposes_content_actions_without_edit_or_mutation_actions()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        Guid runId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        string path = $"artifacts/process-runs/{runId:D}";
+        var node = CreateNode(
+            ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId, path),
+            ProjectObjectType.File,
+            "Run artifacts",
+            0,
+            0) with
+        {
+            ParentId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId),
+            ObjectSubtype = "folder",
+            Route = "/projects/10000000-0000-0000-0000-000000000001/structure",
+            ArtifactKind = ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind,
+            ArtifactId = runId,
+            MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+            {
+                File = new ProjectFileMetadata
+                {
+                    FileSubtype = ProjectFileSubtype.Folder,
+                    ExternalPath = path
+                }
+            }),
+            IsSystemManaged = true
+        };
+
+        var actions = adapter.BuildNodeContextActions(
+            node,
+            canLaunchRuntime: false,
+            canOpenInFileExplorer: true,
+            canOpenInNewTab: false);
+
+        Assert.Equal(
+            ["browse-files", "open-local", "copy-id", "copy-info"],
+            actions.Select(action => action.ActionId));
+        Assert.Contains(actions, action => action.ActionId == "open-local" && action.Label == "Open in Explorer");
+        Assert.DoesNotContain(actions, action => action.ActionId == ProjectStructureActionCatalogAdapter.EditActionId);
+        Assert.DoesNotContain(actions, action => action.ActionId is "delete" or "reconnect" or "disconnect");
+    }
+
+    [Fact]
     public void Storage_backed_infrastructure_node_exposes_one_browse_action_separate_from_open_local()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
@@ -528,5 +571,4 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Equal(shortcuts.Count, shortcuts.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 }
-
 

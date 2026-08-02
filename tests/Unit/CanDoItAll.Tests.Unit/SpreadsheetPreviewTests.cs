@@ -162,7 +162,7 @@ public sealed class SpreadsheetPreviewTests
         var plugin = CreatePlugin(temp.Path, documents, canReadFiles: true);
         var run = CreateExecutionRunRecord();
 
-        SpreadsheetWorkbookPreviewResult result;
+        WorkspaceSpreadsheetPreviewToolResult result;
         using (WorkspaceExecutionAuditContext.BeginScope(run))
         {
             result = plugin.PreviewWorkbook(
@@ -179,6 +179,12 @@ public sealed class SpreadsheetPreviewTests
         Assert.Equal(1, documents.PreviewRequest.MaxWorksheets);
         Assert.Equal(2, documents.PreviewRequest.MaxRows);
         Assert.Equal(3, documents.PreviewRequest.MaxColumns);
+        Assert.Equal(run.Id, result.Receipt.ExecutionRunId);
+        Assert.Equal(
+            run.Id,
+            MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                "workspace_inspect_spreadsheet",
+                result));
 
         var receipt = Assert.Single(ReadReceipts(temp.Path, run.Id));
         Assert.Equal("workspace_spreadsheet_preview", receipt.ToolName);

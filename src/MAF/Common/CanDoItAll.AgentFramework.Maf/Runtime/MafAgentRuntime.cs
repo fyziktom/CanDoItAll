@@ -722,7 +722,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
                         runtimeSessionKey,
                         updates,
                         ProviderUsageSourcePhases.FinalizerRecovery,
-                        $"Required finalizer repair captured '{exception.ToolName}' but validation failed."));
+                        $"Required finalizer repair captured '{exception.ToolName}' but validation failed."),
+                    snapshotEffectiveToolInvocationTraces());
             }
             catch (Exception exception)
             {
@@ -755,8 +756,9 @@ public sealed class MafAgentRuntime : IAgentRuntime
                         runtimeSession,
                         runtimeSessionKey,
                         updates,
-                    ProviderUsageSourcePhases.FinalizerRecovery,
-                    MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)));
+                        ProviderUsageSourcePhases.FinalizerRecovery,
+                        MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)),
+                    snapshotEffectiveToolInvocationTraces());
             }
         }
 
@@ -954,7 +956,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
                             runtimeSessionKey,
                             updates,
                             ProviderUsageSourcePhases.AgentRuntime,
-                            MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)));
+                            MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)),
+                        snapshotEffectiveToolInvocationTraces());
                 }
             }
 

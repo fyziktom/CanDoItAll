@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -8,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProjectStructureRuntimeLauncherPathResolverTests
 {
     [Fact]
-    public void Resolve_fails_when_the_project_path_escapes_the_active_workspace_root()
+    public void Resolve_reports_a_missing_external_project_path()
     {
         var sut = CreateSut();
         var node = CreateEnvironmentNode(
@@ -21,13 +23,164 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
         var result = sut.Resolve(node);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("Project path must stay inside the active workspace root.", result.Message);
+        Assert.Equal("Project path does not exist or is not accessible.", result.Message);
     }
 
-    private static ProjectStructureRuntimeLauncher CreateSut()
+    [Fact]
+    public void Resolve_does_not_inspect_an_external_project_outside_the_current_run_authority()
+    {
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.RuntimeLauncher.External.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        var projectPath = Path.Combine(externalRoot, "Calculator.csproj");
+        File.WriteAllText(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        try
+        {
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+                CreateExecutionRun(readOnlyExternalTargetAlias: null));
+
+            var result = CreateSut().Resolve(CreateEnvironmentNode(
+                ProjectEnvironmentKind.DotNetWatch,
+                new ProjectEnvironmentMetadata
+                {
+                    ProjectPath = projectPath
+                }));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("outside the active workspace", result.Message, StringComparison.Ordinal);
+            Assert.Contains("not authorized", result.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Resolve_agent_mode_rejects_an_external_project_without_an_audited_execution()
+    {
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.RuntimeLauncher.External.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        var projectPath = Path.Combine(externalRoot, "Calculator.csproj");
+        File.WriteAllText(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        try
+        {
+            var node = CreateEnvironmentNode(
+                ProjectEnvironmentKind.DotNetWatch,
+                new ProjectEnvironmentMetadata
+                {
+                    ProjectPath = projectPath
+                });
+
+            var result = CreateSut(new UnexpectedProjectTargetResolver()).Resolve(
+                node.ObjectType,
+                node.ObjectSubtype,
+                node.Notes,
+                node.MetadataJson,
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution);
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("not authorized for this agent execution", result.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Resolve_can_inspect_an_external_project_inside_the_current_run_read_authority()
+    {
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.RuntimeLauncher.External.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        var projectPath = Path.Combine(externalRoot, "Calculator.csproj");
+        File.WriteAllText(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+        try
+        {
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+                CreateExecutionRun(
+                    AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)));
+
+            var node = CreateEnvironmentNode(
+                ProjectEnvironmentKind.DotNetWatch,
+                new ProjectEnvironmentMetadata
+                {
+                    ProjectPath = projectPath
+                });
+            var result = CreateSut().Resolve(
+                node.ObjectType,
+                node.ObjectSubtype,
+                node.Notes,
+                node.MetadataJson,
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(projectPath, result.Plan!.Target!.Path);
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Resolve_rejects_an_authorized_external_project_through_a_symbolic_link()
+    {
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.RuntimeLauncher.External.{Guid.NewGuid():N}");
+        var linkedTargetRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.RuntimeLauncher.LinkedTarget.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+        Directory.CreateDirectory(linkedTargetRoot);
+        var projectPath = Path.Combine(linkedTargetRoot, "Calculator.csproj");
+        File.WriteAllText(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var linkedRoot = Path.Combine(externalRoot, "linked");
+
+        try
+        {
+            Directory.CreateSymbolicLink(linkedRoot, linkedTargetRoot);
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+                CreateExecutionRun(
+                    AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)));
+
+            var result = CreateSut().Resolve(CreateEnvironmentNode(
+                ProjectEnvironmentKind.DotNetWatch,
+                new ProjectEnvironmentMetadata
+                {
+                    ProjectPath = Path.Combine(linkedRoot, "Calculator.csproj")
+                }));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("cannot traverse symbolic links or filesystem reparse points", result.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(linkedRoot))
+            {
+                Directory.Delete(linkedRoot);
+            }
+
+            Directory.Delete(externalRoot, recursive: true);
+            Directory.Delete(linkedTargetRoot, recursive: true);
+        }
+    }
+
+    private static ProjectStructureRuntimeLauncher CreateSut(
+        IProjectStructureDotNetProjectTargetResolver? projectTargetResolver = null)
         => new(
             new WorkspacePathAccessGuard(new TestWorkspacePathResolver(@"C:\workspace")),
-            NullLogger<ProjectStructureRuntimeLauncher>.Instance);
+            NullLogger<ProjectStructureRuntimeLauncher>.Instance,
+            projectTargetResolver ?? new ExistingProjectTargetResolver());
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
     {
@@ -77,5 +230,58 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
         public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
 
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
+    }
+
+    private sealed class ExistingProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver
+    {
+        public ProjectStructureDotNetProjectTargetResolution Resolve(string path)
+            => new(path, "Verified by the launcher path test boundary.");
+    }
+
+    private sealed class UnexpectedProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver
+    {
+        public ProjectStructureDotNetProjectTargetResolution Resolve(string path)
+            => throw new InvalidOperationException(
+                "An unauthorized external runtime path must be rejected before project inspection.");
+    }
+
+    private static ExecutionRunRecord CreateExecutionRun(string? readOnlyExternalTargetAlias)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var metadataJson = readOnlyExternalTargetAlias is null
+            ? "{}"
+            : System.Text.Json.JsonSerializer.Serialize(
+                new Dictionary<string, string[]>
+                {
+                    [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
+                    [
+                        readOnlyExternalTargetAlias
+                    ]
+                });
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Runtime launcher external authority test",
+            SourceKind: "test",
+            SourceId: "project-structure-runtime-launcher",
+            CorrelationId: Guid.NewGuid().ToString("D"),
+            CausationId: string.Empty,
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: metadataJson,
+            InputSummary: string.Empty,
+            ResultSummary: string.Empty,
+            ProviderName: "test",
+            Model: "test",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
     }
 }
