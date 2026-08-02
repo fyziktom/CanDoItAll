@@ -856,9 +856,15 @@ else
                     <Button Text="Save agent" Type="submit" Disabled="@isBusy" IsBusy="@isBusy" data-testid="agents-catalog-save" />
                 </PrimaryActions>
                 <DangerActions>
-                    @if (editorModel.Id.HasValue)
+                    @if (editorModel.Id.HasValue && !IsManagedSeedAgent)
                     {
-                        <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Disabled="@isBusy" Click="DeleteAgentAsync" />
+                        <Button Text="Delete"
+                                Icon="delete"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Disabled="@(isBusy || isConfirmingDelete)"
+                                IsBusy="@isBusy"
+                                Click="DeleteAgentAsync"
+                                data-testid="agents-catalog-delete" />
                     }
                 </DangerActions>
             </StickyActionFooter>

@@ -146,9 +146,27 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
-        await store.UpdateWorkspaceAsync(
-            document => PruneAgentWorkspace(document, agentId),
-            cancellationToken);
+        if (agentId == Guid.Empty)
+        {
+            throw new ArgumentException("An agent identifier is required.", nameof(agentId));
+        }
+
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        var agent = catalog.Agents.FirstOrDefault(item => item.Id == agentId);
+        if (agent is null)
+        {
+            return;
+        }
+
+        if (ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent))
+        {
+            throw new AgentDeletionConflictException(
+                agentId,
+                AgentDeletionConflictKind.ManagedSeedAgent,
+                $"Managed seed agent '{agent.Name}' cannot be deleted.");
+        }
+
+        await store.DeleteAgentWorkspaceDataAsync(agentId, cancellationToken);
     }
 
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
@@ -167,6 +185,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 Name = cloneName.Trim(),
                 IsTemplate = false,
                 TemplateKey = cloneTemplateKey,
+                ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
+                    source.ConfigurationJson),
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
@@ -202,6 +222,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 IsTemplate = true,
                 TemplateKey = normalizedTemplateKey,
                 Name = $"{source.Name} template",
+                ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
+                    source.ConfigurationJson),
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };

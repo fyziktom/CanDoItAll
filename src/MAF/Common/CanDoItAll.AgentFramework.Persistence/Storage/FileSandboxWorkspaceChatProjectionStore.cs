@@ -68,6 +68,51 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         CancellationToken cancellationToken)
         => LoadOrBuildReportingChatIndexAsync(cancellationToken);
 
+    public async Task<ExecutionChatIndex> LoadCurrentIndexAsync(
+        ExecutionStorageIndex executionIndex,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(executionIndex);
+
+        var current = await LoadOrBuildChatIndexAsync(cancellationToken);
+        if (current.Revision == executionIndex.Revision &&
+            current.SessionSummaries.Count == executionIndex.SessionCount &&
+            current.RunSummaries.Count == executionIndex.RunCount)
+        {
+            return current;
+        }
+
+        var rebuilt = await BuildChatIndexAsync(cancellationToken);
+        if (rebuilt.SessionSummaries.Count != executionIndex.SessionCount ||
+            rebuilt.RunSummaries.Count != executionIndex.RunCount)
+        {
+            throw new InvalidDataException(
+                "The execution chat index cannot be reconciled with the canonical execution index before agent deletion.");
+        }
+
+        rebuilt = rebuilt with
+        {
+            Revision = executionIndex.Revision,
+            UpdatedAtUtc = executionIndex.UpdatedAtUtc
+        };
+        await jsonStore.WriteJsonAtomicallyAsync(
+            layout.ExecutionChatIndexPath,
+            rebuilt,
+            cancellationToken);
+        return rebuilt;
+    }
+
+    public Task PersistAgentDeletionIndexAsync(
+        ExecutionChatIndex targetIndex,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(targetIndex);
+        return jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionChatIndexPath,
+            targetIndex,
+            cancellationToken);
+    }
+
     public async Task<ExecutionReportIndexPreparation> InspectExecutionReportIndexAsync(
         CancellationToken cancellationToken)
     {

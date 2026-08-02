@@ -165,7 +165,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteAgentAsync(agentId, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+        await RefreshDirectoryProjectionAfterCommittedAgentDeletionAsync(
+            agentId,
+            cancellationToken);
     }
 
     public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
@@ -964,6 +966,42 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         }
 
         referenceDataCacheInvalidator.Invalidate();
+    }
+
+    private async Task RefreshDirectoryProjectionAfterCommittedAgentDeletionAsync(
+        Guid agentId,
+        CancellationToken cancellationToken)
+    {
+        TryInvalidateReferenceDataAfterAgentDeletion(agentId);
+        try
+        {
+            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Agent {AgentId} was deleted from the canonical catalog, but agent-directory projection synchronization failed.",
+                agentId);
+            return;
+        }
+
+        TryInvalidateReferenceDataAfterAgentDeletion(agentId);
+    }
+
+    private void TryInvalidateReferenceDataAfterAgentDeletion(Guid agentId)
+    {
+        try
+        {
+            referenceDataCacheInvalidator.Invalidate();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Agent {AgentId} was deleted from the canonical catalog, but reference-data cache invalidation failed.",
+                agentId);
+        }
     }
 
     private async Task RefreshProjectStructureAccessProjectionsAsync(

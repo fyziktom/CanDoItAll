@@ -101,6 +101,41 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
             message => message.Contains("agent-directory projection synchronization failed", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Agent_deletion_succeeds_after_catalog_commit_when_secondary_projections_fail()
+    {
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceServiceProxy>();
+        var workspaceProxy = (WorkspaceServiceProxy)(object)workspace;
+        var bridge = DispatchProxy.Create<IAiTechnicalAgentBridge, TechnicalAgentBridgeProxy>();
+        var bridgeProxy = (TechnicalAgentBridgeProxy)(object)bridge;
+        var invalidator = new FailingReferenceDataCacheInvalidator();
+        var loggerProvider = new CapturingLoggerProvider();
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddProvider(loggerProvider));
+        using var serviceProvider = services.BuildServiceProvider();
+        var service = CreateCurrentProfileService(
+            new StubWorkspaceFactory(workspace),
+            bridge,
+            invalidator,
+            serviceProvider);
+
+        await service.DeleteAgentAsync(Guid.NewGuid());
+
+        Assert.Equal(1, workspaceProxy.DeleteAgentCallCount);
+        Assert.Equal(1, invalidator.InvalidationCallCount);
+        Assert.Equal(1, bridgeProxy.SynchronizationCallCount);
+        Assert.Contains(
+            loggerProvider.Messages,
+            message => message.Contains(
+                "reference-data cache invalidation failed",
+                StringComparison.Ordinal));
+        Assert.Contains(
+            loggerProvider.Messages,
+            message => message.Contains(
+                "agent-directory projection synchronization failed",
+                StringComparison.Ordinal));
+    }
+
     private static IAgentFrameworkWorkspaceService CreateCurrentProfileService(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
         IAiTechnicalAgentBridge technicalAgentBridge,
@@ -263,6 +298,8 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
 
     private class WorkspaceServiceProxy : DispatchProxy
     {
+        public int DeleteAgentCallCount { get; private set; }
+
         public int GrantCallCount { get; private set; }
 
         public int RevokeCallCount { get; private set; }
@@ -270,6 +307,12 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             ArgumentNullException.ThrowIfNull(targetMethod);
+
+            if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.DeleteAgentAsync))
+            {
+                DeleteAgentCallCount++;
+                return Task.CompletedTask;
+            }
 
             if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.GrantAgentProjectStructureAccessAsync))
             {

@@ -338,6 +338,11 @@ public sealed class ProviderCatalogProjectionFailureTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public bool ContainsCatalogProvider(Guid providerId)
         {
             return document.Providers.Any(item => item.Id == providerId);

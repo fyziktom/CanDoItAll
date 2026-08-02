@@ -51,6 +51,62 @@ public sealed class ManagedSeedProviderFallbacksTests
         Assert.Equal("gpt-4.1", effectiveModel);
     }
 
+    [Fact]
+    public void Top_level_managed_seed_ownership_is_detected()
+    {
+        var agent = CreateAgent(
+            "{\"managedSeedVersion\":\"2026-08-test\"}",
+            model: "gpt-4.1",
+            templateKey: "customer-agent");
+
+        Assert.True(ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent));
+    }
+
+    [Theory]
+    [InlineData("{\"notes\":\"managedSeedVersion\"}")]
+    [InlineData("{\"metadata\":{\"managedSeedVersion\":\"2026-08-test\"}}")]
+    public void Managed_seed_marker_outside_the_top_level_property_is_not_detected(
+        string configurationJson)
+    {
+        var agent = CreateAgent(
+            configurationJson,
+            model: "gpt-4.1",
+            templateKey: "customer-agent");
+
+        Assert.False(ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent));
+    }
+
+    [Fact]
+    public void Removing_managed_seed_ownership_preserves_runtime_configuration()
+    {
+        const string configurationJson =
+            "{\"managedSeedVersion\":\"2026-08-test\",\"managedSeedCustomizationVersion\":\"2026-08-test\",\"reasoningEffort\":\"high\",\"timeoutSeconds\":47,\"runtime\":{\"transport\":\"responses\",\"toolsEnabled\":true}}";
+
+        var detached = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
+            configurationJson);
+
+        using var document = System.Text.Json.JsonDocument.Parse(detached);
+        var root = document.RootElement;
+        Assert.False(root.TryGetProperty("managedSeedVersion", out _));
+        Assert.False(root.TryGetProperty("managedSeedCustomizationVersion", out _));
+        Assert.Equal("high", root.GetProperty("reasoningEffort").GetString());
+        Assert.Equal(47, root.GetProperty("timeoutSeconds").GetInt32());
+        var runtime = root.GetProperty("runtime");
+        Assert.Equal("responses", runtime.GetProperty("transport").GetString());
+        Assert.True(runtime.GetProperty("toolsEnabled").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("{not-valid-json")]
+    [InlineData("[\"managedSeedVersion\"]")]
+    public void Removing_managed_seed_ownership_rejects_invalid_or_non_object_json(
+        string configurationJson)
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
+                configurationJson));
+    }
+
     [Theory]
     [InlineData("delivery-qa-observer")]
     [InlineData("dotnet-application-developer")]

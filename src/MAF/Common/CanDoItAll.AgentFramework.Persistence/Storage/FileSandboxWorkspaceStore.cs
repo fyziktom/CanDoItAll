@@ -27,6 +27,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private readonly Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary;
     private readonly Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary;
     private readonly Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary;
+    private readonly Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary;
 
     public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
         : this(
@@ -85,7 +86,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary,
         Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary,
         Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary,
-        FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics)
+        FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics,
+        Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null)
     {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
         jsonStore = new FileSandboxWorkspaceJsonStore(jsonReadDiagnostics);
@@ -95,6 +97,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         this.chatBackedRunCommitBoundary = chatBackedRunCommitBoundary;
         this.genericNewRunCommitBoundary = genericNewRunCommitBoundary;
         this.existingRunDetailCommitBoundary = existingRunDetailCommitBoundary;
+        this.agentDeletionCommitBoundary = agentDeletionCommitBoundary;
     }
 
     public async Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
@@ -1271,7 +1274,8 @@ public sealed partial class FileSandboxWorkspaceStore :
         var pendingJournalCount =
             (HasPendingChatBackedRunCommit ? 1 : 0) +
             (HasPendingGenericNewRunCommit ? 1 : 0) +
-            (HasPendingExistingRunDetailCommit ? 1 : 0);
+            (HasPendingExistingRunDetailCommit ? 1 : 0) +
+            (HasPendingAgentDeletionCommit ? 1 : 0);
         if (pendingJournalCount > 1)
         {
             throw new InvalidDataException(
@@ -1281,6 +1285,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         await RecoverPendingChatBackedRunCommitAsync(cancellationToken);
         await RecoverPendingGenericNewRunCommitAsync(cancellationToken);
         await RecoverPendingExistingRunDetailCommitAsync(cancellationToken);
+        await RecoverPendingAgentDeletionAsync(cancellationToken);
     }
 
     private async Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotCoreAsync(CancellationToken cancellationToken)
@@ -1633,7 +1638,8 @@ public sealed partial class FileSandboxWorkspaceStore :
     private bool CanReadCatalogWithoutWorkspaceLock()
     {
         return File.Exists(layout.CatalogPath) &&
-               File.Exists(layout.WorkspaceIndexPath);
+               File.Exists(layout.WorkspaceIndexPath) &&
+               !HasPendingAgentDeletionCommit;
     }
 
     private string PendingChatBackedRunCommitJournalPath

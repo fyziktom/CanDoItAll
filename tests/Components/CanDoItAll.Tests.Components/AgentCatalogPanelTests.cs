@@ -255,12 +255,66 @@ public sealed class AgentCatalogPanelTests
         cut.WaitForAssertion(() => Assert.Same(second, selected));
     }
 
-    private static BunitContext CreateCatalogTestContext(IAgentChatLauncher launcher)
+    [Fact]
+    public async Task Deleted_agent_result_clears_selection_instead_of_selecting_another_agent()
+    {
+        var deleted = CreateAgent(Guid.NewGuid(), "Deleted agent", string.Empty);
+        var survivor = CreateAgent(Guid.NewGuid(), "Surviving agent", string.Empty);
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            CatalogReloadWorkspaceServiceProxy>();
+        var workspaceProxy = (CatalogReloadWorkspaceServiceProxy)(object)workspaceService;
+        workspaceProxy.Agents = [survivor];
+        var selections = new List<AgentDefinition?>();
+        using var context = CreateCatalogTestContext(
+            new RecordingAgentChatLauncher(deleted),
+            workspaceService);
+
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { deleted, survivor })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true)
+            .Add(component => component.SelectedAgentChanged,
+                EventCallback.Factory.Create<AgentDefinition?>(this, selections.Add)));
+        var deletedCard = cut.FindAll("[data-testid='agents-catalog-card-shell']")
+            .Single(card => card.TextContent.Contains(deleted.Name, StringComparison.Ordinal));
+        deletedCard.QuerySelector("[data-testid='agents-catalog-card']")!.Click();
+        cut.WaitForAssertion(() => Assert.Same(deleted, selections.Last()));
+
+        var handler = typeof(AgentCatalogPanel).GetMethod(
+            "HandleAgentDialogSavedAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingMethodException(
+                typeof(AgentCatalogPanel).FullName,
+                "HandleAgentDialogSavedAsync");
+        var handlingTask = Assert.IsAssignableFrom<Task>(handler.Invoke(
+            cut.Instance,
+            [new AgentDetailsDialogResult(deleted.Id, Deleted: true)]));
+
+        await handlingTask;
+
+        Assert.Null(selections.Last());
+        var selectedAgentIdField = typeof(AgentCatalogPanel).GetField(
+            "selectedAgentId",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingFieldException(
+                typeof(AgentCatalogPanel).FullName,
+                "selectedAgentId");
+        Assert.Null(selectedAgentIdField.GetValue(cut.Instance));
+        Assert.Contains(survivor.Name, cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(deleted.Name, cut.Markup, StringComparison.Ordinal);
+    }
+
+    private static BunitContext CreateCatalogTestContext(
+        IAgentChatLauncher launcher,
+        IAgentFrameworkWorkspaceService? workspaceService = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(
+            workspaceService ??
             DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnusedWorkspaceServiceProxy>());
         context.Services.AddSingleton<IAgentFrameworkOrganizationCatalogRepairService, UnusedOrganizationCatalogRepairService>();
         context.Services.AddSingleton(launcher);
@@ -341,5 +395,25 @@ public sealed class AgentCatalogPanelTests
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
             => throw new InvalidOperationException(
                 $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.");
+    }
+
+    private class CatalogReloadWorkspaceServiceProxy : DispatchProxy
+    {
+        public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            return targetMethod?.Name switch
+            {
+                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
+                    Task.FromResult(Agents),
+                nameof(IAgentFrameworkWorkspaceService.ListProvidersAsync) =>
+                    Task.FromResult<IReadOnlyList<ProviderProfile>>([]),
+                nameof(IAgentFrameworkWorkspaceService.ListAgentTeamsAsync) =>
+                    Task.FromResult<IReadOnlyList<AgentTeamDefinition>>([]),
+                _ => throw new InvalidOperationException(
+                    $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
+            };
+        }
     }
 }

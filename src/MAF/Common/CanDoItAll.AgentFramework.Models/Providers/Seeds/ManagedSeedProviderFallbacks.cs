@@ -5,7 +5,6 @@ namespace CanDoItAll.AgentFramework.Models;
 
 public static class ManagedSeedProviderFallbacks
 {
-    private const string ManagedSeedMarker = "managedSeedVersion";
     private const string OpenAiApiKeyVariableName = "OPENAI_API_KEY";
     private const string ProviderRepairFallbackOverrideMarker = "providerRepairFallbackOverride";
 
@@ -209,7 +208,7 @@ public static class ManagedSeedProviderFallbacks
     {
         ArgumentNullException.ThrowIfNull(agent);
 
-        return agent.ConfigurationJson.Contains(ManagedSeedMarker, StringComparison.OrdinalIgnoreCase) ||
+        return AgentManagedSeedCustomizationMetadata.HasManagedSeedOwnership(agent.ConfigurationJson) ||
                ManagedSeedTemplateKeys.Contains(agent.TemplateKey);
     }
 

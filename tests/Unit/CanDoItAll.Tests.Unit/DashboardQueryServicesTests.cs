@@ -244,6 +244,11 @@ public sealed class DashboardQueryServicesTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
         {
             LoadUsageProjectionCallCount++;

@@ -30,6 +30,241 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return LoadOrBuildUsageProjectionAsync(cancellationToken);
     }
 
+    public async Task<AgentExecutionDeletionPlan> PrepareAgentDeletionAsync(
+        Guid agentId,
+        ExecutionStorageIndex currentIndex,
+        ExecutionChatIndex currentChatIndex,
+        DateTimeOffset deletedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (agentId == Guid.Empty)
+        {
+            throw new ArgumentException("An agent identifier is required.", nameof(agentId));
+        }
+
+        ArgumentNullException.ThrowIfNull(currentIndex);
+        ArgumentNullException.ThrowIfNull(currentChatIndex);
+        if (currentChatIndex.Revision != currentIndex.Revision)
+        {
+            throw new InvalidDataException(
+                "The execution chat index revision does not match the canonical execution index before agent deletion.");
+        }
+
+        var sessionIds = currentChatIndex.SessionSummaries
+            .Where(item => item.AgentId == agentId)
+            .Select(item => item.Id)
+            .ToHashSet();
+        var runSummaries = currentChatIndex.RunSummaries
+            .Where(item =>
+                item.AgentId == agentId ||
+                item.ChatSessionId.HasValue &&
+                sessionIds.Contains(item.ChatSessionId.Value))
+            .ToList();
+        var activeRun = runSummaries.FirstOrDefault(item => IsIndexedActiveState(item.State));
+        if (activeRun is not null)
+        {
+            throw new AgentDeletionConflictException(
+                agentId,
+                AgentDeletionConflictKind.ActiveExecution,
+                $"Agent '{agentId:D}' cannot be deleted while execution run '{activeRun.ExecutionRunId:D}' is active.");
+        }
+
+        var runIds = runSummaries
+            .Select(item => item.ExecutionRunId)
+            .ToHashSet();
+        var runSummariesById = runSummaries.ToDictionary(
+            item => item.ExecutionRunId);
+        var runDetails = new List<ExecutionRunDetail>(runIds.Count);
+        foreach (var runId in runIds.OrderBy(item => item))
+        {
+            var detail = await LoadRunDetailAsync(runId, cancellationToken)
+                ?? throw new InvalidDataException(
+                    $"Execution run '{runId:N}' disappeared while preparing agent deletion.");
+            var summary = runSummariesById[runId];
+            if (detail.Run.AgentId != summary.AgentId ||
+                detail.Run.ChatSessionId != summary.ChatSessionId)
+            {
+                throw new InvalidDataException(
+                    $"Execution run '{runId:N}' does not match its canonical chat index summary.");
+            }
+
+            if (IsIndexedActiveState(detail.Run.State))
+            {
+                throw new AgentDeletionConflictException(
+                    agentId,
+                    AgentDeletionConflictKind.ActiveExecution,
+                    $"Agent '{agentId:D}' cannot be deleted while execution run '{runId:D}' is active.");
+            }
+
+            runDetails.Add(detail);
+        }
+
+        var orphanLogs = (await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionLogEntry>(
+                layout.OrphanLogsRoot,
+                cancellationToken))
+            .Where(item => MatchesDeletedAgent(item.AgentId, item.ChatSessionId, item.ExecutionRunId, agentId, sessionIds, runIds))
+            .ToList();
+        var orphanMetrics = (await jsonStore.LoadRecordsFromDirectoryAsync<AgentRunMetric>(
+                layout.OrphanMetricsRoot,
+                cancellationToken))
+            .Where(item => MatchesDeletedAgent(item.AgentId, item.ChatSessionId, item.ExecutionRunId, agentId, sessionIds, runIds))
+            .ToList();
+        var allOrphanUsage = await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
+            layout.OrphanUsageRoot,
+            cancellationToken);
+        var orphanUsage = allOrphanUsage
+            .Where(item =>
+                item.AgentId == agentId ||
+                item.ChatSessionId.HasValue && sessionIds.Contains(item.ChatSessionId.Value) ||
+                item.ExecutionRunId.HasValue && runIds.Contains(item.ExecutionRunId.Value))
+            .ToList();
+        var orphanApprovals = (await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionApprovalRecord>(
+                layout.OrphanApprovalsRoot,
+                cancellationToken))
+            .Where(item => runIds.Contains(item.ExecutionRunId))
+            .ToList();
+        var orphanArtifacts = (await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionArtifactRecord>(
+                layout.OrphanArtifactsRoot,
+                cancellationToken))
+            .Where(item => runIds.Contains(item.ExecutionRunId))
+            .ToList();
+        var orphanReceipts = (await jsonStore.LoadRecordsFromDirectoryAsync<ToolExecutionReceiptRecord>(
+                layout.OrphanReceiptsRoot,
+                cancellationToken))
+            .Where(item => runIds.Contains(item.ExecutionRunId))
+            .ToList();
+
+        var hasExecutionChanges =
+            runDetails.Count > 0 ||
+            sessionIds.Count > 0 ||
+            orphanLogs.Count > 0 ||
+            orphanMetrics.Count > 0 ||
+            orphanUsage.Count > 0 ||
+            orphanApprovals.Count > 0 ||
+            orphanArtifacts.Count > 0 ||
+            orphanReceipts.Count > 0;
+        if (!hasExecutionChanges)
+        {
+            return new AgentExecutionDeletionPlan(
+                agentId,
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                currentIndex,
+                currentIndex,
+                TargetUsageProjection: null,
+                SourceUsageProjection: null,
+                HasExecutionChanges: false);
+        }
+
+        var targetIndex = CreateAgentDeletionTargetIndex(
+            currentIndex,
+            runDetails,
+            sessionIds.Count,
+            orphanLogs.Count,
+            orphanMetrics.Count,
+            orphanUsage.Count,
+            orphanApprovals.Count,
+            orphanArtifacts.Count,
+            orphanReceipts.Count,
+            deletedAtUtc);
+        var currentUsageProjection = await LoadOrBuildUsageProjectionAsync(
+            currentIndex,
+            cancellationToken);
+        var targetUsageProjection = await CreateAgentDeletionUsageProjectionAsync(
+            agentId,
+            currentUsageProjection,
+            runDetails,
+            orphanUsage,
+            targetIndex,
+            cancellationToken);
+
+        return new AgentExecutionDeletionPlan(
+            agentId,
+            runDetails.Select(item => item.Run.Id).ToList(),
+            sessionIds.OrderBy(item => item).ToList(),
+            orphanLogs,
+            orphanMetrics,
+            orphanUsage,
+            orphanApprovals,
+            orphanArtifacts,
+            orphanReceipts,
+            currentIndex,
+            targetIndex,
+            targetUsageProjection,
+            currentUsageProjection,
+            HasExecutionChanges: true);
+    }
+
+    public async Task PersistAgentDeletionAsync(
+        AgentExecutionDeletionPlan plan,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!plan.HasExecutionChanges)
+        {
+            return;
+        }
+
+        foreach (var runId in plan.RunIds)
+        {
+            DeleteRunRoot(runId);
+        }
+
+        foreach (var sessionId in plan.SessionIds)
+        {
+            DeleteFileIfExists(layout.SessionPath(sessionId));
+        }
+
+        foreach (var item in plan.OrphanLogs)
+        {
+            DeleteFileIfExists(Path.Combine(layout.OrphanLogsRoot, $"{item.Id:N}.json"));
+        }
+
+        foreach (var item in plan.OrphanMetrics)
+        {
+            DeleteFileIfExists(Path.Combine(layout.OrphanMetricsRoot, $"{item.Id:N}.json"));
+        }
+
+        foreach (var item in plan.OrphanUsage)
+        {
+            DeleteFileIfExists(Path.Combine(layout.OrphanUsageRoot, $"{item.Id:N}.json"));
+        }
+
+        foreach (var item in plan.OrphanApprovals)
+        {
+            DeleteFileIfExists(Path.Combine(
+                layout.OrphanApprovalsRoot,
+                $"{item.ExecutionRunId:N}-{jsonStore.NormalizeFileName(item.ApprovalId)}.json"));
+        }
+
+        foreach (var item in plan.OrphanArtifacts)
+        {
+            DeleteFileIfExists(Path.Combine(layout.OrphanArtifactsRoot, $"{item.Id:N}.json"));
+        }
+
+        foreach (var item in plan.OrphanReceipts)
+        {
+            DeleteFileIfExists(Path.Combine(layout.OrphanReceiptsRoot, $"{item.Id:N}.json"));
+        }
+
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionIndexPath,
+            plan.TargetIndex,
+            cancellationToken);
+        await jsonStore.WriteJsonIfChangedAsync(
+            layout.ExecutionUsageIndexPath,
+            plan.TargetUsageProjection
+                ?? throw new InvalidDataException(
+                    "Agent deletion with execution changes requires a target usage projection."),
+            cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ExecutionRunRecord>> ListRunsAsync(CancellationToken cancellationToken)
     {
         if (!ExecutionStorageExists())
@@ -1563,9 +1798,72 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 previousDetail.UsageObservations.Count);
     }
 
+    private static ExecutionStorageIndex CreateAgentDeletionTargetIndex(
+        ExecutionStorageIndex currentIndex,
+        IReadOnlyList<ExecutionRunDetail> runDetails,
+        int sessionCount,
+        int orphanLogCount,
+        int orphanMetricCount,
+        int orphanUsageCount,
+        int orphanApprovalCount,
+        int orphanArtifactCount,
+        int orphanReceiptCount,
+        DateTimeOffset updatedAtUtc)
+    {
+        var runLogCount = runDetails.Sum(item => item.ExecutionLog.Count);
+        var runMetricCount = runDetails.Sum(item => item.Metrics.Count);
+        var runUsageCount = runDetails.Sum(item => item.UsageObservations.Count);
+        var runApprovalCount = runDetails.Sum(item => item.Approvals.Count);
+        var runArtifactCount = runDetails.Sum(item => item.Artifacts.Count);
+        var runCheckpointCount = runDetails.Sum(item => item.Checkpoints.Count);
+        var runReceiptCount = runDetails.Sum(item => item.ToolReceipts.Count);
+
+        return currentIndex with
+        {
+            Revision = currentIndex.Revision + 1L,
+            UpdatedAtUtc = updatedAtUtc,
+            SessionCount = SubtractIndexedCount(currentIndex.SessionCount, sessionCount, "session"),
+            RunCount = SubtractIndexedCount(currentIndex.RunCount, runDetails.Count, "execution run"),
+            LogCount = SubtractIndexedCount(currentIndex.LogCount, runLogCount + orphanLogCount, "execution log"),
+            MetricCount = SubtractIndexedCount(currentIndex.MetricCount, runMetricCount + orphanMetricCount, "execution metric"),
+            ApprovalCount = SubtractIndexedCount(currentIndex.ApprovalCount, runApprovalCount + orphanApprovalCount, "execution approval"),
+            ArtifactCount = SubtractIndexedCount(currentIndex.ArtifactCount, runArtifactCount + orphanArtifactCount, "execution artifact"),
+            CheckpointCount = SubtractIndexedCount(currentIndex.CheckpointCount, runCheckpointCount, "execution checkpoint"),
+            ReceiptCount = SubtractIndexedCount(currentIndex.ReceiptCount, runReceiptCount + orphanReceiptCount, "tool execution receipt"),
+            ActiveRunCount = SubtractIndexedCount(
+                currentIndex.ActiveRunCount,
+                runDetails.Count(item => IsIndexedActiveRun(item.Run)),
+                "active execution run"),
+            FailedRunCount = SubtractIndexedCount(
+                currentIndex.FailedRunCount,
+                runDetails.Count(item => IsIndexedFailedRun(item.Run)),
+                "failed execution run"),
+            UsageObservationCount = SubtractIndexedCount(
+                currentIndex.UsageObservationCount,
+                runUsageCount + orphanUsageCount,
+                "provider usage observation")
+        };
+    }
+
+    private static int SubtractIndexedCount(int current, int removed, string label)
+    {
+        if (removed < 0 || removed > current)
+        {
+            throw new InvalidDataException(
+                $"Agent deletion would make the canonical {label} count invalid.");
+        }
+
+        return current - removed;
+    }
+
     private static bool IsIndexedActiveRun(ExecutionRunRecord run)
     {
-        return run.State is
+        return IsIndexedActiveState(run.State);
+    }
+
+    private static bool IsIndexedActiveState(ExecutionState state)
+    {
+        return state is
             ExecutionState.Preparing or
             ExecutionState.Running or
             ExecutionState.WaitingOnTool or
@@ -1707,6 +2005,162 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             Agents: OrderAgentRows(agentRows.Values),
             Providers: OrderProviderRows(providerRows.Values),
             Models: OrderModelRows(modelRows.Values));
+    }
+
+    private static AgentUsageProjection CreateAgentDeletionUsageProjection(
+        AgentUsageProjection currentProjection,
+        IReadOnlyList<ExecutionRunDetail> runDetails,
+        IReadOnlyList<ProviderUsageObservation> orphanUsage,
+        ExecutionStorageIndex targetIndex)
+    {
+        var agentRows = currentProjection.Agents
+            .Select(CreateAgentAccumulator)
+            .ToDictionary(item => item.AgentId);
+        var providerRows = currentProjection.Providers
+            .Select(CreateProviderAccumulator)
+            .ToDictionary(
+                item => CreateProviderKey(item.ProviderName, item.ProviderKind),
+                ProviderUsageProjectionKeyComparer.Instance);
+        var modelRows = currentProjection.Models
+            .Select(CreateModelAccumulator)
+            .ToDictionary(
+                item => CreateModelKey(item.ProviderName, item.ProviderKind, item.Model),
+                ModelUsageProjectionKeyComparer.Instance);
+
+        foreach (var detail in runDetails)
+        {
+            SubtractRunContribution(agentRows, providerRows, modelRows, detail);
+        }
+
+        foreach (var observation in orphanUsage)
+        {
+            SubtractProviderUsage(providerRows, observation);
+            SubtractModelUsage(modelRows, observation);
+        }
+
+        return new AgentUsageProjection(
+            Version: string.IsNullOrWhiteSpace(targetIndex.Version)
+                ? currentProjection.Version
+                : targetIndex.Version,
+            Revision: targetIndex.Revision,
+            UpdatedAtUtc: targetIndex.UpdatedAtUtc,
+            Agents: OrderAgentRows(agentRows.Values),
+            Providers: OrderProviderRows(providerRows.Values),
+            Models: OrderModelRows(modelRows.Values));
+    }
+
+    private async Task<AgentUsageProjection> CreateAgentDeletionUsageProjectionAsync(
+        Guid deletedAgentId,
+        AgentUsageProjection currentProjection,
+        IReadOnlyList<ExecutionRunDetail> runDetails,
+        IReadOnlyList<ProviderUsageObservation> orphanUsage,
+        ExecutionStorageIndex targetIndex,
+        CancellationToken cancellationToken)
+    {
+        var targetProjection = CreateAgentDeletionUsageProjection(
+            currentProjection,
+            runDetails,
+            orphanUsage,
+            targetIndex);
+        if (!RequiresAgentDeletionUsageRebuild(
+                deletedAgentId,
+                currentProjection,
+                targetProjection,
+                runDetails,
+                orphanUsage))
+        {
+            return targetProjection;
+        }
+
+        var deletedRunIds = runDetails
+            .Select(item => item.Run.Id)
+            .ToHashSet();
+        var deletedUsageIds = runDetails
+            .SelectMany(item => item.UsageObservations)
+            .Concat(orphanUsage)
+            .Select(item => item.Id)
+            .ToHashSet();
+        var source = await LoadUsageProjectionSourceAsync(cancellationToken);
+        var targetSource = source with
+        {
+            ExecutionRuns = source.ExecutionRuns
+                .Where(item => !deletedRunIds.Contains(item.Id))
+                .ToList(),
+            ProviderUsageObservations = source.ProviderUsageObservations
+                .Where(item => !deletedUsageIds.Contains(item.Id))
+                .ToList()
+        };
+        return BuildUsageProjection(targetSource, targetIndex);
+    }
+
+    private static bool RequiresAgentDeletionUsageRebuild(
+        Guid deletedAgentId,
+        AgentUsageProjection currentProjection,
+        AgentUsageProjection targetProjection,
+        IReadOnlyList<ExecutionRunDetail> runDetails,
+        IReadOnlyList<ProviderUsageObservation> orphanUsage)
+    {
+        var targetAgentIds = targetProjection.Agents
+            .Select(item => item.AgentId)
+            .ToHashSet();
+        foreach (var detail in runDetails)
+        {
+            var currentAgentLastUsedAtUtc = currentProjection.Agents
+                .FirstOrDefault(item => item.AgentId == detail.Run.AgentId)?
+                .LastUsedAtUtc;
+            if (detail.Run.AgentId != deletedAgentId &&
+                targetAgentIds.Contains(detail.Run.AgentId) &&
+                (currentAgentLastUsedAtUtc == detail.Run.UpdatedAtUtc ||
+                 detail.UsageObservations.Any(
+                     item => item.CreatedAtUtc == currentAgentLastUsedAtUtc)))
+            {
+                return true;
+            }
+        }
+
+        var deletedUsage = runDetails
+            .SelectMany(item => item.UsageObservations)
+            .Concat(orphanUsage)
+            .ToList();
+        foreach (var observation in deletedUsage)
+        {
+            var providerKey = CreateProviderKey(
+                observation.ProviderName,
+                observation.ProviderKind);
+            var currentProvider = currentProjection.Providers.FirstOrDefault(item =>
+                ProviderUsageProjectionKeyComparer.Instance.Equals(
+                    CreateProviderKey(item.ProviderName, item.ProviderKind),
+                    providerKey));
+            var targetProviderExists = targetProjection.Providers.Any(item =>
+                ProviderUsageProjectionKeyComparer.Instance.Equals(
+                    CreateProviderKey(item.ProviderName, item.ProviderKind),
+                    providerKey));
+            if (targetProviderExists &&
+                currentProvider?.LastUsedAtUtc == observation.CreatedAtUtc)
+            {
+                return true;
+            }
+
+            var modelKey = CreateModelKey(
+                observation.ProviderName,
+                observation.ProviderKind,
+                observation.Model);
+            var currentModel = currentProjection.Models.FirstOrDefault(item =>
+                ModelUsageProjectionKeyComparer.Instance.Equals(
+                    CreateModelKey(item.ProviderName, item.ProviderKind, item.Model),
+                    modelKey));
+            var targetModelExists = targetProjection.Models.Any(item =>
+                ModelUsageProjectionKeyComparer.Instance.Equals(
+                    CreateModelKey(item.ProviderName, item.ProviderKind, item.Model),
+                    modelKey));
+            if (targetModelExists &&
+                currentModel?.LastUsedAtUtc == observation.CreatedAtUtc)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static AgentUsageProjection BuildUsageProjection(
@@ -2649,7 +3103,62 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             }
         }
     }
+
+    private static bool MatchesDeletedAgent(
+        Guid recordAgentId,
+        Guid? chatSessionId,
+        Guid executionRunId,
+        Guid agentId,
+        IReadOnlySet<Guid> sessionIds,
+        IReadOnlySet<Guid> runIds)
+    {
+        return recordAgentId == agentId ||
+               chatSessionId.HasValue && sessionIds.Contains(chatSessionId.Value) ||
+               executionRunId != Guid.Empty && runIds.Contains(executionRunId);
+    }
+
+    private void DeleteRunRoot(Guid executionRunId)
+    {
+        var runsRoot = Path.GetFullPath(layout.ExecutionRunsRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        var runRoot = Path.GetFullPath(layout.RunRoot(executionRunId));
+        if (!runRoot.StartsWith(runsRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                $"Execution run deletion target '{runRoot}' is outside the canonical runs root.");
+        }
+
+        if (Directory.Exists(runRoot))
+        {
+            Directory.Delete(runRoot, recursive: true);
+        }
+    }
+
+    private static void DeleteFileIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
 }
+
+internal sealed record AgentExecutionDeletionPlan(
+    Guid AgentId,
+    IReadOnlyList<Guid> RunIds,
+    IReadOnlyList<Guid> SessionIds,
+    IReadOnlyList<ExecutionLogEntry> OrphanLogs,
+    IReadOnlyList<AgentRunMetric> OrphanMetrics,
+    IReadOnlyList<ProviderUsageObservation> OrphanUsage,
+    IReadOnlyList<ExecutionApprovalRecord> OrphanApprovals,
+    IReadOnlyList<ExecutionArtifactRecord> OrphanArtifacts,
+    IReadOnlyList<ToolExecutionReceiptRecord> OrphanReceipts,
+    ExecutionStorageIndex SourceIndex,
+    ExecutionStorageIndex TargetIndex,
+    AgentUsageProjection? TargetUsageProjection,
+    AgentUsageProjection? SourceUsageProjection,
+    bool HasExecutionChanges);
 
 internal sealed record NewExecutionRunPersistencePlan(
     ChatSessionRecord? PreviousSession,

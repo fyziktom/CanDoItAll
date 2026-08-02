@@ -66,6 +66,7 @@ public partial class AgentDetailsDialog
     private bool isAvatarUploadBusy;
     private bool isAvatarGenerationBusy;
     private bool isConfirmingAutoApproval;
+    private bool isConfirmingDelete;
     private bool areProvidersLoaded;
     private bool areProjectStructureProjectsLoaded;
     private bool isLoadingProjectStructureProjects;
@@ -333,31 +334,101 @@ public partial class AgentDetailsDialog
 
     private async Task DeleteAgentAsync()
     {
-        if (!editorModel.Id.HasValue || isBusy)
+        if (!editorModel.Id.HasValue ||
+            isBusy ||
+            isConfirmingDelete ||
+            IsManagedSeedAgent)
+        {
+            return;
+        }
+
+        var deletedAgentId = editorModel.Id.Value;
+        var deletedAgentName = string.IsNullOrWhiteSpace(editorModel.Name)
+            ? "Unnamed agent"
+            : editorModel.Name.Trim();
+        var confirmed = false;
+
+        try
+        {
+            isConfirmingDelete = true;
+            confirmed = await DialogService.OpenAsync<AgentDeleteConfirmationDialog>(
+                "Delete agent?",
+                new Dictionary<string, object?>
+                {
+                    [nameof(AgentDeleteConfirmationDialog.AgentName)] = deletedAgentName
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Danger action",
+                    Subtitle = "This action cannot be undone.",
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    AriaLabel = $"Confirm deletion of agent {deletedAgentName}",
+                    TestId = "agents-catalog-delete-confirmation"
+                }) is true;
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Agent delete confirmation failed", exception.Message);
+        }
+        finally
+        {
+            isConfirmingDelete = false;
+        }
+
+        if (!confirmed)
         {
             return;
         }
 
         isBusy = true;
-        var deletedAgentId = editorModel.Id.Value;
-
         try
         {
             await WorkspaceService.DeleteAgentAsync(deletedAgentId);
-            NotificationService.Success("Agent deleted", "Technical agent deleted.");
-            await Saved.InvokeAsync(new AgentDetailsDialogResult(deletedAgentId, Deleted: true));
-            if (DialogReference is not null)
-            {
-                await DialogReference.CloseAsync(new AgentDetailsDialogResult(deletedAgentId, Deleted: true));
-            }
         }
         catch (Exception exception)
         {
             NotificationService.Error("Agent delete failed", exception.Message);
+            return;
         }
         finally
         {
             isBusy = false;
+        }
+
+        NotificationService.Success("Agent deleted", $"Technical agent '{deletedAgentName}' deleted.");
+        var result = new AgentDetailsDialogResult(deletedAgentId, Deleted: true);
+        try
+        {
+            if (DialogReference is not null)
+            {
+                await DialogReference.CloseAsync(result);
+            }
+            else
+            {
+                await Saved.InvokeAsync(result);
+            }
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error(
+                "Agent deleted, but the catalog refresh failed",
+                exception.Message);
+        }
+    }
+
+    private bool IsManagedSeedAgent
+    {
+        get
+        {
+            if (!editorModel.Id.HasValue)
+            {
+                return false;
+            }
+
+            var definition = agents.FirstOrDefault(item => item.Id == editorModel.Id.Value);
+            return definition is not null &&
+                   ManagedSeedProviderFallbacks.IsManagedSeedAgent(definition);
         }
     }
 
