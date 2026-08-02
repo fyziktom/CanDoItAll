@@ -33,6 +33,16 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["aspnet-core-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Skill, byKey["project-plan-analysis-inline-skill"].Kind);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["project-plan-summary-get"].Kind);
+        Assert.Equal(CreateStableGuid("capabilities/workflows-run-start"), byKey["workflows-run-start"].Id);
+        Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Tool, byKey["workflows-run-start"].Kind);
+        Assert.Equal(
+            "skill:hr-agent-governance:v2",
+            Assert.Single(
+                pack.Capabilities,
+                template => string.Equals(
+                    template.Key,
+                    "hr-agent-governance-inline-skill",
+                    StringComparison.Ordinal)).StableId);
         Assert.Equal(CanDoItAll.AgentFramework.Models.CapabilityKind.Rag, byKey["workspace-source-rag"].Kind);
         Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "project-task-create", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(byKey.Keys, key => string.Equals(key, "project-task-update", StringComparison.OrdinalIgnoreCase));
@@ -71,6 +81,10 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         using var dotnetNewJson = JsonDocument.Parse(capabilities["workspace-dotnet-new"].ConfigurationJson);
         Assert.Equal("workspace_dotnet_new", dotnetNewJson.RootElement.GetProperty("tool").GetString());
         Assert.True(dotnetNewJson.RootElement.GetProperty("approvalRequired").GetBoolean());
+
+        using var workflowRunStartJson = JsonDocument.Parse(capabilities["workflows-run-start"].ConfigurationJson);
+        Assert.Equal("workflows_run_start", workflowRunStartJson.RootElement.GetProperty("tool").GetString());
+        Assert.True(workflowRunStartJson.RootElement.GetProperty("approvalRequired").GetBoolean());
 
         using var blazorSkillJson = JsonDocument.Parse(capabilities["blazor-ssr-delivery-inline-skill"].ConfigurationJson);
         Assert.Equal("inline", blazorSkillJson.RootElement.GetProperty("skillSource").GetString());
@@ -114,9 +128,114 @@ public sealed class CapabilityTemplateSeedMaterializationTests
             developmentImageSkillJson.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(),
             StringComparison.Ordinal);
 
+        using var hrGovernanceSkillJson = JsonDocument.Parse(
+            capabilities["hr-agent-governance-inline-skill"].ConfigurationJson);
+        var hrGovernanceInstructions = hrGovernanceSkillJson.RootElement
+            .GetProperty("inlineSkill")
+            .GetProperty("instructions")
+            .GetString();
+        Assert.Contains("WorkspaceToolAccess", hrGovernanceInstructions, StringComparison.Ordinal);
+        Assert.Contains("Custom` read-files-only default", hrGovernanceInstructions, StringComparison.Ordinal);
+
         using var ragJson = JsonDocument.Parse(capabilities["workspace-source-rag"].ConfigurationJson);
         Assert.Equal(".", ragJson.RootElement.GetProperty("ragRoot").GetString());
         Assert.Equal(5, ragJson.RootElement.GetProperty("maxResults").GetInt32());
+    }
+
+    [Fact]
+    public void Versioned_templates_persist_their_stable_id_for_each_managed_configuration_branch()
+    {
+        var pack = new CapabilityTemplatePackLoader().Load();
+        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(pack)
+            .ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var template in pack.Capabilities)
+        {
+            using var configuration = JsonDocument.Parse(capabilities[template.Key].ConfigurationJson);
+            if (!template.IncludeManagedSeedVersion)
+            {
+                Assert.False(configuration.RootElement.TryGetProperty(
+                    ManagedCapabilitySeedMetadata.PackVersionPropertyName,
+                    out _));
+                Assert.False(configuration.RootElement.TryGetProperty(
+                    ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName,
+                    out _));
+                continue;
+            }
+
+            Assert.Equal(
+                pack.Manifest.SeedVersion,
+                configuration.RootElement
+                    .GetProperty(ManagedCapabilitySeedMetadata.PackVersionPropertyName)
+                    .GetString());
+            Assert.Equal(
+                template.StableId,
+                configuration.RootElement
+                    .GetProperty(ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName)
+                    .GetString());
+        }
+
+        Assert.Contains(pack.Capabilities, template =>
+            string.Equals(template.Kind, "tool", StringComparison.OrdinalIgnoreCase) &&
+            template.IncludeManagedSeedVersion);
+        Assert.Contains(pack.Capabilities, template =>
+            string.Equals(template.Kind, "skill", StringComparison.OrdinalIgnoreCase) &&
+            template.IncludeManagedSeedVersion);
+        Assert.Contains(pack.Capabilities, template =>
+            string.Equals(template.Kind, "ai-context", StringComparison.OrdinalIgnoreCase) &&
+            template.IncludeManagedSeedVersion);
+        Assert.Contains(pack.Capabilities, template =>
+            string.Equals(template.Kind, "rag", StringComparison.OrdinalIgnoreCase) &&
+            template.IncludeManagedSeedVersion);
+        Assert.Contains(pack.Capabilities, template =>
+            string.Equals(template.Kind, "mcp-server", StringComparison.OrdinalIgnoreCase) &&
+            template.IncludeManagedSeedVersion);
+
+        using var aiContextConfiguration = JsonDocument.Parse(
+            capabilities["mail-triage-context"].ConfigurationJson);
+        Assert.Equal(
+            "When handling mail-oriented work, identify urgency, the next concrete action, and a draft reply before you close the task.",
+            aiContextConfiguration.RootElement.GetProperty("message").GetString());
+        Assert.Equal("system", aiContextConfiguration.RootElement.GetProperty("role").GetString());
+        Assert.Equal(
+            pack.Manifest.SeedVersion,
+            aiContextConfiguration.RootElement
+                .GetProperty(ManagedCapabilitySeedMetadata.PackVersionPropertyName)
+                .GetString());
+        Assert.Equal(
+            "context:mail-triage:v1",
+            aiContextConfiguration.RootElement
+                .GetProperty(ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName)
+                .GetString());
+    }
+
+    [Fact]
+    public void Managed_template_without_stable_id_fails_pack_validation_before_materialization()
+    {
+        using var packDirectory = new TemporaryCapabilityTemplatePack(
+            "capabilities.json",
+            """
+            {
+              "capabilities": [
+                {
+                  "kind": "tool",
+                  "key": "missing-managed-stable-id",
+                  "displayName": "Missing Managed Stable Id",
+                  "description": "Invalid managed seed template.",
+                  "stableGuidKey": "capabilities/missing-managed-stable-id",
+                  "endpointOrPath": "sandbox://missing-managed-stable-id",
+                  "runtimeToolName": "missing_managed_stable_id"
+                }
+              ]
+            }
+            """);
+
+        var exception = Assert.Throws<CapabilityTemplatePackValidationException>(() =>
+            new CapabilityTemplatePackLoader(packDirectory.RootPath).Load());
+
+        Assert.Contains(exception.Issues, issue =>
+            issue.FieldPath == "$.stableId" &&
+            issue.Message.Contains("must define a stable id", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -473,6 +592,11 @@ public sealed class CapabilityTemplateSeedMaterializationTests
         "workflow-curator-draft-update",
         "workflow-curator-lifecycle-change",
         "workflow-curator-node-update",
+        "workflows-definitions-list",
+        "workflows-external-response-submit",
+        "workflows-run-cancel",
+        "workflows-run-start",
+        "workflows-run-status-get",
         "writing-mstest-tests"
     ];
 

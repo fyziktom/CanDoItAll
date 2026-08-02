@@ -16,18 +16,22 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
     private readonly IWorkflowCatalogService catalog;
     private readonly IWorkflowLaunchService launchService;
     private readonly IWorkflowRuntimeManager runtimeManager;
+    private readonly WorkflowAgentRuntimeAuthorizationService authorizationService;
 
     public WorkflowAgentRuntimeToolProvider(
         IWorkflowCatalogService catalog,
         IWorkflowLaunchService launchService,
-        IWorkflowRuntimeManager runtimeManager)
+        IWorkflowRuntimeManager runtimeManager,
+        WorkflowAgentRuntimeAuthorizationService authorizationService)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(launchService);
         ArgumentNullException.ThrowIfNull(runtimeManager);
+        ArgumentNullException.ThrowIfNull(authorizationService);
         this.catalog = catalog;
         this.launchService = launchService;
         this.runtimeManager = runtimeManager;
+        this.authorizationService = authorizationService;
     }
 
     public int Order => ProviderOrder;
@@ -37,12 +41,7 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
         "Workflow runtime tools",
         "Lists and launches governed workflows and inspects or controls their runtime lifecycle.",
         ["agent-framework", "workflow", "runtime"],
-        [
-            AgentRuntimeToolProviderPurpose.InteractiveChat,
-            AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
-            AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive,
-            AgentRuntimeToolProviderPurpose.A2AEndpoint
-        ]);
+        WorkflowAgentRuntimeAuthorizationPolicy.SupportedPurposes);
 
     public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
         AgentRuntimeToolProviderContext context,
@@ -50,51 +49,91 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
-        if (!context.Agent.Permissions.CanUseTools)
+        if (!WorkflowAgentRuntimeAuthorizationPolicy.CanAttach(context))
         {
             return ValueTask.FromResult<IReadOnlyList<AITool>>([]);
         }
 
-        return ValueTask.FromResult<IReadOnlyList<AITool>>(
-        [
-            AIFunctionFactory.Create(
-                (CancellationToken token = default) => ListActiveDefinitionsAsync(token),
+        var tools = new List<AITool>(WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.Count);
+        AddToolIfAuthorized(
+            tools,
+            context,
+            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+            () => AIFunctionFactory.Create(
+                (CancellationToken token = default) => ExecuteAuthorizedAsync(
+                    context.Agent.Id,
+                    AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+                    ListActiveDefinitionsAsync,
+                    token),
                 AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
-                "Lists the latest Active version of each saved workflow. Use the returned workflowId and versionId with workflows_run_start."),
-            AIFunctionFactory.Create(
+                "Lists the latest Active version of each saved workflow. Use the returned workflowId and versionId with workflows_run_start."));
+        AddToolIfAuthorized(
+            tools,
+            context,
+            AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+            () => AIFunctionFactory.Create(
                 (WorkflowAgentStartInput request, CancellationToken token = default) =>
-                    StartAsync(context, request, token),
+                    ExecuteAuthorizedAsync(
+                        context.Agent.Id,
+                        AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                        authorizedToken => StartAsync(context, request, authorizedToken),
+                        token),
                 AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
-                "Starts an Active saved workflow in Production mode and waits until it stops or waits for external input. Select LatestActive or ExactSavedVersion explicitly. Supply a stable idempotencyKey for retries; it is required outside interactive chat. Runtime backend and launch origin are governed by the host."),
-            AIFunctionFactory.Create(
+                "Starts an Active saved workflow in Production mode and waits until it stops or waits for external input. Select LatestActive or ExactSavedVersion explicitly. Supply a stable idempotencyKey for retries; it is required outside interactive chat. Runtime backend and launch origin are governed by the host."));
+        AddToolIfAuthorized(
+            tools,
+            context,
+            AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+            () => AIFunctionFactory.Create(
                 (WorkflowAgentRunInput request, CancellationToken token = default) =>
-                    GetStatusAsync(request, token),
+                    ExecuteAuthorizedAsync(
+                        context.Agent.Id,
+                        AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
+                        authorizedToken => GetStatusAsync(request, authorizedToken),
+                        token),
                 AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet,
-                "Gets the current persisted status of one workflow run."),
-            AIFunctionFactory.Create(
+                "Gets the current persisted status of one workflow run."));
+        AddToolIfAuthorized(
+            tools,
+            context,
+            AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+            () => AIFunctionFactory.Create(
                 (WorkflowAgentRunInput request, CancellationToken token = default) =>
-                    RequestCancellationAsync(request, token),
+                    ExecuteAuthorizedAsync(
+                        context.Agent.Id,
+                        AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
+                        authorizedToken => RequestCancellationAsync(request, authorizedToken),
+                        token),
                 AgentToolInvocationPolicyMetadata.WorkflowsRunCancel,
-                "Requests cancellation for an active workflow run and returns the authoritative capability outcome. A requested cancellation is not terminal until the backend observes it."),
-            AIFunctionFactory.Create(
+                "Requests cancellation for an active workflow run and returns the authoritative capability outcome. A requested cancellation is not terminal until the backend observes it."));
+        AddToolIfAuthorized(
+            tools,
+            context,
+            AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+            () => AIFunctionFactory.Create(
                 (WorkflowAgentExternalResponseInput request, CancellationToken token = default) =>
-                    SubmitExternalResponseAsync(request, token),
+                    ExecuteAuthorizedAsync(
+                        context.Agent.Id,
+                        AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
+                        authorizedToken => SubmitExternalResponseAsync(request, authorizedToken),
+                        token),
                 AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
-                "Submits one response to a pending workflow external request. Unsupported backend resume remains explicit and does not fabricate completion.")
-        ]);
+                "Submits one response to a pending workflow external request. Unsupported backend resume remains explicit and does not fabricate completion."));
+
+        return ValueTask.FromResult<IReadOnlyList<AITool>>(tools);
     }
 
     public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(
         AgentRuntimeToolProviderContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.Agent.Permissions.CanUseTools)
+        if (!WorkflowAgentRuntimeAuthorizationPolicy.CanAttach(context))
         {
             return [];
         }
 
-        return
-        [
+        return new[]
+        {
             CreateMetadata(
                 AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
                 AgentRuntimeToolOperationKind.Read,
@@ -115,7 +154,12 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
                 AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit,
                 AgentRuntimeToolOperationKind.Mutation,
                 requiresApprovalByDefault: true)
-        ];
+        }
+            .Where(item => WorkflowAgentRuntimeAuthorizationPolicy.IsToolAuthorized(
+                context.Agent,
+                context.Capabilities,
+                item.ToolName))
+            .ToArray();
     }
 
     private async Task<WorkflowAgentDefinitionListResult> ListActiveDefinitionsAsync(
@@ -315,6 +359,34 @@ public sealed class WorkflowAgentRuntimeToolProvider : IAgentRuntimeToolProvider
             operationKind,
             requiresApprovalByDefault,
             ["workflow", "runtime", "governed-launch"]);
+
+    private static void AddToolIfAuthorized(
+        ICollection<AITool> tools,
+        AgentRuntimeToolProviderContext context,
+        string toolName,
+        Func<AITool> createTool)
+    {
+        if (WorkflowAgentRuntimeAuthorizationPolicy.IsToolAuthorized(
+                context.Agent,
+                context.Capabilities,
+                toolName))
+        {
+            tools.Add(createTool());
+        }
+    }
+
+    private async Task<TResult> ExecuteAuthorizedAsync<TResult>(
+        Guid actorAgentId,
+        string toolName,
+        Func<CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken)
+    {
+        await authorizationService.EnsureToolInvocationAuthorizedAsync(
+            actorAgentId,
+            toolName,
+            cancellationToken);
+        return await action(cancellationToken);
+    }
 
     private static WorkflowAgentRunDescriptor MapRun(WorkflowRunSnapshot run)
         => new(

@@ -11,17 +11,17 @@ public sealed class CapabilityCuratorSetupAttestationStore(TimeProvider timeProv
         new(StringComparer.Ordinal);
 
     public CapabilityCuratorSetupAttestation Issue(
-        string runtimeSessionKey,
+        string attestationScopeKey,
         CapabilityCuratorSetupKind kind,
         string candidateFingerprint)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeSessionKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(attestationScopeKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateFingerprint);
         RemoveExpired();
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
         var expiresAtUtc = timeProvider.GetUtcNow().Add(Lifetime);
         attestations[token] = new AttestationEntry(
-            runtimeSessionKey,
+            attestationScopeKey,
             kind,
             candidateFingerprint,
             expiresAtUtc);
@@ -29,12 +29,12 @@ public sealed class CapabilityCuratorSetupAttestationStore(TimeProvider timeProv
     }
 
     public void Consume(
-        string runtimeSessionKey,
+        string attestationScopeKey,
         CapabilityCuratorSetupKind kind,
         string candidateFingerprint,
         string token)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeSessionKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(attestationScopeKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(candidateFingerprint);
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -45,7 +45,7 @@ public sealed class CapabilityCuratorSetupAttestationStore(TimeProvider timeProv
         if (!attestations.TryRemove(token.Trim(), out var entry) ||
             entry.ExpiresAtUtc <= timeProvider.GetUtcNow() ||
             entry.Kind != kind ||
-            !string.Equals(entry.RuntimeSessionKey, runtimeSessionKey, StringComparison.Ordinal) ||
+            !string.Equals(entry.AttestationScopeKey, attestationScopeKey, StringComparison.Ordinal) ||
             !string.Equals(entry.CandidateFingerprint, candidateFingerprint, StringComparison.Ordinal))
         {
             throw new UnauthorizedAccessException(
@@ -66,7 +66,7 @@ public sealed class CapabilityCuratorSetupAttestationStore(TimeProvider timeProv
     }
 
     private sealed record AttestationEntry(
-        string RuntimeSessionKey,
+        string AttestationScopeKey,
         CapabilityCuratorSetupKind Kind,
         string CandidateFingerprint,
         DateTimeOffset ExpiresAtUtc);

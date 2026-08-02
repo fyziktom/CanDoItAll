@@ -8,6 +8,11 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
     {
         ArgumentNullException.ThrowIfNull(document);
 
+        EnsureUniqueIds(document.Agents.Select(item => item.Id), "Agent");
+        EnsureUniqueIds(document.Providers.Select(item => item.Id), "Provider profile");
+        EnsureUniqueIds(document.Capabilities.Select(item => item.Id), "Capability");
+        EnsureUniqueCapabilityIdentities(document.Capabilities);
+
         var runIds = document.ExecutionRuns
             .Select(item => item.Id)
             .ToHashSet();
@@ -22,6 +27,8 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
         var capabilityIds = document.Capabilities
             .Select(item => item.Id)
             .ToHashSet();
+        var capabilitiesById = document.Capabilities
+            .ToDictionary(item => item.Id);
         var sessionIds = document.ChatSessions
             .Select(item => item.Id)
             .ToHashSet();
@@ -36,15 +43,32 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
                     $"Agent '{agent.Id:N}' references missing provider profile '{agent.ProviderProfileId.Value:N}'.");
             }
 
+            var assignedCapabilityIds = new HashSet<Guid>();
             foreach (var capability in agent.Capabilities)
             {
-                if (capabilityIds.Contains(capability.CapabilityId))
+                if (!assignedCapabilityIds.Add(capability.CapabilityId))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Agent '{agent.Id:N}' contains duplicate capability assignment '{capability.CapabilityId:N}'.");
                 }
 
-                throw new InvalidOperationException(
-                    $"Agent '{agent.Id:N}' references missing capability '{capability.CapabilityId:N}'.");
+                if (!capabilityIds.Contains(capability.CapabilityId) ||
+                    !capabilitiesById.TryGetValue(capability.CapabilityId, out var catalogCapability))
+                {
+                    throw new InvalidOperationException(
+                        $"Agent '{agent.Id:N}' references missing capability '{capability.CapabilityId:N}'.");
+                }
+
+                if (capability.Kind != catalogCapability.Kind ||
+                    !string.Equals(
+                        capability.CapabilityKey,
+                        catalogCapability.Key,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Agent '{agent.Id:N}' capability assignment '{capability.CapabilityId:N}' does not match " +
+                        $"catalog identity '{catalogCapability.Kind}:{catalogCapability.Key}'.");
+                }
             }
         }
 
@@ -294,4 +318,35 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
                 $"{item.Label} references missing execution run '{item.ExecutionRunId:N}'.");
         }
     }
+
+    private static void EnsureUniqueIds(IEnumerable<Guid> ids, string label)
+    {
+        var duplicate = ids
+            .GroupBy(id => id)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new InvalidOperationException(
+                $"{label} id '{duplicate.Key:N}' is duplicated.");
+        }
+    }
+
+    private static void EnsureUniqueCapabilityIdentities(
+        IReadOnlyList<CapabilityCatalogItem> capabilities)
+    {
+        var duplicate = capabilities
+            .GroupBy(capability => new CapabilityIdentity(
+                capability.Kind,
+                capability.Key.Trim().ToUpperInvariant()))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new InvalidOperationException(
+                $"Capability identity '{duplicate.Key.Kind}:{duplicate.First().Key}' is duplicated.");
+        }
+    }
+
+    private readonly record struct CapabilityIdentity(
+        CapabilityKind Kind,
+        string NormalizedKey);
 }

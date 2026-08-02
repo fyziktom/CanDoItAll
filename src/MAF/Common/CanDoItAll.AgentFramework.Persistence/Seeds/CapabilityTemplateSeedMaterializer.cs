@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CapabilityStableId = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityStableId;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
@@ -26,7 +27,15 @@ internal static class CapabilityTemplateSeedMaterializer
         string packRoot)
     {
         var kind = ParseKind(template.Kind, template.Key);
-        var configurationJson = BuildConfigurationJson(template, seedVersion, packRoot);
+        CapabilityStableId? managedCapabilityVersion = template.IncludeManagedSeedVersion
+            ? ManagedCapabilitySeedMetadata.CreateCapabilityVersion(
+                Require(template.StableId, template.Key, "stableId"))
+            : null;
+        var configurationJson = BuildConfigurationJson(
+            template,
+            seedVersion,
+            managedCapabilityVersion,
+            packRoot);
         return new CapabilityCatalogItem(
             CreateStableGuid(Require(template.StableGuidKey, template.Key, "stableGuidKey")),
             kind,
@@ -52,42 +61,48 @@ internal static class CapabilityTemplateSeedMaterializer
     private static string BuildConfigurationJson(
         CapabilitySeedTemplateDescriptor template,
         string seedVersion,
+        CapabilityStableId? managedCapabilityVersion,
         string packRoot)
     {
         return NormalizeKind(template.Kind) switch
         {
             "skill" when string.Equals(template.SkillSource, "file", StringComparison.OrdinalIgnoreCase) =>
-                BuildFileSkillConfiguration(template, seedVersion),
+                BuildFileSkillConfiguration(template, seedVersion, managedCapabilityVersion),
             "skill" when string.Equals(template.SkillSource, "inline", StringComparison.OrdinalIgnoreCase) =>
-                BuildInlineSkillConfiguration(template, seedVersion, packRoot),
-            "tool" => BuildToolConfiguration(template, seedVersion),
-            "aiContext" => SerializeConfiguration(new { message = Require(template.Message, template.Key, "message"), role = "system" }),
-            _ => BuildRawConfiguration(template, seedVersion)
+                BuildInlineSkillConfiguration(template, seedVersion, managedCapabilityVersion, packRoot),
+            "tool" => BuildToolConfiguration(template, seedVersion, managedCapabilityVersion),
+            "aicontext" => BuildAiContextConfiguration(template, seedVersion, managedCapabilityVersion),
+            _ => BuildRawConfiguration(template, seedVersion, managedCapabilityVersion)
         };
     }
 
-    private static string BuildFileSkillConfiguration(CapabilitySeedTemplateDescriptor template, string seedVersion)
+    private static string BuildFileSkillConfiguration(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        CapabilityStableId? managedCapabilityVersion)
     {
         var skillRoot = SandboxWorkspaceSeedAssets.Current.GetSkillRoot(Require(template.SkillRootKey, template.Key, "skillRootKey"));
         var allowExternalRoot = Path.IsPathRooted(skillRoot) || skillRoot.StartsWith("~", StringComparison.Ordinal);
-        return SerializeConfiguration(new
+        var configuration = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            managedSeedVersion = seedVersion,
-            skillSource = "file",
-            skillRoot,
-            allowedExternalRoots = allowExternalRoot ? new[] { skillRoot } : Array.Empty<string>(),
-            scriptApproval = true,
-            scriptExecution = new
+            ["skillSource"] = "file",
+            ["skillRoot"] = skillRoot,
+            ["allowedExternalRoots"] = allowExternalRoot ? new[] { skillRoot } : Array.Empty<string>(),
+            ["scriptApproval"] = true,
+            ["scriptExecution"] = new
             {
                 approvalRequired = true,
                 trustLevel = allowExternalRoot ? "ExternalSkillRoot" : "WorkspaceSkillRoot"
             }
-        });
+        };
+        StampManagedVersionIfIncluded(configuration, template, seedVersion, managedCapabilityVersion);
+        return SerializeConfiguration(configuration);
     }
 
     private static string BuildInlineSkillConfiguration(
         CapabilitySeedTemplateDescriptor template,
         string seedVersion,
+        CapabilityStableId? managedCapabilityVersion,
         string packRoot)
     {
         var inlineSkill = template.InlineSkill
@@ -115,28 +130,36 @@ internal static class CapabilityTemplateSeedMaterializer
             }
         };
 
-        if (!template.IncludeManagedSeedVersion)
+        var configuration = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            return SerializeConfiguration(new
-            {
-                skillSource = "inline",
-                inlineSkillConfiguration.inlineSkill
-            });
-        }
-
-        return SerializeConfiguration(new
-        {
-            managedSeedVersion = seedVersion,
-            skillSource = "inline",
-            inlineSkillConfiguration.inlineSkill
-        });
+            ["skillSource"] = "inline",
+            ["inlineSkill"] = inlineSkillConfiguration.inlineSkill
+        };
+        StampManagedVersionIfIncluded(configuration, template, seedVersion, managedCapabilityVersion);
+        return SerializeConfiguration(configuration);
     }
 
-    private static string BuildToolConfiguration(CapabilitySeedTemplateDescriptor template, string seedVersion)
+    private static string BuildAiContextConfiguration(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        CapabilityStableId? managedCapabilityVersion)
     {
         var configuration = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            ["managedSeedVersion"] = seedVersion,
+            ["message"] = Require(template.Message, template.Key, "message"),
+            ["role"] = "system"
+        };
+        StampManagedVersionIfIncluded(configuration, template, seedVersion, managedCapabilityVersion);
+        return SerializeConfiguration(configuration);
+    }
+
+    private static string BuildToolConfiguration(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        CapabilityStableId? managedCapabilityVersion)
+    {
+        var configuration = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+        {
             ["tool"] = Require(template.RuntimeToolName, template.Key, "runtimeToolName"),
             ["approvalRequired"] = template.ApprovalRequired
         };
@@ -146,31 +169,53 @@ internal static class CapabilityTemplateSeedMaterializer
             configuration[item.Key] = ConvertSeedConfigurationValue(item.Value);
         }
 
+        StampManagedVersionIfIncluded(configuration, template, seedVersion, managedCapabilityVersion);
         return SerializeConfiguration(configuration);
     }
 
-    private static string BuildRawConfiguration(CapabilitySeedTemplateDescriptor template, string seedVersion)
+    private static string BuildRawConfiguration(
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        CapabilityStableId? managedCapabilityVersion)
     {
-        if (template.Configuration.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        var configuration = template.Configuration.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null
+            ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            : ConvertSeedConfigurationValue(template.Configuration);
+
+        if (configuration is Dictionary<string, object?> dictionary)
         {
-            return "{}";
+            if (string.Equals(template.ExcludePathsSource, "workspaceRagDefault", StringComparison.OrdinalIgnoreCase))
+            {
+                dictionary["excludePaths"] = WorkspaceRetrievalNoisePolicy.BuildSeedWorkspaceRagExcludedPaths();
+            }
+
+            StampManagedVersionIfIncluded(dictionary, template, seedVersion, managedCapabilityVersion);
+            return SerializeConfiguration(dictionary);
         }
 
-        var configuration = ConvertSeedConfigurationValue(template.Configuration);
-        if (configuration is Dictionary<string, object?> dictionary &&
-            string.Equals(template.ExcludePathsSource, "workspaceRagDefault", StringComparison.OrdinalIgnoreCase))
+        if (template.IncludeManagedSeedVersion)
         {
-            dictionary["excludePaths"] = WorkspaceRetrievalNoisePolicy.BuildSeedWorkspaceRagExcludedPaths();
-        }
-
-        if (template.IncludeManagedSeedVersion &&
-            configuration is Dictionary<string, object?> versionedDictionary &&
-            !versionedDictionary.ContainsKey("managedSeedVersion"))
-        {
-            versionedDictionary["managedSeedVersion"] = seedVersion;
+            throw new InvalidOperationException(
+                $"Capability template '{template.Key}' must use an object configuration when managed seed versioning is enabled.");
         }
 
         return SerializeConfiguration(configuration);
+    }
+
+    private static void StampManagedVersionIfIncluded(
+        IDictionary<string, object?> configuration,
+        CapabilitySeedTemplateDescriptor template,
+        string seedVersion,
+        CapabilityStableId? managedCapabilityVersion)
+    {
+        if (template.IncludeManagedSeedVersion)
+        {
+            ManagedCapabilitySeedMetadata.Stamp(
+                configuration,
+                seedVersion,
+                managedCapabilityVersion ?? throw new InvalidOperationException(
+                    $"Capability template '{template.Key}' is missing a managed capability version."));
+        }
     }
 
     private static string ResolveEndpointOrPath(CapabilitySeedTemplateDescriptor template, CapabilityKind kind)

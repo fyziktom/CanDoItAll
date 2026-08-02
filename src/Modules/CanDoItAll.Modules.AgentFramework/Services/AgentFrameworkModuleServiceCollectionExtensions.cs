@@ -219,6 +219,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<HrAgentRuntimeAuthorizationService>();
         services.TryAddScoped<PromptsCuratorAgentRuntimeAuthorizationService>();
         services.TryAddScoped<WorkflowCuratorAgentRuntimeAuthorizationService>();
+        services.TryAddScoped<WorkflowAgentRuntimeAuthorizationService>();
         services.TryAddScoped<CapabilityCuratorAgentRuntimeAuthorizationService>();
         services.TryAddSingleton<CapabilityCuratorSetupAttestationStore>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ImageGenerationAgentRuntimeToolProvider>());

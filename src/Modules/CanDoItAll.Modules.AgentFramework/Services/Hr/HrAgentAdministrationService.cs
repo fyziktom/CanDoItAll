@@ -111,6 +111,9 @@ public sealed class HrAgentAdministrationService(
         var projectStructureAccess = ApplyProjectStructureAccessPatch(
             new AgentProjectStructureAccessSettings(),
             input.ProjectStructureAccess);
+        var workspaceToolAccess = input.WorkspaceToolAccess is null
+            ? AgentWorkspaceToolAccessMetadata.Normalize(new AgentWorkspaceToolAccessSettings())
+            : CreateWorkspaceToolAccess(input.WorkspaceToolAccess);
 
         var id = Guid.NewGuid();
         var providers = await workspaceService.ListProvidersAsync(cancellationToken);
@@ -143,6 +146,7 @@ public sealed class HrAgentAdministrationService(
                 AutoApproveExternalCallsByDefault: false,
                 AllowedSecrets: []),
             ProjectStructureAccess = projectStructureAccess,
+            WorkspaceToolAccess = workspaceToolAccess,
             SelectedCapabilityIds = capabilities.Select(item => item.Id).ToList(),
             Tags = NormalizeTags(input.Tags).ToList()
         };
@@ -268,6 +272,13 @@ public sealed class HrAgentAdministrationService(
             editor.ProjectStructureAccess = ApplyProjectStructureAccessPatch(
                 editor.ProjectStructureAccess,
                 input.ProjectStructureAccess);
+        }
+
+        if (input.WorkspaceToolAccess is not null)
+        {
+            editor.WorkspaceToolAccess = ApplyWorkspaceToolAccessPatch(
+                editor.WorkspaceToolAccess,
+                input.WorkspaceToolAccess);
         }
 
         var warnings = await SaveAndInspectProjectionOutcomeAsync(
@@ -458,6 +469,7 @@ public sealed class HrAgentAdministrationService(
                 agent.Permissions.RequiresApprovalForExternalCalls,
                 agent.Permissions.AutoApproveExternalCallsByDefault),
             MapProjectStructureAccess(agent.ConfigurationJson),
+            MapWorkspaceToolAccess(agent.ConfigurationJson),
             agent.Capabilities
                 .Select(assignment => capabilityLookup.TryGetValue(assignment.CapabilityId, out var capability)
                     ? MapCapability(capability) with { ProofStatus = assignment.ProofStatus }
@@ -487,6 +499,26 @@ public sealed class HrAgentAdministrationService(
             access.CanCreateSubprojects,
             access.AllowAllProjects,
             access.AllowedProjectIds.ToArray());
+    }
+
+    private static HrAgentSafeWorkspaceToolAccess MapWorkspaceToolAccess(
+        string? configurationJson)
+    {
+        var access = AgentWorkspaceToolAccessMetadata.Read(configurationJson);
+        return new HrAgentSafeWorkspaceToolAccess(
+            access.Profile,
+            access.CanReadFiles,
+            access.CanWriteFiles,
+            access.CanRunValidationCommands,
+            access.CanRunLocalScripts,
+            access.CanScaffoldProjects,
+            access.CanManageWorkspacePaths,
+            access.CanTransformArtifacts,
+            access.AllowedExternalTargetAliases.ToArray(),
+            access.CanReadStorage,
+            access.CanWriteStorage,
+            access.AllowAllStorageCatalogs,
+            access.AllowedStorageCatalogIds.ToArray());
     }
 
     private static HrAgentAvatarMetadata MapAvatarMetadata(string? avatarImageUrl)
@@ -728,6 +760,145 @@ public sealed class HrAgentAdministrationService(
                 AllowAllProjects = allowAllProjects,
                 AllowedProjectIds = allowedProjectIds
             });
+    }
+
+    private static AgentWorkspaceToolAccessSettings CreateWorkspaceToolAccess(
+        HrAgentWorkspaceToolAccessInput input)
+    {
+        ValidateWorkspaceToolProfile(input.Profile, nameof(input.Profile));
+        var aliases = NormalizeExternalTargetAliases(input.AllowedExternalTargetAliases);
+        var storageIds = NormalizeStorageCatalogIds(input.AllowedStorageCatalogIds);
+        ValidateStorageCatalogScope(
+            input.AllowAllStorageCatalogs,
+            storageIds,
+            storageIdsWereSupplied: input.AllowedStorageCatalogIds is not null);
+
+        return AgentWorkspaceToolAccessMetadata.Normalize(
+            new AgentWorkspaceToolAccessSettings
+            {
+                Profile = input.Profile,
+                CanReadFiles = input.CanReadFiles,
+                CanWriteFiles = input.CanWriteFiles,
+                CanRunValidationCommands = input.CanRunValidationCommands,
+                CanRunLocalScripts = input.CanRunLocalScripts,
+                CanScaffoldProjects = input.CanScaffoldProjects,
+                CanManageWorkspacePaths = input.CanManageWorkspacePaths,
+                CanTransformArtifacts = input.CanTransformArtifacts,
+                AllowedExternalTargetAliases = aliases,
+                CanReadStorage = input.CanReadStorage,
+                CanWriteStorage = input.CanWriteStorage,
+                AllowAllStorageCatalogs = input.AllowAllStorageCatalogs,
+                AllowedStorageCatalogIds = storageIds
+            });
+    }
+
+    private static AgentWorkspaceToolAccessSettings ApplyWorkspaceToolAccessPatch(
+        AgentWorkspaceToolAccessSettings current,
+        HrAgentWorkspaceToolAccessPatch patch)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(patch);
+        ValidateOptionalEnum(patch.Profile, nameof(patch.Profile));
+
+        var normalizedCurrent = AgentWorkspaceToolAccessMetadata.Normalize(current);
+        var aliases = patch.AllowedExternalTargetAliases is null
+            ? normalizedCurrent.AllowedExternalTargetAliases.ToList()
+            : NormalizeExternalTargetAliases(patch.AllowedExternalTargetAliases);
+        var storageIdsWereSupplied = patch.AllowedStorageCatalogIds is not null;
+        var storageIds = storageIdsWereSupplied
+            ? NormalizeStorageCatalogIds(patch.AllowedStorageCatalogIds)
+            : normalizedCurrent.AllowedStorageCatalogIds.ToList();
+        ValidateStorageCatalogScope(
+            patch.AllowAllStorageCatalogs == true,
+            storageIds,
+            storageIdsWereSupplied);
+
+        var allowAllStorageCatalogs = patch.AllowAllStorageCatalogs ?? normalizedCurrent.AllowAllStorageCatalogs;
+        if (patch.AllowAllStorageCatalogs == true)
+        {
+            storageIds.Clear();
+        }
+        else if (storageIdsWereSupplied && storageIds.Count > 0)
+        {
+            allowAllStorageCatalogs = false;
+        }
+
+        return AgentWorkspaceToolAccessMetadata.Normalize(
+            new AgentWorkspaceToolAccessSettings
+            {
+                Profile = patch.Profile ?? normalizedCurrent.Profile,
+                CanReadFiles = patch.CanReadFiles ?? normalizedCurrent.CanReadFiles,
+                CanWriteFiles = patch.CanWriteFiles ?? normalizedCurrent.CanWriteFiles,
+                CanRunValidationCommands =
+                    patch.CanRunValidationCommands ?? normalizedCurrent.CanRunValidationCommands,
+                CanRunLocalScripts = patch.CanRunLocalScripts ?? normalizedCurrent.CanRunLocalScripts,
+                CanScaffoldProjects = patch.CanScaffoldProjects ?? normalizedCurrent.CanScaffoldProjects,
+                CanManageWorkspacePaths =
+                    patch.CanManageWorkspacePaths ?? normalizedCurrent.CanManageWorkspacePaths,
+                CanTransformArtifacts = patch.CanTransformArtifacts ?? normalizedCurrent.CanTransformArtifacts,
+                AllowedExternalTargetAliases = aliases,
+                CanReadStorage = patch.CanReadStorage ?? normalizedCurrent.CanReadStorage,
+                CanWriteStorage = patch.CanWriteStorage ?? normalizedCurrent.CanWriteStorage,
+                AllowAllStorageCatalogs = allowAllStorageCatalogs,
+                AllowedStorageCatalogIds = storageIds
+            });
+    }
+
+    private static List<string> NormalizeExternalTargetAliases(IReadOnlyList<string>? requestedAliases)
+    {
+        var normalized = new List<string>();
+        foreach (var requestedAlias in requestedAliases ?? [])
+        {
+            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(requestedAlias);
+            if (string.IsNullOrWhiteSpace(alias))
+            {
+                throw new InvalidOperationException(
+                    "Workspace external target aliases must be absolute paths or canonical external-target aliases below a drive root.");
+            }
+
+            normalized.Add(alias);
+        }
+
+        return normalized
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<Guid> NormalizeStorageCatalogIds(IReadOnlyList<Guid>? requestedIds)
+    {
+        var storageIds = requestedIds ?? [];
+        if (storageIds.Any(storageId => storageId == Guid.Empty))
+        {
+            throw new InvalidOperationException("Workspace storage access IDs cannot contain an empty GUID.");
+        }
+
+        return storageIds
+            .Distinct()
+            .OrderBy(storageId => storageId)
+            .ToList();
+    }
+
+    private static void ValidateStorageCatalogScope(
+        bool allowAllStorageCatalogs,
+        IReadOnlyList<Guid> storageIds,
+        bool storageIdsWereSupplied)
+    {
+        if (allowAllStorageCatalogs && storageIdsWereSupplied && storageIds.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "AllowAllStorageCatalogs cannot be combined with explicit workspace storage access IDs.");
+        }
+    }
+
+    private static void ValidateWorkspaceToolProfile(
+        AgentWorkspaceToolProfileKind profile,
+        string fieldName)
+    {
+        if (!Enum.IsDefined(profile))
+        {
+            throw new InvalidOperationException($"{fieldName} must be a defined enum value.");
+        }
     }
 
     private static void ValidateTemperature(double? temperature)

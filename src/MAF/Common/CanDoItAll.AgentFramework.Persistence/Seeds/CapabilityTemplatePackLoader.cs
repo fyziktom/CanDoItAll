@@ -149,6 +149,18 @@ internal sealed class CapabilityTemplatePackLoader
                 "Set stableGuidKey to the historical CreateStableGuid input, for example 'capabilities/workspace-read-file'."));
         }
 
+        if (capability.IncludeManagedSeedVersion && string.IsNullOrWhiteSpace(capability.StableId))
+        {
+            issues.Add(Issue(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                kind,
+                key,
+                capability.TemplatePath,
+                "$.stableId",
+                "Managed capability templates must define a stable id.",
+                "Set a versioned stableId such as 'tool:workspace-read-file:v1'."));
+        }
+
         if (string.IsNullOrWhiteSpace(capability.EndpointOrPath) &&
             !string.Equals(capability.Kind, "ai-context", StringComparison.OrdinalIgnoreCase))
         {

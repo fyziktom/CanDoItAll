@@ -173,27 +173,28 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 $"{assignment.RunId}:{assignment.StepInstanceId}:{agentId}:{readiness.ReadinessHash}");
         }
 
-        var runtimeToolPreflight = await runtimeToolPreflightService
-            .EvaluateAsync(
-                new ProcessRuntimeToolPreflightRequest(
-                    assignment,
-                    agent,
-                    ResolvePreflightRequiredRuntimeToolNames(assignment, request.StepContract)),
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (!runtimeToolPreflight.IsSatisfied)
-        {
-            var issue = CreateRuntimeToolPreflightIssue(assignment, runtimeToolPreflight);
-            return NeedsManagerForCompletionIssue(
-                assignment,
-                ComputeHash(issue.Evidence),
-                issue);
-        }
-
         IAgentFrameworkWorkspaceService? workspaceService = null;
         try
         {
-            workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+            var runtimeToolPreflight = await runtimeToolPreflightService
+                .EvaluateAsync(
+                    new ProcessRuntimeToolPreflightRequest(
+                        assignment,
+                        agent,
+                        ResolvePreflightRequiredRuntimeToolNames(assignment, request.StepContract),
+                        CapabilityCatalogResolver: ResolveAttachedCapabilityCatalogAsync),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (!runtimeToolPreflight.IsSatisfied)
+            {
+                var issue = CreateRuntimeToolPreflightIssue(assignment, runtimeToolPreflight);
+                return NeedsManagerForCompletionIssue(
+                    assignment,
+                    ComputeHash(issue.Evidence),
+                    issue);
+            }
+
+            workspaceService ??= workspaceFactory.GetOrganizationWorkspaceService();
             var metadataJson = executionMetadataComposer.ComposeClaimedExecution(
                 assignment,
                 request.DispatchClaimIdentity);
@@ -414,6 +415,21 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                 "process.adapter.agent_execution_failed",
                 $"Agent execution failed for step '{assignment.StepKey}': {exception.Message}",
                 ComputeHash(exception.GetType().FullName + ":" + exception.Message));
+        }
+
+        async ValueTask<IReadOnlyList<CapabilityCatalogItem>> ResolveAttachedCapabilityCatalogAsync(
+            CancellationToken token)
+        {
+            workspaceService ??= workspaceFactory.GetOrganizationWorkspaceService();
+            var capabilityCatalog = await workspaceService
+                .ListCapabilitiesAsync(token)
+                .ConfigureAwait(false);
+            var assignedCapabilityIds = agent.Capabilities
+                .Select(capability => capability.CapabilityId)
+                .ToHashSet();
+            return capabilityCatalog
+                .Where(capability => assignedCapabilityIds.Contains(capability.Id))
+                .ToArray();
         }
     }
 

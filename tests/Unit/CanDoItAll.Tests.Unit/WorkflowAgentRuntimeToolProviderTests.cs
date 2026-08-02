@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
@@ -26,16 +27,15 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     [Fact]
     public async Task ProviderExposesFiveGovernedToolsWithAuthoritativeMetadata()
     {
-        var provider = CreateProvider();
-        var context = CreateContext();
+        var harness = CreateHarness();
 
-        var tools = await provider.CreateToolsAsync(context, CancellationToken.None);
-        var metadata = provider.GetToolMetadata(context);
+        var tools = await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None);
+        var metadata = harness.Provider.GetToolMetadata(harness.Context);
 
         Assert.Equal(5, tools.Count);
         Assert.Equal(5, metadata.Count);
-        Assert.Equal(940, provider.Order);
-        Assert.Equal(WorkflowAgentRuntimeToolProvider.ProviderKey, provider.Descriptor.ProviderKey);
+        Assert.Equal(940, harness.Provider.Order);
+        Assert.Equal(WorkflowAgentRuntimeToolProvider.ProviderKey, harness.Provider.Descriptor.ProviderKey);
         Assert.Equal(
             [
                 AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
@@ -85,25 +85,24 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     [Fact]
     public async Task RuntimeComposerWrapsOnlyWorkflowMutationsUnlessHostSuppressesApproval()
     {
-        var workflowProvider = CreateProvider();
+        var harness = CreateHarness();
         var services = new ServiceCollection();
-        services.AddSingleton<IAgentRuntimeToolProvider>(workflowProvider);
+        services.AddSingleton<IAgentRuntimeToolProvider>(harness.Provider);
         using var serviceProvider = services.BuildServiceProvider();
         var composer = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), serviceProvider);
-        var context = CreateContext();
 
         var governed = await composer.CreateCapabilityStateAsync(
-            context.Agent,
-            context.Provider,
-            [],
+            harness.Context.Agent,
+            harness.Context.Provider,
+            harness.Context.Capabilities,
             [],
             static (_, _, _) => Task.CompletedTask,
             CancellationToken.None,
             suppressApprovalRequirements: false);
         var suppressed = await composer.CreateCapabilityStateAsync(
-            context.Agent,
-            context.Provider,
-            [],
+            harness.Context.Agent,
+            harness.Context.Provider,
+            harness.Context.Capabilities,
             [],
             static (_, _, _) => Task.CompletedTask,
             CancellationToken.None,
@@ -153,10 +152,10 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
                 [workflowId] = new WorkflowDefinitionDetail(active, WorkflowValidationResult.Success)
             }
         };
-        var provider = CreateProvider(catalog: catalog);
+        var harness = CreateHarness(catalog: catalog);
         var tool = await GetToolAsync(
-            provider,
-            CreateContext(),
+            harness.Provider,
+            harness.Context,
             AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList);
 
         var result = await InvokeAsync<WorkflowAgentDefinitionListResult>(tool);
@@ -171,14 +170,14 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     public async Task StartToolUsesGovernedAgentOriginAndExplicitVersionSelection()
     {
         var launchService = new RecordingWorkflowLaunchService();
-        var provider = CreateProvider(launchService: launchService);
-        var context = CreateContext(
+        var harness = CreateHarness(
+            launchService: launchService,
             purpose: AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
             runtimeSessionKey: "runtime-session-42",
             contextIntent: CreateProcessIntent("process-correlation-9"));
         var tool = await GetToolAsync(
-            provider,
-            context,
+            harness.Provider,
+            harness.Context,
             AgentToolInvocationPolicyMetadata.WorkflowsRunStart);
         var workflowId = Guid.NewGuid();
         var versionId = Guid.NewGuid();
@@ -221,7 +220,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         Assert.False(exactIntent.PreviewSimulationPlan.HasSteps);
         var origin = Assert.IsType<WorkflowLaunchOrigin.AgentRuntimeInvocation>(exactIntent.Origin);
         Assert.Equal(WorkflowLaunchActorKind.Agent, origin.Agent.Kind);
-        Assert.Equal(context.Agent.Id.ToString("D"), origin.Agent.SubjectId);
+        Assert.Equal(harness.Context.Agent.Id.ToString("D"), origin.Agent.SubjectId);
         Assert.Equal("runtime-session-42", origin.RuntimeSessionId.Value);
         Assert.Equal("process-correlation-9", origin.CorrelationId.Value);
         Assert.Equal(AgentRuntimeToolProviderPurpose.GovernedProcessAutomation.ToString(), origin.Purpose);
@@ -258,19 +257,18 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
                 externalRequest,
                 "Resume is unsupported.")
         };
-        var provider = CreateProvider(runtimeManager: runtime);
-        var context = CreateContext();
+        var harness = CreateHarness(runtimeManager: runtime);
         var statusTool = await GetToolAsync(
-            provider,
-            context,
+            harness.Provider,
+            harness.Context,
             AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet);
         var cancelTool = await GetToolAsync(
-            provider,
-            context,
+            harness.Provider,
+            harness.Context,
             AgentToolInvocationPolicyMetadata.WorkflowsRunCancel);
         var responseTool = await GetToolAsync(
-            provider,
-            context,
+            harness.Provider,
+            harness.Context,
             AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit);
 
         var status = await InvokeAsync<WorkflowAgentRunStatusResult>(
@@ -303,20 +301,174 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     [Fact]
     public async Task ProviderRequiresToolPermissionAndModuleRegistersItAsScoped()
     {
-        var provider = CreateProvider();
-        var deniedContext = CreateContext(
-            agent: CreateAgent(AgentPermissionsPolicy.Default with { CanUseTools = false }));
+        var harness = CreateHarness();
+        var deniedContext = harness.Context with
+        {
+            Agent = harness.Context.Agent with
+            {
+                Permissions = harness.Context.Agent.Permissions with { CanUseTools = false }
+            }
+        };
 
-        Assert.Empty(await provider.CreateToolsAsync(deniedContext, CancellationToken.None));
-        Assert.Empty(provider.GetToolMetadata(deniedContext));
+        Assert.Empty(await harness.Provider.CreateToolsAsync(deniedContext, CancellationToken.None));
+        Assert.Empty(harness.Provider.GetToolMetadata(deniedContext));
 
         var services = new ServiceCollection();
         services.AddAgentFrameworkModule(new ConfigurationBuilder().Build());
         Assert.Contains(
             services,
+            descriptor => descriptor.ServiceType == typeof(WorkflowAgentRuntimeAuthorizationService) &&
+                          descriptor.ImplementationType == typeof(WorkflowAgentRuntimeAuthorizationService) &&
+                          descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
             descriptor => descriptor.ServiceType == typeof(IAgentRuntimeToolProvider) &&
                           descriptor.ImplementationType == typeof(WorkflowAgentRuntimeToolProvider) &&
                           descriptor.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void CapabilityMappingCoversEveryWorkflowRuntimeToolExactlyOnce()
+    {
+        var expected = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList] = WorkflowRuntimeCapabilityKeys.DefinitionsList,
+            [AgentToolInvocationPolicyMetadata.WorkflowsRunStart] = WorkflowRuntimeCapabilityKeys.RunStart,
+            [AgentToolInvocationPolicyMetadata.WorkflowsRunStatusGet] = WorkflowRuntimeCapabilityKeys.RunStatusGet,
+            [AgentToolInvocationPolicyMetadata.WorkflowsRunCancel] = WorkflowRuntimeCapabilityKeys.RunCancel,
+            [AgentToolInvocationPolicyMetadata.WorkflowsExternalResponseSubmit] = WorkflowRuntimeCapabilityKeys.ExternalResponseSubmit
+        };
+
+        Assert.Equal(expected.Count, WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.Count);
+        Assert.All(expected, item => Assert.Equal(
+            item.Value,
+            WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey[item.Key]));
+        Assert.Equal(5, WorkflowAgentCapabilityKeys.Keys.Count);
+        Assert.Equal(
+            WorkflowRuntimeCapabilityKeys.Keys.OrderBy(item => item, StringComparer.Ordinal),
+            WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.Values.OrderBy(item => item, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task ProviderFailsClosedForIneligibleActorsAndAmbiguousOrDriftedAssignments()
+    {
+        var harness = CreateHarness([WorkflowRuntimeCapabilityKeys.DefinitionsList]);
+        var assignment = Assert.Single(harness.Context.Agent.Capabilities);
+        var catalogItem = Assert.Single(harness.Context.Capabilities);
+        var contexts = new[]
+        {
+            harness.Context with
+            {
+                Agent = harness.Context.Agent with { Id = Guid.Empty }
+            },
+            harness.Context with
+            {
+                Agent = harness.Context.Agent with { Status = AgentLifecycleStatus.Suspended }
+            },
+            harness.Context with
+            {
+                Agent = harness.Context.Agent with { IsTemplate = true }
+            },
+            harness.Context with
+            {
+                Purpose = (AgentRuntimeToolProviderPurpose)999
+            },
+            harness.Context with
+            {
+                Agent = harness.Context.Agent with { Capabilities = [] }
+            },
+            harness.Context with
+            {
+                Agent = harness.Context.Agent with { Capabilities = [assignment, assignment] }
+            },
+            harness.Context with
+            {
+                Agent = harness.Context.Agent with
+                {
+                    Capabilities = [assignment with { Kind = CapabilityKind.Skill }]
+                }
+            },
+            harness.Context with
+            {
+                Capabilities = [catalogItem with { Key = $"{catalogItem.Key}-drifted" }]
+            },
+            harness.Context with
+            {
+                Capabilities = [catalogItem with { Id = Guid.NewGuid() }]
+            },
+            harness.Context with
+            {
+                Capabilities = [catalogItem with { Kind = CapabilityKind.Skill }]
+            },
+            harness.Context with
+            {
+                Capabilities = [catalogItem, catalogItem]
+            }
+        };
+
+        foreach (var context in contexts)
+        {
+            Assert.Empty(await harness.Provider.CreateToolsAsync(context, CancellationToken.None));
+            Assert.Empty(harness.Provider.GetToolMetadata(context));
+        }
+
+        var wrongCase = CreateHarness([WorkflowRuntimeCapabilityKeys.DefinitionsList.ToUpperInvariant()]);
+        Assert.Empty(await wrongCase.Provider.CreateToolsAsync(wrongCase.Context, CancellationToken.None));
+        Assert.Empty(wrongCase.Provider.GetToolMetadata(wrongCase.Context));
+    }
+
+    [Fact]
+    public async Task OneExactAssignmentExposesOnlyItsMappedToolForEverySupportedPurpose()
+    {
+        foreach (var mapping in WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey)
+        {
+            var harness = CreateHarness([mapping.Value]);
+            Assert.Equal(
+                Enum.GetValues<AgentRuntimeToolProviderPurpose>(),
+                harness.Provider.Descriptor.SupportedPurposes.OrderBy(item => item));
+
+            foreach (var purpose in harness.Provider.Descriptor.SupportedPurposes)
+            {
+                var context = harness.Context with { Purpose = purpose };
+                var tool = Assert.Single(await harness.Provider.CreateToolsAsync(context, CancellationToken.None));
+                var metadata = Assert.Single(harness.Provider.GetToolMetadata(context));
+
+                Assert.Equal(mapping.Key, tool.Name);
+                Assert.Equal(tool.Name, metadata.ToolName);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AttachedToolReauthorizesActorAndCatalogAtInvocationTime()
+    {
+        var harness = CreateHarness([WorkflowRuntimeCapabilityKeys.DefinitionsList]);
+        var tool = Assert.IsAssignableFrom<AIFunction>(Assert.Single(
+            await harness.Provider.CreateToolsAsync(harness.Context, CancellationToken.None)));
+
+        harness.Workspace.Agents =
+        [
+            harness.Context.Agent with { Capabilities = [] }
+        ];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            tool.InvokeAsync(new AIFunctionArguments()).AsTask());
+
+        harness.Workspace.Agents = [harness.Context.Agent];
+        harness.Workspace.Capabilities = [];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            tool.InvokeAsync(new AIFunctionArguments()).AsTask());
+
+        harness.Workspace.Capabilities = harness.Context.Capabilities;
+        harness.Workspace.Agents = [harness.Context.Agent, harness.Context.Agent];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            tool.InvokeAsync(new AIFunctionArguments()).AsTask());
+
+        harness.Workspace.Agents =
+        [
+            harness.Context.Agent with { Status = AgentLifecycleStatus.Suspended }
+        ];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            tool.InvokeAsync(new AIFunctionArguments()).AsTask());
     }
 
     [Fact]
@@ -341,14 +493,60 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             idempotencyKey: " "));
     }
 
-    private static WorkflowAgentRuntimeToolProvider CreateProvider(
+    private static RuntimeHarness CreateHarness(
+        IEnumerable<string>? capabilityKeys = null,
         RecordingWorkflowCatalog? catalog = null,
         RecordingWorkflowLaunchService? launchService = null,
-        RecordingWorkflowRuntimeManager? runtimeManager = null)
-        => new(
+        RecordingWorkflowRuntimeManager? runtimeManager = null,
+        AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat,
+        string runtimeSessionKey = "runtime-session-1",
+        AgentRuntimeContextIntent? contextIntent = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var capabilities = (capabilityKeys ?? WorkflowAgentCapabilityKeys.Keys)
+            .Select(key => new CapabilityCatalogItem(
+                Guid.NewGuid(),
+                CapabilityKind.Tool,
+                key,
+                key,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                CapabilityProofStatus.Verified,
+                string.Empty,
+                now,
+                IsBuiltIn: true))
+            .ToArray();
+        var assignments = capabilities
+            .Select(capability => new AgentCapabilityAssignment(
+                capability.Id,
+                capability.Key,
+                capability.Kind,
+                capability.ProofStatus,
+                capability.LastVerifiedAtUtc,
+                capability.ProofNotes))
+            .ToArray();
+        var agent = CreateAgent(assignments, now);
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, AuthorizationWorkspaceProxy>();
+        var workspace = (AuthorizationWorkspaceProxy)(object)workspaceService;
+        workspace.Agents = [agent];
+        workspace.Capabilities = capabilities;
+        var provider = new WorkflowAgentRuntimeToolProvider(
             catalog ?? new RecordingWorkflowCatalog(),
             launchService ?? new RecordingWorkflowLaunchService(),
-            runtimeManager ?? new RecordingWorkflowRuntimeManager());
+            runtimeManager ?? new RecordingWorkflowRuntimeManager(),
+            new WorkflowAgentRuntimeAuthorizationService(workspaceService));
+        var context = new AgentRuntimeToolProviderContext(
+            agent,
+            CreateChatProvider(),
+            capabilities,
+            SuppressApprovalRequirements: false,
+            purpose,
+            runtimeSessionKey,
+            contextIntent ?? AgentRuntimeContextIntent.Empty,
+            Tags: new Dictionary<string, string>());
+        return new RuntimeHarness(provider, context, workspace);
+    }
 
     private static async Task<AITool> GetToolAsync(
         WorkflowAgentRuntimeToolProvider provider,
@@ -393,21 +591,6 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
         Assert.Equal(requiresApproval, item.RequiresApprovalByDefault);
     }
 
-    private static AgentRuntimeToolProviderContext CreateContext(
-        AgentDefinition? agent = null,
-        AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat,
-        string runtimeSessionKey = "runtime-session-1",
-        AgentRuntimeContextIntent? contextIntent = null)
-        => new(
-            agent ?? CreateAgent(),
-            CreateChatProvider(),
-            [],
-            SuppressApprovalRequirements: false,
-            purpose,
-            runtimeSessionKey,
-            contextIntent ?? AgentRuntimeContextIntent.Empty,
-            Tags: new Dictionary<string, string>());
-
     private static AgentRuntimeContextIntent CreateProcessIntent(string processRunId)
         => new(
             SourceKind: "process-assignment",
@@ -422,9 +605,10 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             WorkspaceScope: null,
             AllowedOperations: [ProcessOperationContractNames.LaunchRuntime]);
 
-    private static AgentDefinition CreateAgent(AgentPermissionsPolicy? permissions = null)
+    private static AgentDefinition CreateAgent(
+        IReadOnlyList<AgentCapabilityAssignment> capabilities,
+        DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
         return new AgentDefinition(
             Guid.NewGuid(),
             "Workflow agent",
@@ -442,8 +626,8 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             "{}",
             IsTemplate: false,
             TemplateKey: string.Empty,
-            permissions ?? AgentPermissionsPolicy.Default,
-            [],
+            AgentPermissionsPolicy.Default,
+            capabilities,
             [],
             now,
             now);
@@ -520,6 +704,31 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             state.ToString(),
             now,
             now);
+    }
+
+    private sealed record RuntimeHarness(
+        WorkflowAgentRuntimeToolProvider Provider,
+        AgentRuntimeToolProviderContext Context,
+        AuthorizationWorkspaceProxy Workspace);
+
+    private class AuthorizationWorkspaceProxy : DispatchProxy
+    {
+        public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
+        public IReadOnlyList<CapabilityCatalogItem> Capabilities { get; set; } = [];
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            return targetMethod?.Name switch
+            {
+                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
+                    Task.FromResult(Agents),
+                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) =>
+                    Task.FromResult(Capabilities),
+                _ => throw new InvalidOperationException(
+                    $"Workspace service member '{targetMethod?.Name}' was not expected in this runtime-provider test.")
+            };
+        }
     }
 
     private sealed class RecordingWorkflowLaunchService : IWorkflowLaunchService
