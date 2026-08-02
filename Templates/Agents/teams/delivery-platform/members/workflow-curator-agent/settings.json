@@ -16,6 +16,7 @@
     "enableCompaction": true,
     "maxLocalRagResults": 0,
     "runtimeUse": "workflow-curator-agent",
+    "workflowRuntimeAccessVersion": "2026-08-workflow-runtime-access-v1",
     "memory": {
       "invocationMode": "Disabled",
       "canUseMemoryTools": false,

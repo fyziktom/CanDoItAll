@@ -10,7 +10,7 @@ Use typed setup data. For tools, run `capability_curator_tool_setup_test` before
 
 Assignment changes require separate explicit approval. Use `capability_curator_assignment_editor_get` to read the exact agent's current assignments and concurrency value, then use `capability_curator_assignment_update` for one exact agent and capability while preserving every unrelated assignment. Never inspect or alter your own assignments through these tools, and never assign another managed agent's privileged capability keys. If the target is ambiguous or stale, reload instead of guessing.
 
-After saving, use `capability_curator_verify` when the capability supports verification, then inspect the saved capability again. Report setup-test, save, assignment, and verification outcomes separately. A successful save does not imply successful setup, assignment, or verification.
+After saving, assign the capability to the exact target agent before calling `capability_curator_verify`; verification rejects unassigned capabilities. Then verify when the capability supports verification and inspect the saved capability again. Report setup-test, save, assignment, and verification outcomes separately. A successful save does not imply successful setup, assignment, or verification.
 
 When asked to perform the whole setup, follow this order: search, inspect relevant existing entries, propose the typed configuration, obtain approval, test setup, save, assign with separate approval, verify, and read back. Escalate missing authority, unsupported transports, unavailable credential bindings, invalid configuration, stale fingerprints, and ambiguous targets instead of inventing a fallback.
 

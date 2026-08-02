@@ -1,15 +1,119 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
+using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessRuntimeToolPreflightServiceTests
 {
+    [Fact]
+    public async Task EvaluateAsync_composes_capability_bound_provider_from_resolved_attached_catalog()
+    {
+        var capability = CreateCatalogCapability(WorkflowAgentCapabilityKeys.DefinitionsList);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext],
+            ProcessOperationContractNames.ManagedProcessArtifactsOnly);
+        var service = new ProcessRuntimeToolPreflightService(
+            [new CapabilityBoundRuntimeToolProvider(
+                AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+                capability.Id)],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var resolverCalls = 0;
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+                CapabilityCatalogResolver: _ =>
+                {
+                    resolverCalls++;
+                    return ValueTask.FromResult<IReadOnlyList<CapabilityCatalogItem>>([capability]);
+                }),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Equal(1, resolverCalls);
+        Assert.Empty(result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_reports_exact_workflow_capability_diagnostic_when_catalog_attachment_is_missing()
+    {
+        var capability = CreateCatalogCapability(WorkflowAgentCapabilityKeys.DefinitionsList);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext],
+            ProcessOperationContractNames.ManagedProcessArtifactsOnly);
+        var service = new ProcessRuntimeToolPreflightService(
+            [],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+                CapabilityCatalog: []),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Empty(result.MissingToolNames);
+        var diagnostic = Assert.Single(result.CapabilityDiagnostics);
+        Assert.Equal(WorkflowAgentCapabilityKeys.DefinitionsList, diagnostic.CapabilityKey);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_filters_workflow_launch_without_launch_runtime_operation()
+    {
+        var capability = CreateCatalogCapability(WorkflowAgentCapabilityKeys.RunStart);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext],
+            ProcessOperationContractNames.ManagedProcessArtifactsOnly);
+        var service = new ProcessRuntimeToolPreflightService(
+            [new CapabilityBoundRuntimeToolProvider(
+                AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
+                capability.Id)],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                [AgentToolInvocationPolicyMetadata.WorkflowsRunStart],
+                [capability]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Equal(
+            [AgentToolInvocationPolicyMetadata.WorkflowsRunStart],
+            result.MissingToolNames);
+        Assert.Empty(result.CapabilityDiagnostics);
+    }
+
     [Fact]
     public async Task EvaluateAsync_rejects_workspace_script_when_profile_can_expose_tool_but_agent_lacks_capability()
     {
@@ -47,15 +151,22 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
         var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var resolverCalls = 0;
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                ["workspace_pwsh_run_script"]),
+                ["workspace_pwsh_run_script"],
+                CapabilityCatalogResolver: _ =>
+                {
+                    resolverCalls++;
+                    return ValueTask.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]);
+                }),
             CancellationToken.None);
 
         Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Equal(0, resolverCalls);
         Assert.Empty(result.MissingToolNames);
         Assert.Empty(result.CapabilityDiagnostics);
     }
@@ -287,14 +398,21 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ]));
         var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
+        var resolverCalls = 0;
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                []),
+                [],
+                CapabilityCatalogResolver: _ =>
+                {
+                    resolverCalls++;
+                    return ValueTask.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]);
+                }),
             CancellationToken.None);
 
         Assert.False(result.IsSatisfied);
+        Assert.Equal(0, resolverCalls);
         Assert.Empty(result.MissingToolNames);
         var issue = Assert.Single(
             result.PlanIssues,
@@ -563,6 +681,33 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ProofNotes: string.Empty);
     }
 
+    private static CapabilityCatalogItem CreateCatalogCapability(string capabilityKey)
+    {
+        return new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Tool,
+            capabilityKey,
+            capabilityKey,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            CapabilityProofStatus.Verified,
+            string.Empty,
+            LastVerifiedAtUtc: null,
+            IsBuiltIn: true);
+    }
+
+    private static AgentCapabilityAssignment CreateAssignment(CapabilityCatalogItem capability)
+    {
+        return new AgentCapabilityAssignment(
+            capability.Id,
+            capability.Key,
+            capability.Kind,
+            capability.ProofStatus,
+            capability.LastVerifiedAtUtc,
+            capability.ProofNotes);
+    }
+
     private static ProcessRuntimeStepAssignment CreateAssignment(
         Guid agentId,
         IReadOnlyList<string> allowedOperations,
@@ -673,5 +818,28 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                     }
                 })
         };
+    }
+
+    private sealed class CapabilityBoundRuntimeToolProvider(
+        string toolName,
+        Guid requiredCapabilityId) : IAgentRuntimeToolProvider
+    {
+        public int Order => 1;
+
+        public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
+            AgentRuntimeToolProviderContext context,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return context.Capabilities.Count(capability => capability.Id == requiredCapabilityId) == 1
+                ? ValueTask.FromResult<IReadOnlyList<AITool>>(
+                [
+                    AIFunctionFactory.Create(
+                        () => "available",
+                        toolName,
+                        "Test capability-bound runtime tool.")
+                ])
+                : ValueTask.FromResult<IReadOnlyList<AITool>>([]);
+        }
     }
 }

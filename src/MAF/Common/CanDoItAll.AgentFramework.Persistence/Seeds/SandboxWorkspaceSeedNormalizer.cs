@@ -35,7 +35,13 @@ internal static class SandboxWorkspaceSeedNormalizer
         var seeded = SandboxWorkspaceSeedFactory.Create();
         var providers = MergeProviders(catalog.Providers, seeded.Providers);
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
-        var agents = MergeAgents(catalog.Agents, seeded.Agents, providers.Items, providers.IdMap, capabilities.IdMap);
+        var agents = MergeAgents(
+            catalog.Agents,
+            seeded.Agents,
+            providers.Items,
+            capabilities.Items,
+            providers.IdMap,
+            capabilities.IdMap);
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
@@ -171,8 +177,37 @@ internal static class SandboxWorkspaceSeedNormalizer
             {
                 Tags = ResolveCapabilityTags(seededCapability)
             };
-            var match = merged.FirstOrDefault(item => item.Id == seededCapability.Id)
-                ?? merged.FirstOrDefault(item => item.Kind == seededCapability.Kind && string.Equals(item.Key, seededCapability.Key, StringComparison.OrdinalIgnoreCase));
+            var idMatches = merged
+                .Where(item => item.Id == seededCapability.Id)
+                .ToArray();
+            if (idMatches.Length > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Capability id '{seededCapability.Id:D}' is duplicated in the catalog.");
+            }
+
+            var semanticMatches = merged
+                .Where(item => item.Kind == seededCapability.Kind)
+                .Where(item => string.Equals(
+                    item.Key,
+                    seededCapability.Key,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (semanticMatches.Length > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Capability identity '{seededCapability.Kind}:{seededCapability.Key}' is ambiguous in the catalog.");
+            }
+
+            var match = idMatches.SingleOrDefault() ?? semanticMatches.SingleOrDefault();
+            if (seededCapability.IsBuiltIn &&
+                semanticMatches.SingleOrDefault() is { IsBuiltIn: false } customCollision &&
+                customCollision.Id != seededCapability.Id)
+            {
+                throw new InvalidOperationException(
+                    $"Custom capability '{customCollision.Id:D}' collides with built-in capability " +
+                    $"'{seededCapability.Kind}:{seededCapability.Key}'.");
+            }
 
             if (match is null)
             {
@@ -184,6 +219,8 @@ internal static class SandboxWorkspaceSeedNormalizer
             idMap[seededCapability.Id] = match.Id;
             var mergedCapability = match with
             {
+                Kind = seededCapability.IsBuiltIn ? seededCapability.Kind : match.Kind,
+                Key = seededCapability.IsBuiltIn ? seededCapability.Key : match.Key,
                 Name = string.IsNullOrWhiteSpace(match.Name) ? seededCapability.Name : match.Name,
                 Description = string.IsNullOrWhiteSpace(match.Description) ? seededCapability.Description : match.Description,
                 EndpointOrPath = string.IsNullOrWhiteSpace(match.EndpointOrPath) ? seededCapability.EndpointOrPath : match.EndpointOrPath,
@@ -208,6 +245,7 @@ internal static class SandboxWorkspaceSeedNormalizer
         IReadOnlyList<AgentDefinition> existingAgents,
         IReadOnlyList<AgentDefinition> seededAgents,
         IReadOnlyList<ProviderProfile> providers,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyDictionary<Guid, Guid> providerIdMap,
         IReadOnlyDictionary<Guid, Guid> capabilityIdMap)
     {
@@ -217,11 +255,20 @@ internal static class SandboxWorkspaceSeedNormalizer
 
         foreach (var seededAgent in seededAgents.Select(agent => RemapSeedAgent(agent, providerIdMap, capabilityIdMap)))
         {
-            var match = merged.FirstOrDefault(item => item.Id == seededAgent.Id)
-                ?? (!string.IsNullOrWhiteSpace(seededAgent.TemplateKey)
+            var requiresCanonicalIdentity = ManagedAdministrativeAgentIdentityCatalog.AgentIds.Contains(seededAgent.Id);
+            var idMatch = merged.FirstOrDefault(item => item.Id == seededAgent.Id);
+            if (requiresCanonicalIdentity && idMatch is not null)
+            {
+                idMatch = CanonicalizeReservedManagedAgentIdentity(idMatch, seededAgent);
+            }
+
+            var match = idMatch
+                ?? (!requiresCanonicalIdentity && !string.IsNullOrWhiteSpace(seededAgent.TemplateKey)
                     ? merged.FirstOrDefault(item => string.Equals(item.TemplateKey, seededAgent.TemplateKey, StringComparison.OrdinalIgnoreCase))
                     : null)
-                ?? merged.FirstOrDefault(item => string.Equals(item.Name, seededAgent.Name, StringComparison.OrdinalIgnoreCase) && item.IsTemplate == seededAgent.IsTemplate);
+                ?? (!requiresCanonicalIdentity
+                    ? merged.FirstOrDefault(item => string.Equals(item.Name, seededAgent.Name, StringComparison.OrdinalIgnoreCase) && item.IsTemplate == seededAgent.IsTemplate)
+                    : null);
 
             if (match is null)
             {
@@ -231,7 +278,12 @@ internal static class SandboxWorkspaceSeedNormalizer
             }
 
             idMap[seededAgent.Id] = match.Id;
-            var migratedMatch = ApplyHrCapabilityCurationGrantMigration(match, seededAgent);
+            var canonicalizedMatch = CanonicalizePresentManagedAssignments(match, seededAgent, capabilities);
+            var migratedMatch = ApplySchedulerSchedulingPermissionMigration(
+                ApplyWorkflowRuntimeGrantMigration(
+                    ApplyHrCapabilityCurationGrantMigration(canonicalizedMatch, seededAgent),
+                    seededAgent),
+                seededAgent);
             var preserveProviderAssignment = ShouldPreserveExplicitProviderAssignment(migratedMatch, seededAgent, providersById);
             var hasCustomization = AgentManagedSeedCustomizationMetadata.HasCustomization(migratedMatch.ConfigurationJson);
             var mergedAgent = hasCustomization
@@ -258,7 +310,35 @@ internal static class SandboxWorkspaceSeedNormalizer
             ReplaceById(merged, match.Id, mergedAgent);
         }
 
-        return new MergeResult<AgentDefinition>(merged.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList(), idMap);
+        var catalogById = capabilities.ToDictionary(capability => capability.Id);
+        var normalizedAssignments = merged
+            .Select(agent => CanonicalizeCatalogAssignmentSnapshots(agent, catalogById))
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return new MergeResult<AgentDefinition>(normalizedAssignments, idMap);
+    }
+
+    private static AgentDefinition CanonicalizeReservedManagedAgentIdentity(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent)
+    {
+        if (!TryGetManagedSeedVersion(seededAgent, out _))
+        {
+            throw new InvalidOperationException(
+                $"Reserved managed agent seed '{seededAgent.Id:D}' does not declare a managed seed version.");
+        }
+
+        if (!TryGetManagedSeedVersion(existingAgent, out _))
+        {
+            throw new InvalidOperationException(
+                $"Agent '{existingAgent.Id:D}' collides with reserved managed identity '{seededAgent.TemplateKey}'.");
+        }
+
+        return existingAgent with
+        {
+            IsTemplate = seededAgent.IsTemplate,
+            TemplateKey = seededAgent.TemplateKey
+        };
     }
 
     private static string ResolveMergedAgentModel(
@@ -308,69 +388,253 @@ internal static class SandboxWorkspaceSeedNormalizer
         return merged.OrderBy(item => item.Kind).ThenBy(item => item.CapabilityKey, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    private static AgentDefinition CanonicalizePresentManagedAssignments(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        IReadOnlyList<CapabilityCatalogItem> capabilityCatalog)
+    {
+        if (!IsTrustedManagedSeedPair(existingAgent, seededAgent))
+        {
+            return existingAgent;
+        }
+
+        var catalogById = capabilityCatalog.ToDictionary(capability => capability.Id);
+        var seededAssignmentsByKey = seededAgent.Capabilities
+            .GroupBy(assignment => assignment.CapabilityKey, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.OrdinalIgnoreCase);
+        var synchronized = existingAgent.Capabilities
+            .Select(assignment => CanonicalizePresentAssignment(
+                assignment,
+                catalogById,
+                seededAssignmentsByKey))
+            .GroupBy(assignment => assignment.CapabilityId)
+            .Select(CollapseAssignmentDuplicates)
+            .OrderBy(assignment => assignment.Kind)
+            .ThenBy(assignment => assignment.CapabilityKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return existingAgent with { Capabilities = synchronized };
+    }
+
+    private static AgentDefinition CanonicalizeCatalogAssignmentSnapshots(
+        AgentDefinition agent,
+        IReadOnlyDictionary<Guid, CapabilityCatalogItem> catalogById)
+    {
+        var synchronized = agent.Capabilities
+            .Select(assignment => catalogById.TryGetValue(assignment.CapabilityId, out var capability)
+                ? assignment with
+                {
+                    CapabilityKey = capability.Key,
+                    Kind = capability.Kind
+                }
+                : assignment)
+            .GroupBy(assignment => assignment.CapabilityId)
+            .Select(CollapseAssignmentDuplicates)
+            .OrderBy(assignment => assignment.Kind)
+            .ThenBy(assignment => assignment.CapabilityKey, StringComparer.Ordinal)
+            .ToArray();
+        return agent with { Capabilities = synchronized };
+    }
+
+    private static bool IsTrustedManagedSeedPair(AgentDefinition existingAgent, AgentDefinition seededAgent)
+    {
+        return existingAgent.Id == seededAgent.Id &&
+               existingAgent.IsTemplate == seededAgent.IsTemplate &&
+               string.Equals(existingAgent.TemplateKey, seededAgent.TemplateKey, StringComparison.Ordinal) &&
+               TryGetManagedSeedVersion(existingAgent, out _) &&
+               TryGetManagedSeedVersion(seededAgent, out _);
+    }
+
+    private static AgentCapabilityAssignment CanonicalizePresentAssignment(
+        AgentCapabilityAssignment assignment,
+        IReadOnlyDictionary<Guid, CapabilityCatalogItem> catalogById,
+        IReadOnlyDictionary<string, AgentCapabilityAssignment> seededAssignmentsByKey)
+    {
+        if (catalogById.TryGetValue(assignment.CapabilityId, out var catalogCapability))
+        {
+            return assignment with
+            {
+                CapabilityKey = catalogCapability.Key,
+                Kind = catalogCapability.Kind
+            };
+        }
+
+        return seededAssignmentsByKey.TryGetValue(assignment.CapabilityKey, out var seededAssignment)
+            ? assignment with
+            {
+                CapabilityId = seededAssignment.CapabilityId,
+                CapabilityKey = seededAssignment.CapabilityKey,
+                Kind = seededAssignment.Kind
+            }
+            : assignment;
+    }
+
+    private static AgentCapabilityAssignment CollapseAssignmentDuplicates(
+        IGrouping<Guid, AgentCapabilityAssignment> assignments)
+    {
+        var candidates = assignments.ToArray();
+        var selected = candidates[0];
+        if (candidates.Length == 1 || candidates.All(candidate => AssignmentProofEquals(candidate, selected)))
+        {
+            return selected;
+        }
+
+        return selected with
+        {
+            ProofStatus = CapabilityProofStatus.NotRun,
+            LastVerifiedAtUtc = null,
+            ProofNotes = string.Empty
+        };
+    }
+
+    private static bool AssignmentProofEquals(
+        AgentCapabilityAssignment left,
+        AgentCapabilityAssignment right)
+    {
+        return left.ProofStatus == right.ProofStatus &&
+               left.LastVerifiedAtUtc == right.LastVerifiedAtUtc &&
+               string.Equals(left.ProofNotes, right.ProofNotes, StringComparison.Ordinal);
+    }
+
     private static AgentDefinition ApplyHrCapabilityCurationGrantMigration(
         AgentDefinition existingAgent,
         AgentDefinition seededAgent)
+        => ApplyManagedCapabilityGrantMigration(
+            existingAgent,
+            seededAgent,
+            HrAgentIdentity.Matches,
+            HrAgentIdentity.CapabilityCurationAccessVersionPropertyName,
+            HrAgentIdentity.CurrentCapabilityCurationAccessVersion,
+            HrAgentIdentity.CapabilityCurationCapabilityKeys,
+            "HR capability-curation");
+
+    private static AgentDefinition ApplyWorkflowRuntimeGrantMigration(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent)
+        => ApplyManagedCapabilityGrantMigration(
+            existingAgent,
+            seededAgent,
+            WorkflowCuratorAgentIdentity.Matches,
+            WorkflowCuratorAgentIdentity.RuntimeAccessVersionPropertyName,
+            WorkflowCuratorAgentIdentity.CurrentRuntimeAccessVersion,
+            WorkflowRuntimeCapabilityKeys.Keys,
+            "Workflow Curator runtime-access");
+
+    private static AgentDefinition ApplySchedulerSchedulingPermissionMigration(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent)
     {
-        if (!HrAgentIdentity.Matches(existingAgent) ||
-            !HrAgentIdentity.Matches(seededAgent))
+        if (!TryPrepareManagedMigrationConfiguration(
+                existingAgent,
+                seededAgent,
+                SchedulerAgentIdentity.Matches,
+                SchedulerAgentIdentity.SchedulingAccessVersionPropertyName,
+                SchedulerAgentIdentity.CurrentSchedulingAccessVersion,
+                out var existingConfiguration))
         {
             return existingAgent;
         }
 
-        JsonObject existingConfiguration;
-        JsonObject seededConfiguration;
-        try
+        if (!seededAgent.Permissions.CanScheduleWork)
         {
-            existingConfiguration = JsonNode.Parse(existingAgent.ConfigurationJson) as JsonObject
-                ?? throw new JsonException("The existing HR agent configuration is not a JSON object.");
-            seededConfiguration = JsonNode.Parse(seededAgent.ConfigurationJson) as JsonObject
-                ?? throw new JsonException("The seeded HR agent configuration is not a JSON object.");
-        }
-        catch (JsonException)
-        {
-            return existingAgent;
+            throw new InvalidOperationException(
+                "The managed Scheduler scheduling-access migration must enable scheduling permission.");
         }
 
-        // This is an append-only migration ledger entry, not desired-state reconciliation.
-        // Once present, an operator's later capability removal must remain removed.
-        if (existingConfiguration.ContainsKey(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName))
+        return existingAgent with
         {
-            return existingAgent;
-        }
+            ConfigurationJson = existingConfiguration.ToJsonString(),
+            Permissions = existingAgent.Permissions with { CanScheduleWork = true }
+        };
+    }
 
-        if (seededConfiguration[HrAgentIdentity.CapabilityCurationAccessVersionPropertyName] is not JsonValue seededVersion ||
-            !seededVersion.TryGetValue<string>(out var version) ||
-            !string.Equals(
-                version,
-                HrAgentIdentity.CurrentCapabilityCurationAccessVersion,
-                StringComparison.Ordinal))
+    private static AgentDefinition ApplyManagedCapabilityGrantMigration(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        Func<AgentDefinition?, bool> matchesIdentity,
+        string versionPropertyName,
+        string currentVersion,
+        IReadOnlySet<string> capabilityKeys,
+        string migrationName)
+    {
+        if (!TryPrepareManagedMigrationConfiguration(
+                existingAgent,
+                seededAgent,
+                matchesIdentity,
+                versionPropertyName,
+                currentVersion,
+                out var existingConfiguration))
         {
             return existingAgent;
         }
 
         var migrationCapabilities = seededAgent.Capabilities
-            .Where(item => HrAgentIdentity.CapabilityCurationCapabilityKeys.Contains(item.CapabilityKey))
+            .Where(item => capabilityKeys.Contains(item.CapabilityKey))
             .ToArray();
         var migrationCapabilityKeys = migrationCapabilities
             .Select(item => item.CapabilityKey)
             .ToHashSet(StringComparer.Ordinal);
-        var missingCapabilityKeys = HrAgentIdentity.CapabilityCurationCapabilityKeys
+        var missingCapabilityKeys = capabilityKeys
             .Except(migrationCapabilityKeys, StringComparer.Ordinal)
             .ToArray();
         if (missingCapabilityKeys.Length > 0 ||
-            migrationCapabilities.Length != HrAgentIdentity.CapabilityCurationCapabilityKeys.Count)
+            migrationCapabilities.Length != capabilityKeys.Count)
         {
             throw new InvalidOperationException(
-                $"The managed HR capability-curation migration is incomplete: {string.Join(", ", missingCapabilityKeys)}.");
+                $"The managed {migrationName} migration is incomplete: {string.Join(", ", missingCapabilityKeys)}.");
         }
 
-        existingConfiguration[HrAgentIdentity.CapabilityCurationAccessVersionPropertyName] = version;
         return existingAgent with
         {
             ConfigurationJson = existingConfiguration.ToJsonString(),
             Capabilities = MergeAgentCapabilities(existingAgent.Capabilities, migrationCapabilities)
         };
+    }
+
+    private static bool TryPrepareManagedMigrationConfiguration(
+        AgentDefinition existingAgent,
+        AgentDefinition seededAgent,
+        Func<AgentDefinition?, bool> matchesIdentity,
+        string versionPropertyName,
+        string currentVersion,
+        out JsonObject existingConfiguration)
+    {
+        existingConfiguration = [];
+        if (!matchesIdentity(existingAgent) ||
+            !matchesIdentity(seededAgent))
+        {
+            return false;
+        }
+
+        JsonObject seededConfiguration;
+        try
+        {
+            existingConfiguration = JsonNode.Parse(existingAgent.ConfigurationJson) as JsonObject
+                ?? throw new JsonException("The existing managed agent configuration is not a JSON object.");
+            seededConfiguration = JsonNode.Parse(seededAgent.ConfigurationJson) as JsonObject
+                ?? throw new JsonException("The seeded managed agent configuration is not a JSON object.");
+        }
+        catch (JsonException)
+        {
+            existingConfiguration = [];
+            return false;
+        }
+
+        if (existingConfiguration.ContainsKey(versionPropertyName))
+        {
+            return false;
+        }
+
+        if (seededConfiguration[versionPropertyName] is not JsonValue seededVersion ||
+            !seededVersion.TryGetValue<string>(out var version) ||
+            !string.Equals(version, currentVersion, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        existingConfiguration[versionPropertyName] = version;
+        return true;
     }
 
     private static bool ShouldRefreshManagedAgentFromSeed(AgentDefinition existingAgent, AgentDefinition seededAgent)
@@ -409,19 +673,22 @@ internal static class SandboxWorkspaceSeedNormalizer
         IReadOnlyList<AgentCapabilityAssignment> existingCapabilities,
         IReadOnlyList<AgentCapabilityAssignment> seededCapabilities)
     {
-        var existingKeys = existingCapabilities
-            .Select(item => item.CapabilityKey)
-            .Where(key => !string.IsNullOrWhiteSpace(key))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
-        var seededKeys = seededCapabilities
-            .Select(item => item.CapabilityKey)
-            .Where(key => !string.IsNullOrWhiteSpace(key))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
+        var existingPolicy = existingCapabilities
+            .Select(ToCapabilityAssignmentPolicy)
+            .OrderBy(item => item.CapabilityId)
+            .ThenBy(item => item.CapabilityKey, StringComparer.Ordinal)
+            .ThenBy(item => item.Kind);
+        var seededPolicy = seededCapabilities
+            .Select(ToCapabilityAssignmentPolicy)
+            .OrderBy(item => item.CapabilityId)
+            .ThenBy(item => item.CapabilityKey, StringComparer.Ordinal)
+            .ThenBy(item => item.Kind);
 
-        return existingKeys.SequenceEqual(seededKeys, StringComparer.OrdinalIgnoreCase);
+        return existingPolicy.SequenceEqual(seededPolicy);
     }
+
+    private static CapabilityAssignmentPolicy ToCapabilityAssignmentPolicy(AgentCapabilityAssignment assignment)
+        => new(assignment.CapabilityId, assignment.CapabilityKey, assignment.Kind);
 
     private static bool PermissionsPolicyEquals(AgentPermissionsPolicy existing, AgentPermissionsPolicy seeded)
     {
@@ -798,6 +1065,17 @@ internal static class SandboxWorkspaceSeedNormalizer
             return true;
         }
 
+        if (ManagedCapabilitySeedMetadata.TryReadCapabilityVersion(
+                seededCapability.ConfigurationJson,
+                out var seededCapabilityVersion) &&
+            (!ManagedCapabilitySeedMetadata.TryReadCapabilityVersion(
+                 existingCapability.ConfigurationJson,
+                 out var existingCapabilityVersion) ||
+             existingCapabilityVersion != seededCapabilityVersion))
+        {
+            return true;
+        }
+
         return !string.Equals(existingCapability.Name, seededCapability.Name, StringComparison.Ordinal) ||
                !string.Equals(existingCapability.Description, seededCapability.Description, StringComparison.Ordinal) ||
                !string.Equals(existingCapability.EndpointOrPath, seededCapability.EndpointOrPath, StringComparison.Ordinal) ||
@@ -809,6 +1087,8 @@ internal static class SandboxWorkspaceSeedNormalizer
     {
         return existingCapability with
         {
+            Kind = seededCapability.Kind,
+            Key = seededCapability.Key,
             Name = seededCapability.Name,
             Description = seededCapability.Description,
             EndpointOrPath = seededCapability.EndpointOrPath,
@@ -818,6 +1098,11 @@ internal static class SandboxWorkspaceSeedNormalizer
             Tags = ResolveCapabilityTags(seededCapability)
         };
     }
+
+    private readonly record struct CapabilityAssignmentPolicy(
+        Guid CapabilityId,
+        string CapabilityKey,
+        CapabilityKind Kind);
 
     private static IReadOnlyList<string> ResolveProviderTags(ProviderProfile provider)
     {

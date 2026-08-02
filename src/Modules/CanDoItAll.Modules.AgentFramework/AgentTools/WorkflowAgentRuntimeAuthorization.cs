@@ -1,26 +1,37 @@
+using System.Collections.Frozen;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 
-namespace CanDoItAll.Modules.SchedulerPlanner;
+namespace CanDoItAll.Modules.AgentFramework;
 
-public static class SchedulerAgentRuntimeAuthorizationPolicy
+public static class WorkflowAgentRuntimeAuthorizationPolicy
 {
+    public static IReadOnlySet<AgentRuntimeToolProviderPurpose> SupportedPurposes { get; } = new[]
+    {
+        AgentRuntimeToolProviderPurpose.InteractiveChat,
+        AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+        AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive,
+        AgentRuntimeToolProviderPurpose.A2AEndpoint
+    }.ToFrozenSet();
+
     public static bool CanAttach(AgentRuntimeToolProviderContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        return context.Purpose == AgentRuntimeToolProviderPurpose.InteractiveChat &&
-               IsManagedSchedulerActor(context.Agent);
+        return SupportedPurposes.Contains(context.Purpose) &&
+               IsEligibleActor(context.Agent);
     }
 
-    public static bool IsManagedSchedulerActor(AgentDefinition? agent)
+    public static bool IsEligibleActor(AgentDefinition? agent)
     {
-        return SchedulerAgentIdentity.Matches(agent) &&
-               agent!.Status == AgentLifecycleStatus.Active &&
-               !agent.IsTemplate &&
-               agent.Permissions.CanUseTools &&
-               agent.Permissions.CanScheduleWork;
+        return agent is
+        {
+            Id: var id,
+            Status: AgentLifecycleStatus.Active,
+            IsTemplate: false,
+            Permissions.CanUseTools: true
+        } && id != Guid.Empty;
     }
 
     public static bool IsToolAuthorized(
@@ -31,10 +42,10 @@ public static class SchedulerAgentRuntimeAuthorizationPolicy
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(capabilityCatalog);
 
-        if (!SchedulerAgentCapabilityKeys.ToolNameToCapabilityKey.TryGetValue(toolName, out var capabilityKey))
+        if (!WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.TryGetValue(toolName, out var capabilityKey))
         {
             throw new InvalidOperationException(
-                $"Scheduler Agent runtime tool '{toolName}' does not have a capability key mapping.");
+                $"Workflow runtime tool '{toolName}' does not have a capability key mapping.");
         }
 
         var assignments = agent.Capabilities
@@ -55,7 +66,7 @@ public static class SchedulerAgentRuntimeAuthorizationPolicy
     }
 }
 
-public sealed class SchedulerAgentRuntimeAuthorizationService(
+public sealed class WorkflowAgentRuntimeAuthorizationService(
     IAgentFrameworkWorkspaceService workspaceService)
 {
     public async Task EnsureToolInvocationAuthorizedAsync(
@@ -63,7 +74,7 @@ public sealed class SchedulerAgentRuntimeAuthorizationService(
         string toolName,
         CancellationToken cancellationToken)
     {
-        if (actorAgentId != SchedulerAgentIdentity.AgentId)
+        if (actorAgentId == Guid.Empty)
         {
             throw CreateDeniedException(toolName);
         }
@@ -71,15 +82,18 @@ public sealed class SchedulerAgentRuntimeAuthorizationService(
         var agents = await workspaceService.ListAgentsAsync(
             includeTemplates: true,
             cancellationToken);
-        var actor = agents.FirstOrDefault(agent => agent.Id == actorAgentId);
-        if (!SchedulerAgentRuntimeAuthorizationPolicy.IsManagedSchedulerActor(actor))
+        var actors = agents
+            .Where(agent => agent.Id == actorAgentId)
+            .ToArray();
+        if (actors.Length != 1 ||
+            !WorkflowAgentRuntimeAuthorizationPolicy.IsEligibleActor(actors[0]))
         {
             throw CreateDeniedException(toolName);
         }
 
         var capabilityCatalog = await workspaceService.ListCapabilitiesAsync(cancellationToken);
-        if (!SchedulerAgentRuntimeAuthorizationPolicy.IsToolAuthorized(
-                actor!,
+        if (!WorkflowAgentRuntimeAuthorizationPolicy.IsToolAuthorized(
+                actors[0],
                 capabilityCatalog,
                 toolName))
         {
@@ -90,6 +104,6 @@ public sealed class SchedulerAgentRuntimeAuthorizationService(
     private static UnauthorizedAccessException CreateDeniedException(string toolName)
     {
         return new UnauthorizedAccessException(
-            $"The current managed Scheduler Agent is not authorized to invoke '{toolName}'.");
+            $"The current agent is not authorized to invoke workflow runtime tool '{toolName}'.");
     }
 }

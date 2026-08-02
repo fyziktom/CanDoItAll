@@ -356,6 +356,450 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public void Managed_seed_normalization_restores_canonical_actor_without_promoting_template_key_lookalike()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var lookalike = seededHrAgent with
+        {
+            Id = Guid.NewGuid(),
+            Name = "HR identity lookalike",
+            Capabilities = []
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Where(agent => agent.Id != seededHrAgent.Id)
+                .Append(lookalike)
+                .ToArray()
+        });
+
+        var canonical = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+        var preservedLookalike = Assert.Single(normalized.Agents, agent => agent.Id == lookalike.Id);
+        Assert.Equal(HrAgentIdentity.AgentId, canonical.Id);
+        Assert.False(HrAgentIdentity.Matches(preservedLookalike));
+        Assert.Empty(preservedLookalike.Capabilities);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("HR-AGENT")]
+    [InlineData("stale-managed-hr-key")]
+    public void Managed_seed_normalization_repairs_trusted_reserved_identity_drift_idempotently(
+        string driftedTemplateKey)
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var drifted = seededHrAgent with
+        {
+            Name = "Customized HR display name",
+            IsTemplate = true,
+            TemplateKey = driftedTemplateKey
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? drifted : agent)
+                .ToArray()
+        });
+        var repaired = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.False(repaired.IsTemplate);
+        Assert.Equal(HrAgentIdentity.TemplateKey, repaired.TemplateKey);
+        Assert.Equal(drifted.Name, repaired.Name);
+
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized);
+        var repairedAgain = Assert.Single(normalizedAgain.Agents, HrAgentIdentity.Matches);
+
+        Assert.False(repairedAgain.IsTemplate);
+        Assert.Equal(repaired.TemplateKey, repairedAgain.TemplateKey);
+        Assert.Equal(repaired.Name, repairedAgain.Name);
+        Assert.Equal(
+            repaired.Capabilities.Select(assignment => assignment.CapabilityId),
+            repairedAgain.Capabilities.Select(assignment => assignment.CapabilityId));
+    }
+
+    [Fact]
+    public void Managed_seed_normalization_rejects_untrusted_reserved_agent_id_collision()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var collision = seededHrAgent with
+        {
+            Name = "Untrusted reserved-id collision",
+            TemplateKey = "untrusted-agent",
+            ConfigurationJson = "{}",
+            Capabilities = []
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+            {
+                Agents = seed.Agents
+                    .Select(agent => agent.Id == seededHrAgent.Id ? collision : agent)
+                    .ToArray()
+            }));
+
+        Assert.Contains("collides with reserved managed identity", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(HrAgentIdentity.AgentId.ToString("D"), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Managed_seed_normalization_canonicalizes_built_in_catalog_contract_fields()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededCapability = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                CapabilityCuratorAgentIdentity.CatalogSearchCapabilityKey,
+                StringComparison.Ordinal));
+        var driftedCapability = seededCapability with
+        {
+            Kind = CapabilityKind.Skill,
+            Key = seededCapability.Key.ToUpperInvariant()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Capabilities = seed.Capabilities
+                .Select(capability => capability.Id == seededCapability.Id ? driftedCapability : capability)
+                .ToArray()
+        });
+
+        var repaired = Assert.Single(normalized.Capabilities, capability => capability.Id == seededCapability.Id);
+        Assert.Equal(CapabilityKind.Tool, repaired.Kind);
+        Assert.Equal(seededCapability.Key, repaired.Key);
+    }
+
+    [Fact]
+    public void Managed_capability_version_refreshes_only_changed_built_in_at_same_pack_version_and_is_idempotent()
+    {
+        const string staleInstructions = "Stale HR governance instructions.";
+        const string customTag = "customer-observation";
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var changedCapability = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                "hr-agent-governance-inline-skill",
+                StringComparison.Ordinal));
+        var unchangedCapability = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                CapabilityCuratorAgentIdentity.CatalogSearchCapabilityKey,
+                StringComparison.Ordinal));
+        var staleConfiguration = JsonNode.Parse(changedCapability.ConfigurationJson)!.AsObject();
+        var packVersion = staleConfiguration[ManagedCapabilitySeedMetadata.PackVersionPropertyName]!.GetValue<string>();
+        staleConfiguration[ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName] =
+            "skill:hr-agent-governance:v1";
+        staleConfiguration["inlineSkill"]!["instructions"] = staleInstructions;
+        var customCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Tool,
+            "customer-garden-catalog",
+            "Customer Garden Catalog",
+            "Customer-owned garden catalog.",
+            "custom://customer-garden-catalog",
+            """
+            {
+              "managedSeedVersion": "customer-v1",
+              "managedCapabilityVersion": "tool:customer-garden-catalog:v1"
+            }
+            """,
+            CapabilityProofStatus.Verified,
+            "Customer proof",
+            DateTimeOffset.Parse("2026-08-02T12:00:00Z"),
+            IsBuiltIn: false);
+        var staleChangedCapability = changedCapability with
+        {
+            ConfigurationJson = staleConfiguration.ToJsonString(),
+            Tags = changedCapability.Tags.Append("stale-version-marker").ToArray()
+        };
+        var taggedUnchangedCapability = unchangedCapability with
+        {
+            Tags = unchangedCapability.Tags.Append(customTag).ToArray()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Capabilities = seed.Capabilities
+                .Select(capability => capability.Id switch
+                {
+                    var id when id == changedCapability.Id => staleChangedCapability,
+                    var id when id == unchangedCapability.Id => taggedUnchangedCapability,
+                    _ => capability
+                })
+                .Append(customCapability)
+                .ToArray()
+        });
+
+        var refreshed = Assert.Single(normalized.Capabilities, capability => capability.Id == changedCapability.Id);
+        var preservedUnchanged = Assert.Single(
+            normalized.Capabilities,
+            capability => capability.Id == unchangedCapability.Id);
+        var preservedCustom = Assert.Single(normalized.Capabilities, capability => capability.Id == customCapability.Id);
+        Assert.Equal(changedCapability.ConfigurationJson, refreshed.ConfigurationJson);
+        Assert.DoesNotContain("stale-version-marker", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
+        using (var refreshedConfiguration = JsonDocument.Parse(refreshed.ConfigurationJson))
+        {
+            Assert.Equal(
+                packVersion,
+                refreshedConfiguration.RootElement
+                    .GetProperty(ManagedCapabilitySeedMetadata.PackVersionPropertyName)
+                    .GetString());
+            Assert.Equal(
+                "skill:hr-agent-governance:v2",
+                refreshedConfiguration.RootElement
+                    .GetProperty(ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName)
+                    .GetString());
+            Assert.DoesNotContain(
+                staleInstructions,
+                refreshedConfiguration.RootElement.GetProperty("inlineSkill").GetProperty("instructions").GetString(),
+                StringComparison.Ordinal);
+        }
+
+        Assert.Equal(unchangedCapability.ConfigurationJson, preservedUnchanged.ConfigurationJson);
+        Assert.Contains(customTag, preservedUnchanged.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(customCapability.Kind, preservedCustom.Kind);
+        Assert.Equal(customCapability.Key, preservedCustom.Key);
+        Assert.Equal(customCapability.Name, preservedCustom.Name);
+        Assert.Equal(customCapability.Description, preservedCustom.Description);
+        Assert.Equal(customCapability.EndpointOrPath, preservedCustom.EndpointOrPath);
+        Assert.Equal(customCapability.ConfigurationJson, preservedCustom.ConfigurationJson);
+        Assert.Equal(customCapability.ProofStatus, preservedCustom.ProofStatus);
+        Assert.Equal(customCapability.ProofNotes, preservedCustom.ProofNotes);
+        Assert.Equal(customCapability.LastVerifiedAtUtc, preservedCustom.LastVerifiedAtUtc);
+        Assert.False(preservedCustom.IsBuiltIn);
+        Assert.Contains("tool", preservedCustom.Tags, StringComparer.OrdinalIgnoreCase);
+
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized);
+        var refreshedAgain = Assert.Single(
+            normalizedAgain.Capabilities,
+            capability => capability.Id == changedCapability.Id);
+        var unchangedAgain = Assert.Single(
+            normalizedAgain.Capabilities,
+            capability => capability.Id == unchangedCapability.Id);
+        var customAgain = Assert.Single(normalizedAgain.Capabilities, capability => capability.Id == customCapability.Id);
+        Assert.Equal(refreshed.ConfigurationJson, refreshedAgain.ConfigurationJson);
+        Assert.Equal(refreshed.Tags, refreshedAgain.Tags);
+        Assert.Equal(preservedUnchanged.ConfigurationJson, unchangedAgain.ConfigurationJson);
+        Assert.Equal(preservedUnchanged.Tags, unchangedAgain.Tags);
+        Assert.Equal(preservedCustom.ConfigurationJson, customAgain.ConfigurationJson);
+        Assert.Equal(preservedCustom.Tags, customAgain.Tags);
+    }
+
+    [Fact]
+    public void Legacy_versioned_built_in_without_capability_version_receives_one_time_seed_refresh()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededCapability = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                "workflow-curator-agent-inline-skill",
+                StringComparison.Ordinal));
+        var legacyConfiguration = JsonNode.Parse(seededCapability.ConfigurationJson)!.AsObject();
+        Assert.True(legacyConfiguration.Remove(ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName));
+        legacyConfiguration["inlineSkill"]!["instructions"] = "Legacy workflow curator instructions.";
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Capabilities = seed.Capabilities
+                .Select(capability => capability.Id == seededCapability.Id
+                    ? capability with { ConfigurationJson = legacyConfiguration.ToJsonString() }
+                    : capability)
+                .ToArray()
+        });
+        var refreshed = Assert.Single(normalized.Capabilities, capability => capability.Id == seededCapability.Id);
+        Assert.Equal(seededCapability.ConfigurationJson, refreshed.ConfigurationJson);
+
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized);
+        var refreshedAgain = Assert.Single(
+            normalizedAgain.Capabilities,
+            capability => capability.Id == seededCapability.Id);
+        Assert.Equal(refreshed.ConfigurationJson, refreshedAgain.ConfigurationJson);
+        Assert.Equal(refreshed.Tags, refreshedAgain.Tags);
+    }
+
+    [Fact]
+    public void Managed_seed_normalization_rejects_custom_catalog_collision_with_built_in_identity()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededCapability = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                CapabilityCuratorAgentIdentity.CatalogSearchCapabilityKey,
+                StringComparison.Ordinal));
+        var customCollision = seededCapability with
+        {
+            Id = Guid.NewGuid(),
+            IsBuiltIn = false,
+            Name = "Customer-owned collision"
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+            {
+                Capabilities = seed.Capabilities
+                    .Where(capability => capability.Id != seededCapability.Id)
+                    .Append(customCollision)
+                    .ToArray()
+            }));
+
+        Assert.Contains("collides with built-in", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(seededCapability.Key, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Catalog_normalization_canonicalizes_custom_agent_assignment_snapshot_from_catalog_identity()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var customCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Skill,
+            "customer-garden-design",
+            "Customer garden design",
+            "Customer-owned skill.",
+            "inline://customer-garden-design",
+            "{}",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            IsBuiltIn: false);
+        var customAgent = seed.Agents.First(agent => !ManagedAdministrativeAgentIdentityCatalog.AgentIds.Contains(agent.Id)) with
+        {
+            Id = Guid.NewGuid(),
+            Name = "Customer Gardener",
+            TemplateKey = "customer-gardener",
+            Capabilities =
+            [
+                new AgentCapabilityAssignment(
+                    customCapability.Id,
+                    customCapability.Key.ToUpperInvariant(),
+                    CapabilityKind.Tool,
+                    CapabilityProofStatus.NotRun,
+                    null,
+                    string.Empty)
+            ]
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Capabilities = seed.Capabilities.Append(customCapability).ToArray(),
+            Agents = seed.Agents.Append(customAgent).ToArray()
+        });
+
+        var repaired = Assert.Single(normalized.Agents, agent => agent.Id == customAgent.Id);
+        var assignment = Assert.Single(repaired.Capabilities);
+        Assert.Equal(customCapability.Key, assignment.CapabilityKey);
+        Assert.Equal(customCapability.Kind, assignment.Kind);
+    }
+
+    [Fact]
+    public void Customized_managed_agent_normalization_repairs_present_assignment_snapshots_without_restoring_removed_grants()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var catalogSearch = Assert.Single(
+            seededHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                CapabilityCuratorAgentIdentity.CatalogSearchCapabilityKey,
+                StringComparison.Ordinal));
+        var editorGet = Assert.Single(
+            seededHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                CapabilityCuratorAgentIdentity.EditorGetCapabilityKey,
+                StringComparison.Ordinal));
+        var customCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Skill,
+            "customer-retained-skill",
+            "Customer retained skill",
+            "Customer-owned capability that normalization must preserve.",
+            "inline://customer-retained-skill",
+            "{}",
+            CapabilityProofStatus.Verified,
+            "Customer proof",
+            DateTimeOffset.Parse("2026-08-01T12:00:00Z"),
+            false);
+        var customAssignment = new AgentCapabilityAssignment(
+            customCapability.Id,
+            customCapability.Key,
+            customCapability.Kind,
+            customCapability.ProofStatus,
+            customCapability.LastVerifiedAtUtc,
+            customCapability.ProofNotes);
+        var driftedAssignments = seededHrAgent.Capabilities
+            .Where(assignment => !string.Equals(
+                assignment.CapabilityKey,
+                CapabilityCuratorAgentIdentity.SaveCapabilityKey,
+                StringComparison.Ordinal))
+            .Where(assignment => assignment.CapabilityId != catalogSearch.CapabilityId)
+            .Where(assignment => assignment.CapabilityId != editorGet.CapabilityId)
+            .Append(catalogSearch with
+            {
+                CapabilityKey = catalogSearch.CapabilityKey.ToUpperInvariant(),
+                Kind = CapabilityKind.Skill
+            })
+            .Append(catalogSearch with
+            {
+                CapabilityKey = catalogSearch.CapabilityKey.ToUpperInvariant(),
+                ProofNotes = "duplicate stale snapshot"
+            })
+            .Append(editorGet with
+            {
+                CapabilityId = Guid.NewGuid(),
+                CapabilityKey = editorGet.CapabilityKey.ToUpperInvariant(),
+                Kind = CapabilityKind.Skill
+            })
+            .Append(customAssignment)
+            .ToArray();
+        var customizedHrAgent = seededHrAgent with
+        {
+            ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(
+                seededHrAgent.ConfigurationJson),
+            Capabilities = driftedAssignments
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Capabilities = seed.Capabilities.Append(customCapability).ToArray(),
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? customizedHrAgent : agent)
+                .ToArray()
+        });
+        var repairedHrAgent = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.DoesNotContain(
+            repairedHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                CapabilityCuratorAgentIdentity.SaveCapabilityKey,
+                StringComparison.Ordinal));
+        var repairedCatalogSearch = Assert.Single(
+            repairedHrAgent.Capabilities,
+            assignment => assignment.CapabilityId == catalogSearch.CapabilityId);
+        Assert.Equal(catalogSearch.CapabilityKey, repairedCatalogSearch.CapabilityKey);
+        Assert.Equal(CapabilityKind.Tool, repairedCatalogSearch.Kind);
+        var repairedEditorGet = Assert.Single(
+            repairedHrAgent.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                editorGet.CapabilityKey,
+                StringComparison.Ordinal));
+        Assert.Equal(editorGet.CapabilityId, repairedEditorGet.CapabilityId);
+        Assert.Equal(CapabilityKind.Tool, repairedEditorGet.Kind);
+        Assert.Contains(repairedHrAgent.Capabilities, assignment => assignment == customAssignment);
+    }
+
+    [Fact]
     public void Customized_hr_normalization_unions_curation_access_once_without_overwriting_customer_policy()
     {
         const string unrelatedRevokedCapabilityKey = "hr-crm-search";
@@ -525,6 +969,147 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             preexistingLedgerMarker,
             preservedConfiguration.RootElement
                 .GetProperty(HrAgentIdentity.CapabilityCurationAccessVersionPropertyName)
+                .GetString());
+    }
+
+    [Fact]
+    public void Customized_workflow_curator_receives_runtime_access_once_then_preserves_operator_removal()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededCurator = Assert.Single(seed.Agents, WorkflowCuratorAgentIdentity.Matches);
+        var seededRuntimeAssignments = seededCurator.Capabilities
+            .Where(assignment => WorkflowRuntimeCapabilityKeys.Keys.Contains(assignment.CapabilityKey))
+            .ToArray();
+        Assert.Equal(WorkflowRuntimeCapabilityKeys.Keys.Count, seededRuntimeAssignments.Length);
+        var configuration = JsonNode.Parse(seededCurator.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The seeded Workflow Curator configuration must be an object.");
+        configuration.Remove(WorkflowCuratorAgentIdentity.RuntimeAccessVersionPropertyName);
+        configuration["customerWorkflowPolicy"] = "preserve";
+        var customized = seededCurator with
+        {
+            ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(
+                configuration.ToJsonString()),
+            Capabilities = seededCurator.Capabilities
+                .Where(assignment => !WorkflowRuntimeCapabilityKeys.Keys.Contains(
+                    assignment.CapabilityKey))
+                .ToArray()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededCurator.Id ? customized : agent)
+                .ToArray()
+        });
+        var migrated = Assert.Single(normalized.Agents, WorkflowCuratorAgentIdentity.Matches);
+
+        Assert.Equal(
+            WorkflowRuntimeCapabilityKeys.Keys.OrderBy(key => key, StringComparer.Ordinal),
+            migrated.Capabilities
+                .Where(assignment => WorkflowRuntimeCapabilityKeys.Keys.Contains(
+                    assignment.CapabilityKey))
+                .Select(assignment => assignment.CapabilityKey)
+                .OrderBy(key => key, StringComparer.Ordinal));
+        using (var migratedConfiguration = JsonDocument.Parse(migrated.ConfigurationJson))
+        {
+            Assert.Equal(
+                "preserve",
+                migratedConfiguration.RootElement.GetProperty("customerWorkflowPolicy").GetString());
+            Assert.Equal(
+                WorkflowCuratorAgentIdentity.CurrentRuntimeAccessVersion,
+                migratedConfiguration.RootElement
+                    .GetProperty(WorkflowCuratorAgentIdentity.RuntimeAccessVersionPropertyName)
+                    .GetString());
+        }
+
+        var deliberatelyRemoved = WorkflowRuntimeCapabilityKeys.RunCancel;
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized with
+        {
+            Agents = normalized.Agents
+                .Select(agent => agent.Id == migrated.Id
+                    ? agent with
+                    {
+                        Capabilities = agent.Capabilities
+                            .Where(assignment => !string.Equals(
+                                assignment.CapabilityKey,
+                                deliberatelyRemoved,
+                                StringComparison.Ordinal))
+                            .ToArray()
+                    }
+                    : agent)
+                .ToArray()
+        });
+        var preserved = Assert.Single(normalizedAgain.Agents, WorkflowCuratorAgentIdentity.Matches);
+
+        Assert.DoesNotContain(
+            preserved.Capabilities,
+            assignment => string.Equals(
+                assignment.CapabilityKey,
+                deliberatelyRemoved,
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Customized_scheduler_receives_scheduling_access_once_then_preserves_operator_removal()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededScheduler = Assert.Single(seed.Agents, SchedulerAgentIdentity.Matches);
+        var configuration = JsonNode.Parse(seededScheduler.ConfigurationJson)?.AsObject()
+            ?? throw new InvalidOperationException("The seeded Scheduler configuration must be an object.");
+        configuration.Remove(SchedulerAgentIdentity.SchedulingAccessVersionPropertyName);
+        configuration["customerSchedulerPolicy"] = "preserve";
+        var customized = seededScheduler with
+        {
+            ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(
+                configuration.ToJsonString()),
+            Permissions = seededScheduler.Permissions with { CanScheduleWork = false }
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededScheduler.Id ? customized : agent)
+                .ToArray()
+        });
+        var migrated = Assert.Single(normalized.Agents, SchedulerAgentIdentity.Matches);
+
+        Assert.True(migrated.Permissions.CanScheduleWork);
+        using (var migratedConfiguration = JsonDocument.Parse(migrated.ConfigurationJson))
+        {
+            Assert.Equal(
+                "preserve",
+                migratedConfiguration.RootElement.GetProperty("customerSchedulerPolicy").GetString());
+            Assert.Equal(
+                SchedulerAgentIdentity.CurrentSchedulingAccessVersion,
+                migratedConfiguration.RootElement
+                    .GetProperty(SchedulerAgentIdentity.SchedulingAccessVersionPropertyName)
+                    .GetString());
+        }
+
+        var normalizedAgain = SandboxWorkspaceSeedFactory.NormalizeCatalog(normalized);
+        var idempotent = Assert.Single(normalizedAgain.Agents, SchedulerAgentIdentity.Matches);
+        Assert.True(idempotent.Permissions.CanScheduleWork);
+
+        var deliberatelyRemoved = normalizedAgain with
+        {
+            Agents = normalizedAgain.Agents
+                .Select(agent => agent.Id == idempotent.Id
+                    ? agent with
+                    {
+                        Permissions = agent.Permissions with { CanScheduleWork = false }
+                    }
+                    : agent)
+                .ToArray()
+        };
+        var preservedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(deliberatelyRemoved);
+        var preserved = Assert.Single(preservedCatalog.Agents, SchedulerAgentIdentity.Matches);
+
+        Assert.False(preserved.Permissions.CanScheduleWork);
+        using var preservedConfiguration = JsonDocument.Parse(preserved.ConfigurationJson);
+        Assert.Equal(
+            SchedulerAgentIdentity.CurrentSchedulingAccessVersion,
+            preservedConfiguration.RootElement
+                .GetProperty(SchedulerAgentIdentity.SchedulingAccessVersionPropertyName)
                 .GetString());
     }
 
