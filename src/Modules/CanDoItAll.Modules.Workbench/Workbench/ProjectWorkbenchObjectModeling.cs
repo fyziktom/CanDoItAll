@@ -14,15 +14,16 @@ internal enum ProjectMarkerMutationMode
 
 internal static class ProjectWorkbenchObjectModeling
 {
-    private static readonly string[] ProjectBlockRootMetadataKeys =
-    [
-        "outputRoot",
-        "productRoot",
-        "targetRoot",
-        "targetPath",
-        "repositoryRoot",
-        "workspaceRoot"
-    ];
+    internal static IReadOnlySet<string> ProjectBlockRootMetadataKeys { get; } = new HashSet<string>(
+        [
+            "outputRoot",
+            "productRoot",
+            "targetRoot",
+            "targetPath",
+            "repositoryRoot",
+            "workspaceRoot"
+        ],
+        StringComparer.OrdinalIgnoreCase);
 
     internal static DateTimeOffset? ResolveEndUtc(DateTimeOffset? startUtc, DateTimeOffset? endUtc, int? durationSeconds)
     {
@@ -86,7 +87,10 @@ internal static class ProjectWorkbenchObjectModeling
             media);
 
         ProjectObjectMetadataSerializer.Validate(objectType, objectSubtype ?? string.Empty, metadata);
-        return ProjectObjectMetadataSerializer.Serialize(metadata);
+        return ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(
+            effectiveMetadataJson,
+            metadata,
+            objectType == ProjectObjectType.ProjectBlock ? ProjectBlockRootMetadataKeys : null);
     }
 
     internal static bool HasMeaningfulMetadata(string? metadataJson)

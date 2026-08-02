@@ -410,6 +410,30 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
     }
 
     [Fact]
+    public async Task TryExecuteAsync_reports_all_missing_existing_solution_candidates_as_missing()
+    {
+        using var workspace = new RuntimeExecutorWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var projectFile = Path.Combine(productRoot, "modules", "Portal", "Portal.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+        await File.WriteAllTextAsync(projectFile, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        var result = await executor.TryExecuteAsync(CreateAssignment(
+            productRoot,
+            "template-owned-existing-solution-verification",
+            CreateVerifyExistingLaunchVariables(productRoot, [projectFile])));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Contains("missing every solution candidate", result.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("EnterpriseSuite.sln", result.Summary, StringComparison.Ordinal);
+        Assert.Contains("EnterpriseSuite.slnx", result.Summary, StringComparison.Ordinal);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
     public void Tool_plan_guard_accepts_declared_verify_existing_context_without_an_initialization_script()
     {
         using var workspace = new RuntimeExecutorWorkspace();

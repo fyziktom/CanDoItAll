@@ -54,6 +54,11 @@ internal sealed class DotNetExistingSolutionVerifier
             var relativeCandidate = Path.GetRelativePath(inputs.ProductRoot, candidate);
             var stat = files.StatPath(relativeCandidate);
             receipts.Add(From(executionRunId, stat));
+            if (stat.IsKnownMissing())
+            {
+                continue;
+            }
+
             if (!stat.Succeeded)
             {
                 candidateIssues.Add(

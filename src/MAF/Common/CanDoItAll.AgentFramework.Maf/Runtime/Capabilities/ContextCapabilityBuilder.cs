@@ -108,7 +108,12 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
             {
                 text = await File.ReadAllTextAsync(file, cancellationToken);
             }
-            catch
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (
+                exception is UnauthorizedAccessException or IOException)
             {
                 continue;
             }
@@ -159,6 +164,7 @@ internal sealed class StaticMessageContextProvider : MessageAIContextProvider
 {
     private const string StateKeyPrefix = "CanDoItAll.StaticContext.";
     public const string TransientAgentChatStateKey = $"{StateKeyPrefix}TransientAgentChat";
+    public const string EffectiveExternalTargetsStateKey = $"{StateKeyPrefix}EffectiveExternalTargets";
     private readonly ChatMessage message;
     private readonly string stateKey;
 

@@ -31,7 +31,8 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
                 typeof(ProjectWorkbenchRelationService),
                 typeof(ProjectWorkbenchLifecycleService),
                 typeof(ProjectWorkbenchCommandService),
-                typeof(ProjectWorkbenchCrossModuleMutationService)
+                typeof(ProjectWorkbenchCrossModuleMutationService),
+                typeof(ProjectStructureRuntimeNodeMetadataBoundary)
             ],
             parameterTypes);
     }
@@ -59,6 +60,19 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
     public void Runtime_module_assemblies_include_prompts()
     {
         Assert.Contains(typeof(PromptsModuleAssemblyMarker).Assembly, ModuleAssemblies.All);
+    }
+
+    [Theory]
+    [InlineData(typeof(IProjectStructureRuntimeLauncher))]
+    [InlineData(typeof(ProjectStructureRuntimeLauncher))]
+    public void Raw_runtime_resolution_requires_an_explicit_path_authority_mode(Type launcherType)
+    {
+        var rawResolve = Assert.Single(
+            launcherType.GetMethods(),
+            method => method.Name == nameof(IProjectStructureRuntimeLauncher.Resolve) &&
+                method.GetParameters().Length == 5);
+
+        Assert.False(rawResolve.GetParameters()[^1].HasDefaultValue);
     }
 
     [Fact]

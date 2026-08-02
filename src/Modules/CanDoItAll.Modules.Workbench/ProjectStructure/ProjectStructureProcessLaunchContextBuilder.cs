@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.SharedKernel;
 
@@ -10,23 +9,15 @@ internal static class ProjectStructureProcessLaunchContextBuilder
     private const int ContextRowLimit = 40;
     private const int VisualTargetAssetLimit = 8;
 
-    private static readonly string[] OutputRootMetadataKeys =
-    [
-        "outputRoot",
-        "productRoot",
-        "targetRoot",
-        "targetPath",
-        "repositoryRoot",
-        "workspaceRoot"
-    ];
-
     public static ProjectStructureProcessLaunchContext Build(
         ProjectStructureSurface? surface,
         ProjectStructureNode? focusNode)
     {
         return new ProjectStructureProcessLaunchContext(
             BuildContextSummary(surface, focusNode),
-            ResolveOutputRoot(surface, focusNode));
+            ProjectStructureOutputRootAuthorityResolver.ResolveProcessOutputRoot(
+                surface,
+                focusNode));
     }
 
     private static string BuildContextSummary(
@@ -239,124 +230,6 @@ internal static class ProjectStructureProcessLaunchContextBuilder
 
         return [(focusNode, 0), .. rows];
     }
-
-    private static string ResolveOutputRoot(
-        ProjectStructureSurface? surface,
-        ProjectStructureNode? focusNode)
-    {
-        var direct = ResolveOutputRoot(focusNode);
-        if (!string.IsNullOrWhiteSpace(direct) || surface is null || focusNode is null)
-        {
-            return direct;
-        }
-
-        foreach (var (node, _) in EnumerateContextNodes(surface, focusNode))
-        {
-            var candidate = ResolveOutputRoot(node);
-            if (!string.IsNullOrWhiteSpace(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static string ResolveOutputRoot(ProjectStructureNode? node)
-    {
-        if (node is null)
-        {
-            return string.Empty;
-        }
-
-        var metadataOutputRoot = TryReadOutputRootFromMetadata(node.MetadataJson);
-        if (!string.IsNullOrWhiteSpace(metadataOutputRoot))
-        {
-            return metadataOutputRoot;
-        }
-
-        var text = string.Join(Environment.NewLine, node.Title, node.Subtitle, node.Notes);
-        var match = Regex.Match(text, @"[A-Za-z]:\\[^\r\n""<>|]+");
-        return match.Success
-            ? match.Value.Trim().TrimEnd('.', ',', ';', ')', ']')
-            : string.Empty;
-    }
-
-    private static string TryReadOutputRootFromMetadata(string? metadataJson)
-    {
-        if (string.IsNullOrWhiteSpace(metadataJson))
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
-            var typedOutputRoot = FirstNonEmpty(
-                metadata.ProjectBlock?.OutputRoot,
-                metadata.ProjectBlock?.ProductRoot,
-                metadata.ProjectBlock?.TargetRoot,
-                metadata.ProjectBlock?.RepositoryRoot,
-                metadata.ProjectBlock?.WorkspaceRoot);
-            if (!string.IsNullOrWhiteSpace(typedOutputRoot))
-            {
-                return typedOutputRoot;
-            }
-
-            using var document = JsonDocument.Parse(metadataJson);
-            return TryReadOutputRootFromElement(document.RootElement);
-        }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
-        {
-        }
-
-        return string.Empty;
-    }
-
-    private static string TryReadOutputRootFromElement(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var key in OutputRootMetadataKeys)
-            {
-                if (element.TryGetProperty(key, out var property) &&
-                    property.ValueKind == JsonValueKind.String)
-                {
-                    var value = property.GetString();
-                    if (!string.IsNullOrWhiteSpace(value))
-                    {
-                        return value.Trim();
-                    }
-                }
-            }
-
-            foreach (var property in element.EnumerateObject())
-            {
-                var value = TryReadOutputRootFromElement(property.Value);
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    return value;
-                }
-            }
-        }
-
-        if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                var value = TryReadOutputRootFromElement(item);
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    return value;
-                }
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static string NormalizeContextText(string value, int maxLength)
     {

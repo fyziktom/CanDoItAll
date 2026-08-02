@@ -5,6 +5,7 @@ namespace CanDoItAll.AgentFramework.Core;
 public static class WorkspaceFileLimits
 {
     public const int MaxTextReadCharacters = 64_000;
+    public const int MaxTextMutationBytes = 4 * 1024 * 1024;
 }
 
 public interface IWorkspaceFileService
@@ -25,17 +26,48 @@ public interface IWorkspaceFileService
 
     WorkspaceFileMutationResult WriteTextFile(string path, string content, bool overwrite = true);
 
+    WorkspaceFileMutationResult WriteTextFile(
+        string path,
+        string content,
+        bool overwrite,
+        string authorityRootPath);
+
     WorkspaceFileMutationResult AppendTextFile(string path, string content);
+
+    WorkspaceFileMutationResult AppendTextFile(
+        string path,
+        string content,
+        string authorityRootPath);
 
     WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false);
 
+    WorkspaceFileMutationResult CopyPath(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        string destinationAuthorityRootPath);
+
     WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false);
+
+    WorkspaceFileMutationResult MovePath(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        string destinationAuthorityRootPath);
 
     WorkspaceFileMutationResult DeletePath(string path, bool recursive = false);
 
     WorkspaceArchiveMutationResult ZipPath(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760);
 
     WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760);
+
+    WorkspaceArchiveMutationResult UnzipArchive(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        int maxFiles,
+        long maxBytes,
+        string destinationAuthorityRootPath);
 
     WorkspaceTextDiffResult DiffTextFiles(string leftPath, string rightPath, int maxLines = 160);
 }

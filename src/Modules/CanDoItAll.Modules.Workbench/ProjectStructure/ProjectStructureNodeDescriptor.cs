@@ -115,7 +115,7 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Type", HumanizeToken(node.ObjectSubtype));
                 if (string.Equals(node.ObjectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase))
                 {
-                    AddIfValue(facts, "Diagram", HumanizeEnum<MermaidDiagramKind>(ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(node.Notes)));
+                    AddIfValue(facts, "Diagram", HumanizeEnum(metadata.File?.MermaidDiagramKind));
                 }
 
                 AddIfValue(facts, "Source", metadata.File?.SourceHint);

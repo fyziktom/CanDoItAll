@@ -5,11 +5,18 @@ using CanDoItAll.AgentFramework.Tools;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
+internal readonly record struct RuntimeStorageToolAvailability(
+    bool ContentToolsAvailable,
+    bool BrowseToolAvailable)
+{
+    public static RuntimeStorageToolAvailability None { get; } = new(false, false);
+}
+
 internal static class RuntimeConfiguredWorkspaceToolDescriptorCatalog
 {
     public static IReadOnlyList<CapabilityExposureDescriptor> CreateConfiguredWorkspaceToolDescriptors(
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
-        bool storageToolsAvailable)
+        RuntimeStorageToolAvailability storageAvailability)
     {
         var normalized = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
         var descriptors = ToolContractCatalog.WorkspaceToolNames
@@ -21,13 +28,18 @@ internal static class RuntimeConfiguredWorkspaceToolDescriptorCatalog
                 ["configured", "workspace"]))
             .ToList();
 
-        if (storageToolsAvailable && normalized.CanReadStorage)
+        if (storageAvailability.ContentToolsAvailable && normalized.CanReadStorage)
         {
             descriptors.Add(CreateStorageToolDescriptor(RuntimeStorageToolNames.CatalogList, CapabilityOperationClassification.Read));
             descriptors.Add(CreateStorageToolDescriptor(RuntimeStorageToolNames.ReadTextFile, CapabilityOperationClassification.Read));
         }
 
-        if (storageToolsAvailable && normalized.CanWriteStorage)
+        if (storageAvailability.BrowseToolAvailable && normalized.CanReadStorage)
+        {
+            descriptors.Add(CreateStorageToolDescriptor(RuntimeStorageToolNames.Browse, CapabilityOperationClassification.Read));
+        }
+
+        if (storageAvailability.ContentToolsAvailable && normalized.CanWriteStorage)
         {
             descriptors.Add(CreateStorageToolDescriptor(
                 RuntimeStorageToolNames.WriteTextFile,

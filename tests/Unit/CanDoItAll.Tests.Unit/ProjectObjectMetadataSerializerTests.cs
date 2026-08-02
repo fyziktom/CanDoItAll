@@ -1,9 +1,55 @@
+using System.Text.Json;
 using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectObjectMetadataSerializerTests
 {
+    [Fact]
+    public void Serialize_preserving_unknown_properties_replaces_typed_families_without_losing_extensions()
+    {
+        const string originalJson = """
+            {
+              "Environment": {
+                "environmentKind": "dotNetRuntime",
+                "projectPath": "Legacy.csproj"
+              },
+              "script": {
+                "scriptKind": "powerShell",
+                "command": "Write-Output"
+              },
+              "runtimeAuditExtension": {
+                "correlationId": "runtime-repair-42"
+              },
+              "extensionRevision": 7
+            }
+            """;
+        var metadata = new ProjectObjectMetadataEnvelope
+        {
+            Environment = new ProjectEnvironmentMetadata
+            {
+                EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
+                ProjectPath = "Calculator.csproj"
+            }
+        };
+
+        var json = ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(
+            originalJson,
+            metadata);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        Assert.Equal(
+            "Calculator.csproj",
+            root.GetProperty("environment").GetProperty("projectPath").GetString());
+        Assert.False(root.TryGetProperty("Environment", out _));
+        Assert.False(root.TryGetProperty("script", out _));
+        Assert.Equal(
+            "runtime-repair-42",
+            root.GetProperty("runtimeAuditExtension").GetProperty("correlationId").GetString());
+        Assert.Equal(7, root.GetProperty("extensionRevision").GetInt32());
+    }
+
     [Fact]
     public void Validate_and_serialize_round_trips_task_delivery_estimate_metadata()
     {

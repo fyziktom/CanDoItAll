@@ -272,6 +272,35 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task SB04_IPFS_HTTP_MfsEntryId_ReadsThroughMutableFileEndpoint()
+    {
+        HttpMethod? observedMethod = null;
+        Uri? observedUri = null;
+        var handler = new RecordingHttpHandler(request =>
+        {
+            observedMethod = request.Method;
+            observedUri = request.RequestUri;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("mutable-content")
+            };
+        });
+        using var client = new HttpClient(handler);
+        var transport = new IpfsHttpStorageTransport(client);
+
+        await using Stream stream = await transport.OpenReadAsync(
+            CreateStorage(StorageProviderKind.Ipfs),
+            bearerToken: null,
+            "mfs:/projects/readme.txt",
+            route: string.Empty,
+            CancellationToken.None);
+
+        Assert.Equal(HttpMethod.Post, observedMethod);
+        Assert.EndsWith("/files/read", observedUri?.AbsolutePath, StringComparison.Ordinal);
+        Assert.Equal("?arg=/projects/readme.txt", Uri.UnescapeDataString(observedUri?.Query ?? string.Empty));
+    }
+
+    [Fact]
     public async Task SB04_IPFS_HTTP_MfsBrowse_UsesBeforeAndAfterRevisionChecks()
     {
         var handler = new RecordingHttpHandler(request =>

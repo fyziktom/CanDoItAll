@@ -26,6 +26,14 @@ public partial class ProjectStructurePage
             ProjectId,
             surface?.ProjectName ?? "Project files");
 
+    private ProjectStructureNode? CurrentFileBrowserNode
+        => CurrentFileBrowserRequest is ProjectStructureNodeFileCollectionRequest nodeRequest
+            ? ResolveNode(nodeRequest.NodeId)
+            : null;
+
+    private bool CanOpenCurrentFileBrowserNodeInExplorer
+        => CurrentFileBrowserNode is { } node && CanShowLocalOpen(node);
+
     private bool IsObjectIndexWindowLoaded
         => ObjectIndexWindowState is { IsVisible: true, IsMinimized: false };
 
@@ -56,6 +64,11 @@ public partial class ProjectStructurePage
 
     private Task HandleFileBrowserWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(FileBrowserWindowKey, state);
+
+    private Task OpenCurrentFileBrowserNodeInExplorerAsync()
+        => CurrentFileBrowserNode is { } node
+            ? OpenAttachmentLocallyAsync(node)
+            : Task.CompletedTask;
 
     private Task HandleObjectIndexSearchTextChangedAsync(string value)
     {

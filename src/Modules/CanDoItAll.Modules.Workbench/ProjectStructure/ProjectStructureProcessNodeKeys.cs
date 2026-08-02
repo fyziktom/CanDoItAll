@@ -11,6 +11,7 @@ internal static class ProjectStructureProcessNodeKeys
     public const string ProcessRunSummaryPrefix = "process-run-summary:";
     public const string ProcessRunScreenshotPrefix = "process-run-screenshot:";
     public const string ProcessRunRuntimePrefix = "process-run-runtime:";
+    public const string ProcessRunOutputFolderArtifactKind = "process-run-output-folder";
     public const string ProcessRunScreenshotArtifactKind = "process-run-screenshot";
 
     public static string BuildProcessDefinitionNodeKey(Guid definitionId)

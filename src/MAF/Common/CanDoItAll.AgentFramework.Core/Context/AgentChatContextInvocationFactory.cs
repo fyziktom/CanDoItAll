@@ -87,6 +87,12 @@ public static class AgentChatContextInvocationFactory
         metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
             metadataJson,
             context.Scope.WorkspaceScope);
+        metadataJson = ExecutionInvocationMetadata.ApplyReadOnlyExternalTargetAliases(
+            metadataJson,
+            ResolveTrustedReadOnlyExternalTargetAliases(
+                context,
+                currentDatabaseProfileGeneration,
+                nowUtc));
         if (transientContext is not null)
         {
             metadataJson = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
@@ -210,5 +216,48 @@ public static class AgentChatContextInvocationFactory
 
         contributors.AddRange(context.Fragments.Select(item => item.ContributorId.Value));
         return contributors;
+    }
+
+    private static IReadOnlyList<string> ResolveTrustedReadOnlyExternalTargetAliases(
+        AgentChatContextSnapshot context,
+        DatabaseProfileGeneration currentDatabaseProfileGeneration,
+        DateTimeOffset nowUtc)
+    {
+        var source = context.Scope.Source;
+        var workspaceScope = context.Scope.WorkspaceScope;
+        if (!string.Equals(
+                source.Kind.Value,
+                AgentChatExternalTargetAccessAttachmentFactory.TrustedSourceKindValue,
+                StringComparison.Ordinal) ||
+            workspaceScope is null ||
+            workspaceScope.Kind != WorkspaceScopeKind.Project ||
+            !string.Equals(workspaceScope.Key, source.Id.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        return context.Attachments
+            .Where(attachment =>
+                attachment.ScopeId == context.Scope.Id &&
+                attachment.Source == source &&
+                attachment.WorkspaceScope == workspaceScope &&
+                string.Equals(
+                    attachment.ContributorId.Value,
+                    AgentChatExternalTargetAccessAttachmentFactory.TrustedContributorIdValue,
+                    StringComparison.Ordinal))
+            .SelectMany(ResolveValidatedAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        IReadOnlyList<string> ResolveValidatedAliases(
+            AgentChatContextAttachmentEnvelope attachment)
+            => AgentChatExternalTargetAccessAttachmentFactory.TryGetValidatedReadOnlyAliases(
+                attachment,
+                currentDatabaseProfileGeneration,
+                nowUtc,
+                out var aliases)
+                ? aliases
+                : [];
     }
 }

@@ -15,8 +15,10 @@ public sealed class ProjectStructureAgentService(
     ProjectStructureChecklistService checklistService,
     ProjectStructureImportService importService,
     IProjectStructureRuntimeLauncher runtimeLauncher,
+    ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathAccessGuard pathAccessGuard,
+    IWorkspacePathResolver workspacePathResolver,
     FileSystemStoragePathPolicy fileSystemPathPolicy,
     IHttpClientFactory httpClientFactory,
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
@@ -276,6 +278,10 @@ public sealed class ProjectStructureAgentService(
             "create-structure-node",
             async cancellationToken =>
             {
+                await EnsureParentAuthorityAllowedAsync(
+                    projectId,
+                    request.ParentNodeKey,
+                    cancellationToken);
                 var objectSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype);
                 if (!allowCanonicalTask)
                 {
@@ -284,12 +290,12 @@ public sealed class ProjectStructureAgentService(
                         objectSubtype);
                 }
 
-                var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                var metadataJson = runtimeMetadataBoundary.ValidateAndCanonicalizeForAgent(
                     request.ObjectType,
                     objectSubtype,
                     request.Notes,
                     request.MetadataJson);
-                ValidateRuntimeNodeMetadata(request.ObjectType, objectSubtype, metadataJson);
+                EnsureProjectBlockRootAuthority(request.ObjectType, metadataJson);
                 var createdNode = await projectWorkbenchService.CreateObjectAsync(
                     projectId,
                     new ProjectObjectCreateRequest(
@@ -345,12 +351,12 @@ public sealed class ProjectStructureAgentService(
                 var metadataJson = string.IsNullOrWhiteSpace(request.MetadataJson)
                     ? string.IsNullOrWhiteSpace(existingNode.MetadataJson) ? "{}" : existingNode.MetadataJson
                     : request.MetadataJson;
-                metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                metadataJson = runtimeMetadataBoundary.ValidateAndCanonicalizeForAgent(
                     targetObjectType,
                     targetObjectSubtype,
                     request.Notes,
                     metadataJson);
-                ValidateRuntimeNodeMetadata(targetObjectType, targetObjectSubtype, metadataJson);
+                EnsureProjectBlockRootAuthority(targetObjectType, metadataJson);
 
                 ProjectStructureNode? updatedNode;
                 var requiresReclassification = targetObjectType != existingNode.ObjectType ||
@@ -366,7 +372,13 @@ public sealed class ProjectStructureAgentService(
                             request.Title,
                             request.Subtitle,
                             request.Notes,
-                            metadataJson),
+                            metadataJson,
+                            request.StartUtc,
+                            request.EndUtc,
+                            request.DurationSeconds,
+                            UpdateTiming: request.StartUtc.HasValue ||
+                                request.EndUtc.HasValue ||
+                                request.DurationSeconds.HasValue),
                         cancellationToken);
                     if (updatedNode is null)
                     {
@@ -376,23 +388,6 @@ public sealed class ProjectStructureAgentService(
                             $"Node '{nodeId}' cannot be reclassified from '{existingNode.ObjectType}:{existingNode.ObjectSubtype}' to '{targetObjectType}:{targetObjectSubtype}'.");
                     }
 
-                    if (request.StartUtc.HasValue ||
-                        request.EndUtc.HasValue ||
-                        request.DurationSeconds.HasValue)
-                    {
-                        updatedNode = await projectWorkbenchService.UpdateObjectAsync(
-                            projectId,
-                            nodeId,
-                            new ProjectObjectEditRequest(
-                                updatedNode.Title,
-                                updatedNode.Subtitle,
-                                updatedNode.Notes,
-                                request.StartUtc,
-                                request.EndUtc,
-                                metadataJson,
-                                request.DurationSeconds),
-                            cancellationToken);
-                    }
                 }
                 else
                 {
@@ -415,117 +410,6 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    private static void ValidateRuntimeNodeMetadata(
-        ProjectObjectType objectType,
-        string? objectSubtype,
-        string metadataJson)
-    {
-        if (objectType is not (ProjectObjectType.Script or ProjectObjectType.Environment))
-        {
-            return;
-        }
-
-        ProjectObjectMetadataEnvelope metadata;
-        try
-        {
-            metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "InvalidRuntimeMetadata",
-                $"Runnable node metadata is invalid JSON or does not match the project-structure metadata schema: {exception.Message}");
-        }
-
-        if (objectType == ProjectObjectType.Script)
-        {
-            ValidateScriptRuntimeMetadata(objectSubtype, metadata.Script);
-            return;
-        }
-
-        ValidateEnvironmentRuntimeMetadata(objectSubtype, metadata.Environment);
-    }
-
-    private static void ValidateScriptRuntimeMetadata(string? objectSubtype, ProjectScriptMetadata? script)
-    {
-        if (script is null)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "InvalidRuntimeMetadata",
-                "Script runtime nodes require metadata.script with command, arguments, and workingDirectory fields.");
-        }
-
-        var scriptKind = script.ScriptKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
-            ? ProjectNodeKindRegistry.ResolveScriptKind(objectSubtype)
-            : script.ScriptKind;
-        var hasCommand = !string.IsNullOrWhiteSpace(script.Command);
-        var hasPowerShellScript = scriptKind == ProjectScriptKind.PowerShell &&
-            !string.IsNullOrWhiteSpace(script.ScriptPath);
-
-        if (!hasCommand && !hasPowerShellScript)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "InvalidRuntimeMetadata",
-                "Script runtime nodes require metadata.script.command, or metadata.script.scriptPath when objectSubtype is powershell.");
-        }
-    }
-
-    private static void ValidateEnvironmentRuntimeMetadata(string? objectSubtype, ProjectEnvironmentMetadata? environment)
-    {
-        if (environment is null)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "InvalidRuntimeMetadata",
-                "Environment runtime nodes require metadata.environment with environmentKind, projectPath, and workingDirectory fields.");
-        }
-
-        var environmentKind = environment.EnvironmentKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
-            ? ProjectNodeKindRegistry.ResolveEnvironmentKind(objectSubtype)
-            : environment.EnvironmentKind;
-
-        if (environmentKind is ProjectEnvironmentKind.DotNetRuntime or ProjectEnvironmentKind.DotNetWatch or ProjectEnvironmentKind.DotNetRelease &&
-            string.IsNullOrWhiteSpace(environment.ProjectPath))
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "InvalidRuntimeMetadata",
-                "DotNet environment runtime nodes require metadata.environment.projectPath.");
-        }
-
-        if (environmentKind != ProjectEnvironmentKind.PythonEnvironment)
-        {
-            return;
-        }
-
-        var missingFields = new List<string>();
-        if (string.IsNullOrWhiteSpace(environment.ProjectPath))
-        {
-            missingFields.Add("metadata.environment.projectPath");
-        }
-
-        if (string.IsNullOrWhiteSpace(environment.EnvironmentName))
-        {
-            missingFields.Add("metadata.environment.environmentName");
-        }
-
-        if (!environment.PythonProvider.HasValue)
-        {
-            missingFields.Add("metadata.environment.pythonProvider");
-        }
-
-        if (missingFields.Count > 0)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "InvalidRuntimeMetadata",
-                $"Python environment runtime nodes require {string.Join(", ", missingFields)}.");
-        }
-    }
-
     public async Task<ProjectStructureNodeSummary> UpdateNodeTypeAsync(
         Guid projectId,
         string nodeId,
@@ -543,11 +427,11 @@ public sealed class ProjectStructureAgentService(
                 existingNode.Notes,
                 request.ObjectType,
                 request.ObjectSubtype,
-                existingNode.StartUtc,
-                existingNode.EndUtc,
-                existingNode.MetadataJson,
-                request.LeaseToken,
-                existingNode.DurationSeconds),
+                StartUtc: null,
+                EndUtc: null,
+                MetadataJson: existingNode.MetadataJson,
+                LeaseToken: request.LeaseToken,
+                DurationSeconds: null),
             agent,
             cancellationToken);
     }
@@ -571,11 +455,12 @@ public sealed class ProjectStructureAgentService(
                     existingNode.ObjectType,
                     existingNode.ObjectSubtype);
                 var notes = request.Notes ?? existingNode.Notes;
-                var metadataJson = ProjectStructureDotNetRuntimeMetadataHydrator.NormalizeMetadataJson(
+                var metadataJson = runtimeMetadataBoundary.ValidateAndCanonicalizeForAgent(
                     existingNode.ObjectType,
                     existingNode.ObjectSubtype,
                     notes,
                     request.MetadataJson);
+                EnsureProjectBlockRootAuthority(existingNode.ObjectType, metadataJson);
                 var updatedNode = await projectWorkbenchService.UpdateObjectMetadataAsync(
                     projectId,
                     nodeId,
@@ -586,6 +471,36 @@ public sealed class ProjectStructureAgentService(
                 return MapRequiredNode(updatedNode, nodeId);
             },
             cancellationToken);
+    }
+
+    private void EnsureProjectBlockRootAuthority(
+        ProjectObjectType objectType,
+        string metadataJson)
+    {
+        if (objectType != ProjectObjectType.ProjectBlock)
+        {
+            return;
+        }
+
+        ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+            metadataJson,
+            workspacePathResolver.ResolveWorkspaceRoot());
+    }
+
+    private async Task EnsureParentAuthorityAllowedAsync(
+        Guid projectId,
+        string? parentNodeKey,
+        CancellationToken cancellationToken)
+    {
+        var surface = await projectWorkbenchService.GetStructureAsync(
+            projectId,
+            cancellationToken);
+        ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
+            surface.Nodes,
+            string.IsNullOrWhiteSpace(parentNodeKey)
+                ? ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)
+                : parentNodeKey.Trim(),
+            workspacePathResolver.ResolveWorkspaceRoot());
     }
 
     public async Task<int> UpdateNodeStatusesAsync(
@@ -757,6 +672,10 @@ public sealed class ProjectStructureAgentService(
             "reparent-structure-node",
             async cancellationToken =>
             {
+                await EnsureParentAuthorityAllowedAsync(
+                    projectId,
+                    request.ParentNodeKey,
+                    cancellationToken);
                 var updatedNode = await projectWorkbenchService.ReparentObjectAsync(projectId, request.NodeId, request.ParentNodeKey, cancellationToken);
                 return MapRequiredNode(updatedNode, request.NodeId);
             },
@@ -790,6 +709,14 @@ public sealed class ProjectStructureAgentService(
             "link-structure-nodes",
             async cancellationToken =>
             {
+                if (request.Kind is ProjectObjectLinkKind.Contains or ProjectObjectLinkKind.BelongsTo)
+                {
+                    await EnsureParentAuthorityAllowedAsync(
+                        projectId,
+                        request.SourceNodeId,
+                        cancellationToken);
+                }
+
                 await EnsureResourceLinkAllowedAsync(
                     projectId,
                     request,
@@ -1338,6 +1265,10 @@ public sealed class ProjectStructureAgentService(
             "create-approval-request",
             async cancellationToken =>
             {
+                await EnsureParentAuthorityAllowedAsync(
+                    projectId,
+                    request.ParentNodeKey,
+                    cancellationToken);
                 var metadataJson = string.IsNullOrWhiteSpace(request.MetadataJson)
                     ? JsonSerializer.Serialize(new
                     {
@@ -1654,6 +1585,10 @@ public sealed class ProjectStructureAgentService(
             "create-asset-revision",
             async cancellationToken =>
             {
+                await EnsureParentAuthorityAllowedAsync(
+                    projectId,
+                    nodeId,
+                    cancellationToken);
                 var originalAsset = await GetAssetAsync(projectId, nodeId, cancellationToken);
                 var originalNode = await GetNodeAsync(projectId, nodeId, cancellationToken);
 
@@ -2315,7 +2250,11 @@ public sealed class ProjectStructureAgentService(
             options.IncludeLayout ? node.X : null,
             options.IncludeLayout ? node.Y : null,
             node.DurationSeconds,
-            ProjectStructureNodeActionCapabilityResolver.Resolve(node, runtimeLauncher, localFileOpener));
+            ProjectStructureNodeActionCapabilityResolver.Resolve(
+                node,
+                runtimeLauncher,
+                localFileOpener,
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution));
     }
 
     private static ProjectStructureDependencyItem MapDependencyItem(ProjectStructureDependencyNodeAnalysis analysis)

@@ -1,4 +1,6 @@
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
@@ -134,6 +136,7 @@ public enum ProjectAiReferenceKind
 public enum ProjectFileSubtype
 {
     Unknown,
+    Folder,
     Pdf,
     Excel,
     Docx,
@@ -659,6 +662,12 @@ public sealed class ProjectWorkflowNodeMetadata
 public static class ProjectObjectMetadataSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = BuildSerializerOptions();
+    private static readonly IReadOnlySet<string> EnvelopePropertyNames = typeof(ProjectObjectMetadataEnvelope)
+        .GetProperties()
+        .Select(property => property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name
+                            ?? SerializerOptions.PropertyNamingPolicy?.ConvertName(property.Name)
+                            ?? property.Name)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public static ProjectObjectMetadataEnvelope Parse(string? json)
     {
@@ -686,6 +695,51 @@ public static class ProjectObjectMetadataSerializer
 
     public static string Serialize(ProjectObjectMetadataEnvelope? metadata)
         => JsonSerializer.Serialize(metadata ?? new ProjectObjectMetadataEnvelope(), SerializerOptions);
+
+    internal static string SerializePreservingUnknownProperties(
+        string? originalJson,
+        ProjectObjectMetadataEnvelope? metadata,
+        IEnumerable<string>? additionalRecognizedPropertyNames = null)
+    {
+        var canonicalRoot = JsonSerializer.SerializeToNode(
+                                metadata ?? new ProjectObjectMetadataEnvelope(),
+                                SerializerOptions) as JsonObject
+                            ?? new JsonObject();
+        if (string.IsNullOrWhiteSpace(originalJson))
+        {
+            return canonicalRoot.ToJsonString(SerializerOptions);
+        }
+
+        JsonObject? originalRoot;
+        try
+        {
+            originalRoot = JsonNode.Parse(originalJson) as JsonObject;
+        }
+        catch (JsonException exception)
+        {
+            throw new ProjectObjectMetadataPayloadException(exception.Path, exception);
+        }
+
+        if (originalRoot is null)
+        {
+            return canonicalRoot.ToJsonString(SerializerOptions);
+        }
+
+        var additionalRecognizedNames = additionalRecognizedPropertyNames?.ToHashSet(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var property in originalRoot)
+        {
+            if (EnvelopePropertyNames.Contains(property.Key) ||
+                additionalRecognizedNames?.Contains(property.Key) == true)
+            {
+                continue;
+            }
+
+            canonicalRoot[property.Key] = property.Value?.DeepClone();
+        }
+
+        return canonicalRoot.ToJsonString(SerializerOptions);
+    }
 
     public static ProjectNodeMarker? NormalizeMarker(string? icon, string? tone, string? label)
     {

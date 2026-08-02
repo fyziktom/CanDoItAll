@@ -41,6 +41,11 @@ internal sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContrib
 
     private static string ResolveState(WorkspacePathStatResult stat)
     {
+        if (stat.IsKnownMissing())
+        {
+            return "missing";
+        }
+
         if (!stat.Succeeded)
         {
             return "unavailable";

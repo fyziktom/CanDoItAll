@@ -32,6 +32,22 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
         return fullPath;
     }
 
+    public static string ResolveReparseSafeFullPath(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        string fullPath = Path.GetFullPath(path);
+        string? rootPath = Path.GetPathRoot(fullPath);
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            throw new StorageBrowseException(new StorageBrowseError(
+                StorageBrowseErrorCode.AccessDenied,
+                "The requested filesystem path does not have a trusted root."));
+        }
+
+        EnsureNoReparseTraversal(rootPath, fullPath);
+        return fullPath;
+    }
+
     public string ResolveTrustedLocalOpenPath(StorageCatalogRecord storage, string relativePath)
     {
         ArgumentNullException.ThrowIfNull(storage);

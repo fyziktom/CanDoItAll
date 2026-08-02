@@ -3,9 +3,19 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
-internal sealed class WorkflowSourceFileResolver(IWorkspacePathResolutionService paths)
+internal sealed class WorkflowSourceFileResolver
 {
     private static readonly char[] PathTrimCharacters = [' ', '\t', '\r', '\n', '`', '\'', '"'];
+    private readonly IWorkspacePathResolutionService paths;
+    private readonly Func<string, bool, IEnumerable<string>> fileEnumerator;
+
+    public WorkflowSourceFileResolver(
+        IWorkspacePathResolutionService paths,
+        Func<string, bool, IEnumerable<string>>? fileEnumerator = null)
+    {
+        this.paths = paths;
+        this.fileEnumerator = fileEnumerator ?? EnumerateFiles;
+    }
 
     public IEnumerable<WorkflowSourceIngestionFile> ResolveCandidateFiles(
         WorkflowSourceCandidate candidate,
@@ -25,15 +35,9 @@ internal sealed class WorkflowSourceFileResolver(IWorkspacePathResolutionService
         {
             var directory = ResolveDirectory(candidate.Value, settings);
             var count = 0;
-            foreach (var file in Directory.EnumerateFiles(
-                         directory.FullPath,
-                         "*",
-                         new EnumerationOptions
-                         {
-                             RecurseSubdirectories = settings.RecursiveFolders,
-                             IgnoreInaccessible = true,
-                             AttributesToSkip = 0
-                         })
+            foreach (var file in EnumerateAccessibleFiles(
+                         directory,
+                         settings.RecursiveFolders)
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
                 if (!IsAllowedExtension(file, allowedExtensions))
@@ -88,6 +92,55 @@ internal sealed class WorkflowSourceFileResolver(IWorkspacePathResolutionService
             return new WorkspaceResolvedPath(fullPath, NormalizeAbsoluteDisplayPath(fullPath), IsWorkspacePath: false);
         }
     }
+
+    private IEnumerable<string> EnumerateAccessibleFiles(
+        WorkspaceResolvedPath directory,
+        bool recursive)
+    {
+        IEnumerator<string> enumerator;
+        try
+        {
+            enumerator = fileEnumerator(directory.FullPath, recursive).GetEnumerator();
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(directory.RelativePath);
+        }
+
+        using (enumerator)
+        {
+            while (true)
+            {
+                bool hasNext;
+                try
+                {
+                    hasNext = enumerator.MoveNext();
+                }
+                catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+                {
+                    throw WorkspaceToolAccessDeniedException.InaccessiblePath(directory.RelativePath);
+                }
+
+                if (!hasNext)
+                {
+                    yield break;
+                }
+
+                yield return enumerator.Current;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateFiles(string directory, bool recursive)
+        => Directory.EnumerateFiles(
+            directory,
+            "*",
+            new EnumerationOptions
+            {
+                RecurseSubdirectories = recursive,
+                IgnoreInaccessible = false,
+                AttributesToSkip = FileAttributes.ReparsePoint
+            });
 
     private WorkspaceResolvedPath ResolveDirectory(
         string value,

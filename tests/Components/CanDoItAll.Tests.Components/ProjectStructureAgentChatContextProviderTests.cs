@@ -488,6 +488,228 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     }
 
     [Fact]
+    public void CTX_AUTH_001_Provider_publishes_only_the_selected_nodes_typed_owning_root()
+    {
+        using var context = new BunitContext();
+        var clock = new ManualTimerTimeProvider(InitialUtc);
+        var registry = new AgentChatContextRegistry(clock);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var projectRootId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
+        var projectRoot = CreateNode(projectRootId, "Project root");
+        var unrelatedOwner = CreateNode(
+            "custom:unrelated",
+            "Unrelated delivery",
+            parentId: projectRootId,
+            objectType: ProjectObjectType.ProjectBlock,
+            objectSubtype: "delivery",
+            metadataJson: ProjectObjectMetadataSerializer.Serialize(
+                new ProjectObjectMetadataEnvelope
+                {
+                    ProjectBlock = new ProjectBlockMetadata
+                    {
+                        OutputRoot = @"C:\sensitive\unrelated"
+                    }
+                }));
+        var selectedOwner = CreateNode(
+            "custom:selected",
+            "Calculator delivery",
+            parentId: projectRootId,
+            objectType: ProjectObjectType.ProjectBlock,
+            objectSubtype: "delivery",
+            metadataJson: ProjectObjectMetadataSerializer.Serialize(
+                new ProjectObjectMetadataEnvelope
+                {
+                    ProjectBlock = new ProjectBlockMetadata
+                    {
+                        OutputRoot = @"C:\programovani\dotnet\calculator-e2e-test"
+                    }
+                }));
+        var runtime = CreateNode(
+            "custom:runtime",
+            "Start Calculator",
+            parentId: selectedOwner.Id,
+            objectType: ProjectObjectType.Script,
+            objectSubtype: "powershell",
+            notes: @"Do not trust C:\sensitive\notes as authority.");
+        var surface = CreateSurface(
+            projectId,
+            "Calculator",
+            [projectRoot, unrelatedOwner, selectedOwner, runtime]);
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(
+            new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton<TimeProvider>(clock);
+
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Calculator")
+            .Add(component => component.Surface, surface)
+            .Add(component => component.SelectedNodes, new[] { runtime })
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var accessEnvelope = Assert.Single(snapshot.Attachments, attachment =>
+                attachment.Kind.Value ==
+                AgentChatExternalTargetAccessAttachmentFactory.AttachmentKindValue);
+            Assert.True(accessEnvelope.TryGetAttachment<
+                AgentChatExternalTargetAccessAttachment>(out var access));
+            Assert.Equal(
+                "external-target/C/programovani/dotnet/calculator-e2e-test",
+                Assert.Single(access.ReadOnlyAliases));
+            Assert.DoesNotContain(
+                "external-target/C/sensitive/unrelated",
+                access.ReadOnlyAliases,
+                StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain(
+                "external-target/C/sensitive/notes",
+                access.ReadOnlyAliases,
+                StringComparer.OrdinalIgnoreCase);
+        });
+    }
+
+    [Fact]
+    public void Provider_does_not_mint_external_authority_from_user_authored_hierarchy_links()
+    {
+        using var context = new BunitContext();
+        var clock = new ManualTimerTimeProvider(InitialUtc);
+        var registry = new AgentChatContextRegistry(clock);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var projectRoot = CreateNode(
+            ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
+            "Project root");
+        var externalOwner = CreateNode(
+            "custom:external-owner",
+            "Unselected external owner",
+            parentId: projectRoot.Id,
+            objectType: ProjectObjectType.ProjectBlock,
+            objectSubtype: "delivery",
+            metadataJson: ProjectObjectMetadataSerializer.Serialize(
+                new ProjectObjectMetadataEnvelope
+                {
+                    ProjectBlock = new ProjectBlockMetadata
+                    {
+                        OutputRoot = @"C:\operator\private\unselected-project"
+                    }
+                }));
+        var selectedNode = CreateNode(
+            "custom:selected",
+            "Selected node",
+            parentId: projectRoot.Id);
+        var surface = CreateSurface(
+            projectId,
+            "Link authority",
+            [projectRoot, externalOwner, selectedNode],
+            [new ProjectStructureLink(
+                externalOwner.Id,
+                selectedNode.Id,
+                ProjectObjectLinkKind.Contains,
+                IsUserAuthored: true)]);
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(
+            new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton<TimeProvider>(clock);
+
+        context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Link authority")
+            .Add(component => component.Surface, surface)
+            .Add(component => component.SelectedNodes, new[] { selectedNode })
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        Assert.DoesNotContain(
+            snapshot.Attachments,
+            attachment => attachment.Kind.Value ==
+                AgentChatExternalTargetAccessAttachmentFactory.AttachmentKindValue);
+    }
+
+    [Fact]
+    public void Provider_derives_external_authority_only_from_the_normalized_capped_selection()
+    {
+        using var context = new BunitContext();
+        var clock = new ManualTimerTimeProvider(InitialUtc);
+        var registry = new AgentChatContextRegistry(clock);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var selectedNodes = Enumerable.Range(
+                0,
+                AgentChatPositionLimits.MaximumSelectedEntities + 1)
+            .Select(index => CreateNode(
+                $"selected-{index:D2}",
+                $"Selected {index:D2}",
+                objectType: ProjectObjectType.ProjectBlock,
+                objectSubtype: "delivery",
+                metadataJson: ProjectObjectMetadataSerializer.Serialize(
+                    new ProjectObjectMetadataEnvelope
+                    {
+                        ProjectBlock = new ProjectBlockMetadata
+                        {
+                            OutputRoot =
+                                $@"C:\programovani\dotnet\selected-{index:D2}"
+                        }
+                    })))
+            .ToArray();
+        var surface = CreateSurface(projectId, "Capped selection", selectedNodes);
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(
+            new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(
+            new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(
+            new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton<TimeProvider>(clock);
+
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Capped selection")
+            .Add(component => component.Surface, surface)
+            .Add(component => component.SelectedNodes, selectedNodes)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var accessEnvelope = Assert.Single(snapshot.Attachments, attachment =>
+                attachment.Kind.Value ==
+                AgentChatExternalTargetAccessAttachmentFactory.AttachmentKindValue);
+            Assert.True(accessEnvelope.TryGetAttachment<
+                AgentChatExternalTargetAccessAttachment>(out var access));
+            Assert.Equal(
+                AgentChatPositionLimits.MaximumSelectedEntities,
+                access.ReadOnlyAliases.Length);
+            Assert.Contains(
+                "external-target/C/programovani/dotnet/selected-63",
+                access.ReadOnlyAliases,
+                StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain(
+                "external-target/C/programovani/dotnet/selected-64",
+                access.ReadOnlyAliases,
+                StringComparer.OrdinalIgnoreCase);
+        });
+    }
+
+    [Fact]
     public void Provider_without_a_held_structure_surface_publishes_no_usable_snapshot()
     {
         using var context = new BunitContext();
@@ -673,27 +895,35 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     private static ProjectStructureSurface CreateSurface(
         Guid projectId,
         string projectName,
-        IReadOnlyList<ProjectStructureNode>? nodes = null)
+        IReadOnlyList<ProjectStructureNode>? nodes = null,
+        IReadOnlyList<ProjectStructureLink>? links = null)
     {
         return new ProjectStructureSurface(
             projectId,
             projectName,
             nodes ?? [],
-            [],
+            links ?? [],
             null);
     }
 
-    private static ProjectStructureNode CreateNode(string id, string title)
+    private static ProjectStructureNode CreateNode(
+        string id,
+        string title,
+        string? parentId = null,
+        ProjectObjectType objectType = ProjectObjectType.Note,
+        string objectSubtype = "note",
+        string notes = "",
+        string metadataJson = "{}")
     {
         return new ProjectStructureNode(
             id,
-            null,
-            ProjectObjectType.Note,
-            "note",
+            parentId,
+            objectType,
+            objectSubtype,
             title,
             string.Empty,
             "Draft",
-            string.Empty,
+            notes,
             string.Empty,
             string.Empty,
             null,
@@ -710,7 +940,8 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             string.Empty,
             string.Empty,
             [],
-            0);
+            0,
+            MetadataJson: metadataJson);
     }
 
     private sealed class StubAgentReferenceDataProvider(

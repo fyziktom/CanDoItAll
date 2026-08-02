@@ -151,7 +151,8 @@ internal sealed class ToolInvocationTraceRecorder
         int sequence,
         bool succeeded,
         string failureMessage,
-        bool failureMessageSafeForPersistence)
+        bool failureMessageSafeForPersistence,
+        Guid? directReceiptExecutionRunId = null)
     {
         lock (gate)
         {
@@ -169,7 +170,8 @@ internal sealed class ToolInvocationTraceRecorder
                     ? string.Empty
                     : failureMessageSafeForPersistence
                         ? failureMessage
-                        : UnexposedFailureMessage
+                        : UnexposedFailureMessage,
+                DirectReceiptExecutionRunId = directReceiptExecutionRunId
             };
         }
     }

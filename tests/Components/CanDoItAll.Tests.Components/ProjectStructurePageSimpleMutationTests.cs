@@ -868,7 +868,11 @@ public sealed class ProjectStructurePageSimpleMutationTests
             projectRootId,
             "Runbook text",
             "docs/runbooks",
-            "Operator checklist and rollout notes.");
+            "Operator checklist and rollout notes.",
+            uploadedFile: BuildUploadedFile(
+                "runbook.txt",
+                "text/plain",
+                "Validate the release, capture evidence, and record the rollout result."));
 
         _ = await InvokeCreateActionAsync(
             cut,
@@ -878,7 +882,11 @@ public sealed class ProjectStructurePageSimpleMutationTests
             projectRootId,
             "Settings JSON",
             "config",
-            "{\n  \"toolbox\": true,\n  \"validation\": \"strict\"\n}");
+            "Runtime settings for strict toolbox validation.",
+            uploadedFile: BuildUploadedFile(
+                "settings.json",
+                "application/json",
+                "{\n  \"toolbox\": true,\n  \"validation\": \"strict\"\n}"));
 
         _ = await InvokeCreateActionAsync(
             cut,
@@ -888,10 +896,15 @@ public sealed class ProjectStructurePageSimpleMutationTests
             projectRootId,
             "Evidence README",
             "docs",
-            "# Validation evidence\n\nCapture screenshots and exports.");
+            "Validation evidence index.",
+            uploadedFile: BuildUploadedFile(
+                "README.md",
+                "text/markdown",
+                "# Validation evidence\n\nCapture screenshots and exports."));
 
         const string mermaidTitle = "Validation flow diagram";
-        const string mermaidNotes = "gantt\n" +
+        const string mermaidPurpose = "Visualizes the bundle validation timeline.";
+        const string mermaidSource = "gantt\n" +
             "    title Bundle validation timeline\n" +
             "    dateFormat YYYY-MM-DD\n" +
             "    section Evidence\n" +
@@ -905,10 +918,11 @@ public sealed class ProjectStructurePageSimpleMutationTests
             projectRootId,
             mermaidTitle,
             "docs/diagrams",
-            string.Empty,
-            [
-                new CanvasWorkbenchInputValue { Key = "mermaidText", Value = mermaidNotes }
-            ]);
+            mermaidPurpose,
+            uploadedFile: BuildUploadedFile(
+                "validation-flow.mmd",
+                "text/vnd.mermaid",
+                mermaidSource));
 
         cut.WaitForAssertion(() =>
         {
@@ -917,7 +931,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 node => string.Equals(node.Id, mermaidId, StringComparison.Ordinal));
             Assert.Equal(mermaidTitle, runtimeNode.Title);
             Assert.Equal("Mermaid", runtimeNode.Kind);
-            Assert.Equal(mermaidNotes, runtimeNode.InlineText);
+            Assert.Equal(mermaidPurpose, runtimeNode.InlineText);
         });
 
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
@@ -927,7 +941,12 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.Equal(ProjectObjectType.File, persistedMermaidNode.ObjectType);
         Assert.Equal("mermaid", persistedMermaidNode.ObjectSubtype);
         Assert.Equal(mermaidTitle, persistedMermaidNode.Title);
-        Assert.Equal(mermaidNotes, persistedMermaidNode.Notes);
+        Assert.Equal(mermaidPurpose, persistedMermaidNode.Notes);
+        Assert.Equal("validation-flow.mmd", persistedMermaidNode.MediaOriginalFileName);
+        Assert.Equal("text/vnd.mermaid", persistedMermaidNode.MediaContentType);
+        Assert.Equal(
+            MermaidDiagramKind.Gantt,
+            ProjectObjectMetadataSerializer.Parse(persistedMermaidNode.MetadataJson).File?.MermaidDiagramKind);
     }
 
     [Fact]

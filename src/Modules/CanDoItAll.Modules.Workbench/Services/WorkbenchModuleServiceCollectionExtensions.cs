@@ -93,6 +93,12 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureTaskDetailsService>();
         services.AddScoped<ProjectStructureGanttTaskEditCoordinator>();
         services.AddScoped<ProjectStructureCanvasTaskDialogCoordinator>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectAssetContentGenerator,
+            ProjectTextAssetContentGenerator>());
+        services.AddScoped<ProjectAssetContentGeneratorResolver>();
+        services.AddScoped<ProjectAssetCreationService>();
+        services.AddScoped<ProjectStructureTextAssetDialogCoordinator>();
         services.AddSingleton<ProjectStructureDeferredNodeCompletionQueue>();
         services.AddSingleton<IProjectStructureDeferredNodeCompletionQueue>(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionQueue>());
@@ -120,7 +126,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkbenchProjectStructureMemorySourceGatewayAdapter>());
         services.AddScoped<ProjectMemoryIngestionService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
+        services.AddScoped<IProjectStructureDotNetProjectTargetResolver, ProjectStructureDotNetProjectTargetResolver>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
+        services.AddScoped<ProjectStructureRuntimeNodeMetadataBoundary>();
         services.AddScoped<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IFileToolsStorageBindingSource, ProjectStructureFileScopeResolver>());
@@ -136,4 +144,3 @@ public static class WorkbenchModuleServiceCollectionExtensions
 }
 
 public static class WorkbenchModuleAssemblyMarker;
-

@@ -320,6 +320,215 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task PowerShellRunScript_rewrites_named_managed_path_argument_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var inputDirectory = Path.Combine(workspaceRoot, "inputs");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(inputDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
+        await File.WriteAllTextAsync(Path.Combine(inputDirectory, "request.json"), "{}");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Read-Input.ps1",
+                arguments:
+                [
+                    "--input=inputs/request.json",
+                    "--mode=validate",
+                    "https://example.test/status"
+                ]);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Contains(
+                $"--input={Path.Combine(inputDirectory, "request.json")}",
+                processHost.LastRequest!.Arguments,
+                StringComparer.OrdinalIgnoreCase);
+            Assert.Contains("--mode=validate", processHost.LastRequest.Arguments, StringComparer.Ordinal);
+            Assert.Contains("https://example.test/status", processHost.LastRequest.Arguments, StringComparer.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_denies_native_external_argument_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var externalRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ScriptArgumentExternal.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(externalRoot);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Read-Input.ps1",
+                arguments: [Path.Combine(externalRoot, "secret.txt")]);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("not allowed", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(externalRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PythonRunFile_denies_named_parent_traversal_argument_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "read_input.py"), "print('ok')");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PythonRunFile(
+                "scripts/read_input.py",
+                arguments: ["--input=../secret.txt"]);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("parent traversal", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_denies_external_target_dot_segment_argument_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Read-Input.ps1",
+                arguments: ["--input=external-target/C/repositories/allowed/../secret.txt"]);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("parent traversal", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_denies_colon_attached_parent_traversal_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Read-Input.ps1",
+                arguments: [@"-Path:..\secret.txt"]);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("parent traversal", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PythonRunFile_denies_attached_short_native_external_argument_before_process_execution()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var externalRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ScriptArgumentExternal.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(externalRoot);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "read_input.py"), "print('ok')");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PythonRunFile(
+                "scripts/read_input.py",
+                arguments: [$"-i{Path.Combine(externalRoot, "secret.txt")}"]);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("not allowed", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(externalRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_preserves_non_path_slash_literals()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Validate.ps1"), "Write-Output 'ok'");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        string[] arguments =
+        [
+            "--content-type=application/json",
+            "--payload={\"route\":\"api/v1/items\"}",
+            "--regex=^api/v[0-9]+$",
+            "--route=api/v1/items",
+            "-Endpoint:https://example.test/api/v1/items"
+        ];
+
+        try
+        {
+            var result = await service.PowerShellRunScript(
+                "scripts/Validate.ps1",
+                arguments: arguments);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.All(arguments, argument => Assert.Contains(argument, processHost.LastRequest!.Arguments));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task PowerShellRunScript_preserves_external_working_directory_when_script_path_is_shortened()
     {
         if (!OperatingSystem.IsWindows())
@@ -443,6 +652,224 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 Assert.False(result.Succeeded);
                 Assert.Contains("Post-execution product target audit", result.Message, StringComparison.Ordinal);
                 Assert.Contains(productAlias, result.Message, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(7, 7)]
+    public async Task PowerShellRunScript_persists_process_evidence_when_post_execution_audit_is_inconclusive(
+        int processExitCode,
+        int expectedExitCode)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var productFile = Path.Combine(productRoot, "Program.cs");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await File.WriteAllTextAsync(productFile, "Console.WriteLine(\"before\");");
+        FileStream? lockedProductFile = null;
+        var processHost = new FakeWorkspaceProcessHost(
+            exitCode: processExitCode,
+            stdout: "captured stdout",
+            stderr: processExitCode == 0 ? string.Empty : "primary process failure",
+            onExecute: _ => lockedProductFile = new FileStream(
+                productFile,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None));
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(
+                        new GovernedScriptSideEffectManifest
+                        {
+                            Mode = GovernedScriptSideEffectMode.NoMutation
+                        }));
+
+                Assert.False(result.Succeeded);
+                Assert.Equal(expectedExitCode, result.ExitCode);
+                Assert.Single(processHost.Requests);
+                Assert.Equal("captured stdout", result.StdoutPreview);
+                Assert.Equal(
+                    processExitCode == 0 ? string.Empty : "primary process failure",
+                    result.StderrPreview);
+                Assert.Contains(
+                    "could not complete the post-execution inspection",
+                    result.Message,
+                    StringComparison.OrdinalIgnoreCase);
+                if (processExitCode != 0)
+                {
+                    Assert.Contains(
+                        $"exit code {processExitCode}",
+                        result.Message,
+                        StringComparison.OrdinalIgnoreCase);
+                }
+
+                Assert.Equal("Failed", result.Receipt.Outcome);
+                Assert.False(string.IsNullOrWhiteSpace(result.Receipt.ReceiptRelativePath));
+            }
+        }
+        finally
+        {
+            lockedProductFile?.Dispose();
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_does_not_launch_when_the_pre_execution_product_audit_is_inaccessible()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var productFile = Path.Combine(productRoot, "Program.cs");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await File.WriteAllTextAsync(productFile, "Console.WriteLine(\"before\");");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            await using var lockedProductFile = new FileStream(
+                productFile,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None);
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(
+                        new GovernedScriptSideEffectManifest
+                        {
+                            Mode = GovernedScriptSideEffectMode.NoMutation
+                        }));
+
+                Assert.False(result.Succeeded);
+                Assert.Equal("Denied", result.Receipt.Outcome);
+                Assert.Contains(productAlias, result.Message, StringComparison.OrdinalIgnoreCase);
+                Assert.Empty(processHost.Requests);
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_does_not_launch_when_the_pre_execution_product_audit_exceeds_its_byte_budget()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var productFile = Path.Combine(productRoot, "large.bin");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await using (var stream = new FileStream(productFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            stream.SetLength((100L * 1024 * 1024) + 1);
+        }
+
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(
+                        new GovernedScriptSideEffectManifest
+                        {
+                            Mode = GovernedScriptSideEffectMode.NoMutation
+                        }));
+
+                Assert.False(result.Succeeded);
+                Assert.Equal("Denied", result.Receipt.Outcome);
+                Assert.Contains(productAlias, result.Message, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains(
+                    "bounded pre-execution mutation audit",
+                    result.Message,
+                    StringComparison.OrdinalIgnoreCase);
+                Assert.Empty(processHost.Requests);
             }
         }
         finally

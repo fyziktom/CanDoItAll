@@ -1,9 +1,14 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafRuntimeToolInvocationResultClassifier
 {
+    private static readonly HashSet<string> TrustedWorkspaceReceiptToolNames =
+        ToolContractCatalog.WorkspaceToolNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     private static readonly string[] ResultEnvelopePropertyNames =
     [
         "Result",
@@ -12,6 +17,18 @@ internal static class MafRuntimeToolInvocationResultClassifier
         "Contents",
         "Data"
     ];
+
+    private static readonly string[] ReceiptEnvelopePropertyNames =
+    [
+        "Result",
+        "Value"
+    ];
+
+    private static readonly IReadOnlyDictionary<string, string> TrustedReceiptOperationAliases =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [ToolContractCatalog.WorkspaceInspectSpreadsheet] = "workspace_spreadsheet_preview"
+        };
 
     public static bool IsSuccessful(object? result)
     {
@@ -25,6 +42,20 @@ internal static class MafRuntimeToolInvocationResultClassifier
         return TryResolveFailureMessage(result, [], out var message)
             ? message
             : "Tool invocation returned an unsuccessful result.";
+    }
+
+    public static Guid? ResolveDurableReceiptExecutionRunId(
+        string toolName,
+        object? result)
+    {
+        if (!TrustedWorkspaceReceiptToolNames.Contains(toolName))
+        {
+            return null;
+        }
+
+        return TryResolveDurableReceiptExecutionRunId(toolName, result, [], out var executionRunId)
+            ? executionRunId
+            : null;
     }
 
     private static bool TryResolveSuccess(
@@ -185,6 +216,151 @@ internal static class MafRuntimeToolInvocationResultClassifier
         }
 
         return false;
+    }
+
+    private static bool TryResolveDurableReceiptExecutionRunId(
+        string toolName,
+        object? result,
+        HashSet<object> visited,
+        out Guid executionRunId)
+    {
+        executionRunId = Guid.Empty;
+        if (result is null || result is string)
+        {
+            return false;
+        }
+
+        if (result is JsonElement jsonElement)
+        {
+            if (jsonElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (TryGetJsonProperty(jsonElement, "receipt", out var jsonReceipt) &&
+                TryReadExecutionRunId(toolName, jsonReceipt, out executionRunId))
+            {
+                return true;
+            }
+
+            foreach (var propertyName in ReceiptEnvelopePropertyNames)
+            {
+                if (TryGetJsonProperty(jsonElement, propertyName, out var property) &&
+                    TryResolveDurableReceiptExecutionRunId(toolName, property, visited, out executionRunId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        var type = result.GetType();
+        if (!type.IsValueType && !visited.Add(result))
+        {
+            return false;
+        }
+
+        if (result is WorkspaceToolReceipt
+            {
+                Operation: var receiptOperation,
+                ExecutionRunId: { } receiptExecutionRunId
+            } &&
+            receiptExecutionRunId != Guid.Empty &&
+            ReceiptOperationMatchesTool(toolName, receiptOperation))
+        {
+            executionRunId = receiptExecutionRunId;
+            return true;
+        }
+
+        if (result is ToolExecutionReceiptRecord
+            {
+                ToolName: var recordToolName,
+                ExecutionRunId: var recordExecutionRunId
+            } &&
+            recordExecutionRunId != Guid.Empty &&
+            ReceiptOperationMatchesTool(toolName, recordToolName))
+        {
+            executionRunId = recordExecutionRunId;
+            return true;
+        }
+
+        if (IsTrustedBuiltInReceiptResultContract(type) &&
+            TryReadObjectProperty(result, "Receipt", out var directReceipt) &&
+            directReceipt is WorkspaceToolReceipt
+            {
+                Operation: var directReceiptOperation,
+                ExecutionRunId: { } directReceiptExecutionRunId
+            } &&
+            directReceiptExecutionRunId != Guid.Empty &&
+            ReceiptOperationMatchesTool(toolName, directReceiptOperation))
+        {
+            executionRunId = directReceiptExecutionRunId;
+            return true;
+        }
+
+        foreach (var propertyName in ReceiptEnvelopePropertyNames)
+        {
+            if (TryReadObjectProperty(result, propertyName, out var propertyValue) &&
+                TryResolveDurableReceiptExecutionRunId(toolName, propertyValue, visited, out executionRunId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsTrustedBuiltInReceiptResultContract(Type type)
+    {
+        var receiptProperty = type.GetProperty("Receipt");
+        if (receiptProperty?.PropertyType != typeof(WorkspaceToolReceipt) ||
+            receiptProperty.GetIndexParameters().Length != 0)
+        {
+            return false;
+        }
+
+        var assembly = type.Assembly;
+        return assembly == typeof(WorkspaceToolReceipt).Assembly ||
+               assembly == typeof(WorkspaceImageContentResult).Assembly ||
+               assembly == typeof(MafRuntimeToolInvocationResultClassifier).Assembly;
+    }
+
+    private static bool TryReadExecutionRunId(
+        string toolName,
+        JsonElement receipt,
+        out Guid executionRunId)
+    {
+        executionRunId = Guid.Empty;
+        return receipt.ValueKind == JsonValueKind.Object &&
+               TryGetJsonProperty(receipt, "operation", out var operationProperty) &&
+               operationProperty.ValueKind == JsonValueKind.String &&
+               ReceiptOperationMatchesTool(toolName, operationProperty.GetString()) &&
+               TryGetJsonProperty(receipt, "executionRunId", out var executionRunIdProperty) &&
+               executionRunIdProperty.ValueKind == JsonValueKind.String &&
+               Guid.TryParse(executionRunIdProperty.GetString(), out executionRunId) &&
+               executionRunId != Guid.Empty;
+    }
+
+    private static bool ReceiptOperationMatchesTool(string toolName, string? operation)
+    {
+        if (string.IsNullOrWhiteSpace(operation))
+        {
+            return false;
+        }
+
+        var normalizedToolName = ToolContractCatalog.NormalizeToolName(toolName);
+        var normalizedOperation = ToolContractCatalog.NormalizeToolName(operation);
+        if (string.Equals(normalizedToolName, normalizedOperation, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return TrustedReceiptOperationAliases.TryGetValue(normalizedToolName, out var aliasedOperation) &&
+               string.Equals(
+                   ToolContractCatalog.NormalizeToolName(aliasedOperation),
+                   normalizedOperation,
+                   StringComparison.Ordinal);
     }
 
     private static bool TryReadBooleanProperty(object instance, string propertyName, out bool value)

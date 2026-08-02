@@ -32,6 +32,34 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.Null(alias);
     }
 
+    [Theory]
+    [InlineData("external-target/C/repositories/demo/../secret")]
+    [InlineData("external-target/C/repositories/demo/./src")]
+    [InlineData("external-target/C/repositories/demo/..")]
+    [InlineData("external-target/C/repositories/demo/.")]
+    [InlineData("external-target/C/repositories/demo/..,")]
+    [InlineData(@"external-target\C\repositories\demo\..\secret")]
+    public void NormalizeExternalTargetAlias_rejects_dot_segments(string alias)
+    {
+        var normalized = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(alias);
+
+        Assert.Null(normalized);
+        Assert.False(AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
+            alias,
+            ["external-target/C/repositories/demo"]));
+    }
+
+    [Fact]
+    public void NormalizeExternalTargetAlias_preserves_valid_nested_alias()
+    {
+        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            "external-target/c/repositories/demo/src/Calculator/Calculator.csproj");
+
+        Assert.Equal(
+            "external-target/C/repositories/demo/src/Calculator/Calculator.csproj",
+            alias);
+    }
+
     [Fact]
     public void NormalizeExternalTargetAlias_strips_escaped_line_break_annotations()
     {
@@ -73,6 +101,84 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.False(AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(
             "external-target/C/repositories/demo-sibling",
             allowedAliases));
+    }
+
+    [Fact]
+    public void Effective_external_target_access_unions_configured_and_run_aliases()
+    {
+        var configured = new AgentWorkspaceToolAccessSettings
+        {
+            AllowedExternalTargetAliases =
+            [
+                "external-target/C/repositories/configured"
+            ]
+        };
+
+        var access = EffectiveExternalTargetAccessResolver.Resolve(
+            configured,
+            ["external-target/C/repositories/run-write"],
+            [
+                "external-target/C/repositories/run-read",
+                "external-target/C/repositories/configured/docs"
+            ]);
+
+        Assert.Equal(
+            [
+                "external-target/C/repositories/configured",
+                "external-target/C/repositories/run-write"
+            ],
+            access.WritableAliases);
+        Assert.Equal(
+            [
+                "external-target/C/repositories/run-read",
+                "external-target/C/repositories/configured/docs"
+            ],
+            access.ReadOnlyAliases);
+        Assert.True(access.CanWrite("external-target/C/repositories/configured/src/Program.cs"));
+        Assert.False(access.CanWrite("external-target/C/repositories/configured/docs/architecture.md"));
+        Assert.True(access.CanWrite("external-target/C/repositories/run-write/src/Program.cs"));
+        Assert.True(access.CanRead("external-target/C/repositories/run-read/README.md"));
+        Assert.False(access.CanWrite("external-target/C/repositories/run-read/README.md"));
+    }
+
+    [Fact]
+    public void Effective_external_target_access_preserves_writable_child_under_readonly_parent()
+    {
+        var access = EffectiveExternalTargetAccessResolver.Resolve(
+            new AgentWorkspaceToolAccessSettings(),
+            ["external-target/C/repositories/products/Calculator"],
+            ["external-target/C/repositories/products"]);
+
+        Assert.True(access.CanWrite("external-target/C/repositories/products/Calculator/src/Program.cs"));
+        Assert.True(access.CanRead("external-target/C/repositories/products/Inventory/README.md"));
+        Assert.False(access.CanWrite("external-target/C/repositories/products/Inventory/README.md"));
+    }
+
+    [Fact]
+    public void Effective_external_target_access_readonly_invocation_restricts_configured_child_and_allows_explicit_writable_descendant()
+    {
+        var configured = new AgentWorkspaceToolAccessSettings
+        {
+            AllowedExternalTargetAliases =
+            [
+                "external-target/C/repositories/products/Calculator"
+            ]
+        };
+
+        var access = EffectiveExternalTargetAccessResolver.Resolve(
+            configured,
+            ["external-target/C/repositories/products/Calculator/generated"],
+            ["external-target/C/repositories/products"]);
+
+        Assert.Equal(
+            ["external-target/C/repositories/products/Calculator/generated"],
+            access.WritableAliases);
+        Assert.Equal(
+            ["external-target/C/repositories/products"],
+            access.ReadOnlyAliases);
+        Assert.True(access.CanRead("external-target/C/repositories/products/Calculator/src/Program.cs"));
+        Assert.False(access.CanWrite("external-target/C/repositories/products/Calculator/src/Program.cs"));
+        Assert.True(access.CanWrite("external-target/C/repositories/products/Calculator/generated/output.json"));
     }
 
     [Fact]
