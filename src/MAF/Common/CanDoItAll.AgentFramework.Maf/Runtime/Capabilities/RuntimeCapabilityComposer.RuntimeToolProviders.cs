@@ -69,7 +69,10 @@ internal sealed class RuntimeRegisteredToolProviderAttacher(IRuntimeToolProvider
             AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive => AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive,
             AgentRuntimeContextPolicyKind.A2AEndpoint => AgentRuntimeToolProviderPurpose.A2AEndpoint,
             AgentRuntimeContextPolicyKind.InteractiveChat => AgentRuntimeToolProviderPurpose.InteractiveChat,
-            _ => AgentRuntimeToolProviderPurpose.InteractiveChat
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(policyKind),
+                policyKind,
+                "Runtime context policy kind is not supported.")
         };
 
     private static IReadOnlyDictionary<string, string> ResolveRuntimeToolProviderTags(

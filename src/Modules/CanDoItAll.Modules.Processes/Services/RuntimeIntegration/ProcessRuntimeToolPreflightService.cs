@@ -148,6 +148,11 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
         foreach (var provider in runtimeToolProviders)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (provider.Descriptor is { } descriptor &&
+                !descriptor.SupportedPurposes.Contains(context.Purpose))
+            {
+                continue;
+            }
 
             try
             {

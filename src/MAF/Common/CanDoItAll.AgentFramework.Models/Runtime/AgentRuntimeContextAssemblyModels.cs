@@ -21,6 +21,15 @@ public static class AgentRuntimeContextSourceCategories
     public const string FrameworkTool = "framework-tool";
 }
 
+public enum AgentRuntimeContextPurpose
+{
+    Unspecified = 0,
+    InteractiveChat = 1,
+    GovernedProcessAutomation = 2,
+    AutoApprovedNonInteractive = 3,
+    A2AEndpoint = 4
+}
+
 public sealed record AgentRuntimeContextIntent(
     string SourceKind,
     string SourceId,
@@ -38,6 +47,8 @@ public sealed record AgentRuntimeContextIntent(
     AgentRuntimeCapabilityScopeOverride? CapabilityScopeOverride = null)
 {
     public bool ToolCapabilitiesEnabled { get; init; } = true;
+
+    public AgentRuntimeContextPurpose Purpose { get; init; } = AgentRuntimeContextPurpose.Unspecified;
 
     public static AgentRuntimeContextIntent Empty { get; } = new(
         SourceKind: string.Empty,

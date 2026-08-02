@@ -2704,8 +2704,28 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             WorkspaceToolsEnabled: ExecutionInvocationMetadata.ResolveWorkspaceToolsEnabled(run),
             CapabilityScopeOverride: ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run))
         {
-            ToolCapabilitiesEnabled = ExecutionInvocationMetadata.ResolveToolCapabilitiesEnabled(run)
+            ToolCapabilitiesEnabled = ExecutionInvocationMetadata.ResolveToolCapabilitiesEnabled(run),
+            Purpose = ResolveRuntimeContextPurpose(run, isGovernedProcessStep)
         };
+    }
+
+    private static AgentRuntimeContextPurpose ResolveRuntimeContextPurpose(
+        ExecutionRunRecord run,
+        bool isGovernedProcessStep)
+    {
+        if (isGovernedProcessStep)
+        {
+            return AgentRuntimeContextPurpose.GovernedProcessAutomation;
+        }
+
+        if (run.ChatSessionId.HasValue)
+        {
+            return AgentRuntimeContextPurpose.InteractiveChat;
+        }
+
+        return run.AutoApprovePendingToolCalls
+            ? AgentRuntimeContextPurpose.AutoApprovedNonInteractive
+            : AgentRuntimeContextPurpose.Unspecified;
     }
 
     private async Task AppendProcessCooperationLogAsync(

@@ -52,6 +52,47 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_skips_provider_that_does_not_support_governed_process_execution()
+    {
+        var capability = CreateCatalogCapability(WorkflowAgentCapabilityKeys.DefinitionsList);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.ReadProcessContext],
+            ProcessOperationContractNames.ManagedProcessArtifactsOnly);
+        var descriptor = new AgentRuntimeToolProviderDescriptor(
+            "tests.interactive-only-preflight-provider",
+            "Interactive-only preflight provider",
+            "Tests process preflight purpose enforcement.",
+            ["tests"],
+            [AgentRuntimeToolProviderPurpose.InteractiveChat]);
+        var runtimeProvider = new CapabilityBoundRuntimeToolProvider(
+            AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
+            capability.Id,
+            descriptor);
+        var service = new ProcessRuntimeToolPreflightService(
+            [runtimeProvider],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+                [capability]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Equal(
+            [AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList],
+            result.MissingToolNames);
+        Assert.Equal(0, runtimeProvider.InvocationCount);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_reports_exact_workflow_capability_diagnostic_when_catalog_attachment_is_missing()
     {
         var capability = CreateCatalogCapability(WorkflowAgentCapabilityKeys.DefinitionsList);
@@ -822,15 +863,21 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
 
     private sealed class CapabilityBoundRuntimeToolProvider(
         string toolName,
-        Guid requiredCapabilityId) : IAgentRuntimeToolProvider
+        Guid requiredCapabilityId,
+        AgentRuntimeToolProviderDescriptor? descriptor = null) : IAgentRuntimeToolProvider
     {
         public int Order => 1;
+
+        public AgentRuntimeToolProviderDescriptor? Descriptor => descriptor;
+
+        public int InvocationCount { get; private set; }
 
         public ValueTask<IReadOnlyList<AITool>> CreateToolsAsync(
             AgentRuntimeToolProviderContext context,
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            InvocationCount++;
             return context.Capabilities.Count(capability => capability.Id == requiredCapabilityId) == 1
                 ? ValueTask.FromResult<IReadOnlyList<AITool>>(
                 [

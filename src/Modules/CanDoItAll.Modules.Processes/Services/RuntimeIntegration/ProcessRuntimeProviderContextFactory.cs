@@ -24,6 +24,9 @@ internal static class ProcessRuntimeProviderContextFactory
             AllowedOperations: assignment.AllowedOperations,
             RuntimeToolProvidersEnabled: true,
             WorkspaceToolsEnabled: true,
-            CapabilityScopeOverride: AgentFrameworkProcessCapabilityScopeTranslator.Translate(assignment.CapabilityScope));
+            CapabilityScopeOverride: AgentFrameworkProcessCapabilityScopeTranslator.Translate(assignment.CapabilityScope))
+        {
+            Purpose = AgentRuntimeContextPurpose.GovernedProcessAutomation
+        };
     }
 }
