@@ -66,7 +66,23 @@ public sealed class ProjectNodeKindRegistryTests
         Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Note, string.Empty, ProjectObjectType.WorkItem, "task"));
         Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Note, string.Empty, ProjectObjectType.Decision, string.Empty));
         Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.WorkItem, "task", ProjectObjectType.WorkItem, "issue"));
+        Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Script, "powershell", ProjectObjectType.Environment, "dotnet-watch"));
+        Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Environment, "dotnet-watch", ProjectObjectType.Infrastructure, "docker-mode"));
         Assert.False(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.WorkItem, "task", ProjectObjectType.Decision, string.Empty));
+    }
+
+    [Theory]
+    [InlineData("database")]
+    [InlineData("remote-server")]
+    [InlineData("deployment-folder")]
+    public void CanReclassify_rejects_cross_family_promotion_to_non_runnable_infrastructure(
+        string infrastructureSubtype)
+    {
+        Assert.False(ProjectNodeKindRegistry.CanReclassify(
+            ProjectObjectType.Script,
+            "powershell",
+            ProjectObjectType.Infrastructure,
+            infrastructureSubtype));
     }
 
     [Fact]

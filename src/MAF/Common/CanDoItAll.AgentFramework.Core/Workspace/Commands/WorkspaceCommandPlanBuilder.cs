@@ -33,10 +33,14 @@ internal sealed class WorkspaceCommandPlanBuilder
     };
 
     private readonly WorkspacePathPolicy pathPolicy;
+    private readonly Func<string, bool> projectTreeInspector;
 
-    public WorkspaceCommandPlanBuilder(WorkspacePathPolicy pathPolicy)
+    public WorkspaceCommandPlanBuilder(
+        WorkspacePathPolicy pathPolicy,
+        Func<string, bool>? projectTreeInspector = null)
     {
         this.pathPolicy = pathPolicy;
+        this.projectTreeInspector = projectTreeInspector ?? ContainsProjectFileInAccessibleTree;
     }
 
     public WorkspaceCommandPlan BuildGitStatus(bool includeBranch = true, string? workingDirectory = null, int timeoutSeconds = 30)
@@ -533,9 +537,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
-        if (Directory.Exists(workingDirectoryResolution.FullPath) &&
-            ContainsTopLevelProjectFile(
+        if (InspectTopLevelProjectFiles(
                 workingDirectoryResolution.FullPath,
+                workingDirectoryRelative,
                 includeSolutionFiles: !isSolutionTemplate))
         {
             throw new InvalidOperationException(
@@ -544,16 +548,19 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         var targetRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, trimmedName));
         var targetPaths = BuildDotnetNewTargetPaths(normalizedTemplate, workingDirectoryRelative, trimmedName, targetRelativePath);
-        var targetFullPath = Path.Combine(workingDirectoryResolution.FullPath, trimmedName);
-        if (Directory.Exists(targetFullPath) && ContainsProjectFile(targetFullPath))
+        var targetResolution = pathPolicy.ResolveAccessiblePath(targetRelativePath);
+        var targetFullPath = targetResolution.FullPath;
+        var targetDirectoryExists = DirectoryExistsForMutationGuard(targetFullPath, targetRelativePath);
+        if (targetDirectoryExists &&
+            InspectProjectTree(targetFullPath, targetRelativePath))
         {
             throw new InvalidOperationException(
                 $"workspace_dotnet_new is not allowed for existing project target '{targetRelativePath}' because it already contains a .NET project or solution file. Inspect and repair the existing scaffold in place instead of re-scaffolding.");
         }
 
         if (force &&
-            Directory.Exists(targetFullPath) &&
-            Directory.EnumerateFileSystemEntries(targetFullPath).Any())
+            targetDirectoryExists &&
+            DirectoryHasEntries(targetFullPath, targetRelativePath))
         {
             throw new InvalidOperationException(
                 $"workspace_dotnet_new --force is not allowed over existing non-empty target '{targetRelativePath}'. Inspect and repair the existing scaffold, or explicitly delete the target directory first when replacement is intentional.");
@@ -642,17 +649,103 @@ internal sealed class WorkspaceCommandPlanBuilder
             ? "none"
             : string.Join(", ", options.OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
 
-    private static bool ContainsProjectFile(string directory)
-        => Directory.EnumerateFiles(
-                directory,
-                "*.*",
-                new EnumerationOptions
+    private bool InspectProjectTree(string directory, string displayPath)
+    {
+        try
+        {
+            return projectTreeInspector(directory);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(displayPath);
+        }
+        catch (IOException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(displayPath);
+        }
+    }
+
+    private static bool InspectTopLevelProjectFiles(
+        string directory,
+        string displayPath,
+        bool includeSolutionFiles)
+    {
+        try
+        {
+            return ContainsTopLevelProjectFile(directory, includeSolutionFiles);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(displayPath);
+        }
+    }
+
+    private static bool DirectoryHasEntries(string directory, string displayPath)
+    {
+        try
+        {
+            return Directory.EnumerateFileSystemEntries(directory).Any();
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(displayPath);
+        }
+    }
+
+    private static bool DirectoryExistsForMutationGuard(string directory, string displayPath)
+    {
+        try
+        {
+            return File.GetAttributes(directory).HasFlag(FileAttributes.Directory);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return false;
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(displayPath);
+        }
+    }
+
+    private static bool ContainsProjectFileInAccessibleTree(string directory)
+    {
+        var pendingDirectories = new Stack<string>();
+        pendingDirectories.Push(directory);
+
+        while (pendingDirectories.TryPop(out var currentDirectory))
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(
+                         currentDirectory,
+                         "*",
+                         new EnumerationOptions
+                         {
+                             RecurseSubdirectories = false,
+                             IgnoreInaccessible = false,
+                             AttributesToSkip = 0
+                         }))
+            {
+                var attributes = File.GetAttributes(entry);
+                if (attributes.HasFlag(FileAttributes.ReparsePoint))
                 {
-                    RecurseSubdirectories = true,
-                    IgnoreInaccessible = true,
-                    AttributesToSkip = FileAttributes.ReparsePoint
-                })
-            .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
+                    throw new IOException("Project-target inspection cannot cross a filesystem reparse point.");
+                }
+
+                if (attributes.HasFlag(FileAttributes.Directory))
+                {
+                    pendingDirectories.Push(entry);
+                    continue;
+                }
+
+                if (AllowedProjectExtensions.Contains(Path.GetExtension(entry)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     private static bool ContainsTopLevelProjectFile(
         string directory,

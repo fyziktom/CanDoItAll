@@ -278,7 +278,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe runtime run actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab)."),
+                    "Reads a filtered project structure. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated runtime handoff actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). Runtime actions prove only that a launch plan can be handed to the shell; terminal output is required to prove that the application started."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
                     "project_structure_node_catalog",
@@ -302,11 +302,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new non-task project-structure node through the internal workspace service. Canonical WorkItem/task nodes are rejected here and must use project_task_create so lifecycle, assignment, and authoritative pricing are applied. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
+                    "Creates a new non-task project-structure node through the internal workspace service. Canonical WorkItem/task nodes are rejected here and must use project_task_create so lifecycle, assignment, and authoritative pricing are applied. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. For dotnet-runtime, dotnet-watch, and dotnet-release, recursively inspect the selected project root first and set metadata.environment.projectPath to the exact existing .csproj, .fsproj, or .vbproj application file. A directory is valid only with exactly one top-level project file; solution files and recursive guessing are rejected. If inspection is denied, preserve the current node and report the access blocker instead of inventing or saving a target. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing non-task project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
+                    "Updates an existing non-task project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, action capability, or shell handoff as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_type_update",
@@ -314,7 +314,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeMetadataInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMetadataUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_metadata_update",
-                    "Updates a non-task node's metadata JSON and optional notes/status without changing its type or layout. Canonical WorkItem/task metadata must use project_task_update."),
+                    "Updates a non-task node's metadata JSON and optional notes/status without changing its type or layout. Runtime metadata is validated on this path too. A .NET runtime node requires an exact existing project file, or an unambiguous directory with one top-level project file; solution files, nested-project guessing, and unverified paths are rejected. This tool cannot turn a Script command into a typed Environment node, so use project_structure_node_update when reclassification is required. Canonical WorkItem/task metadata must use project_task_update."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureStatusBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesStatusUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_nodes_status_update",
@@ -1177,6 +1177,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
+                    ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                        request.MetadataJson,
+                        workspaceRoot);
                     var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
                     ProjectStructureNonTaskWritePolicy.EnsureNodeCreateAllowed(
                         accessState.RequiresNonTaskWriteGuard,
@@ -1221,13 +1224,25 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
-                    await EnsureNodeUpdateAllowedAsync(
+                    ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                        request.MetadataJson,
+                        workspaceRoot);
+                    var currentNode = await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
                         nodeId,
                         request.ObjectType,
                         request.ObjectSubtype,
                         cancellationToken);
+                    if (request.ObjectType == ProjectObjectType.ProjectBlock &&
+                        currentNode.ObjectType != ProjectObjectType.ProjectBlock &&
+                        string.IsNullOrWhiteSpace(request.MetadataJson))
+                    {
+                        ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                            currentNode.MetadataJson,
+                            workspaceRoot);
+                    }
+
                     return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1253,13 +1268,21 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 async cancellationToken =>
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
-                    await EnsureNodeUpdateAllowedAsync(
+                    var currentNode = await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
                         nodeId,
                         request.ObjectType,
                         request.ObjectSubtype,
                         cancellationToken);
+                    if (request.ObjectType == ProjectObjectType.ProjectBlock &&
+                        currentNode.ObjectType != ProjectObjectType.ProjectBlock)
+                    {
+                        ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                            currentNode.MetadataJson,
+                            workspaceRoot);
+                    }
+
                     return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
                 },
                 cancellationToken);
@@ -1286,6 +1309,9 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
+                    ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                        request.MetadataJson,
+                        workspaceRoot);
                     await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
@@ -2880,7 +2906,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 : Math.Clamp(requestedDurationMinutes, 1, GovernedProcessMaxExplicitLeaseMinutes);
         }
 
-        private async Task EnsureNodeUpdateAllowedAsync(
+        private async Task<ProjectStructureNodeSummary> EnsureNodeUpdateAllowedAsync(
             ProjectStructureAccessState accessState,
             Guid projectId,
             string nodeId,
@@ -2910,6 +2936,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 node,
                 requestedObjectType,
                 requestedObjectSubtype);
+            return node;
         }
 
         private Task EnsureTaskFreeTargetsAsync(

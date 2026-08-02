@@ -138,6 +138,30 @@ public interface IAgentChatContextAttachment
 {
 }
 
+internal sealed record AgentChatExternalTargetAccessAttachment : IAgentChatContextAttachment
+{
+    internal AgentChatExternalTargetAccessAttachment(
+        IEnumerable<string> readOnlyAliases)
+    {
+        ArgumentNullException.ThrowIfNull(readOnlyAliases);
+        ReadOnlyAliases = readOnlyAliases
+            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+            .Where(static alias => !string.IsNullOrWhiteSpace(alias))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToImmutableArray();
+        if (ReadOnlyAliases.IsEmpty)
+        {
+            throw new ArgumentException(
+                "At least one bounded external-target alias is required.",
+                nameof(readOnlyAliases));
+        }
+    }
+
+    internal ImmutableArray<string> ReadOnlyAliases { get; }
+}
+
 public readonly record struct AgentChatContextAttachmentKind
 {
     public AgentChatContextAttachmentKind(string value)
@@ -265,9 +289,10 @@ public readonly record struct SnapshotFreshnessFingerprint
 
 public enum AgentChatContextAttachmentFreshness
 {
-    Current,
-    Expired,
-    ProfileMismatch
+    Current = 0,
+    Expired = 1,
+    ProfileMismatch = 2,
+    NotYetValid = 3
 }
 
 public sealed class AgentChatContextAttachmentDraft
@@ -511,6 +536,11 @@ public sealed class AgentChatContextAttachmentEnvelope
         if (DatabaseProfileGeneration != currentDatabaseProfileGeneration)
         {
             return AgentChatContextAttachmentFreshness.ProfileMismatch;
+        }
+
+        if (nowUtc < CapturedAtUtc)
+        {
+            return AgentChatContextAttachmentFreshness.NotYetValid;
         }
 
         return FreshUntilUtc.HasValue && nowUtc >= FreshUntilUtc.Value

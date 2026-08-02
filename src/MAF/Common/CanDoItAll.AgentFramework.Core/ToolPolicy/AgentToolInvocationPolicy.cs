@@ -64,6 +64,8 @@ public sealed record AgentToolInvocationTrace(
     public string Signature { get; init; } = string.Empty;
 
     public string TargetPath { get; init; } = string.Empty;
+
+    public Guid? DirectReceiptExecutionRunId { get; init; }
 }
 
 public sealed record AgentToolPolicyMetadata(

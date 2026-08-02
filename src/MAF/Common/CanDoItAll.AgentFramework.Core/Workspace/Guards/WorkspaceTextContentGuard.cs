@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace CanDoItAll.AgentFramework.Core;
 
 internal enum WorkspaceTextGuardFailure
@@ -5,6 +7,7 @@ internal enum WorkspaceTextGuardFailure
     None,
     TooLarge,
     Binary,
+    Inaccessible,
     ReadFailed
 }
 
@@ -23,9 +26,26 @@ internal sealed class WorkspaceTextContentGuard
     private const long MaxDiffFileBytes = 256 * 1024;
     private const int BinaryProbeBytes = 4096;
 
+    private readonly Func<string, Stream> openRead;
+
+    public WorkspaceTextContentGuard()
+        : this(File.OpenRead)
+    {
+    }
+
+    internal WorkspaceTextContentGuard(Func<string, Stream> openRead)
+    {
+        this.openRead = openRead ?? throw new ArgumentNullException(nameof(openRead));
+    }
+
     public WorkspaceTextLoadResult LoadForRead(string fullPath, string relativePath, int maxCharacters)
     {
-        var loaded = TryLoadText(fullPath, relativePath, MaxReadableFileBytes, "read");
+        var loaded = TryLoadText(
+            fullPath,
+            relativePath,
+            MaxReadableFileBytes,
+            "read",
+            propagateUnauthorizedAccess: true);
         if (!loaded.Succeeded)
         {
             return loaded;
@@ -47,21 +67,39 @@ internal sealed class WorkspaceTextContentGuard
     }
 
     public WorkspaceTextLoadResult LoadForDiff(string fullPath, string relativePath)
-        => TryLoadText(fullPath, relativePath, MaxDiffFileBytes, "diff");
+        => TryLoadText(
+            fullPath,
+            relativePath,
+            MaxDiffFileBytes,
+            "diff",
+            propagateUnauthorizedAccess: true);
 
     public WorkspaceTextGuardFailure TryLoadForSearch(string fullPath, string relativePath, out string text)
     {
-        var loaded = TryLoadText(fullPath, relativePath, MaxSearchableFileBytes, "search");
+        var loaded = TryLoadText(
+            fullPath,
+            relativePath,
+            MaxSearchableFileBytes,
+            "search",
+            propagateUnauthorizedAccess: false,
+            classifyIoAsInaccessible: true);
         text = loaded.Content;
         return loaded.Failure;
     }
 
-    private static WorkspaceTextLoadResult TryLoadText(string fullPath, string relativePath, long maxBytes, string operationName)
+    private WorkspaceTextLoadResult TryLoadText(
+        string fullPath,
+        string relativePath,
+        long maxBytes,
+        string operationName,
+        bool propagateUnauthorizedAccess = false,
+        bool classifyIoAsInaccessible = false)
     {
         try
         {
-            var fileInfo = new FileInfo(fullPath);
-            if (fileInfo.Length > maxBytes)
+            using var stream = openRead(fullPath);
+            var bytes = ReadBounded(stream, maxBytes, out var exceedsLimit);
+            if (exceedsLimit)
             {
                 return new WorkspaceTextLoadResult(
                     Succeeded: false,
@@ -72,7 +110,7 @@ internal sealed class WorkspaceTextContentGuard
                     Message: $"File '{relativePath}' exceeds the safe {operationName} limit of {maxBytes} bytes.");
             }
 
-            if (LooksBinary(fullPath))
+            if (LooksBinary(bytes))
             {
                 return new WorkspaceTextLoadResult(
                     Succeeded: false,
@@ -83,7 +121,12 @@ internal sealed class WorkspaceTextContentGuard
                     Message: $"File '{relativePath}' appears to be binary and cannot be {operationName}ed as text.");
             }
 
-            var content = File.ReadAllText(fullPath);
+            var content = Encoding.UTF8.GetString(bytes);
+            if (content.Length > 0 && content[0] == '\uFEFF')
+            {
+                content = content[1..];
+            }
+
             return new WorkspaceTextLoadResult(
                 Succeeded: true,
                 Content: content,
@@ -92,32 +135,76 @@ internal sealed class WorkspaceTextContentGuard
                 Failure: WorkspaceTextGuardFailure.None,
                 Message: string.Empty);
         }
-        catch (Exception exception)
+        catch (UnauthorizedAccessException) when (propagateUnauthorizedAccess)
         {
-            return new WorkspaceTextLoadResult(
-                Succeeded: false,
-                Content: string.Empty,
-                TotalCharacters: 0,
-                IsTruncated: false,
-                Failure: WorkspaceTextGuardFailure.ReadFailed,
-                Message: $"Failed to read '{relativePath}': {exception.Message}");
+            throw;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return CreateReadFailure(
+                relativePath,
+                operationName,
+                classifyIoAsInaccessible
+                    ? WorkspaceTextGuardFailure.Inaccessible
+                    : WorkspaceTextGuardFailure.ReadFailed);
+        }
+        catch (IOException)
+        {
+            return CreateReadFailure(
+                relativePath,
+                operationName,
+                classifyIoAsInaccessible
+                    ? WorkspaceTextGuardFailure.Inaccessible
+                    : WorkspaceTextGuardFailure.ReadFailed);
+        }
+        catch (Exception)
+        {
+            return CreateReadFailure(
+                relativePath,
+                operationName,
+                WorkspaceTextGuardFailure.ReadFailed);
         }
     }
 
-    private static bool LooksBinary(string fullPath)
+    private static WorkspaceTextLoadResult CreateReadFailure(
+        string relativePath,
+        string operationName,
+        WorkspaceTextGuardFailure failure)
+        => new(
+            Succeeded: false,
+            Content: string.Empty,
+            TotalCharacters: 0,
+            IsTruncated: false,
+            Failure: failure,
+            Message: $"Failed to read '{relativePath}' for {operationName}.");
+
+    private static byte[] ReadBounded(Stream stream, long maxBytes, out bool exceedsLimit)
     {
-        using var stream = File.OpenRead(fullPath);
-        var buffer = new byte[BinaryProbeBytes];
-        var read = stream.Read(buffer, 0, buffer.Length);
-        if (read == 0)
+        var buffer = new byte[checked((int)maxBytes + 1)];
+        var totalRead = 0;
+        while (totalRead < buffer.Length)
         {
-            return false;
+            var read = stream.Read(buffer, totalRead, buffer.Length - totalRead);
+            if (read == 0)
+            {
+                break;
+            }
+
+            totalRead += read;
         }
 
+        exceedsLimit = totalRead > maxBytes;
+        return exceedsLimit
+            ? []
+            : buffer[..totalRead];
+    }
+
+    private static bool LooksBinary(ReadOnlySpan<byte> content)
+    {
+        var probe = content[..Math.Min(content.Length, BinaryProbeBytes)];
         var suspicious = 0;
-        for (var index = 0; index < read; index++)
+        foreach (var value in probe)
         {
-            var value = buffer[index];
             if (value == 0)
             {
                 return true;
@@ -129,6 +216,6 @@ internal sealed class WorkspaceTextContentGuard
             }
         }
 
-        return suspicious > Math.Max(3, read / 10);
+        return suspicious > Math.Max(3, probe.Length / 10);
     }
 }

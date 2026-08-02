@@ -309,13 +309,17 @@ public sealed class AgentRuntimeUsageException : Exception
     public AgentRuntimeUsageException(
         string message,
         Exception innerException,
-        IReadOnlyList<ProviderUsageObservation> usageObservations)
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
+        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null)
         : base(message, innerException)
     {
         UsageObservations = usageObservations;
+        ToolInvocationTraces = toolInvocationTraces ?? [];
     }
 
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; }
+
+    public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; }
 }
 
 public interface IAgentRuntime

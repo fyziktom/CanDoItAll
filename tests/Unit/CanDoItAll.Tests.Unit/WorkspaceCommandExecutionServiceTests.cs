@@ -661,6 +661,224 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(7, 7)]
+    public async Task PowerShellRunScript_persists_process_evidence_when_post_execution_audit_is_inconclusive(
+        int processExitCode,
+        int expectedExitCode)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var productFile = Path.Combine(productRoot, "Program.cs");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await File.WriteAllTextAsync(productFile, "Console.WriteLine(\"before\");");
+        FileStream? lockedProductFile = null;
+        var processHost = new FakeWorkspaceProcessHost(
+            exitCode: processExitCode,
+            stdout: "captured stdout",
+            stderr: processExitCode == 0 ? string.Empty : "primary process failure",
+            onExecute: _ => lockedProductFile = new FileStream(
+                productFile,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None));
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(
+                        new GovernedScriptSideEffectManifest
+                        {
+                            Mode = GovernedScriptSideEffectMode.NoMutation
+                        }));
+
+                Assert.False(result.Succeeded);
+                Assert.Equal(expectedExitCode, result.ExitCode);
+                Assert.Single(processHost.Requests);
+                Assert.Equal("captured stdout", result.StdoutPreview);
+                Assert.Equal(
+                    processExitCode == 0 ? string.Empty : "primary process failure",
+                    result.StderrPreview);
+                Assert.Contains(
+                    "could not complete the post-execution inspection",
+                    result.Message,
+                    StringComparison.OrdinalIgnoreCase);
+                if (processExitCode != 0)
+                {
+                    Assert.Contains(
+                        $"exit code {processExitCode}",
+                        result.Message,
+                        StringComparison.OrdinalIgnoreCase);
+                }
+
+                Assert.Equal("Failed", result.Receipt.Outcome);
+                Assert.False(string.IsNullOrWhiteSpace(result.Receipt.ReceiptRelativePath));
+            }
+        }
+        finally
+        {
+            lockedProductFile?.Dispose();
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_does_not_launch_when_the_pre_execution_product_audit_is_inaccessible()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var productFile = Path.Combine(productRoot, "Program.cs");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await File.WriteAllTextAsync(productFile, "Console.WriteLine(\"before\");");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            await using var lockedProductFile = new FileStream(
+                productFile,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None);
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(
+                        new GovernedScriptSideEffectManifest
+                        {
+                            Mode = GovernedScriptSideEffectMode.NoMutation
+                        }));
+
+                Assert.False(result.Succeeded);
+                Assert.Equal("Denied", result.Receipt.Outcome);
+                Assert.Contains(productAlias, result.Message, StringComparison.OrdinalIgnoreCase);
+                Assert.Empty(processHost.Requests);
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_does_not_launch_when_the_pre_execution_product_audit_exceeds_its_byte_budget()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
+            "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        var productFile = Path.Combine(productRoot, "large.bin");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await using (var stream = new FileStream(productFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            stream.SetLength((100L * 1024 * 1024) + 1);
+        }
+
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(
+                        new GovernedScriptSideEffectManifest
+                        {
+                            Mode = GovernedScriptSideEffectMode.NoMutation
+                        }));
+
+                Assert.False(result.Succeeded);
+                Assert.Equal("Denied", result.Receipt.Outcome);
+                Assert.Contains(productAlias, result.Message, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains(
+                    "bounded pre-execution mutation audit",
+                    result.Message,
+                    StringComparison.OrdinalIgnoreCase);
+                Assert.Empty(processHost.Requests);
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
+        }
+    }
+
     [Fact]
     public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets()
     {

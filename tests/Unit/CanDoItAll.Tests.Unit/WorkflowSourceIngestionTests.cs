@@ -177,6 +177,35 @@ public sealed class WorkflowSourceIngestionTests
         Assert.False(string.IsNullOrWhiteSpace(resolved.DisplayPath));
     }
 
+    [Fact]
+    public void FileResolverFailsClosedWhenRecursiveFolderInspectionIsDenied()
+    {
+        using var workspace = new TempDirectory();
+        Directory.CreateDirectory(workspace.FullPath("sources"));
+        var resolver = new WorkflowSourceFileResolver(
+            new WorkspacePathResolutionService(workspace.Path),
+            (_, _) => throw new UnauthorizedAccessException(@"C:\private\native-path"));
+        var candidate = new WorkflowSourceCandidate(
+            "sources",
+            "Sources",
+            "folderPath",
+            "sources",
+            "test");
+
+        var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(() => resolver.ResolveCandidateFiles(
+            candidate,
+            CreateSettings(".txt") with
+            {
+                RecursiveFolders = true
+            },
+            new HashSet<string>([".txt"], StringComparer.OrdinalIgnoreCase),
+            take: 10).ToArray());
+
+        Assert.Equal(WorkspaceToolAccessDeniedException.FailureCode, exception.ErrorCode);
+        Assert.Contains("sources", exception.SafeMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\private\native-path", exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData(11, 11, false, 10)]
     [InlineData(5, 4, false, 10)]

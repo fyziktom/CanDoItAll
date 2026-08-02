@@ -847,6 +847,7 @@ public sealed class MafRuntimeArchitectureServicesTests
     public void ToolInvocationTraceRecorder_records_completion_state()
     {
         var recorder = new ToolInvocationTraceRecorder();
+        var directReceiptExecutionRunId = Guid.NewGuid();
 
         var sequence = recorder.Start(
             "workspace_write_file",
@@ -858,7 +859,8 @@ public sealed class MafRuntimeArchitectureServicesTests
             sequence,
             succeeded: false,
             "denied",
-            failureMessageSafeForPersistence: true);
+            failureMessageSafeForPersistence: true,
+            directReceiptExecutionRunId: directReceiptExecutionRunId);
 
         var trace = Assert.Single(recorder.Snapshot());
         Assert.Equal("workspace_write_file", trace.ToolName);
@@ -866,6 +868,7 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.False(trace.Succeeded);
         Assert.Equal("denied", trace.FailureMessage);
         Assert.Equal("provider.key", trace.RuntimeToolProviderKey);
+        Assert.Equal(directReceiptExecutionRunId, trace.DirectReceiptExecutionRunId);
     }
 
     [Fact]

@@ -1,12 +1,24 @@
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class ProjectStructureRuntimeLauncherTests
+public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 {
+    private readonly string workspaceRoot = TestFileSystem.CreateTemporaryRoot("runtime-launcher");
+
+    public ProjectStructureRuntimeLauncherTests()
+    {
+        CreateProjectFile(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj");
+        CreateProjectFile(@"repos\TetrisGame\src\TetrisGame\TetrisGame.csproj");
+        CreateFile(@"scripts\task.ps1", "Write-Output 'ready'");
+        CreateFile(@"repos\python-app\.venv\Scripts\Activate.ps1", "Write-Output 'activated'");
+        Directory.CreateDirectory(WorkspacePath(@"repos\compose-app"));
+    }
+
     [Fact]
     public void Resolve_returns_watch_plan_with_launch_profile_when_configured()
     {
@@ -23,10 +35,11 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace\repos\CanDoItAll\src\App\CanDoItAll.Web", result.Plan!.WorkingDirectory);
+        var projectPath = WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj");
+        Assert.Equal(Path.GetDirectoryName(projectPath), result.Plan!.WorkingDirectory);
         Assert.Equal("dotnet watch", result.Plan.DisplayName);
         Assert.Equal(
-            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --launch-profile 'https'",
+            $"dotnet watch --project '{projectPath}' run --launch-profile 'https'",
             result.Plan.DisplayCommand);
     }
 
@@ -38,7 +51,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"C:\workspace\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj",
+                ProjectPath = WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"),
                 LocalhostUrl = "https://localhost:7271"
             });
 
@@ -48,7 +61,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.NotNull(result.Plan);
         Assert.Contains("$env:ASPNETCORE_URLS = 'https://localhost:7271'", result.Plan!.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
-            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run --no-launch-profile",
+            $"dotnet watch --project '{WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj")}' run --no-launch-profile",
             result.Plan.DisplayCommand);
     }
 
@@ -69,10 +82,12 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace\repos\TetrisGame", result.Plan!.WorkingDirectory);
+        var workingDirectory = WorkspacePath(@"repos\TetrisGame");
+        var projectPath = WorkspacePath(@"repos\TetrisGame\src\TetrisGame\TetrisGame.csproj");
+        Assert.Equal(workingDirectory, result.Plan!.WorkingDirectory);
         Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
-            "dotnet run --project 'C:\\workspace\\repos\\TetrisGame\\src\\TetrisGame\\TetrisGame.csproj' --no-launch-profile",
+            $"dotnet run --project '{projectPath}' --no-launch-profile",
             result.Plan.DisplayCommand);
     }
 
@@ -83,17 +98,19 @@ public sealed class ProjectStructureRuntimeLauncherTests
         var node = CreateEnvironmentNode(
             ProjectEnvironmentKind.DotNetRuntime,
             new ProjectEnvironmentMetadata(),
-            "Launch the client-only TetrisGame app from C:\\workspace\\repos\\TetrisGame using `dotnet run --project src/TetrisGame/TetrisGame.csproj`. Observed QA launch returned `http://127.0.0.1:55963/`.");
+            $"Launch the client-only TetrisGame app from {WorkspacePath(@"repos\TetrisGame")} using `dotnet run --project src/TetrisGame/TetrisGame.csproj`. Observed QA launch returned `http://127.0.0.1:55963/`.");
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
         Assert.Equal(".NET runtime", result.Plan!.DisplayName);
-        Assert.Equal(@"C:\workspace\repos\TetrisGame", result.Plan.WorkingDirectory);
+        var workingDirectory = WorkspacePath(@"repos\TetrisGame");
+        var projectPath = WorkspacePath(@"repos\TetrisGame\src\TetrisGame\TetrisGame.csproj");
+        Assert.Equal(workingDirectory, result.Plan.WorkingDirectory);
         Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
-            "dotnet run --project 'C:\\workspace\\repos\\TetrisGame\\src\\TetrisGame\\TetrisGame.csproj' --no-launch-profile",
+            $"dotnet run --project '{projectPath}' --no-launch-profile",
             result.Plan.DisplayCommand);
     }
 
@@ -113,7 +130,7 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace\repos\python-app", result.Plan!.WorkingDirectory);
+        Assert.Equal(WorkspacePath(@"repos\python-app"), result.Plan!.WorkingDirectory);
         Assert.Equal("python app.py --watch", result.Plan.DisplayCommand);
         Assert.Equal("script command", result.Plan.DisplayName);
     }
@@ -134,10 +151,10 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace", result.Plan!.WorkingDirectory);
+        Assert.Equal(workspaceRoot, result.Plan!.WorkingDirectory);
         Assert.Equal("PowerShell script", result.Plan.DisplayName);
         Assert.Equal("pwsh ./scripts/task.ps1 -Verbose", result.Plan.DisplayCommand);
-        Assert.Contains("Set-Location -LiteralPath 'C:\\workspace'", result.Plan.StartupScript, StringComparison.Ordinal);
+        Assert.Contains($"Set-Location -LiteralPath '{workspaceRoot}'", result.Plan.StartupScript, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -155,10 +172,11 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace\scripts", result.Plan!.WorkingDirectory);
+        var scriptPath = WorkspacePath(@"scripts\task.ps1");
+        Assert.Equal(Path.GetDirectoryName(scriptPath), result.Plan!.WorkingDirectory);
         Assert.Equal("PowerShell script", result.Plan.DisplayName);
-        Assert.Equal("& 'C:\\workspace\\scripts\\task.ps1'", result.Plan.DisplayCommand);
-        Assert.Equal(@"C:\workspace\scripts\task.ps1", result.Plan.Target!.Path);
+        Assert.Equal($"& '{scriptPath}'", result.Plan.DisplayCommand);
+        Assert.Equal(scriptPath, result.Plan.Target!.Path);
     }
 
     [Fact]
@@ -170,13 +188,23 @@ public sealed class ProjectStructureRuntimeLauncherTests
             new ProjectScriptMetadata
             {
                 Command = "npx tailwindcss -i ./input.css -o ./output.css --watch"
-            });
+            }) with
+        {
+            MetadataJson =
+                """
+                {
+                  "script": {
+                    "command": "npx tailwindcss -i ./input.css -o ./output.css --watch"
+                  }
+                }
+                """
+        };
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace", result.Plan!.WorkingDirectory);
+        Assert.Equal(workspaceRoot, result.Plan!.WorkingDirectory);
         Assert.Equal("Tailwind watch", result.Plan.DisplayName);
     }
 
@@ -198,11 +226,13 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
         Assert.Equal("Python environment", result.Plan!.DisplayName);
-        Assert.Equal(@"C:\workspace\repos\python-app", result.Plan.WorkingDirectory);
+        var projectPath = WorkspacePath(@"repos\python-app");
+        var activationPath = WorkspacePath(@"repos\python-app\.venv\Scripts\Activate.ps1");
+        Assert.Equal(projectPath, result.Plan.WorkingDirectory);
         Assert.Equal(
-            "& 'C:\\workspace\\repos\\python-app\\.venv\\Scripts\\Activate.ps1'",
+            $"& '{activationPath}'",
             result.Plan.DisplayCommand);
-        Assert.Equal(@"C:\workspace\repos\python-app\.venv\Scripts\Activate.ps1", result.Plan.Target!.Path);
+        Assert.Equal(activationPath, result.Plan.Target!.Path);
     }
 
     [Fact]
@@ -215,7 +245,17 @@ public sealed class ProjectStructureRuntimeLauncherTests
             new ProjectEnvironmentMetadata
             {
                 ProjectPath = @"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"
-            });
+            }) with
+        {
+            MetadataJson =
+                """
+                {
+                  "environment": {
+                    "projectPath": "repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj"
+                  }
+                }
+                """
+        };
 
         var result = sut.Resolve(node);
 
@@ -223,8 +263,66 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.NotNull(result.Plan);
         Assert.Equal("dotnet watch", result.Plan!.DisplayName);
         Assert.Equal(
-            "dotnet watch --project 'C:\\workspace\\repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj' run",
+            $"dotnet watch --project '{WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj")}' run",
             result.Plan.DisplayCommand);
+    }
+
+    [Fact]
+    public void Resolve_rejects_an_explicit_environment_kind_that_disagrees_with_the_subtype()
+    {
+        var sut = CreateSut();
+        var node = CreateEnvironmentNode(
+            ProjectEnvironmentKind.PythonEnvironment,
+            "dotnet-watch",
+            new ProjectEnvironmentMetadata
+            {
+                ProjectPath = @"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("does not match objectSubtype 'dotnet-watch'", result.Message, StringComparison.Ordinal);
+        Assert.Contains("DotNetWatch", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Resolve_rejects_a_quoted_direct_dotnet_watch_command_on_a_legacy_script_node()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptKind = ProjectScriptKind.PowerShell,
+                Command = "& \"C:\\Program Files\\dotnet\\dotnet.exe\"",
+                Arguments = "watch --project Calculator.csproj run"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("typed Environment node", result.Message, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_update", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Resolve_rejects_dotnet_watch_hidden_behind_a_powershell_command_wrapper()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptKind = ProjectScriptKind.PowerShell,
+                Command = "pwsh",
+                Arguments = "-NoProfile -Command \"dotnet watch --project Calculator.csproj run\""
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("typed Environment node", result.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -245,10 +343,10 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace\repos\compose-app", result.Plan!.WorkingDirectory);
+        Assert.Equal(WorkspacePath(@"repos\compose-app"), result.Plan!.WorkingDirectory);
         Assert.Equal("Docker runtime", result.Plan.DisplayName);
         Assert.Equal("docker compose up --build", result.Plan.DisplayCommand);
-        Assert.Equal(@"C:\workspace\repos\compose-app", result.Plan.Target!.Path);
+        Assert.Equal(WorkspacePath(@"repos\compose-app"), result.Plan.Target!.Path);
         Assert.True(result.Plan.Target.IsDirectory);
     }
 
@@ -270,8 +368,90 @@ public sealed class ProjectStructureRuntimeLauncherTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(@"C:\workspace\repos\compose-app", result.Plan!.WorkingDirectory);
+        Assert.Equal(WorkspacePath(@"repos\compose-app"), result.Plan!.WorkingDirectory);
         Assert.Equal("docker compose up", result.Plan.DisplayCommand);
+    }
+
+    [Fact]
+    public void Resolve_rejects_a_missing_script_working_directory()
+    {
+        var result = CreateSut().Resolve(CreateScriptNode(new ProjectScriptMetadata
+        {
+            ScriptKind = ProjectScriptKind.Console,
+            Command = "python",
+            Arguments = "app.py",
+            WorkingDirectory = @"repos\missing-script-app"
+        }));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Script working directory does not exist or is not accessible.", result.Message);
+    }
+
+    [Fact]
+    public void Resolve_rejects_a_file_used_as_the_relative_project_path_base()
+    {
+        var workingDirectoryFile = WorkspacePath("runtime-base.txt");
+        File.WriteAllText(workingDirectoryFile, "not a directory");
+        var result = CreateSut().Resolve(CreateEnvironmentNode(
+            ProjectEnvironmentKind.DotNetRuntime,
+            new ProjectEnvironmentMetadata
+            {
+                ProjectPath = @"src\Calculator.csproj",
+                WorkingDirectory = workingDirectoryFile
+            }));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(
+            "Runtime working directory must be a directory, but the configured path is a file.",
+            result.Message);
+    }
+
+    [Fact]
+    public void Resolve_rejects_a_missing_powershell_script_target()
+    {
+        var result = CreateSut().Resolve(CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptPath = @"scripts\missing.ps1"
+            }));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(
+            "The configured script path does not exist, has the wrong path type, or is not accessible.",
+            result.Message);
+    }
+
+    [Fact]
+    public void Resolve_rejects_a_missing_docker_working_directory()
+    {
+        var result = CreateSut().Resolve(CreateInfrastructureNode(
+            "docker-mode",
+            new ProjectInfrastructureMetadata
+            {
+                InfrastructureKind = ProjectInfrastructureKind.DockerMode,
+                RuntimeCommand = "docker compose up",
+                WorkingDirectory = @"repos\missing-compose-app"
+            }));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Docker working directory does not exist or is not accessible.", result.Message);
+    }
+
+    [Fact]
+    public void Resolve_rejects_a_missing_python_project_directory()
+    {
+        var result = CreateSut().Resolve(CreateEnvironmentNode(
+            ProjectEnvironmentKind.PythonEnvironment,
+            new ProjectEnvironmentMetadata
+            {
+                ProjectPath = @"repos\missing-python-app",
+                PythonProvider = ProjectPythonProvider.Conda,
+                EnvironmentName = "calculator"
+            }));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Python project path does not exist or is not accessible.", result.Message);
     }
 
     [Fact]
@@ -290,10 +470,49 @@ public sealed class ProjectStructureRuntimeLauncherTests
         Assert.Equal("Script launch requires a command or PowerShell script path.", result.Message);
     }
 
-    private static ProjectStructureRuntimeLauncher CreateSut()
+    [Fact]
+    public void Resolve_returns_a_diagnostic_for_malformed_legacy_runtime_metadata()
+    {
+        var sut = CreateSut();
+        var node = CreateEnvironmentNode(
+            ProjectEnvironmentKind.DotNetWatch,
+            new ProjectEnvironmentMetadata
+            {
+                ProjectPath = @"repos\Calculator\Calculator.csproj"
+            }) with
+        {
+            MetadataJson = "{"
+        };
+
+        var result = sut.Resolve(node);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(
+            "Runtime metadata is invalid and must be repaired before this node can be launched.",
+            result.Message);
+    }
+
+    public void Dispose()
+        => TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+
+    private ProjectStructureRuntimeLauncher CreateSut()
         => new(
-            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(@"C:\workspace")),
-            NullLogger<ProjectStructureRuntimeLauncher>.Instance);
+            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot)),
+            NullLogger<ProjectStructureRuntimeLauncher>.Instance,
+            new ExistingProjectTargetResolver());
+
+    private string WorkspacePath(string relativePath)
+        => Path.Combine(workspaceRoot, relativePath);
+
+    private void CreateProjectFile(string relativePath)
+        => CreateFile(relativePath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+
+    private void CreateFile(string relativePath, string content)
+    {
+        var path = WorkspacePath(relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata, string notes = "")
         => CreateEnvironmentNode(kind, kind switch
@@ -373,5 +592,11 @@ public sealed class ProjectStructureRuntimeLauncherTests
         public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
 
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
+    }
+
+    private sealed class ExistingProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver
+    {
+        public ProjectStructureDotNetProjectTargetResolution Resolve(string path)
+            => new(path, "Verified by the launcher test boundary.");
     }
 }

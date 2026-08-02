@@ -11,6 +11,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
     private readonly WorkspaceFileReceiptWriter receiptWriter;
     private readonly WorkspaceFileQueryService queryService;
     private readonly WorkspaceFileMutationService mutationService;
+    private readonly WorkspaceDestinationContentPlacementPolicy destinationContentPlacementPolicy;
 
     public WorkspaceFileService(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
     {
@@ -19,7 +20,8 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         var textContentGuard = new WorkspaceTextContentGuard();
 
         queryService = new WorkspaceFileQueryService(pathPolicy, receiptWriter, textContentGuard);
-        mutationService = new WorkspaceFileMutationService(pathPolicy, receiptWriter);
+        destinationContentPlacementPolicy = new WorkspaceDestinationContentPlacementPolicy(pathPolicy);
+        mutationService = new WorkspaceFileMutationService(pathPolicy, receiptWriter, destinationContentPlacementPolicy);
     }
 
     public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
@@ -92,7 +94,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 new EnumerationOptions
                 {
                     RecurseSubdirectories = true,
-                    IgnoreInaccessible = true,
+                    IgnoreInaccessible = false,
                     AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
@@ -143,16 +145,43 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         => mutationService.CreateDirectory(path);
 
     public WorkspaceFileMutationResult WriteTextFile(string path, string content, bool overwrite = true)
-        => mutationService.WriteTextFile(path, content, overwrite);
+        => mutationService.WriteTextFile(path, content, overwrite, authorityRootPath: null);
+
+    public WorkspaceFileMutationResult WriteTextFile(
+        string path,
+        string content,
+        bool overwrite,
+        string authorityRootPath)
+        => mutationService.WriteTextFile(path, content, overwrite, authorityRootPath);
 
     public WorkspaceFileMutationResult AppendTextFile(string path, string content)
-        => mutationService.AppendTextFile(path, content);
+        => mutationService.AppendTextFile(path, content, authorityRootPath: null);
+
+    public WorkspaceFileMutationResult AppendTextFile(
+        string path,
+        string content,
+        string authorityRootPath)
+        => mutationService.AppendTextFile(path, content, authorityRootPath);
 
     public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false)
-        => mutationService.CopyPath(sourcePath, destinationPath, overwrite);
+        => mutationService.CopyPath(sourcePath, destinationPath, overwrite, destinationAuthorityRootPath: null);
+
+    public WorkspaceFileMutationResult CopyPath(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        string destinationAuthorityRootPath)
+        => mutationService.CopyPath(sourcePath, destinationPath, overwrite, destinationAuthorityRootPath);
 
     public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
-        => mutationService.MovePath(sourcePath, destinationPath, overwrite);
+        => mutationService.MovePath(sourcePath, destinationPath, overwrite, destinationAuthorityRootPath: null);
+
+    public WorkspaceFileMutationResult MovePath(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        string destinationAuthorityRootPath)
+        => mutationService.MovePath(sourcePath, destinationPath, overwrite, destinationAuthorityRootPath);
 
     public WorkspaceFileMutationResult DeletePath(string path, bool recursive = false)
         => mutationService.DeletePath(path, recursive);
@@ -198,19 +227,29 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             Directory.CreateDirectory(directory);
         }
 
-        if (File.Exists(destination.FullPath) && overwrite)
+        var stagingArchivePath = WorkspaceFileMutationService.CreateSiblingArtifactPath(
+            destination.FullPath,
+            "stage");
+        try
         {
-            File.Delete(destination.FullPath);
-        }
-
-        using (var archive = ZipFile.Open(destination.FullPath, ZipArchiveMode.Create))
-        {
-            foreach (var file in files)
+            using (var archive = ZipFile.Open(stagingArchivePath, ZipArchiveMode.Create))
             {
-                var entryName = sourceKind == "file"
-                    ? Path.GetFileName(file)
-                    : Path.GetRelativePath(source.FullPath, file).Replace('\\', '/');
-                archive.CreateEntryFromFile(file, entryName, CompressionLevel.Fastest);
+                foreach (var file in files)
+                {
+                    var entryName = sourceKind == "file"
+                        ? Path.GetFileName(file)
+                        : Path.GetRelativePath(source.FullPath, file).Replace('\\', '/');
+                    archive.CreateEntryFromFile(file, entryName, CompressionLevel.Fastest);
+                }
+            }
+
+            File.Move(stagingArchivePath, destination.FullPath, overwrite);
+        }
+        finally
+        {
+            if (File.Exists(stagingArchivePath))
+            {
+                File.Delete(stagingArchivePath);
             }
         }
 
@@ -227,6 +266,36 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
     }
 
     public WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760)
+        => UnzipArchiveCore(
+            sourcePath,
+            destinationPath,
+            overwrite,
+            maxFiles,
+            maxBytes,
+            destinationAuthorityRootPath: null);
+
+    public WorkspaceArchiveMutationResult UnzipArchive(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        int maxFiles,
+        long maxBytes,
+        string destinationAuthorityRootPath)
+        => UnzipArchiveCore(
+            sourcePath,
+            destinationPath,
+            overwrite,
+            maxFiles,
+            maxBytes,
+            destinationAuthorityRootPath);
+
+    private WorkspaceArchiveMutationResult UnzipArchiveCore(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite,
+        int maxFiles,
+        long maxBytes,
+        string? destinationAuthorityRootPath)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         const string operationName = "workspace_unzip_archive";
@@ -298,24 +367,73 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             targets.Add((entry, targetPath));
         }
 
-        Directory.CreateDirectory(destination.FullPath);
-        foreach (var (entry, targetPath) in targets)
+        var placementCandidates = targets
+            .Select(target => new WorkspaceDestinationContentCandidate(
+                target.TargetPath,
+                pathPolicy.ToRelativePath(target.TargetPath),
+                File.Exists(target.TargetPath),
+                () => ReadArchiveEntryText(target.Entry)))
+            .ToArray();
+        if (destinationContentPlacementPolicy.TryValidate(
+                destination,
+                destinationAuthorityRootPath,
+                placementCandidates,
+                out var placementMessage))
         {
-            var targetDirectory = Path.GetDirectoryName(targetPath);
-            if (!string.IsNullOrWhiteSpace(targetDirectory))
-            {
-                Directory.CreateDirectory(targetDirectory);
-            }
-
-            if (!WorkspacePathPolicy.TryValidateNoReparseTraversal(targetPath, out var reparseValidationMessage))
-            {
-                return CreateArchiveFailure(operationName, reparseValidationMessage, source.RelativePath, destination.RelativePath, startedAtUtc);
-            }
-
-            entry.ExtractToFile(targetPath, overwrite);
+            return CreateArchiveFailure(
+                operationName,
+                placementMessage,
+                source.RelativePath,
+                destination.RelativePath,
+                startedAtUtc);
         }
 
-        var message = $"Extracted archive '{source.RelativePath}' to '{destination.RelativePath}'.";
+        var destinationParent = Path.GetDirectoryName(destination.FullPath)
+            ?? throw new InvalidOperationException($"Destination '{destination.FullPath}' has no containing directory.");
+        Directory.CreateDirectory(destinationParent);
+        var stagingDirectory = WorkspaceFileMutationService.CreateSiblingArtifactPath(
+            destination.FullPath,
+            "stage");
+        WorkspaceMutationCommitResult commitResult;
+        try
+        {
+            if (Directory.Exists(destination.FullPath))
+            {
+                CopyDirectoryTree(destination.FullPath, stagingDirectory);
+            }
+            else
+            {
+                Directory.CreateDirectory(stagingDirectory);
+            }
+
+            foreach (var (entry, targetPath) in targets)
+            {
+                var relativeTargetPath = Path.GetRelativePath(destination.FullPath, targetPath);
+                var stagingTargetPath = Path.Combine(stagingDirectory, relativeTargetPath);
+                var stagingTargetDirectory = Path.GetDirectoryName(stagingTargetPath);
+                if (!string.IsNullOrWhiteSpace(stagingTargetDirectory))
+                {
+                    Directory.CreateDirectory(stagingTargetDirectory);
+                }
+
+                entry.ExtractToFile(stagingTargetPath, overwrite: true);
+            }
+
+            commitResult = WorkspaceFileMutationService.CommitStagedDirectory(
+                stagingDirectory,
+                destination.FullPath,
+                overwrite: true);
+        }
+        finally
+        {
+            if (Directory.Exists(stagingDirectory))
+            {
+                WorkspaceFileMutationService.DeleteDirectoryTree(stagingDirectory);
+            }
+        }
+
+        var message = commitResult.AppendWarning(
+            $"Extracted archive '{source.RelativePath}' to '{destination.RelativePath}'.");
         return new WorkspaceArchiveMutationResult(
             Succeeded: true,
             Message: message,
@@ -387,11 +505,57 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 new EnumerationOptions
                 {
                     RecurseSubdirectories = true,
-                    IgnoreInaccessible = true,
+                    IgnoreInaccessible = false,
                     AttributesToSkip = FileAttributes.ReparsePoint
                 })
             .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static string ReadArchiveEntryText(ZipArchiveEntry entry)
+    {
+        using var stream = entry.Open();
+        using var reader = new StreamReader(
+            stream,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            leaveOpen: false);
+        return reader.ReadToEnd();
+    }
+
+    private static void CopyDirectoryTree(string sourcePath, string destinationPath)
+    {
+        Directory.CreateDirectory(destinationPath);
+        foreach (var directory in Directory.EnumerateDirectories(
+                     sourcePath,
+                     "*",
+                     new EnumerationOptions
+                     {
+                         RecurseSubdirectories = true,
+                         IgnoreInaccessible = false,
+                         AttributesToSkip = FileAttributes.ReparsePoint
+                     }))
+        {
+            Directory.CreateDirectory(
+                Path.Combine(destinationPath, Path.GetRelativePath(sourcePath, directory)));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(
+                     sourcePath,
+                     "*",
+                     new EnumerationOptions
+                     {
+                         RecurseSubdirectories = true,
+                         IgnoreInaccessible = false,
+                         AttributesToSkip = FileAttributes.ReparsePoint
+                     }))
+        {
+            var targetPath = Path.Combine(
+                destinationPath,
+                Path.GetRelativePath(sourcePath, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+            File.Copy(file, targetPath, overwrite: false);
+        }
     }
 
     private static bool CheckArchiveBounds(

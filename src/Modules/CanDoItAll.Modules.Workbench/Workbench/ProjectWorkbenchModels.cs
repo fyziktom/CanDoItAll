@@ -301,7 +301,11 @@ public sealed record ProjectObjectReclassificationRequest(
     string Title,
     string Subtitle,
     string Notes,
-    string MetadataJson = "{}");
+    string MetadataJson = "{}",
+    DateTimeOffset? StartUtc = null,
+    DateTimeOffset? EndUtc = null,
+    int? DurationSeconds = null,
+    bool UpdateTiming = false);
 
 public sealed record ProjectObjectSeedRequest(
     ProjectObjectType ObjectType,
@@ -378,7 +382,8 @@ ProjectStructureAssemblyService projectStructureAssemblyService,
 ProjectWorkbenchRelationService relationService,
 ProjectWorkbenchLifecycleService lifecycleService,
 ProjectWorkbenchCommandService commandService,
-ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjectWorkbenchSeedService
+ProjectWorkbenchCrossModuleMutationService crossModuleMutationService,
+ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectWorkbenchSeedService
 {
     private const string GanttTaskSubtype = "task";
     private const string GanttViewStateSurfaceKind = "gantt";
@@ -534,6 +539,11 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
                 ? (request.X!.Value, request.Y!.Value)
                 : ProjectWorkbenchGraphConventions.GetDefaultPosition(request.ObjectType, existingCount + 1);
         var normalizedObjectSubtype = ProjectObjectSubtypePolicy.Normalize(request.ObjectType, request.ObjectSubtype);
+        var runtimeMetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+            request.ObjectType,
+            normalizedObjectSubtype,
+            request.Notes,
+            request.MetadataJson);
         var media = await SaveMediaAsync(
             projectId,
             request.ObjectType,
@@ -541,7 +551,7 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             request.Media,
             cancellationToken);
         var binding = ResolveCreateBinding(projectId, request.ObjectType, media, request.ExternalBinding);
-        var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, normalizedObjectSubtype, request.MetadataJson, null, request.Notes, media);
+        var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(request.ObjectType, normalizedObjectSubtype, runtimeMetadataJson, null, request.Notes, media);
         metadataJson = ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(
             request.ObjectType,
             normalizedObjectSubtype,
@@ -703,10 +713,15 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             var position = ProjectWorkbenchGraphConventions.GetDefaultPosition(seed.ObjectType, existingCount + index);
             var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(seed.StartUtc, seed.EndUtc, seed.DurationSeconds);
             var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(seed.DurationSeconds, seed.StartUtc, resolvedEndUtc);
+            var runtimeMetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+                seed.ObjectType,
+                normalizedObjectSubtype,
+                seed.Notes,
+                seed.MetadataJson);
             var metadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
                 seed.ObjectType,
                 normalizedObjectSubtype,
-                seed.MetadataJson,
+                runtimeMetadataJson,
                 null,
                 seed.Notes,
                 null);
@@ -878,6 +893,11 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
         node.Subtitle = subtitle?.Trim() ?? string.Empty;
         node.Notes = notes?.Trim() ?? string.Empty;
+        node.MetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+            node.ObjectType,
+            node.ObjectSubtype,
+            node.Notes,
+            node.MetadataJson);
         node.UpdatedAtUtc = clock.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
@@ -950,7 +970,21 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         node.StartUtc = request.StartUtc;
         node.EndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         node.DurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, node.StartUtc, node.EndUtc);
-        node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, request.MetadataJson, node.MetadataJson, node.Notes, null);
+        var runtimeMetadataInput = ProjectWorkbenchObjectModeling.HasMeaningfulMetadata(request.MetadataJson)
+            ? request.MetadataJson
+            : node.MetadataJson;
+        var runtimeMetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+            node.ObjectType,
+            node.ObjectSubtype,
+            node.Notes,
+            runtimeMetadataInput);
+        node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
+            node.ObjectType,
+            node.ObjectSubtype,
+            runtimeMetadataJson,
+            null,
+            node.Notes,
+            null);
         node.NodeReferences = request.NodeReferences ?? node.NodeReferences;
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
@@ -1104,7 +1138,21 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
             metadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
         }
 
-        node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(node.ObjectType, node.ObjectSubtype, metadataJson, node.MetadataJson, node.Notes, null);
+        var runtimeMetadataInput = ProjectWorkbenchObjectModeling.HasMeaningfulMetadata(metadataJson)
+            ? metadataJson
+            : node.MetadataJson;
+        var runtimeMetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+            node.ObjectType,
+            node.ObjectSubtype,
+            node.Notes,
+            runtimeMetadataInput);
+        node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
+            node.ObjectType,
+            node.ObjectSubtype,
+            runtimeMetadataJson,
+            null,
+            node.Notes,
+            null);
         node.NodeReferences = nodeReferences ?? node.NodeReferences;
 
         if (!string.IsNullOrWhiteSpace(status))
@@ -1927,4 +1975,3 @@ ProjectWorkbenchCrossModuleMutationService crossModuleMutationService) : IProjec
         return builder.Trim('-');
     }
 }
-

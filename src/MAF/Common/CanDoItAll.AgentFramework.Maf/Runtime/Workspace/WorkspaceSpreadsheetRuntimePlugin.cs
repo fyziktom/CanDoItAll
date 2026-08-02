@@ -17,12 +17,12 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     private readonly WorkspaceSpreadsheetRuntimePathAccess pathAccess = new(workspaceRoot, workspaceScope, accessSettings);
     private readonly WorkspaceSpreadsheetReceiptWriter receiptWriter = new(workspaceRoot, workspaceScope);
 
-    public SpreadsheetWorkbookSummary InspectWorkbook(string workbookPath)
+    public WorkspaceSpreadsheetSummaryToolResult InspectWorkbook(string workbookPath)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var workbook = ResolveReadableWorkbook(workbookPath);
         var summary = spreadsheets.InspectWorkbook(workbook.FullPath);
-        receiptWriter.Persist(
+        var receipt = receiptWriter.Persist(
             "workspace_spreadsheet_summary",
             mutatesWorkspace: false,
             message: $"Inspected workbook '{workbook.RelativePath}'.",
@@ -31,13 +31,13 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             artifactReferences: [],
             startedAtUtc);
 
-        return summary with
-        {
-            WorkbookPath = workbook.RelativePath
-        };
+        return new WorkspaceSpreadsheetSummaryToolResult(
+            workbook.RelativePath,
+            summary.Worksheets,
+            receipt);
     }
 
-    public SpreadsheetWorkbookPreviewResult PreviewWorkbook(
+    public WorkspaceSpreadsheetPreviewToolResult PreviewWorkbook(
         string workbookPath,
         int maxWorksheets = 2,
         int maxRows = 8,
@@ -50,7 +50,7 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             maxWorksheets,
             maxRows,
             maxColumns));
-        receiptWriter.Persist(
+        var receipt = receiptWriter.Persist(
             SpreadsheetPreviewOperation,
             mutatesWorkspace: false,
             message: $"Previewed {result.Worksheets.Count} of {result.TotalWorksheetCount} worksheet(s) from workbook '{workbook.RelativePath}'.",
@@ -59,13 +59,15 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             artifactReferences: [],
             startedAtUtc);
 
-        return result with
-        {
-            WorkbookPath = workbook.RelativePath
-        };
+        return new WorkspaceSpreadsheetPreviewToolResult(
+            workbook.RelativePath,
+            result.TotalWorksheetCount,
+            result.Worksheets,
+            result.WorksheetsTruncated,
+            receipt);
     }
 
-    public SpreadsheetCellValue ReadSpreadsheetCell(string workbookPath, string worksheetName, string cellAddress)
+    public WorkspaceSpreadsheetCellToolResult ReadSpreadsheetCell(string workbookPath, string worksheetName, string cellAddress)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var workbook = ResolveReadableWorkbook(workbookPath);
@@ -75,7 +77,7 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             workbook.FullPath,
             requestedWorksheetName,
             requestedCellAddress);
-        receiptWriter.Persist(
+        var receipt = receiptWriter.Persist(
             "workspace_read_spreadsheet_cell",
             mutatesWorkspace: false,
             message: $"Read cell '{requestedWorksheetName}!{requestedCellAddress}' from workbook '{workbook.RelativePath}'.",
@@ -84,10 +86,13 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             artifactReferences: [],
             startedAtUtc);
 
-        return result;
+        return new WorkspaceSpreadsheetCellToolResult(
+            result.Address,
+            result.Value,
+            receipt);
     }
 
-    public SpreadsheetRangeReadResult ReadSpreadsheetRange(
+    public WorkspaceSpreadsheetRangeToolResult ReadSpreadsheetRange(
         string workbookPath,
         string worksheetName,
         string rangeAddress,
@@ -104,7 +109,7 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             requestedRangeAddress,
             maxRows,
             maxColumns);
-        receiptWriter.Persist(
+        var receipt = receiptWriter.Persist(
             "workspace_read_spreadsheet_range",
             mutatesWorkspace: false,
             message: $"Read range '{requestedWorksheetName}!{requestedRangeAddress}' from workbook '{workbook.RelativePath}'.",
@@ -113,10 +118,13 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             artifactReferences: [],
             startedAtUtc);
 
-        return result with
-        {
-            WorkbookPath = workbook.RelativePath
-        };
+        return new WorkspaceSpreadsheetRangeToolResult(
+            workbook.RelativePath,
+            result.WorksheetName,
+            result.RangeAddress,
+            result.Values,
+            result.MarkdownTable,
+            receipt);
     }
 
     public WorkspaceSpreadsheetWriteToolResult WriteSpreadsheetWorkbook(
@@ -147,7 +155,7 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             rangeWrites ?? [],
             createWorkbookIfMissing,
             overwrite));
-        receiptWriter.Persist(
+        var receipt = receiptWriter.Persist(
             "workspace_write_spreadsheet",
             mutatesWorkspace: true,
             message: $"Wrote workbook '{output.RelativePath}' worksheet '{result.WorksheetName}'.",
@@ -163,7 +171,8 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             WorksheetName: result.WorksheetName,
             CellWriteCount: result.CellWriteCount,
             RangeWriteCount: result.RangeWriteCount,
-            Diagnostics: string.Empty);
+            Diagnostics: string.Empty,
+            Receipt: receipt);
     }
 
     public WorkspaceSpreadsheetFunctionCatalogResult ListSpreadsheetFunctions(
@@ -173,7 +182,7 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var functions = SpreadsheetFunctionCatalog.List(query, category, maxResults);
-        receiptWriter.Persist(
+        var receipt = receiptWriter.Persist(
             "workspace_spreadsheet_function_catalog",
             mutatesWorkspace: false,
             message: $"Returned {functions.Count:N0} spreadsheet function descriptor(s).",
@@ -186,7 +195,8 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             Succeeded: true,
             Message: $"Returned {functions.Count:N0} spreadsheet function descriptor(s).",
             Functions: functions,
-            Diagnostics: string.Empty);
+            Diagnostics: string.Empty,
+            Receipt: receipt);
     }
 
     private WorkspaceResolvedPath ResolveReadableWorkbook(string workbookPath)
@@ -220,6 +230,34 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             : value.Trim();
 }
 
+internal sealed record WorkspaceSpreadsheetSummaryToolResult(
+    string WorkbookPath,
+    IReadOnlyList<SpreadsheetWorksheetSummary> Worksheets,
+    WorkspaceToolReceipt Receipt);
+
+internal sealed record WorkspaceSpreadsheetPreviewToolResult(
+    string WorkbookPath,
+    int TotalWorksheetCount,
+    IReadOnlyList<SpreadsheetWorksheetPreview> Worksheets,
+    bool WorksheetsTruncated,
+    WorkspaceToolReceipt Receipt)
+{
+    public bool IsTruncated => WorksheetsTruncated || Worksheets.Any(worksheet => worksheet.IsTruncated);
+}
+
+internal sealed record WorkspaceSpreadsheetCellToolResult(
+    string Address,
+    string Value,
+    WorkspaceToolReceipt Receipt);
+
+internal sealed record WorkspaceSpreadsheetRangeToolResult(
+    string WorkbookPath,
+    string WorksheetName,
+    string RangeAddress,
+    IReadOnlyList<IReadOnlyList<string>> Values,
+    string MarkdownTable,
+    WorkspaceToolReceipt Receipt);
+
 internal sealed record WorkspaceSpreadsheetWriteToolResult(
     bool Succeeded,
     string Message,
@@ -227,13 +265,15 @@ internal sealed record WorkspaceSpreadsheetWriteToolResult(
     string WorksheetName,
     int CellWriteCount,
     int RangeWriteCount,
-    string Diagnostics);
+    string Diagnostics,
+    WorkspaceToolReceipt Receipt);
 
 internal sealed record WorkspaceSpreadsheetFunctionCatalogResult(
     bool Succeeded,
     string Message,
     IReadOnlyList<SpreadsheetFunctionDescriptor> Functions,
-    string Diagnostics);
+    string Diagnostics,
+    WorkspaceToolReceipt Receipt);
 
 internal sealed class WorkspaceSpreadsheetReceiptWriter(
     string workspaceRoot,
@@ -245,7 +285,7 @@ internal sealed class WorkspaceSpreadsheetReceiptWriter(
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
     private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
 
-    public void Persist(
+    public WorkspaceToolReceipt Persist(
         string operation,
         bool mutatesWorkspace,
         string message,
@@ -281,6 +321,8 @@ internal sealed class WorkspaceSpreadsheetReceiptWriter(
             requestSummary: requestSummary,
             workingDirectory: ".",
             exitSummary: $"Succeeded: {message}");
+
+        return receipt;
     }
 
     public static WorkspaceArtifactReference CreateWorkbookArtifact(string relativePath, string summary)

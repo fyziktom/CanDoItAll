@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using CanDoItAll.SharedKernel;
 
@@ -7,8 +5,6 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal static partial class ProjectStructureDotNetRuntimeMetadataHydrator
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public static string NormalizeMetadataJson(
         ProjectObjectType objectType,
         string? objectSubtype,
@@ -22,7 +18,7 @@ internal static partial class ProjectStructureDotNetRuntimeMetadataHydrator
 
         var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
         Hydrate(objectType, objectSubtype, notes, metadata);
-        return MergeHydratedMetadata(metadataJson, metadata);
+        return ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(metadataJson, metadata);
     }
 
     public static void Hydrate(
@@ -96,28 +92,6 @@ internal static partial class ProjectStructureDotNetRuntimeMetadataHydrator
         var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
         return metadata.Environment is not null &&
                IsDotNetKind(metadata.Environment.EnvironmentKind);
-    }
-
-    private static string MergeHydratedMetadata(string? originalJson, ProjectObjectMetadataEnvelope metadata)
-    {
-        var hydratedRoot = JsonNode.Parse(ProjectObjectMetadataSerializer.Serialize(metadata)) as JsonObject
-                           ?? new JsonObject();
-
-        if (string.IsNullOrWhiteSpace(originalJson) ||
-            JsonNode.Parse(originalJson) is not JsonObject originalRoot)
-        {
-            return hydratedRoot.ToJsonString(JsonOptions);
-        }
-
-        foreach (var property in originalRoot)
-        {
-            if (!hydratedRoot.ContainsKey(property.Key))
-            {
-                hydratedRoot[property.Key] = property.Value?.DeepClone();
-            }
-        }
-
-        return hydratedRoot.ToJsonString(JsonOptions);
     }
 
     private static bool IsDotNetKind(ProjectEnvironmentKind kind)

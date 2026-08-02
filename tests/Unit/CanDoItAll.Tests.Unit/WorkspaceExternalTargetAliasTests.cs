@@ -333,6 +333,23 @@ app.Run();
         Assert.Contains("--force", plan.Arguments, StringComparer.Ordinal);
     }
 
+    [Fact]
+    public void BuildDotnetNew_fails_closed_when_existing_target_tree_cannot_be_fully_inspected()
+    {
+        var workspaceRoot = CreateDirectory("workspace-inaccessible-target");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps", "WorkflowApp"));
+        var builder = new WorkspaceCommandPlanBuilder(
+            new WorkspacePathPolicy(workspaceRoot),
+            _ => throw new UnauthorizedAccessException(@"C:\private\native-path"));
+
+        var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(
+            () => builder.BuildDotnetNew("blazor", "WorkflowApp", "apps"));
+
+        Assert.Equal(WorkspaceToolAccessDeniedException.FailureCode, exception.ErrorCode);
+        Assert.Contains("apps/WorkflowApp", exception.SafeMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\private\native-path", exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
     public void Dispose()
     {
         try

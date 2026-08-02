@@ -126,7 +126,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, WorkbenchProjectStructureMemorySourceGatewayAdapter>());
         services.AddScoped<ProjectMemoryIngestionService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
+        services.AddScoped<IProjectStructureDotNetProjectTargetResolver, ProjectStructureDotNetProjectTargetResolver>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
+        services.AddScoped<ProjectStructureRuntimeNodeMetadataBoundary>();
         services.AddScoped<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IFileToolsStorageBindingSource, ProjectStructureFileScopeResolver>());

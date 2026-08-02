@@ -107,7 +107,148 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
         Assert.False(succeeded);
     }
 
-    private static WorkspaceCommandExecutionResult CreateWorkspaceCommandResult(bool succeeded, string message)
+    [Fact]
+    public void ResolveDurableReceiptExecutionRunId_reads_direct_workspace_receipt()
+    {
+        var executionRunId = Guid.NewGuid();
+        var result = CreateWorkspaceCommandResult(
+            succeeded: true,
+            message: "Completed.",
+            executionRunId: executionRunId);
+
+        var resolvedExecutionRunId =
+            MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                "workspace_dotnet_new",
+                result);
+
+        Assert.Equal(executionRunId, resolvedExecutionRunId);
+    }
+
+    [Fact]
+    public void ResolveDurableReceiptExecutionRunId_reads_marshaled_result_envelope()
+    {
+        var executionRunId = Guid.NewGuid();
+        using var document = JsonDocument.Parse(
+            JsonSerializer.Serialize(new
+            {
+                result = new
+                {
+                    receipt = new
+                    {
+                        operation = "workspace_dotnet_new",
+                        executionRunId
+                    }
+                }
+            }));
+
+        var resolvedExecutionRunId =
+            MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                "workspace_dotnet_new",
+                document.RootElement);
+
+        Assert.Equal(executionRunId, resolvedExecutionRunId);
+    }
+
+    [Fact]
+    public void ResolveDurableReceiptExecutionRunId_rejects_receipts_embedded_in_user_controlled_json()
+    {
+        var executionRunId = Guid.NewGuid();
+        var receipt = new
+        {
+            operation = "workspace_dotnet_new",
+            executionRunId
+        };
+        object[] payloads =
+        [
+            new { content = new { receipt } },
+            new { data = new { receipt } },
+            new { result = new { content = new { receipt } } }
+        ];
+
+        foreach (var payload in payloads)
+        {
+            using var document = JsonDocument.Parse(JsonSerializer.Serialize(payload));
+
+            Assert.Null(MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                "workspace_dotnet_new",
+                document.RootElement));
+        }
+    }
+
+    [Fact]
+    public void ResolveDurableReceiptExecutionRunId_rejects_receipt_for_a_different_workspace_tool()
+    {
+        var executionRunId = Guid.NewGuid();
+        using var document = JsonDocument.Parse(
+            JsonSerializer.Serialize(new
+            {
+                receipt = new
+                {
+                    operation = "workspace_read_file",
+                    executionRunId
+                }
+            }));
+
+        var resolvedExecutionRunId =
+            MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                "workspace_dotnet_new",
+                document.RootElement);
+
+        Assert.Null(resolvedExecutionRunId);
+    }
+
+    [Fact]
+    public void ResolveDurableReceiptExecutionRunId_rejects_unbound_receipt()
+    {
+        var result = CreateWorkspaceCommandResult(succeeded: true, message: "Completed.");
+
+        var resolvedExecutionRunId =
+            MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                "workspace_dotnet_new",
+                result);
+
+        Assert.Null(resolvedExecutionRunId);
+    }
+
+    [Fact]
+    public void ResolveDurableReceiptExecutionRunId_rejects_untrusted_spoofed_receipt()
+    {
+        var executionRunId = Guid.NewGuid();
+        using var document = JsonDocument.Parse(
+            JsonSerializer.Serialize(new
+            {
+                result = new
+                {
+                    receipt = new
+                    {
+                        operation = "workspace_dotnet_new",
+                        executionRunId
+                    }
+                }
+            }));
+        var reflectedSpoof = new
+        {
+            Receipt = new
+            {
+                ExecutionRunId = executionRunId
+            }
+        };
+
+        Assert.Null(MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+            "untrusted_mcp_tool",
+            document.RootElement));
+        Assert.Null(MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+            "untrusted_mcp_tool",
+            reflectedSpoof));
+        Assert.Null(MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+            "workspace_dotnet_new",
+            reflectedSpoof));
+    }
+
+    private static WorkspaceCommandExecutionResult CreateWorkspaceCommandResult(
+        bool succeeded,
+        string message,
+        Guid? executionRunId = null)
     {
         var now = DateTimeOffset.UtcNow;
         var receipt = new WorkspaceToolReceipt(
@@ -120,7 +261,10 @@ public sealed class MafAgentRuntimeToolInvocationResultTests
             TargetPaths: [],
             ArtifactReferences: [],
             StartedAtUtc: now,
-            CompletedAtUtc: now);
+            CompletedAtUtc: now)
+        {
+            ExecutionRunId = executionRunId
+        };
 
         return new WorkspaceCommandExecutionResult(
             Succeeded: succeeded,

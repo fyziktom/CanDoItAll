@@ -243,6 +243,14 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
                 "The held project-structure snapshot exceeded its freshness lifetime. Refresh the surface or use CanonicalCurrent.");
         }
 
+        if (freshness == AgentChatContextAttachmentFreshness.NotYetValid)
+        {
+            throw Failure(
+                409,
+                "ProjectStructureInvocationSnapshotNotYetValid",
+                "The project-structure snapshot capture time is later than the current execution time. Refresh the surface or use CanonicalCurrent.");
+        }
+
         var contentFingerprint =
             ProjectStructureInvocationSnapshotMapper.ComputeContentFingerprint(snapshot);
         if (envelope.ContentFingerprint != contentFingerprint)

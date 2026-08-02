@@ -50,6 +50,7 @@
     private IAgentChatExecutionNotificationSubscription? notificationSubscription;
     private AgentChatContextSource? activeSource;
     private ProjectStructureInvocationSnapshotCapture? activeSnapshotCapture;
+    private AgentChatContextAttachmentDraft? activeExternalTargetAccessAttachment;
     private ITimer? snapshotRenewalTimer;
     private DateTimeOffset? scheduledSnapshotDeadlineUtc;
     private Guid activeProjectId;
@@ -252,36 +253,65 @@
             SelectedNodes,
             SelectedEntityReferences);
         ProjectStructureInvocationSnapshotCapture? snapshotCapture = null;
+        AgentChatContextAttachmentDraft? externalTargetAccessAttachment = null;
         if (EffectiveAccessState == AgentChatContextAccessState.Ready &&
             ActiveView != ProjectStructureAgentChatView.Calendar &&
             Surface is { } surface &&
             surface.ProjectId == ProjectId)
         {
             var capturedAtUtc = TimeProvider.GetUtcNow();
+            var databaseProfileGeneration = new DatabaseProfileGeneration(
+                DatabaseRuntimeState.GetSnapshot().Generation);
             var candidateCapture = ProjectStructureInvocationSnapshotMapper.Capture(
                 surface,
                 ActiveView,
                 selectedEntities,
-                new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
+                databaseProfileGeneration,
                 capturedAtUtc);
             snapshotCapture = ProjectStructureInvocationSnapshotMapper.ReuseCurrent(
                 activeSnapshotCapture,
                 candidateCapture,
                 capturedAtUtc);
+            var candidateAccessAttachment =
+                AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
+                    ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
+                        surface,
+                        selectedEntities),
+                    databaseProfileGeneration,
+                    capturedAtUtc,
+                    capturedAtUtc.Add(
+                        ProjectStructureInvocationSnapshotMapper.FreshnessLifetime));
+            externalTargetAccessAttachment = candidateAccessAttachment is null
+                ? null
+                : AgentChatExternalTargetAccessAttachmentPublisher.ReuseCurrent(
+                    activeExternalTargetAccessAttachment,
+                    candidateAccessAttachment,
+                    capturedAtUtc);
         }
 
         activeSnapshotCapture = snapshotCapture;
+        activeExternalTargetAccessAttachment = externalTargetAccessAttachment;
         var selectionFragment = snapshotCapture is null
             ? ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(selectedEntities)
             : ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
                 snapshotCapture.Snapshot,
                 selectedEntities);
-        AgentChatContextContributorPublication selectionContributor =
-            snapshotCapture is null
-                ? new AgentChatContextContributorPublication(selectionFragment)
-                : new AgentChatContextContributorPublication(
-                    selectionFragment,
-                    [snapshotCapture.AttachmentDraft]);
+        var selectionAttachmentDrafts = new List<AgentChatContextAttachmentDraft>();
+        if (snapshotCapture is not null)
+        {
+            selectionAttachmentDrafts.Add(snapshotCapture.AttachmentDraft);
+        }
+
+        if (externalTargetAccessAttachment is not null)
+        {
+            selectionAttachmentDrafts.Add(externalTargetAccessAttachment);
+        }
+
+        var selectionContributor = selectionAttachmentDrafts.Count == 0
+            ? new AgentChatContextContributorPublication(selectionFragment)
+            : new AgentChatContextContributorPublication(
+                selectionFragment,
+                selectionAttachmentDrafts);
 
         return new AgentChatContextPublication(
             ProjectStructureAgentChatContextBuilder.BuildScope(
@@ -365,8 +395,9 @@
 
     private void UpdateSnapshotRenewalTimer()
     {
-        var deadlineUtc =
-            activeSnapshotCapture?.AttachmentDraft.FreshUntilUtc;
+        var deadlineUtc = ResolveEarliestDeadline(
+            activeSnapshotCapture?.AttachmentDraft.FreshUntilUtc,
+            activeExternalTargetAccessAttachment?.FreshUntilUtc);
         if (snapshotRenewalTimer is not null &&
             scheduledSnapshotDeadlineUtc == deadlineUtc)
         {
@@ -394,6 +425,23 @@
             this,
             dueTime,
             Timeout.InfiniteTimeSpan);
+    }
+
+    private static DateTimeOffset? ResolveEarliestDeadline(
+        params DateTimeOffset?[] deadlinesUtc)
+    {
+        DateTimeOffset? earliestDeadlineUtc = null;
+        foreach (var deadlineUtc in deadlinesUtc)
+        {
+            if (deadlineUtc.HasValue &&
+                (!earliestDeadlineUtc.HasValue ||
+                 deadlineUtc.Value < earliestDeadlineUtc.Value))
+            {
+                earliestDeadlineUtc = deadlineUtc;
+            }
+        }
+
+        return earliestDeadlineUtc;
     }
 
     private void QueueSnapshotRenewal()
@@ -456,6 +504,7 @@
         snapshotRenewalTimer = null;
         scheduledSnapshotDeadlineUtc = null;
         activeSnapshotCapture = null;
+        activeExternalTargetAccessAttachment = null;
         agents = [];
         activeProjectId = Guid.Empty;
         accessState = AgentChatContextAccessState.Loading;

@@ -473,11 +473,13 @@ public sealed class ProjectStructureInvocationSnapshotTests
     }
 
     [Theory]
-    [InlineData(true, false, "ProjectStructureInvocationSnapshotProfileMismatch")]
-    [InlineData(false, true, "ProjectStructureInvocationSnapshotExpired")]
+    [InlineData(true, false, false, "ProjectStructureInvocationSnapshotProfileMismatch")]
+    [InlineData(false, true, false, "ProjectStructureInvocationSnapshotExpired")]
+    [InlineData(false, false, true, "ProjectStructureInvocationSnapshotNotYetValid")]
     public async Task Freshness_mismatch_fails_without_canonical_read(
         bool changeProfile,
         bool expire,
+        bool beforeCapture,
         string expectedErrorCode)
     {
         var fixture = CreateReadFixture();
@@ -485,9 +487,11 @@ public sealed class ProjectStructureInvocationSnapshotTests
         var generation = changeProfile
             ? new DatabaseProfileGeneration(fixture.Generation.Value + 1)
             : fixture.Generation;
-        var nowUtc = expire
-            ? CapturedAtUtc.Add(ProjectStructureInvocationSnapshotMapper.FreshnessLifetime)
-            : CapturedAtUtc.AddMinutes(1);
+        var nowUtc = beforeCapture
+            ? CapturedAtUtc.AddMinutes(-1)
+            : expire
+                ? CapturedAtUtc.Add(ProjectStructureInvocationSnapshotMapper.FreshnessLifetime)
+                : CapturedAtUtc.AddMinutes(1);
 
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             ProjectStructureInvocationSnapshotReadDispatcher.ReadAsync(

@@ -136,8 +136,26 @@ internal static class ProjectNodeKindRegistry
                 current.Family == target.Family;
         }
 
-        return currentType == ProjectObjectType.Note && target.AllowNotePromotion;
+        return currentType == ProjectObjectType.Note && target.AllowNotePromotion ||
+               current.SupportsSubtypeMutation &&
+               target.SupportsSubtypeMutation &&
+               IsRunnableRuntimeDescriptor(currentType, currentSubtype, current) &&
+               IsRunnableRuntimeDescriptor(targetType, targetSubtype, target);
     }
+
+    private static bool IsRunnableRuntimeDescriptor(
+        ProjectObjectType objectType,
+        string? objectSubtype,
+        ProjectNodeKindDescriptor descriptor)
+        => objectType switch
+        {
+            ProjectObjectType.Script => descriptor.Family == ProjectNodeKindFamily.Script,
+            ProjectObjectType.Environment => descriptor.Family == ProjectNodeKindFamily.Environment,
+            ProjectObjectType.Infrastructure =>
+                descriptor.Family == ProjectNodeKindFamily.Infrastructure &&
+                ResolveInfrastructureKind(objectSubtype) == ProjectInfrastructureKind.DockerMode,
+            _ => false
+        };
 
     public static ProjectNodeKindFamily ResolveFamily(ProjectObjectType objectType, string? objectSubtype)
         => ResolveDescriptor(objectType, objectSubtype).Family;

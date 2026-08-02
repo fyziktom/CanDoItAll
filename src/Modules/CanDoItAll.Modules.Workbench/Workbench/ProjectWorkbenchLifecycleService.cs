@@ -6,7 +6,8 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectWorkbenchLifecycleService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock)
+    IClock clock,
+    ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary)
 {
     public async Task<ProjectStructureNode?> ReclassifyObjectAsync(
         Guid projectId,
@@ -87,18 +88,41 @@ public sealed class ProjectWorkbenchLifecycleService(
             NodeReferences = node.NodeReferences.Clone()
         };
 
-        node.ObjectType = request.TargetObjectType;
-        node.ObjectSubtype = ProjectObjectSubtypePolicy.Normalize(
+        var targetObjectSubtype = ProjectObjectSubtypePolicy.Normalize(
             request.TargetObjectType,
             request.TargetObjectSubtype);
+        var runtimeMetadataInput = ProjectWorkbenchObjectModeling.HasMeaningfulMetadata(request.MetadataJson)
+            ? request.MetadataJson
+            : sourceSnapshot.MetadataJson;
+        var runtimeMetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
+            request.TargetObjectType,
+            targetObjectSubtype,
+            request.Notes,
+            runtimeMetadataInput);
+
+        node.ObjectType = request.TargetObjectType;
+        node.ObjectSubtype = targetObjectSubtype;
         node.Title = string.IsNullOrWhiteSpace(request.Title) ? node.Title : request.Title.Trim();
         node.Subtitle = request.Subtitle?.Trim() ?? string.Empty;
         node.Notes = request.Notes?.Trim() ?? string.Empty;
+        if (request.UpdateTiming)
+        {
+            node.StartUtc = request.StartUtc;
+            node.EndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(
+                request.StartUtc,
+                request.EndUtc,
+                request.DurationSeconds);
+            node.DurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(
+                request.DurationSeconds,
+                node.StartUtc,
+                node.EndUtc);
+        }
+
         node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
             node.ObjectType,
             node.ObjectSubtype,
-            request.MetadataJson,
-            sourceSnapshot.MetadataJson,
+            runtimeMetadataJson,
+            null,
             node.Notes,
             null);
         node.MetadataJson =

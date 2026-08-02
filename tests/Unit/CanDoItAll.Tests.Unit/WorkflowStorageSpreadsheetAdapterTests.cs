@@ -279,13 +279,25 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
         public WorkspaceFileMutationResult WriteTextFile(string path, string content, bool overwrite = true)
             => throw new NotSupportedException();
 
+        public WorkspaceFileMutationResult WriteTextFile(string path, string content, bool overwrite, string authorityRootPath)
+            => throw new NotSupportedException();
+
         public WorkspaceFileMutationResult AppendTextFile(string path, string content)
+            => throw new NotSupportedException();
+
+        public WorkspaceFileMutationResult AppendTextFile(string path, string content, string authorityRootPath)
             => throw new NotSupportedException();
 
         public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false)
             => throw new NotSupportedException();
 
+        public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite, string destinationAuthorityRootPath)
+            => throw new NotSupportedException();
+
         public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
+            => throw new NotSupportedException();
+
+        public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite, string destinationAuthorityRootPath)
             => throw new NotSupportedException();
 
         public WorkspaceFileMutationResult DeletePath(string path, bool recursive = false)
@@ -295,6 +307,9 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
             => throw new NotSupportedException();
 
         public WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760)
+            => throw new NotSupportedException();
+
+        public WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite, int maxFiles, long maxBytes, string destinationAuthorityRootPath)
             => throw new NotSupportedException();
 
         public WorkspaceTextDiffResult DiffTextFiles(string leftPath, string rightPath, int maxLines = 160)

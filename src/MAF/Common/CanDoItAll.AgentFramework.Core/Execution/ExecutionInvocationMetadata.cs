@@ -243,6 +243,31 @@ public static class ExecutionInvocationMetadata
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
+    public static string ApplyReadOnlyExternalTargetAliases(
+        string? metadataJson,
+        IEnumerable<string>? pathsOrAliases)
+    {
+        var metadata = ParseObject(metadataJson);
+        var aliases = pathsOrAliases?
+            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+            .Where(static alias => !string.IsNullOrWhiteSpace(alias))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+        if (aliases.Length == 0)
+        {
+            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+        }
+
+        MergeExternalTargetAliases(
+            metadata,
+            ReadOnlyExternalTargetAliasesMetadataKey,
+            aliases);
+        RemoveWritableCoveredReadOnlyExternalTargetAliases(metadata);
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
     public static IReadOnlyList<string> ExtractPromptExternalTargetAliases(string? prompt)
     {
         if (string.IsNullOrWhiteSpace(prompt))

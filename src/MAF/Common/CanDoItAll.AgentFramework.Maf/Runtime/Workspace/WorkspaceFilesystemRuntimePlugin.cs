@@ -34,79 +34,121 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     public WorkspaceFileListResult ListWorkspaceDirectory(string? relativePath = null, int maxResults = 100)
     {
         var allowedPath = PrepareFileReadPath(relativePath);
-        return fileService.ListDirectory(allowedPath, maxResults);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath ?? ".",
+            () => fileService.ListDirectory(allowedPath, maxResults));
     }
 
     public WorkspaceFileListResult ListWorkspaceFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
     {
         var allowedPath = PrepareFileReadPath(relativePath);
-        return fileService.ListFiles(allowedPath, searchPattern, maxResults);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath ?? ".",
+            () => fileService.ListFiles(allowedPath, searchPattern, maxResults));
     }
 
     public WorkspaceTextSearchResult SearchWorkspace(string query, string? relativePath = null, int maxResults = 20)
     {
         var allowedPath = PrepareFileReadPath(relativePath);
-        return fileService.SearchText(query, allowedPath, maxResults);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath ?? ".",
+            () => fileService.SearchText(query, allowedPath, maxResults));
     }
 
     public WorkspaceTextFileReadResult ReadWorkspaceTextFile(string path, int maxCharacters = 12000)
     {
         var allowedPath = PrepareFileReadPath(path) ?? path;
-        return fileService.ReadTextFile(allowedPath, maxCharacters);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.ReadTextFile(allowedPath, maxCharacters));
     }
 
     public WorkspacePathStatResult StatWorkspacePath(string path)
     {
         var allowedPath = PrepareFileReadPath(path) ?? path;
-        return fileService.StatPath(allowedPath);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.StatPath(allowedPath));
     }
 
     public WorkspacePathHashResult HashWorkspacePath(string path, int maxFiles = 200, long maxBytes = 10485760)
     {
         var allowedPath = PrepareFileReadPath(path) ?? path;
-        return fileService.HashPath(allowedPath, maxFiles, maxBytes);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.HashPath(allowedPath, maxFiles, maxBytes));
     }
 
     public WorkspaceFileMutationResult CreateWorkspaceDirectory(string path)
     {
         var allowedPath = PrepareFileWritePath(path) ?? path;
-        return fileService.CreateDirectory(allowedPath);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.CreateDirectory(allowedPath));
     }
 
     public WorkspaceFileMutationResult WriteWorkspaceTextFile(string path, string content, bool overwrite = true)
     {
         var allowedPath = PrepareFileWritePath(path) ?? path;
-        return fileService.WriteTextFile(allowedPath, content, overwrite);
+        var authorityRootPath = ResolveFileWriteAuthorityRoot(allowedPath);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.WriteTextFile(allowedPath, content, overwrite, authorityRootPath));
     }
 
     public WorkspaceFileMutationResult AppendWorkspaceTextFile(string path, string content)
     {
         var allowedPath = PrepareFileWritePath(path) ?? path;
-        return fileService.AppendTextFile(allowedPath, content);
+        var authorityRootPath = ResolveFileWriteAuthorityRoot(allowedPath);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.AppendTextFile(allowedPath, content, authorityRootPath));
     }
 
     public WorkspaceFileMutationResult CopyWorkspacePath(string sourcePath, string destinationPath, bool overwrite = false)
     {
         var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
-        EnsureNoReadOnlyDescendantMutation(allowedDestinationPath, "copy or replace");
-        return fileService.CopyPath(allowedSourcePath, allowedDestinationPath, overwrite);
+        EnsureNoReadOnlyDescendantMutation(
+            allowedDestinationPath,
+            WorkspaceReadOnlyAncestorMutationOperation.CopyOrReplace);
+        return ExecuteWithSafeAccessDenial(
+            allowedSourcePath,
+            allowedDestinationPath,
+            () => fileService.CopyPath(
+                allowedSourcePath,
+                allowedDestinationPath,
+                overwrite,
+                ResolveFileWriteAuthorityRoot(allowedDestinationPath)));
     }
 
     public WorkspaceFileMutationResult MoveWorkspacePath(string sourcePath, string destinationPath, bool overwrite = false)
     {
         var allowedSourcePath = PrepareFileWritePath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
-        EnsureNoReadOnlyDescendantMutation(allowedSourcePath, "move");
-        EnsureNoReadOnlyDescendantMutation(allowedDestinationPath, "move or replace");
-        return fileService.MovePath(allowedSourcePath, allowedDestinationPath, overwrite);
+        EnsureNoReadOnlyDescendantMutation(
+            allowedSourcePath,
+            WorkspaceReadOnlyAncestorMutationOperation.Move);
+        EnsureNoReadOnlyDescendantMutation(
+            allowedDestinationPath,
+            WorkspaceReadOnlyAncestorMutationOperation.MoveOrReplace);
+        return ExecuteWithSafeAccessDenial(
+            allowedSourcePath,
+            allowedDestinationPath,
+            () => fileService.MovePath(
+                allowedSourcePath,
+                allowedDestinationPath,
+                overwrite,
+                ResolveFileWriteAuthorityRoot(allowedDestinationPath)));
     }
 
     public WorkspaceFileMutationResult DeleteWorkspacePath(string path, bool recursive = false)
     {
         var allowedPath = PrepareFileWritePath(path) ?? path;
         EnsureDeleteAllowed(allowedPath, recursive);
-        return fileService.DeletePath(allowedPath, recursive);
+        return ExecuteWithSafeAccessDenial(
+            allowedPath,
+            () => fileService.DeletePath(allowedPath, recursive));
     }
 
     public WorkspaceArchiveMutationResult ZipWorkspacePath(
@@ -118,7 +160,10 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
-        return fileService.ZipPath(allowedSourcePath, allowedDestinationPath, overwrite, maxFiles, maxBytes);
+        return ExecuteWithSafeAccessDenial(
+            allowedSourcePath,
+            allowedDestinationPath,
+            () => fileService.ZipPath(allowedSourcePath, allowedDestinationPath, overwrite, maxFiles, maxBytes));
     }
 
     public WorkspaceArchiveMutationResult UnzipWorkspaceArchive(
@@ -130,15 +175,60 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var allowedSourcePath = PrepareFileReadPath(sourcePath) ?? sourcePath;
         var allowedDestinationPath = PrepareFileWritePath(destinationPath) ?? destinationPath;
-        EnsureNoReadOnlyDescendantMutation(allowedDestinationPath, "extract into");
-        return fileService.UnzipArchive(allowedSourcePath, allowedDestinationPath, overwrite, maxFiles, maxBytes);
+        EnsureNoReadOnlyDescendantMutation(
+            allowedDestinationPath,
+            WorkspaceReadOnlyAncestorMutationOperation.ExtractInto);
+        return ExecuteWithSafeAccessDenial(
+            allowedSourcePath,
+            allowedDestinationPath,
+            () => fileService.UnzipArchive(
+                allowedSourcePath,
+                allowedDestinationPath,
+                overwrite,
+                maxFiles,
+                maxBytes,
+                ResolveFileWriteAuthorityRoot(allowedDestinationPath)));
     }
 
     public WorkspaceTextDiffResult DiffWorkspaceTextFiles(string leftPath, string rightPath, int maxLines = 160)
     {
         var allowedLeftPath = PrepareFileReadPath(leftPath) ?? leftPath;
         var allowedRightPath = PrepareFileReadPath(rightPath) ?? rightPath;
-        return fileService.DiffTextFiles(allowedLeftPath, allowedRightPath, maxLines);
+        return ExecuteWithSafeAccessDenial(
+            allowedLeftPath,
+            allowedRightPath,
+            () => fileService.DiffTextFiles(allowedLeftPath, allowedRightPath, maxLines));
+    }
+
+    private static TResult ExecuteWithSafeAccessDenial<TResult>(
+        string requestedPath,
+        Func<TResult> operation)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePath(requestedPath);
+        }
+    }
+
+    private static TResult ExecuteWithSafeAccessDenial<TResult>(
+        string firstRequestedPath,
+        string secondRequestedPath,
+        Func<TResult> operation)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw WorkspaceToolAccessDeniedException.InaccessiblePaths(
+                firstRequestedPath,
+                secondRequestedPath);
+        }
     }
 
     private string? PrepareFileReadPath(string? path)
@@ -157,7 +247,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         if (!accessSettings.CanReadFiles && !accessSettings.CanWriteFiles)
         {
-            throw new InvalidOperationException("This agent is not allowed to read workspace files.");
+            throw WorkspaceToolAccessDeniedException.FileReadDisabled();
         }
 
         EnsureExternalAliasAllowed(path, requireWrite: false);
@@ -167,7 +257,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         if (!accessSettings.CanWriteFiles)
         {
-            throw new InvalidOperationException("This agent is not allowed to write workspace files.");
+            throw WorkspaceToolAccessDeniedException.FileWriteDisabled();
         }
 
         EnsureExternalAliasAllowed(path, requireWrite: true);
@@ -204,12 +294,10 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
 
         if (requireWrite && externalAccess.CanRead(normalizedAlias))
         {
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is read-only for this run.");
+            throw WorkspaceToolAccessDeniedException.ExternalTargetReadOnly(normalizedAlias);
         }
 
-        throw new InvalidOperationException(
-            $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
+        throw WorkspaceToolAccessDeniedException.ExternalTargetNotAuthorized(normalizedAlias);
     }
 
     private void EnsureDeleteAllowed(string path, bool recursive)
@@ -223,8 +311,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
         var externalAccess = ResolveExternalTargetAccess();
         if (recursive && externalAccess.HasEffectiveReadOnlyDescendant(normalizedAlias))
         {
-            throw new InvalidOperationException(
-                $"Refusing to recursively delete external workspace path '{normalizedAlias}' because it is an ancestor of a read-only external target for this run.");
+            throw WorkspaceToolAccessDeniedException.RecursiveDeleteReadOnlyAncestor(normalizedAlias);
         }
 
         var allowedAliases = externalAccess.WritableAliases
@@ -238,20 +325,20 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
         {
             if (string.Equals(normalizedDeleteAlias, allowedAlias, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
-                    $"Refusing to delete grounded external target root '{normalizedDeleteAlias}'. Repair the scaffold in place or delete only explicit generated evidence files.");
+                throw WorkspaceToolAccessDeniedException.GroundedTargetRootDelete(normalizedDeleteAlias);
             }
 
             if (recursive &&
                 IsProtectedExternalTargetDirectoryDelete(normalizedDeleteAlias, allowedAlias))
             {
-                throw new InvalidOperationException(
-                    $"Refusing to recursively delete protected external product directory '{normalizedDeleteAlias}'. Repair source and test files in place instead.");
+                throw WorkspaceToolAccessDeniedException.ProtectedProductDirectoryDelete(normalizedDeleteAlias);
             }
         }
     }
 
-    private void EnsureNoReadOnlyDescendantMutation(string path, string operation)
+    private void EnsureNoReadOnlyDescendantMutation(
+        string path,
+        WorkspaceReadOnlyAncestorMutationOperation operation)
     {
         var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
         if (string.IsNullOrWhiteSpace(normalizedAlias) ||
@@ -260,8 +347,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             return;
         }
 
-        throw new InvalidOperationException(
-            $"Refusing to {operation} external workspace path '{normalizedAlias}' because it is an ancestor of a read-only external target for this run.");
+        throw WorkspaceToolAccessDeniedException.ReadOnlyAncestorMutation(operation, normalizedAlias);
     }
 
     private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
@@ -304,6 +390,30 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             accessSettings,
             auditScope?.AllowedExternalTargetAliases,
             auditScope?.ReadOnlyExternalTargetAliases);
+    }
+
+    private string ResolveFileWriteAuthorityRoot(string path)
+    {
+        if (IsManagedWorkspaceAbsolutePath(path))
+        {
+            return workspaceRoot;
+        }
+
+        var normalizedPath = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return workspaceRoot;
+        }
+
+        return ResolveExternalTargetAccess().WritableAliases
+                   .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
+                   .Where(alias =>
+                       !string.IsNullOrWhiteSpace(alias) &&
+                       (string.Equals(normalizedPath, alias, StringComparison.OrdinalIgnoreCase) ||
+                        normalizedPath.StartsWith(alias + "/", StringComparison.OrdinalIgnoreCase)))
+                   .OrderByDescending(alias => alias!.Length)
+                   .FirstOrDefault()
+               ?? normalizedPath;
     }
 
     private static bool IsProtectedExternalTargetDirectoryDelete(string normalizedDeleteAlias, string allowedAlias)

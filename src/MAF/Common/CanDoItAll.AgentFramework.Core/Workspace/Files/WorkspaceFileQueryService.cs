@@ -7,11 +7,13 @@ namespace CanDoItAll.AgentFramework.Core;
 internal sealed class WorkspaceFileQueryService
 {
     private const int MaxSearchFiles = 512;
+    private const int MaximumTraversalEntries = 2_048;
     private const int MaxDiffInputLines = 240;
 
     private readonly WorkspacePathPolicy pathPolicy;
     private readonly WorkspaceFileReceiptWriter receiptWriter;
     private readonly WorkspaceTextContentGuard textContentGuard;
+    private readonly Func<string, IReadOnlyList<string>> enumerateDirectoryEntries;
 
     private readonly record struct WorkspaceFileListRequest(
         string? RelativePath,
@@ -20,11 +22,13 @@ internal sealed class WorkspaceFileQueryService
     public WorkspaceFileQueryService(
         WorkspacePathPolicy pathPolicy,
         WorkspaceFileReceiptWriter receiptWriter,
-        WorkspaceTextContentGuard textContentGuard)
+        WorkspaceTextContentGuard textContentGuard,
+        Func<string, IReadOnlyList<string>>? enumerateDirectoryEntries = null)
     {
         this.pathPolicy = pathPolicy;
         this.receiptWriter = receiptWriter;
         this.textContentGuard = textContentGuard;
+        this.enumerateDirectoryEntries = enumerateDirectoryEntries ?? EnumerateDirectoryEntries;
     }
 
     public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
@@ -82,7 +86,7 @@ internal sealed class WorkspaceFileQueryService
                      new EnumerationOptions
                      {
                          RecurseSubdirectories = false,
-                         IgnoreInaccessible = true,
+                         IgnoreInaccessible = false,
                          AttributesToSkip = FileAttributes.ReparsePoint
                      }))
         {
@@ -183,19 +187,14 @@ internal sealed class WorkspaceFileQueryService
         var limit = Math.Clamp(maxResults, 1, 400);
         var entries = new List<WorkspaceFileListEntry>();
         var truncated = false;
-
-        var enumerationSearchPattern = GetEnumerationSearchPattern(normalizedSearchPattern);
-        foreach (var path in Directory.EnumerateFileSystemEntries(
+        var listingBudgetReached = false;
+        var traversal = new DirectoryTraversalState();
+        foreach (var path in EnumerateDirectoryTree(
                      resolution.FullPath,
-                     enumerationSearchPattern,
-                     new EnumerationOptions
-                     {
-                         RecurseSubdirectories = true,
-                         IgnoreInaccessible = true,
-                         AttributesToSkip = FileAttributes.ReparsePoint
-                     }))
+                     ShouldIgnorePath,
+                     traversal))
         {
-            if (ShouldIgnorePath(path))
+            if (!TryClassifyRegularFile(path, traversal))
             {
                 continue;
             }
@@ -208,6 +207,7 @@ internal sealed class WorkspaceFileQueryService
             if (entries.Count >= limit)
             {
                 truncated = true;
+                listingBudgetReached = true;
                 break;
             }
 
@@ -221,9 +221,23 @@ internal sealed class WorkspaceFileQueryService
         var listMessage = entries.Count == 0
             ? $"No workspace paths matched '{normalizedSearchPattern}' under '{resolution.RelativePath}'."
             : $"Listed {entries.Count} workspace path(s) under '{resolution.RelativePath}'.";
-        if (truncated)
+        if (traversal.InaccessiblePathCount > 0)
+        {
+            truncated = true;
+            listMessage = entries.Count == 0
+                ? $"No accessible workspace paths matched '{normalizedSearchPattern}' under '{resolution.RelativePath}'. The listing is incomplete because {FormatInaccessiblePathCount(traversal.InaccessiblePathCount)}; inspect or narrow relativePath before concluding that no match exists."
+                : $"{listMessage} Results are incomplete because {FormatInaccessiblePathCount(traversal.InaccessiblePathCount)}.";
+        }
+
+        if (listingBudgetReached)
         {
             listMessage += " Results are incomplete because the listing budget was reached. Narrow relativePath or searchPattern, or increase maxResults up to 400.";
+        }
+
+        if (traversal.TraversalBudgetReached)
+        {
+            truncated = true;
+            listMessage += $" Results are incomplete because the traversal budget of {MaximumTraversalEntries} filesystem entries was reached. Narrow relativePath or searchPattern and retry before treating the listing as conclusive.";
         }
 
         return new WorkspaceFileListResult(
@@ -301,10 +315,12 @@ internal sealed class WorkspaceFileQueryService
         var limit = Math.Clamp(maxResults, 1, 50);
         var matches = new List<WorkspaceTextSearchMatch>();
         var skippedGuardedFiles = 0;
+        var inaccessibleFiles = 0;
         var fileLimitReached = false;
         var searchedFiles = 0;
+        var traversal = new DirectoryTraversalState();
 
-        foreach (var filePath in EnumerateSearchFiles(resolution.FullPath))
+        foreach (var filePath in EnumerateSearchFiles(resolution.FullPath, traversal))
         {
             if (searchedFiles >= MaxSearchFiles)
             {
@@ -315,6 +331,12 @@ internal sealed class WorkspaceFileQueryService
             searchedFiles++;
             var relativeFilePath = pathPolicy.ToRelativePath(filePath);
             var guardFailure = textContentGuard.TryLoadForSearch(filePath, relativeFilePath, out var text);
+            if (guardFailure == WorkspaceTextGuardFailure.Inaccessible)
+            {
+                inaccessibleFiles++;
+                continue;
+            }
+
             if (guardFailure != WorkspaceTextGuardFailure.None)
             {
                 skippedGuardedFiles++;
@@ -343,8 +365,13 @@ internal sealed class WorkspaceFileQueryService
             .ThenBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var truncated = fileLimitReached || matches.Count > limit;
-        if (matches.Count > limit)
+        var resultLimitReached = matches.Count > limit;
+        var inaccessibleItemCount = traversal.InaccessiblePathCount + inaccessibleFiles;
+        var truncated = fileLimitReached ||
+                        resultLimitReached ||
+                        traversal.TraversalBudgetReached ||
+                        inaccessibleItemCount > 0;
+        if (resultLimitReached)
         {
             matches = matches.Take(limit).ToList();
         }
@@ -353,13 +380,28 @@ internal sealed class WorkspaceFileQueryService
         {
             0 when fileLimitReached =>
                 $"No matches were found for '{query}' within the first {MaxSearchFiles} searchable workspace files. The search is incomplete; narrow relativePath and retry before concluding that no match exists.",
+            0 when traversal.TraversalBudgetReached =>
+                $"No matches were found for '{query}' within the first {MaximumTraversalEntries} traversed filesystem entries. The search is incomplete because the traversal budget was reached; narrow relativePath and retry before concluding that no match exists.",
+            0 when inaccessibleItemCount > 0 =>
+                $"No accessible matches were found for '{query}'. The search is incomplete because {FormatInaccessibleSearchItemCount(traversal.InaccessiblePathCount, inaccessibleFiles)}; inspect or narrow relativePath before concluding that no match exists.",
             0 => $"No matches found for '{query}'.",
             _ => $"Found {matches.Count} workspace match(es) for '{query}'."
         };
 
-        if (truncated && matches.Count > 0)
+        if ((fileLimitReached || resultLimitReached) && matches.Count > 0)
         {
             resultMessage += " Results are incomplete because the file-scan or result budget was reached. Narrow relativePath or increase maxResults up to 50.";
+        }
+
+        if (traversal.TraversalBudgetReached && matches.Count > 0)
+        {
+            resultMessage += $" Results are incomplete because the traversal budget of {MaximumTraversalEntries} filesystem entries was reached. Narrow relativePath and retry before treating the search as conclusive.";
+        }
+
+        if (inaccessibleItemCount > 0 &&
+            (matches.Count > 0 || fileLimitReached || traversal.TraversalBudgetReached))
+        {
+            resultMessage += $" Results are also incomplete because {FormatInaccessibleSearchItemCount(traversal.InaccessiblePathCount, inaccessibleFiles)}. Inspect or narrow relativePath before treating the search as conclusive.";
         }
 
         if (skippedGuardedFiles > 0)
@@ -475,7 +517,7 @@ internal sealed class WorkspaceFileQueryService
             var childCount = Directory.EnumerateFileSystemEntries(resolution.FullPath, "*", new EnumerationOptions
             {
                 RecurseSubdirectories = false,
-                IgnoreInaccessible = true,
+                IgnoreInaccessible = false,
                 AttributesToSkip = FileAttributes.ReparsePoint
             }).Count();
             var message = $"'{resolution.RelativePath}' is a workspace directory.";
@@ -574,6 +616,19 @@ internal sealed class WorkspaceFileQueryService
         DateTimeOffset startedAtUtc)
     {
         var guardFailure = textContentGuard.TryLoadForSearch(resolution.FullPath, resolution.RelativePath, out var text);
+        if (guardFailure == WorkspaceTextGuardFailure.Inaccessible)
+        {
+            var inaccessibleMessage = $"The search is incomplete because file '{resolution.RelativePath}' could not be read. Inspect its access or retry before concluding that no match exists.";
+            return new WorkspaceTextSearchResult(
+                Succeeded: true,
+                Message: inaccessibleMessage,
+                Receipt: receiptWriter.CreateReceipt("workspace_search", false, "Succeeded", inaccessibleMessage, string.Empty, [resolution.RelativePath], [], startedAtUtc),
+                Query: query,
+                RootPath: resolution.RelativePath,
+                Matches: [],
+                IsTruncated: true);
+        }
+
         if (guardFailure != WorkspaceTextGuardFailure.None)
         {
             var failureMessage = guardFailure switch
@@ -640,7 +695,9 @@ internal sealed class WorkspaceFileQueryService
                 LastWriteTimeUtc: Directory.Exists(fullPath) ? Directory.GetLastWriteTimeUtc(fullPath) : null);
     }
 
-    private IEnumerable<string> EnumerateSearchFiles(string rootPath)
+    private IEnumerable<string> EnumerateSearchFiles(
+        string rootPath,
+        DirectoryTraversalState traversal)
     {
         if (File.Exists(rootPath))
         {
@@ -652,22 +709,155 @@ internal sealed class WorkspaceFileQueryService
             yield break;
         }
 
-        foreach (var filePath in Directory.EnumerateFiles(
+        foreach (var filePath in EnumerateDirectoryTree(
                      rootPath,
-                     "*",
-                     new EnumerationOptions
-                     {
-                         RecurseSubdirectories = true,
-                         IgnoreInaccessible = true,
-                         AttributesToSkip = FileAttributes.ReparsePoint
-                     }))
+                     path => ShouldIgnoreSearchPath(rootPath, path),
+                     traversal))
         {
-            if (ShouldIgnoreSearchPath(rootPath, filePath))
+            if (!TryClassifyRegularFile(filePath, traversal))
             {
                 continue;
             }
 
             yield return filePath;
+        }
+    }
+
+    private IEnumerable<string> EnumerateDirectoryTree(
+        string rootPath,
+        Func<string, bool> shouldIgnore,
+        DirectoryTraversalState traversal)
+    {
+        var pendingDirectories = new Stack<string>();
+        pendingDirectories.Push(rootPath);
+        while (pendingDirectories.TryPop(out var directory))
+        {
+            if (!traversal.TryVisitEntry(MaximumTraversalEntries))
+            {
+                yield break;
+            }
+
+            IReadOnlyList<string> children;
+            try
+            {
+                children = enumerateDirectoryEntries(directory);
+            }
+            catch (Exception exception) when (
+                (exception is UnauthorizedAccessException or IOException) &&
+                !string.Equals(directory, rootPath, StringComparison.OrdinalIgnoreCase))
+            {
+                traversal.InaccessiblePathCount++;
+                continue;
+            }
+
+            foreach (var child in children.Order(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!traversal.TryVisitEntry(MaximumTraversalEntries))
+                {
+                    yield break;
+                }
+
+                FileAttributes attributes;
+                try
+                {
+                    attributes = File.GetAttributes(child);
+                }
+                catch (Exception exception) when (
+                    exception is UnauthorizedAccessException or IOException)
+                {
+                    traversal.InaccessiblePathCount++;
+                    continue;
+                }
+
+                if (attributes.HasFlag(FileAttributes.ReparsePoint) ||
+                    shouldIgnore(child))
+                {
+                    continue;
+                }
+
+                yield return child;
+                if (attributes.HasFlag(FileAttributes.Directory))
+                {
+                    pendingDirectories.Push(child);
+                }
+            }
+        }
+    }
+
+    private static IReadOnlyList<string> EnumerateDirectoryEntries(string directory)
+        => Directory.EnumerateFileSystemEntries(
+                directory,
+                "*",
+                new EnumerationOptions
+                {
+                    RecurseSubdirectories = false,
+                    IgnoreInaccessible = false,
+                    AttributesToSkip = FileAttributes.ReparsePoint
+                })
+            .Take(MaximumTraversalEntries + 1)
+            .ToArray();
+
+    private static string FormatInaccessiblePathCount(int count)
+        => count == 1
+            ? "1 filesystem path could not be inspected"
+            : $"{count} filesystem paths could not be inspected";
+
+    private static bool TryClassifyRegularFile(
+        string path,
+        DirectoryTraversalState traversal)
+    {
+        try
+        {
+            var attributes = File.GetAttributes(path);
+            return !attributes.HasFlag(FileAttributes.Directory) &&
+                   !attributes.HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch (Exception exception) when (
+            exception is UnauthorizedAccessException or IOException)
+        {
+            traversal.InaccessiblePathCount++;
+            return false;
+        }
+    }
+
+    private static string FormatInaccessibleSearchItemCount(
+        int inaccessiblePathCount,
+        int inaccessibleFileCount)
+    {
+        var descriptions = new List<string>(2);
+        if (inaccessiblePathCount > 0)
+        {
+            descriptions.Add(FormatInaccessiblePathCount(inaccessiblePathCount));
+        }
+
+        if (inaccessibleFileCount > 0)
+        {
+            descriptions.Add(inaccessibleFileCount == 1
+                ? "1 searchable file could not be read"
+                : $"{inaccessibleFileCount} searchable files could not be read");
+        }
+
+        return string.Join(" and ", descriptions);
+    }
+
+    private sealed class DirectoryTraversalState
+    {
+        public int InaccessiblePathCount { get; set; }
+
+        public int TraversedEntryCount { get; private set; }
+
+        public bool TraversalBudgetReached { get; private set; }
+
+        public bool TryVisitEntry(int maximumEntries)
+        {
+            if (TraversedEntryCount >= maximumEntries)
+            {
+                TraversalBudgetReached = true;
+                return false;
+            }
+
+            TraversedEntryCount++;
+            return true;
         }
     }
 
@@ -903,18 +1093,6 @@ internal sealed class WorkspaceFileQueryService
         return new WorkspaceFileListRequest(
             string.IsNullOrWhiteSpace(normalizedRelativePath) ? null : normalizedRelativePath,
             embeddedSearchPattern);
-    }
-
-    private static string GetEnumerationSearchPattern(string normalizedSearchPattern)
-    {
-        var pattern = normalizedSearchPattern.Replace('\\', '/');
-        if (pattern.Contains('/', StringComparison.Ordinal) ||
-            pattern.Contains("**", StringComparison.Ordinal))
-        {
-            return "*";
-        }
-
-        return pattern;
     }
 
     private static bool MatchesSearchPattern(string rootFullPath, string candidateFullPath, string normalizedSearchPattern)

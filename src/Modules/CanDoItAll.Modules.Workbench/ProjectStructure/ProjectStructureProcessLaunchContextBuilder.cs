@@ -15,7 +15,9 @@ internal static class ProjectStructureProcessLaunchContextBuilder
     {
         return new ProjectStructureProcessLaunchContext(
             BuildContextSummary(surface, focusNode),
-            ResolveOutputRoot(surface, focusNode));
+            ProjectStructureOutputRootAuthorityResolver.ResolveProcessOutputRoot(
+                surface,
+                focusNode));
     }
 
     private static string BuildContextSummary(
@@ -228,128 +230,6 @@ internal static class ProjectStructureProcessLaunchContextBuilder
 
         return [(focusNode, 0), .. rows];
     }
-
-    private static string ResolveOutputRoot(
-        ProjectStructureSurface? surface,
-        ProjectStructureNode? focusNode)
-    {
-        var direct = ResolveOutputRoot(focusNode);
-        if (!string.IsNullOrWhiteSpace(direct) || surface is null || focusNode is null)
-        {
-            return direct;
-        }
-
-        foreach (var node in EnumerateOutputRootAuthorityNodes(surface, focusNode))
-        {
-            var candidate = ResolveOutputRoot(node);
-            if (!string.IsNullOrWhiteSpace(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static IEnumerable<ProjectStructureNode> EnumerateOutputRootAuthorityNodes(
-        ProjectStructureSurface surface,
-        ProjectStructureNode focusNode)
-    {
-        var nodesById = surface.Nodes
-            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
-            .GroupBy(node => node.Id, StringComparer.Ordinal)
-            .Where(group => group.Count() == 1)
-            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
-        var explicitParentsByChildId = surface.Links
-            .Where(link =>
-                !string.IsNullOrWhiteSpace(link.SourceId) &&
-                !string.IsNullOrWhiteSpace(link.TargetId) &&
-                link.Kind is ProjectObjectLinkKind.Contains or ProjectObjectLinkKind.BelongsTo)
-            .GroupBy(link => link.TargetId, StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group
-                    .Select(link => link.SourceId)
-                    .Distinct(StringComparer.Ordinal)
-                    .Order(StringComparer.Ordinal)
-                    .ToArray(),
-                StringComparer.Ordinal);
-        var pending = new Queue<ProjectStructureNode>();
-        var visited = new HashSet<string>(StringComparer.Ordinal)
-        {
-            focusNode.Id
-        };
-
-        EnqueueParentAuthorities(focusNode);
-        while (pending.TryDequeue(out var node))
-        {
-            yield return node;
-            EnqueueParentAuthorities(node);
-        }
-
-        void EnqueueParentAuthorities(ProjectStructureNode node)
-        {
-            Enqueue(node.ParentId);
-            if (!explicitParentsByChildId.TryGetValue(node.Id, out var explicitParentIds))
-            {
-                return;
-            }
-
-            foreach (var parentId in explicitParentIds)
-            {
-                Enqueue(parentId);
-            }
-        }
-
-        void Enqueue(string? nodeId)
-        {
-            if (string.IsNullOrWhiteSpace(nodeId) ||
-                !visited.Add(nodeId) ||
-                !nodesById.TryGetValue(nodeId, out var node))
-            {
-                return;
-            }
-
-            pending.Enqueue(node);
-        }
-    }
-
-    private static string ResolveOutputRoot(ProjectStructureNode? node)
-    {
-        if (node is null || node.ObjectType != ProjectObjectType.ProjectBlock)
-        {
-            return string.Empty;
-        }
-
-        return TryReadOutputRootFromMetadata(node.MetadataJson);
-    }
-
-    private static string TryReadOutputRootFromMetadata(string? metadataJson)
-    {
-        if (string.IsNullOrWhiteSpace(metadataJson))
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            var metadata = ProjectObjectMetadataSerializer.Parse(metadataJson);
-            return FirstNonEmpty(
-                metadata.ProjectBlock?.OutputRoot,
-                metadata.ProjectBlock?.ProductRoot,
-                metadata.ProjectBlock?.TargetRoot,
-                metadata.ProjectBlock?.RepositoryRoot,
-                metadata.ProjectBlock?.WorkspaceRoot);
-        }
-        catch (InvalidOperationException)
-        {
-        }
-
-        return string.Empty;
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static string NormalizeContextText(string value, int maxLength)
     {

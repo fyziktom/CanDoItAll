@@ -663,6 +663,7 @@ public sealed class ProjectStructureGanttPanelTests
                 null!,
                 null!,
                 null!,
+                null!,
                 null!),
             factory,
             clock);

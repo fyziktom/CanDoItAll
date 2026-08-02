@@ -108,7 +108,12 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
             {
                 text = await File.ReadAllTextAsync(file, cancellationToken);
             }
-            catch
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (
+                exception is UnauthorizedAccessException or IOException)
             {
                 continue;
             }

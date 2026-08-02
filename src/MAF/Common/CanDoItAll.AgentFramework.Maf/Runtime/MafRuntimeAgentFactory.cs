@@ -472,6 +472,7 @@ internal sealed class MafRuntimeAgentFactory
             var succeeded = false;
             var failureMessage = string.Empty;
             var failureMessageSafeForPersistence = false;
+            Guid? directReceiptExecutionRunId = null;
             using var runtimeToolOwnershipScope = AgentRuntimeToolOwnershipContext.BeginScope(runtimeToolOwnership);
             try
             {
@@ -500,6 +501,10 @@ internal sealed class MafRuntimeAgentFactory
                     policyContext.HasEffectiveApprovalPath);
 
                 var result = await next(context, cancellationToken);
+                directReceiptExecutionRunId =
+                    MafRuntimeToolInvocationResultClassifier.ResolveDurableReceiptExecutionRunId(
+                        functionName,
+                        result);
                 succeeded = MafRuntimeToolInvocationResultClassifier.IsSuccessful(result);
                 if (succeeded)
                 {
@@ -562,7 +567,8 @@ internal sealed class MafRuntimeAgentFactory
                     traceSequence,
                     succeeded,
                     failureMessage,
-                    failureMessageSafeForPersistence);
+                    failureMessageSafeForPersistence,
+                    directReceiptExecutionRunId);
             }
         });
         builder.UseOpenTelemetry(
