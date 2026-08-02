@@ -256,6 +256,29 @@ public sealed class AgentCatalogPanelTests
     }
 
     [Fact]
+    public void Catalog_marks_card_selection_as_handled_for_requested_dialog_echo()
+    {
+        var agent = CreateAgent(Guid.NewGuid(), "Selected agent", string.Empty);
+        using var context = CreateCatalogTestContext(
+            new RecordingAgentChatLauncher(agent));
+        var cut = context.Render<AgentCatalogPanel>(parameters => parameters
+            .Add(component => component.InitialAgents, new[] { agent })
+            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
+            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
+            .Add(component => component.SkipCatalogRepair, true));
+
+        cut.Find("[data-testid='agents-catalog-card']").Click();
+        var openedRequestedAgentIdField = typeof(AgentCatalogPanel).GetField(
+            "openedRequestedAgentId",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingFieldException(
+                typeof(AgentCatalogPanel).FullName,
+                "openedRequestedAgentId");
+
+        Assert.Equal(agent.Id, openedRequestedAgentIdField.GetValue(cut.Instance));
+    }
+
+    [Fact]
     public async Task Deleted_agent_result_clears_selection_instead_of_selecting_another_agent()
     {
         var deleted = CreateAgent(Guid.NewGuid(), "Deleted agent", string.Empty);

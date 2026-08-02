@@ -160,6 +160,29 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OpenAiProviderDriver_UsesNativeMinimalReasoningValue()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"status":"completed","output_text":"configured"}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            "gpt-5",
+            """{"modelParameters":{"reasoningEffort":"minimal"}}""",
+            transport: ProviderTransportKind.Responses);
+
+        await driver.CompleteChatAsync(CreateChatRequest(provider, "gpt-5"));
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal(
+            "minimal",
+            body.RootElement.GetProperty("reasoning").GetProperty("effort").GetString());
+    }
+
+    [Fact]
     public async Task OpenAiProviderDriver_UsesChatCompletionsWireNamesForReasoningAndMaxOutputTokens()
     {
         var handler = new CapturingHandler((request, body) =>
@@ -312,6 +335,135 @@ public sealed class ConcreteProviderDriverTests
         Assert.Contains("\"messages\"", request.Body, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task AzureOpenAiProviderDriver_ChatCompletionsUsesDeploymentEndpointAndAgentReasoningOverride()
+    {
+        const string deployment = "reasoning-deployment";
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse(
+                """{"choices":[{"message":{"content":"azure chat response"}}],"usage":{"prompt_tokens":5,"completion_tokens":6}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new AzureOpenAiProviderDriver(httpClient, new FixedCredentialResolver("azure-key"));
+        var provider = CreateAzureReasoningProvider(
+            deployment,
+            ProviderTransportKind.ChatCompletions);
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            deployment,
+            "system",
+            [new ProviderTestChatMessage(ChatMessageRole.User, "hello", DateTimeOffset.UnixEpoch)],
+            "prompt",
+            ModelParameterConfigurationJson: AgentThinkingEffortPolicy.WriteAgentOverride(
+                "{}",
+                AgentReasoningEffortLevel.High)));
+
+        Assert.Equal("azure chat response", result.ResponseText);
+        Assert.Equal(5, result.InputTokens);
+        Assert.Equal(6, result.OutputTokens);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(
+            "/openai/deployments/reasoning-deployment/chat/completions?api-version=2024-10-21",
+            request.PathAndQuery);
+        Assert.Equal("azure-key", request.Headers["api-key"]);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal(3, root.EnumerateObject().Count());
+        Assert.False(root.GetProperty("stream").GetBoolean());
+        Assert.Equal("high", root.GetProperty("reasoning_effort").GetString());
+        Assert.False(root.TryGetProperty("model", out _));
+        Assert.False(root.TryGetProperty("input", out _));
+        Assert.False(root.TryGetProperty("reasoning", out _));
+        Assert.False(root.TryGetProperty("store", out _));
+        var messages = root.GetProperty("messages").EnumerateArray().ToArray();
+        Assert.Collection(
+            messages,
+            message => AssertResponseInputMessage(message, "system", "system"),
+            message => AssertResponseInputMessage(message, "user", "hello"),
+            message => AssertResponseInputMessage(message, "user", "prompt"));
+    }
+
+    [Fact]
+    public async Task AzureOpenAiProviderDriver_ResponsesUsesV1EndpointAndAgentReasoningOverride()
+    {
+        const string deployment = "reasoning-deployment";
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse(
+                """
+                {
+                  "status": "completed",
+                  "output_text": "azure response",
+                  "usage": {
+                    "input_tokens": 7,
+                    "output_tokens": 8
+                  }
+                }
+                """));
+        using var httpClient = new HttpClient(handler);
+        var driver = new AzureOpenAiProviderDriver(httpClient, new FixedCredentialResolver("azure-key"));
+        var provider = CreateAzureReasoningProvider(
+            deployment,
+            ProviderTransportKind.Responses);
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            deployment,
+            "system",
+            [new ProviderTestChatMessage(ChatMessageRole.User, "hello", DateTimeOffset.UnixEpoch)],
+            "prompt",
+            ModelParameterConfigurationJson: AgentThinkingEffortPolicy.WriteAgentOverride(
+                "{}",
+                AgentReasoningEffortLevel.High)));
+
+        Assert.Equal("azure response", result.ResponseText);
+        Assert.Equal(7, result.InputTokens);
+        Assert.Equal(8, result.OutputTokens);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/openai/v1/responses", request.PathAndQuery);
+        Assert.Equal("azure-key", request.Headers["api-key"]);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal(5, root.EnumerateObject().Count());
+        Assert.Equal(deployment, root.GetProperty("model").GetString());
+        Assert.False(root.GetProperty("stream").GetBoolean());
+        Assert.False(root.GetProperty("store").GetBoolean());
+        Assert.Equal("high", root.GetProperty("reasoning").GetProperty("effort").GetString());
+        Assert.False(root.TryGetProperty("messages", out _));
+        Assert.False(root.TryGetProperty("reasoning_effort", out _));
+        var input = root.GetProperty("input").EnumerateArray().ToArray();
+        Assert.Collection(
+            input,
+            message => AssertResponseInputMessage(message, "system", "system"),
+            message => AssertResponseInputMessage(message, "user", "hello"),
+            message => AssertResponseInputMessage(message, "user", "prompt"));
+    }
+
+    [Fact]
+    public async Task AzureOpenAiProviderDriver_RejectsReasoningEffortWithoutProviderMetadataBeforeDispatch()
+    {
+        const string deployment = "unknown-deployment";
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"unexpected"}}]}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new AzureOpenAiProviderDriver(httpClient, new FixedCredentialResolver("azure-key"));
+        var provider = CreateProvider(
+            ProviderKind.AzureOpenAi,
+            "https://azure-openai.test",
+            deployment);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+                provider,
+                deployment,
+                "system",
+                [],
+                "Reply with OK.",
+                ModelParameterConfigurationJson: """{"modelParameters":{"reasoningEffort":"medium"}}""")));
+
+        Assert.Contains("provider-scoped thinking-effort capability metadata", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
     [Theory]
     [InlineData("https://azure-openai.test/openai/deployments/gpt-4o", "legacy deployment endpoint")]
     [InlineData("https://azure-openai.test?api-version=preview", "query parameters or fragments")]
@@ -361,6 +513,35 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OpenAiProviderDriver_IgnoresLegacyOllamaThinkingAliasesForGpt4o()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"vision response"}}]}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            "gpt-4o",
+            """{"think":true}""");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "gpt-4o",
+            "system",
+            [],
+            "Describe the screenshot.",
+            Attachments: [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])],
+            ModelParameterConfigurationJson: """{"modelParameters":{"think":false}}"""));
+
+        Assert.Equal("vision response", result.ResponseText);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.False(body.RootElement.TryGetProperty("reasoning_effort", out _));
+        Assert.Contains("\"type\":\"image_url\"", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task OllamaProviderDriver_SerializesImageAttachmentsAsNativeImages()
     {
         var handler = new CapturingHandler((request, body) =>
@@ -385,7 +566,7 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
-    public async Task OllamaProviderDriver_UsesThinkingWhenContentIsEmpty()
+    public async Task OllamaProviderDriver_DoesNotExposeThinkingWhenAssistantContentIsEmpty()
     {
         var handler = new CapturingHandler((request, body) =>
             JsonResponse("""{"message":{"content":"","thinking":"red circle and blue square"},"prompt_eval_count":13,"eval_count":14}"""));
@@ -401,13 +582,13 @@ public sealed class ConcreteProviderDriverTests
             "Describe the screenshot.",
             [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])]));
 
-        Assert.Equal("red circle and blue square", result.ResponseText);
+        Assert.Equal(string.Empty, result.ResponseText);
         Assert.Equal(13, result.InputTokens);
         Assert.Equal(14, result.OutputTokens);
     }
 
     [Fact]
-    public async Task OllamaProviderDriver_SerializesConfiguredNumPredictAsChatOptions()
+    public async Task OllamaProviderDriver_SerializesExplicitNoneAsFalseAndConfiguredNumPredictAsChatOptions()
     {
         var handler = new CapturingHandler((request, body) =>
             JsonResponse("""{"message":{"content":"vision response"},"prompt_eval_count":13,"eval_count":14}"""));
@@ -417,7 +598,7 @@ public sealed class ConcreteProviderDriverTests
             ProviderKind.Ollama,
             "http://ollama.test",
             "qwen3.5:2b",
-            """{"modelParameters":{"numPredict":80,"think":false}}""");
+            """{"modelParameters":{"numPredict":80}}""");
 
         var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
             provider,
@@ -425,7 +606,8 @@ public sealed class ConcreteProviderDriverTests
             "system",
             [],
             "Describe the screenshot.",
-            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])]));
+            [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])],
+            """{"modelParameters":{"reasoningEffort":"none"}}"""));
 
         Assert.Equal("vision response", result.ResponseText);
         var request = Assert.Single(handler.Requests);
@@ -460,13 +642,11 @@ public sealed class ConcreteProviderDriverTests
         Assert.Equal(
             AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
             body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
-        Assert.Equal(
-            AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled,
-            body.RootElement.GetProperty("think").GetBoolean());
+        Assert.False(body.RootElement.TryGetProperty("think", out _));
     }
 
     [Fact]
-    public async Task OllamaProviderDriver_PrefersRequestModelParametersOverProviderDefaults()
+    public async Task OllamaProviderDriver_MapsBinaryEnabledEffortToTrueAndPrefersRequestParameters()
     {
         var handler = new CapturingHandler((request, body) =>
             JsonResponse("""{"message":{"content":"vision response"},"prompt_eval_count":13,"eval_count":14}"""));
@@ -476,7 +656,7 @@ public sealed class ConcreteProviderDriverTests
             ProviderKind.Ollama,
             "http://ollama.test",
             "qwen3.5:2b",
-            """{"modelParameters":{"numPredict":4096,"think":true}}""");
+            """{"modelParameters":{"numPredict":4096,"reasoningEffort":"none"}}""");
 
         var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
             provider,
@@ -485,13 +665,81 @@ public sealed class ConcreteProviderDriverTests
             [],
             "Describe the screenshot.",
             [new ProviderChatAttachment("screen.png", "image/png", [1, 2, 3])],
-            """{"modelParameters":{"numPredict":512,"think":false}}"""));
+            """{"modelParameters":{"numPredict":512,"reasoningEffort":"medium"}}"""));
 
         Assert.Equal("vision response", result.ResponseText);
         var request = Assert.Single(handler.Requests);
         using var body = JsonDocument.Parse(request.Body);
         Assert.Equal(512, body.RootElement.GetProperty("options").GetProperty("num_predict").GetInt32());
-        Assert.False(body.RootElement.GetProperty("think").GetBoolean());
+        Assert.True(body.RootElement.GetProperty("think").GetBoolean());
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_MapsGptOssEffortToNativeLevel()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"response"},"prompt_eval_count":13,"eval_count":14}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "gpt-oss:20b");
+
+        await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "gpt-oss:20b",
+            "system",
+            [],
+            "Reply with OK.",
+            ModelParameterConfigurationJson: """{"modelParameters":{"reasoningEffort":"high"}}"""));
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal("high", body.RootElement.GetProperty("think").GetString());
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_RejectsGptOssDisableBeforeHttpDispatch()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"unexpected"}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "gptoss32k:latest");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+                provider,
+                "gptoss32k:latest",
+                "system",
+                [],
+                "Reply with OK.",
+                ModelParameterConfigurationJson: """{"modelParameters":{"reasoningEffort":"none"}}""")));
+
+        Assert.Contains("none", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Allowed values are low, medium, high", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_RejectsExtraHighBeforeHttpDispatch()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"unexpected"}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "qwen3.5:2b");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+                provider,
+                "qwen3.5:2b",
+                "system",
+                [],
+                "Reply with OK.",
+                ModelParameterConfigurationJson: """{"modelParameters":{"reasoningEffort":"xhigh"}}""")));
+
+        Assert.Contains("xhigh", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Allowed values", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
@@ -517,13 +765,107 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OllamaProviderDriver_UsesShowCapabilitiesWhenTagsOmitThinkingMetadata()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            request.RequestUri!.AbsolutePath switch
+            {
+                "/api/tags" => JsonResponse(
+                    """{"models":[{"name":"deepseek-r1:14b","details":{"family":"qwen2"}}]}"""),
+                "/api/show" => JsonResponse(
+                    """{"details":{"family":"qwen2"},"capabilities":["tools","thinking","completion"]}"""),
+                _ => JsonResponse("{}", HttpStatusCode.NotFound)
+            });
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "deepseek-r1:14b");
+
+        var models = await driver.ListModelsAsync(
+            new ProviderModelCatalogRequest(
+                provider,
+                AgentProviderCapabilityKind.ChatCompletion));
+
+        var model = Assert.Single(models);
+        var capability = Assert.IsType<ProviderModelThinkingEffortCapability>(
+            model.ThinkingEffortCapability);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Supported, capability.Status);
+        Assert.Equal(AgentThinkingEffortCapabilitySource.Discovered, capability.Source);
+        Assert.Equal(AgentThinkingEffortControlMode.BooleanToggle, capability.ControlMode);
+        Assert.Equal(
+            [AgentReasoningEffortLevel.None, AgentReasoningEffortLevel.Medium],
+            capability.AllowedEfforts);
+        Assert.Collection(
+            handler.Requests,
+            request => Assert.Equal("/api/tags", request.PathAndQuery),
+            request =>
+            {
+                Assert.Equal("/api/show", request.PathAndQuery);
+                Assert.Contains("\"model\":\"deepseek-r1:14b\"", request.Body, StringComparison.Ordinal);
+                Assert.Contains("\"verbose\":false", request.Body, StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_RejectsInvalidShowCapabilityShape()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            request.RequestUri!.AbsolutePath switch
+            {
+                "/api/tags" => JsonResponse("""{"models":[{"name":"custom-model"}]}"""),
+                "/api/show" => JsonResponse("""{"capabilities":"thinking"}"""),
+                _ => JsonResponse("{}", HttpStatusCode.NotFound)
+            });
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "custom-model");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            driver.ListModelsAsync(
+                new ProviderModelCatalogRequest(
+                    provider,
+                    AgentProviderCapabilityKind.ChatCompletion)));
+
+        Assert.Contains("model details for 'custom-model'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("must be an array", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task OllamaProviderDriver_UsesTagsChatAndCreateEndpoints()
     {
         var handler = new CapturingHandler((request, body) =>
         {
             return request.RequestUri!.AbsolutePath switch
             {
-                "/api/tags" => JsonResponse("""{"models":[{"name":"llama3.1"},{"name":"qwen"}]}"""),
+                "/api/tags" => JsonResponse(
+                    """
+                    {
+                      "models": [
+                        {
+                          "name": "llama3.1",
+                          "details": { "family": "llama" },
+                          "capabilities": ["completion"]
+                        },
+                        {
+                          "name": "qwen3.5:2b",
+                          "details": { "family": "qwen35" },
+                          "capabilities": ["completion", "thinking"]
+                        },
+                        {
+                          "name": "gptoss32k:latest",
+                          "details": { "family": "gptoss" },
+                          "capabilities": ["completion", "thinking"]
+                        },
+                        {
+                          "name": "custom-unknown",
+                          "details": { "family": "custom" }
+                        }
+                      ]
+                    }
+                    """),
+                "/api/show" when body.Contains("\"model\":\"llama3.1\"", StringComparison.Ordinal) =>
+                    JsonResponse("""{"details":{"family":"llama"},"capabilities":["completion"]}"""),
+                "/api/show" when body.Contains("\"model\":\"custom-unknown\"", StringComparison.Ordinal) =>
+                    JsonResponse("""{"details":{"family":"custom"}}"""),
                 "/api/chat" => JsonResponse("""{"message":{"content":"ollama response"},"prompt_eval_count":7,"eval_count":8}"""),
                 "/api/create" => JsonResponse("""{"status":"success"}"""),
                 _ => JsonResponse("{}", HttpStatusCode.NotFound)
@@ -542,7 +884,37 @@ public sealed class ConcreteProviderDriverTests
             "system prompt",
             4096));
 
-        Assert.Equal(new[] { "llama3.1", "qwen" }, models.Select(model => model.Model).ToArray());
+        Assert.Equal(
+            new[] { "llama3.1", "qwen3.5:2b", "gptoss32k:latest", "custom-unknown" },
+            models.Select(model => model.Model).ToArray());
+        var unsupportedCapability = Assert.IsType<ProviderModelThinkingEffortCapability>(
+            Assert.Single(models, model => model.Model == "llama3.1").ThinkingEffortCapability);
+        var supportedCapability = Assert.IsType<ProviderModelThinkingEffortCapability>(
+            Assert.Single(models, model => model.Model == "qwen3.5:2b").ThinkingEffortCapability);
+        var gptOssCapability = Assert.IsType<ProviderModelThinkingEffortCapability>(
+            Assert.Single(models, model => model.Model == "gptoss32k:latest").ThinkingEffortCapability);
+        var unknownCapability = Assert.IsType<ProviderModelThinkingEffortCapability>(
+            Assert.Single(models, model => model.Model == "custom-unknown").ThinkingEffortCapability);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Unsupported, unsupportedCapability.Status);
+        Assert.Equal("llama", unsupportedCapability.ModelFamily);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Supported, supportedCapability.Status);
+        Assert.Equal("qwen35", supportedCapability.ModelFamily);
+        Assert.Equal(
+            [AgentReasoningEffortLevel.None, AgentReasoningEffortLevel.Medium],
+            supportedCapability.AllowedEfforts);
+        Assert.Equal(AgentThinkingEffortControlMode.BooleanToggle, supportedCapability.ControlMode);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Supported, gptOssCapability.Status);
+        Assert.Equal("gptoss", gptOssCapability.ModelFamily);
+        Assert.Equal(
+            [
+                AgentReasoningEffortLevel.Low,
+                AgentReasoningEffortLevel.Medium,
+                AgentReasoningEffortLevel.High
+            ],
+            gptOssCapability.AllowedEfforts);
+        Assert.Equal(AgentThinkingEffortControlMode.EffortLevels, gptOssCapability.ControlMode);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Unknown, unknownCapability.Status);
+        Assert.Equal("custom", unknownCapability.ModelFamily);
         Assert.Equal("ollama response", chat.ResponseText);
         Assert.Equal(7, chat.InputTokens);
         Assert.Equal(8, chat.OutputTokens);
@@ -714,6 +1086,30 @@ public sealed class ConcreteProviderDriverTests
             LastCheckedAtUtc: null,
             SuggestedModels: [defaultModel],
             Purpose: purpose);
+    }
+
+    private static ProviderProfile CreateAzureReasoningProvider(
+        string deployment,
+        ProviderTransportKind transport)
+    {
+        return CreateProvider(
+            ProviderKind.AzureOpenAi,
+            "https://azure-openai.test",
+            deployment,
+            AgentThinkingEffortPolicy.WriteProviderDefault(
+                "{}",
+                AgentReasoningEffortLevel.Low),
+            transport) with
+        {
+            ModelThinkingEffortCapabilities =
+            [
+                new ProviderModelThinkingEffortCapability(
+                    deployment,
+                    AgentThinkingEffortSupportStatus.Supported,
+                    AgentThinkingEffortCapabilitySource.Defined,
+                    [AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High])
+            ]
+        };
     }
 
     private static HttpResponseMessage JsonResponse(

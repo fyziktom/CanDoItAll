@@ -38,7 +38,7 @@ public sealed class WorkspaceRuntimePluginImageAnalysisTests
         Assert.Equal("gpt-4o", request.Model);
         Assert.Contains("User question: What is visible?", request.Prompt, StringComparison.Ordinal);
         Assert.Equal(request.Prompt, result.Prompt);
-        Assert.Equal("""{"modelParameters":{"numPredict":512,"think":false}}""", request.ModelParameterConfigurationJson);
+        Assert.Equal("""{"modelParameters":{"numPredict":512}}""", request.ModelParameterConfigurationJson);
         var source = Assert.Single(request.Sources);
         Assert.Equal("frame.png", source.Name);
         Assert.Equal("image/png", source.ContentType);

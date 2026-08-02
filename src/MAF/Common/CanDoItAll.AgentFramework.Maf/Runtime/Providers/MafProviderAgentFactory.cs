@@ -360,10 +360,36 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         };
         IChatClient chatClient = new DefaultOllamaOptionsChatClient(
             new OllamaApiClient(httpClient, model, jsonSerializerContext: null),
-            AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(provider.ConfigurationJson, string.Empty),
-            AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(provider.ConfigurationJson, string.Empty));
+            options.ChatOptions?.MaxOutputTokens ??
+            AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
+                provider.ConfigurationJson,
+                string.Empty),
+            ResolveDefaultOllamaThinkingValue(provider, model, options.ChatOptions));
         return AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services)
             .AsAIAgent(options: options);
+    }
+
+    private static object? ResolveDefaultOllamaThinkingValue(
+        ProviderProfile provider,
+        string model,
+        ChatOptions? chatOptions)
+    {
+        if (chatOptions?.AdditionalProperties?.TryGetValue(
+                OllamaOption.Think.Name,
+                out var effectiveThinkingValue) == true)
+        {
+            return effectiveThinkingValue;
+        }
+
+        var providerThinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+            provider,
+            model,
+            string.Empty);
+        return providerThinkingEffort is null
+            ? null
+            : OllamaThinkingEffortAdapter.ToNativeValue(
+                AgentThinkingEffortPolicy.ResolveCapability(provider, model),
+                providerThinkingEffort.Value);
     }
 
     private static IChatClient AddRuntimePolicies(
@@ -462,7 +488,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
 internal sealed class DefaultOllamaOptionsChatClient(
     IChatClient innerClient,
     int defaultMaxOutputTokens,
-    bool defaultThink) : DelegatingChatClient(innerClient)
+    object? defaultThinkingValue) : DelegatingChatClient(innerClient)
 {
     public override Task<ChatResponse> GetResponseAsync(
         IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
@@ -491,9 +517,10 @@ internal sealed class DefaultOllamaOptionsChatClient(
             normalizedOptions.AddOllamaOption(OllamaOption.NumPredict, normalizedOptions.MaxOutputTokens.Value);
         }
 
-        if (!normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.Think.Name))
+        if (defaultThinkingValue is not null &&
+            !normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.Think.Name))
         {
-            normalizedOptions.AddOllamaOption(OllamaOption.Think, defaultThink);
+            normalizedOptions.AddOllamaOption(OllamaOption.Think, defaultThinkingValue);
         }
 
         return normalizedOptions;

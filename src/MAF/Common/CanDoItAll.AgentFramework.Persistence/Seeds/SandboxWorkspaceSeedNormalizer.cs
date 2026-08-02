@@ -661,12 +661,21 @@ internal static class SandboxWorkspaceSeedNormalizer
     private static bool HasManagedAgentPolicyDrift(AgentDefinition existingAgent, AgentDefinition seededAgent)
     {
         return !string.Equals(existingAgent.Model, seededAgent.Model, StringComparison.OrdinalIgnoreCase) ||
+               !ThinkingEffortPolicyEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !ProjectStructureAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !ProcessAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !WorkspaceToolAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !ImageGenerationAccessEquals(existingAgent.ConfigurationJson, seededAgent.ConfigurationJson) ||
                !PermissionsPolicyEquals(existingAgent.Permissions, seededAgent.Permissions) ||
                !CapabilityPolicyEquals(existingAgent.Capabilities, seededAgent.Capabilities);
+    }
+
+    private static bool ThinkingEffortPolicyEquals(
+        string existingConfigurationJson,
+        string seededConfigurationJson)
+    {
+        return AgentThinkingEffortPolicy.ReadConfiguredEffort(existingConfigurationJson, "existing agent") ==
+               AgentThinkingEffortPolicy.ReadConfiguredEffort(seededConfigurationJson, "seeded agent");
     }
 
     private static bool CapabilityPolicyEquals(

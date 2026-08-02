@@ -38,6 +38,21 @@ public sealed class ProviderProfileService : IProviderProfileService
     {
         ArgumentNullException.ThrowIfNull(model);
 
+        var normalizedBaseUrl = NormalizeBaseUrl(model.BaseUrl);
+        var providerIdentityChanged = current is not null &&
+                                      (current.Kind != model.Kind ||
+                                       !string.Equals(
+                                           NormalizeBaseUrl(current.BaseUrl),
+                                           normalizedBaseUrl,
+                                           StringComparison.OrdinalIgnoreCase));
+        IEnumerable<ProviderModelThinkingEffortCapability>? retainedThinkingEffortCapabilities =
+            model.ModelThinkingEffortCapabilities ?? current?.ModelThinkingEffortCapabilities;
+        if (providerIdentityChanged)
+        {
+            retainedThinkingEffortCapabilities = retainedThinkingEffortCapabilities?
+                .Where(item => item.Source != AgentThinkingEffortCapabilitySource.Discovered);
+        }
+
         var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
             model.Kind,
             model.DefaultModel,
@@ -51,7 +66,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             Id: model.Id ?? Guid.NewGuid(),
             Name: NormalizeText(model.Name),
             Kind: model.Kind,
-            BaseUrl: NormalizeBaseUrl(model.BaseUrl),
+            BaseUrl: normalizedBaseUrl,
             ApiKeyEnvironmentVariable: NormalizeEnvironmentVariable(model.ApiKeyEnvironmentVariable),
             DefaultModel: NormalizeText(model.DefaultModel),
             Transport: model.Transport,
@@ -69,13 +84,28 @@ public sealed class ProviderProfileService : IProviderProfileService
         {
             IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider),
             ModelPrices = modelPrices,
-            Tags = NormalizeTags(model.Tags)
+            Tags = NormalizeTags(model.Tags),
+            ModelThinkingEffortCapabilities = NormalizeThinkingEffortCapabilities(
+                retainedThinkingEffortCapabilities)
         };
 
-        return NormalizeImportedProfile(profile);
+        return NormalizeImportedProfileCore(
+            profile,
+            allowLegacyKindMigration: false);
     }
 
     public ProviderProfile NormalizeImportedProfile(ProviderProfile provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        return NormalizeImportedProfileCore(
+            provider,
+            allowLegacyKindMigration: !HasExplicitProviderKind(provider.ConfigurationJson));
+    }
+
+    private ProviderProfile NormalizeImportedProfileCore(
+        ProviderProfile provider,
+        bool allowLegacyKindMigration)
     {
         ArgumentNullException.ThrowIfNull(provider);
 
@@ -87,14 +117,18 @@ public sealed class ProviderProfileService : IProviderProfileService
         var normalizedPreferFrameworkManagedHistory = provider.PreferFrameworkManagedChatHistory;
         var normalizedBackgroundResponses = provider.SupportsBackgroundResponses;
 
-        if (provider.Kind == ProviderKind.AzureOpenAi && LooksLikeLegacyOllama(provider))
+        if (allowLegacyKindMigration &&
+            provider.Kind == ProviderKind.AzureOpenAi &&
+            LooksLikeLegacyOllama(provider))
         {
             normalizedKind = ProviderKind.Ollama;
             normalizedTransport = ProviderTransportKind.ChatCompletions;
             normalizedPreferFrameworkManagedHistory = true;
             normalizedBackgroundResponses = false;
         }
-        else if (provider.Kind == ProviderKind.AzureOpenAi && LooksLikeLegacyOpenAi(provider))
+        else if (allowLegacyKindMigration &&
+                 provider.Kind == ProviderKind.AzureOpenAi &&
+                 LooksLikeLegacyOpenAi(provider))
         {
             normalizedKind = ProviderKind.OpenAi;
         }
@@ -137,7 +171,9 @@ public sealed class ProviderProfileService : IProviderProfileService
                 metadata.IsPrivateProvider ?? provider.IsPrivateProvider),
             SuggestedModels = NormalizeSuggestedModels(provider.SuggestedModels),
             ModelPrices = normalizedModelPrices,
-            Tags = NormalizeTags(provider.Tags)
+            Tags = NormalizeTags(provider.Tags),
+            ModelThinkingEffortCapabilities = NormalizeThinkingEffortCapabilities(
+                provider.ModelThinkingEffortCapabilities)
         };
     }
 
@@ -146,11 +182,15 @@ public sealed class ProviderProfileService : IProviderProfileService
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(result);
 
+        var refreshedThinkingEffortCapabilities = result.ModelThinkingEffortCapabilities ??
+                                                  provider.ModelThinkingEffortCapabilities;
         return NormalizeImportedProfile(provider with
         {
             HealthStatus = NormalizeHealthStatus(result.Summary),
             LastCheckedAtUtc = checkedAtUtc,
-            SuggestedModels = NormalizeSuggestedModels(result.SuggestedModels)
+            SuggestedModels = NormalizeSuggestedModels(result.SuggestedModels),
+            ModelThinkingEffortCapabilities = NormalizeThinkingEffortCapabilities(
+                refreshedThinkingEffortCapabilities)
         });
     }
 
@@ -446,6 +486,32 @@ public sealed class ProviderProfileService : IProviderProfileService
             ?? [];
     }
 
+    private static IReadOnlyList<ProviderModelThinkingEffortCapability> NormalizeThinkingEffortCapabilities(
+        IEnumerable<ProviderModelThinkingEffortCapability>? capabilities)
+    {
+        var configuredCapabilities = capabilities?.ToList() ?? [];
+        if (configuredCapabilities.Any(item => string.IsNullOrWhiteSpace(item.Model)))
+        {
+            throw new InvalidOperationException("Provider thinking-effort capabilities must identify a model.");
+        }
+
+        var normalizedCapabilities = configuredCapabilities
+            .Select(AgentThinkingEffortPolicy.NormalizeCapability)
+            .ToList();
+        var duplicateModel = normalizedCapabilities
+            .GroupBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1)?.Key;
+        if (!string.IsNullOrWhiteSpace(duplicateModel))
+        {
+            throw new InvalidOperationException(
+                $"Provider thinking-effort capabilities contain duplicate model '{duplicateModel}'.");
+        }
+
+        return normalizedCapabilities
+            .OrderBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
     {
         return tags?
@@ -498,6 +564,32 @@ public sealed class ProviderProfileService : IProviderProfileService
         return provider.Name.Contains("ollama", StringComparison.OrdinalIgnoreCase)
             || provider.BaseUrl.Contains("11434", StringComparison.OrdinalIgnoreCase)
             || provider.BaseUrl.Contains("ollama", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasExplicitProviderKind(string? configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson) ||
+            !configurationJson.Contains(
+                ProviderProfileMetadataPropertyNames.ProviderKind,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(configurationJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.EnumerateObject().Any(property =>
+                       string.Equals(
+                           property.Name,
+                           ProviderProfileMetadataPropertyNames.ProviderKind,
+                           StringComparison.OrdinalIgnoreCase));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static bool LooksLikeLegacyOpenAi(ProviderProfile provider)

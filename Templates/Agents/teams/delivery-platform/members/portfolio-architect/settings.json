@@ -20,7 +20,7 @@
       "profile": "readonly-research"
     }
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "portfolio-architect",
   "permissions": {

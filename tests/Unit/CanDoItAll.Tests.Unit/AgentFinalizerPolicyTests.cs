@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using OllamaSharp.Models;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -1528,21 +1529,76 @@ public sealed class AgentFinalizerPolicyTests
     }
 
     [Fact]
-    public void Chat_completions_provider_accepts_reasoning_effort_configuration()
+    public void Effective_thinking_effort_prefers_supported_agent_override()
     {
         var provider = CreateProvider(
             ProviderTransportKind.ChatCompletions,
             preferFrameworkManagedHistory: true) with
         {
-            ConfigurationJson = "{\"reasoningEffort\":\"medium\"}"
+            ConfigurationJson = AgentThinkingEffortPolicy.WriteProviderDefault(
+                "{}",
+                AgentReasoningEffortLevel.Medium)
         };
 
-        var isUnsupported = MafModelParametersBuilder.IsReasoningEffortConfiguredButTransportUnsupported(
+        var effort = MafModelParametersBuilder.ResolveEffectiveThinkingEffort(
             provider,
             "gpt-5.4-mini",
-            "{\"reasoningEffort\":\"high\"}");
+            AgentThinkingEffortPolicy.WriteAgentOverride(
+                "{}",
+                AgentReasoningEffortLevel.High));
 
-        Assert.False(isUnsupported);
+        Assert.Equal(AgentReasoningEffortLevel.High, effort);
+    }
+
+    [Theory]
+    [InlineData("gpt-4.1")]
+    [InlineData("custom-deployment-west")]
+    public void Runtime_ignores_provider_default_for_unsupported_or_unknown_model(string model)
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            ConfigurationJson = AgentThinkingEffortPolicy.WriteProviderDefault(
+                "{}",
+                AgentReasoningEffortLevel.Medium)
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            model,
+            requestedTemperature: null,
+            forceOmitTemperature: false,
+            agentConfigurationJson: "{}");
+
+        Assert.Null(options.Reasoning);
+        Assert.Null(options.RawRepresentationFactory);
+    }
+
+    [Theory]
+    [InlineData("gpt-4.1", "does not support configurable thinking effort")]
+    [InlineData("custom-deployment-west", "capability is not defined")]
+    public void Runtime_rejects_agent_override_for_unsupported_or_unknown_model(
+        string model,
+        string expectedMessage)
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true);
+        var agentConfiguration = AgentThinkingEffortPolicy.WriteAgentOverride(
+            "{}",
+            AgentReasoningEffortLevel.High);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+                provider,
+                model,
+                requestedTemperature: null,
+                forceOmitTemperature: false,
+                agentConfigurationJson: agentConfiguration));
+
+        Assert.Contains("agent thinking-effort override", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(expectedMessage, exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -1574,6 +1630,142 @@ public sealed class AgentFinalizerPolicyTests
         Assert.Equal("max", chatOptions.ReasoningEffortLevel.ToString());
     }
 #pragma warning restore OPENAI001
+
+    [Theory]
+    [InlineData(ProviderTransportKind.Responses)]
+    [InlineData(ProviderTransportKind.ChatCompletions)]
+#pragma warning disable OPENAI001
+    public void Minimal_reasoning_effort_builds_transport_native_OpenAI_options(ProviderTransportKind transport)
+    {
+        var provider = CreateProvider(transport, preferFrameworkManagedHistory: false) with
+        {
+            ConfigurationJson = "{\"reasoningEffort\":\"minimal\"}"
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            "gpt-5",
+            requestedTemperature: null,
+            forceOmitTemperature: false);
+        var rawOptions = Assert.IsAssignableFrom<object>(options.RawRepresentationFactory!(null!));
+
+        if (transport == ProviderTransportKind.Responses)
+        {
+            var responseOptions = Assert.IsType<OpenAI.Responses.CreateResponseOptions>(rawOptions);
+            Assert.Equal("minimal", responseOptions.ReasoningOptions!.ReasoningEffortLevel.ToString());
+            return;
+        }
+
+        var chatOptions = Assert.IsType<OpenAI.Chat.ChatCompletionOptions>(rawOptions);
+        Assert.Equal("minimal", chatOptions.ReasoningEffortLevel.ToString());
+    }
+#pragma warning restore OPENAI001
+
+    [Fact]
+    public void Azure_supported_deployment_omits_non_null_temperature_from_MAF_options()
+    {
+        const string deployment = "reasoning-deployment";
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Name = "Azure OpenAI",
+            Kind = ProviderKind.AzureOpenAi,
+            BaseUrl = "https://azure-openai.test",
+            DefaultModel = deployment,
+            ModelThinkingEffortCapabilities =
+            [
+                new ProviderModelThinkingEffortCapability(
+                    deployment,
+                    AgentThinkingEffortSupportStatus.Supported,
+                    AgentThinkingEffortCapabilitySource.Defined,
+                    [AgentReasoningEffortLevel.Low, AgentReasoningEffortLevel.High])
+            ]
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            deployment,
+            requestedTemperature: 0.4f,
+            forceOmitTemperature: false,
+            agentConfigurationJson: AgentThinkingEffortPolicy.WriteAgentOverride(
+                "{}",
+                AgentReasoningEffortLevel.High));
+
+        Assert.Null(options.Temperature);
+        Assert.Equal(ReasoningEffort.High, options.Reasoning!.Effort);
+    }
+
+    [Fact]
+    public void Ollama_binary_thinking_effort_builds_native_boolean_option()
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Name = "Ollama",
+            Kind = ProviderKind.Ollama,
+            BaseUrl = "http://ollama.test",
+            ApiKeyEnvironmentVariable = string.Empty,
+            DefaultModel = "qwen3.5:2b"
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            provider.DefaultModel,
+            requestedTemperature: null,
+            forceOmitTemperature: false,
+            agentConfigurationJson: """{"modelParameters":{"reasoningEffort":"medium"}}""");
+
+        Assert.True(Assert.IsType<bool>(options.AdditionalProperties![OllamaOption.Think.Name]));
+    }
+
+    [Fact]
+    public void Ollama_gptoss_thinking_effort_builds_native_level_option()
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Name = "Ollama",
+            Kind = ProviderKind.Ollama,
+            BaseUrl = "http://ollama.test",
+            ApiKeyEnvironmentVariable = string.Empty,
+            DefaultModel = "gptoss32k:latest"
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            provider.DefaultModel,
+            requestedTemperature: null,
+            forceOmitTemperature: false,
+            agentConfigurationJson: """{"modelParameters":{"reasoningEffort":"high"}}""");
+
+        Assert.Equal("high", options.AdditionalProperties![OllamaOption.Think.Name]);
+    }
+
+    [Fact]
+    public void Ollama_provider_default_omits_native_thinking_option_when_unconfigured()
+    {
+        var provider = CreateProvider(
+            ProviderTransportKind.ChatCompletions,
+            preferFrameworkManagedHistory: true) with
+        {
+            Name = "Ollama",
+            Kind = ProviderKind.Ollama,
+            BaseUrl = "http://ollama.test",
+            ApiKeyEnvironmentVariable = string.Empty,
+            DefaultModel = "qwen3.5:2b"
+        };
+
+        var options = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            provider.DefaultModel,
+            requestedTemperature: null,
+            forceOmitTemperature: false);
+
+        Assert.False(options.AdditionalProperties?.ContainsKey(OllamaOption.Think.Name) ?? false);
+    }
 
     [Fact]
     public void ExecutionInvocationMetadata_builds_required_finalizer_and_repair_policy()

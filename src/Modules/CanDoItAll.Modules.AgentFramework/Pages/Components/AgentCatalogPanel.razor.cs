@@ -281,6 +281,7 @@ public partial class AgentCatalogPanel
     private async Task SelectAgentAsync(Guid agentId)
     {
         selectedAgentId = agentId;
+        openedRequestedAgentId = agentId;
         await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
         await PublishAccessStateAsync(AgentChatContextAccessState.Ready);
     }

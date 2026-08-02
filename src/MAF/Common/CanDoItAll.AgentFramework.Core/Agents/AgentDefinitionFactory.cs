@@ -26,6 +26,30 @@ internal static class AgentDefinitionFactory
         configurationJson = AgentImageGenerationAccessMetadata.Write(configurationJson, model.ImageGenerationAccess);
         configurationJson = AgentVoiceAccessMetadata.Write(configurationJson, model.VoiceAccess);
         configurationJson = AgentMemoryAccessMetadata.Write(configurationJson, model.MemoryAccess);
+
+        var normalizedProviders = catalog.Providers
+            .Select(providerProfileService.NormalizeImportedProfile)
+            .ToList();
+        var selectedProvider = ResolveSelectedProvider(model.ProviderProfileId, normalizedProviders);
+        var normalizedModel = NormalizeAgentModelForSave(model.Model);
+        var effectiveModel = ResolveEffectiveModel(normalizedModel, selectedProvider);
+        var thinkingEffortOverride = ResolveThinkingEffortOverrideForSave(
+            model.ThinkingEffortOverride,
+            model.IsThinkingEffortOverrideEdited,
+            selectedProvider,
+            configurationJson);
+        EnsureThinkingEffortConfigurationSupported(
+            model.ProviderProfileId,
+            thinkingEffortOverride,
+            selectedProvider,
+            effectiveModel);
+        EnsureManualModelOverrideHasPricing(
+            model.ProviderProfileId,
+            normalizedModel,
+            selectedProvider);
+        configurationJson = AgentThinkingEffortPolicy.WriteAgentOverride(
+            configurationJson,
+            thinkingEffortOverride);
         configurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(configurationJson);
 
         var capabilities = catalog.Capabilities
@@ -44,12 +68,6 @@ internal static class AgentDefinitionFactory
                     existingCapability?.ProofNotes ?? item.ProofNotes);
             })
             .ToList();
-
-        var normalizedModel = NormalizeAgentModelForSave(model.Model);
-        EnsureManualModelOverrideHasPricing(
-            model.ProviderProfileId,
-            normalizedModel,
-            catalog.Providers.Select(providerProfileService.NormalizeImportedProfile).ToList());
 
         return new AgentDefinition(
             Id: id,
@@ -113,24 +131,103 @@ internal static class AgentDefinitionFactory
     private static string NormalizeAgentModelForSave(string? model)
         => string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
 
+    private static ProviderProfile? ResolveSelectedProvider(
+        Guid? providerProfileId,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        return providerProfileId.HasValue
+            ? providers.FirstOrDefault(item => item.Id == providerProfileId.Value)
+            : null;
+    }
+
+    private static string ResolveEffectiveModel(
+        string normalizedAgentModel,
+        ProviderProfile? selectedProvider)
+    {
+        return string.IsNullOrWhiteSpace(normalizedAgentModel)
+            ? NormalizeAgentModelForSave(selectedProvider?.DefaultModel)
+            : normalizedAgentModel;
+    }
+
+    private static AgentReasoningEffortLevel? ResolveThinkingEffortOverrideForSave(
+        AgentReasoningEffortLevel? editorOverride,
+        bool isEditorOverrideEdited,
+        ProviderProfile? selectedProvider,
+        string configurationJson)
+    {
+        if (editorOverride is not null ||
+            isEditorOverrideEdited ||
+            selectedProvider?.Kind != ProviderKind.Ollama)
+        {
+            return editorOverride;
+        }
+
+        return AgentThinkingEffortPolicy.ReadConfiguredEffort(
+            configurationJson,
+            "agent");
+    }
+
+    private static void EnsureThinkingEffortConfigurationSupported(
+        Guid? providerProfileId,
+        AgentReasoningEffortLevel? thinkingEffortOverride,
+        ProviderProfile? selectedProvider,
+        string effectiveModel)
+    {
+        if (thinkingEffortOverride is not { } configuredThinkingEffortOverride)
+        {
+            if (selectedProvider is not null && !string.IsNullOrWhiteSpace(effectiveModel))
+            {
+                _ = AgentThinkingEffortPolicy.ResolveProviderDefault(
+                    selectedProvider,
+                    effectiveModel);
+            }
+
+            return;
+        }
+
+        var formattedEffort = AgentThinkingEffortPolicy.FormatEffort(configuredThinkingEffortOverride);
+        if (!providerProfileId.HasValue)
+        {
+            throw new InvalidOperationException(
+                $"Agent thinking-effort override '{formattedEffort}' requires a selected provider profile.");
+        }
+
+        if (selectedProvider is null)
+        {
+            throw new InvalidOperationException(
+                $"Agent thinking-effort override '{formattedEffort}' references missing provider profile '{providerProfileId.Value}'.");
+        }
+
+        if (string.IsNullOrWhiteSpace(effectiveModel))
+        {
+            throw new InvalidOperationException(
+                $"Agent thinking-effort override '{formattedEffort}' requires a selected model for provider '{selectedProvider.Name}'.");
+        }
+
+        AgentThinkingEffortPolicy.EnsureOverrideSupported(
+            selectedProvider,
+            effectiveModel,
+            configuredThinkingEffortOverride);
+    }
+
     private static void EnsureManualModelOverrideHasPricing(
         Guid? providerProfileId,
         string normalizedModel,
-        IReadOnlyList<ProviderProfile> providers)
+        ProviderProfile? selectedProvider)
     {
         if (!providerProfileId.HasValue || string.IsNullOrWhiteSpace(normalizedModel))
         {
             return;
         }
 
-        var provider = providers.FirstOrDefault(item => item.Id == providerProfileId.Value);
-        if (provider is null || ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, normalizedModel, out _))
+        if (selectedProvider is null ||
+            ProviderPricingDefaults.TryFindPrice(selectedProvider.ModelPrices, normalizedModel, out _))
         {
             return;
         }
 
         throw new InvalidOperationException(
-            $"Agent model override '{normalizedModel}' for provider '{provider.Name}' requires a model price row on the provider profile.");
+            $"Agent model override '{normalizedModel}' for provider '{selectedProvider.Name}' requires a model price row on the provider profile.");
     }
 
     private static IReadOnlyList<AgentAllowedSecretReference> NormalizeAllowedSecretReferences(

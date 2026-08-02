@@ -24,7 +24,7 @@ internal sealed class WorkspaceRuntimePlugin(
         private readonly ProviderProfile provider = provider;
         private readonly string runtimeModel = runtimeModel;
         private readonly IAgentImageAnalysisService imageAnalysisService = imageAnalysisService;
-        private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512,"think":false}}""";
+        private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512}}""";
         private static readonly JsonSerializerOptions ScriptManifestJsonOptions = CreateScriptManifestJsonOptions();
 
         public WorkspaceCommandExecutionResult GetWorkspaceExecutionBoundary()

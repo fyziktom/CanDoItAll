@@ -1,5 +1,11 @@
 namespace CanDoItAll.AgentFramework.Models;
 
+public static class ProviderProfileMetadataPropertyNames
+{
+    public const string ProviderKind = "agentFrameworkProviderKind";
+    public const string ModelThinkingEffortCapabilities = "modelThinkingEffortCapabilities";
+}
+
 public enum ProviderNativeToolFamily
 {
     CodeInterpreter,
@@ -110,9 +116,14 @@ public sealed record ProviderProfile(
     public IReadOnlyList<ProviderModelTokenPrice> ModelPrices { get; init; } = [];
 
     public IReadOnlyList<string> Tags { get; init; } = [];
+
+    public IReadOnlyList<ProviderModelThinkingEffortCapability> ModelThinkingEffortCapabilities { get; init; } = [];
 }
 
 public sealed record ProviderHealthResult(
     bool Success,
     string Summary,
-    IReadOnlyList<string> SuggestedModels);
+    IReadOnlyList<string> SuggestedModels)
+{
+    public IReadOnlyList<ProviderModelThinkingEffortCapability>? ModelThinkingEffortCapabilities { get; init; }
+}

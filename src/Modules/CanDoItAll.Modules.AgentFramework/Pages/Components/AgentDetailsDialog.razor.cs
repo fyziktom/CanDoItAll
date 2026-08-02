@@ -98,6 +98,33 @@ public partial class AgentDetailsDialog
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
 
+    private bool HasIncompatibleThinkingEffortOverride
+    {
+        get
+        {
+            if (SelectedRuntimeProvider is not { } provider)
+            {
+                return editorModel.ThinkingEffortOverride is not null;
+            }
+
+            var model = ResolveEditorRuntimeModel(provider);
+            if (editorModel.ThinkingEffortOverride is { } effort)
+            {
+                return !AgentThinkingEffortPolicy.IsOverrideSupported(provider, model, effort);
+            }
+
+            try
+            {
+                _ = AgentThinkingEffortPolicy.ResolveProviderDefault(provider, model);
+                return false;
+            }
+            catch (InvalidOperationException)
+            {
+                return true;
+            }
+        }
+    }
+
     private ProviderProfile? SelectedImageGenerationProvider
         => editorModel.ImageGenerationAccess.PreferredProviderProfileId.HasValue
             ? providers.FirstOrDefault(item => item.Id == editorModel.ImageGenerationAccess.PreferredProviderProfileId.Value)
@@ -1272,11 +1299,8 @@ public partial class AgentDetailsDialog
 
     private Task HandleRuntimeProviderChangedAsync(Guid? providerId)
     {
-        if (editorModel.ProviderProfileId != providerId)
-        {
-            editorModel.ProviderProfileId = providerId;
-            editorModel.Model = string.Empty;
-        }
+        editorModel.ProviderProfileId = providerId;
+        editorModel.Model = string.Empty;
 
         return Task.CompletedTask;
     }
@@ -1286,6 +1310,13 @@ public partial class AgentDetailsDialog
         editorModel.Model = string.IsNullOrWhiteSpace(model)
             ? string.Empty
             : model.Trim();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleThinkingEffortChangedAsync(AgentReasoningEffortLevel? effort)
+    {
+        editorModel.ThinkingEffortOverride = effort;
+        editorModel.IsThinkingEffortOverrideEdited = true;
         return Task.CompletedTask;
     }
 
@@ -1559,7 +1590,10 @@ public partial class AgentDetailsDialog
 
     private void ApplySelectedAgent(AgentDefinition definition)
     {
-        editorModel = AgentEditorModel.FromDefinition(definition);
+        var providerKind = definition.ProviderProfileId is { } providerProfileId
+            ? providers.FirstOrDefault(provider => provider.Id == providerProfileId)?.Kind
+            : null;
+        editorModel = AgentEditorModel.FromDefinition(definition, providerKind);
         ApplyEditorTextState();
         ResetAvatarGenerationState();
         linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;

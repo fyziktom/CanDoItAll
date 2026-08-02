@@ -144,7 +144,13 @@ public sealed record AgentExecutionPreparationBlueprint
             ModelPrices = provider.ModelPrices
                 .Select(item => item with { })
                 .ToImmutableArray(),
-            Tags = provider.Tags.ToImmutableArray()
+            Tags = provider.Tags.ToImmutableArray(),
+            ModelThinkingEffortCapabilities = provider.ModelThinkingEffortCapabilities
+                .Select(item => item with
+                {
+                    AllowedEfforts = item.AllowedEfforts.ToImmutableArray()
+                })
+                .ToImmutableArray()
         };
     }
 

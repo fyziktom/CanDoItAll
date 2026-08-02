@@ -55,7 +55,7 @@ public sealed class ProviderModelSelectorTests
         Assert.Empty(cut.FindAll("[data-testid='model-text']"));
 
         cut.Find("[data-testid='model-override']").Change(true);
-        cut.Find("[data-testid='model-text']").Change(" custom-model ");
+        cut.Find("[data-testid='model-text']").Input(" custom-model ");
 
         Assert.Equal("custom-model", selectedModel);
     }

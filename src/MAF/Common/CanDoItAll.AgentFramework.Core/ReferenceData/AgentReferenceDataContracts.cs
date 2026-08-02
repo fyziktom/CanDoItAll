@@ -112,7 +112,12 @@ public sealed record AgentReferenceDataSnapshot(
         {
             SuggestedModels = CopyList(provider.SuggestedModels),
             ModelPrices = CopyList(provider.ModelPrices),
-            Tags = CopyList(provider.Tags)
+            Tags = CopyList(provider.Tags),
+            ModelThinkingEffortCapabilities = CopyList(
+                provider.ModelThinkingEffortCapabilities.Select(item => item with
+                {
+                    AllowedEfforts = CopyList(item.AllowedEfforts)
+                }))
         };
     }
 

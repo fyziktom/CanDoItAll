@@ -150,6 +150,14 @@ else
                                                        CustomModelTestId="agents-catalog-model" />
                             </Grid>
 
+                            <AgentThinkingEffortSettings Provider="@SelectedRuntimeProvider"
+                                                         Model="@editorModel.Model"
+                                                         Value="@editorModel.ThinkingEffortOverride"
+                                                         ValueChanged="HandleThinkingEffortChangedAsync"
+                                                         Disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                         TestId="agents-catalog-thinking-effort"
+                                                         SupportTestId="agents-catalog-thinking-effort-support" />
+
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                 <div>
                                     <label class="cda-field-label">Status</label>
@@ -853,7 +861,11 @@ else
                     <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
                 </SecondaryActions>
                 <PrimaryActions>
-                    <Button Text="Save agent" Type="submit" Disabled="@isBusy" IsBusy="@isBusy" data-testid="agents-catalog-save" />
+                    <Button Text="Save agent"
+                            Type="submit"
+                            Disabled="@(isBusy || HasIncompatibleThinkingEffortOverride)"
+                            IsBusy="@isBusy"
+                            data-testid="agents-catalog-save" />
                 </PrimaryActions>
                 <DangerActions>
                     @if (editorModel.Id.HasValue && !IsManagedSeedAgent)

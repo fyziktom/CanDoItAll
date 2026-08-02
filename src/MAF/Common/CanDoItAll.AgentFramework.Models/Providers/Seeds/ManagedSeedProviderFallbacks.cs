@@ -76,7 +76,6 @@ public static class ManagedSeedProviderFallbacks
     public const string FallbackModel = "gptoss32k:latest";
     public const int FallbackTimeoutSeconds = 600;
     public const int FallbackMaxOutputTokens = 4096;
-    public const bool FallbackThinkEnabled = false;
 
     public static IReadOnlyList<string> OpenAiSuggestedModels => ManagedSeedOpenAiSuggestedModels;
 
@@ -170,17 +169,17 @@ public static class ManagedSeedProviderFallbacks
         string configurationJson,
         string? history = null)
     {
-        var configuration = ParseConfigurationObject(configurationJson);
+        var canonicalConfigurationJson = AgentThinkingEffortPolicy.WriteProviderDefault(
+            configurationJson,
+            AgentReasoningEffortLevel.Medium);
         if (!string.IsNullOrWhiteSpace(history))
         {
+            var configuration = JsonNode.Parse(canonicalConfigurationJson)!.AsObject();
             configuration["history"] ??= history;
+            return configuration.ToJsonString();
         }
 
-        configuration[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = DefaultReasoningEffort;
-        var modelParameters = configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] as JsonObject ?? [];
-        modelParameters[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = DefaultReasoningEffort;
-        configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
-        return configuration.ToJsonString();
+        return canonicalConfigurationJson;
     }
 
     public static bool ShouldUseFallback(
@@ -307,7 +306,8 @@ public static class ManagedSeedProviderFallbacks
 
     public static string EnsureFallbackRuntimeConfigurationJson(string configurationJson, string fallbackReason)
     {
-        var configuration = ParseConfigurationObject(configurationJson);
+        var configuration = JsonNode.Parse(
+            AgentThinkingEffortPolicy.WriteProviderDefault(configurationJson, null))!.AsObject();
 
         configuration["history"] = "framework-managed";
         configuration["fallback"] = fallbackReason;
@@ -315,7 +315,6 @@ public static class ManagedSeedProviderFallbacks
 
         var modelParameters = configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] as JsonObject ?? [];
         modelParameters[AgentProviderModelParameterPolicy.OllamaNumPredictConfigurationPropertyName] = FallbackMaxOutputTokens;
-        modelParameters[AgentProviderModelParameterPolicy.OllamaThinkConfigurationPropertyName] = FallbackThinkEnabled;
         configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
 
         return configuration.ToJsonString();

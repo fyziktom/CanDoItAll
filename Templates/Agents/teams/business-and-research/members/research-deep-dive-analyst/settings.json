@@ -17,7 +17,7 @@
     "maxInjectedMemoryItems": 6,
     "maxLocalRagResults": 5
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "research-deep-dive-analyst",
   "permissions": {

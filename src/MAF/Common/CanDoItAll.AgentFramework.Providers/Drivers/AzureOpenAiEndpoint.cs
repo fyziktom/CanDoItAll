@@ -13,9 +13,12 @@ public sealed class AzureOpenAiEndpoint
     {
         this.resourceEndpoint = resourceEndpoint;
         V1Endpoint = new Uri(resourceEndpoint, "openai/v1/");
+        ResponsesEndpoint = new Uri(V1Endpoint, "responses");
     }
 
     public Uri V1Endpoint { get; }
+
+    public Uri ResponsesEndpoint { get; }
 
     public static AzureOpenAiEndpoint Parse(ProviderProfile provider)
     {

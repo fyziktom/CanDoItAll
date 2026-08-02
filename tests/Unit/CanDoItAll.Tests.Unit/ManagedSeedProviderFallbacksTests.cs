@@ -5,6 +5,37 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ManagedSeedProviderFallbacksTests
 {
     [Fact]
+    public void Managed_seed_provider_default_is_written_once_in_canonical_model_parameters()
+    {
+        var configurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
+            """{"reasoningEffort":"low","keep":"value","modelParameters":{"think":false,"maxOutputTokens":512}}""",
+            "service-managed");
+
+        using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
+        var root = document.RootElement;
+        var modelParameters = root.GetProperty("modelParameters");
+        Assert.Equal("service-managed", root.GetProperty("history").GetString());
+        Assert.Equal("value", root.GetProperty("keep").GetString());
+        Assert.False(root.TryGetProperty("reasoningEffort", out _));
+        Assert.False(root.TryGetProperty("think", out _));
+        Assert.Equal("medium", modelParameters.GetProperty("reasoningEffort").GetString());
+        Assert.Equal(512, modelParameters.GetProperty("maxOutputTokens").GetInt32());
+        Assert.False(modelParameters.TryGetProperty("think", out _));
+    }
+
+    [Theory]
+    [InlineData("{not-json")]
+    [InlineData("[]")]
+    public void Managed_seed_thinking_configuration_rejects_invalid_json_instead_of_replacing_it(
+        string configurationJson)
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(configurationJson));
+        Assert.Throws<InvalidOperationException>(() =>
+            ManagedSeedProviderFallbacks.EnsureFallbackRuntimeConfigurationJson(configurationJson, "test"));
+    }
+
+    [Fact]
     public void Managed_seed_openai_suggestions_include_all_gpt_5_6_models()
     {
         Assert.All(
@@ -309,15 +340,16 @@ public sealed class ManagedSeedProviderFallbacksTests
             ProviderKind.Ollama,
             configurationJson,
             string.Empty);
-        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(configurationJson, string.Empty);
+        var effort = AgentThinkingEffortPolicy.ReadConfiguredEffort(configurationJson, "provider");
 
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackMaxOutputTokens, maxOutputTokens);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackThinkEnabled, think);
+        Assert.Null(effort);
 
         using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
         Assert.Equal("framework-managed", document.RootElement.GetProperty("history").GetString());
         Assert.Equal("unit-test", document.RootElement.GetProperty("fallback").GetString());
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackTimeoutSeconds, document.RootElement.GetProperty("timeoutSeconds").GetInt32());
+        Assert.False(document.RootElement.GetProperty("modelParameters").TryGetProperty("think", out _));
     }
 
     [Fact]
@@ -333,15 +365,16 @@ public sealed class ManagedSeedProviderFallbacksTests
             ProviderKind.Ollama,
             configurationJson,
             string.Empty);
-        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(configurationJson, string.Empty);
+        var effort = AgentThinkingEffortPolicy.ReadConfiguredEffort(configurationJson, "provider");
 
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackMaxOutputTokens, maxOutputTokens);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackThinkEnabled, think);
+        Assert.Null(effort);
 
         using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
         Assert.Equal("framework-managed", document.RootElement.GetProperty("history").GetString());
         Assert.Equal("repair", document.RootElement.GetProperty("fallback").GetString());
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackTimeoutSeconds, document.RootElement.GetProperty("timeoutSeconds").GetInt32());
+        Assert.False(document.RootElement.GetProperty("modelParameters").TryGetProperty("think", out _));
     }
 
     [Fact]

@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Persistence;
@@ -9,7 +11,13 @@ internal sealed class AgentTemplatePackLoader
     private const string ManifestFileName = "manifest.json";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        Converters =
+        {
+            new JsonStringEnumConverter<AgentReasoningEffortLevel>(
+                JsonNamingPolicy.CamelCase,
+                allowIntegerValues: false)
+        }
     };
 
     private readonly string? configuredPackRoot;
@@ -238,7 +246,14 @@ internal sealed class AgentTemplateSettings
 
     public Dictionary<string, JsonElement> Configuration { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public bool ApplyDefaultReasoningEffort { get; set; } = true;
+    public AgentReasoningEffortLevel? ReasoningEffort { get; set; }
+
+    [JsonPropertyName("applyDefaultReasoningEffort")]
+    public bool? LegacyApplyDefaultReasoningEffort
+    {
+        set => throw new JsonException(
+            "Agent template property 'applyDefaultReasoningEffort' is no longer supported. Use nullable 'reasoningEffort' instead.");
+    }
 
     public bool IsTemplate { get; set; }
 

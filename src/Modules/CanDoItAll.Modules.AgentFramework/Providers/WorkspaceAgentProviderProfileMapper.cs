@@ -24,8 +24,11 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var mappedKind = ResolveMappedProviderKind(
+        var legacyMappedKind = ResolveMappedProviderKind(
             provider.ConnectorPluginKey);
+        var mappedKind = AgentFrameworkProviderMetadata.ResolveProviderKind(
+            provider,
+            legacyMappedKind);
         var legacyMappedTransport = ResolveLegacyMappedTransport(provider);
         var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(
             provider,
@@ -68,7 +71,10 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
             Tags = ResolveWorkspaceProviderTags(
                 provider,
                 mappedKind,
-                mappedTransport)
+                mappedTransport),
+            ModelThinkingEffortCapabilities =
+                AgentFrameworkProviderMetadata.ReadThinkingEffortCapabilities(
+                    provider.ExtraSettingsJson)
         };
 
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
