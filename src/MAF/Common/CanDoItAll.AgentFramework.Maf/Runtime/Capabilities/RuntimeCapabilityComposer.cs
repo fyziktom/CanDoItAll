@@ -243,7 +243,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     progressCallback,
                     cancellationToken,
                     suppressApprovalRequirements,
-                    ResolveContextPolicyKind(agent, suppressApprovalRequirements),
+                    ResolveContextPolicyKind(agent, suppressApprovalRequirements, contextIntent),
                     contextWorkspaceScope,
                     contextIntent,
                     runtimeSessionKey,
@@ -263,7 +263,12 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     suppressApprovalRequirements));
             await TrackAsync(
                 "capability.compaction",
-                () => AttachCompactionAsync(composition, agent, progressCallback, suppressApprovalRequirements));
+                () => AttachCompactionAsync(
+                    composition,
+                    agent,
+                    progressCallback,
+                    suppressApprovalRequirements,
+                    contextIntent));
 
             TrackAction("capability.deduplicate-tools", () => DeduplicateTools(composition.State.Tools));
             TrackAction(
@@ -566,7 +571,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         }
 
         var policy = new AgentContextContributionPolicy(
-            MapContextContributionExecutionMode(ResolveContextPolicyKind(agent, suppressApprovalRequirements)),
+            MapContextContributionExecutionMode(ResolveContextPolicyKind(agent, suppressApprovalRequirements, contextIntent)),
             suppressApprovalRequirements,
             contextWorkspaceScope);
 
@@ -924,9 +929,14 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
         Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeContextIntent contextIntent)
     {
-        var decision = ResolveCompactionDecision(agent, composition.AgentConfiguration, suppressApprovalRequirements);
+        var decision = ResolveCompactionDecision(
+            agent,
+            composition.AgentConfiguration,
+            suppressApprovalRequirements,
+            contextIntent);
         if (!decision.ShouldAttachCompaction)
         {
             composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
@@ -968,9 +978,10 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     private static RuntimeCompactionDecision ResolveCompactionDecision(
         AgentDefinition agent,
         AgentRuntimeConfiguration configuration,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeContextIntent contextIntent)
     {
-        var policyKind = ResolveContextPolicyKind(agent, suppressApprovalRequirements);
+        var policyKind = ResolveContextPolicyKind(agent, suppressApprovalRequirements, contextIntent);
         if (configuration.EnableCompaction.HasValue)
         {
             if (configuration.EnableCompaction.Value)
@@ -1028,11 +1039,30 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
     private static AgentRuntimeContextPolicyKind ResolveContextPolicyKind(
         AgentDefinition agent,
-        bool suppressApprovalRequirements)
+        bool suppressApprovalRequirements,
+        AgentRuntimeContextIntent contextIntent)
     {
-        if (IsGovernedProcessAutomationRun())
+        if (IsGovernedProcessAutomationRun() ||
+            contextIntent.IsGovernedProcessStep ||
+            contextIntent.Purpose == AgentRuntimeContextPurpose.GovernedProcessAutomation)
         {
             return AgentRuntimeContextPolicyKind.GovernedProcessAutomation;
+        }
+
+        var explicitPolicyKind = contextIntent.Purpose switch
+        {
+            AgentRuntimeContextPurpose.InteractiveChat => AgentRuntimeContextPolicyKind.InteractiveChat,
+            AgentRuntimeContextPurpose.AutoApprovedNonInteractive => AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive,
+            AgentRuntimeContextPurpose.A2AEndpoint => AgentRuntimeContextPolicyKind.A2AEndpoint,
+            AgentRuntimeContextPurpose.Unspecified => (AgentRuntimeContextPolicyKind?)null,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(contextIntent),
+                contextIntent.Purpose,
+                "Runtime context purpose is not supported.")
+        };
+        if (explicitPolicyKind.HasValue)
+        {
+            return explicitPolicyKind.Value;
         }
 
         if (suppressApprovalRequirements)

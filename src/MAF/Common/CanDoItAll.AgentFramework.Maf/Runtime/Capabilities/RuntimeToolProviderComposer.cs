@@ -49,6 +49,20 @@ internal sealed class RuntimeToolProviderComposer(
         foreach (var registration in request.RuntimeToolProviders)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!registration.Descriptor.SupportedPurposes.Contains(request.Context.Purpose))
+            {
+                request.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
+                    AgentRuntimeContextSourceCategories.RuntimeToolProvider,
+                    registration.Descriptor.ProviderKey,
+                    $"registered runtime tool provider does not support {request.Context.Purpose} execution"));
+                attachmentSummaries.Add(new RuntimeToolProviderAttachmentSummary(
+                    registration.Descriptor.ProviderKey,
+                    registration.Descriptor.DisplayName,
+                    ToolCount: 0,
+                    ExcludedToolCount: 0));
+                continue;
+            }
+
             var toolProvider = registration.Provider;
             IReadOnlyList<AITool> providerTools;
             try
