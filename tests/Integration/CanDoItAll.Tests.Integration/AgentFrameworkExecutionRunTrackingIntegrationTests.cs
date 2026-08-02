@@ -486,6 +486,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         await using var scope = provider.CreateAsyncScope();
         var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var runtime = scope.ServiceProvider.GetRequiredService<StructuredOutputApprovalRuntime>();
         var workspaceRoot = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
         var workspaceScope = ResolveWorkspaceScope(scope.ServiceProvider);
         var layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
@@ -518,7 +519,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             session.Id,
             AgentExecutionOperationId.New(),
             approved: true,
-            autoApprovePendingToolCalls: false);
+            autoApprovePendingToolCalls: true);
         var completedDetail = await executionRunStore.GetExecutionRunDetailAsync(completedResult.ExecutionRunId);
 
         Assert.NotNull(completedDetail);
@@ -526,6 +527,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.Equal(ExecutionState.Completed, completedDetail!.Run.State);
         Assert.Empty(completedDetail.Run.PendingApprovals);
         Assert.Contains(completedDetail.ChatSession!.Messages, message => message.Role == ChatMessageRole.Assistant);
+        Assert.True(Assert.Single(runtime.ContinuationSuppressApprovalRequirements));
+        Assert.Equal(
+            AgentRuntimeContextPurpose.InteractiveChat,
+            Assert.Single(runtime.ContinuationExecutionOptions)?.ContextIntent?.Purpose);
     }
 
     [Fact]
@@ -2337,6 +2342,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         public List<AgentRuntimeExecutionOptions?> RunExecutionOptions { get; } = [];
 
+        public List<AgentRuntimeExecutionOptions?> ContinuationExecutionOptions { get; } = [];
+
+        public List<bool> ContinuationSuppressApprovalRequirements { get; } = [];
+
         public List<Guid> ObservedExecutionRunIds { get; } = [];
 
         public string InitialResponseText { get; init; } = "Pending approval.";
@@ -2484,6 +2493,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             }
 
             ContinuationStructuredOutputs.Add(structuredOutput);
+            ContinuationExecutionOptions.Add(executionOptions);
+            ContinuationSuppressApprovalRequirements.Add(suppressApprovalRequirements);
             if (continuationResponseIndex < ContinuationResponses.Count)
             {
                 return Task.FromResult(ContinuationResponses[continuationResponseIndex++]);

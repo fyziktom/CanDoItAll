@@ -76,6 +76,106 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_preserves_interactive_purpose_when_approval_wrappers_are_suppressed()
+    {
+        var runtimeProvider = new TestRuntimeToolProvider(
+            10,
+            AgentToolInvocationPolicyMetadata.HrAgentCreate);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            services.BuildServiceProvider());
+        var contextIntent = AgentRuntimeContextIntent.Empty with
+        {
+            Purpose = AgentRuntimeContextPurpose.InteractiveChat
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            contextIntent,
+            suppressApprovalRequirements: true);
+
+        var context = Assert.Single(runtimeProvider.Contexts);
+        Assert.True(context.SuppressApprovalRequirements);
+        Assert.Equal(AgentRuntimeToolProviderPurpose.InteractiveChat, context.Purpose);
+        var tool = Assert.Single(ReadTools(state), candidate =>
+            candidate.Name == AgentToolInvocationPolicyMetadata.HrAgentCreate);
+        Assert.IsNotType<ApprovalRequiredAIFunction>(tool);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_keeps_unspecified_suppressed_runs_non_interactive()
+    {
+        var runtimeProvider = new TestRuntimeToolProvider(
+            10,
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            services.BuildServiceProvider());
+
+        _ = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: true);
+
+        var context = Assert.Single(runtimeProvider.Contexts);
+        Assert.True(context.SuppressApprovalRequirements);
+        Assert.Equal(AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive, context.Purpose);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_enforces_declared_supported_purposes_before_provider_invocation()
+    {
+        var descriptor = new AgentRuntimeToolProviderDescriptor(
+            "tests.interactive-only-provider",
+            "Interactive-only test provider",
+            "Tests central runtime purpose enforcement.",
+            ["tests"],
+            [AgentRuntimeToolProviderPurpose.InteractiveChat]);
+        var runtimeProvider = new TestRuntimeToolProvider(
+            10,
+            descriptor,
+            AgentToolInvocationPolicyMetadata.HrAgentCreate);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            services.BuildServiceProvider());
+        var contextIntent = AgentRuntimeContextIntent.Empty with
+        {
+            Purpose = AgentRuntimeContextPurpose.AutoApprovedNonInteractive
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [],
+            contextIntent,
+            suppressApprovalRequirements: true);
+
+        Assert.Empty(runtimeProvider.Contexts);
+        Assert.DoesNotContain(ReadTools(state), tool =>
+            tool.Name == AgentToolInvocationPolicyMetadata.HrAgentCreate);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.RuntimeToolProvider &&
+            source.SourceId == descriptor.ProviderKey &&
+            source.Decision == AgentRuntimeContextSourceDecision.Excluded &&
+            source.Reason.Contains(
+                AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive.ToString(),
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_propagates_authoritative_runtime_session_key()
     {
         var provider = new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesRunsList);
@@ -1483,7 +1583,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             $"Test provider {providerKey}",
             "Test runtime provider.",
             ["tests"],
-            [AgentRuntimeToolProviderPurpose.InteractiveChat]);
+            Enum.GetValues<AgentRuntimeToolProviderPurpose>());
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(
         RuntimeCapabilityComposer composer,
