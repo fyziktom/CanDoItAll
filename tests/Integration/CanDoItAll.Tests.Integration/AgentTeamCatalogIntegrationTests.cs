@@ -10,7 +10,8 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
-    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v69";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v70";
+    private const string PreviousAgentTemplateSeedVersion = "2026-07-agent-template-teams-v69";
 
     private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -301,6 +302,7 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.False(schedulerTemplate.Settings.Access.WorkspaceTools!.CanReadFiles);
         Assert.False(schedulerTemplate.Settings.Access.WorkspaceTools.CanWriteFiles);
         Assert.False(schedulerTemplate.Settings.Access.ImageGeneration!.CanGenerateImages);
+        Assert.True(schedulerTemplate.Settings.Permissions.CanScheduleWork);
 
         var seed = SandboxWorkspaceSeedFactory.Create();
         var teams = seed.AgentTeams;
@@ -431,7 +433,9 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.False(workflowCurator.Permissions.CanAskOtherAgents);
         Assert.False(workflowCurator.Permissions.CanObserveOtherAgents);
         Assert.Equal(
-            WorkflowCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+            WorkflowCuratorAgentCapabilityKeys.PrivilegedKeys
+                .Concat(WorkflowRuntimeCapabilityKeys.Keys)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
             workflowCurator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
 
         var capabilityCurator = agentsByTemplateKey[CapabilityCuratorAgentIdentity.TemplateKey];
@@ -445,6 +449,20 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Equal(
             CapabilityCuratorAgentCapabilityKeys.PrivilegedKeys.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
             capabilityCurator.Capabilities.Select(item => item.CapabilityKey).OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
+        Assert.Contains(
+            "assign the capability to the exact target agent before calling `capability_curator_verify`",
+            capabilityCurator.Instructions,
+            StringComparison.Ordinal);
+        var capabilityCuratorSkill = Assert.Single(
+            seed.Capabilities,
+            capability => string.Equals(
+                capability.Key,
+                CapabilityCuratorAgentIdentity.CuratorSkillCapabilityKey,
+                StringComparison.Ordinal));
+        Assert.Contains(
+            "Assign a saved capability to the exact target agent before verification",
+            ReadInlineSkillInstructions(capabilityCuratorSkill.ConfigurationJson),
+            StringComparison.Ordinal);
 
         var schedulerAgent = agentsByTemplateKey[SchedulerAgentIdentity.TemplateKey];
         Assert.Equal(SchedulerAgentIdentity.AgentId, schedulerAgent.Id);
@@ -452,6 +470,7 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.False(schedulerAgent.IsTemplate);
         Assert.Equal(AgentWorkloadKind.Management, schedulerAgent.Workload);
         Assert.True(schedulerAgent.Permissions.CanUseTools);
+        Assert.True(schedulerAgent.Permissions.CanScheduleWork);
         Assert.False(schedulerAgent.Permissions.CanAskOtherAgents);
         Assert.False(schedulerAgent.Permissions.CanObserveOtherAgents);
         Assert.Equal(
@@ -618,6 +637,71 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(refreshed.Tags, AgentSpecialTags.IsFavorite);
         Assert.DoesNotContain("user-only-tag", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("prompts", refreshed.Tags, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Managed_hr_agent_v69_refreshes_current_workspace_access_guidance_and_settings()
+    {
+        const string legacyInstructions = "Legacy HR instructions without typed workspace access guidance.";
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var staleHrAgent = seededHrAgent with
+        {
+            Instructions = legacyInstructions,
+            Permissions = seededHrAgent.Permissions with { CanAskOtherAgents = false },
+            ConfigurationJson = seededHrAgent.ConfigurationJson.Replace(
+                ExpectedAgentTemplateSeedVersion,
+                PreviousAgentTemplateSeedVersion,
+                StringComparison.Ordinal)
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? staleHrAgent : agent)
+                .ToList()
+        });
+        var refreshedHrAgent = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.Equal(seededHrAgent.Instructions, refreshedHrAgent.Instructions);
+        Assert.Contains("typed `WorkspaceToolAccess` field", refreshedHrAgent.Instructions, StringComparison.Ordinal);
+        Assert.Equal(seededHrAgent.Permissions, refreshedHrAgent.Permissions);
+        Assert.Equal(seededHrAgent.ConfigurationJson, refreshedHrAgent.ConfigurationJson);
+        Assert.Equal(ExpectedAgentTemplateSeedVersion, ReadManagedSeedVersion(refreshedHrAgent.ConfigurationJson));
+    }
+
+    [Fact]
+    public void Customized_managed_hr_agent_v69_preserves_customer_owned_guidance_and_settings()
+    {
+        const string customizedInstructions = "Customer-owned HR governance instructions.";
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var staleConfiguration = seededHrAgent.ConfigurationJson.Replace(
+            ExpectedAgentTemplateSeedVersion,
+            PreviousAgentTemplateSeedVersion,
+            StringComparison.Ordinal);
+        var customizedHrAgent = seededHrAgent with
+        {
+            Instructions = customizedInstructions,
+            Permissions = seededHrAgent.Permissions with { CanAskOtherAgents = false },
+            ConfigurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(staleConfiguration)
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? customizedHrAgent : agent)
+                .ToList()
+        });
+        var preservedHrAgent = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.Equal(customizedInstructions, preservedHrAgent.Instructions);
+        Assert.Equal(customizedHrAgent.Permissions, preservedHrAgent.Permissions);
+        Assert.Equal(customizedHrAgent.ConfigurationJson, preservedHrAgent.ConfigurationJson);
+        Assert.Equal(PreviousAgentTemplateSeedVersion, ReadManagedSeedVersion(preservedHrAgent.ConfigurationJson));
+        Assert.True(AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(preservedHrAgent.ConfigurationJson));
     }
 
     [Fact]

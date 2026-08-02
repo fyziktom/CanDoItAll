@@ -7,7 +7,12 @@
     "workflow-curator-draft-create",
     "workflow-curator-draft-update",
     "workflow-curator-node-update",
-    "workflow-curator-lifecycle-change"
+    "workflow-curator-lifecycle-change",
+    "workflows-definitions-list",
+    "workflows-run-start",
+    "workflows-run-status-get",
+    "workflows-run-cancel",
+    "workflows-external-response-submit"
   ],
-  "notes": "Privileged managed Workflow Curator capability set. Identity-gated curator tools verify the immutable agent identity and every exact catalog assignment; generic workflow runtime tools provide governed run operations."
+  "notes": "Managed Workflow Curator capability set. Identity-gated curator tools and explicitly assigned generic workflow runtime tools verify every exact catalog assignment before attachment and invocation."
 }

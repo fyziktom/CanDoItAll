@@ -87,7 +87,11 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
                         AgentToolInvocationPolicyMetadata.CapabilityCuratorSave,
-                        authorizedToken => SaveAsync(request, context.RuntimeSessionKey, authorizedToken),
+                        authorizedToken => SaveAsync(
+                            request,
+                            context.Agent.Id,
+                            context.RuntimeSessionKey,
+                            authorizedToken),
                         token),
                 AgentToolInvocationPolicyMetadata.CapabilityCuratorSave,
                 "Creates custom capabilities or updates custom capabilities using a mandatory editor fingerprint. Inline Skill names are technical lowercase kebab-case identifiers and are normalized before persistence; use capability Name for the human-readable title. Tool and MCP saves also require the one-time setup attestation returned for the exact candidate by the matching setup test. Built-in capabilities are seed-managed and cannot be edited. Typed Tool and MCP configuration accepts credential binding references only. This mutation requires host approval."));
@@ -100,7 +104,11 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
                         AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
-                        authorizedToken => TestToolSetupAsync(request, context.RuntimeSessionKey, authorizedToken),
+                        authorizedToken => TestToolSetupAsync(
+                            request,
+                            context.Agent.Id,
+                            context.RuntimeSessionKey,
+                            authorizedToken),
                         token),
                 AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest,
                 "Runs the canonical setup test against the same unsaved typed Tool candidate accepted by save. A successful result includes a short-lived one-time attestation required to save that exact candidate. Existing candidates require a current fingerprint and built-in or privileged candidates are rejected. Process or network activity may occur and requires host approval."));
@@ -113,7 +121,11 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
                     ExecuteAuthorizedAsync(
                         context.Agent.Id,
                         AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest,
-                        authorizedToken => TestMcpSetupAsync(request, context.RuntimeSessionKey, authorizedToken),
+                        authorizedToken => TestMcpSetupAsync(
+                            request,
+                            context.Agent.Id,
+                            context.RuntimeSessionKey,
+                            authorizedToken),
                         token),
                 AgentToolInvocationPolicyMetadata.CapabilityCuratorMcpSetupTest,
                 "Runs the canonical MCP start, handshake, and list-tools setup test against the same unsaved typed MCP candidate accepted by save. A successful result includes a short-lived one-time attestation required to save that exact candidate. Existing candidates require a current fingerprint and built-in or privileged candidates are rejected. This requires host approval."));
@@ -244,12 +256,16 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
     private async Task<CapabilityCuratorEditorResult> SaveAsync(
         CapabilityCuratorSaveInput request,
-        string runtimeSessionKey,
+        Guid actorAgentId,
+        string fallbackRuntimeSessionKey,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var attestationScopeKey = ResolveSetupAttestationScopeKey(
+            actorAgentId,
+            fallbackRuntimeSessionKey);
         var editor = await PrepareCandidateEditorAsync(request, cancellationToken);
-        ConsumeSetupAttestationIfRequired(request, editor, runtimeSessionKey);
+        ConsumeSetupAttestationIfRequired(request, editor, attestationScopeKey);
 
         var savedId = await workspaceService.SaveCapabilityAsync(editor, cancellationToken);
         if (request.CapabilityId.HasValue && savedId != request.CapabilityId.Value)
@@ -262,9 +278,13 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
     private async Task<CapabilityCuratorToolSetupTestResult> TestToolSetupAsync(
         CapabilityCuratorCapabilitySetupTestInput request,
-        string runtimeSessionKey,
+        Guid actorAgentId,
+        string fallbackRuntimeSessionKey,
         CancellationToken cancellationToken)
     {
+        var attestationScopeKey = ResolveSetupAttestationScopeKey(
+            actorAgentId,
+            fallbackRuntimeSessionKey);
         var editor = await PrepareSetupCandidateAsync(request, CapabilityKind.Tool, cancellationToken);
         var result = await setupFlowService.TestToolSetupAsync(
             new CapabilityToolSetupTestRequest
@@ -276,7 +296,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
             cancellationToken);
         var attestation = result.IsSuccess
             ? setupAttestationStore.Issue(
-                runtimeSessionKey,
+                attestationScopeKey,
                 CapabilityCuratorSetupKind.Tool,
                 CapabilityEditorConcurrency.ComputeFingerprint(editor))
             : null;
@@ -285,9 +305,13 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
 
     private async Task<CapabilityCuratorMcpSetupTestResult> TestMcpSetupAsync(
         CapabilityCuratorCapabilitySetupTestInput request,
-        string runtimeSessionKey,
+        Guid actorAgentId,
+        string fallbackRuntimeSessionKey,
         CancellationToken cancellationToken)
     {
+        var attestationScopeKey = ResolveSetupAttestationScopeKey(
+            actorAgentId,
+            fallbackRuntimeSessionKey);
         var editor = await PrepareSetupCandidateAsync(request, CapabilityKind.McpServer, cancellationToken);
         var result = await setupFlowService.TestMcpSetupAsync(
             new CapabilityMcpSetupTestRequest
@@ -298,7 +322,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
             cancellationToken);
         var attestation = result.IsSuccess
             ? setupAttestationStore.Issue(
-                runtimeSessionKey,
+                attestationScopeKey,
                 CapabilityCuratorSetupKind.Mcp,
                 CapabilityEditorConcurrency.ComputeFingerprint(editor))
             : null;
@@ -623,7 +647,7 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
     private void ConsumeSetupAttestationIfRequired(
         CapabilityCuratorSaveInput request,
         CapabilityEditorModel editor,
-        string runtimeSessionKey)
+        string attestationScopeKey)
     {
         var kind = editor.Kind switch
         {
@@ -637,10 +661,34 @@ public sealed class CapabilityCuratorAgentRuntimeToolProvider(
         }
 
         setupAttestationStore.Consume(
-            runtimeSessionKey,
+            attestationScopeKey,
             kind.Value,
             CapabilityEditorConcurrency.ComputeFingerprint(editor),
             request.SetupAttestationToken ?? string.Empty);
+    }
+
+    private static string ResolveSetupAttestationScopeKey(
+        Guid actorAgentId,
+        string fallbackRuntimeSessionKey)
+    {
+        if (WorkspaceExecutionAuditContext.Current is { } execution)
+        {
+            if (execution.AgentId != actorAgentId)
+            {
+                throw new UnauthorizedAccessException(
+                    "Capability setup attestation execution identity does not match the authorized agent.");
+            }
+
+            return $"execution-run:{execution.ExecutionRunId:D}:agent:{actorAgentId:D}";
+        }
+
+        if (string.IsNullOrWhiteSpace(fallbackRuntimeSessionKey))
+        {
+            throw new InvalidOperationException(
+                "Capability setup attestation requires an execution audit scope or runtime session identity.");
+        }
+
+        return $"runtime-session:{actorAgentId:D}:{fallbackRuntimeSessionKey.Trim()}";
     }
 
     private static void EnsureAssignmentTargetIsNotTemplate(AgentEditorModel editor)

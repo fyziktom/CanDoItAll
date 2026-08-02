@@ -75,6 +75,51 @@ public sealed record HrAgentSafeProjectStructureAccess(
     bool AllowAllProjects,
     IReadOnlyList<Guid> AllowedProjectIds);
 
+public sealed record HrAgentWorkspaceToolAccessInput(
+    AgentWorkspaceToolProfileKind Profile = AgentWorkspaceToolProfileKind.Custom,
+    bool CanReadFiles = false,
+    bool CanWriteFiles = false,
+    bool CanRunValidationCommands = false,
+    bool CanRunLocalScripts = false,
+    bool CanScaffoldProjects = false,
+    bool CanManageWorkspacePaths = false,
+    bool CanTransformArtifacts = false,
+    IReadOnlyList<string>? AllowedExternalTargetAliases = null,
+    bool CanReadStorage = false,
+    bool CanWriteStorage = false,
+    bool AllowAllStorageCatalogs = false,
+    IReadOnlyList<Guid>? AllowedStorageCatalogIds = null);
+
+public sealed record HrAgentWorkspaceToolAccessPatch(
+    AgentWorkspaceToolProfileKind? Profile = null,
+    bool? CanReadFiles = null,
+    bool? CanWriteFiles = null,
+    bool? CanRunValidationCommands = null,
+    bool? CanRunLocalScripts = null,
+    bool? CanScaffoldProjects = null,
+    bool? CanManageWorkspacePaths = null,
+    bool? CanTransformArtifacts = null,
+    IReadOnlyList<string>? AllowedExternalTargetAliases = null,
+    bool? CanReadStorage = null,
+    bool? CanWriteStorage = null,
+    bool? AllowAllStorageCatalogs = null,
+    IReadOnlyList<Guid>? AllowedStorageCatalogIds = null);
+
+public sealed record HrAgentSafeWorkspaceToolAccess(
+    AgentWorkspaceToolProfileKind Profile,
+    bool CanReadFiles,
+    bool CanWriteFiles,
+    bool CanRunValidationCommands,
+    bool CanRunLocalScripts,
+    bool CanScaffoldProjects,
+    bool CanManageWorkspacePaths,
+    bool CanTransformArtifacts,
+    IReadOnlyList<string> AllowedExternalTargetAliases,
+    bool CanReadStorage,
+    bool CanWriteStorage,
+    bool AllowAllStorageCatalogs,
+    IReadOnlyList<Guid> AllowedStorageCatalogIds);
+
 public sealed record HrAgentCapabilityDescriptor(
     Guid Id,
     string Key,
@@ -115,6 +160,7 @@ public sealed record HrAgentSafeSettings(
     double Temperature,
     HrAgentSafePermissions Permissions,
     HrAgentSafeProjectStructureAccess ProjectStructureAccess,
+    HrAgentSafeWorkspaceToolAccess WorkspaceToolAccess,
     IReadOnlyList<HrAgentCapabilityDescriptor> Capabilities,
     IReadOnlyList<string> Tags,
     DateTimeOffset CreatedAtUtc,
@@ -173,7 +219,8 @@ public sealed record HrAgentCreateInput(
     IReadOnlyList<string>? Tags = null,
     HrAgentPermissionsInput? Permissions = null,
     Guid? TeamId = null,
-    HrAgentProjectStructureAccessInput? ProjectStructureAccess = null);
+    HrAgentProjectStructureAccessInput? ProjectStructureAccess = null,
+    HrAgentWorkspaceToolAccessInput? WorkspaceToolAccess = null);
 
 public sealed record HrAgentPermissionsPatch(
     bool? CanUseTools = null,
@@ -200,7 +247,8 @@ public sealed record HrAgentSettingsUpdateInput(
     IReadOnlyList<Guid>? CapabilityIds = null,
     IReadOnlyList<string>? Tags = null,
     HrAgentPermissionsPatch? Permissions = null,
-    HrAgentProjectStructureAccessInput? ProjectStructureAccess = null);
+    HrAgentProjectStructureAccessInput? ProjectStructureAccess = null,
+    HrAgentWorkspaceToolAccessPatch? WorkspaceToolAccess = null);
 
 public sealed record HrAgentMutationResult(
     Guid AgentId,

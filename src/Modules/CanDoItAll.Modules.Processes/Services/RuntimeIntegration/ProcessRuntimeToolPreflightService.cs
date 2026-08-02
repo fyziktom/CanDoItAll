@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
@@ -15,7 +16,9 @@ internal interface IProcessRuntimeToolPreflightService
 internal sealed record ProcessRuntimeToolPreflightRequest(
     ProcessRuntimeStepAssignment Assignment,
     AgentDefinition Agent,
-    IReadOnlyList<string> RequiredRuntimeToolNames);
+    IReadOnlyList<string> RequiredRuntimeToolNames,
+    IReadOnlyList<CapabilityCatalogItem>? CapabilityCatalog = null,
+    Func<CancellationToken, ValueTask<IReadOnlyList<CapabilityCatalogItem>>>? CapabilityCatalogResolver = null);
 
 internal sealed record ProcessRuntimeToolPreflightResult(
     bool IsSatisfied,
@@ -108,6 +111,13 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             requiredToolNames,
             ProcessRuntimeProviderContextFactory.Create(request.Assignment));
         toolPreflightContributions.Contribute(contributionContext);
+        if (RequiresCapabilityCatalogForDiagnostics(
+                requiredToolNames,
+                contributionContext.HandledToolNames))
+        {
+            request = await ResolveCapabilityCatalogAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
         var capabilityDiagnostics = contributionContext.CapabilityDiagnostics
             .Concat(EvaluateRequiredRuntimeToolCapabilities(
                 request,
@@ -121,10 +131,19 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
         }
 
         var contextIntent = contributionContext.ContextIntent;
-        var context = CreateProviderContext(request.Agent, contextIntent);
         var composedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         AddConfiguredWorkspaceToolNames(composedToolNames, request.Agent, contextIntent);
         composedToolNames.UnionWith(contributionContext.ComposedToolNames);
+        if (requiredToolNames.All(composedToolNames.Contains))
+        {
+            return ProcessRuntimeToolPreflightResult.Satisfied;
+        }
+
+        request = await ResolveCapabilityCatalogAsync(request, cancellationToken).ConfigureAwait(false);
+        var context = CreateProviderContext(
+            request.Agent,
+            request.CapabilityCatalog ?? [],
+            contextIntent);
         var providerErrors = new List<string>();
         foreach (var provider in runtimeToolProviders)
         {
@@ -135,7 +154,8 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
                 var tools = await provider.CreateToolsAsync(context, cancellationToken).ConfigureAwait(false);
                 foreach (var tool in tools)
                 {
-                    if (!string.IsNullOrWhiteSpace(tool.Name))
+                    if (!string.IsNullOrWhiteSpace(tool.Name) &&
+                        IsProviderToolAllowedForProcessIntent(tool.Name, contextIntent))
                     {
                         composedToolNames.Add(tool.Name.Trim());
                     }
@@ -163,6 +183,35 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             false,
             missingToolNames,
             $"Required runtime tool(s) are not composed for this process step: {string.Join(", ", missingToolNames)}.{providerErrorSummary}");
+    }
+
+    private static bool RequiresCapabilityCatalogForDiagnostics(
+        IReadOnlyList<string> requiredToolNames,
+        IReadOnlySet<string> contributionHandledToolNames)
+    {
+        return requiredToolNames.Any(requiredToolName =>
+        {
+            var normalizedToolName = ToolContractCatalog.NormalizeToolName(requiredToolName);
+            return !string.IsNullOrWhiteSpace(normalizedToolName) &&
+                   !contributionHandledToolNames.Contains(normalizedToolName) &&
+                   WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.ContainsKey(normalizedToolName);
+        });
+    }
+
+    private static async ValueTask<ProcessRuntimeToolPreflightRequest> ResolveCapabilityCatalogAsync(
+        ProcessRuntimeToolPreflightRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.CapabilityCatalog is not null || request.CapabilityCatalogResolver is null)
+        {
+            return request;
+        }
+
+        return request with
+        {
+            CapabilityCatalog = await request.CapabilityCatalogResolver(cancellationToken)
+                .ConfigureAwait(false)
+        };
     }
 
     private ProcessRuntimeToolPlanGuardEvaluation EvaluateToolPlanGuards(
@@ -228,6 +277,18 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
                 continue;
             }
 
+            if (WorkflowAgentCapabilityKeys.ToolNameToCapabilityKey.TryGetValue(
+                    normalizedToolName,
+                    out var workflowCapabilityKey))
+            {
+                AddMissingExactToolCapabilityDiagnostic(
+                    request,
+                    normalizedToolName,
+                    workflowCapabilityKey,
+                    diagnostics);
+                continue;
+            }
+
             if (!normalizedToolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) ||
                 !AgentWorkspaceToolAccessMetadata.TryResolveWorkspaceToolPermission(normalizedToolName, out _))
             {
@@ -240,6 +301,43 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
         return diagnostics
             .DistinctBy(diagnostic => (diagnostic.Kind, diagnostic.CapabilityKey))
             .ToArray();
+    }
+
+    private static void AddMissingExactToolCapabilityDiagnostic(
+        ProcessRuntimeToolPreflightRequest request,
+        string normalizedToolName,
+        string capabilityKey,
+        List<AgentCapabilityDiagnostic> diagnostics)
+    {
+        var assignments = request.Agent.Capabilities
+            .Where(capability => capability.Kind == CapabilityKind.Tool)
+            .Where(capability => string.Equals(
+                capability.CapabilityKey,
+                capabilityKey,
+                StringComparison.Ordinal))
+            .ToArray();
+        if (assignments.Length == 1)
+        {
+            var assignment = assignments[0];
+            var catalogMatches = (request.CapabilityCatalog ?? [])
+                .Where(capability => capability.Id == assignment.CapabilityId)
+                .Where(capability => capability.Kind == CapabilityKind.Tool)
+                .Where(capability => string.Equals(
+                    capability.Key,
+                    capabilityKey,
+                    StringComparison.Ordinal))
+                .ToArray();
+            if (catalogMatches.Length == 1)
+            {
+                return;
+            }
+        }
+
+        diagnostics.Add(CreateMissingCapabilityDiagnostic(
+            request,
+            CapabilityKind.Tool,
+            capabilityKey,
+            $"Step '{request.Assignment.StepKey}' requires runtime tool '{normalizedToolName}', but agent '{request.Agent.Name}' does not have one exact attached tool capability '{capabilityKey}'."));
     }
 
     private static void AddMissingWorkspaceToolCapabilityDiagnostic(
@@ -284,17 +382,29 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
 
     private static AgentRuntimeToolProviderContext CreateProviderContext(
         AgentDefinition agent,
+        IReadOnlyList<CapabilityCatalogItem> capabilityCatalog,
         AgentRuntimeContextIntent contextIntent)
     {
         return new AgentRuntimeToolProviderContext(
             agent,
             PreflightProvider,
-            Capabilities: [],
+            Capabilities: capabilityCatalog,
             SuppressApprovalRequirements: true,
             AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
             RuntimeSessionKey: string.Empty,
             contextIntent,
             Tags: new Dictionary<string, string>(StringComparer.Ordinal));
+    }
+
+    private static bool IsProviderToolAllowedForProcessIntent(
+        string toolName,
+        AgentRuntimeContextIntent contextIntent)
+    {
+        var normalizedToolName = ToolContractCatalog.NormalizeToolName(toolName);
+        return !ToolCapabilityRegistry.TryResolve(normalizedToolName, out var capability) ||
+               RuntimeToolProcessIntentPolicy.IsToolCapabilityAllowedForProcessIntent(
+                   capability,
+                   contextIntent);
     }
 
     private static void AddConfiguredWorkspaceToolNames(

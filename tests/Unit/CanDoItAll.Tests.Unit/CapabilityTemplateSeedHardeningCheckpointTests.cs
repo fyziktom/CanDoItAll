@@ -299,6 +299,7 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
     [Fact]
     public void INV_SEED_001_managed_seed_dry_run_is_idempotent_without_duplicate_capability_identity()
     {
+        var capabilityPack = new CapabilityTemplatePackLoader().Load();
         var seed = SandboxWorkspaceSeedBuilder.Build();
         var normalized = SandboxWorkspaceSeedNormalizer.Normalize(seed);
         var normalizedAgain = SandboxWorkspaceSeedNormalizer.Normalize(normalized);
@@ -317,9 +318,18 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
         }
 
         Assert.Equal(
-            "2026-07-capability-template-pack-v12",
+            capabilityPack.Manifest.SeedVersion,
             ReadManagedSeedVersion(firstByKey["workspace-read-file"].ConfigurationJson));
+        Assert.Equal(
+            Assert.Single(
+                capabilityPack.Capabilities,
+                capability => string.Equals(
+                    capability.Key,
+                    "workspace-read-file",
+                    StringComparison.OrdinalIgnoreCase)).StableId,
+            ReadManagedCapabilityVersion(firstByKey["workspace-read-file"].ConfigurationJson));
         Assert.Null(ReadManagedSeedVersion(firstByKey["mail-triage-inline-skill"].ConfigurationJson));
+        Assert.Null(ReadManagedCapabilityVersion(firstByKey["mail-triage-inline-skill"].ConfigurationJson));
     }
 
     private static void AssertToolConfigurationParity(
@@ -477,6 +487,16 @@ public sealed class CapabilityTemplateSeedHardeningCheckpointTests
     {
         using var document = JsonDocument.Parse(configurationJson);
         return document.RootElement.TryGetProperty("managedSeedVersion", out var version)
+            ? version.GetString()
+            : null;
+    }
+
+    private static string? ReadManagedCapabilityVersion(string configurationJson)
+    {
+        using var document = JsonDocument.Parse(configurationJson);
+        return document.RootElement.TryGetProperty(
+            ManagedCapabilitySeedMetadata.CapabilityVersionPropertyName,
+            out var version)
             ? version.GetString()
             : null;
     }

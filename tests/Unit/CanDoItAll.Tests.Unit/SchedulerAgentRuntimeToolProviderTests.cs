@@ -40,6 +40,33 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
 
         Assert.Empty(await harness.Provider.CreateToolsAsync(spoofedContext, CancellationToken.None));
         Assert.Empty(harness.Provider.GetToolMetadata(spoofedContext));
+
+        var schedulingDisabledContext = harness.Context with
+        {
+            Agent = harness.Context.Agent with
+            {
+                Permissions = harness.Context.Agent.Permissions with { CanScheduleWork = false }
+            }
+        };
+        Assert.Empty(await harness.Provider.CreateToolsAsync(
+            schedulingDisabledContext,
+            CancellationToken.None));
+        Assert.Empty(harness.Provider.GetToolMetadata(schedulingDisabledContext));
+
+        var targetSearch = Assert.IsAssignableFrom<AIFunction>(tools.Single(item =>
+            item.Name == AgentToolInvocationPolicyMetadata.SchedulerWorkflowTargetsSearch));
+        harness.Workspace.Agents =
+        [
+            harness.Context.Agent with
+            {
+                Permissions = harness.Context.Agent.Permissions with { CanScheduleWork = false }
+            }
+        ];
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => targetSearch.InvokeAsync(
+            new AIFunctionArguments
+            {
+                ["request"] = new SchedulerWorkflowTargetSearchInput()
+            }).AsTask());
     }
 
     [Fact]
@@ -227,7 +254,11 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             "{}",
             IsTemplate: false,
             SchedulerAgentIdentity.TemplateKey,
-            AgentPermissionsPolicy.Default with { CanUseTools = true },
+            AgentPermissionsPolicy.Default with
+            {
+                CanUseTools = true,
+                CanScheduleWork = true
+            },
             assignments,
             [],
             now,
@@ -272,7 +303,7 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
             RuntimeSessionKey: "scheduler-agent-runtime-test",
             AgentRuntimeContextIntent.Empty,
             Tags: new Dictionary<string, string>());
-        return new RuntimeHarness(runtimeProvider, context);
+        return new RuntimeHarness(runtimeProvider, context, workspaceProxy);
     }
 
     private static async Task<TResult> InvokeAsync<TResult>(AIFunction function, object request)
@@ -293,7 +324,8 @@ public sealed class SchedulerAgentRuntimeToolProviderTests
 
     private sealed record RuntimeHarness(
         SchedulerAgentRuntimeToolProvider Provider,
-        AgentRuntimeToolProviderContext Context);
+        AgentRuntimeToolProviderContext Context,
+        AuthorizationWorkspaceProxy Workspace);
 
     private sealed class RecordingSchedulerPlannerService(
         SchedulerPlannerWorkspace workspace) : ISchedulerPlannerService

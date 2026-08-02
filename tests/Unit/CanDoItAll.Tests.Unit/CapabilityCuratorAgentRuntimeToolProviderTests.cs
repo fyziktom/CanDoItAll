@@ -447,6 +447,98 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
     }
 
     [Fact]
+    public async Task Setup_attestation_survives_approval_continuation_runtime_reconstruction_for_same_execution()
+    {
+        var harness = CreateHarness();
+        var initialTools = await CreateToolDictionaryAsync(harness);
+        var continuationContext = harness.Context with
+        {
+            RuntimeSessionKey = "capability-curator-approval-continuation"
+        };
+        var continuationTools = (await harness.Provider.CreateToolsAsync(
+                continuationContext,
+                CancellationToken.None))
+            .ToDictionary(tool => tool.Name, StringComparer.Ordinal);
+        var candidate = new CapabilityCuratorSaveInput(
+            CapabilityId: null,
+            ExpectedFingerprint: null,
+            ModelCapabilityKind.Tool,
+            "approval-continuation-tool",
+            "Approval continuation tool",
+            "Setup proof must remain valid when the approved invocation rebuilds runtime tools.",
+            Tags: ["custom"],
+            ToolConfiguration: new CapabilityCuratorToolConfigurationInput(
+                CapabilityCuratorToolKind.ExternalProcess,
+                "approval_continuation_tool",
+                "external.approval-continuation-tool",
+                ExternalProcess: new CapabilityCuratorExternalProcessToolInput(
+                    "dotnet",
+                    ["--info"],
+                    AllowedExecutableNames: ["dotnet"])));
+        var executionRun = CreateExecutionRun(
+            Guid.NewGuid(),
+            harness.Context.Agent.Id,
+            DateTimeOffset.Parse("2026-07-21T12:00:00Z"));
+
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(executionRun);
+        var setupResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
+            initialTools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+            new CapabilityCuratorCapabilitySetupTestInput(candidate));
+        var saved = await InvokeAsync<CapabilityCuratorEditorResult>(
+            continuationTools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+            candidate with { SetupAttestationToken = setupResult.Attestation!.Token });
+
+        Assert.Equal(ModelCapabilityKind.Tool, saved.Kind);
+        Assert.Equal(candidate.Key, saved.Key);
+    }
+
+    [Fact]
+    public async Task Setup_attestation_cannot_cross_execution_boundary()
+    {
+        var harness = CreateHarness();
+        var tools = await CreateToolDictionaryAsync(harness);
+        var candidate = new CapabilityCuratorSaveInput(
+            CapabilityId: null,
+            ExpectedFingerprint: null,
+            ModelCapabilityKind.Tool,
+            "execution-bound-tool",
+            "Execution-bound tool",
+            "Setup proof must not authorize a different execution.",
+            ToolConfiguration: new CapabilityCuratorToolConfigurationInput(
+                CapabilityCuratorToolKind.ExternalProcess,
+                "execution_bound_tool",
+                "external.execution-bound-tool",
+                ExternalProcess: new CapabilityCuratorExternalProcessToolInput(
+                    "dotnet",
+                    ["--info"],
+                    AllowedExecutableNames: ["dotnet"])));
+        CapabilityCuratorToolSetupTestResult setupResult;
+        var now = DateTimeOffset.Parse("2026-07-21T12:00:00Z");
+
+        using (WorkspaceExecutionAuditContext.BeginScope(CreateExecutionRun(
+                   Guid.NewGuid(),
+                   harness.Context.Agent.Id,
+                   now)))
+        {
+            setupResult = await InvokeAsync<CapabilityCuratorToolSetupTestResult>(
+                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorToolSetupTest],
+                new CapabilityCuratorCapabilitySetupTestInput(candidate));
+        }
+
+        using (WorkspaceExecutionAuditContext.BeginScope(CreateExecutionRun(
+                   Guid.NewGuid(),
+                   harness.Context.Agent.Id,
+                   now.AddMinutes(1))))
+        {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InvokeAsync<CapabilityCuratorEditorResult>(
+                tools[AgentToolInvocationPolicyMetadata.CapabilityCuratorSave],
+                candidate with { SetupAttestationToken = setupResult.Attestation!.Token }));
+        }
+
+        Assert.Equal(0, harness.Workspace.SaveCapabilityCallCount);
+    }
+
+    [Fact]
     public async Task Setup_candidates_reject_inline_credentials_but_accept_binding_references()
     {
         var harness = CreateHarness();
@@ -997,6 +1089,36 @@ public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
             [],
             now,
             now);
+
+    private static ExecutionRunRecord CreateExecutionRun(
+        Guid executionRunId,
+        Guid agentId,
+        DateTimeOffset now)
+        => new(
+            Id: executionRunId,
+            AgentId: agentId,
+            ChatSessionId: Guid.NewGuid(),
+            Title: "Capability Curator approval continuation",
+            SourceKind: "chat",
+            SourceId: "capability-curator-test",
+            CorrelationId: "capability-curator-test",
+            CausationId: string.Empty,
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: "{}",
+            InputSummary: "Test setup attestation approval continuation.",
+            ResultSummary: string.Empty,
+            ProviderName: "Test provider",
+            Model: "test-model",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
 
     private static AgentCapabilityAssignment ToAssignment(CapabilityCatalogItem capability)
         => new(

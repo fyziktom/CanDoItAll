@@ -16,6 +16,7 @@
     "enableCompaction": true,
     "maxLocalRagResults": 0,
     "runtimeUse": "scheduler-agent",
+    "schedulerSchedulingAccessVersion": "2026-08-scheduler-scheduling-access-v1",
     "memory": {
       "invocationMode": "Disabled",
       "canUseMemoryTools": false,
@@ -30,7 +31,7 @@
     "canAskOtherAgents": false,
     "canEscalateToHuman": true,
     "canObserveOtherAgents": false,
-    "canScheduleWork": false,
+    "canScheduleWork": true,
     "requiresApprovalForExternalCalls": true,
     "autoApproveExternalCallsByDefault": false
   },

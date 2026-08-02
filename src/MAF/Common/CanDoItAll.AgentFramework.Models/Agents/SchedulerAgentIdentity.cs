@@ -10,6 +10,8 @@ public static class SchedulerAgentIdentity
     public const string WorkflowTargetsSearchCapabilityKey = "scheduler-workflow-targets-search";
     public const string WorkflowSchedulesSearchCapabilityKey = "scheduler-workflow-schedules-search";
     public const string WorkflowScheduleCreateCapabilityKey = "scheduler-workflow-schedule-create";
+    public const string SchedulingAccessVersionPropertyName = "schedulerSchedulingAccessVersion";
+    public const string CurrentSchedulingAccessVersion = "2026-08-scheduler-scheduling-access-v1";
 
     public static Guid AgentId { get; } = new("c81de15b-c260-425d-8727-adbc1fb5d598");
 
