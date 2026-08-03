@@ -8,11 +8,227 @@ using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class MafContextMessageTransformationTests
 {
+    [Fact]
+    public async Task Capability_composition_rejects_conflicting_explicit_and_intent_scopes()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            new ServiceCollection().BuildServiceProvider());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            runtime.CreateCapabilityStateCoreAsync(
+                CreateAgent(),
+                CreateProviderProfile(),
+                "gpt-5-mini",
+                [],
+                [],
+                (_, _, _) => Task.CompletedTask,
+                CancellationToken.None,
+                suppressApprovalRequirements: true,
+                WorkspaceScopeDescriptor.Project("project-a"),
+                AgentRuntimeContextIntent.Empty with
+                {
+                    WorkspaceScope = WorkspaceScopeDescriptor.Project("project-b")
+                }));
+
+        Assert.Contains("conflicting workspace scopes", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Interactive_composition_uses_transient_project_scope_when_intent_scope_is_not_recorded()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            nameof(MafContextMessageTransformationTests),
+            Guid.NewGuid().ToString("N"));
+        var projectId = Guid.Parse("3324868f-66e2-478a-bb8f-14f32a5db1e9");
+        var foreignProjectId = Guid.Parse("be2ebfd7-7766-43f9-9b2e-8051d0b0d99d");
+        var currentRoot = Path.Combine(
+            workspaceRoot,
+            "managed-files",
+            "project-media",
+            "files",
+            projectId.ToString("N"));
+        var foreignRoot = Path.Combine(
+            workspaceRoot,
+            "managed-files",
+            "project-media",
+            "files",
+            foreignProjectId.ToString("N"));
+        Directory.CreateDirectory(currentRoot);
+        Directory.CreateDirectory(foreignRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(currentRoot, "current.md"),
+            "analyze project structure summary CURRENT-PROJECT-CONTEXT");
+        await File.WriteAllTextAsync(
+            Path.Combine(foreignRoot, "foreign.md"),
+            "analyze project structure summary FOREIGN-PROJECT-CONTEXT");
+        await File.WriteAllTextAsync(
+            Path.Combine(workspaceRoot, "project-structure-context-brief.md"),
+            "analyze project structure summary SHARED-ROOT-CONTEXT");
+
+        try
+        {
+            var runtime = RuntimeCapabilityComposer.CreateDefault(
+                workspaceRoot,
+                new ServiceCollection().BuildServiceProvider());
+            var state = await runtime.CreateCapabilityStateCoreAsync(
+                CreateAgent(),
+                CreateProviderProfile(),
+                "gpt-5-mini",
+                [CreateWorkspaceRagCapability()],
+                [],
+                (_, _, _) => Task.CompletedTask,
+                CancellationToken.None,
+                suppressApprovalRequirements: true,
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+                AgentRuntimeContextIntent.Empty with
+                {
+                    Purpose = AgentRuntimeContextPurpose.InteractiveChat
+                });
+            var (wrappedAgent, recordingClient) = CreateContextRecordingAgent(state);
+
+            await wrappedAgent.RunAsync([
+                new ChatMessage(ChatRole.User, "analyze this project structure and create simple summary for me")
+            ]);
+
+            Assert.NotNull(recordingClient.LastMessages);
+            var deliveredContext = string.Join(
+                Environment.NewLine,
+                recordingClient.LastMessages!.Select(message => message.Text));
+            Assert.Contains("CURRENT-PROJECT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+            Assert.DoesNotContain("FOREIGN-PROJECT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+            Assert.DoesNotContain("SHARED-ROOT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Project_scoped_workspace_rag_injects_only_current_project_context()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            nameof(MafContextMessageTransformationTests),
+            Guid.NewGuid().ToString("N"));
+        var projectId = Guid.Parse("3324868f-66e2-478a-bb8f-14f32a5db1e9");
+        var foreignProjectId = Guid.Parse("be2ebfd7-7766-43f9-9b2e-8051d0b0d99d");
+        var currentRoot = Path.Combine(
+            workspaceRoot,
+            "managed-files",
+            "project-media",
+            "files",
+            projectId.ToString("N"));
+        var foreignRoot = Path.Combine(
+            workspaceRoot,
+            "managed-files",
+            "project-media",
+            "files",
+            foreignProjectId.ToString("N"));
+        Directory.CreateDirectory(currentRoot);
+        Directory.CreateDirectory(foreignRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(currentRoot, "current.md"),
+            "analyze project structure summary CURRENT-PROJECT-CONTEXT");
+        await File.WriteAllTextAsync(
+            Path.Combine(foreignRoot, "foreign.md"),
+            "analyze project structure summary FOREIGN-PROJECT-CONTEXT");
+        await File.WriteAllTextAsync(
+            Path.Combine(workspaceRoot, "project-structure-context-brief.md"),
+            "analyze project structure summary SHARED-ROOT-CONTEXT");
+
+        try
+        {
+            var contextBuilder = new ContextCapabilityBuilder(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+            var state = new RuntimeCapabilityState();
+            var providerAdded = contextBuilder.AddRagProvider(
+                state,
+                CreateWorkspaceRagCapability(),
+                new AgentRuntimeConfiguration());
+            var (wrappedAgent, recordingClient) = CreateContextRecordingAgent(state);
+
+            await wrappedAgent.RunAsync([
+                new ChatMessage(ChatRole.User, "analyze this project structure and create simple summary for me")
+            ]);
+
+            Assert.True(providerAdded);
+            Assert.NotNull(recordingClient.LastMessages);
+            var deliveredContext = string.Join(
+                Environment.NewLine,
+                recordingClient.LastMessages!.Select(message => message.Text));
+            Assert.Contains("CURRENT-PROJECT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+            Assert.DoesNotContain("FOREIGN-PROJECT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+            Assert.DoesNotContain("SHARED-ROOT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Project_scoped_workspace_rag_composed_before_media_creation_retrieves_later_asset()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            nameof(MafContextMessageTransformationTests),
+            Guid.NewGuid().ToString("N"));
+        var projectId = Guid.Parse("3324868f-66e2-478a-bb8f-14f32a5db1e9");
+        Directory.CreateDirectory(workspaceRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(workspaceRoot, "project-structure-context-brief.md"),
+            "analyze project structure summary SHARED-ROOT-CONTEXT");
+
+        try
+        {
+            var contextBuilder = new ContextCapabilityBuilder(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+            var state = new RuntimeCapabilityState();
+            var providerAdded = contextBuilder.AddRagProvider(
+                state,
+                CreateWorkspaceRagCapability(),
+                new AgentRuntimeConfiguration());
+            var currentRoot = Path.Combine(
+                workspaceRoot,
+                "managed-files",
+                "project-media",
+                "files",
+                projectId.ToString("N"));
+            Directory.CreateDirectory(currentRoot);
+            await File.WriteAllTextAsync(
+                Path.Combine(currentRoot, "created-later.md"),
+                "analyze project structure summary CREATED-LATER-CURRENT-CONTEXT");
+            var (wrappedAgent, recordingClient) = CreateContextRecordingAgent(state);
+
+            await wrappedAgent.RunAsync([
+                new ChatMessage(ChatRole.User, "analyze this project structure and create simple summary for me")
+            ]);
+
+            Assert.True(providerAdded);
+            Assert.NotNull(recordingClient.LastMessages);
+            var deliveredContext = string.Join(
+                Environment.NewLine,
+                recordingClient.LastMessages!.Select(message => message.Text));
+            Assert.Contains("CREATED-LATER-CURRENT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+            Assert.DoesNotContain("SHARED-ROOT-CONTEXT", deliveredContext, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task Wrapped_model_receives_malicious_tool_memory_only_inside_explicit_untrusted_frames()
     {
@@ -131,6 +347,48 @@ public sealed class MafContextMessageTransformationTests
             now);
     }
 
+    private static (ChatClientAgent Agent, RecordingChatClient Client) CreateContextRecordingAgent(
+        RuntimeCapabilityState state)
+    {
+        var recordingClient = new RecordingChatClient();
+        var agent = new ChatClientAgent(
+            recordingClient,
+            new ChatClientAgentOptions
+            {
+                AIContextProviders = state.ContextProviders,
+                UseProvidedChatClientAsIs = false,
+                DisableApprovalNotRequiredFunctionBypassing = true,
+                DisableApprovalResponseBinding = false
+            });
+        return (agent, recordingClient);
+    }
+
+    private static CapabilityCatalogItem CreateWorkspaceRagCapability()
+    {
+        return new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Rag,
+            "workspace-source-rag",
+            "Workspace Source RAG",
+            "Test scoped workspace retrieval.",
+            ".",
+            """
+            {
+              "ragRoot": ".",
+              "extensions": [".md"],
+              "maxResults": 5,
+              "maxFilesToScan": 256,
+              "minQueryTerms": 2,
+              "minMatchedTerms": 2,
+              "minScore": 2
+            }
+            """,
+            CapabilityProofStatus.Verified,
+            string.Empty,
+            DateTimeOffset.UtcNow,
+            IsBuiltIn: true);
+    }
+
     private static ProviderProfile CreateProviderProfile() =>
         new(
             Guid.NewGuid(),
@@ -231,5 +489,45 @@ public sealed class MafContextMessageTransformationTests
         }
 
         private sealed class RecordingSession : AgentSession;
+    }
+
+    private sealed class RecordingChatClient : IChatClient
+    {
+        public IReadOnlyList<ChatMessage>? LastMessages { get; private set; }
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastMessages = messages.ToArray();
+            return Task.FromResult(new ChatResponse(
+                new ChatMessage(ChatRole.Assistant, "recorded")));
+        }
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastMessages = messages.ToArray();
+            yield return new ChatResponseUpdate(
+                role: ChatRole.Assistant,
+                contents: [new TextContent("recorded")]);
+            await Task.CompletedTask;
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null)
+        {
+            return serviceKey is null && serviceType.IsInstanceOfType(this)
+                ? this
+                : null;
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

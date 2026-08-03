@@ -125,6 +125,72 @@ public sealed class OllamaToolResultProtocolHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_two_sequential_tool_results_remain_correlated_and_normalized()
+    {
+        const string requestJson =
+            """
+            {
+              "model": "gptoss20b64k",
+              "messages": [
+                {
+                  "role": "assistant",
+                  "content": "",
+                  "tool_calls": [
+                    {
+                      "id": "call-001",
+                      "function": {
+                        "name": "workspace_read_file",
+                        "arguments": { "path": "first.md" }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "role": "tool",
+                  "content": "{\"callId\":\"call-001\",\"result\":{\"message\":\"first result\"}}"
+                },
+                {
+                  "role": "assistant",
+                  "content": "",
+                  "tool_calls": [
+                    {
+                      "id": "call-002",
+                      "function": {
+                        "name": "project_structure_read",
+                        "arguments": {}
+                      }
+                    }
+                  ]
+                },
+                {
+                  "role": "tool",
+                  "content": "{\"callId\":\"call-002\",\"result\":{\"nodeCount\":22}}"
+                }
+              ],
+              "stream": true
+            }
+            """;
+        var transport = new RecordingHttpMessageHandler();
+        using var client = new HttpClient(
+            new OllamaToolResultProtocolHandler(transport))
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+        using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync("/api/chat", content, CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(transport.RequestContent);
+        using var normalizedRequest = JsonDocument.Parse(transport.RequestContent);
+        var messages = normalizedRequest.RootElement.GetProperty("messages");
+        Assert.Equal("workspace_read_file", messages[1].GetProperty("tool_name").GetString());
+        Assert.Equal("{\"message\":\"first result\"}", messages[1].GetProperty("content").GetString());
+        Assert.Equal("project_structure_read", messages[3].GetProperty("tool_name").GetString());
+        Assert.Equal("{\"nodeCount\":22}", messages[3].GetProperty("content").GetString());
+    }
+
+    [Fact]
     public async Task SendAsync_UnmatchedOllamaFunctionResult_FailsExplicitly()
     {
         const string requestJson =

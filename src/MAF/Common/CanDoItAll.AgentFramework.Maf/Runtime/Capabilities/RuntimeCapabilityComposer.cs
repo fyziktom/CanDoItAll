@@ -181,6 +181,14 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var totalStopwatch = Stopwatch.StartNew();
         try
         {
+            if (contextIntent.WorkspaceScope is not null &&
+                contextIntent.WorkspaceScope != contextWorkspaceScope)
+            {
+                throw new InvalidOperationException(
+                    "Runtime context intent and execution options have conflicting workspace scopes.");
+            }
+
+            var effectiveContextWorkspaceScope = contextIntent.WorkspaceScope ?? contextWorkspaceScope;
             if (!contextIntent.ToolCapabilitiesEnabled)
             {
                 return await CreateToolFreeCapabilityStateAsync(progressCallback);
@@ -205,6 +213,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     provider,
                     model,
                     effectiveCapabilities,
+                    effectiveContextWorkspaceScope,
                     contextIntent,
                     agentConfiguration,
                     workspaceToolAccess,
@@ -225,7 +234,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     provider,
                     progressCallback,
                     suppressApprovalRequirements,
-                    contextWorkspaceScope,
+                    effectiveContextWorkspaceScope,
                     contextIntent));
             await TrackAsync(
                 "capability.skills",
@@ -244,7 +253,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     cancellationToken,
                     suppressApprovalRequirements,
                     ResolveContextPolicyKind(agent, suppressApprovalRequirements, contextIntent),
-                    contextWorkspaceScope,
+                    effectiveContextWorkspaceScope,
                     contextIntent,
                     runtimeSessionKey,
                     contextAttachments));
@@ -385,13 +394,14 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         ProviderProfile provider,
         string model,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
+        WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent,
         AgentRuntimeConfiguration agentConfiguration,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         RuntimeCapabilityAccessPlan capabilityAccessPlan)
     {
         var workspaceServices = dependencyResolver.ResolveWorkspaceServices(services, workspaceRoot, workspaceScope);
-        var effectiveWorkspaceScope = contextIntent.WorkspaceScope ?? workspaceScope;
+        var effectiveWorkspaceScope = contextWorkspaceScope;
         var filesystemPlugin = new WorkspaceFilesystemRuntimePlugin(
             workspaceServices.FileService,
             workspaceRoot,
@@ -413,7 +423,9 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             workspaceToolAccess);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(workspaceRoot, services);
-        var contextBuilder = new ContextCapabilityBuilder(workspaceRoot);
+        var contextBuilder = new ContextCapabilityBuilder(
+            workspaceRoot,
+            effectiveWorkspaceScope);
         var contextContributors = services.GetServices<IAgentContextContributor>().ToList();
         var runtimeToolProviders = runtimeToolProviderComposer.ComposeRegistrations(
             services.GetServices<IAgentRuntimeToolProvider>());
@@ -848,8 +860,15 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     suppressApprovalRequirements);
                 break;
             case CapabilityKind.Rag:
-                composition.ContextBuilder.AddRagProvider(composition.State, capability, composition.AgentConfiguration);
-                RecordCatalogCapabilitySource(composition.State, capability, 1, capability.Description.Length);
+                var ragProviderAdded = composition.ContextBuilder.AddRagProvider(
+                    composition.State,
+                    capability,
+                    composition.AgentConfiguration);
+                RecordCatalogCapabilitySource(
+                    composition.State,
+                    capability,
+                    ragProviderAdded ? 1 : 0,
+                    ragProviderAdded ? capability.Description.Length : 0);
                 break;
             case CapabilityKind.AiContext:
                 composition.ContextBuilder.AddConfiguredAiContextProvider(composition.State, capability);
