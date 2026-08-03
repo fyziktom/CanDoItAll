@@ -7,6 +7,199 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentToolInvocationPolicyTests
 {
+    [Theory]
+    [InlineData("managed-files/project-media/files/be2ebfd7776643f99b2e8051d0b0d99d/foreign.md")]
+    [InlineData("./managed-files/project-media/files/be2ebfd7776643f99b2e8051d0b0d99d/foreign.md")]
+    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\be2ebfd7776643f99b2e8051d0b0d99d\foreign.md")]
+    public async Task EvaluateAsync_denies_foreign_project_media_for_interactive_project_scope(
+        string path)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = path
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not owned by project", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/current.md")]
+    [InlineData("./managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/current.md")]
+    [InlineData("managed-files/project-media/files/3324868f-66e2-478a-bb8f-14f32a5db1e9/current.md")]
+    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9\current.md")]
+    public async Task EvaluateAsync_allows_current_project_media_for_interactive_project_scope(
+        string path)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = path
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Theory]
+    [InlineData("project-structure-context-brief.md")]
+    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace\project-structure-context-brief.md")]
+    public async Task EvaluateAsync_denies_ambiguous_shared_project_brief_for_interactive_project_scope(
+        string path)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = path
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not project-owned", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(".")]
+    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace")]
+    public async Task EvaluateAsync_denies_broad_workspace_discovery_for_interactive_project_scope(
+        string path)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceListFiles,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = path
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("shared workspace root", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_project_media_traversal_for_interactive_project_scope()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/../be2ebfd7776643f99b2e8051d0b0d99d/foreign.md"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("traversal", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("x/../project-structure-context-brief.md", ToolContractCatalog.WorkspaceReadFile)]
+    [InlineData("x/..", ToolContractCatalog.WorkspaceListFiles)]
+    public async Task EvaluateAsync_denies_all_relative_traversal_for_project_scope(
+        string path,
+        string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            toolName,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = path
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("traversal", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_non_canonical_embedded_project_media_path()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "stale-copy/managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/brief.md"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("non-canonical", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_foreign_project_media_for_governed_project_scope_without_external_aliases()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/files/be2ebfd7776643f99b2e8051d0b0d99d/foreign.md"
+            },
+            contextWorkspaceScopeKind: WorkspaceScopeKind.Project.ToString(),
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not owned by project", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_foreign_project_media_for_workspace_spreadsheet_read()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceInspectSpreadsheet,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "managed-files/project-media/files/be2ebfd7776643f99b2e8051d0b0d99d/foreign.xlsx"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not owned by project", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_current_project_media_discovery_by_absolute_path()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceListFiles,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = @"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
     [Fact]
     public async Task EvaluateAsync_allows_known_read_tool()
     {
@@ -341,7 +534,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("outside current-run evidence folders", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not owned by project", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -4809,6 +5002,25 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
             AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
         };
+    }
+
+    private static ToolInvocationPolicyContext CreateInteractiveProjectContext(
+        string toolName,
+        IReadOnlyDictionary<string, string> arguments)
+    {
+        return CreateContext(
+            toolName,
+            AgentToolInvocationPolicyMetadata.Classify(toolName),
+            isKnownTool: true,
+            autoApprovalAllowed: false,
+            approvalWrapperAvailable: false,
+            arguments: arguments,
+            processRunId: string.Empty,
+            sourceId: "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+            contextWorkspaceScopeKind: WorkspaceScopeKind.Project.ToString(),
+            contextWorkspaceScopeKey: "3324868f-66e2-478a-bb8f-14f32a5db1e9",
+            sourceKind: "project-structure",
+            processStepId: string.Empty);
     }
 
     private static ToolInvocationPolicyContext CreateContext(

@@ -669,8 +669,15 @@ public sealed record AgentRuntimeTransientContext
         WorkspaceScopeDescriptor? workspaceScope = null,
         IReadOnlyList<AgentChatContextAttachmentEnvelope>? attachments = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        ArgumentNullException.ThrowIfNull(content);
         var normalizedContent = content.Trim();
+        if (normalizedContent.Length == 0 && workspaceScope is null)
+        {
+            throw new ArgumentException(
+                "Transient agent context must contain model context or a workspace scope.",
+                nameof(content));
+        }
+
         if (normalizedContent.Length > AgentChatContextLimits.MaximumTransientContextLength)
         {
             throw new ArgumentException(
@@ -684,6 +691,8 @@ public sealed record AgentRuntimeTransientContext
     }
 
     public string Content { get; }
+
+    public bool HasContent => Content.Length > 0;
 
     public WorkspaceScopeDescriptor? WorkspaceScope { get; }
 

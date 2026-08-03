@@ -456,8 +456,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
+            var runtimeExecutionOptions = CreateRuntimeExecutionOptionsCore(
+                run,
+                activityOperationId,
+                structuredOutput,
+                handoffOptions,
+                inputAttachments: null,
+                jsonSchemaOutput: null);
             AgentRuntimeResponse runtimeResponse;
-            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            using (WorkspaceExecutionAuditContext.BeginScope(run, runtimeExecutionOptions.ContextWorkspaceScope))
             {
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
@@ -481,13 +488,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptionsCore(
-                        run,
-                        activityOperationId,
-                        structuredOutput,
-                        handoffOptions,
-                        inputAttachments: null,
-                        jsonSchemaOutput: null));
+                    executionOptions: runtimeExecutionOptions);
                 lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -1254,8 +1255,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
+            var runtimeExecutionOptions = CreateRuntimeExecutionOptionsCore(
+                run,
+                activityOperation.StreamId.OperationId,
+                request.StructuredOutput,
+                handoffOptions,
+                startup.InputAttachments,
+                jsonSchemaOutput);
             AgentRuntimeResponse runtimeResponse;
-            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            using (WorkspaceExecutionAuditContext.BeginScope(run, runtimeExecutionOptions.ContextWorkspaceScope))
             {
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
@@ -1279,13 +1287,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
-                    executionOptions: CreateRuntimeExecutionOptionsCore(
-                        run,
-                        activityOperation.StreamId.OperationId,
-                        request.StructuredOutput,
-                        handoffOptions,
-                        startup.InputAttachments,
-                        jsonSchemaOutput));
+                    executionOptions: runtimeExecutionOptions);
                 lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -2259,6 +2261,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentRuntimeTransientContext? transientContext)
     {
         ArgumentNullException.ThrowIfNull(run);
+        var transientWorkspaceScope = transientContext?.WorkspaceScope;
+        var recordedWorkspaceScope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+        if (transientWorkspaceScope is not null &&
+            recordedWorkspaceScope is not null &&
+            transientWorkspaceScope != recordedWorkspaceScope)
+        {
+            throw new InvalidOperationException(
+                $"Execution run '{run.Id:N}' has conflicting trusted workspace scopes.");
+        }
+
+        var contextWorkspaceScope = transientWorkspaceScope ?? recordedWorkspaceScope;
 
         return new AgentRuntimeExecutionOptions(
             StructuredOutput: structuredOutput,
@@ -2266,14 +2279,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             RequireStructuredOutputValidation: ExecutionInvocationMetadata.ResolveRequireStructuredOutputValidation(run),
             MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.ResolveMaxStructuredOutputRepairAttempts(run),
             Handoff: handoffOptions,
-            ContextWorkspaceScope: transientContext?.WorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
+            ContextWorkspaceScope: contextWorkspaceScope,
             RequireJsonResponseFormat: jsonSchemaOutput is not null,
             ResponseFormatJsonSchema: jsonSchemaOutput?.SchemaJson ?? string.Empty,
             ResponseFormatSchemaName: jsonSchemaOutput?.Name ?? string.Empty,
             ResponseFormatSchemaDescription: jsonSchemaOutput is null
                 ? string.Empty
                 : $"Portable JSON Schema output contract {jsonSchemaOutput.Version}.",
-            ContextIntent: CreateRuntimeContextIntent(run),
+            ContextIntent: CreateRuntimeContextIntent(run, contextWorkspaceScope),
             InputAttachments: inputAttachments)
         {
             ActivityOperationId = activityOperationId,
@@ -2679,11 +2692,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return !string.IsNullOrWhiteSpace(contentType);
     }
 
-    private static AgentRuntimeContextIntent CreateRuntimeContextIntent(ExecutionRunRecord run)
+    private static AgentRuntimeContextIntent CreateRuntimeContextIntent(
+        ExecutionRunRecord run,
+        WorkspaceScopeDescriptor? workspaceScope)
     {
         ArgumentNullException.ThrowIfNull(run);
 
-        var workspaceScope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
         var isGovernedProcessStep = string.Equals(run.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) &&
                                     string.Equals(run.RequestedByKind, "system", StringComparison.OrdinalIgnoreCase) &&
                                     !string.IsNullOrWhiteSpace(run.ProcessRunId) &&

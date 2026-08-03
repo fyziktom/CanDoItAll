@@ -8,7 +8,9 @@ public static class WorkspaceExecutionAuditContext
 
     public static WorkspaceExecutionAuditScopeState? Current => CurrentState.Value;
 
-    public static IDisposable BeginScope(ExecutionRunRecord run)
+    public static IDisposable BeginScope(
+        ExecutionRunRecord run,
+        WorkspaceScopeDescriptor? contextWorkspaceScope = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -38,7 +40,7 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveProcessProductMutationRequiredBranchOutcomeKeys(run),
             ExecutionInvocationMetadata.ResolveProcessStepAllowedOperations(run),
             ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
-            ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
+            contextWorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run),
             ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run));
         return new Scope(previous);

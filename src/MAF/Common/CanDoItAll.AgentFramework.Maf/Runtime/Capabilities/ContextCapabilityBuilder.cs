@@ -5,12 +5,22 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed class ContextCapabilityBuilder(string workspaceRoot)
+internal sealed class ContextCapabilityBuilder
 {
     private const string RagStateKeyPrefix = "CanDoItAll.Rag.";
-    private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
+    private readonly WorkspaceRagRetriever ragRetriever;
+    private readonly string workspaceRoot;
 
-    public void AddRagProvider(
+    public ContextCapabilityBuilder(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
+        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
+        ragRetriever = new WorkspaceRagRetriever(this.workspaceRoot, workspaceScope);
+    }
+
+    public bool AddRagProvider(
         RuntimeCapabilityState state,
         CapabilityCatalogItem capability,
         AgentRuntimeConfiguration agentConfiguration)
@@ -19,7 +29,13 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
         var ragRoot = MafRuntimePathResolver.ResolvePathFromWorkspace(workspaceRoot, configuration.RagRoot ?? capability.EndpointOrPath, allowExternal: false);
         if (!Directory.Exists(ragRoot) && !File.Exists(ragRoot))
         {
-            return;
+            return false;
+        }
+
+        var searchRoots = ragRetriever.ResolveSearchRoots(ragRoot);
+        if (searchRoots.Count == 0)
+        {
+            return false;
         }
 
         var searchTime = Enum.TryParse<TextSearchProviderOptions.TextSearchBehavior>(
@@ -42,8 +58,8 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         state.ContextProviders.Add(new TextSearchProvider(
-            (query, cancellationToken) => SearchWorkspaceAsync(
-                ragRoot,
+            (query, cancellationToken) => ragRetriever.SearchAsync(
+                searchRoots,
                 query,
                 maxResults,
                 maxFilesToScan,
@@ -59,6 +75,8 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
                 RecentMessageMemoryLimit = recentMessageMemoryLimit,
                 StateKey = $"{RagStateKeyPrefix}{capability.Id:N}"
             }));
+
+        return true;
     }
 
     public void AddConfiguredAiContextProvider(
@@ -77,87 +95,6 @@ internal sealed class ContextCapabilityBuilder(string workspaceRoot)
             StaticMessageContextProvider.CreateCapabilityStateKey(capability.Id)));
     }
 
-    private async Task<IEnumerable<TextSearchProvider.TextSearchResult>> SearchWorkspaceAsync(
-        string rootPath,
-        string query,
-        int maxResults,
-        int maxFilesToScan,
-        int minQueryTerms,
-        int minMatchedTerms,
-        int minScore,
-        HashSet<string>? extensions,
-        HashSet<string>? excludedPaths,
-        CancellationToken cancellationToken)
-    {
-        var terms = WorkspaceSearchSupport.TokenizeRagQuery(query);
-        if (!WorkspaceSearchSupport.HasEnoughRagSignal(terms, minQueryTerms))
-        {
-            return [];
-        }
-
-        var effectiveMinMatchedTerms = Math.Min(minMatchedTerms, terms.Count);
-        var files = WorkspaceSearchSupport.EnumerateSearchFiles(rootPath, extensions, excludedPaths).Take(maxFilesToScan).ToList();
-        var scoredResults = new List<(int Score, int MatchedTerms, string Path, string Snippet)>();
-
-        foreach (var file in files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            string text;
-            try
-            {
-                text = await File.ReadAllTextAsync(file, cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception) when (
-                exception is UnauthorizedAccessException or IOException)
-            {
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                continue;
-            }
-
-            var score = 0;
-            var matchedTerms = 0;
-            foreach (var term in terms)
-            {
-                var occurrences = WorkspaceSearchSupport.CountWholeTermOccurrences(text, term);
-                if (occurrences <= 0)
-                {
-                    continue;
-                }
-
-                score += occurrences;
-                matchedTerms++;
-            }
-
-            if (matchedTerms < effectiveMinMatchedTerms || score < minScore)
-            {
-                continue;
-            }
-
-            scoredResults.Add((score, matchedTerms, file, WorkspaceSearchSupport.BuildSearchSnippet(text, terms)));
-        }
-
-        return scoredResults
-            .OrderByDescending(item => item.Score)
-            .ThenByDescending(item => item.MatchedTerms)
-            .ThenBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
-            .Take(maxResults)
-            .Select(item => new TextSearchProvider.TextSearchResult
-            {
-                SourceName = Path.GetRelativePath(workspaceRoot, item.Path),
-                SourceLink = item.Path,
-                Text = item.Snippet
-            })
-            .ToList();
-    }
 }
 
 internal sealed class StaticMessageContextProvider : MessageAIContextProvider

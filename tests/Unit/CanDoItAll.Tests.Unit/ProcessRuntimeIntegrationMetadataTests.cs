@@ -321,7 +321,9 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("CreateRuntimeContextIntent method was not found.");
 
-        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(null, [run]));
+        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(
+            null,
+            [run, ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run)]));
 
         Assert.True(contextIntent.IsGovernedProcessStep);
         Assert.Equal("process-step", contextIntent.SourceKind);
@@ -351,7 +353,9 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("CreateRuntimeContextIntent method was not found.");
 
-        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(null, [run]));
+        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(
+            null,
+            [run, ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run)]));
 
         Assert.False(contextIntent.RuntimeToolProvidersEnabled);
         Assert.False(contextIntent.WorkspaceToolsEnabled);
@@ -515,7 +519,9 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("CreateRuntimeContextIntent method was not found.");
 
-        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(null, [run]));
+        var contextIntent = Assert.IsType<AgentRuntimeContextIntent>(method.Invoke(
+            null,
+            [run, ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run)]));
 
         var resolvedScope = ExecutionInvocationMetadata.ResolveRuntimeCapabilityScopeOverride(run);
         Assert.NotNull(resolvedScope);

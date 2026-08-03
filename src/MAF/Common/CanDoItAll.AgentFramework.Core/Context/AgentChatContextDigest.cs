@@ -7,7 +7,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal static class AgentChatContextDigest
 {
-    private const byte DigestSchemaVersion = 1;
+    private const byte DigestSchemaVersion = 2;
 
     public static string Compute(AgentRuntimeTransientContext context)
     {
@@ -15,6 +15,7 @@ internal static class AgentChatContextDigest
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         AppendByte(hash, DigestSchemaVersion);
         AppendString(hash, context.Content);
+        AppendWorkspaceScope(hash, context.WorkspaceScope);
         AppendInt32(hash, context.Attachments.Length);
 
         foreach (var attachment in context.Attachments)

@@ -850,7 +850,11 @@ public static class AgentChatContextContributionComposer
             context.Scope.SurfacePosition is null &&
             context.Attachments.IsEmpty)
         {
-            return null;
+            return context.Scope.WorkspaceScope is null
+                ? null
+                : new AgentRuntimeTransientContext(
+                    string.Empty,
+                    context.Scope.WorkspaceScope);
         }
 
         var contextDataJson = JsonSerializer.Serialize(

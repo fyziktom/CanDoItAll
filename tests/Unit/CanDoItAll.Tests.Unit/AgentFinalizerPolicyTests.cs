@@ -1950,6 +1950,85 @@ public sealed class AgentFinalizerPolicyTests
         Assert.NotNull(options.ContextWorkspaceScope);
         Assert.Equal(WorkspaceScopeKind.Project, options.ContextWorkspaceScope!.Kind);
         Assert.Equal(projectId.ToString("D"), options.ContextWorkspaceScope.Key);
+        Assert.Equal(options.ContextWorkspaceScope, options.ContextIntent?.WorkspaceScope);
+    }
+
+    [Fact]
+    public void AgentFramework_runtime_options_and_audit_use_trusted_transient_scope_for_interactive_run()
+    {
+        var projectId = Guid.Parse("3324868f-66e2-478a-bb8f-14f32a5db1e9");
+        var projectScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+        var run = CreateRun("{}") with
+        {
+            ChatSessionId = Guid.NewGuid(),
+            SourceKind = "project-structure",
+            SourceId = projectId.ToString("D"),
+            RequestedBy = "floating-agent-chat",
+            RequestedByKind = "interactive",
+            ProcessRunId = string.Empty,
+            ProcessStepId = string.Empty
+        };
+        var transientContext = new AgentRuntimeTransientContext(
+            "Project structure context",
+            projectScope);
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "BuildRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildRuntimeExecutionOptions method was not found.");
+
+        var options = Assert.IsType<AgentRuntimeExecutionOptions>(
+            method.Invoke(
+                null,
+                [
+                    run,
+                    null,
+                    null,
+                    null,
+                    Array.Empty<AgentRuntimeInputAttachment>(),
+                    null,
+                    transientContext
+                ]));
+
+        Assert.Equal(projectScope, options.ContextWorkspaceScope);
+        Assert.Equal(projectScope, options.ContextIntent?.WorkspaceScope);
+        using (WorkspaceExecutionAuditContext.BeginScope(run, options.ContextWorkspaceScope))
+        {
+            Assert.Equal(projectScope, WorkspaceExecutionAuditContext.Current?.ContextWorkspaceScope);
+        }
+    }
+
+    [Fact]
+    public void AgentFramework_runtime_options_reject_conflicting_trusted_workspace_scopes()
+    {
+        var recordedScope = WorkspaceScopeDescriptor.Project("project-a");
+        var transientScope = WorkspaceScopeDescriptor.Project("project-b");
+        var run = CreateRun(
+            ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+                "{}",
+                recordedScope));
+        var method = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "BuildRuntimeExecutionOptions",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildRuntimeExecutionOptions method was not found.");
+
+        var exception = Assert.Throws<TargetInvocationException>(() =>
+            method.Invoke(
+                null,
+                [
+                    run,
+                    null,
+                    null,
+                    null,
+                    Array.Empty<AgentRuntimeInputAttachment>(),
+                    null,
+                    new AgentRuntimeTransientContext(string.Empty, transientScope)
+                ]));
+
+        var innerException = Assert.IsType<InvalidOperationException>(exception.InnerException);
+        Assert.Contains(
+            "conflicting trusted workspace scopes",
+            innerException.Message,
+            StringComparison.Ordinal);
     }
 
     private static AgentFinalizerPolicy CreatePolicy()

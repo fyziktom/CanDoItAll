@@ -192,6 +192,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(MafRuntimeExecutionOptionsResolver),
             typeof(MafRuntimeToolInvocationResultClassifier),
             typeof(ContextCapabilityBuilder),
+            typeof(WorkspaceRagRetriever),
             typeof(SkillCapabilityBuilder),
             typeof(McpCapabilityBuilder),
             typeof(ToolCapabilityBuilder),
@@ -204,10 +205,41 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(RequestScopedSessionContentScrubber),
             typeof(ProcessArtifactRecoveryService),
             typeof(ProviderRuntimeDiagnostics),
+            typeof(OllamaChatResponseResilienceHandler),
+            typeof(ProjectWorkspaceScopePolicy),
             typeof(RequiredFinalizerCapturedException)
         };
 
         Assert.All(collaboratorTypes, type => Assert.False(type.IsNested, $"{type.FullName} must not be nested under MafAgentRuntime."));
+    }
+
+    [Fact]
+    public void Ollama_provider_composes_protocol_normalization_before_response_resilience()
+    {
+        var root = FindRepoRoot();
+        var source = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Providers",
+            "MafProviderAgentFactory.cs"));
+        var protocolHandlerIndex = source.IndexOf(
+            "new OllamaToolResultProtocolHandler(",
+            StringComparison.Ordinal);
+        var resilienceHandlerIndex = source.IndexOf(
+            "new OllamaChatResponseResilienceHandler(",
+            StringComparison.Ordinal);
+        var transportHandlerIndex = source.IndexOf(
+            "new HttpClientHandler()",
+            resilienceHandlerIndex,
+            StringComparison.Ordinal);
+
+        Assert.True(protocolHandlerIndex >= 0);
+        Assert.True(resilienceHandlerIndex > protocolHandlerIndex);
+        Assert.True(transportHandlerIndex > resilienceHandlerIndex);
     }
 
     [Fact]

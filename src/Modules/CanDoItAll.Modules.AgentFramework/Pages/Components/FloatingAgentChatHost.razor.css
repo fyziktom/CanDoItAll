@@ -5,6 +5,11 @@
     z-index: 1700;
 }
 
+.floating-agent-chat-host ::deep .cda-overlay-window {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
 .floating-agent-chat-host ::deep .floating-agent-chat-host__catalog-body,
 .floating-agent-chat-host ::deep .floating-agent-chat-host__chat-body,
 .floating-agent-chat-host__chat-content {

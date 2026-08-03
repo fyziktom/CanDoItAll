@@ -353,8 +353,16 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         bool allowBackgroundResponses,
         IServiceProvider services)
     {
+        var resilienceLogger = services
+            .GetService<ILoggerFactory>()
+            ?.CreateLogger<OllamaChatResponseResilienceHandler>();
         var httpClient = new HttpClient(
-            new OllamaToolResultProtocolHandler(new HttpClientHandler()))
+            new OllamaToolResultProtocolHandler(
+                new OllamaChatResponseResilienceHandler(
+                    new HttpClientHandler(),
+                    provider,
+                    model,
+                    resilienceLogger)))
         {
             BaseAddress = new Uri(provider.BaseUrl, UriKind.Absolute),
             Timeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
