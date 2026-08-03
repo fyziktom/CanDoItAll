@@ -110,7 +110,7 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             ["messages"] = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
             ["stream"] = false
         };
-        AddChatCompletionModelParameters(payload, request);
+        ProviderDriverProtocol.AddOpenAiChatCompletionModelParameters(payload, request);
         httpRequest.Content = JsonContent.Create(
             payload,
             options: ProviderDriverJson.Options);
@@ -144,169 +144,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             ["stream"] = false,
             ["store"] = false
         };
-        AddResponsesModelParameters(payload, request);
+        ProviderDriverProtocol.AddOpenAiResponsesModelParameters(payload, request);
         httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
 
         using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI response", cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        var root = document.RootElement;
-        EnsureResponseCompleted(root);
-        var usage = root.TryGetProperty("usage", out var usageElement)
-            ? usageElement
-            : default;
-        return new ProviderChatCompletionResult(
-            request.Model,
-            ReadResponseText(root),
-            usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "input_tokens") : 0,
-            usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "output_tokens") : 0);
-    }
-
-    private static void AddChatCompletionModelParameters(
-        IDictionary<string, object?> payload,
-        ProviderChatCompletionRequest request)
-    {
-        var reasoningEffort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
-            request.Provider.Kind,
-            request.Provider.Transport,
-            request.Model,
-            request.Provider.ConfigurationJson,
-            request.ModelParameterConfigurationJson);
-        if (reasoningEffort is not null)
-        {
-            payload["reasoning_effort"] = AgentProviderModelParameterPolicy.FormatReasoningEffort(reasoningEffort.Value);
-        }
-
-        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
-            request.Provider.Kind,
-            request.Model,
-            request.Provider.ConfigurationJson,
-            request.ModelParameterConfigurationJson);
-        if (maxOutputTokens is not null)
-        {
-            payload["max_completion_tokens"] = maxOutputTokens.Value;
-        }
-    }
-
-    private static void AddResponsesModelParameters(
-        IDictionary<string, object?> payload,
-        ProviderChatCompletionRequest request)
-    {
-        var reasoningEffort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
-            request.Provider.Kind,
-            request.Provider.Transport,
-            request.Model,
-            request.Provider.ConfigurationJson,
-            request.ModelParameterConfigurationJson);
-        if (reasoningEffort is not null)
-        {
-            payload["reasoning"] = new Dictionary<string, object>
-            {
-                ["effort"] = AgentProviderModelParameterPolicy.FormatReasoningEffort(reasoningEffort.Value)
-            };
-        }
-
-        var maxOutputTokens = AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(
-            request.Provider.Kind,
-            request.Model,
-            request.Provider.ConfigurationJson,
-            request.ModelParameterConfigurationJson);
-        if (maxOutputTokens is not null)
-        {
-            payload["max_output_tokens"] = maxOutputTokens.Value;
-        }
-    }
-
-    private static string ReadResponseText(JsonElement root)
-    {
-        var directText = ProviderDriverJson.ReadString(root, "output_text");
-        if (!string.IsNullOrWhiteSpace(directText))
-        {
-            return directText;
-        }
-
-        if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
-        {
-            return string.Empty;
-        }
-
-        var text = new StringBuilder();
-        foreach (var outputItem in output.EnumerateArray())
-        {
-            if (!string.Equals(
-                    ProviderDriverJson.ReadString(outputItem, "type"),
-                    "message",
-                    StringComparison.Ordinal) ||
-                !outputItem.TryGetProperty("content", out var content) ||
-                content.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            foreach (var contentItem in content.EnumerateArray())
-            {
-                var value = ProviderDriverJson.ReadString(contentItem, "type") switch
-                {
-                    "output_text" => ProviderDriverJson.ReadString(contentItem, "text"),
-                    "refusal" => ProviderDriverJson.ReadString(contentItem, "refusal"),
-                    _ => string.Empty
-                };
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    continue;
-                }
-
-                if (text.Length > 0)
-                {
-                    text.AppendLine();
-                }
-
-                text.Append(value);
-            }
-        }
-
-        return text.ToString();
-    }
-
-    private static void EnsureResponseCompleted(JsonElement root)
-    {
-        var status = ProviderDriverJson.ReadString(root, "status");
-        if (string.Equals(status, "completed", StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        var detail = status switch
-        {
-            "failed" => ReadNestedResponseDetail(root, "error", "message"),
-            "incomplete" => ReadNestedResponseDetail(root, "incomplete_details", "reason"),
-            _ => string.Empty
-        };
-        var detailSuffix = string.IsNullOrWhiteSpace(detail)
-            ? string.Empty
-            : $": {detail}";
-        var statusLabel = string.IsNullOrWhiteSpace(status)
-            ? "missing"
-            : status;
-        throw new InvalidOperationException($"OpenAI response ended with status '{statusLabel}'{detailSuffix}");
-    }
-
-    private static string ReadNestedResponseDetail(
-        JsonElement root,
-        string objectPropertyName,
-        string detailPropertyName)
-    {
-        if (!root.TryGetProperty(objectPropertyName, out var container) ||
-            container.ValueKind != JsonValueKind.Object)
-        {
-            return string.Empty;
-        }
-
-        var detail = ProviderDriverJson.ReadString(container, detailPropertyName).Trim();
-        return detail.Length <= 800
-            ? detail
-            : detail[..800];
+        return ProviderDriverProtocol.ReadOpenAiResponsesResult(request.Model, document.RootElement);
     }
 
     public async Task<ProviderImageGenerationResult> GenerateImageAsync(

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -10,8 +11,8 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
-    private const string ExpectedAgentTemplateSeedVersion = "2026-07-agent-template-teams-v70";
-    private const string PreviousAgentTemplateSeedVersion = "2026-07-agent-template-teams-v69";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-08-agent-template-teams-v71";
+    private const string PreviousAgentTemplateSeedVersion = "2026-07-agent-template-teams-v70";
 
     private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -176,6 +177,7 @@ public sealed class AgentTeamCatalogIntegrationTests
                 Assert.NotNull(member.Settings.Access.ProjectStructure);
                 Assert.NotNull(member.Settings.Access.Processes);
                 Assert.NotEmpty(member.Skills.CapabilityKeys);
+                Assert.Equal(AgentReasoningEffortLevel.Medium, member.Settings.ReasoningEffort);
             });
         Assert.Equal(
             LunaTemplateKeys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase),
@@ -316,7 +318,13 @@ public sealed class AgentTeamCatalogIntegrationTests
         var agentsByTemplateKey = seed.Agents.ToDictionary(item => item.TemplateKey, StringComparer.OrdinalIgnoreCase);
         Assert.All(
             agentsByTemplateKey.Values,
-            agent => Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(agent.AvatarImageUrl)));
+            agent =>
+            {
+                Assert.True(AgentAvatarImageCatalog.IsBundledAvatarUrl(agent.AvatarImageUrl));
+                AssertCanonicalReasoningEffort(
+                    agent.ConfigurationJson,
+                    AgentReasoningEffortLevel.Medium);
+            });
         Assert.Equal(
             LunaTemplateKeys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase),
             agentsByTemplateKey.Values
@@ -483,6 +491,64 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Contains(agentsByTemplateKey["layout-image-generation-agent"].Id, visualTemplateTeam.AgentIds);
     }
 
+    [Fact]
+    public void Agent_template_without_reasoning_effort_inherits_provider_default()
+    {
+        using var templatePack = new TemporaryAgentTemplatePack();
+        templatePack.SetTargetSetting("reasoningEffort", valueJson: null);
+
+        var seed = SandboxWorkspaceSeedBuilder.Build(agentTemplatePackRoot: templatePack.RootPath);
+        var architect = Assert.Single(
+            seed.Agents,
+            agent => string.Equals(agent.TemplateKey, "portfolio-architect", StringComparison.Ordinal));
+
+        AssertCanonicalReasoningEffort(architect.ConfigurationJson, expected: null);
+    }
+
+    [Theory]
+    [InlineData("\"turbo\"")]
+    [InlineData("2")]
+    public void Agent_template_pack_rejects_invalid_reasoning_effort_with_settings_path(string invalidValueJson)
+    {
+        using var templatePack = new TemporaryAgentTemplatePack();
+        templatePack.SetTargetSetting("reasoningEffort", invalidValueJson);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new AgentTemplatePackLoader(templatePack.RootPath).Load());
+
+        Assert.Contains(templatePack.TargetSettingsPath, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("could not be loaded", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Agent_template_pack_rejects_legacy_reasoning_effort_switch_with_settings_path()
+    {
+        using var templatePack = new TemporaryAgentTemplatePack();
+        templatePack.SetTargetSetting("reasoningEffort", valueJson: null);
+        templatePack.SetTargetSetting("applyDefaultReasoningEffort", "true");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new AgentTemplatePackLoader(templatePack.RootPath).Load());
+
+        Assert.Contains(templatePack.TargetSettingsPath, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("applyDefaultReasoningEffort", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("no longer supported", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Agent_template_materialization_rejects_reasoning_effort_for_unsupported_model()
+    {
+        using var templatePack = new TemporaryAgentTemplatePack();
+        templatePack.SetTargetSetting("model", "\"gpt-4.1\"");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            SandboxWorkspaceSeedBuilder.Build(agentTemplatePackRoot: templatePack.RootPath));
+
+        Assert.Contains("portfolio-architect", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("gpt-4.1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("cannot be applied", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsCapabilityCurationKey(string capabilityKey)
     {
         return string.Equals(
@@ -640,7 +706,33 @@ public sealed class AgentTeamCatalogIntegrationTests
     }
 
     [Fact]
-    public void Managed_hr_agent_v69_refreshes_current_workspace_access_guidance_and_settings()
+    public void Current_managed_agent_reasoning_effort_drift_refreshes_canonical_policy()
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
+        var driftedHrAgent = seededHrAgent with
+        {
+            ConfigurationJson = AgentThinkingEffortPolicy.WriteAgentOverride(
+                seededHrAgent.ConfigurationJson,
+                AgentReasoningEffortLevel.High)
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
+        {
+            Agents = seed.Agents
+                .Select(agent => agent.Id == seededHrAgent.Id ? driftedHrAgent : agent)
+                .ToList()
+        });
+        var refreshedHrAgent = Assert.Single(normalized.Agents, HrAgentIdentity.Matches);
+
+        Assert.Equal(seededHrAgent.ConfigurationJson, refreshedHrAgent.ConfigurationJson);
+        AssertCanonicalReasoningEffort(
+            refreshedHrAgent.ConfigurationJson,
+            AgentReasoningEffortLevel.Medium);
+    }
+
+    [Fact]
+    public void Managed_hr_agent_v70_refreshes_current_workspace_access_guidance_and_settings()
     {
         const string legacyInstructions = "Legacy HR instructions without typed workspace access guidance.";
 
@@ -650,10 +742,12 @@ public sealed class AgentTeamCatalogIntegrationTests
         {
             Instructions = legacyInstructions,
             Permissions = seededHrAgent.Permissions with { CanAskOtherAgents = false },
-            ConfigurationJson = seededHrAgent.ConfigurationJson.Replace(
-                ExpectedAgentTemplateSeedVersion,
-                PreviousAgentTemplateSeedVersion,
-                StringComparison.Ordinal)
+            ConfigurationJson = AgentThinkingEffortPolicy.WriteAgentOverride(
+                seededHrAgent.ConfigurationJson.Replace(
+                    ExpectedAgentTemplateSeedVersion,
+                    PreviousAgentTemplateSeedVersion,
+                    StringComparison.Ordinal),
+                AgentReasoningEffortLevel.High)
         };
 
         var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(seed.ToCatalog() with
@@ -669,19 +763,24 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Equal(seededHrAgent.Permissions, refreshedHrAgent.Permissions);
         Assert.Equal(seededHrAgent.ConfigurationJson, refreshedHrAgent.ConfigurationJson);
         Assert.Equal(ExpectedAgentTemplateSeedVersion, ReadManagedSeedVersion(refreshedHrAgent.ConfigurationJson));
+        Assert.Equal(
+            AgentReasoningEffortLevel.Medium,
+            AgentThinkingEffortPolicy.ReadConfiguredEffort(refreshedHrAgent.ConfigurationJson, "agent"));
     }
 
     [Fact]
-    public void Customized_managed_hr_agent_v69_preserves_customer_owned_guidance_and_settings()
+    public void Customized_managed_hr_agent_v70_preserves_customer_owned_guidance_and_settings()
     {
         const string customizedInstructions = "Customer-owned HR governance instructions.";
 
         var seed = SandboxWorkspaceSeedFactory.Create();
         var seededHrAgent = Assert.Single(seed.Agents, HrAgentIdentity.Matches);
-        var staleConfiguration = seededHrAgent.ConfigurationJson.Replace(
-            ExpectedAgentTemplateSeedVersion,
-            PreviousAgentTemplateSeedVersion,
-            StringComparison.Ordinal);
+        var staleConfiguration = AgentThinkingEffortPolicy.WriteAgentOverride(
+            seededHrAgent.ConfigurationJson.Replace(
+                ExpectedAgentTemplateSeedVersion,
+                PreviousAgentTemplateSeedVersion,
+                StringComparison.Ordinal),
+            AgentReasoningEffortLevel.High);
         var customizedHrAgent = seededHrAgent with
         {
             Instructions = customizedInstructions,
@@ -702,6 +801,9 @@ public sealed class AgentTeamCatalogIntegrationTests
         Assert.Equal(customizedHrAgent.ConfigurationJson, preservedHrAgent.ConfigurationJson);
         Assert.Equal(PreviousAgentTemplateSeedVersion, ReadManagedSeedVersion(preservedHrAgent.ConfigurationJson));
         Assert.True(AgentManagedSeedCustomizationMetadata.HasCurrentCustomization(preservedHrAgent.ConfigurationJson));
+        Assert.Equal(
+            AgentReasoningEffortLevel.High,
+            AgentThinkingEffortPolicy.ReadConfiguredEffort(preservedHrAgent.ConfigurationJson, "agent"));
     }
 
     [Fact]
@@ -745,6 +847,49 @@ public sealed class AgentTeamCatalogIntegrationTests
         using var document = JsonDocument.Parse(configurationJson);
         return document.RootElement.GetProperty(ManagedSeedVersionPropertyName).GetString()
             ?? throw new InvalidOperationException("Managed seed version is required for agent template refresh tests.");
+    }
+
+    private static void AssertCanonicalReasoningEffort(
+        string configurationJson,
+        AgentReasoningEffortLevel? expected)
+    {
+        Assert.Equal(
+            expected,
+            AgentThinkingEffortPolicy.ReadConfiguredEffort(configurationJson, "agent"));
+
+        using var document = JsonDocument.Parse(configurationJson);
+        var root = document.RootElement;
+        Assert.DoesNotContain(
+            root.EnumerateObject(),
+            property => string.Equals(property.Name, "reasoningEffort", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            root.EnumerateObject(),
+            property => string.Equals(property.Name, "think", StringComparison.OrdinalIgnoreCase));
+
+        if (!root.TryGetProperty(
+                AgentThinkingEffortPolicy.ModelParametersConfigurationPropertyName,
+                out var modelParameters))
+        {
+            Assert.Null(expected);
+            return;
+        }
+
+        Assert.DoesNotContain(
+            modelParameters.EnumerateObject(),
+            property => string.Equals(property.Name, "think", StringComparison.OrdinalIgnoreCase));
+        if (expected is null)
+        {
+            Assert.DoesNotContain(
+                modelParameters.EnumerateObject(),
+                property => string.Equals(property.Name, "reasoningEffort", StringComparison.OrdinalIgnoreCase));
+            return;
+        }
+
+        Assert.Equal(
+            AgentThinkingEffortPolicy.FormatEffort(expected.Value),
+            modelParameters
+                .GetProperty(AgentThinkingEffortPolicy.ReasoningEffortConfigurationPropertyName)
+                .GetString());
     }
 
     private static string ReadInlineSkillInstructions(string configurationJson)
@@ -800,5 +945,75 @@ public sealed class AgentTeamCatalogIntegrationTests
         editor.IsTemplate = false;
         editor.TemplateKey = string.Empty;
         return await workspaceService.SaveAgentAsync(editor);
+    }
+
+    private sealed class TemporaryAgentTemplatePack : IDisposable
+    {
+        private static readonly string TargetSettingsRelativePath = Path.Combine(
+            "teams",
+            "delivery-platform",
+            "members",
+            "portfolio-architect",
+            "settings.json");
+
+        public TemporaryAgentTemplatePack()
+        {
+            RootPath = Path.Combine(
+                Path.GetTempPath(),
+                $"agent-template-pack-{Guid.NewGuid():N}");
+            CopyDirectory(AgentTemplatePackLoader.FindPackRoot(), RootPath);
+            TargetSettingsPath = Path.Combine(RootPath, TargetSettingsRelativePath);
+        }
+
+        public string RootPath { get; }
+
+        public string TargetSettingsPath { get; }
+
+        public void SetTargetSetting(string propertyName, string? valueJson)
+        {
+            var settings = JsonNode.Parse(File.ReadAllText(TargetSettingsPath))?.AsObject()
+                ?? throw new InvalidOperationException(
+                    $"Agent template settings '{TargetSettingsPath}' must contain a JSON object.");
+            if (valueJson is null)
+            {
+                settings.Remove(propertyName);
+            }
+            else
+            {
+                settings[propertyName] = JsonNode.Parse(valueJson)
+                    ?? throw new InvalidOperationException(
+                        $"Agent template test value for '{propertyName}' must not be JSON null.");
+            }
+
+            File.WriteAllText(
+                TargetSettingsPath,
+                settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(RootPath))
+            {
+                Directory.Delete(RootPath, recursive: true);
+            }
+        }
+
+        private static void CopyDirectory(string sourcePath, string destinationPath)
+        {
+            Directory.CreateDirectory(destinationPath);
+            foreach (var filePath in Directory.EnumerateFiles(sourcePath))
+            {
+                File.Copy(
+                    filePath,
+                    Path.Combine(destinationPath, Path.GetFileName(filePath)));
+            }
+
+            foreach (var directoryPath in Directory.EnumerateDirectories(sourcePath))
+            {
+                CopyDirectory(
+                    directoryPath,
+                    Path.Combine(destinationPath, Path.GetFileName(directoryPath)));
+            }
+        }
     }
 }

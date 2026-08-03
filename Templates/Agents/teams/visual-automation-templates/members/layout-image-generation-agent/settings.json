@@ -17,7 +17,7 @@
     "maxLocalRagResults": 4,
     "runtimeUse": "layout-image-generation"
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": true,
   "templateKey": "layout-image-generation-agent",
   "permissions": {

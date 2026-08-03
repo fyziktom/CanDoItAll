@@ -704,7 +704,6 @@ public sealed class AppDatabaseBootstrapper(
                 ExtraSettingsJson = JsonSerializer.Serialize(new
                 {
                     history = "service-managed",
-                    reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
                     modelParameters = new
                     {
                         reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
@@ -938,10 +937,7 @@ public sealed class AppDatabaseBootstrapper(
                         {
                             numPredict =
                                 AgentProviderModelParameterPolicy
-                                    .DefaultOllamaMaxOutputTokens,
-                            think =
-                                AgentProviderModelParameterPolicy
-                                    .DefaultOllamaThinkEnabled
+                                    .DefaultOllamaMaxOutputTokens
                         }
                     }),
                     OllamaProviderAdapter.PluginKey,
@@ -1219,7 +1215,6 @@ public sealed class AppDatabaseBootstrapper(
         var expectedExtraSettingsJson = JsonSerializer.Serialize(new
         {
             history = "service-managed",
-            reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
             modelParameters = new
             {
                 reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
@@ -1436,4 +1431,3 @@ public sealed class DatabaseSwitchCoordinator(
         }
     }
 }
-

@@ -23,7 +23,7 @@
       "allowedSourceScopes": []
     }
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "workflow-curator-agent",
   "permissions": {

@@ -10,7 +10,7 @@ internal sealed class InputAttachmentPreparer(
     IMafProviderCredentialService providerCredentialService,
     IMafProviderRuntimeGateway providerRuntimeGateway)
 {
-    private const string InputAttachmentAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":384,"think":false}}""";
+    private const string InputAttachmentAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":384}}""";
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
     public async Task<PreparedInputAttachments> PrepareAsync(

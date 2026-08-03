@@ -949,7 +949,7 @@ public sealed record WorkflowImageAnalyzeExecutorSettings
     public long MaxBytes { get; init; } = 10 * 1024 * 1024;
 
     public string ModelParameterConfigurationJson { get; init; } =
-        """{"modelParameters":{"numPredict":512,"think":false}}""";
+        """{"modelParameters":{"numPredict":512}}""";
 }
 
 public sealed record WorkflowImageAnalyzeExecutorResult(

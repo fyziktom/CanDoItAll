@@ -22,7 +22,7 @@
       "allowedSourceScopes": []
     }
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "prompts-curator-agent",
   "permissions": {

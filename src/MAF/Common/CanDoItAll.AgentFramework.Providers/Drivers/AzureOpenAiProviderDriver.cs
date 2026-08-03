@@ -89,6 +89,21 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
         ProviderChatCompletionRequest request,
         CancellationToken cancellationToken = default)
     {
+        return request.Provider.Transport switch
+        {
+            ProviderTransportKind.ChatCompletions =>
+                await CompleteChatCompletionsAsync(request, cancellationToken).ConfigureAwait(false),
+            ProviderTransportKind.Responses =>
+                await CompleteResponseAsync(request, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidOperationException(
+                $"Unsupported transport '{request.Provider.Transport}' for provider '{request.Provider.Name}'.")
+        };
+    }
+
+    private async Task<ProviderChatCompletionResult> CompleteChatCompletionsAsync(
+        ProviderChatCompletionRequest request,
+        CancellationToken cancellationToken)
+    {
         var credential = ResolveCredential(request.Provider);
         if (!credential.IsResolved)
         {
@@ -102,12 +117,15 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
                 request.Model,
                 ReadApiVersion(request.Provider.ConfigurationJson)));
         httpRequest.Headers.Add("api-key", credential.ApiKey);
+        var payload = new Dictionary<string, object?>
+        {
+            ["messages"] = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
+            ["stream"] = false
+        };
+        ProviderDriverProtocol.AddOpenAiChatCompletionModelParameters(payload, request);
+
         httpRequest.Content = JsonContent.Create(
-            new
-            {
-                messages = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
-                stream = false
-            },
+            payload,
             options: ProviderDriverJson.Options);
         using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         await ProviderDriverProtocol.EnsureSuccessAsync(response, "Azure OpenAI chat completion", cancellationToken).ConfigureAwait(false);
@@ -123,6 +141,39 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
             ProviderDriverJson.ReadString(choice, "content"),
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "prompt_tokens") : 0,
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "completion_tokens") : 0);
+    }
+
+    private async Task<ProviderChatCompletionResult> CompleteResponseAsync(
+        ProviderChatCompletionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var credential = ResolveCredential(request.Provider);
+        if (!credential.IsResolved)
+        {
+            throw new InvalidOperationException(credential.FailureMessage);
+        }
+
+        var endpoint = AzureOpenAiEndpoint.Parse(request.Provider);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint.ResponsesEndpoint);
+        httpRequest.Headers.Add("api-key", credential.ApiKey);
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = request.Model,
+            ["input"] = ProviderDriverProtocol.BuildOpenAiResponsesInput(request),
+            ["stream"] = false,
+            ["store"] = false
+        };
+        ProviderDriverProtocol.AddOpenAiResponsesModelParameters(payload, request);
+        httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
+
+        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            "Azure OpenAI response",
+            cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return ProviderDriverProtocol.ReadOpenAiResponsesResult(request.Model, document.RootElement);
     }
 
     private ProviderDriverCredential ResolveCredential(ProviderProfile provider)

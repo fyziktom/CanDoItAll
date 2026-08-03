@@ -17,7 +17,7 @@
     "maxLocalRagResults": 4,
     "runtimeUse": "app-screenshot-capture"
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": true,
   "templateKey": "app-screenshot-capture-agent",
   "permissions": {

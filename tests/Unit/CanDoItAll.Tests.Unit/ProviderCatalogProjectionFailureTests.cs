@@ -13,6 +13,8 @@ using WorkspaceProviderProfile =
     CanDoItAll.Modules.Workspace.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
+using AgentFrameworkProviderKind =
+    CanDoItAll.AgentFramework.Models.ProviderKind;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class ProviderCatalogProjectionFailureTests
@@ -157,6 +159,201 @@ public sealed class ProviderCatalogProjectionFailureTests
         }
     }
 
+    [Fact]
+    public async Task Provider_save_persists_kind_and_defined_thinking_capabilities_through_database_mapping()
+    {
+        var registry = CreateScenarioRegistry();
+        var providerId = await registry.SaveProviderAsync(
+            new AgentFrameworkProviderProfileEditorModel
+            {
+                Name = "Azure deployment provider",
+                Kind = AgentFrameworkProviderKind.AzureOpenAi,
+                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                DefaultModel = "reasoning-deployment",
+                Transport = ProviderTransportKind.ChatCompletions,
+                Purpose = ProviderProfilePurpose.Chat,
+                IsEnabled = true,
+                SupportsStreaming = true,
+                SupportsTools = true,
+                ConfigurationJson =
+                    """{"modelThinkingEffortCapabilities":[{"model":"reasoning-deployment","status":"supported","source":"defined","allowedEfforts":["low","medium","high"],"modelFamily":"","summary":"Deployment metadata supplied by the provider administrator."}]}"""
+            });
+        var reloaded = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(AgentFrameworkProviderKind.AzureOpenAi, reloaded.Kind);
+        var reloadedCapability = Assert.Single(
+            reloaded.ModelThinkingEffortCapabilities);
+        Assert.Equal("reasoning-deployment", reloadedCapability.Model);
+        Assert.Equal(
+            AgentThinkingEffortSupportStatus.Supported,
+            reloadedCapability.Status);
+        Assert.Equal(
+            AgentThinkingEffortCapabilitySource.Defined,
+            reloadedCapability.Source);
+        Assert.Equal(
+            [
+                AgentReasoningEffortLevel.Low,
+                AgentReasoningEffortLevel.Medium,
+                AgentReasoningEffortLevel.High
+            ],
+            reloadedCapability.AllowedEfforts);
+        Assert.Equal(
+            AgentThinkingEffortControlMode.EffortLevels,
+            reloadedCapability.ControlMode);
+        Assert.Contains(
+            "modelThinkingEffortCapabilities",
+            reloaded.ConfigurationJson,
+            StringComparison.Ordinal);
+
+        var editor = await registry.GetProviderEditorAsync(providerId);
+        editor.ConfigurationJson =
+            """{"modelThinkingEffortCapabilities":[{"model":"reasoning-deployment","status":"supported","source":"defined","allowedEfforts":["high"],"modelFamily":"","summary":"Updated deployment metadata."}]}""";
+        await registry.SaveProviderAsync(editor);
+        var edited = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(
+            [AgentReasoningEffortLevel.High],
+            Assert.Single(edited.ModelThinkingEffortCapabilities).AllowedEfforts);
+    }
+
+    [Fact]
+    public async Task Provider_update_persists_discovered_thinking_capabilities_through_database_mapping()
+    {
+        var registry = CreateScenarioRegistry();
+        var providerId = await registry.SaveProviderAsync(
+            new AgentFrameworkProviderProfileEditorModel
+            {
+                Name = "Local model provider",
+                Kind = AgentFrameworkProviderKind.Ollama,
+                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                DefaultModel = "qwen3.5:2b",
+                Transport = ProviderTransportKind.ChatCompletions,
+                Purpose = ProviderProfilePurpose.Chat,
+                IsEnabled = true,
+                SupportsStreaming = true,
+                SupportsTools = true
+            });
+        var capability = AgentThinkingEffortPolicy.CreateDiscoveredCapability(
+            "qwen3.5:2b",
+            "qwen3",
+            AgentThinkingEffortSupportStatus.Supported);
+
+        await registry.UpdateProviderAsync(
+            providerId,
+            provider => provider with
+            {
+                ModelThinkingEffortCapabilities = [capability]
+            });
+        var reloaded = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(AgentFrameworkProviderKind.Ollama, reloaded.Kind);
+        var reloadedCapability = Assert.Single(
+            reloaded.ModelThinkingEffortCapabilities);
+        Assert.Equal(capability.Model, reloadedCapability.Model);
+        Assert.Equal(capability.Status, reloadedCapability.Status);
+        Assert.Equal(capability.Source, reloadedCapability.Source);
+        Assert.Equal(capability.AllowedEfforts, reloadedCapability.AllowedEfforts);
+        Assert.Equal(capability.ControlMode, reloadedCapability.ControlMode);
+
+        await registry.UpdateProviderAsync(
+            providerId,
+            provider => provider with
+            {
+                ModelThinkingEffortCapabilities = []
+            });
+        var cleared = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Empty(cleared.ModelThinkingEffortCapabilities);
+        Assert.DoesNotContain(
+            "modelThinkingEffortCapabilities",
+            cleared.ConfigurationJson,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Provider_save_drops_discovered_capabilities_when_provider_identity_changes()
+    {
+        var registry = CreateScenarioRegistry();
+        var discoveredCapability = AgentThinkingEffortPolicy.CreateDiscoveredCapability(
+            "qwen3.5:2b",
+            "qwen35",
+            AgentThinkingEffortSupportStatus.Supported);
+        var providerId = await registry.SaveProviderAsync(
+            new AgentFrameworkProviderProfileEditorModel
+            {
+                Name = "Changing provider identity",
+                Kind = AgentFrameworkProviderKind.Ollama,
+                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                DefaultModel = "qwen3.5:2b",
+                Transport = ProviderTransportKind.ChatCompletions,
+                Purpose = ProviderProfilePurpose.Chat,
+                IsEnabled = true,
+                SupportsStreaming = true,
+                SupportsTools = true,
+                ModelThinkingEffortCapabilities = [discoveredCapability]
+            });
+        var editor = await registry.GetProviderEditorAsync(providerId);
+        editor.Kind = AgentFrameworkProviderKind.AzureOpenAi;
+        editor.BaseUrl = "https://example.openai.azure.com";
+        editor.DefaultModel = "reasoning-deployment";
+        editor.Transport = ProviderTransportKind.Responses;
+
+        await registry.SaveProviderAsync(editor);
+        var reloaded = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(AgentFrameworkProviderKind.AzureOpenAi, reloaded.Kind);
+        Assert.Empty(reloaded.ModelThinkingEffortCapabilities);
+        Assert.DoesNotContain(
+            "modelThinkingEffortCapabilities",
+            reloaded.ConfigurationJson,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            AgentThinkingEffortSupportStatus.Unknown,
+            AgentThinkingEffortPolicy.ResolveCapability(
+                reloaded,
+                "reasoning-deployment").Status);
+    }
+
+    [Fact]
+    public async Task Provider_save_rejects_malformed_configuration_without_mutating_stored_profile()
+    {
+        var registry = CreateScenarioRegistry();
+        var providerId = await registry.SaveProviderAsync(
+            new AgentFrameworkProviderProfileEditorModel
+            {
+                Name = "Stored provider",
+                Kind = AgentFrameworkProviderKind.AzureOpenAi,
+                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                DefaultModel = "reasoning-deployment",
+                Transport = ProviderTransportKind.Responses,
+                Purpose = ProviderProfilePurpose.Chat,
+                IsEnabled = true,
+                SupportsStreaming = true,
+                SupportsTools = true,
+                ConfigurationJson = "{}"
+            });
+        var before = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+        var editor = await registry.GetProviderEditorAsync(providerId);
+        editor.Name = "Must not persist";
+        editor.ConfigurationJson = "{not-valid-json";
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            registry.SaveProviderAsync(editor));
+        var after = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Contains("not valid JSON", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(before.Name, after.Name);
+        Assert.Equal(before.ConfigurationJson, after.ConfigurationJson);
+        Assert.Equal(before.ModelThinkingEffortCapabilities, after.ModelThinkingEffortCapabilities);
+    }
+
     private static async Task<ProjectionFailureFixture>
         CreateCommittedDeleteProjectionFailureAsync()
     {
@@ -222,6 +419,34 @@ public sealed class ProviderCatalogProjectionFailureTests
             registry,
             store,
             providerId);
+    }
+
+    private static WorkspaceBackedAgentProviderProfileRegistry
+        CreateScenarioRegistry()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(
+        [
+            typeof(WorkspaceModuleAssemblyMarker).Assembly
+        ]);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(
+                $"provider-thinking-capability-{Guid.NewGuid():N}")
+            .Options;
+        var providerRegistry = new ProviderRegistry(
+            [new ScenarioHarnessProviderAdapter()]);
+        IProviderProfileService providerProfileService =
+            new ProviderProfileService();
+        return new WorkspaceBackedAgentProviderProfileRegistry(
+            new TestDbContextFactory(options),
+            new FailingCatalogProjectionStore(),
+            providerRegistry,
+            providerProfileService,
+            new WorkspaceAgentProviderProfileMapper(
+                providerRegistry,
+                providerProfileService),
+            [new RecordingCommitObserver()],
+            new RecordingLogger<
+                WorkspaceBackedAgentProviderProfileRegistry>());
     }
 
     private static void AssertProjectionFailure(

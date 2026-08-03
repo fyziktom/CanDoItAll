@@ -16,7 +16,7 @@
     "enableCompaction": true,
     "maxLocalRagResults": 5
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "marketing-specialist",
   "permissions": {

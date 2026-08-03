@@ -21,7 +21,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
     private const string ProjectsSourceKind = "projects";
     private const string ProjectStructurePlannedStatus = "Planned";
     private const string ProjectStructurePublishedStatus = "Published";
-    private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512,"think":false}}""";
+    private const string ImageAnalysisModelParameterConfigurationJson = """{"modelParameters":{"numPredict":512}}""";
 
     private static readonly IReadOnlyList<string> GovernedProcessDefaultStructureReadStatuses =
     [
