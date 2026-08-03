@@ -110,6 +110,9 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             ? await dbContext.Set<WorkspaceProviderProfile>()
                 .SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
             : null;
+        var currentProfile = current is null
+            ? null
+            : providerMapper.Map(current);
 
         var connectorPluginKey = AgentFrameworkProviderMetadata.ResolveConnectorPluginKey(model, current);
         if (!providerRegistry.TryResolve(connectorPluginKey, out var providerAdapter))
@@ -146,10 +149,17 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
         var timeoutSeconds = AgentFrameworkProviderMetadata.ResolveTimeoutSeconds(model, current?.TimeoutSeconds ?? 45);
         var selectedTransport = model.Transport;
-        var capabilityProfile = providerProfileService.NormalizeImportedProfile(providerProfileService.CreateProfile(model) with
-        {
-            Transport = selectedTransport
-        });
+        var configuredThinkingEffortCapabilities =
+            AgentFrameworkProviderMetadata.HasThinkingEffortCapabilities(
+                model.ConfigurationJson)
+                ? AgentFrameworkProviderMetadata.ReadThinkingEffortCapabilities(
+                    model.ConfigurationJson)
+                : model.ModelThinkingEffortCapabilities ?? [];
+        model.ModelThinkingEffortCapabilities =
+            configuredThinkingEffortCapabilities.ToList();
+        var capabilityProfile = providerProfileService.CreateProfile(
+            model,
+            currentProfile);
         var featureMatrix = providerProfileService.ResolveFeatureMatrix(capabilityProfile);
         entity.Name = model.Name.Trim();
         entity.ProviderKind = providerAdapter.LegacyProviderKind;
@@ -183,8 +193,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 configSchemaVersion,
                 secretRecordId,
                 timeoutSeconds,
+                capabilityProfile.Kind,
                 selectedTransport,
                 model.Purpose,
+                capabilityProfile.ModelThinkingEffortCapabilities,
                 model.Tags),
             ProviderPricingDefaults.ResolveIsPrivateProvider(capabilityProfile.Kind, model.IsPrivateProvider),
             modelPrices);
@@ -238,7 +250,12 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var current = await GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
         var updated = update(current);
-        await SaveProviderAsync(providerProfileService.CreateEditor(updated), cancellationToken);
+        var editor = providerProfileService.CreateEditor(updated);
+        editor.ConfigurationJson =
+            AgentFrameworkProviderMetadata.WriteThinkingEffortCapabilities(
+                editor.ConfigurationJson,
+                updated.ModelThinkingEffortCapabilities);
+        await SaveProviderAsync(editor, cancellationToken);
         return (await GetProviderAsync(providerId, cancellationToken))
             ?? throw new InvalidOperationException("Provider profile was not found after update.");
     }

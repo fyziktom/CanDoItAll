@@ -48,13 +48,22 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
                     [],
                     "Reply with the single word OK."),
                 cancellationToken).ConfigureAwait(false);
-            return string.IsNullOrWhiteSpace(result.ResponseText)
+            return (string.IsNullOrWhiteSpace(result.ResponseText)
                 ? new ProviderHealthResult(false, "Ollama health check returned an empty chat response.", suggestedModels)
-                : new ProviderHealthResult(true, $"Ollama returned /api/tags and completed a chat probe with model '{model}'.", suggestedModels);
+                : new ProviderHealthResult(true, $"Ollama returned /api/tags and completed a chat probe with model '{model}'.", suggestedModels)) with
+            {
+                ModelThinkingEffortCapabilities = models
+                    .Where(item => item.ThinkingEffortCapability is not null)
+                    .Select(item => item.ThinkingEffortCapability!)
+                    .ToList()
+            };
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return new ProviderHealthResult(false, $"Ollama health check failed: {exception.Message}", provider.SuggestedModels);
+            return new ProviderHealthResult(false, $"Ollama health check failed: {exception.Message}", provider.SuggestedModels)
+            {
+                ModelThinkingEffortCapabilities = provider.ModelThinkingEffortCapabilities
+            };
         }
     }
 
@@ -66,18 +75,35 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         await ProviderDriverProtocol.EnsureSuccessAsync(response, "Ollama model catalog", cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return document.RootElement.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array
-            ? models.EnumerateArray()
-                .Select(item => ProviderDriverJson.ReadString(item, "name"))
-                .Where(model => !string.IsNullOrWhiteSpace(model))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(model => new ProviderModelDescriptor(
-                    model,
-                    model,
-                    request.Capability,
-                    ProviderDispatchLimits.Unbatched(TimeSpan.FromMinutes(5))))
-                .ToList()
-            : [];
+        if (!document.RootElement.TryGetProperty("models", out var models))
+        {
+            return [];
+        }
+
+        if (models.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("Ollama model catalog property 'models' must be an array.");
+        }
+
+        var descriptors = new List<ProviderModelDescriptor>();
+        var seenModels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in models.EnumerateArray())
+        {
+            var model = ProviderDriverJson.ReadString(item, "name").Trim();
+            if (string.IsNullOrWhiteSpace(model) || !seenModels.Add(model))
+            {
+                continue;
+            }
+
+            descriptors.Add(await CreateModelDescriptorAsync(
+                request.Provider,
+                item,
+                model,
+                request.Capability,
+                cancellationToken).ConfigureAwait(false));
+        }
+
+        return descriptors;
     }
 
     public async Task<ProviderChatCompletionResult> CompleteChatAsync(
@@ -96,10 +122,19 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             payload["options"] = options;
         }
 
-        var think = AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(
-            request.Provider.ConfigurationJson,
+        var thinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+            request.Provider,
+            request.Model,
             request.ModelParameterConfigurationJson);
-        payload["think"] = think;
+        if (thinkingEffort is not null)
+        {
+            var thinkingCapability = AgentThinkingEffortPolicy.ResolveCapability(
+                request.Provider,
+                request.Model);
+            payload["think"] = OllamaThinkingEffortAdapter.ToNativeValue(
+                thinkingCapability,
+                thinkingEffort.Value);
+        }
 
         using var response = await httpClient.PostAsJsonAsync(
             BuildEndpoint(request.Provider, "api/chat"),
@@ -164,6 +199,111 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         return $"{provider.BaseUrl.Trim().TrimEnd('/')}/{relativePath.TrimStart('/')}";
     }
 
+    private async Task<ProviderModelDescriptor> CreateModelDescriptorAsync(
+        ProviderProfile provider,
+        JsonElement item,
+        string model,
+        AgentProviderCapabilityKind capability,
+        CancellationToken cancellationToken)
+    {
+        var modelFamily = item.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Object
+            ? ProviderDriverJson.ReadString(details, "family")
+            : string.Empty;
+        var thinkingStatus = ResolveThinkingStatus(
+            item,
+            "model catalog",
+            AgentThinkingEffortSupportStatus.Unknown);
+        if (thinkingStatus == AgentThinkingEffortSupportStatus.Unknown)
+        {
+            (modelFamily, thinkingStatus) = await ReadModelThinkingDetailsAsync(
+                provider,
+                model,
+                modelFamily,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return new ProviderModelDescriptor(
+            model,
+            model,
+            capability,
+            ProviderDispatchLimits.Unbatched(TimeSpan.FromMinutes(5)))
+        {
+            ThinkingEffortCapability = AgentThinkingEffortPolicy.CreateDiscoveredCapability(
+                model,
+                modelFamily,
+                thinkingStatus)
+        };
+    }
+
+    private async Task<(string ModelFamily, AgentThinkingEffortSupportStatus ThinkingStatus)>
+        ReadModelThinkingDetailsAsync(
+        ProviderProfile provider,
+        string model,
+        string fallbackModelFamily,
+        CancellationToken cancellationToken)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            BuildEndpoint(provider, "api/show"),
+            new
+            {
+                model,
+                verbose = false
+            },
+            ProviderDriverJson.Options,
+            cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            $"Ollama model details for '{model}'",
+            cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var root = document.RootElement;
+        var reportedModelFamily = root.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Object
+            ? ProviderDriverJson.ReadString(details, "family")
+            : string.Empty;
+        var modelFamily = string.IsNullOrWhiteSpace(reportedModelFamily)
+            ? fallbackModelFamily
+            : reportedModelFamily.Trim();
+        var thinkingStatus = ResolveThinkingStatus(
+            root,
+            $"model details for '{model}'",
+            AgentThinkingEffortSupportStatus.Unsupported);
+        return (modelFamily, thinkingStatus);
+    }
+
+    private static AgentThinkingEffortSupportStatus ResolveThinkingStatus(
+        JsonElement source,
+        string sourceDescription,
+        AgentThinkingEffortSupportStatus noThinkingStatus)
+    {
+        if (!source.TryGetProperty("capabilities", out var capabilities))
+        {
+            return AgentThinkingEffortSupportStatus.Unknown;
+        }
+
+        if (capabilities.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException(
+                $"Ollama {sourceDescription} property 'capabilities' must be an array.");
+        }
+
+        foreach (var capability in capabilities.EnumerateArray())
+        {
+            if (capability.ValueKind != JsonValueKind.String)
+            {
+                throw new InvalidOperationException(
+                    $"Ollama {sourceDescription} property 'capabilities' must contain only strings.");
+            }
+
+            if (string.Equals(capability.GetString(), "thinking", StringComparison.OrdinalIgnoreCase))
+            {
+                return AgentThinkingEffortSupportStatus.Supported;
+            }
+        }
+
+        return noThinkingStatus;
+    }
+
     private static string ResolveHealthModel(
         ProviderProfile provider,
         IReadOnlyList<string> suggestedModels,
@@ -186,12 +326,7 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         }
 
         var content = ProviderDriverJson.ReadString(message, "content");
-        if (!string.IsNullOrWhiteSpace(content))
-        {
-            return content;
-        }
-
-        return ProviderDriverJson.ReadString(message, "thinking");
+        return content;
     }
 
     private static Dictionary<string, object> ResolveChatOptions(

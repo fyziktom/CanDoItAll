@@ -17,7 +17,7 @@
     "slidingWindowTurns": 10,
     "maxLocalRagResults": 5
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "javascript-application-developer",
   "permissions": {

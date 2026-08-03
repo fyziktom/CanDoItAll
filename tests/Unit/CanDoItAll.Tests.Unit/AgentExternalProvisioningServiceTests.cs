@@ -109,6 +109,11 @@ public sealed class AgentExternalProvisioningServiceTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
+            Guid agentId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(Document);
 

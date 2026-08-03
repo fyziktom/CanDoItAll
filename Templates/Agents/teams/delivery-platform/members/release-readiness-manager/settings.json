@@ -16,7 +16,7 @@
     "enableCompaction": true,
     "maxLocalRagResults": 4
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "release-readiness-manager",
   "permissions": {

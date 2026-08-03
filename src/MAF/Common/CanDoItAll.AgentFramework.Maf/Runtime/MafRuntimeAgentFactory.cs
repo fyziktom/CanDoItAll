@@ -116,10 +116,10 @@ internal sealed class MafRuntimeAgentFactory
                 $"Using provider image-analysis model '{model}' for request-scoped image attachment(s) because runtime model '{requestedModel}' is not vision-capable.");
         }
 
-        if (MafModelParametersBuilder.IsReasoningEffortConfiguredButTransportUnsupported(effectiveProvider, model, agent.ConfigurationJson))
-        {
-            throw new InvalidOperationException(MafModelParametersBuilder.BuildReasoningEffortUnsupportedTransportMessage(effectiveProvider, model));
-        }
+        _ = MafModelParametersBuilder.ResolveEffectiveThinkingEffort(
+            effectiveProvider,
+            model,
+            agent.ConfigurationJson);
 
         MafRuntimeExecutionOptionsResolver.EnsureStructuredOutputCapability(effectiveProvider, runtimeOptions);
         var finalizerCapture = MafFinalizerToolFactory.CreateCapture(

@@ -269,9 +269,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
-            ProviderTransportKind.Responses when frameworkManagedHistory => AddEmptyCompletionRecovery(
+            ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
                         .AsIChatClientWithStoredOutputDisabled(
@@ -287,7 +287,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
             _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
         };
@@ -322,9 +322,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .GetChatClient(model)
                 .AsAIAgent(
                     options: options,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
-            ProviderTransportKind.Responses when frameworkManagedHistory => AddEmptyCompletionRecovery(
+            ProviderTransportKind.Responses when frameworkManagedHistory => AddRuntimePolicies(
                     client
                         .GetResponsesClient()
                         .AsIChatClientWithStoredOutputDisabled(
@@ -340,7 +340,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 .AsAIAgent(
                     options: options,
                     model: model,
-                    clientFactory: chatClient => AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services),
+                    clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
             _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
         };
@@ -353,26 +353,58 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         bool allowBackgroundResponses,
         IServiceProvider services)
     {
-        var httpClient = new HttpClient
+        var httpClient = new HttpClient(
+            new OllamaToolResultProtocolHandler(new HttpClientHandler()))
         {
             BaseAddress = new Uri(provider.BaseUrl, UriKind.Absolute),
             Timeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
         };
         IChatClient chatClient = new DefaultOllamaOptionsChatClient(
             new OllamaApiClient(httpClient, model, jsonSerializerContext: null),
-            AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(provider.ConfigurationJson, string.Empty),
-            AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(provider.ConfigurationJson, string.Empty));
-        return AddEmptyCompletionRecovery(chatClient, provider, model, allowBackgroundResponses, services)
+            options.ChatOptions?.MaxOutputTokens ??
+            AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
+                provider.ConfigurationJson,
+                string.Empty),
+            ResolveDefaultOllamaThinkingValue(provider, model, options.ChatOptions));
+        return AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services)
             .AsAIAgent(options: options);
     }
 
-    private static IChatClient AddEmptyCompletionRecovery(
+    private static object? ResolveDefaultOllamaThinkingValue(
+        ProviderProfile provider,
+        string model,
+        ChatOptions? chatOptions)
+    {
+        if (chatOptions?.AdditionalProperties?.TryGetValue(
+                OllamaOption.Think.Name,
+                out var effectiveThinkingValue) == true)
+        {
+            return effectiveThinkingValue;
+        }
+
+        var providerThinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+            provider,
+            model,
+            string.Empty);
+        return providerThinkingEffort is null
+            ? null
+            : OllamaThinkingEffortAdapter.ToNativeValue(
+                AgentThinkingEffortPolicy.ResolveCapability(provider, model),
+                providerThinkingEffort.Value);
+    }
+
+    private static IChatClient AddRuntimePolicies(
         IChatClient chatClient,
         ProviderProfile provider,
         string model,
         bool allowBackgroundResponses,
         IServiceProvider services)
     {
+        chatClient = AddOpenAiChatCompletionsCompatibility(
+            chatClient,
+            provider,
+            model,
+            services);
         if (chatClient.GetService<EmptyCompletionRetryChatClient>() is not null)
         {
             throw new InvalidOperationException(
@@ -387,6 +419,34 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
             provider,
             model,
             allowBackgroundResponses,
+            logger);
+    }
+
+    private static IChatClient AddOpenAiChatCompletionsCompatibility(
+        IChatClient chatClient,
+        ProviderProfile provider,
+        string model,
+        IServiceProvider services)
+    {
+        if (provider.Kind != ProviderKind.OpenAi ||
+            provider.Transport != ProviderTransportKind.ChatCompletions)
+        {
+            return chatClient;
+        }
+
+        if (chatClient.GetService<OpenAiChatCompletionsCompatibilityChatClient>() is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider '{provider.Name}' model '{model}' already contains OpenAI Chat Completions compatibility handling.");
+        }
+
+        var logger = services
+            .GetService<ILoggerFactory>()
+            ?.CreateLogger<OpenAiChatCompletionsCompatibilityChatClient>();
+        return new OpenAiChatCompletionsCompatibilityChatClient(
+            chatClient,
+            provider,
+            model,
             logger);
     }
 
@@ -429,7 +489,7 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
 internal sealed class DefaultOllamaOptionsChatClient(
     IChatClient innerClient,
     int defaultMaxOutputTokens,
-    bool defaultThink) : DelegatingChatClient(innerClient)
+    object? defaultThinkingValue) : DelegatingChatClient(innerClient)
 {
     public override Task<ChatResponse> GetResponseAsync(
         IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
@@ -458,9 +518,10 @@ internal sealed class DefaultOllamaOptionsChatClient(
             normalizedOptions.AddOllamaOption(OllamaOption.NumPredict, normalizedOptions.MaxOutputTokens.Value);
         }
 
-        if (!normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.Think.Name))
+        if (defaultThinkingValue is not null &&
+            !normalizedOptions.AdditionalProperties.ContainsKey(OllamaOption.Think.Name))
         {
-            normalizedOptions.AddOllamaOption(OllamaOption.Think, defaultThink);
+            normalizedOptions.AddOllamaOption(OllamaOption.Think, defaultThinkingValue);
         }
 
         return normalizedOptions;

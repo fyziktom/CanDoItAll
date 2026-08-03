@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-07-agent-template-teams-v70";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-08-agent-template-teams-v71";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -33,7 +33,9 @@ internal static class SandboxWorkspaceSeedBuilder
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
-    internal static SandboxWorkspaceDocument Build(string? capabilityTemplatePackRoot = null)
+    internal static SandboxWorkspaceDocument Build(
+        string? capabilityTemplatePackRoot = null,
+        string? agentTemplatePackRoot = null)
     {
         var now = SeedTimestamp;
 
@@ -167,8 +169,7 @@ internal static class SandboxWorkspaceSeedBuilder
                     timeoutSeconds = 45,
                     modelParameters = new
                     {
-                        numPredict = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
-                        think = AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled
+                        numPredict = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens
                     }
                 }),
                 "Local Ollama provider for developer workstations running the standard Ollama API endpoint.",
@@ -196,8 +197,7 @@ internal static class SandboxWorkspaceSeedBuilder
                     history = "framework-managed",
                     modelParameters = new
                     {
-                        numPredict = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens,
-                        think = AgentProviderModelParameterPolicy.DefaultOllamaThinkEnabled
+                        numPredict = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens
                     }
                 }),
                 "Targets the remote host validated during the latest Ollama repair and networking checks.",
@@ -218,7 +218,12 @@ internal static class SandboxWorkspaceSeedBuilder
             ["ollama-remote"] = ollamaProviderId,
             ["managed-seed-openai-default"] = openAiProviderId
         };
-        var agentSeed = BuildAgentSeedFromTemplates(now, providerIdsByKey, capabilities);
+        var agentSeed = BuildAgentSeedFromTemplates(
+            now,
+            providerIdsByKey,
+            providers,
+            capabilities,
+            agentTemplatePackRoot);
         var agentIdsByTemplateKey = agentSeed.Agents.ToDictionary(
             item => item.TemplateKey,
             item => item.Id,
@@ -270,9 +275,11 @@ internal static class SandboxWorkspaceSeedBuilder
     private static AgentTemplateSeed BuildAgentSeedFromTemplates(
         DateTimeOffset now,
         IReadOnlyDictionary<string, Guid> providerIdsByKey,
-        IReadOnlyList<CapabilityCatalogItem> capabilities)
+        IReadOnlyList<ProviderProfile> providers,
+        IReadOnlyList<CapabilityCatalogItem> capabilities,
+        string? agentTemplatePackRoot)
     {
-        var pack = new AgentTemplatePackLoader().Load();
+        var pack = new AgentTemplatePackLoader(agentTemplatePackRoot).Load();
         var seedVersion = string.IsNullOrWhiteSpace(pack.Manifest.SeedVersion)
             ? SeriousDeliveryManagedSeedVersion
             : pack.Manifest.SeedVersion.Trim();
@@ -283,6 +290,7 @@ internal static class SandboxWorkspaceSeedBuilder
         }
 
         var capabilitiesByKey = capabilities.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
+        var providersById = providers.ToDictionary(item => item.Id);
         var agents = new List<AgentDefinition>();
 
         foreach (var member in pack.Teams.SelectMany(team => team.MemberTemplates))
@@ -290,8 +298,15 @@ internal static class SandboxWorkspaceSeedBuilder
             var settings = member.Settings;
             var id = CreateStableGuid(RequireTemplateValue(settings.StableIdKey, member.Key, "stableIdKey"));
             var templateKey = RequireTemplateValue(settings.TemplateKey, member.Key, "templateKey");
-            var configurationJson = BuildAgentTemplateConfigurationJson(settings, providerIdsByKey, seedVersion);
             var providerProfileId = ResolveProviderProfileId(settings.ProviderProfileKey, providerIdsByKey, member.Key);
+            var model = NormalizeTemplateText(settings.Model);
+            EnsureTemplateThinkingEffortSupported(
+                settings,
+                member.Key,
+                providerProfileId,
+                model,
+                providersById);
+            var configurationJson = BuildAgentTemplateConfigurationJson(settings, providerIdsByKey, seedVersion);
             var assignments = ResolveCapabilityAssignments(member, capabilitiesByKey);
 
             agents.Add(new AgentDefinition(
@@ -302,7 +317,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 RequireTemplateValue(member.Instructions, member.Key, "instructions"),
                 ParseEnumOrDefault(settings.Status, AgentLifecycleStatus.Active),
                 providerProfileId,
-                NormalizeTemplateText(settings.Model),
+                model,
                 ParseEnumOrDefault(settings.Workload, AgentWorkloadKind.General),
                 ParseEnumOrDefault(settings.ChatHistoryMode, AgentChatHistoryMode.FrameworkManaged),
                 settings.Temperature,
@@ -418,9 +433,9 @@ internal static class SandboxWorkspaceSeedBuilder
                 });
         }
 
-        return settings.ApplyDefaultReasoningEffort
-            ? WithDefaultReasoningEffort(configurationJson)
-            : configurationJson;
+        return AgentThinkingEffortPolicy.WriteAgentOverride(
+            configurationJson,
+            settings.ReasoningEffort);
     }
 
     private static void ApplyWorkspaceToolTemplateOverrides(
@@ -514,6 +529,35 @@ internal static class SandboxWorkspaceSeedBuilder
                 $"Agent template references missing provider profile key '{providerProfileKey}'.");
     }
 
+    private static void EnsureTemplateThinkingEffortSupported(
+        AgentTemplateSettings settings,
+        string templateKey,
+        Guid? providerProfileId,
+        string model,
+        IReadOnlyDictionary<Guid, ProviderProfile> providersById)
+    {
+        if (settings.ReasoningEffort is not { } reasoningEffort)
+        {
+            return;
+        }
+
+        if (!providerProfileId.HasValue ||
+            !providersById.TryGetValue(providerProfileId.Value, out var provider))
+        {
+            throw new InvalidOperationException(
+                $"Agent template '{templateKey}' defines thinking effort '{AgentThinkingEffortPolicy.FormatEffort(reasoningEffort)}' without a resolved provider profile.");
+        }
+
+        var effectiveModel = string.IsNullOrWhiteSpace(model)
+            ? provider.DefaultModel
+            : model;
+        AgentThinkingEffortPolicy.EnsureOverrideSupported(
+            provider,
+            effectiveModel,
+            reasoningEffort,
+            $"agent template '{templateKey}'");
+    }
+
     private static Guid RequireAgentId(
         IReadOnlyDictionary<string, Guid> agentIdsByTemplateKey,
         string templateKey)
@@ -568,35 +612,15 @@ internal static class SandboxWorkspaceSeedBuilder
         return new AgentCapabilityAssignment(capabilityId, capabilityKey, kind, status, null, notes);
     }
 
-    private static string WithDefaultReasoningEffort(string configurationJson)
-    {
-        var configuration = ReadConfigurationObject(configurationJson);
-        configuration[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = ManagedSeedProviderFallbacks.DefaultReasoningEffort;
-
-        var modelParameters = configuration.TryGetValue(
-                AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName,
-                out var existingModelParameters) &&
-            existingModelParameters is IDictionary<string, object?> existingModelParameterDictionary
-                ? new Dictionary<string, object?>(existingModelParameterDictionary, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-
-        modelParameters[AgentProviderModelParameterPolicy.ReasoningEffortConfigurationPropertyName] = ManagedSeedProviderFallbacks.DefaultReasoningEffort;
-        configuration[AgentProviderModelParameterPolicy.ModelParametersConfigurationPropertyName] = modelParameters;
-        return SerializeConfiguration(configuration);
-    }
-
     private static string CreateOpenAiProviderConfigurationJson(string history)
     {
-        return SerializeConfiguration(new
-        {
-            history,
-            timeoutSeconds = ManagedSeedProviderFallbacks.OpenAiDefaultTimeoutSeconds,
-            reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort,
-            modelParameters = new
+        return AgentThinkingEffortPolicy.WriteProviderDefault(
+            SerializeConfiguration(new
             {
-                reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
-            }
-        });
+                history,
+                timeoutSeconds = ManagedSeedProviderFallbacks.OpenAiDefaultTimeoutSeconds
+            }),
+            AgentReasoningEffortLevel.Medium);
     }
 
     private static string CreateOpenAiImageProviderConfigurationJson()
@@ -608,27 +632,6 @@ internal static class SandboxWorkspaceSeedBuilder
             defaultSize = "1024x1024",
             defaultOutputFormat = "png"
         });
-    }
-
-    private static Dictionary<string, object?> ReadConfigurationObject(string configurationJson)
-    {
-        if (string.IsNullOrWhiteSpace(configurationJson))
-        {
-            return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        using var document = JsonDocument.Parse(configurationJson);
-        if (document.RootElement.ValueKind != JsonValueKind.Object)
-        {
-            return new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        return document.RootElement
-            .EnumerateObject()
-            .ToDictionary(
-                property => property.Name,
-                property => ConvertSeedConfigurationValue(property.Value),
-                StringComparer.OrdinalIgnoreCase);
     }
 
     private static Guid CreateStableGuid(string key)

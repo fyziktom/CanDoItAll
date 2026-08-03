@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
@@ -33,17 +34,26 @@ internal static class MafModelParametersBuilder
             options.Temperature = requestedTemperature;
         }
 
-        var reasoningEffort = AgentProviderModelParameterPolicy.ResolveReasoningEffort(
-            provider.Kind,
-            provider.Transport,
+        var reasoningEffort = ResolveEffectiveThinkingEffort(
+            provider,
             model,
-            provider.ConfigurationJson,
             agentConfigurationJson ?? string.Empty);
-        if (reasoningEffort is not null)
+        if (reasoningEffort is not null && provider.Kind == ProviderKind.Ollama)
         {
-            if (reasoningEffort == AgentReasoningEffortLevel.Max)
+            var thinkingCapability = AgentThinkingEffortPolicy.ResolveCapability(provider, model);
+            options.AddOllamaOption(
+                OllamaOption.Think,
+                OllamaThinkingEffortAdapter.ToNativeValue(
+                    thinkingCapability,
+                    reasoningEffort.Value));
+        }
+        else if (reasoningEffort is not null)
+        {
+            if (reasoningEffort is AgentReasoningEffortLevel.Minimal or AgentReasoningEffortLevel.Max)
             {
-                options.RawRepresentationFactory = _ => CreateMaxReasoningOptions(provider.Transport);
+                options.RawRepresentationFactory = _ => CreateRawReasoningOptions(
+                    provider.Transport,
+                    reasoningEffort.Value);
             }
             else
             {
@@ -68,14 +78,6 @@ internal static class MafModelParametersBuilder
             options.MaxOutputTokens = AgentProviderModelParameterPolicy.DefaultOllamaMaxOutputTokens;
         }
 
-        if (provider.Kind == ProviderKind.Ollama)
-        {
-            var think = AgentProviderModelParameterPolicy.ResolveOllamaThinkOrDefault(
-                provider.ConfigurationJson,
-                agentConfigurationJson ?? string.Empty);
-            options.AddOllamaOption(OllamaOption.Think, think);
-        }
-
         return options;
     }
 
@@ -85,6 +87,13 @@ internal static class MafModelParametersBuilder
         bool forceOmitTemperature)
     {
         if (forceOmitTemperature)
+        {
+            return true;
+        }
+
+        if (provider.Kind == ProviderKind.AzureOpenAi &&
+            AgentThinkingEffortPolicy.ResolveCapability(provider, model).Status ==
+            AgentThinkingEffortSupportStatus.Supported)
         {
             return true;
         }
@@ -117,24 +126,15 @@ internal static class MafModelParametersBuilder
         return $"The runtime will omit temperature for model '{model}' and use the provider default.";
     }
 
-    public static bool IsReasoningEffortConfiguredButTransportUnsupported(
+    public static AgentReasoningEffortLevel? ResolveEffectiveThinkingEffort(
         ProviderProfile provider,
         string model,
         string? agentConfigurationJson)
     {
-        return AgentProviderModelParameterPolicy.ResolveConfiguredReasoningEffort(
-                   provider.Kind,
-                   model,
-                   provider.ConfigurationJson,
-                   agentConfigurationJson ?? string.Empty) is not null &&
-               !AgentProviderModelParameterPolicy.CanApplyReasoningEffort(provider.Kind, provider.Transport, model);
-    }
-
-    public static string BuildReasoningEffortUnsupportedTransportMessage(
-        ProviderProfile provider,
-        string model)
-    {
-        return $"Provider '{provider.Name}' has reasoning effort configured for model '{model}', but the {provider.Transport} transport cannot apply it. Use the Responses or Chat Completions transport for reasoning-capable OpenAI runs.";
+        return AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+            provider,
+            model,
+            agentConfigurationJson ?? string.Empty);
     }
 
     private static bool IsUnsupportedTemperatureException(Exception exception)
@@ -158,23 +158,26 @@ internal static class MafModelParametersBuilder
     }
 
 #pragma warning disable OPENAI001
-    private static object CreateMaxReasoningOptions(ProviderTransportKind transport)
+    private static object CreateRawReasoningOptions(
+        ProviderTransportKind transport,
+        AgentReasoningEffortLevel effort)
     {
+        var nativeEffort = AgentThinkingEffortPolicy.FormatEffort(effort);
         return transport switch
         {
             ProviderTransportKind.Responses => new CreateResponseOptions
             {
                 ReasoningOptions = new ResponseReasoningOptions
                 {
-                    ReasoningEffortLevel = new ResponseReasoningEffortLevel("max")
+                    ReasoningEffortLevel = new ResponseReasoningEffortLevel(nativeEffort)
                 }
             },
             ProviderTransportKind.ChatCompletions => new ChatCompletionOptions
             {
-                ReasoningEffortLevel = new ChatReasoningEffortLevel("max")
+                ReasoningEffortLevel = new ChatReasoningEffortLevel(nativeEffort)
             },
             _ => throw new InvalidOperationException(
-                $"The {transport} transport cannot apply max reasoning effort.")
+                $"The {transport} transport cannot apply {nativeEffort} reasoning effort.")
         };
     }
 #pragma warning restore OPENAI001

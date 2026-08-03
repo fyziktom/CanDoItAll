@@ -112,10 +112,11 @@ public enum AgentChatHistoryMode
 
 public enum AgentReasoningEffortLevel
 {
-    None,
-    Low,
-    Medium,
-    High,
-    ExtraHigh,
-    Max
+    None = 0,
+    Low = 1,
+    Medium = 2,
+    High = 3,
+    ExtraHigh = 4,
+    Max = 5,
+    Minimal = 6
 }

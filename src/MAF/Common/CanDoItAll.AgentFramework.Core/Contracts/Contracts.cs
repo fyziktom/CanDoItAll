@@ -154,6 +154,7 @@ public interface ISandboxWorkspaceExecutionRunMutationStore
 public interface ISandboxWorkspaceStore :
     ISandboxWorkspaceCatalogStore,
     ISandboxWorkspaceExecutionStore,
+    ISandboxWorkspaceAgentDeletionStore,
     IAgentExecutionReportReader
 {
     Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default);
@@ -168,6 +169,34 @@ public interface ISandboxWorkspaceStore :
         Func<SandboxWorkspaceDocument, SandboxWorkspaceDocument> update,
         long expectedRevision,
         CancellationToken cancellationToken = default);
+}
+
+public interface ISandboxWorkspaceAgentDeletionStore
+{
+    Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
+        Guid agentId,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record AgentWorkspaceDeletionResult(
+    bool Deleted,
+    int DeletedChatSessionCount,
+    int DeletedExecutionRunCount);
+
+public enum AgentDeletionConflictKind
+{
+    ManagedSeedAgent,
+    ActiveExecution
+}
+
+public sealed class AgentDeletionConflictException(
+    Guid agentId,
+    AgentDeletionConflictKind kind,
+    string message) : InvalidOperationException(message)
+{
+    public Guid AgentId { get; } = agentId;
+
+    public AgentDeletionConflictKind Kind { get; } = kind;
 }
 
 public interface ISandboxWorkspaceChatQueryStore

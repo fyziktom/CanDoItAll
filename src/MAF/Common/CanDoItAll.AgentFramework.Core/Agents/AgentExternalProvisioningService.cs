@@ -323,6 +323,8 @@ internal sealed class AgentExternalProvisioningService(
             Status = source.Status,
             ProviderProfileId = source.ProviderProfileId,
             Model = source.Model,
+            ThinkingEffortOverride = source.ThinkingEffortOverride,
+            IsThinkingEffortOverrideEdited = source.IsThinkingEffortOverrideEdited,
             Workload = source.Workload,
             ChatHistoryMode = source.ChatHistoryMode,
             Temperature = source.Temperature,

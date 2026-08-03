@@ -5,26 +5,17 @@ namespace CanDoItAll.AgentFramework.Models;
 
 public static class AgentProviderModelParameterPolicy
 {
-    public const string ModelParametersConfigurationPropertyName = "modelParameters";
-    public const string ReasoningEffortConfigurationPropertyName = "reasoningEffort";
+    private const int DefaultMaxOutputTokens = 8192;
+
+    public const string ModelParametersConfigurationPropertyName = AgentThinkingEffortPolicy.ModelParametersConfigurationPropertyName;
+    public const string ReasoningEffortConfigurationPropertyName = AgentThinkingEffortPolicy.ReasoningEffortConfigurationPropertyName;
     public const string MaxOutputTokensConfigurationPropertyName = "maxOutputTokens";
     public const string OllamaNumPredictConfigurationPropertyName = "numPredict";
     public const string OllamaNumPredictSnakeConfigurationPropertyName = "num_predict";
-    public const string OllamaThinkConfigurationPropertyName = "think";
-    public const int DefaultOllamaMaxOutputTokens = 2048;
-    public const bool DefaultOllamaThinkEnabled = false;
+    public const int DefaultOllamaMaxOutputTokens = DefaultMaxOutputTokens;
 
     private const int MinMaxOutputTokens = 1;
-    private const int DefaultMaxOutputTokens = 8192;
     private const int OpenAiMaxOutputTokens = 128_000;
-
-    private static readonly string[] OpenAiDefaultTemperatureModelPrefixes =
-    [
-        "gpt-5",
-        "o1",
-        "o3",
-        "o4"
-    ];
 
     public static bool ShouldOmitTemperature(
         ProviderKind providerKind,
@@ -47,13 +38,9 @@ public static class AgentProviderModelParameterPolicy
         string providerConfigurationJson,
         string agentConfigurationJson)
     {
-        if (!CanApplyReasoningEffort(providerKind, providerTransport, model))
-        {
-            return null;
-        }
-
-        return ResolveConfiguredReasoningEffort(
+        return AgentThinkingEffortPolicy.ResolveDefinedEffectiveEffort(
             providerKind,
+            providerTransport,
             model,
             providerConfigurationJson,
             agentConfigurationJson);
@@ -65,22 +52,19 @@ public static class AgentProviderModelParameterPolicy
         string providerConfigurationJson,
         string agentConfigurationJson)
     {
-        if (!IsOpenAiLikeProvider(providerKind) ||
-            !IsOpenAiDefaultTemperatureModel(model))
+        if (!IsOpenAiLikeProvider(providerKind))
         {
             return null;
         }
 
-        var configuredEffort = TryReadReasoningEffort(agentConfigurationJson, "agent") ??
-                               TryReadReasoningEffort(providerConfigurationJson, "provider");
-        if (configuredEffort == AgentReasoningEffortLevel.Max &&
-            !OpenAiModelIds.Gpt56Models.Contains(model.Trim(), StringComparer.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(
-                $"Reasoning effort 'max' is only supported by GPT-5.6 models. Model '{model}' does not support it.");
-        }
-
-        return configuredEffort;
+        return AgentThinkingEffortPolicy.ReadConfiguredEffort(
+                   agentConfigurationJson,
+                   "agent",
+                   includeLegacyOllamaThink: false) ??
+               AgentThinkingEffortPolicy.ReadConfiguredEffort(
+                   providerConfigurationJson,
+                   "provider",
+                   includeLegacyOllamaThink: false);
     }
 
     public static bool CanApplyReasoningEffort(
@@ -89,8 +73,8 @@ public static class AgentProviderModelParameterPolicy
         string model)
     {
         return IsOpenAiLikeProvider(providerKind) &&
-               providerTransport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions &&
-               IsOpenAiDefaultTemperatureModel(model);
+               AgentThinkingEffortPolicy.ResolveDefinedCapability(providerKind, providerTransport, model).Status ==
+               AgentThinkingEffortSupportStatus.Supported;
     }
 
     public static int? ResolveMaxOutputTokens(
@@ -116,14 +100,6 @@ public static class AgentProviderModelParameterPolicy
                TryReadMaxOutputTokens(providerConfigurationJson, "provider", providerKind, maximum);
     }
 
-    public static bool? ResolveOllamaThink(
-        string providerConfigurationJson,
-        string agentConfigurationJson)
-    {
-        return TryReadOllamaThink(agentConfigurationJson, "agent") ??
-               TryReadOllamaThink(providerConfigurationJson, "provider");
-    }
-
     public static int ResolveOllamaMaxOutputTokensOrDefault(
         string providerConfigurationJson,
         string agentConfigurationJson)
@@ -134,14 +110,6 @@ public static class AgentProviderModelParameterPolicy
                    providerConfigurationJson,
                    agentConfigurationJson) ??
                DefaultOllamaMaxOutputTokens;
-    }
-
-    public static bool ResolveOllamaThinkOrDefault(
-        string providerConfigurationJson,
-        string agentConfigurationJson)
-    {
-        return ResolveOllamaThink(providerConfigurationJson, agentConfigurationJson) ??
-               DefaultOllamaThinkEnabled;
     }
 
     public static bool IsOpenAiLikeProvider(ProviderKind providerKind)
@@ -156,131 +124,12 @@ public static class AgentProviderModelParameterPolicy
             return false;
         }
 
-        var normalizedModel = model.Trim().ToLowerInvariant();
-        return OpenAiDefaultTemperatureModelPrefixes.Any(prefix =>
-            string.Equals(normalizedModel, prefix, StringComparison.Ordinal) ||
-            normalizedModel.StartsWith(prefix + "-", StringComparison.Ordinal) ||
-            normalizedModel.StartsWith(prefix + ".", StringComparison.Ordinal));
+        return AgentThinkingEffortPolicy.IsDefinedOpenAiReasoningModel(model);
     }
 
     public static string FormatReasoningEffort(AgentReasoningEffortLevel effort)
     {
-        return effort switch
-        {
-            AgentReasoningEffortLevel.None => "none",
-            AgentReasoningEffortLevel.Low => "low",
-            AgentReasoningEffortLevel.Medium => "medium",
-            AgentReasoningEffortLevel.High => "high",
-            AgentReasoningEffortLevel.ExtraHigh => "xhigh",
-            AgentReasoningEffortLevel.Max => "max",
-            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unsupported reasoning effort.")
-        };
-    }
-
-    private static AgentReasoningEffortLevel? TryReadReasoningEffort(
-        string configurationJson,
-        string configurationOwner)
-    {
-        if (string.IsNullOrWhiteSpace(configurationJson) ||
-            !configurationJson.Contains(ReasoningEffortConfigurationPropertyName, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(configurationJson);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            if (TryGetPropertyIgnoreCase(root, ModelParametersConfigurationPropertyName, out var modelParametersElement) &&
-                modelParametersElement.ValueKind == JsonValueKind.Object &&
-                TryReadReasoningEffortProperty(modelParametersElement, out var nestedEffort))
-            {
-                return nestedEffort;
-            }
-
-            return TryReadReasoningEffortProperty(root, out var rootEffort)
-                ? rootEffort
-                : null;
-        }
-        catch (JsonException exception)
-        {
-            throw new InvalidOperationException(
-                $"The {configurationOwner} model-parameter configuration contains '{ReasoningEffortConfigurationPropertyName}' but is not valid JSON.",
-                exception);
-        }
-    }
-
-    private static bool? TryReadOllamaThink(
-        string configurationJson,
-        string configurationOwner)
-    {
-        if (string.IsNullOrWhiteSpace(configurationJson) ||
-            !configurationJson.Contains(OllamaThinkConfigurationPropertyName, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(configurationJson);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            if (TryGetPropertyIgnoreCase(root, ModelParametersConfigurationPropertyName, out var modelParametersElement))
-            {
-                if (modelParametersElement.ValueKind != JsonValueKind.Object)
-                {
-                    throw new InvalidOperationException(
-                        $"The {configurationOwner} model-parameter configuration property '{ModelParametersConfigurationPropertyName}' must be a JSON object.");
-                }
-
-                var nestedValue = TryReadBooleanProperty(
-                    modelParametersElement,
-                    OllamaThinkConfigurationPropertyName,
-                    configurationOwner);
-                if (nestedValue is not null)
-                {
-                    return nestedValue;
-                }
-            }
-
-            return TryReadBooleanProperty(root, OllamaThinkConfigurationPropertyName, configurationOwner);
-        }
-        catch (JsonException exception)
-        {
-            throw new InvalidOperationException(
-                $"The {configurationOwner} model-parameter configuration contains '{OllamaThinkConfigurationPropertyName}' but is not valid JSON.",
-                exception);
-        }
-    }
-
-    private static bool? TryReadBooleanProperty(
-        JsonElement element,
-        string propertyName,
-        string configurationOwner)
-    {
-        if (!TryGetPropertyIgnoreCase(element, propertyName, out var valueElement))
-        {
-            return null;
-        }
-
-        return valueElement.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.String when bool.TryParse(valueElement.GetString(), out var value) => value,
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            _ => throw new InvalidOperationException(
-                $"The {configurationOwner} model-parameter configuration property '{propertyName}' must be a boolean.")
-        };
+        return AgentThinkingEffortPolicy.FormatEffort(effort);
     }
 
     private static int? TryReadMaxOutputTokens(
@@ -439,31 +288,6 @@ public static class AgentProviderModelParameterPolicy
                normalizedModel.StartsWith("gpt-5.", StringComparison.Ordinal);
     }
 
-    private static bool TryReadReasoningEffortProperty(
-        JsonElement element,
-        out AgentReasoningEffortLevel effort)
-    {
-        effort = default;
-        if (!TryGetPropertyIgnoreCase(element, ReasoningEffortConfigurationPropertyName, out var effortElement))
-        {
-            return false;
-        }
-
-        var value = effortElement.ValueKind switch
-        {
-            JsonValueKind.String => effortElement.GetString(),
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            _ => effortElement.ToString()
-        };
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        effort = ParseReasoningEffort(value);
-        return true;
-    }
-
     private static bool TryGetPropertyIgnoreCase(
         JsonElement element,
         string propertyName,
@@ -487,19 +311,4 @@ public static class AgentProviderModelParameterPolicy
         return false;
     }
 
-    private static AgentReasoningEffortLevel ParseReasoningEffort(string value)
-    {
-        var normalizedValue = value.Trim().Replace('_', '-').ToLowerInvariant();
-        return normalizedValue switch
-        {
-            "none" => AgentReasoningEffortLevel.None,
-            "low" => AgentReasoningEffortLevel.Low,
-            "medium" => AgentReasoningEffortLevel.Medium,
-            "high" => AgentReasoningEffortLevel.High,
-            "extra-high" or "extrahigh" or "x-high" or "xhigh" => AgentReasoningEffortLevel.ExtraHigh,
-            "max" => AgentReasoningEffortLevel.Max,
-            _ => throw new InvalidOperationException(
-                $"Unsupported reasoning effort '{value}'. Supported values are none, low, medium, high, extraHigh, and max.")
-        };
-    }
 }

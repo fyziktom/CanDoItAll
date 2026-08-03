@@ -281,6 +281,7 @@ public partial class AgentCatalogPanel
     private async Task SelectAgentAsync(Guid agentId)
     {
         selectedAgentId = agentId;
+        openedRequestedAgentId = agentId;
         await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
         await PublishAccessStateAsync(AgentChatContextAccessState.Ready);
     }
@@ -446,11 +447,9 @@ public partial class AgentCatalogPanel
         await ReloadCatalogAsync();
         if (result.Deleted)
         {
-            selectedAgentId = agents.FirstOrDefault()?.Id;
-            await SelectedAgentChanged.InvokeAsync(
-                selectedAgentId.HasValue
-                    ? agents.First(item => item.Id == selectedAgentId.Value)
-                    : null);
+            selectedAgentId = null;
+            await SelectedAgentChanged.InvokeAsync(null);
+            await InvokeAsync(StateHasChanged);
             return;
         }
 

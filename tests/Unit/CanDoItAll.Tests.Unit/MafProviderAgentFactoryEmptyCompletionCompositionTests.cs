@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using OllamaSharp.Models;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -52,6 +53,81 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
             Assert.Same(
                 decorator,
                 decorator.GetService<EmptyCompletionRetryChatClient>());
+            var compatibilityDecorator = agent.GetService<OpenAiChatCompletionsCompatibilityChatClient>();
+            if (providerKind == ProviderKind.OpenAi &&
+                transport == ProviderTransportKind.ChatCompletions)
+            {
+                Assert.NotNull(compatibilityDecorator);
+                Assert.Same(
+                    compatibilityDecorator,
+                    compatibilityDecorator.GetService<OpenAiChatCompletionsCompatibilityChatClient>());
+            }
+            else
+            {
+                Assert.Null(compatibilityDecorator);
+            }
+        }
+        finally
+        {
+            switch (agent)
+            {
+                case IAsyncDisposable asyncDisposable:
+                    await asyncDisposable.DisposeAsync();
+                    break;
+                case IDisposable disposable:
+                    disposable.Dispose();
+                    break;
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CreateFrameworkAgent_OllamaAgentOverridePrecedesInvalidProviderThinkingDefault()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IAgentProviderCredentialResolver>(
+                new FixedCredentialResolver())
+            .BuildServiceProvider();
+        var provider = CreateProvider(
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions) with
+        {
+            DefaultModel = "qwen3.5:2b",
+            ConfigurationJson = AgentThinkingEffortConfiguration.WriteProviderDefault(
+                "{}",
+                AgentReasoningEffortLevel.High),
+            ModelThinkingEffortCapabilities =
+            [
+                AgentThinkingEffortPolicy.CreateDiscoveredCapability(
+                    "qwen3.5:2b",
+                    "qwen35",
+                    AgentThinkingEffortSupportStatus.Supported)
+            ]
+        };
+        var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
+            provider,
+            provider.DefaultModel,
+            requestedTemperature: null,
+            forceOmitTemperature: false,
+            AgentThinkingEffortConfiguration.WriteAgentOverride(
+                "{}",
+                AgentReasoningEffortLevel.Medium));
+        var factory = new MafProviderAgentFactory(
+            new MafProviderCredentialService(services));
+
+        var agent = factory.CreateFrameworkAgent(
+            provider,
+            provider.DefaultModel,
+            MafChatClientAgentOptionsFactory.Create(chatOptions),
+            frameworkManagedHistory: false,
+            allowBackgroundResponses: false,
+            services);
+
+        try
+        {
+            Assert.True(Assert.IsType<bool>(
+                chatOptions.AdditionalProperties![OllamaOption.Think.Name]));
+            Assert.NotNull(agent.GetService<EmptyCompletionRetryChatClient>());
         }
         finally
         {

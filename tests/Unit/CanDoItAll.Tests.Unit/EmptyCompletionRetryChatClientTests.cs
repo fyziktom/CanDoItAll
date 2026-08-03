@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -16,7 +17,7 @@ public sealed class EmptyCompletionRetryChatClientTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task GetResponse_EmptyThenValid_RetriesExactlyOnce(bool streaming)
+    public async Task GetResponse_EmptyThenValid_RetriesExactlyOnceWithTransientInstruction(bool streaming)
     {
         var validResponse = CreateResponse(new TextContent("completed"));
         var innerClient = streaming
@@ -32,6 +33,15 @@ public sealed class EmptyCompletionRetryChatClientTests
 
         Assert.Equal(2, innerClient.InvocationCount);
         Assert.Equal("completed", result.Text);
+        Assert.Single(innerClient.Invocations[0]);
+        Assert.Same(Messages[0], innerClient.Invocations[0][0]);
+        Assert.Equal(2, innerClient.Invocations[1].Count);
+        Assert.Same(Messages[0], innerClient.Invocations[1][0]);
+        var retryMessage = innerClient.Invocations[1][1];
+        Assert.Equal(ChatRole.User, retryMessage.Role);
+        Assert.Contains(
+            "The previous assistant response was empty.",
+            string.Concat(retryMessage.Contents.OfType<TextContent>().Select(content => content.Text)));
         if (!streaming)
         {
             Assert.Same(validResponse, result.Response);
@@ -70,8 +80,6 @@ public sealed class EmptyCompletionRetryChatClientTests
     [Theory]
     [InlineData(false, CompletionSignal.Text)]
     [InlineData(true, CompletionSignal.Text)]
-    [InlineData(false, CompletionSignal.PositiveOutputTokens)]
-    [InlineData(true, CompletionSignal.PositiveOutputTokens)]
     [InlineData(false, CompletionSignal.FunctionCall)]
     [InlineData(true, CompletionSignal.FunctionCall)]
     [InlineData(false, CompletionSignal.ToolApprovalRequest)]
@@ -105,6 +113,71 @@ public sealed class EmptyCompletionRetryChatClientTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetResponse_ReasoningAndPositiveUsageThenValid_RetriesExactlyOnce(bool streaming)
+    {
+        var firstUsage = CreateUsage(inputTokens: 7, outputTokens: 937);
+        var secondUsage = CreateUsage(inputTokens: 11, outputTokens: 4);
+        var reasoning = new TextReasoningContent("I need to inspect the project structure first.");
+        var firstResponse = CreateResponse(reasoning, firstUsage);
+        firstResponse.FinishReason = ChatFinishReason.Stop;
+        var firstUsageUpdate = CreateUsageUpdate(firstUsage);
+        firstUsageUpdate.FinishReason = ChatFinishReason.Stop;
+        var innerClient = streaming
+            ? ScriptedChatClient.ForStreaming(
+                [CreateUpdate(reasoning), firstUsageUpdate],
+                [
+                    CreateUpdate(new TextContent("completed")),
+                    CreateUsageUpdate(secondUsage)
+                ])
+            : ScriptedChatClient.ForResponses(
+                firstResponse,
+                CreateResponse(new TextContent("completed"), secondUsage));
+        using var client = CreateClient(innerClient);
+
+        var result = await InvokeAsync(client, streaming);
+
+        Assert.Equal(2, innerClient.InvocationCount);
+        Assert.Equal("completed", result.Text);
+        Assert.Equal(18, result.InputTokens);
+        Assert.Equal(941, result.OutputTokens);
+        Assert.Equal(959, result.TotalTokens);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetResponse_ReasoningRetryEndsWithLength_ReportsExhaustionWithoutThirdAttempt(
+        bool streaming)
+    {
+        var firstResponse = CreateResponse(new TextReasoningContent("first attempt reasoning"));
+        firstResponse.FinishReason = ChatFinishReason.Stop;
+        var secondResponse = CreateResponse(new TextReasoningContent("second attempt reasoning"));
+        secondResponse.FinishReason = ChatFinishReason.Length;
+        var firstUpdate = CreateUpdate(new TextReasoningContent("first attempt reasoning"));
+        firstUpdate.FinishReason = ChatFinishReason.Stop;
+        var secondUpdate = CreateUpdate(new TextReasoningContent("second attempt reasoning"));
+        secondUpdate.FinishReason = ChatFinishReason.Length;
+        var innerClient = streaming
+            ? ScriptedChatClient.ForStreaming([firstUpdate], [secondUpdate])
+            : ScriptedChatClient.ForResponses(firstResponse, secondResponse);
+        var logger = new RecordingLogger();
+        using var client = CreateClient(innerClient, logger: logger);
+
+        var result = await InvokeAsync(client, streaming);
+
+        Assert.Equal(2, innerClient.InvocationCount);
+        Assert.Equal(string.Empty, result.Text);
+        Assert.Contains(
+            logger.Messages,
+            message => message.Contains("terminal runtime guard will reject", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            logger.Messages,
+            message => message.Contains("recovered from", StringComparison.Ordinal));
+    }
+
+    [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(false, true)]
@@ -116,9 +189,11 @@ public sealed class EmptyCompletionRetryChatClientTests
         var finishReason = contentFiltered
             ? ChatFinishReason.ContentFilter
             : ChatFinishReason.Length;
-        var firstResponse = CreateResponse();
+        var firstResponse = CreateResponse(
+            new TextReasoningContent("unfinished reasoning"),
+            CreateUsage(inputTokens: 3, outputTokens: 8));
         firstResponse.FinishReason = finishReason;
-        var firstUpdate = CreateUpdate();
+        var firstUpdate = CreateUpdate(new TextReasoningContent("unfinished reasoning"));
         firstUpdate.FinishReason = finishReason;
         var innerClient = streaming
             ? ScriptedChatClient.ForStreaming(
@@ -278,6 +353,60 @@ public sealed class EmptyCompletionRetryChatClientTests
         Assert.Equal(18, response.Usage.TotalTokenCount);
     }
 
+    [Fact]
+    public async Task RunStreaming_AsAIAgent_EmptyAfterLocalFunction_RecoversWithoutRepeatingTool()
+    {
+        var invocationCount = 0;
+        var localFunction = AIFunctionFactory.Create(
+            () =>
+            {
+                invocationCount++;
+                return "local result";
+            },
+            "local_tool",
+            "A local test function.");
+        var innerClient = ScriptedChatClient.ForStreaming(
+            [
+                CreateUpdate(
+                    new FunctionCallContent(
+                        "call-001",
+                        localFunction.Name,
+                        new Dictionary<string, object?>())),
+                CreateUsageUpdate(CreateUsage(inputTokens: 3, outputTokens: 1))
+            ],
+            [CreateUsageUpdate(CreateUsage(inputTokens: 5, outputTokens: 0))],
+            [
+                CreateUpdate(new TextContent("completed")),
+                CreateUsageUpdate(CreateUsage(inputTokens: 7, outputTokens: 2))
+            ]);
+        using var retryClient = CreateClient(innerClient);
+        var agent = retryClient.AsAIAgent(
+            options: new ChatClientAgentOptions
+            {
+                ChatOptions = new ChatOptions
+                {
+                    Tools = [localFunction]
+                }
+            });
+        var session = await agent.CreateSessionAsync();
+
+        var response = await agent
+            .RunStreamingAsync(Messages, session)
+            .ToAgentResponseAsync();
+
+        Assert.Equal("completed", response.Text);
+        Assert.Equal(3, innerClient.InvocationCount);
+        Assert.Equal(1, invocationCount);
+        Assert.Equal(
+            innerClient.Invocations[1].Count + 1,
+            innerClient.Invocations[2].Count);
+        var retryMessage = innerClient.Invocations[2][^1];
+        Assert.Equal(ChatRole.User, retryMessage.Role);
+        Assert.Contains(
+            "The previous assistant response was empty.",
+            string.Concat(retryMessage.Contents.OfType<TextContent>().Select(content => content.Text)));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -350,14 +479,15 @@ public sealed class EmptyCompletionRetryChatClientTests
 
     private static EmptyCompletionRetryChatClient CreateClient(
         IChatClient innerClient,
-        bool allowBackgroundResponses = false)
+        bool allowBackgroundResponses = false,
+        ILogger? logger = null)
     {
         return new EmptyCompletionRetryChatClient(
             innerClient,
             CreateProvider(),
             "test-model",
             allowBackgroundResponses,
-            logger: null);
+            logger);
     }
 
     private static ProviderProfile CreateProvider()
@@ -400,8 +530,6 @@ public sealed class EmptyCompletionRetryChatClientTests
         var response = signal switch
         {
             CompletionSignal.Text => CreateResponse(new TextContent("already completed")),
-            CompletionSignal.PositiveOutputTokens => CreateResponse(
-                usage: CreateUsage(inputTokens: 3, outputTokens: 1)),
             CompletionSignal.FunctionCall => CreateResponse(CreateFunctionCall()),
             CompletionSignal.ToolApprovalRequest => CreateResponse(CreateApprovalRequest()),
             CompletionSignal.ContinuationToken => CreateResponse(),
@@ -422,8 +550,6 @@ public sealed class EmptyCompletionRetryChatClientTests
         var update = signal switch
         {
             CompletionSignal.Text => CreateUpdate(new TextContent("already completed")),
-            CompletionSignal.PositiveOutputTokens => CreateUsageUpdate(
-                CreateUsage(inputTokens: 3, outputTokens: 1)),
             CompletionSignal.FunctionCall => CreateUpdate(CreateFunctionCall()),
             CompletionSignal.ToolApprovalRequest => CreateUpdate(CreateApprovalRequest()),
             CompletionSignal.ContinuationToken => CreateUpdate(),
@@ -486,7 +612,6 @@ public sealed class EmptyCompletionRetryChatClientTests
     public enum CompletionSignal
     {
         Text,
-        PositiveOutputTokens,
         FunctionCall,
         ToolApprovalRequest,
         ContinuationToken,
@@ -496,6 +621,32 @@ public sealed class EmptyCompletionRetryChatClientTests
     private sealed class UnknownActionableContent : AIContent;
 
     private sealed class UnknownProviderTool : AITool;
+
+    private sealed class RecordingLogger : ILogger
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+        {
+            return null;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Messages.Add(formatter(state, exception));
+        }
+    }
 
     private sealed record InvocationResult(
         ChatResponse? Response,
@@ -541,7 +692,6 @@ public sealed class EmptyCompletionRetryChatClientTests
             return signal switch
             {
                 CompletionSignal.Text => Text is "already completed",
-                CompletionSignal.PositiveOutputTokens => OutputTokens > 0,
                 CompletionSignal.FunctionCall => contents.OfType<FunctionCallContent>().Any(),
                 CompletionSignal.ToolApprovalRequest => contents.OfType<ToolApprovalRequestContent>().Any(),
                 CompletionSignal.ContinuationToken => Response?.ContinuationToken is not null
@@ -571,6 +721,8 @@ public sealed class EmptyCompletionRetryChatClientTests
 
         public int InvocationCount { get; private set; }
 
+        public List<IReadOnlyList<ChatMessage>> Invocations { get; } = [];
+
         public static ScriptedChatClient ForResponses(params ChatResponse[] responses)
         {
             return new ScriptedChatClient(responses: responses);
@@ -595,6 +747,7 @@ public sealed class EmptyCompletionRetryChatClientTests
             CancellationToken cancellationToken = default)
         {
             InvocationCount++;
+            Invocations.Add(messages.ToArray());
             if (throwCancellation)
             {
                 throw new OperationCanceledException(
@@ -612,6 +765,7 @@ public sealed class EmptyCompletionRetryChatClientTests
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             InvocationCount++;
+            Invocations.Add(messages.ToArray());
             if (throwCancellation)
             {
                 throw new OperationCanceledException(

@@ -5,6 +5,37 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ManagedSeedProviderFallbacksTests
 {
     [Fact]
+    public void Managed_seed_provider_default_is_written_once_in_canonical_model_parameters()
+    {
+        var configurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(
+            """{"reasoningEffort":"low","keep":"value","modelParameters":{"think":false,"maxOutputTokens":512}}""",
+            "service-managed");
+
+        using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
+        var root = document.RootElement;
+        var modelParameters = root.GetProperty("modelParameters");
+        Assert.Equal("service-managed", root.GetProperty("history").GetString());
+        Assert.Equal("value", root.GetProperty("keep").GetString());
+        Assert.False(root.TryGetProperty("reasoningEffort", out _));
+        Assert.False(root.TryGetProperty("think", out _));
+        Assert.Equal("medium", modelParameters.GetProperty("reasoningEffort").GetString());
+        Assert.Equal(512, modelParameters.GetProperty("maxOutputTokens").GetInt32());
+        Assert.False(modelParameters.TryGetProperty("think", out _));
+    }
+
+    [Theory]
+    [InlineData("{not-json")]
+    [InlineData("[]")]
+    public void Managed_seed_thinking_configuration_rejects_invalid_json_instead_of_replacing_it(
+        string configurationJson)
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(configurationJson));
+        Assert.Throws<InvalidOperationException>(() =>
+            ManagedSeedProviderFallbacks.EnsureFallbackRuntimeConfigurationJson(configurationJson, "test"));
+    }
+
+    [Fact]
     public void Managed_seed_openai_suggestions_include_all_gpt_5_6_models()
     {
         Assert.All(
@@ -49,6 +80,62 @@ public sealed class ManagedSeedProviderFallbacksTests
 
         Assert.Equal(provider, effectiveProvider);
         Assert.Equal("gpt-4.1", effectiveModel);
+    }
+
+    [Fact]
+    public void Top_level_managed_seed_ownership_is_detected()
+    {
+        var agent = CreateAgent(
+            "{\"managedSeedVersion\":\"2026-08-test\"}",
+            model: "gpt-4.1",
+            templateKey: "customer-agent");
+
+        Assert.True(ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent));
+    }
+
+    [Theory]
+    [InlineData("{\"notes\":\"managedSeedVersion\"}")]
+    [InlineData("{\"metadata\":{\"managedSeedVersion\":\"2026-08-test\"}}")]
+    public void Managed_seed_marker_outside_the_top_level_property_is_not_detected(
+        string configurationJson)
+    {
+        var agent = CreateAgent(
+            configurationJson,
+            model: "gpt-4.1",
+            templateKey: "customer-agent");
+
+        Assert.False(ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent));
+    }
+
+    [Fact]
+    public void Removing_managed_seed_ownership_preserves_runtime_configuration()
+    {
+        const string configurationJson =
+            "{\"managedSeedVersion\":\"2026-08-test\",\"managedSeedCustomizationVersion\":\"2026-08-test\",\"reasoningEffort\":\"high\",\"timeoutSeconds\":47,\"runtime\":{\"transport\":\"responses\",\"toolsEnabled\":true}}";
+
+        var detached = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
+            configurationJson);
+
+        using var document = System.Text.Json.JsonDocument.Parse(detached);
+        var root = document.RootElement;
+        Assert.False(root.TryGetProperty("managedSeedVersion", out _));
+        Assert.False(root.TryGetProperty("managedSeedCustomizationVersion", out _));
+        Assert.Equal("high", root.GetProperty("reasoningEffort").GetString());
+        Assert.Equal(47, root.GetProperty("timeoutSeconds").GetInt32());
+        var runtime = root.GetProperty("runtime");
+        Assert.Equal("responses", runtime.GetProperty("transport").GetString());
+        Assert.True(runtime.GetProperty("toolsEnabled").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("{not-valid-json")]
+    [InlineData("[\"managedSeedVersion\"]")]
+    public void Removing_managed_seed_ownership_rejects_invalid_or_non_object_json(
+        string configurationJson)
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
+                configurationJson));
     }
 
     [Theory]
@@ -253,15 +340,16 @@ public sealed class ManagedSeedProviderFallbacksTests
             ProviderKind.Ollama,
             configurationJson,
             string.Empty);
-        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(configurationJson, string.Empty);
+        var effort = AgentThinkingEffortPolicy.ReadConfiguredEffort(configurationJson, "provider");
 
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackMaxOutputTokens, maxOutputTokens);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackThinkEnabled, think);
+        Assert.Null(effort);
 
         using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
         Assert.Equal("framework-managed", document.RootElement.GetProperty("history").GetString());
         Assert.Equal("unit-test", document.RootElement.GetProperty("fallback").GetString());
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackTimeoutSeconds, document.RootElement.GetProperty("timeoutSeconds").GetInt32());
+        Assert.False(document.RootElement.GetProperty("modelParameters").TryGetProperty("think", out _));
     }
 
     [Fact]
@@ -277,15 +365,16 @@ public sealed class ManagedSeedProviderFallbacksTests
             ProviderKind.Ollama,
             configurationJson,
             string.Empty);
-        var think = AgentProviderModelParameterPolicy.ResolveOllamaThink(configurationJson, string.Empty);
+        var effort = AgentThinkingEffortPolicy.ReadConfiguredEffort(configurationJson, "provider");
 
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackMaxOutputTokens, maxOutputTokens);
-        Assert.Equal(ManagedSeedProviderFallbacks.FallbackThinkEnabled, think);
+        Assert.Null(effort);
 
         using var document = System.Text.Json.JsonDocument.Parse(configurationJson);
         Assert.Equal("framework-managed", document.RootElement.GetProperty("history").GetString());
         Assert.Equal("repair", document.RootElement.GetProperty("fallback").GetString());
         Assert.Equal(ManagedSeedProviderFallbacks.FallbackTimeoutSeconds, document.RootElement.GetProperty("timeoutSeconds").GetInt32());
+        Assert.False(document.RootElement.GetProperty("modelParameters").TryGetProperty("think", out _));
     }
 
     [Fact]

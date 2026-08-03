@@ -17,7 +17,7 @@
     "maxLocalRagResults": 4,
     "runtimeUse": "screenshot-review-storage"
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": true,
   "templateKey": "screenshot-review-storage-agent",
   "permissions": {

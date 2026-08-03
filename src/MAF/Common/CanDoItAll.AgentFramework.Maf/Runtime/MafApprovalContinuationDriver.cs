@@ -97,7 +97,8 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
 
         if (pendingApprovals.Count == 0)
         {
-            return "The provider completed without returning text.";
+            throw new InvalidOperationException(
+                "Cannot resolve response text because the provider returned no usable text and no tool approval is pending.");
         }
 
         var summary = string.Join(

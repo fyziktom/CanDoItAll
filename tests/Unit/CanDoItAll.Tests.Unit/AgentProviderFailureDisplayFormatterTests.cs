@@ -49,7 +49,47 @@ public sealed class AgentProviderFailureDisplayFormatterTests
         Assert.DoesNotContain("unit-redaction-secret", display.ProviderDetail, StringComparison.Ordinal);
     }
 
-    private static ProviderProfile CreateProvider()
+    [Fact]
+    public void Format_reports_reasoning_function_tool_request_compatibility()
+    {
+        var provider = CreateProvider(ProviderTransportKind.ChatCompletions);
+        var exception = new InvalidOperationException(
+            "HTTP 400 (invalid_request_error: ) Parameter: reasoning_effort Function tools with reasoning_effort are not supported for gpt-5.6-terra in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.");
+
+        var display = AgentProviderFailureDisplayFormatter.Format(provider, exception);
+
+        Assert.Equal(AgentProviderFailureCategory.RequestCompatibility, display.Category);
+        Assert.Contains("function tools", display.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Responses", display.Message, StringComparison.Ordinal);
+        Assert.Contains("reasoning effort to 'none'", display.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_does_not_treat_unknown_bad_request_as_request_compatibility()
+    {
+        var provider = CreateProvider();
+        var exception = new InvalidOperationException(
+            "HTTP 400 (invalid_request_error) Parameter: messages. Invalid message shape.");
+
+        var display = AgentProviderFailureDisplayFormatter.Format(provider, exception);
+
+        Assert.Equal(AgentProviderFailureCategory.ProviderError, display.Category);
+    }
+
+    [Fact]
+    public void Format_does_not_apply_openai_chat_remediation_to_other_transports()
+    {
+        var provider = CreateProvider(ProviderTransportKind.Responses);
+        var exception = new InvalidOperationException(
+            "HTTP 400 (invalid_request_error: ) Parameter: reasoning_effort Function tools with reasoning_effort are not supported.");
+
+        var display = AgentProviderFailureDisplayFormatter.Format(provider, exception);
+
+        Assert.Equal(AgentProviderFailureCategory.ProviderError, display.Category);
+    }
+
+    private static ProviderProfile CreateProvider(
+        ProviderTransportKind transport = ProviderTransportKind.Responses)
         => new(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "OpenAI default",
@@ -57,7 +97,7 @@ public sealed class AgentProviderFailureDisplayFormatterTests
             "https://api.openai.com/v1",
             "OPENAI_API_KEY",
             "gpt-4.1",
-            ProviderTransportKind.Responses,
+            transport,
             true,
             true,
             true,

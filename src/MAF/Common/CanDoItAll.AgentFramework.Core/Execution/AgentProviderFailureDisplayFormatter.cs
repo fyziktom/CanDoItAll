@@ -7,7 +7,8 @@ public enum AgentProviderFailureCategory
 {
     ProviderError,
     QuotaOrBilling,
-    RateLimit
+    RateLimit,
+    RequestCompatibility
 }
 
 public sealed record AgentProviderFailureDisplay(
@@ -54,7 +55,7 @@ public static class AgentProviderFailureDisplayFormatter
 
         var messages = CollectMessages(exception);
         var providerDetail = SelectProviderDetail(messages);
-        var category = ResolveCategory(messages, exception);
+        var category = ResolveCategory(provider, messages, exception);
 
         return category switch
         {
@@ -66,6 +67,10 @@ public static class AgentProviderFailureDisplayFormatter
                 category,
                 $"Provider '{provider.Name}' rejected the request because of rate limiting. Wait for the provider limit to reset or reduce concurrency, then retry. Provider detail: {providerDetail}",
                 providerDetail),
+            AgentProviderFailureCategory.RequestCompatibility => new AgentProviderFailureDisplay(
+                category,
+                $"Provider '{provider.Name}' rejected an incompatible function-tools request. To retain reasoning with tools, use an OpenAI Responses provider profile; otherwise set reasoning effort to 'none'. Provider detail: {providerDetail}",
+                providerDetail),
             _ => new AgentProviderFailureDisplay(
                 category,
                 $"The agent run failed while using provider '{provider.Name}'. Provider detail: {providerDetail}",
@@ -74,6 +79,7 @@ public static class AgentProviderFailureDisplayFormatter
     }
 
     private static AgentProviderFailureCategory ResolveCategory(
+        ProviderProfile provider,
         IReadOnlyList<string> messages,
         Exception exception)
     {
@@ -87,6 +93,14 @@ public static class AgentProviderFailureDisplayFormatter
             exception is HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests })
         {
             return AgentProviderFailureCategory.RateLimit;
+        }
+
+        if (provider.Kind == ProviderKind.OpenAi &&
+            provider.Transport == ProviderTransportKind.ChatCompletions &&
+            IsBadRequest(messages, exception) &&
+            messages.Any(IsReasoningFunctionToolCompatibilityMessage))
+        {
+            return AgentProviderFailureCategory.RequestCompatibility;
         }
 
         return AgentProviderFailureCategory.ProviderError;
@@ -110,6 +124,25 @@ public static class AgentProviderFailureDisplayFormatter
     private static bool IsRateLimitMessage(string message)
         => ContainsAny(message, RateLimitMarkers);
 
+    private static bool IsReasoningFunctionToolCompatibilityMessage(string message)
+    {
+        return message.Contains("invalid_request_error", StringComparison.OrdinalIgnoreCase) &&
+               message.Contains("reasoning_effort", StringComparison.OrdinalIgnoreCase) &&
+               message.Contains("function tools", StringComparison.OrdinalIgnoreCase) &&
+               message.Contains("not supported", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBadRequest(
+        IReadOnlyList<string> messages,
+        Exception exception)
+    {
+        return exception is HttpRequestException { StatusCode: HttpStatusCode.BadRequest } ||
+               messages.Any(message =>
+                   message.Contains("HTTP 400", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("status code 400", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("status code: 400", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool ContainsAny(string message, IReadOnlyList<string> markers)
     {
         foreach (var marker in markers)
@@ -128,6 +161,7 @@ public static class AgentProviderFailureDisplayFormatter
         var detail =
             messages.FirstOrDefault(IsQuotaOrBillingMessage) ??
             messages.FirstOrDefault(IsRateLimitMessage) ??
+            messages.FirstOrDefault(IsReasoningFunctionToolCompatibilityMessage) ??
             messages.FirstOrDefault(message => !LooksLikeRuntimeWrapper(message)) ??
             messages.FirstOrDefault() ??
             "Provider returned no error detail.";

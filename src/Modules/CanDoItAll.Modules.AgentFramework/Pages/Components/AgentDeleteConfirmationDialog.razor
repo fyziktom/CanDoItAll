@@ -1,0 +1,38 @@
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="agents-catalog-delete-confirmation-content">
+    <TextBlock TextStyle="TextStyle.Body1"
+               Value="@($"Delete agent '{AgentName}'?")" />
+
+    <Alert AlertStyle="AlertStyle.Danger">
+        This action cannot be undone. It removes the agent, its stored memory, chats, execution history, approvals, artifacts, external bindings, and team memberships.
+    </Alert>
+
+    <Cluster Gap="LayoutGap.Small"
+             Wrap="FlexWrap.Wrap"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                ButtonStyle="ButtonStyle.Light"
+                Click="CancelAsync"
+                data-testid="agents-catalog-delete-cancel" />
+        <Button Text="Delete agent"
+                Icon="delete"
+                ButtonStyle="ButtonStyle.Danger"
+                Click="ConfirmAsync"
+                data-testid="agents-catalog-delete-confirm" />
+    </Cluster>
+</Stack>
+
+@code {
+    [Parameter]
+    public string AgentName { get; set; } = string.Empty;
+
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    private Task ConfirmAsync()
+        => DialogReference?.CloseAsync(true) ?? Task.CompletedTask;
+
+    private Task CancelAsync()
+        => DialogReference?.CloseAsync(false) ?? Task.CompletedTask;
+}

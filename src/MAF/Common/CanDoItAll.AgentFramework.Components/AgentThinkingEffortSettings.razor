@@ -1,0 +1,269 @@
+@namespace CanDoItAll.AgentFramework.Components
+
+<FormField Text="Thinking effort">
+    <Stack GapScale="LayoutGap.Small">
+        <DropDown TValue="string"
+                  Data="@options"
+                  TextProperty="@nameof(ThinkingEffortOption.Text)"
+                  ValueProperty="@nameof(ThinkingEffortOption.ChoiceValue)"
+                  Value="@SelectedChoiceValue"
+                  ValueChanged="HandleValueChangedAsync"
+                  Disabled="@IsSelectorDisabled"
+                  data-testid="@TestId" />
+
+        <Alert AlertStyle="@SupportAlertStyle"
+               Variant="Variant.Outlined"
+               data-testid="@SupportTestId">
+            @supportMessage
+        </Alert>
+    </Stack>
+</FormField>
+
+@code {
+    private const string ProviderDefaultChoiceValue = "__provider_default__";
+
+    private readonly List<ThinkingEffortOption> options = [];
+    private ProviderModelThinkingEffortCapability capability = CreateUnknownCapability();
+    private string effectiveModel = string.Empty;
+    private string? providerDefaultError;
+    private string supportMessage = string.Empty;
+    private AlertStyle SupportAlertStyle { get; set; } = AlertStyle.Info;
+
+    [Parameter]
+    public ProviderProfile? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public AgentReasoningEffortLevel? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentReasoningEffortLevel?> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string TestId { get; set; } = "agents-catalog-thinking-effort";
+
+    [Parameter]
+    public string SupportTestId { get; set; } = "agents-catalog-thinking-effort-support";
+
+    private bool IsSelectorDisabled =>
+        Disabled ||
+        Value is null && capability.Status != AgentThinkingEffortSupportStatus.Supported;
+
+    private string SelectedChoiceValue => Value is null
+        ? ProviderDefaultChoiceValue
+        : AgentThinkingEffortPolicy.FormatEffort(Value.Value);
+
+    private bool HasIncompatibleValue =>
+        Value is { } value &&
+        (capability.Status != AgentThinkingEffortSupportStatus.Supported ||
+         !capability.AllowedEfforts.Contains(value));
+
+    protected override void OnParametersSet()
+    {
+        effectiveModel = ResolveEffectiveModel();
+        capability = Provider is null
+            ? CreateUnknownCapability()
+            : AgentThinkingEffortPolicy.ResolveCapability(Provider, effectiveModel);
+        providerDefaultError = null;
+
+        RebuildOptions();
+        ResolveSupportGuidance();
+    }
+
+    private void RebuildOptions()
+    {
+        options.Clear();
+        options.Add(new ThinkingEffortOption(
+            ProviderDefaultChoiceValue,
+            null,
+            ResolveProviderDefaultLabel()));
+
+        if (capability.Status == AgentThinkingEffortSupportStatus.Supported)
+        {
+            options.AddRange(capability.AllowedEfforts.Select(effort =>
+                new ThinkingEffortOption(
+                    AgentThinkingEffortPolicy.FormatEffort(effort),
+                    effort,
+                    FormatEffortLabel(effort))));
+        }
+
+        if (HasIncompatibleValue)
+        {
+            options.Add(new ThinkingEffortOption(
+                AgentThinkingEffortPolicy.FormatEffort(Value!.Value),
+                Value,
+                $"{FormatEffortLabel(Value!.Value)} (currently configured; unavailable)"));
+        }
+    }
+
+    private string ResolveProviderDefaultLabel()
+    {
+        if (Provider is null || capability.Status != AgentThinkingEffortSupportStatus.Supported)
+        {
+            return "Provider default";
+        }
+
+        try
+        {
+            var providerDefault = AgentThinkingEffortPolicy.ResolveProviderDefault(Provider, effectiveModel);
+            return providerDefault is null
+                ? "Provider default"
+                : $"Provider default ({FormatProviderDefaultEffort(providerDefault.Value)})";
+        }
+        catch (InvalidOperationException exception)
+        {
+            providerDefaultError = exception.Message;
+            return "Provider default (unavailable)";
+        }
+    }
+
+    private void ResolveSupportGuidance()
+    {
+        if (Value is null && providerDefaultError is not null)
+        {
+            SupportAlertStyle = AlertStyle.Danger;
+            supportMessage =
+                $"The provider default cannot be applied to {ResolveProviderModelLabel()}. " +
+                $"Select a supported override or update the provider configuration. {providerDefaultError}";
+            return;
+        }
+
+        if (HasIncompatibleValue)
+        {
+            SupportAlertStyle = AlertStyle.Danger;
+            if (providerDefaultError is not null)
+            {
+                supportMessage =
+                    $"The configured thinking-effort override '{FormatEffortLabel(Value!.Value)}' cannot be applied to {ResolveProviderModelLabel()}, " +
+                    "and the provider default is also unavailable. Select a supported override or update the provider configuration. " +
+                    $"{providerDefaultError}";
+                return;
+            }
+
+            supportMessage =
+                $"The configured thinking-effort override '{FormatEffortLabel(Value!.Value)}' cannot be applied to {ResolveProviderModelLabel()}. " +
+                $"Select Provider default to remove this override. {capability.Summary}";
+            return;
+        }
+
+        switch (capability.Status)
+        {
+            case AgentThinkingEffortSupportStatus.Supported:
+                SupportAlertStyle = AlertStyle.Info;
+                var disableGuidance = capability.AllowedEfforts.Contains(AgentReasoningEffortLevel.None)
+                    ? " None explicitly disables thinking."
+                    : string.Empty;
+                supportMessage =
+                    $"{capability.Summary} Provider default inherits the provider setting.{disableGuidance}";
+                return;
+            case AgentThinkingEffortSupportStatus.Unsupported:
+                SupportAlertStyle = AlertStyle.Warning;
+                supportMessage =
+                    $"{capability.Summary} This agent must use Provider default because the selected model cannot accept an override.";
+                return;
+            case AgentThinkingEffortSupportStatus.Unknown:
+                SupportAlertStyle = AlertStyle.Warning;
+                supportMessage = Provider is null
+                    ? capability.Summary
+                    : $"{capability.Summary} {ResolveUnknownCapabilityAction()}";
+                return;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported thinking-effort capability status '{capability.Status}'.");
+        }
+    }
+
+    private string ResolveUnknownCapabilityAction()
+    {
+        return Provider?.Kind switch
+        {
+            ProviderKind.AzureOpenAi =>
+                "Define this deployment's allowed thinking-effort values in the provider configuration before setting an override.",
+            ProviderKind.Ollama =>
+                "Test the provider to refresh this model's advertised capabilities before setting an override.",
+            ProviderKind.OpenAi =>
+                "Use a model with a verified capability definition before setting an override.",
+            _ => "Use a provider and model with verified thinking-effort capabilities before setting an override."
+        };
+    }
+
+    private Task HandleValueChangedAsync(string? choiceValue)
+    {
+        var selectedOption = options.FirstOrDefault(option => string.Equals(
+            option.ChoiceValue,
+            choiceValue,
+            StringComparison.Ordinal));
+        if (selectedOption is null)
+        {
+            throw new InvalidOperationException(
+                $"Unknown thinking-effort selector value '{choiceValue}'.");
+        }
+
+        return ValueChanged.InvokeAsync(selectedOption.Value);
+    }
+
+    private string ResolveEffectiveModel()
+    {
+        var model = string.IsNullOrWhiteSpace(Model)
+            ? Provider?.DefaultModel
+            : Model;
+        return model?.Trim() ?? string.Empty;
+    }
+
+    private string ResolveProviderModelLabel()
+    {
+        var providerName = string.IsNullOrWhiteSpace(Provider?.Name)
+            ? "the selected provider"
+            : $"provider '{Provider.Name}'";
+        return string.IsNullOrWhiteSpace(effectiveModel)
+            ? providerName
+            : $"{providerName} model '{effectiveModel}'";
+    }
+
+    private static ProviderModelThinkingEffortCapability CreateUnknownCapability()
+        => new(
+            string.Empty,
+            AgentThinkingEffortSupportStatus.Unknown,
+            AgentThinkingEffortCapabilitySource.Defined,
+            [],
+            Summary: "Select a provider and model to determine whether thinking effort can be overridden.");
+
+    private string FormatEffortLabel(AgentReasoningEffortLevel effort)
+    {
+        if (effort == AgentReasoningEffortLevel.Medium &&
+            capability.ControlMode == AgentThinkingEffortControlMode.BooleanToggle)
+        {
+            return "Enabled";
+        }
+
+        return effort switch
+        {
+            AgentReasoningEffortLevel.None => "None (disable thinking)",
+            AgentReasoningEffortLevel.Minimal => "Minimal",
+            AgentReasoningEffortLevel.Low => "Low",
+            AgentReasoningEffortLevel.Medium => "Medium",
+            AgentReasoningEffortLevel.High => "High",
+            AgentReasoningEffortLevel.ExtraHigh => "Extra high",
+            AgentReasoningEffortLevel.Max => "Max",
+            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, "Unsupported thinking effort.")
+        };
+    }
+
+    private string FormatProviderDefaultEffort(AgentReasoningEffortLevel effort)
+    {
+        return capability.ControlMode == AgentThinkingEffortControlMode.BooleanToggle &&
+               effort == AgentReasoningEffortLevel.Medium
+            ? "enabled"
+            : AgentThinkingEffortPolicy.FormatEffort(effort);
+    }
+
+    private sealed record ThinkingEffortOption(
+        string ChoiceValue,
+        AgentReasoningEffortLevel? Value,
+        string Text);
+}

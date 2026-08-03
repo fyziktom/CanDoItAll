@@ -11,7 +11,10 @@ public sealed record ProviderModelDescriptor(
     string Model,
     string DisplayName,
     AgentProviderCapabilityKind Capability,
-    ProviderDispatchLimits DispatchLimits);
+    ProviderDispatchLimits DispatchLimits)
+{
+    public ProviderModelThinkingEffortCapability? ThinkingEffortCapability { get; init; }
+}
 
 public sealed record ProviderChatAttachment(
     string Name,

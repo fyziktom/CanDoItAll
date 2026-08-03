@@ -12,6 +12,8 @@ public sealed class AgentEditorModel
     public AgentLifecycleStatus Status { get; set; } = AgentLifecycleStatus.Draft;
     public Guid? ProviderProfileId { get; set; }
     public string Model { get; set; } = string.Empty;
+    public AgentReasoningEffortLevel? ThinkingEffortOverride { get; set; }
+    public bool IsThinkingEffortOverrideEdited { get; set; }
     public AgentWorkloadKind Workload { get; set; } = AgentWorkloadKind.General;
     public AgentChatHistoryMode ChatHistoryMode { get; set; } = AgentChatHistoryMode.ProviderDefault;
     public double Temperature { get; set; } = 0.2d;
@@ -31,7 +33,9 @@ public sealed class AgentEditorModel
     public List<Guid> SelectedCapabilityIds { get; set; } = [];
     public List<string> Tags { get; set; } = [];
 
-    public static AgentEditorModel FromDefinition(AgentDefinition definition)
+    public static AgentEditorModel FromDefinition(
+        AgentDefinition definition,
+        ProviderKind? providerKind = null)
     {
         return new AgentEditorModel
         {
@@ -45,6 +49,10 @@ public sealed class AgentEditorModel
             Status = definition.Status,
             ProviderProfileId = definition.ProviderProfileId,
             Model = definition.Model,
+            ThinkingEffortOverride = AgentThinkingEffortPolicy.ReadConfiguredEffort(
+                definition.ConfigurationJson,
+                "agent",
+                includeLegacyOllamaThink: providerKind == ProviderKind.Ollama),
             Workload = definition.Workload,
             ChatHistoryMode = definition.ChatHistoryMode,
             Temperature = definition.Temperature,
@@ -116,6 +124,7 @@ public sealed class ProviderProfileEditorModel : IProviderModelPricingEditorMode
     public List<string> SuggestedModels { get; set; } = [];
     public List<ProviderModelTokenPriceEditorModel> ModelPrices { get; set; } = [];
     public List<string> Tags { get; set; } = [];
+    public List<ProviderModelThinkingEffortCapability>? ModelThinkingEffortCapabilities { get; set; }
 
     public static ProviderProfileEditorModel FromDefinition(ProviderProfile definition)
     {
@@ -139,7 +148,13 @@ public sealed class ProviderProfileEditorModel : IProviderModelPricingEditorMode
             IsPrivateProvider = definition.IsPrivateProvider,
             SuggestedModels = definition.SuggestedModels.ToList(),
             ModelPrices = ProviderPricingDefaults.ToEditorModels(definition.ModelPrices),
-            Tags = definition.Tags.ToList()
+            Tags = definition.Tags.ToList(),
+            ModelThinkingEffortCapabilities = definition.ModelThinkingEffortCapabilities
+                .Select(capability => capability with
+                {
+                    AllowedEfforts = capability.AllowedEfforts.ToList()
+                })
+                .ToList()
         };
     }
 }

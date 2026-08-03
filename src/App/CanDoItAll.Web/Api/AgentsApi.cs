@@ -55,10 +55,26 @@ internal static class AgentsApi
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
         {
-            await workspaceService.DeleteAgentAsync(agentId, cancellationToken);
-            return Results.Ok(new ApiAck(true));
+            try
+            {
+                await workspaceService.DeleteAgentAsync(agentId, cancellationToken);
+                return Results.Ok(new ApiAck(true));
+            }
+            catch (AgentDeletionConflictException exception)
+            {
+                return ApiEndpointResults.Conflict(
+                    exception.Message,
+                    exception.Kind == AgentDeletionConflictKind.ManagedSeedAgent
+                        ? "agents.delete-managed-seed"
+                        : "agents.delete-active-execution");
+            }
         })
-        .WithName("DeleteAgent");
+        .WithName("DeleteAgent")
+        .Produces<ApiAck>(StatusCodes.Status200OK)
+        .ProducesApiErrors(
+            StatusCodes.Status401Unauthorized,
+            StatusCodes.Status403Forbidden,
+            StatusCodes.Status409Conflict);
 
         agents.MapPost("/{agentId:guid}/clone", async (
                 Guid agentId,

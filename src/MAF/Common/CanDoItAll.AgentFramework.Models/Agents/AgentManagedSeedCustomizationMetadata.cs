@@ -34,6 +34,20 @@ public static class AgentManagedSeedCustomizationMetadata
         return TryReadString(root, CustomizationVersionPropertyName, out _);
     }
 
+    public static bool HasManagedSeedOwnership(string? configurationJson)
+    {
+        var root = ParseObject(configurationJson);
+        return root.ContainsKey(ManagedSeedVersionPropertyName);
+    }
+
+    public static string RemoveManagedSeedOwnership(string? configurationJson)
+    {
+        var root = ParseRequiredObject(configurationJson);
+        root.Remove(ManagedSeedVersionPropertyName);
+        root.Remove(CustomizationVersionPropertyName);
+        return root.ToJsonString();
+    }
+
     private static bool TryReadString(JsonObject root, string propertyName, out string value)
     {
         value = string.Empty;
@@ -62,6 +76,27 @@ public static class AgentManagedSeedCustomizationMetadata
         catch (JsonException)
         {
             return new JsonObject();
+        }
+    }
+
+    private static JsonObject ParseRequiredObject(string? configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return new JsonObject();
+        }
+
+        try
+        {
+            return JsonNode.Parse(configurationJson) as JsonObject
+                ?? throw new InvalidOperationException(
+                    "Agent configuration must be a JSON object before managed-seed ownership can be removed.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "Agent configuration must contain valid JSON before managed-seed ownership can be removed.",
+                exception);
         }
     }
 }

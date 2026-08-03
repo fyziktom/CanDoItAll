@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workspace;
 
@@ -18,8 +19,22 @@ internal static class AgentFrameworkProviderMetadata
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
     private const string PurposePropertyName = "providerPurpose";
+    private const string ProviderKindPropertyName =
+        ProviderProfileMetadataPropertyNames.ProviderKind;
     private const string TagsPropertyName = "tags";
     private const string SupportsVisionPropertyName = "supportsVision";
+    private const string ThinkingEffortCapabilitiesPropertyName =
+        ProviderProfileMetadataPropertyNames.ModelThinkingEffortCapabilities;
+
+    private static readonly JsonSerializerOptions ThinkingEffortJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters =
+        {
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+        }
+    };
 
     public static string BuildConfigurationJson(
         WorkspaceProviderProfile provider)
@@ -65,16 +80,20 @@ internal static class AgentFrameworkProviderMetadata
         string configSchemaVersion,
         Guid? secretRecordId,
         int timeoutSeconds,
+        AgentFrameworkProviderKind providerKind,
         ProviderTransportKind transport,
         ProviderProfilePurpose purpose,
+        IReadOnlyList<ProviderModelThinkingEffortCapability> thinkingEffortCapabilities,
         IEnumerable<string>? tags = null)
     {
         var configuration = ParseObject(configurationJson);
         configuration[ConnectorPluginKeyPropertyName] = connectorPluginKey;
         configuration[ConfigSchemaVersionPropertyName] = configSchemaVersion;
         configuration[TimeoutSecondsPropertyName] = timeoutSeconds;
+        configuration[ProviderKindPropertyName] = providerKind.ToString();
         configuration[TransportPropertyName] = transport.ToString();
         configuration[PurposePropertyName] = purpose.ToString();
+        WriteThinkingEffortCapabilities(configuration, thinkingEffortCapabilities);
         WriteTags(configuration, tags);
         if (secretRecordId.HasValue)
         {
@@ -123,6 +142,80 @@ internal static class AgentFrameworkProviderMetadata
         return TryResolveTransport(provider.ExtraSettingsJson, out var configuredTransport)
             ? configuredTransport
             : fallback;
+    }
+
+    public static AgentFrameworkProviderKind ResolveProviderKind(
+        WorkspaceProviderProfile provider,
+        AgentFrameworkProviderKind fallback)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        var configuration = ParseObject(provider.ExtraSettingsJson);
+        if (configuration[ProviderKindPropertyName] is null)
+        {
+            return fallback;
+        }
+
+        if (configuration[ProviderKindPropertyName] is JsonValue value &&
+            value.TryGetValue<string>(out var configuredKind) &&
+            Enum.TryParse<AgentFrameworkProviderKind>(
+                configuredKind,
+                ignoreCase: true,
+                out var providerKind) &&
+            Enum.IsDefined(providerKind))
+        {
+            return providerKind;
+        }
+
+        throw new InvalidOperationException(
+            $"Provider configuration property '{ProviderKindPropertyName}' must identify a supported provider kind.");
+    }
+
+    public static IReadOnlyList<ProviderModelThinkingEffortCapability>
+        ReadThinkingEffortCapabilities(
+        string? configurationJson)
+    {
+        var configuration = ParseObjectStrict(configurationJson);
+        var propertyName = FindPropertyName(
+            configuration,
+            ThinkingEffortCapabilitiesPropertyName);
+        if (propertyName is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            var capabilities = configuration[propertyName]!
+                .Deserialize<List<ProviderModelThinkingEffortCapability>>(
+                    ThinkingEffortJsonOptions) ?? [];
+            return capabilities
+                .Select(AgentThinkingEffortPolicy.NormalizeCapability)
+                .ToList();
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"Provider configuration property '{ThinkingEffortCapabilitiesPropertyName}' is not valid thinking-effort capability metadata.",
+                exception);
+        }
+    }
+
+    public static bool HasThinkingEffortCapabilities(
+        string? configurationJson)
+    {
+        return FindPropertyName(
+            ParseObjectStrict(configurationJson),
+            ThinkingEffortCapabilitiesPropertyName) is not null;
+    }
+
+    public static string WriteThinkingEffortCapabilities(
+        string? configurationJson,
+        IReadOnlyList<ProviderModelThinkingEffortCapability> capabilities)
+    {
+        var configuration = ParseObjectStrict(configurationJson);
+        WriteThinkingEffortCapabilities(configuration, capabilities);
+        return configuration.ToJsonString();
     }
 
     public static ProviderProfilePurpose ResolvePurpose(
@@ -281,6 +374,27 @@ internal static class AgentFrameworkProviderMetadata
         }
     }
 
+    private static JsonObject ParseObjectStrict(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new JsonObject();
+        }
+
+        try
+        {
+            return JsonNode.Parse(json) as JsonObject
+                ?? throw new InvalidOperationException(
+                    "Provider configuration must be a JSON object.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "Provider configuration is not valid JSON.",
+                exception);
+        }
+    }
+
     private static void WriteTags(
         JsonObject configuration,
         IEnumerable<string>? tags)
@@ -306,6 +420,44 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         configuration[TagsPropertyName] = tagArray;
+    }
+
+    private static void WriteThinkingEffortCapabilities(
+        JsonObject configuration,
+        IReadOnlyList<ProviderModelThinkingEffortCapability> capabilities)
+    {
+        foreach (var propertyName in configuration
+                     .Select(item => item.Key)
+                     .Where(item => string.Equals(
+                         item,
+                         ThinkingEffortCapabilitiesPropertyName,
+                         StringComparison.OrdinalIgnoreCase))
+                     .ToList())
+        {
+            configuration.Remove(propertyName);
+        }
+
+        if (capabilities.Count == 0)
+        {
+            return;
+        }
+
+        configuration[ThinkingEffortCapabilitiesPropertyName] =
+            JsonSerializer.SerializeToNode(
+                capabilities,
+                ThinkingEffortJsonOptions);
+    }
+
+    private static string? FindPropertyName(
+        JsonObject configuration,
+        string propertyName)
+    {
+        return configuration
+            .Select(item => item.Key)
+            .FirstOrDefault(item => string.Equals(
+                item,
+                propertyName,
+                StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool TryResolveTransport(

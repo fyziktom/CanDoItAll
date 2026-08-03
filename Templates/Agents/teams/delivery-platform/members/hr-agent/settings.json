@@ -25,7 +25,7 @@
       ]
     }
   },
-  "applyDefaultReasoningEffort": true,
+  "reasoningEffort": "medium",
   "isTemplate": false,
   "templateKey": "hr-agent",
   "permissions": {
