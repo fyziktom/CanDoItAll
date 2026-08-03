@@ -8,6 +8,9 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage
 {
+    [Inject]
+    private ProjectAssetCreationService AssetCreationService { get; set; } = default!;
+
     private static readonly IReadOnlyList<string> SummaryStatusOptions =
     [
         "Draft",
@@ -405,6 +408,11 @@ public partial class ProjectStructurePage
         var mermaidText = ProjectStructureSummaryExporter.BuildMermaidGantt(
             summaryDialog.Summary,
             DateOnly.FromDateTime(DateTime.UtcNow));
+        ProjectObjectMediaPayload media = await AssetCreationService.CreateTextAsync(
+            ProjectFileSubtype.Mermaid,
+            $"{SanitizeExportName(summaryDialog.RootTitle)}-progress-summary.mmd",
+            mermaidText,
+            deferredCompletionCts.Token);
         var metadata = new ProjectObjectMetadataEnvelope
         {
             File = new ProjectFileMetadata
@@ -420,15 +428,16 @@ public partial class ProjectStructurePage
                 ProjectObjectType.File,
                 $"{summaryDialog.RootTitle} gantt",
                 "Progress summary export",
-                mermaidText,
+                "Generated from the structure progress summary modal.",
                 summaryDialog.RootNodeId,
                 null,
                 null,
                 null,
                 null,
                 "mermaid",
-                null,
-                ProjectObjectMetadataSerializer.Serialize(metadata)));
+                media,
+                ProjectObjectMetadataSerializer.Serialize(metadata)),
+            deferredCompletionCts.Token);
 
         workflowFeedback = $"{created.Title} was exported as a Mermaid Gantt node.";
         workflowFeedbackTone = "mint";

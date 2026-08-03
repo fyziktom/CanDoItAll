@@ -6,6 +6,58 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed partial class AppSmokeTests
 {
     [Fact]
+    [Trait("Surface", "ProjectStructure")]
+    public async Task Project_structure_markdown_right_click_opens_one_authoring_dialog_and_persists_content()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize
+            {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+        var page = await context.NewPageAsync();
+        await CreateProjectAsync(page, "Markdown right-click authoring", "Validation");
+        const string rootSelector = ".cw-node[data-node-id^='project:']";
+
+        string[] menuLabels = await OpenCanvasContextMenuAsync(page, rootSelector);
+        Assert.Contains(menuLabels, label => label.Contains("Assets", StringComparison.OrdinalIgnoreCase));
+        await OpenContextSubmenuAsync(page, "group-assets");
+        await ClickContextMenuActionAsync(page, "add-file-markdown");
+
+        ILocator dialog = page.GetByTestId("project-structure-text-asset-create-dialog");
+        await dialog.WaitForAsync();
+        Assert.Equal(1, await dialog.CountAsync());
+        Assert.Equal(0, await page.Locator(".cw-canvas-composer:visible").CountAsync());
+        await page.GetByTestId("project-structure-text-asset-title").FillAsync("Architecture notes");
+        await page.GetByTestId("project-structure-text-asset-file-name").FillAsync("architecture-notes.markdown");
+        await page.GetByTestId("project-structure-text-asset-content").FillAsync(
+            "# Architecture\n\nTyped storage boundary.");
+        await page.GetByTestId("project-structure-text-asset-notes").FillAsync(
+            "Describes the architecture decision.");
+        await page.GetByTestId("project-structure-text-asset-submit").ClickAsync();
+
+        await dialog.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Detached,
+            Timeout = 20_000
+        });
+        await WaitForSceneNodeTitleAsync(page, "Architecture notes", timeoutMs: 20_000);
+        string? mediaFileName = await page.EvaluateAsync<string?>(
+            @"title => {
+                const host = document.querySelector('.cw-canvas-host');
+                const nodes = host?.__canvasWorkbenchState?.surface?.nodes || [];
+                const node = nodes.find(candidate => candidate?.title === title);
+                return node?.mediaFileName || null;
+            }",
+            "Architecture notes");
+        Assert.Equal("architecture-notes.md", mediaFileName);
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     [Trait("Category", "Quarantined")]
     [Trait("Surface", "ProjectStructure")]
     [Trait("Artifacts", "Required")]
@@ -159,7 +211,11 @@ public sealed partial class AppSmokeTests
             projectRootId,
             "Runbook text",
             "docs/runbooks",
-            "Operator checklist and rollout notes.");
+            "Operator checklist and rollout notes.",
+            uploadedFile: BuildUploadedFile(
+                "runbook.txt",
+                "text/plain",
+                "Validate the release, capture evidence, and record the rollout result."));
 
         await InvokeStructureCreateActionAsync(
             page,
@@ -168,7 +224,11 @@ public sealed partial class AppSmokeTests
             projectRootId,
             "Settings JSON",
             "config",
-            "{\n  \"toolbox\": true,\n  \"validation\": \"strict\"\n}");
+            "Runtime settings for strict toolbox validation.",
+            uploadedFile: BuildUploadedFile(
+                "settings.json",
+                "application/json",
+                "{\n  \"toolbox\": true,\n  \"validation\": \"strict\"\n}"));
 
         await InvokeStructureCreateActionAsync(
             page,
@@ -177,7 +237,11 @@ public sealed partial class AppSmokeTests
             projectRootId,
             "Evidence README",
             "docs",
-            "# Validation evidence\n\nCapture screenshots and exports.");
+            "Validation evidence index.",
+            uploadedFile: BuildUploadedFile(
+                "README.md",
+                "text/markdown",
+                "# Validation evidence\n\nCapture screenshots and exports."));
 
         await InvokeStructureCreateActionAsync(
             page,
@@ -186,10 +250,11 @@ public sealed partial class AppSmokeTests
             projectRootId,
             "Validation flow diagram",
             "docs/diagrams",
-            string.Empty,
-            [
-                new CanvasInputValueSeed("mermaidText", "gantt\n    title Bundle validation timeline\n    dateFormat YYYY-MM-DD\n    section Evidence\n    Capture screenshots :done, a1, 2026-04-08, 2d\n    Export workbook :active, a2, 2026-04-10, 2d")
-            ]);
+            "Visualizes the bundle validation timeline.",
+            uploadedFile: BuildUploadedFile(
+                "validation-flow.mmd",
+                "text/vnd.mermaid",
+                "gantt\n    title Bundle validation timeline\n    dateFormat YYYY-MM-DD\n    section Evidence\n    Capture screenshots :done, a1, 2026-04-08, 2d\n    Export workbook :active, a2, 2026-04-10, 2d"));
 
         await FocusCanvasRootAsync(page);
         await SetCanvasZoomPercentAsync(page, 58);

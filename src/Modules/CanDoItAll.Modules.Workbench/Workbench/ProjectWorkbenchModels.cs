@@ -375,16 +375,41 @@ inputs: project id, command requests, graph mutations
 outputs: ProjectStructureSurface, ProjectCalendarSurface, ArtifactReference
 */
 public sealed partial class ProjectWorkbenchService(
-IDbContextFactory<AppDbContext> dbContextFactory,
-IClock clock,
-IStoragePlacementService storagePlacementService,
-ProjectStructureAssemblyService projectStructureAssemblyService,
-ProjectWorkbenchRelationService relationService,
-ProjectWorkbenchLifecycleService lifecycleService,
-ProjectWorkbenchCommandService commandService,
-ProjectWorkbenchCrossModuleMutationService crossModuleMutationService,
-ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectWorkbenchSeedService
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IClock clock,
+    ProjectAssetStorageService assetStorageService,
+    ProjectStructureAssemblyService projectStructureAssemblyService,
+    ProjectWorkbenchRelationService relationService,
+    ProjectWorkbenchLifecycleService lifecycleService,
+    ProjectWorkbenchCommandService commandService,
+    ProjectWorkbenchCrossModuleMutationService crossModuleMutationService,
+    ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectWorkbenchSeedService
 {
+    public ProjectWorkbenchService(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IClock clock,
+        IStoragePlacementService storagePlacementService,
+        ProjectStructureAssemblyService projectStructureAssemblyService,
+        ProjectWorkbenchRelationService relationService,
+        ProjectWorkbenchLifecycleService lifecycleService,
+        ProjectWorkbenchCommandService commandService,
+        ProjectWorkbenchCrossModuleMutationService crossModuleMutationService,
+        ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary)
+        : this(
+            dbContextFactory,
+            clock,
+            new ProjectAssetStorageService(
+                storagePlacementService,
+                new ProjectAssetCreationService()),
+            projectStructureAssemblyService,
+            relationService,
+            lifecycleService,
+            commandService,
+            crossModuleMutationService,
+            runtimeMetadataBoundary)
+    {
+    }
+
     private const string GanttTaskSubtype = "task";
     private const string GanttViewStateSurfaceKind = "gantt";
     private static readonly ProjectStructureInvariantService InvariantService = new();
@@ -544,7 +569,7 @@ ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectW
             normalizedObjectSubtype,
             request.Notes,
             request.MetadataJson);
-        var media = await SaveMediaAsync(
+        var media = await assetStorageService.SaveAsync(
             projectId,
             request.ObjectType,
             normalizedObjectSubtype,
@@ -1208,7 +1233,7 @@ ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectW
         }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
-        var savedMedia = await SaveMediaAsync(
+        var savedMedia = await assetStorageService.SaveAsync(
                 projectId,
                 node.ObjectType,
                 node.ObjectSubtype,
@@ -1681,116 +1706,6 @@ ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectW
         return await commandService.ExecuteNodeCommandAsync(projectId, nodeKey, commandKind, cancellationToken);
     }
 
-    private async Task<SavedMediaDescriptor?> SaveMediaAsync(
-        Guid projectId,
-        ProjectObjectType objectType,
-        string objectSubtype,
-        ProjectObjectMediaPayload? media,
-        CancellationToken cancellationToken)
-    {
-        if (media is null)
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(media.FileName))
-        {
-            throw new InvalidDataException("Uploaded project assets require a file name.");
-        }
-
-        if (string.IsNullOrWhiteSpace(media.Base64Data))
-        {
-            throw new InvalidDataException("Uploaded project assets require file content.");
-        }
-
-        if (media.Base64Data.Length > ProjectStructureAssetUploadLimits.MaximumBase64Characters)
-        {
-            throw new InvalidDataException(
-                $"Uploaded project assets are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
-        }
-
-        byte[] bytes;
-        try
-        {
-            bytes = Convert.FromBase64String(media.Base64Data);
-        }
-        catch (FormatException exception)
-        {
-            throw new InvalidDataException("Uploaded project asset content is not valid base64.", exception);
-        }
-
-        if (bytes.LongLength > ProjectStructureAssetUploadLimits.MaximumFileBytes)
-        {
-            throw new InvalidDataException(
-                $"Uploaded project assets are limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
-        }
-
-        MermaidDiagramKind mermaidDiagramKind = ResolveMermaidDiagramKind(
-            objectType,
-            objectSubtype,
-            bytes,
-            cancellationToken);
-
-        var extension = Path.GetExtension(media.FileName);
-        var safeExtension = string.IsNullOrWhiteSpace(extension)
-            ? objectType == ProjectObjectType.ImageAsset ? ".png" : ".bin"
-            : extension;
-        var safeFileName = $"{SanitizeSlug(Path.GetFileNameWithoutExtension(media.FileName))}-{Guid.NewGuid():N}{safeExtension}";
-        var category = objectType switch
-        {
-            ProjectObjectType.ImageAsset => "project-media/images",
-            ProjectObjectType.VideoAsset => "project-media/videos",
-            _ => "project-media/files"
-        };
-        var relativePath = Path.Combine("managed-files", category, projectId.ToString("N"), safeFileName)
-            .Replace('\\', '/');
-        var contentKind = StorageContentClassifier.Resolve(media.ContentType, media.FileName);
-        var placement = await storagePlacementService.PlaceAsync(
-            new StoragePlacementRequest(
-                media.FileName,
-                media.ContentType,
-                bytes,
-                StorageUsagePurpose.ProjectAsset,
-                contentKind,
-                projectId,
-                RelativePathHint: relativePath,
-                PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)),
-            cancellationToken);
-        var storageObjectReference = placement.WriteResult.Reference;
-        var storageReference = StorageJson.SerializeReference(storageObjectReference);
-
-        return new SavedMediaDescriptor(
-            placement.RelativePath,
-            placement.Route,
-            storageObjectReference.ContentType,
-            media.FileName,
-            objectType.ToString(),
-            storageReference,
-            mermaidDiagramKind);
-    }
-
-    private static MermaidDiagramKind ResolveMermaidDiagramKind(
-        ProjectObjectType objectType,
-        string objectSubtype,
-        ReadOnlyMemory<byte> content,
-        CancellationToken cancellationToken)
-    {
-        if (objectType != ProjectObjectType.File ||
-            !string.Equals(objectSubtype, "mermaid", StringComparison.OrdinalIgnoreCase))
-        {
-            return MermaidDiagramKind.Unknown;
-        }
-
-        try
-        {
-            return ProjectTextAssetContentPolicy.DetectMermaidDiagramKind(content, cancellationToken);
-        }
-        catch (ProjectAssetCreationException exception)
-        {
-            throw new InvalidDataException("Mermaid asset content is invalid.", exception);
-        }
-    }
-
     private static ProjectNodeBindingState ResolveCreateBinding(
         Guid projectId,
         ProjectObjectType objectType,
@@ -1954,24 +1869,4 @@ ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectW
         return end > start ? viewStateJson[start..end] : "month";
     }
 
-    private static string SanitizeSlug(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "asset";
-        }
-
-        var builder = new string(value
-            .Trim()
-            .ToLowerInvariant()
-            .Select(character => char.IsLetterOrDigit(character) ? character : '-')
-            .ToArray());
-
-        while (builder.Contains("--", StringComparison.Ordinal))
-        {
-            builder = builder.Replace("--", "-", StringComparison.Ordinal);
-        }
-
-        return builder.Trim('-');
-    }
 }

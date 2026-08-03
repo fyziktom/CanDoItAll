@@ -50,7 +50,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<IProjectStructureProjectionContributor, TestPlanProjectionContributor>();
         services.AddScoped<ProjectStructureProcessRunRecordProjector>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectStructureProcessProjectionContributor>();
-        services.AddScoped<ProjectWorkbenchService>();
+        services.AddScoped<ProjectAssetStorageService>();
+        services.AddScoped(serviceProvider =>
+            ActivatorUtilities.CreateInstance<ProjectWorkbenchService>(
+                serviceProvider,
+                serviceProvider.GetRequiredService<ProjectAssetStorageService>()));
         services.AddScoped<IProjectNodeAssignmentPolicyBridge, ProjectNodeAssignmentPolicyBridge>();
         services.AddScoped<IProjectNodeScopeBridge, ProjectNodeScopeBridge>();
         services.Replace(ServiceDescriptor.Scoped<IProjectNodeDetailsBridge, ProjectNodeDetailsBridge>());
@@ -98,7 +102,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
             ProjectTextAssetContentGenerator>());
         services.AddScoped<ProjectAssetContentGeneratorResolver>();
         services.AddScoped<ProjectAssetCreationService>();
-        services.AddScoped<ProjectStructureTextAssetDialogCoordinator>();
+        services.AddScoped<ProjectStructureTextAssetCreationCoordinator>();
         services.AddSingleton<ProjectStructureDeferredNodeCompletionQueue>();
         services.AddSingleton<IProjectStructureDeferredNodeCompletionQueue>(serviceProvider =>
             serviceProvider.GetRequiredService<ProjectStructureDeferredNodeCompletionQueue>());

@@ -658,7 +658,7 @@ public sealed class ProjectStructureGanttPanelTests
             new ProjectWorkbenchService(
                 factory,
                 clock,
-                null!,
+                new ProjectAssetStorageService(null!, new ProjectAssetCreationService()),
                 null!,
                 null!,
                 null!,

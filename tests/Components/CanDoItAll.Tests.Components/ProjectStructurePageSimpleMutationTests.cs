@@ -90,6 +90,42 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Text_asset_actions_bypass_the_generic_composer_and_preserve_drag_drop()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        Guid projectId = await CreateProjectAsync(projectsService, "Text asset action routing");
+        string rootNodeId = $"project:{projectId}";
+        var cut = harness.Context.Render<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        IRenderedComponent<CanvasWorkbench> canvasWorkbench = WaitForCanvasWorkbench(cut);
+        string[] actionIds =
+        [
+            "add-file-text",
+            "add-file-json",
+            "add-file-markdown",
+            "add-file-mermaid",
+            "add-file-log"
+        ];
+
+        cut.WaitForAssertion(() =>
+        {
+            CanvasWorkbenchNode rootNode = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, rootNodeId, StringComparison.Ordinal));
+            foreach (string actionId in actionIds)
+            {
+                AssertDedicatedTextAssetAction(
+                    FindCreateAction(
+                        canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
+                        actionId));
+                AssertDedicatedTextAssetAction(
+                    FindCreateAction(rootNode.ContextActions, actionId));
+            }
+        });
+    }
+
+    [Fact]
     public async Task Inline_note_edit_uses_first_non_empty_line_as_title_and_patches_surface_without_structure_reload()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(WrapDbContextFactoryWithCreateCounter);
@@ -2047,6 +2083,13 @@ public sealed class ProjectStructurePageSimpleMutationTests
         string actionId)
         => TryFindCreateAction(actions, actionId)
            ?? throw new InvalidOperationException($"Create action '{actionId}' was not found.");
+
+    private static void AssertDedicatedTextAssetAction(CanvasWorkbenchAction action)
+    {
+        Assert.False(action.RequiresInput);
+        Assert.NotEqual("command", action.CreateMode);
+        Assert.True(action.SupportsDragDrop);
+    }
 
     private static CanvasWorkbenchAction? TryFindCreateAction(
         IReadOnlyList<CanvasWorkbenchAction> actions,

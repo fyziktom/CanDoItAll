@@ -10,6 +10,7 @@ public sealed class ProjectAssetCreationServiceTests
     [InlineData(ProjectFileSubtype.Json, "settings.JSON", "settings.json", "application/json")]
     [InlineData(ProjectFileSubtype.Markdown, "README.markdown", "README.md", "text/markdown")]
     [InlineData(ProjectFileSubtype.Mermaid, "flow.mermaid", "flow.mmd", "text/vnd.mermaid")]
+    [InlineData(ProjectFileSubtype.Log, "build-output", "build-output.log", "text/plain")]
     public async Task Create_text_uses_canonical_file_name_content_type_and_utf8(
         ProjectFileSubtype subtype,
         string requestedFileName,
@@ -66,7 +67,7 @@ public sealed class ProjectAssetCreationServiceTests
     }
 
     [Fact]
-    public async Task Create_text_rejects_empty_content_before_legacy_media_adaptation()
+    public async Task Create_text_rejects_empty_content()
     {
         ProjectAssetCreationService service = BuildService();
 
@@ -109,6 +110,7 @@ public sealed class ProjectAssetCreationServiceTests
     [InlineData(ProjectFileSubtype.Json, "settings.json", "", "settings.json", "application/json")]
     [InlineData(ProjectFileSubtype.Markdown, "README.markdown", "text/plain", "README.md", "text/markdown")]
     [InlineData(ProjectFileSubtype.Mermaid, "flow.mmd", "", "flow.mmd", "text/vnd.mermaid")]
+    [InlineData(ProjectFileSubtype.Log, "build-output.txt", "text/plain", "build-output.log", "text/plain")]
     public void Adapt_text_upload_validates_extension_and_canonicalizes_untrusted_media_type(
         ProjectFileSubtype subtype,
         string fileName,
@@ -182,6 +184,27 @@ public sealed class ProjectAssetCreationServiceTests
     }
 
     [Fact]
+    public void Adapt_text_upload_accepts_utf8_bom_json_without_rewriting_content()
+    {
+        ProjectAssetCreationService service = BuildService();
+        byte[] content =
+        [
+            0xEF,
+            0xBB,
+            0xBF,
+            .. Encoding.UTF8.GetBytes("{\"enabled\":true}")
+        ];
+
+        ProjectObjectMediaPayload media = service.AdaptTextUpload(
+            ProjectFileSubtype.Json,
+            "settings.json",
+            "application/json",
+            content);
+
+        Assert.Equal(content, Convert.FromBase64String(media.Base64Data));
+    }
+
+    [Fact]
     public void Adapt_encoded_text_upload_applies_the_same_validation_and_canonicalization()
     {
         ProjectAssetCreationService service = BuildService();
@@ -230,7 +253,7 @@ public sealed class ProjectAssetCreationServiceTests
     }
 
     [Fact]
-    public void Resolver_rejects_duplicate_strategy_registrations()
+    public void Compatibility_resolver_rejects_duplicate_strategy_registrations()
     {
         var first = new ProjectTextAssetContentGenerator();
         var second = new ProjectTextAssetContentGenerator();
@@ -242,7 +265,7 @@ public sealed class ProjectAssetCreationServiceTests
     }
 
     [Fact]
-    public void Resolver_rejects_unsupported_generation_kind_without_a_fallback()
+    public void Compatibility_resolver_rejects_unsupported_generation_kind_without_a_fallback()
     {
         var resolver = new ProjectAssetContentGeneratorResolver([new ProjectTextAssetContentGenerator()]);
 
@@ -253,7 +276,7 @@ public sealed class ProjectAssetCreationServiceTests
     }
 
     [Fact]
-    public async Task Text_generator_rejects_a_request_of_the_wrong_contract_type()
+    public async Task Compatibility_text_generator_rejects_a_request_of_the_wrong_contract_type()
     {
         var generator = new ProjectTextAssetContentGenerator();
 
@@ -264,7 +287,7 @@ public sealed class ProjectAssetCreationServiceTests
     }
 
     private static ProjectAssetCreationService BuildService()
-        => new(new ProjectAssetContentGeneratorResolver([new ProjectTextAssetContentGenerator()]));
+        => new();
 
     private sealed record WrongTextRequest()
         : ProjectAssetContentGenerationRequest(ProjectAssetGenerationKind.Text);

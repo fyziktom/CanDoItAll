@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -8,12 +9,119 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructurePageAssetAndActivationTests
 {
+    [Fact]
+    public async Task Summary_gantt_export_persists_mermaid_source_as_file_content()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = harness.Context.Services.GetRequiredService<ProjectStructureAgentService>();
+        Guid projectId = await CreateProjectAsync(projectsService, "Summary Gantt export");
+        string rootNodeId = $"project:{projectId}";
+        _ = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Delivery note",
+                "Validation",
+                "Included in the exported summary.",
+                rootNodeId));
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        IRenderedComponent<CanvasWorkbench> canvas = WaitForCanvasWorkbench(page);
+        CanvasWorkbenchNode rootNode = Assert.Single(
+            canvas.Instance.Surface.Nodes,
+            node => string.Equals(node.Id, rootNodeId, StringComparison.Ordinal));
+
+        await page.InvokeAsync(() => canvas.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                rootNode.Id,
+                "summary",
+                rootNode.X,
+                rootNode.Y,
+                "node"))));
+        var exportButton = page.WaitForElement(".project-structure-summary-dialog")
+            .QuerySelectorAll("button")
+            .Single(button => button.TextContent.Contains("Export Gantt", StringComparison.Ordinal));
+        await exportButton.ClickAsync(new MouseEventArgs());
+
+        ProjectStructureNode persistedNode = Assert.Single(
+            (await workbenchService.GetStructureAsync(projectId)).Nodes,
+            node => string.Equals(node.Title, "Summary Gantt export gantt", StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.File, persistedNode.ObjectType);
+        Assert.Equal("mermaid", persistedNode.ObjectSubtype);
+        Assert.Equal("Generated from the structure progress summary modal.", persistedNode.Notes);
+        Assert.Equal("summary-gantt-export-progress-summary.mmd", persistedNode.MediaOriginalFileName);
+        Assert.Equal("text/vnd.mermaid", persistedNode.MediaContentType);
+        ProjectStructureAssetContentDescriptor storedContent = await agentService.GetAssetContentAsync(
+            projectId,
+            persistedNode.Id);
+        Assert.StartsWith(
+            "gantt",
+            Encoding.UTF8.GetString(Convert.FromBase64String(storedContent.Base64Data)),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Right_click_markdown_create_persists_pasted_content_before_the_dialog_closes()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = harness.Context.Services.GetRequiredService<ProjectStructureAgentService>();
+        Guid projectId = await CreateProjectAsync(projectsService, "Markdown create dialog");
+        string rootNodeId = $"project:{projectId}";
+        var dialogHost = harness.Context.Render<DialogHost>();
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+        IRenderedComponent<CanvasWorkbench> canvas = WaitForCanvasWorkbench(page);
+        CanvasWorkbenchNode rootNode = Assert.Single(
+            canvas.Instance.Surface.Nodes,
+            node => string.Equals(node.Id, rootNodeId, StringComparison.Ordinal));
+
+        Task createTask = page.InvokeAsync(() => canvas.Instance.OnContextActionRequest(JsonSerializer.Serialize(
+            new CanvasWorkbenchContextActionRequest(
+                rootNode.Id,
+                "add-file-markdown",
+                rootNode.X,
+                rootNode.Y,
+                "node"))));
+
+        dialogHost.WaitForElement("[data-testid='project-structure-text-asset-title']").Input("Architecture notes");
+        dialogHost.Find("[data-testid='project-structure-text-asset-file-name']").Input("architecture-notes.markdown");
+        dialogHost.Find("[data-testid='project-structure-text-asset-content']").Input("# Architecture\n\nTyped storage boundary.");
+        dialogHost.Find("[data-testid='project-structure-text-asset-notes']").Input("Describes the architecture decision.");
+        dialogHost.Find("[data-testid='project-structure-text-asset-submit']").Click();
+        await createTask.WaitAsync(TimeSpan.FromSeconds(20));
+
+        page.WaitForAssertion(() => Assert.Contains(
+            canvas.Instance.Surface.Nodes,
+            node => string.Equals(node.Title, "Architecture notes", StringComparison.Ordinal)));
+        dialogHost.WaitForAssertion(() => Assert.Empty(
+            dialogHost.FindAll("[data-testid='project-structure-text-asset-create-dialog']")));
+        ProjectStructureNode persistedNode = Assert.Single(
+            (await workbenchService.GetStructureAsync(projectId)).Nodes,
+            node => string.Equals(node.Title, "Architecture notes", StringComparison.Ordinal));
+        Assert.Equal(ProjectObjectType.File, persistedNode.ObjectType);
+        Assert.Equal("markdown", persistedNode.ObjectSubtype);
+        Assert.Equal("Describes the architecture decision.", persistedNode.Notes);
+        Assert.Equal("architecture-notes.md", persistedNode.MediaOriginalFileName);
+        Assert.Equal("text/markdown", persistedNode.MediaContentType);
+        ProjectStructureAssetContentDescriptor storedContent = await agentService.GetAssetContentAsync(
+            projectId,
+            persistedNode.Id);
+        Assert.Equal(
+            "# Architecture\n\nTyped storage boundary.",
+            Encoding.UTF8.GetString(Convert.FromBase64String(storedContent.Base64Data)));
+    }
+
     [Fact]
     public async Task Direct_json_upload_uses_the_typed_text_asset_boundary_before_persistence()
     {
