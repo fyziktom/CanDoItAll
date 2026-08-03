@@ -556,6 +556,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static readonly ToolOperationRequirementResolver operationRequirementResolver = new();
     private static readonly BrowserProofPolicy browserProofPolicy = new();
     private static readonly ExternalTargetBoundaryPolicy externalTargetBoundaryPolicy = new();
+    private static readonly ProjectWorkspaceScopePolicy projectWorkspaceScopePolicy = new();
     private static readonly ScriptSideEffectPolicy scriptSideEffectPolicy = new();
     private static readonly StaleProofPolicy staleProofPolicy = new();
 
@@ -601,6 +602,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (pathArgumentDecision is not null)
         {
             return ValueTask.FromResult(pathArgumentDecision);
+        }
+
+        var projectWorkspaceScopeDecision = projectWorkspaceScopePolicy.EvaluateProjectScope(
+            context,
+            signature);
+        if (projectWorkspaceScopeDecision is not null)
+        {
+            return ValueTask.FromResult(projectWorkspaceScopeDecision);
         }
 
         var operationDecision = EvaluateGovernedProcessOperationAuthorization(context, signature);
@@ -2114,14 +2123,18 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
             if (IsReadOnlyProjectMediaImageTool(context) &&
                 IsManagedProjectMediaImagePath(normalizedPath) &&
-                IsManagedProjectMediaPathForCurrentProject(normalizedPath, context))
+                projectWorkspaceScopePolicy.IsManagedProjectMediaPathForCurrentProject(
+                    normalizedPath,
+                    context))
             {
                 continue;
             }
 
             if (IsReadOnlyProjectMediaFileTool(context) &&
                 IsManagedProjectMediaFilePath(normalizedPath) &&
-                IsManagedProjectMediaPathForCurrentProject(normalizedPath, context))
+                projectWorkspaceScopePolicy.IsManagedProjectMediaPathForCurrentProject(
+                    normalizedPath,
+                    context))
             {
                 continue;
             }
@@ -2587,7 +2600,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static bool IsManagedProjectMediaImagePath(string normalizedPath)
     {
-        if (!normalizedPath.StartsWith("managed-files/project-media/images/", StringComparison.OrdinalIgnoreCase))
+        if (!normalizedPath.StartsWith(ManagedProjectMediaPath.ImagesRoot + "/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -2611,7 +2624,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static bool IsManagedProjectMediaFilePath(string normalizedPath)
     {
-        if (!normalizedPath.StartsWith("managed-files/project-media/files/", StringComparison.OrdinalIgnoreCase))
+        if (!normalizedPath.StartsWith(ManagedProjectMediaPath.FilesRoot + "/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -2619,61 +2632,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var fileName = Path.GetFileName(normalizedPath);
         return !string.IsNullOrWhiteSpace(fileName) && HasFileExtension(fileName);
     }
-
-    private static bool IsManagedProjectMediaPathForCurrentProject(
-        string normalizedPath,
-        ToolInvocationPolicyContext context)
-    {
-        if (!string.Equals(context.ContextWorkspaceScopeKind, WorkspaceScopeKind.Project.ToString(), StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(context.ContextWorkspaceScopeKey))
-        {
-            return false;
-        }
-
-        var projectSegment = ResolveManagedProjectMediaProjectSegment(normalizedPath);
-        if (string.IsNullOrWhiteSpace(projectSegment))
-        {
-            return false;
-        }
-
-        return ResolveCurrentProjectMediaSegments(context.ContextWorkspaceScopeKey)
-            .Contains(NormalizeProjectMediaSegment(projectSegment), StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string ResolveManagedProjectMediaProjectSegment(string normalizedPath)
-    {
-        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return segments.Length >= 4 &&
-               string.Equals(segments[0], "managed-files", StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(segments[1], "project-media", StringComparison.OrdinalIgnoreCase) &&
-               (string.Equals(segments[2], "images", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(segments[2], "files", StringComparison.OrdinalIgnoreCase))
-            ? segments[3]
-            : string.Empty;
-    }
-
-    private static IReadOnlyList<string> ResolveCurrentProjectMediaSegments(string contextWorkspaceScopeKey)
-    {
-        var segments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var normalizedKey = NormalizeProjectMediaSegment(contextWorkspaceScopeKey);
-        if (!string.IsNullOrWhiteSpace(normalizedKey))
-        {
-            segments.Add(normalizedKey);
-        }
-
-        if (Guid.TryParse(contextWorkspaceScopeKey, out var projectId))
-        {
-            segments.Add(projectId.ToString("N"));
-            segments.Add(projectId.ToString("D"));
-        }
-
-        return segments.ToArray();
-    }
-
-    private static string NormalizeProjectMediaSegment(string value)
-        => string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : value.Trim().Trim('/').Replace("-", string.Empty, StringComparison.Ordinal);
 
     private static string ExtractAfterMarker(string value, string marker)
     {

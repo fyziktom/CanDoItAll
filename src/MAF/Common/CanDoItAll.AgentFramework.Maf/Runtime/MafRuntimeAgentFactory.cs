@@ -125,6 +125,9 @@ internal sealed class MafRuntimeAgentFactory
         var finalizerCapture = MafFinalizerToolFactory.CreateCapture(
             runtimeOptions.StructuredOutput,
             runtimeOptions.FinalizerMode);
+        var contextWorkspaceScope = ResolveContextWorkspaceScope(
+            runtimeOptions,
+            workspaceScope);
         var capabilityState = await runtimeCapabilityComposer.CreateCapabilityStateCoreAsync(
             agent,
             effectiveProvider,
@@ -134,7 +137,7 @@ internal sealed class MafRuntimeAgentFactory
             progressCallback,
             cancellationToken,
             suppressApprovalRequirements,
-            runtimeOptions.ContextWorkspaceScope ?? workspaceScope,
+            contextWorkspaceScope,
             runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty,
             runtimeSessionKey,
             runtimeOptions.TransientContext?.Attachments);
@@ -143,15 +146,9 @@ internal sealed class MafRuntimeAgentFactory
             effectiveProvider,
             suppressApprovalRequirements,
             progressCallback);
-        if (runtimeOptions.TransientContext is not null)
-        {
-            capabilityState.ContextProviders.Add(
-                new StaticMessageContextProvider(
-                    new ChatMessage(
-                        ChatRole.User,
-                        runtimeOptions.TransientContext.Content),
-                    StaticMessageContextProvider.TransientAgentChatStateKey));
-        }
+        AttachTransientContextProvider(
+            capabilityState,
+            runtimeOptions.TransientContext);
 
         if (finalizerCapture is not null)
         {
@@ -218,6 +215,45 @@ internal sealed class MafRuntimeAgentFactory
             toolInvocationTraceRecorder,
             capabilityState.ContextContributionTraceCollector,
             runtimeCapabilityState: capabilityState);
+    }
+
+    internal static void AttachTransientContextProvider(
+        RuntimeCapabilityState capabilityState,
+        AgentRuntimeTransientContext? transientContext)
+    {
+        ArgumentNullException.ThrowIfNull(capabilityState);
+        if (transientContext?.HasContent != true)
+        {
+            return;
+        }
+
+        capabilityState.ContextProviders.Add(
+            new StaticMessageContextProvider(
+                new ChatMessage(
+                    ChatRole.User,
+                    transientContext.Content),
+                StaticMessageContextProvider.TransientAgentChatStateKey));
+    }
+
+    internal static WorkspaceScopeDescriptor ResolveContextWorkspaceScope(
+        AgentRuntimeExecutionOptions runtimeOptions,
+        WorkspaceScopeDescriptor fallbackWorkspaceScope)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
+        ArgumentNullException.ThrowIfNull(fallbackWorkspaceScope);
+        var optionsScope = runtimeOptions.ContextWorkspaceScope;
+        var intentScope = runtimeOptions.ContextIntent?.WorkspaceScope;
+        var transientScope = runtimeOptions.TransientContext?.WorkspaceScope;
+        var resolvedScope = optionsScope ?? intentScope ?? transientScope ?? fallbackWorkspaceScope;
+        if ((optionsScope is not null && optionsScope != resolvedScope) ||
+            (intentScope is not null && intentScope != resolvedScope) ||
+            (transientScope is not null && transientScope != resolvedScope))
+        {
+            throw new InvalidOperationException(
+                "Runtime context intent and execution options have conflicting workspace scopes.");
+        }
+
+        return resolvedScope;
     }
 
     private async Task<RuntimeBuildResult> CreateHandoffRuntimeBuildAsync(

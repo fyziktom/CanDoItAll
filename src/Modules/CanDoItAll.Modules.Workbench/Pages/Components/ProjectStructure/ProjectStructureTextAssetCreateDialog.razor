@@ -121,7 +121,8 @@
         <Button Text="@Definition.SubmitLabel"
                 Icon="@(sourceMode == ProjectAssetSourceMode.CreateNew ? "note_add" : "upload_file")"
                 ButtonStyle="ButtonStyle.Info"
-                Disabled="@isSubmitting"
+                Disabled="@SubmitDisabled"
+                IsBusy="@isSubmitting"
                 data-testid="project-structure-text-asset-submit"
                 Click="SubmitAsync" />
     </Cluster>
@@ -147,6 +148,16 @@
 
     [Parameter, EditorRequired]
     public ProjectStructureTextAssetDialogDefinition Definition { get; set; } = default!;
+
+    [Parameter]
+    public Func<ProjectStructureTextAssetDialogResult, Task>? PersistSubmissionAsync { get; set; }
+
+    [Parameter]
+    public CancellationToken CancellationToken { get; set; }
+
+    private bool SubmitDisabled
+        => isSubmitting ||
+            sourceMode == ProjectAssetSourceMode.UploadExisting && uploadedFile is null;
 
     protected override void OnParametersSet()
     {
@@ -184,12 +195,14 @@
     private Task HandleSubtitleChangedAsync(string? value)
     {
         subtitle = value ?? string.Empty;
+        validationError = string.Empty;
         return Task.CompletedTask;
     }
 
     private Task HandleNotesChangedAsync(string? value)
     {
         notes = value ?? string.Empty;
+        validationError = string.Empty;
         return Task.CompletedTask;
     }
 
@@ -221,6 +234,11 @@
 
     private async Task SubmitAsync()
     {
+        if (isSubmitting)
+        {
+            return;
+        }
+
         string normalizedTitle = title.Trim();
         if (normalizedTitle.Length == 0)
         {
@@ -249,7 +267,8 @@
                 ProjectAssetSourceMode.CreateNew => await AssetCreationService.CreateTextAsync(
                     Definition.FileSubtype,
                     fileName,
-                    content),
+                    content,
+                    CancellationToken),
                 ProjectAssetSourceMode.UploadExisting => await CreateUploadPayloadAsync(),
                 _ => throw new ArgumentOutOfRangeException(nameof(sourceMode))
             };
@@ -263,6 +282,11 @@
                 },
                 media);
 
+            if (PersistSubmissionAsync is not null)
+            {
+                await PersistSubmissionAsync(result);
+            }
+
             if (DialogReference is null)
             {
                 await DialogService.CloseAsync(result);
@@ -274,6 +298,13 @@
         catch (ProjectAssetCreationException exception)
         {
             validationError = exception.Message;
+        }
+        catch (ProjectStructureTextAssetSubmissionException exception)
+        {
+            validationError = exception.Message;
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
         }
         catch (IOException exception)
         {
@@ -306,14 +337,17 @@
                 $"Text assets are limited to {ProjectAssetCreationLimits.MaximumEditableTextBytes / (1024 * 1024)} MiB.");
         }
 
-        await using Stream source = uploadedFile.OpenReadStream(ProjectAssetCreationLimits.MaximumEditableTextBytes);
+        await using Stream source = uploadedFile.OpenReadStream(
+            ProjectAssetCreationLimits.MaximumEditableTextBytes,
+            CancellationToken);
         using var destination = new MemoryStream((int)uploadedFile.Size);
-        await source.CopyToAsync(destination);
+        await source.CopyToAsync(destination, CancellationToken);
         return AssetCreationService.AdaptTextUpload(
             Definition.FileSubtype,
             uploadedFile.Name,
             uploadedFile.ContentType,
-            destination.ToArray());
+            destination.ToArray(),
+            CancellationToken);
     }
 
     private Task CancelAsync()

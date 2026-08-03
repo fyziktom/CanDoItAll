@@ -1,5 +1,6 @@
 using System.Reflection;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 
@@ -7,49 +8,25 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class ProjectStructureCanvasCatalogTests
 {
-    [Fact]
-    public void Markdown_create_definition_allows_upload_without_requiring_an_existing_file()
+    [Theory]
+    [InlineData("add-file-text", ".txt,text/plain")]
+    [InlineData("add-file-json", ".json,application/json,text/json,text/plain")]
+    [InlineData("add-file-markdown", ".md,.markdown,.txt,text/markdown,text/plain")]
+    [InlineData("add-file-mermaid", ".mmd,.mermaid,.txt,text/vnd.mermaid,text/plain")]
+    [InlineData("add-file-log", ".log,.txt,text/plain")]
+    public void Text_asset_create_definition_allows_upload_without_requiring_an_existing_file(
+        string actionId,
+        string expectedAcceptedFileTypes)
     {
-        var assembly = typeof(ProjectStructureActionCatalogAdapter).Assembly;
-        var catalogType = assembly.GetType("CanDoItAll.Modules.Workbench.ProjectStructureCanvasCatalog");
+        Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
+            actionId,
+            out ProjectStructureCreateLeafDefinition definition));
 
-        Assert.NotNull(catalogType);
-
-        var tryResolveMethod = catalogType!
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(method =>
-            {
-                if (!string.Equals(method.Name, "TryResolveCreateDefinition", StringComparison.Ordinal))
-                {
-                    return false;
-                }
-
-                var parameters = method.GetParameters();
-                return parameters.Length == 2 &&
-                    parameters[0].ParameterType == typeof(string) &&
-                    parameters[1].IsOut;
-            });
-
-        var arguments = new object?[] { "add-file-markdown", null };
-        var resolved = (bool)tryResolveMethod!.Invoke(null, arguments)!;
-
-        Assert.True(resolved);
-
-        var definition = arguments[1];
-
-        Assert.NotNull(definition);
-
-        var definitionType = definition!.GetType();
-
-        Assert.False((bool)definitionType.GetProperty("RequiresFile")!.GetValue(definition)!);
-        Assert.True((bool)definitionType.GetProperty("AllowsFileUpload")!.GetValue(definition)!);
-        Assert.True((bool)definitionType.GetProperty("ShowDefaultTextFields")!.GetValue(definition)!);
-        Assert.Equal(
-            ".md,.markdown,.txt,text/markdown,text/plain",
-            definitionType.GetProperty("AcceptedFileTypes")!.GetValue(definition));
-        Assert.Equal(
-            "Drop a markdown file here or choose one.",
-            definitionType.GetProperty("FilePrompt")!.GetValue(definition));
+        Assert.False(definition.RequiresFile);
+        Assert.True(definition.AllowsFileUpload);
+        Assert.True(definition.ShowDefaultTextFields);
+        Assert.Equal(expectedAcceptedFileTypes, definition.AcceptedFileTypes);
+        Assert.False(string.IsNullOrWhiteSpace(definition.FilePrompt));
     }
 
     [Fact]

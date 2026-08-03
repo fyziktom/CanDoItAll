@@ -27,7 +27,6 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
-@inject ProjectAssetCreationService ProjectAssetCreationService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
@@ -1610,10 +1609,9 @@ else
                 return;
             }
 
-            if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition) &&
-                request.UploadedFile is null)
+            if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition))
             {
-                await OpenTextAssetCreateDialogAsync(definition, request);
+                await CreateTextAssetAsync(definition, request);
                 return;
             }
 
@@ -1624,27 +1622,7 @@ else
 
             try
             {
-                if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition) &&
-                    request.UploadedFile is { } uploadedFile)
-                {
-                    ProjectFileSubtype subtype = ProjectNodeKindRegistry.ResolveFileSubtype(
-                        definition.ObjectType,
-                        definition.ObjectSubtype);
-                    ProjectObjectMediaPayload media = ProjectAssetCreationService.AdaptEncodedTextUpload(
-                        subtype,
-                        uploadedFile.FileName,
-                        uploadedFile.ContentType,
-                        uploadedFile.Base64Data,
-                        deferredCompletionCts.Token);
-                    await CreateObjectAsync(
-                        definition,
-                        request,
-                        createRequest => createRequest with { Media = media });
-                }
-                else
-                {
-                    await CreateObjectAsync(definition, request);
-                }
+                await CreateObjectAsync(definition, request);
             }
             catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested)
             {
@@ -1743,7 +1721,7 @@ else
 
             if (ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition))
             {
-                await OpenTextAssetCreateDialogAsync(definition, request);
+                await CreateTextAssetAsync(definition, request);
                 return;
             }
 
@@ -1972,7 +1950,9 @@ else
     private async Task<ProjectStructureNode?> CreateObjectAsync(
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest request,
-        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest>? configureRequest = null)
+        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest>? configureRequest = null,
+        CancellationToken cancellationToken = default,
+        Action<ProjectStructureNode>? onNodeCommitted = null)
     {
         var sourceNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal));
         var parentNodeId = ProjectStructurePlacementPolicy.ResolveParentNodeId(sourceNode, request);
@@ -1989,16 +1969,28 @@ else
             parentNodeId ?? $"project:{ProjectId}",
             placementPlan.Placement);
         var createRequest = configureRequest?.Invoke(prepared.Request) ?? prepared.Request;
-        var created = await ProjectWorkbenchService.CreateObjectAsync(ProjectId, createRequest);
+        var created = await ProjectWorkbenchService.CreateObjectAsync(
+            ProjectId,
+            createRequest,
+            cancellationToken);
+        onNodeCommitted?.Invoke(created);
 
         foreach (var pendingLink in prepared.PendingLinks)
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, created.Id, pendingLink.TargetNodeId, pendingLink.LinkKind);
+            await ProjectWorkbenchService.LinkObjectsAsync(
+                ProjectId,
+                created.Id,
+                pendingLink.TargetNodeId,
+                pendingLink.LinkKind,
+                cancellationToken);
         }
 
         if (placementPlan.FollowUpMoves.Count > 0)
         {
-            await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, placementPlan.FollowUpMoves);
+            await ProjectWorkbenchService.MoveObjectsAsync(
+                ProjectId,
+                placementPlan.FollowUpMoves,
+                cancellationToken);
         }
 
         await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
@@ -2042,7 +2034,7 @@ else
         if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(action.ActionId, out var textDefinition) &&
             ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(textDefinition))
         {
-            await OpenTextAssetCreateDialogAsync(textDefinition, request);
+            await CreateTextAssetAsync(textDefinition, request);
             return;
         }
 

@@ -70,51 +70,13 @@
 }
 
 .components-rejoining-animation {
+    background-image: url("/assets/feedback/spinner.gif");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
     position: relative;
 }
 
-    .components-rejoining-animation div {
-        position: absolute;
-        border: 3px solid #0087ff;
-        opacity: 1;
-        border-radius: 50%;
-        animation: components-rejoining-animation 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
-    }
-
-        .components-rejoining-animation div:nth-child(2) {
-            animation-delay: -0.5s;
-        }
-
-@keyframes components-rejoining-animation {
-    0% {
-        top: 40px;
-        left: 40px;
-        width: 0;
-        height: 0;
-        opacity: 0;
-    }
-
-    4.9% {
-        top: 40px;
-        left: 40px;
-        width: 0;
-        height: 0;
-        opacity: 0;
-    }
-
-    5% {
-        top: 40px;
-        left: 40px;
-        width: 0;
-        height: 0;
-        opacity: 1;
-    }
-
-    100% {
-        top: 0px;
-        left: 0px;
-        width: 80px;
-        height: 80px;
-        opacity: 0;
-    }
+.components-rejoining-animation div {
+    display: none;
 }

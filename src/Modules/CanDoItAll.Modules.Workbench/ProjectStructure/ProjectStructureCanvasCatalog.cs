@@ -156,11 +156,10 @@ internal static partial class ProjectStructureCanvasCatalog
             return false;
         }
 
-        return ProjectNodeKindRegistry.ResolveFileSubtype(definition.ObjectType, definition.ObjectSubtype) is
-            ProjectFileSubtype.Text or
-            ProjectFileSubtype.Json or
-            ProjectFileSubtype.Markdown or
-            ProjectFileSubtype.Mermaid;
+        return ProjectTextAssetFormatCatalog.IsSupported(
+            ProjectNodeKindRegistry.ResolveFileSubtype(
+                definition.ObjectType,
+                definition.ObjectSubtype));
     }
 
     public static CanvasWorkbenchAction BuildComposerAction(ProjectStructureCreateLeafDefinition definition)

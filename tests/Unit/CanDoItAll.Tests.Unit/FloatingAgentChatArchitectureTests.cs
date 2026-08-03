@@ -601,17 +601,22 @@ public sealed class AgentChatContextRegistryTests
 public sealed class AgentChatContextContributionComposerTests
 {
     [Fact]
-    public void Compose_returns_null_when_context_is_absent_or_has_no_fragments()
+    public void Compose_returns_null_only_when_context_is_absent_and_preserves_an_empty_surface_lease()
     {
         var agentId = Guid.NewGuid();
+        var workspaceScope = WorkspaceScopeDescriptor.Project("project-1");
         var emptyContext = new AgentChatContextSnapshot(
-            CreateScope(),
+            CreateScope(workspaceScope: workspaceScope),
             [],
             Version: 1,
             CapturedAtUtc: DateTimeOffset.UtcNow);
 
         Assert.Null(AgentChatContextContributionComposer.Compose(null, agentId));
-        Assert.Null(AgentChatContextContributionComposer.Compose(emptyContext, agentId));
+        var result = Assert.IsType<AgentRuntimeTransientContext>(
+            AgentChatContextContributionComposer.Compose(emptyContext, agentId));
+        Assert.Equal(workspaceScope, result.WorkspaceScope);
+        Assert.False(result.HasContent);
+        Assert.Empty(result.Attachments);
     }
 
     [Fact]
@@ -640,7 +645,7 @@ public sealed class AgentChatContextContributionComposerTests
     }
 
     [Fact]
-    public void Compose_enforces_allowlisted_read_access_before_ignoring_an_empty_context()
+    public void Compose_enforces_allowlisted_read_access_before_ignoring_an_unscoped_empty_context()
     {
         var allowedAgentId = Guid.NewGuid();
         var deniedAgentId = Guid.NewGuid();
@@ -722,6 +727,53 @@ public sealed class AgentChatContextContributionComposerTests
 
 public sealed class AgentChatContextInvocationFactoryTests
 {
+    [Fact]
+    public void Create_retains_project_scope_when_the_surface_snapshot_has_no_detail_fragments()
+    {
+        var agentId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var projectScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+        var context = new AgentChatContextSnapshot(
+            new AgentChatContextScope(
+                AgentChatContextScopeId.Create(),
+                new AgentChatContextSource(
+                    new AgentChatContextSourceKind("project-structure"),
+                    new AgentChatContextSourceId(projectId.ToString("D"))),
+                "Project structure",
+                projectScope,
+                [
+                    new AgentChatContextAgentAccess(
+                        agentId,
+                        AgentChatContextPermission.Read,
+                        "This project")
+                ],
+                AgentChatContextScopeAccessMode.AllowListed),
+            [],
+            Version: 1,
+            CapturedAtUtc: DateTimeOffset.UtcNow);
+
+        var invocation = AgentChatContextInvocationFactory.Create(
+            context,
+            agentId,
+            chatSessionId: null,
+            "Summarize this project",
+            AgentExecutionOperationId.New(),
+            new DatabaseProfileGeneration(0),
+            DateTimeOffset.UtcNow);
+
+        var transientContext = Assert.IsType<AgentRuntimeTransientContext>(
+            invocation.Options.TransientContext);
+        Assert.Equal(projectScope, transientContext.WorkspaceScope);
+        using var metadata = JsonDocument.Parse(
+            Assert.IsType<ExecutionInvocationContext>(invocation.Options.Context).MetadataJson);
+        Assert.True(metadata.RootElement.GetProperty(
+            ExecutionInvocationMetadata.TransientContextRequiredMetadataKey).GetBoolean());
+        Assert.Equal(
+            AgentChatContextDigest.Compute(transientContext),
+            metadata.RootElement.GetProperty(
+                ExecutionInvocationMetadata.TransientContextDigestMetadataKey).GetString());
+    }
+
     [Fact]
     public void Create_keeps_the_prompt_raw_and_attaches_transient_context_metadata()
     {
@@ -1063,7 +1115,8 @@ public sealed class AgentChatContextDigestTests
             CreateContext(contentFingerprint: "content-2"),
             CreateContext(coverageFingerprint: "coverage-2"),
             CreateContext(databaseProfileGeneration: 2),
-            CreateContext(freshnessFingerprint: "freshness-2")
+            CreateContext(freshnessFingerprint: "freshness-2"),
+            CreateContext(contextWorkspaceScope: WorkspaceScopeDescriptor.Project("project-2"))
         };
 
         var digests = contexts
@@ -1093,6 +1146,7 @@ public sealed class AgentChatContextDigestTests
         string coverageFingerprint = "coverage-1",
         long databaseProfileGeneration = 1,
         string freshnessFingerprint = "freshness-1",
+        WorkspaceScopeDescriptor? contextWorkspaceScope = null,
         IAgentChatContextAttachment? attachment = null)
     {
         var workspaceScope = WorkspaceScopeDescriptor.Project("project-1");
@@ -1117,7 +1171,7 @@ public sealed class AgentChatContextDigestTests
 
         return new AgentRuntimeTransientContext(
             promptContent,
-            workspaceScope,
+            contextWorkspaceScope ?? workspaceScope,
             [envelope]);
     }
 
@@ -1130,6 +1184,24 @@ public sealed class AgentChatContextDigestTests
 
 public sealed class AgentRunTransientContextRegistryTests
 {
+    [Fact]
+    public void Approval_context_rejects_a_different_top_level_workspace_scope()
+    {
+        var registry = new AgentRunTransientContextRegistry();
+        var capturedContext = new AgentRuntimeTransientContext(
+            string.Empty,
+            WorkspaceScopeDescriptor.Project("project-1"));
+        var run = CreateRun(capturedContext);
+        var substitutedContext = new AgentRuntimeTransientContext(
+            string.Empty,
+            WorkspaceScopeDescriptor.Project("project-2"));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(run, substitutedContext));
+
+        Assert.Contains("does not match", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Approval_context_must_match_the_run_digest_and_is_unavailable_after_release()
     {

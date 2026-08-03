@@ -6,6 +6,14 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
+internal sealed class ProjectStructureNodeCreatedWithFollowUpFailureException(
+    ProjectStructureNode createdNode,
+    Exception innerException)
+    : Exception("The project structure node was created, but follow-up work failed.", innerException)
+{
+    public ProjectStructureNode CreatedNode { get; } = createdNode;
+}
+
 public partial class ProjectStructurePage
 {
     [Inject]
@@ -15,7 +23,7 @@ public partial class ProjectStructurePage
     private ProjectStructureCanvasTaskDialogCoordinator CanvasTaskDialogCoordinator { get; set; } = default!;
 
     [Inject]
-    private ProjectStructureTextAssetDialogCoordinator TextAssetDialogCoordinator { get; set; } = default!;
+    private ProjectStructureTextAssetCreationCoordinator TextAssetCreationCoordinator { get; set; } = default!;
 
     private Task ToggleSelectionWindowAsync()
         => ToggleWindowAsync(SelectionWindowKey);
@@ -83,23 +91,38 @@ public partial class ProjectStructurePage
             editModel.Request,
             deferredCompletionCts.Token);
 
-    private Task OpenTextAssetCreateDialogAsync(
+    private Task CreateTextAssetAsync(
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest createRequest)
-        => TextAssetDialogCoordinator.OpenCreateAsync(
-            new ProjectStructureTextAssetDialogContext(ProjectId, CreateTextAssetNodeAsync),
+        => TextAssetCreationCoordinator.CreateAsync(
+            new ProjectStructureTextAssetCreationContext(ProjectId, CreateTextAssetNodeAsync),
             definition,
             createRequest,
             deferredCompletionCts.Token);
 
-    private Task<ProjectStructureNode?> CreateTextAssetNodeAsync(
+    private async Task<ProjectStructureNode?> CreateTextAssetNodeAsync(
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest createRequest,
-        ProjectObjectMediaPayload media)
-        => CreateObjectAsync(
-            definition,
-            createRequest,
-            request => request with { Media = media });
+        ProjectObjectMediaPayload media,
+        CancellationToken cancellationToken)
+    {
+        ProjectStructureNode? committedNode = null;
+        try
+        {
+            return await CreateObjectAsync(
+                definition,
+                createRequest,
+                request => request with { Media = media },
+                cancellationToken,
+                node => committedNode = node);
+        }
+        catch (Exception exception) when (committedNode is not null)
+        {
+            throw new ProjectStructureNodeCreatedWithFollowUpFailureException(
+                committedNode,
+                exception);
+        }
+    }
 
     private ProjectStructureCanvasTaskDialogContext CreateCanvasTaskDialogContext()
         => new(
