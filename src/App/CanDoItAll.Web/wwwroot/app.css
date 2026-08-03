@@ -349,3 +349,15 @@ a {
         justify-content: space-between;
     }
 }
+
+.cda-button__spinner {
+    animation: none;
+    background-image: url("/assets/feedback/spinner.gif");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    border: 0;
+    flex-shrink: 0;
+    height: 1rem;
+    width: 1rem;
+}
