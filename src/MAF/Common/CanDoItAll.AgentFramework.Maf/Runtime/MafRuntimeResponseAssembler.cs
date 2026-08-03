@@ -246,8 +246,7 @@ internal static class MafRuntimeResponseAssembler
         IReadOnlyList<PendingToolApprovalRecord> pendingApprovals)
     {
         if (!string.IsNullOrWhiteSpace(response.Text) ||
-            pendingApprovals.Count > 0 ||
-            CountToolCalls(response) > 0)
+            pendingApprovals.Count > 0)
         {
             return;
         }
@@ -256,17 +255,17 @@ internal static class MafRuntimeResponseAssembler
         if (response.FinishReason == ChatFinishReason.Length)
         {
             throw new InvalidOperationException(
-                $"Provider '{provider.Name}' model '{model}' exhausted its output-token budget after reporting {outputTokenCount} output tokens without returning usable text, tool calls, or approvals. Lower the thinking effort or reduce the prompt and tool context. If this run used a lower explicit maximum, increase it up to the supported limit.");
+                $"Provider '{provider.Name}' model '{model}' exhausted its output-token budget after reporting {outputTokenCount} output tokens without a usable terminal answer or pending tool approval. Lower the thinking effort or reduce the prompt and tool context. If this run used a lower explicit maximum, increase it up to the supported limit.");
         }
 
         if (outputTokenCount > 0)
         {
             throw new InvalidOperationException(
-                $"Provider '{provider.Name}' model '{model}' reported {outputTokenCount} output tokens, but returned only non-actionable reasoning or metadata without usable text, tool calls, or approvals.");
+                $"Provider '{provider.Name}' model '{model}' reported {outputTokenCount} output tokens, but the terminal completion contained only non-actionable reasoning or metadata and no pending tool approval.");
         }
 
         throw new InvalidOperationException(
-            $"Provider '{provider.Name}' model '{model}' completed without returning usable text, tool calls, or approvals.");
+            $"Provider '{provider.Name}' model '{model}' completed without a usable terminal answer or pending tool approval.");
     }
 
     public static bool ShouldContinueBackgroundRun(

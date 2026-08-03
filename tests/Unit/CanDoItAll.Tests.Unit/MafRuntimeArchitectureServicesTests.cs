@@ -452,6 +452,19 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public void MafApprovalContinuationDriver_rejects_empty_response_without_pending_approval()
+    {
+        var driver = new MafApprovalContinuationDriver();
+        var response = new AgentResponse(new ChatMessage(ChatRole.Assistant, string.Empty));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            driver.ResolveResponseText(response, []));
+
+        Assert.Contains("no usable text", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("no tool approval is pending", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MafAgentResponseSnapshotter_rejects_tool_call_without_stable_call_id()
     {
         var update = new AgentResponseUpdate(
@@ -597,6 +610,55 @@ public sealed class MafRuntimeArchitectureServicesTests
 
         Assert.Contains("exhausted its output-token budget", exception.Message, StringComparison.Ordinal);
         Assert.Contains("8192 output tokens", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafRuntimeResponseAssembler_rejects_empty_terminal_response_after_tool_activity()
+    {
+        var response = new AgentResponse(
+            [
+                new ChatMessage(
+                    ChatRole.Assistant,
+                    [
+                        new FunctionCallContent(
+                            "call-001",
+                            "workspace_read_file",
+                            new Dictionary<string, object?>())
+                    ]),
+                new ChatMessage(
+                    ChatRole.Tool,
+                    [
+                        new FunctionResultContent(
+                            "call-001",
+                            new Dictionary<string, object?>
+                            {
+                                ["succeeded"] = true
+                            })
+                    ]),
+                new ChatMessage(
+                    ChatRole.Assistant,
+                    [new TextContent(string.Empty)])
+            ])
+        {
+            FinishReason = ChatFinishReason.Stop,
+            Usage = new UsageDetails
+            {
+                InputTokenCount = 12_522,
+                OutputTokenCount = 13,
+                TotalTokenCount = 12_535
+            }
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(
+                CreateProviderProfile(),
+                "gptoss20b64k",
+                response,
+                []));
+
+        Assert.Contains("reported 13 output tokens", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("terminal completion", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("no pending tool approval", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

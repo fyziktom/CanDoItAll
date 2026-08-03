@@ -14,6 +14,10 @@ internal sealed class EmptyCompletionRetryChatClient(
     ILogger? logger) : DelegatingChatClient(innerClient)
 {
     private const int MaximumProviderAttempts = 2;
+    private const string RetryInstruction =
+        "The previous assistant response was empty. Continue the original request now. " +
+        "Return either a valid tool call or a non-empty answer to the user. " +
+        "Do not discuss this recovery instruction.";
 
     public override async Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
@@ -42,7 +46,8 @@ internal sealed class EmptyCompletionRetryChatClient(
 
         Report(1, ProviderEmptyCompletionOutcome.Retrying);
 
-        var secondResponse = await base.GetResponseAsync(materializedMessages, options, cancellationToken);
+        var retryMessages = CreateRetryMessages(materializedMessages);
+        var secondResponse = await base.GetResponseAsync(retryMessages, options, cancellationToken);
         MergeUsage(firstResponse, secondResponse);
         Report(
             2,
@@ -125,8 +130,9 @@ internal sealed class EmptyCompletionRetryChatClient(
         }
 
         var secondAttemptHasActionableOutput = false;
+        var retryMessages = CreateRetryMessages(materializedMessages);
         await foreach (var update in base
-                           .GetStreamingResponseAsync(materializedMessages, options, cancellationToken)
+                           .GetStreamingResponseAsync(retryMessages, options, cancellationToken)
                            .WithCancellation(cancellationToken))
         {
             secondAttemptHasActionableOutput |= HasActionableOutput(update);
@@ -181,6 +187,11 @@ internal sealed class EmptyCompletionRetryChatClient(
     private static bool IsRetryableFinishReason(ChatFinishReason? finishReason)
     {
         return finishReason is null || finishReason == ChatFinishReason.Stop;
+    }
+
+    private static IReadOnlyList<ChatMessage> CreateRetryMessages(IReadOnlyList<ChatMessage> messages)
+    {
+        return [.. messages, new ChatMessage(ChatRole.User, RetryInstruction)];
     }
 
     private static bool HasProviderExecutedTools(ChatOptions? options)
@@ -239,7 +250,7 @@ internal sealed class EmptyCompletionRetryChatClient(
         {
             case ProviderEmptyCompletionOutcome.Retrying:
                 logger?.LogWarning(
-                    "Provider {ProviderName} model {Model} transport {Transport} returned a non-actionable completion on attempt {Attempt}/{MaximumAttempts}; retrying once before any tool execution.",
+                    "Provider {ProviderName} model {Model} transport {Transport} returned a non-actionable completion on attempt {Attempt}/{MaximumAttempts}; retrying once with a transient corrective instruction.",
                     provider.Name,
                     model,
                     provider.Transport,

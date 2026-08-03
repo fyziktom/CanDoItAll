@@ -353,7 +353,8 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         bool allowBackgroundResponses,
         IServiceProvider services)
     {
-        var httpClient = new HttpClient
+        var httpClient = new HttpClient(
+            new OllamaToolResultProtocolHandler(new HttpClientHandler()))
         {
             BaseAddress = new Uri(provider.BaseUrl, UriKind.Absolute),
             Timeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
