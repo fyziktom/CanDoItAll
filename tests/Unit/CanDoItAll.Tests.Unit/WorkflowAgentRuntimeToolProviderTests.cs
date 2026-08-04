@@ -86,7 +86,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
     public async Task RuntimeComposerWrapsOnlyWorkflowMutationsUnlessHostSuppressesApproval()
     {
         var harness = CreateHarness();
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(harness.Provider);
         using var serviceProvider = services.BuildServiceProvider();
         var composer = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), serviceProvider);

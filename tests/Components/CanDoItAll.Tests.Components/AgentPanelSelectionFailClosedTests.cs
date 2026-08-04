@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.Prompts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -160,6 +161,8 @@ public sealed class AgentPanelSelectionFailClosedTests
             DispatchProxy.Create<IFloatingAgentChatCoordinator, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentChatExecutionOrchestrator, UnexpectedCallProxy>());
+        context.Services.AddSingleton<IPromptGalleryService>(
+            DispatchProxy.Create<IPromptGalleryService, UnexpectedCallProxy>());
         return context;
     }
 

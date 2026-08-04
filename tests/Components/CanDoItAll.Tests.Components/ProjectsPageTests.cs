@@ -3,6 +3,8 @@ using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
@@ -418,6 +420,7 @@ public sealed class ProjectsPageTests
         var cut = harness.Context.Render<ProjectsPage>();
 
         cut.Find("[data-testid='projects-new-button']").Click();
+        cut.WaitForElement("[data-testid='project-name-input']");
         cut.Find("[data-testid='project-name-input']").Change("Wizard Project");
         cut.Find("[data-testid='project-save-button']").Click();
 
@@ -471,6 +474,46 @@ public sealed class ProjectsPageTests
         });
 
         Assert.NotEqual(Guid.Empty, projectId);
+    }
+
+    [Fact]
+    public async Task Partial_project_deletion_closes_stale_editor_and_exposes_explicit_cleanup_retry()
+    {
+        var participant = new FailOnceProjectDeletionParticipant();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.AddSingleton<IProjectDeletionParticipant>(participant));
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projectsService, "Partial deletion project");
+        var cut = harness.Context.Render<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Partial deletion project", cut.Markup));
+        var projectCard = cut.FindAll("[data-testid='project-card']")
+            .Single(card => card.TextContent.Contains("Partial deletion project", StringComparison.Ordinal));
+        projectCard.QuerySelector("[data-testid='project-card-details-button']")!.Click();
+        cut.WaitForElement("[data-testid='projects-detail-modal']");
+        cut.FindAll("button")
+            .Single(button => button.TextContent.Contains("Edit name and details", StringComparison.Ordinal))
+            .Click();
+        cut.WaitForElement("[data-testid='project-delete-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll("[data-testid='projects-detail-modal']"));
+            Assert.DoesNotContain(
+                cut.FindAll("[data-testid='project-card']"),
+                card => card.TextContent.Contains("Partial deletion project", StringComparison.Ordinal));
+            Assert.Contains("cleanup remains pending", cut.Find("[data-testid='project-deletion-notice']").TextContent);
+            Assert.NotNull(cut.Find("[data-testid='project-deletion-retry']"));
+        });
+
+        cut.Find("[data-testid='project-deletion-retry']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Project cleanup completed", cut.Find("[data-testid='project-deletion-notice']").TextContent);
+            Assert.Empty(cut.FindAll("[data-testid='project-deletion-retry']"));
+        });
+        Assert.Equal(projectId, participant.LastProjectId);
+        Assert.Equal(2, participant.CompleteCalls);
     }
 
     [Fact]
@@ -578,7 +621,8 @@ public sealed class ProjectsPageTests
         });
 
         var parentNode = cut.Find($"[data-testid='projects-tree-node-{parentProjectId:N}']");
-        var toggle = parentNode.ParentElement?.QuerySelector("button.cda-treeview__toggle")
+        var toggle = parentNode.Closest(".cda-treeview__row-shell")
+            ?.QuerySelector("button.cda-treeview__toggle")
             ?? throw new InvalidOperationException("The project tree toggle was not rendered.");
 
         toggle.Click();
@@ -659,12 +703,25 @@ public sealed class ProjectsPageTests
     [Fact]
     public async Task Package_import_requires_a_package_path()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        var targetProfile = CreateDatabaseProfileSummary("Import target");
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IDatabaseProfileService>();
+            services.AddSingleton<IDatabaseProfileService>(
+                new StubDatabaseProfileService([targetProfile]));
+        });
         var cut = harness.Context.Render<ProjectsPage>();
 
         Assert.Empty(cut.FindAll("[data-testid='projects-package-path-input']"));
         cut.Find("[data-testid='projects-package-dialog-button']").Click();
         cut.WaitForElement("[data-testid='projects-import-package-button']");
+        Assert.True(cut.Find("[data-testid='projects-import-package-button']")
+            .HasAttribute("disabled"));
+        cut.Find("[data-testid='projects-package-target-profile-select']")
+            .Change(targetProfile.Id.ToString());
+        cut.WaitForAssertion(() =>
+            Assert.False(cut.Find("[data-testid='projects-import-package-button']")
+                .HasAttribute("disabled")));
         cut.Find("[data-testid='projects-import-package-button']").Click();
 
         cut.WaitForAssertion(() =>
@@ -672,6 +729,64 @@ public sealed class ProjectsPageTests
             var message = cut.Find("[data-testid='projects-package-message']");
 
             Assert.Contains("Choose a project package path", message.TextContent);
+        });
+    }
+
+    [Fact]
+    public async Task Package_import_lists_only_safe_targets_and_passes_the_selected_profile()
+    {
+        var activeProfile = CreateDatabaseProfileSummary(
+            "Active profile",
+            isActive: true);
+        var pendingProfile = CreateDatabaseProfileSummary(
+            "Pending restart profile",
+            isPendingRestartActivation: true);
+        var runtimeLockedProfile = CreateDatabaseProfileSummary(
+            "Runtime override profile",
+            isRuntimeLocked: true);
+        var eligibleProfile = CreateDatabaseProfileSummary("Eligible target");
+        var packageService = new RecordingProjectPackageService();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IDatabaseProfileService>();
+            services.AddSingleton<IDatabaseProfileService>(
+                new StubDatabaseProfileService([
+                    activeProfile,
+                    pendingProfile,
+                    runtimeLockedProfile,
+                    eligibleProfile
+                ]));
+            services.RemoveAll<IProjectPackageService>();
+            services.AddSingleton<IProjectPackageService>(packageService);
+        });
+        var cut = harness.Context.Render<ProjectsPage>();
+
+        cut.Find("[data-testid='projects-package-dialog-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            var loadedSelector = cut.Find(
+                "[data-testid='projects-package-target-profile-select']");
+            Assert.Contains(eligibleProfile.DisplayName, loadedSelector.TextContent);
+            Assert.DoesNotContain(activeProfile.DisplayName, loadedSelector.TextContent);
+            Assert.DoesNotContain(pendingProfile.DisplayName, loadedSelector.TextContent);
+            Assert.DoesNotContain(runtimeLockedProfile.DisplayName, loadedSelector.TextContent);
+        });
+        var selector = cut.Find(
+            "[data-testid='projects-package-target-profile-select']");
+        selector.Change(eligibleProfile.Id.ToString());
+        cut.Find("[data-testid='projects-package-path-input']")
+            .Input(@"C:\packages\portfolio.zip");
+        cut.Find("[data-testid='projects-import-package-button']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(packageService.LastImportRequest);
+            Assert.Equal(
+                eligibleProfile.Id,
+                packageService.LastImportRequest.TargetProfileId);
+            Assert.Equal(
+                @"C:\packages\portfolio.zip",
+                packageService.LastImportRequest.PackagePath);
         });
     }
 
@@ -688,6 +803,26 @@ public sealed class ProjectsPageTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private static DatabaseProfileSummary CreateDatabaseProfileSummary(
+        string displayName,
+        bool isActive = false,
+        bool isRuntimeLocked = false,
+        bool isPendingRestartActivation = false)
+        => new(
+            Guid.NewGuid(),
+            displayName,
+            DatabaseProviderKind.PostgreSql,
+            DatabaseProfileSourceKind.PostgresConnection,
+            $"{displayName} descriptor",
+            $"{displayName} fingerprint",
+            isActive,
+            isRuntimeLocked,
+            DateTimeOffset.UtcNow,
+            LastUsedUtc: null)
+        {
+            IsPendingRestartActivation = isPendingRestartActivation
+        };
 
     private static string CreateProjectFilesDirectory(ComponentTestHarness harness, Guid projectId)
     {
@@ -790,5 +925,136 @@ public sealed class ProjectsPageTests
             CleanupTokenWasCancellationRequested = cancellationToken.IsCancellationRequested;
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class FailOnceProjectDeletionParticipant : IProjectDeletionParticipant
+    {
+        private bool pending;
+
+        public ProjectDeletionParticipantId Id { get; } = new("component-test");
+
+        public IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; } = [];
+
+        public Guid RecoveryId { get; } = Guid.NewGuid();
+
+        public Guid LastProjectId { get; private set; }
+
+        public int CompleteCalls { get; private set; }
+
+        public Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
+            AppDbContext dbContext,
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+        {
+            LastProjectId = projectId;
+            pending = true;
+            return Task.FromResult<ProjectDeletionParticipantPreparation?>(
+                new(projectId, RecoveryId));
+        }
+
+        public Task<ProjectDeletionParticipantCompletion> CompleteAsync(
+            ProjectDeletionParticipantPreparation preparation,
+            CancellationToken cancellationToken = default)
+        {
+            CompleteCalls++;
+            if (CompleteCalls == 1)
+            {
+                return Task.FromException<ProjectDeletionParticipantCompletion>(
+                    new IOException("Injected component cleanup failure."));
+            }
+
+            pending = false;
+            return Task.FromResult(ProjectDeletionParticipantCompletion.Empty(RecoveryId));
+        }
+
+        public Task<IReadOnlyList<ProjectDeletionParticipantRecovery>> ListPendingRecoveriesAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProjectDeletionParticipantRecovery>>(
+                pending
+                    ? [new(
+                        LastProjectId,
+                        RecoveryId,
+                        ProjectDeletionRecoveryStatus.Failed,
+                        true,
+                        null,
+                        "Retry the exact test recovery.")]
+                    : []);
+
+        public Task<IReadOnlyList<ProjectDeletionParticipantCompletionNotice>> ListCompletionNoticesAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProjectDeletionParticipantCompletionNotice>>(
+                pending || CompleteCalls == 0
+                    ? []
+                    : [new(
+                        LastProjectId,
+                        RecoveryId,
+                        ProjectDeletionCompletionOperation.ProjectDeletion,
+                        [])]);
+    }
+
+    private sealed class StubDatabaseProfileService(
+        IReadOnlyList<DatabaseProfileSummary> profiles) : IDatabaseProfileService
+    {
+        public Task<IReadOnlyList<DatabaseProfileSummary>> ListAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(profiles);
+
+        public Task<DatabaseProfileEditorModel> GetEditorAsync(
+            Guid? id = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Result Validate(DatabaseProfileEditorModel model)
+            => throw new NotSupportedException();
+
+        public Task<Result<Guid>> SaveAsync(
+            DatabaseProfileEditorModel model,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result> DeleteAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result> ActivateAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingProjectPackageService : IProjectPackageService
+    {
+        public ProjectPackageImportRequest? LastImportRequest { get; private set; }
+
+        public Task<Result<ProjectPackageExportResult>> ExportAllAsync(
+            ProjectPackageExportRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result<ProjectPackageImportResult>> ImportAllAsync(
+            ProjectPackageImportRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastImportRequest = request;
+            return Task.FromResult(Result<ProjectPackageImportResult>.Success(
+                new ProjectPackageImportResult(
+                    new ProjectPackageManifest
+                    {
+                        PackageId = Guid.NewGuid(),
+                        TotalRecordCount = 1
+                    },
+                    RecordsImported: 1,
+                    StorageFilesImported: 0)));
+        }
+
+        public Task<Result<ProjectPackageManifest>> ReadManifestAsync(
+            string packagePath,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }

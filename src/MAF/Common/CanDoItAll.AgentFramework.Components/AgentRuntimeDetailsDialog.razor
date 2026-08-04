@@ -18,7 +18,31 @@
                         <StatusBadge Tone="neutral" Text="@Run.UpdatedAtUtc.LocalDateTime.ToString("g")" />
                     </Cluster>
                     <TextBlock TextStyle="TextStyle.Body2" Value="@Run.Title" />
-                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"Provider {Run.ProviderName} / {Run.Model}")" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"Entry provider {Run.ProviderName} / {Run.Model}")" />
+                    @if (Run.FailureProviderProfileId.HasValue)
+                    {
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="@($"Failure provider {Run.FailureProviderName} / {Run.FailureModel}")" />
+                    }
+                    @if (Run.EntryAgentRequestCompatibilityEvidence is { } evidence)
+                    {
+                        <TextBlock TextStyle="TextStyle.Caption" Value="Entry-agent request compatibility" />
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="neutral" Text="@($"Transport {evidence.Transport}")" />
+                            <StatusBadge Tone="info" Text="@($"Compatibility {evidence.Disposition}")" />
+                        </Cluster>
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="@($"Reasoning requested {FormatEffort(evidence.RequestedEffort)} / effective {FormatEffort(evidence.EffectiveEffort)}")" />
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="@($"Model requested {evidence.RequestedModel} / effective {evidence.EffectiveModel}")" />
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="@($"Compatibility code {evidence.Adjustment}")" />
+                    }
+                    else
+                    {
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="Compatibility evidence was not recorded for this run; execution may have ended before provider dispatch." />
+                    }
                 }
             </Stack>
         </SurfaceCard>
@@ -54,5 +78,10 @@
         }
 
         return Run?.State.ToString() ?? "Idle";
+    }
+
+    private static string FormatEffort(AgentReasoningEffortLevel? effort)
+    {
+        return effort?.ToString() ?? "provider default";
     }
 }

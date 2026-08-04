@@ -6,6 +6,12 @@ namespace CanDoItAll.Modules.Workbench;
 internal static class WorkbenchFileInteractionProfileIds
 {
     public const string Mermaid = "workbench-mermaid";
+    public const string SpreadsheetPreview = "workbench-spreadsheet-preview";
+}
+
+internal static class WorkbenchFileInteractionRendererIds
+{
+    public const string SpreadsheetPreviewView = "workbench-spreadsheet-preview-view";
 }
 
 internal static class WorkbenchFileInteractionComposition
@@ -47,5 +53,26 @@ internal static class WorkbenchFileInteractionComposition
                 FileInteractionMode.Edit,
                 typeof(TextFileEditor),
                 FileInteractionContentKind.Text));
+    }
+
+    public static FileInteractionComponentBuilder AddWorkbenchSpreadsheetPreview(
+        this FileInteractionComponentBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        return builder
+            .AddProfile(new FileInteractionProfileDescriptor(
+                WorkbenchFileInteractionProfileIds.SpreadsheetPreview,
+                FileInteractionCapabilities.View,
+                extensions: [".xlsx"],
+                mediaTypes: [ProjectStructureFileInteractionPolicy.XlsxMediaType],
+                priority: 200))
+            .AddRenderer(new FileInteractionRendererDescriptor(
+                WorkbenchFileInteractionRendererIds.SpreadsheetPreviewView,
+                WorkbenchFileInteractionProfileIds.SpreadsheetPreview,
+                FileInteractionMode.View,
+                typeof(WorkbenchSpreadsheetFileView),
+                FileInteractionContentKind.Binary,
+                contentRequirement: FileInteractionContentRequirement.FullContent));
     }
 }

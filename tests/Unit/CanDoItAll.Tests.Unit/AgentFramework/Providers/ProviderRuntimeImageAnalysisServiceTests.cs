@@ -210,18 +210,19 @@ public sealed class ProviderRuntimeImageAnalysisServiceTests
     }
 
     [Fact]
-    public void MafRuntimeDependencyResolver_composes_gateway_adapter_for_standalone_runtime()
+    public void MafRuntimeDependencyResolver_uses_explicit_gateway_adapter_for_standalone_runtime()
     {
         var gateway = new FakeMafProviderRuntimeGateway();
+        var imageAnalysisService = new ProviderRuntimeImageAnalysisService(gateway);
         var services = new ServiceCollection();
         services.AddSingleton<IMafProviderRuntimeGateway>(gateway);
         services.AddSingleton<IMafProviderStreamingDispatchGate>(new FakeMafProviderStreamingDispatchGate());
+        services.AddSingleton<IAgentImageAnalysisService>(imageAnalysisService);
         using var provider = services.BuildServiceProvider();
 
         var dependencies = new MafRuntimeDependencyResolver().ResolveProviderDependencies(provider);
 
-        Assert.IsType<ProviderRuntimeImageAnalysisService>(dependencies.ImageAnalysisService);
-        Assert.IsNotType<UnavailableAgentImageAnalysisService>(dependencies.ImageAnalysisService);
+        Assert.Same(imageAnalysisService, dependencies.ImageAnalysisService);
     }
 
     private static AgentImageAnalysisRequest CreateRequest(ProviderProfile provider, string model)

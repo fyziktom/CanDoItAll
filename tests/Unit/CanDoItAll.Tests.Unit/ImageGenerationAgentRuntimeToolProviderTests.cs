@@ -1,7 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +18,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new ThrowingProviderProfileRegistry(),
-            new StaticWorkspacePathResolver(Path.GetTempPath()),
+            new WorkspacePathResolutionService(Path.GetTempPath()),
             new FakeAgentImageGenerationService(),
             services);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
@@ -51,7 +50,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new ThrowingProviderProfileRegistry(),
-            new StaticWorkspacePathResolver(Path.GetTempPath()),
+            new WorkspacePathResolutionService(Path.GetTempPath()),
             new FakeAgentImageGenerationService(),
             services);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
@@ -78,7 +77,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var workspaceRoot = CreateTempWorkspaceRoot();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([runtimeProvider, secondaryProvider]),
-            new StaticWorkspacePathResolver(workspaceRoot),
+            new WorkspacePathResolutionService(workspaceRoot),
             imageService,
             services);
         var agent = CreateAgent(
@@ -118,7 +117,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([imageProvider]),
-            new StaticWorkspacePathResolver(CreateTempWorkspaceRoot()),
+            new WorkspacePathResolutionService(CreateTempWorkspaceRoot()),
             imageService,
             services);
         var agent = CreateAgent(
@@ -163,7 +162,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         };
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([localProvider, cloudProvider, chatProvider]),
-            new StaticWorkspacePathResolver(CreateTempWorkspaceRoot()),
+            new WorkspacePathResolutionService(CreateTempWorkspaceRoot()),
             imageService,
             services);
         var agent = CreateAgent(
@@ -198,7 +197,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         };
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([imageProvider]),
-            new StaticWorkspacePathResolver(CreateTempWorkspaceRoot()),
+            new WorkspacePathResolutionService(CreateTempWorkspaceRoot()),
             imageService,
             services);
         var agent = CreateAgent(
@@ -398,34 +397,6 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
             CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
-        }
-    }
-
-    private sealed class StaticWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
-    {
-        public string ResolveWorkspaceRoot()
-        {
-            return workspaceRoot;
-        }
-
-        public string ResolveManagedFilesRoot()
-        {
-            return workspaceRoot;
-        }
-
-        public string ResolveExportsRoot()
-        {
-            return workspaceRoot;
-        }
-
-        public string ResolveEvidenceRoot()
-        {
-            return workspaceRoot;
-        }
-
-        public string ResolveManagerArtifactsRoot()
-        {
-            return workspaceRoot;
         }
     }
 

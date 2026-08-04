@@ -15,7 +15,8 @@ internal static class AgentFrameworkProviderMetadata
 {
     private const string ConnectorPluginKeyPropertyName = "connectorPluginKey";
     private const string ConfigSchemaVersionPropertyName = "configSchemaVersion";
-    private const string SecretRecordIdPropertyName = "secretRecordId";
+    private const string SecretRecordIdPropertyName =
+        ProviderProfileMetadataPropertyNames.SecretRecordId;
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
     private const string PurposePropertyName = "providerPurpose";
@@ -25,6 +26,20 @@ internal static class AgentFrameworkProviderMetadata
     private const string SupportsVisionPropertyName = "supportsVision";
     private const string ThinkingEffortCapabilitiesPropertyName =
         ProviderProfileMetadataPropertyNames.ModelThinkingEffortCapabilities;
+
+    private static readonly IReadOnlyList<string> CanonicalMetadataPropertyNames =
+    [
+        ConnectorPluginKeyPropertyName,
+        ConfigSchemaVersionPropertyName,
+        SecretRecordIdPropertyName,
+        TimeoutSecondsPropertyName,
+        ProviderKindPropertyName,
+        TransportPropertyName,
+        PurposePropertyName,
+        TagsPropertyName,
+        SupportsVisionPropertyName,
+        ThinkingEffortCapabilitiesPropertyName
+    ];
 
     private static readonly JsonSerializerOptions ThinkingEffortJsonOptions = new()
     {
@@ -53,14 +68,7 @@ internal static class AgentFrameworkProviderMetadata
         {
             configuration[PurposePropertyName] = purpose.ToString();
         }
-        if (provider.ApiKeySecretId.HasValue)
-        {
-            configuration[SecretRecordIdPropertyName] = provider.ApiKeySecretId.Value.ToString("D");
-        }
-        else
-        {
-            configuration.Remove(SecretRecordIdPropertyName);
-        }
+        configuration.Remove(SecretRecordIdPropertyName);
 
         if (provider.SupportsVision)
         {
@@ -184,13 +192,23 @@ internal static class AgentFrameworkProviderMetadata
             return [];
         }
 
+        var capabilityMetadata = configuration[propertyName]
+            ?? throw new InvalidOperationException(
+                $"Provider configuration property '{ThinkingEffortCapabilitiesPropertyName}' must contain thinking-effort capability metadata.");
         try
         {
-            var capabilities = configuration[propertyName]!
-                .Deserialize<List<ProviderModelThinkingEffortCapability>>(
+            var capabilities = capabilityMetadata
+                .Deserialize<List<ProviderModelThinkingEffortCapability?>>(
                     ThinkingEffortJsonOptions) ?? [];
+            if (capabilities.Any(static capability => capability is null))
+            {
+                throw new InvalidOperationException(
+                    $"Provider configuration property '{ThinkingEffortCapabilitiesPropertyName}' cannot contain null capabilities.");
+            }
+
             return capabilities
-                .Select(AgentThinkingEffortPolicy.NormalizeCapability)
+                .Select(static capability =>
+                    AgentThinkingEffortPolicy.NormalizeCapability(capability!))
                 .ToList();
         }
         catch (JsonException exception)
@@ -235,47 +253,30 @@ internal static class AgentFrameworkProviderMetadata
         ArgumentNullException.ThrowIfNull(provider);
 
         var configuration = ParseObject(provider.ConfigurationJson);
-        if (configuration[SecretRecordIdPropertyName] is JsonValue value &&
-            value.TryGetValue<string>(out var secretValue) &&
-            Guid.TryParse(secretValue, out var secretId))
-        {
-            return secretId;
-        }
-
-        const string SecretPrefix = "secret:";
-        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable) &&
-            provider.ApiKeyEnvironmentVariable.StartsWith(SecretPrefix, StringComparison.OrdinalIgnoreCase) &&
-            Guid.TryParse(provider.ApiKeyEnvironmentVariable[SecretPrefix.Length..], out var inlineSecretId))
-        {
-            return inlineSecretId;
-        }
-
-        return null;
+        var configuredSecretRecordId = ReadConfiguredSecretRecordId(configuration);
+        var inlineSecretRecordId = ReadInlineSecretRecordId(
+            provider.ApiKeyEnvironmentVariable,
+            rejectEnvironmentVariableName: false);
+        EnsureCompatibleSecretRecordIds(
+            configuredSecretRecordId,
+            inlineSecretRecordId);
+        return inlineSecretRecordId ?? configuredSecretRecordId;
     }
 
     public static Guid? ResolveSecretRecordId(
-        AgentFrameworkProviderProfileEditorModel model,
-        Guid? fallbackSecretRecordId)
+        AgentFrameworkProviderProfileEditorModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var configuration = ParseObject(model.ConfigurationJson);
-        if (configuration[SecretRecordIdPropertyName] is JsonValue value &&
-            value.TryGetValue<string>(out var secretValue) &&
-            Guid.TryParse(secretValue, out var secretId))
-        {
-            return secretId;
-        }
-
-        const string SecretPrefix = "secret:";
-        if (!string.IsNullOrWhiteSpace(model.ApiKeyEnvironmentVariable) &&
-            model.ApiKeyEnvironmentVariable.StartsWith(SecretPrefix, StringComparison.OrdinalIgnoreCase) &&
-            Guid.TryParse(model.ApiKeyEnvironmentVariable[SecretPrefix.Length..], out var inlineSecretId))
-        {
-            return inlineSecretId;
-        }
-
-        return fallbackSecretRecordId;
+        var configuration = ParseObjectStrict(model.ConfigurationJson);
+        var configuredSecretRecordId = ReadConfiguredSecretRecordId(configuration);
+        var inlineSecretRecordId = ReadInlineSecretRecordId(
+            model.ApiKeyEnvironmentVariable,
+            rejectEnvironmentVariableName: true);
+        EnsureCompatibleSecretRecordIds(
+            configuredSecretRecordId,
+            inlineSecretRecordId);
+        return inlineSecretRecordId ?? configuredSecretRecordId;
     }
 
     public static string ResolveConnectorPluginKey(
@@ -284,15 +285,39 @@ internal static class AgentFrameworkProviderMetadata
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var configuration = ParseObject(model.ConfigurationJson);
-        if (configuration[ConnectorPluginKeyPropertyName] is JsonValue value &&
-            value.TryGetValue<string>(out var configuredPluginKey) &&
-            !string.IsNullOrWhiteSpace(configuredPluginKey))
+        var configuration = ParseObjectStrict(model.ConfigurationJson);
+        if (configuration.TryGetPropertyValue(
+                ConnectorPluginKeyPropertyName,
+                out var configuredPlugin))
         {
-            return configuredPluginKey.Trim();
+            if (configuredPlugin is JsonValue value &&
+                value.TryGetValue<string>(out var configuredPluginKey) &&
+                !string.IsNullOrWhiteSpace(configuredPluginKey))
+            {
+                var normalizedPluginKey = configuredPluginKey.Trim();
+                if (current is null ||
+                    !string.Equals(
+                        normalizedPluginKey,
+                        current.ConnectorPluginKey,
+                        StringComparison.Ordinal) ||
+                    IsConnectorCompatibleWithEditor(
+                        normalizedPluginKey,
+                        model))
+                {
+                    return normalizedPluginKey;
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Provider configuration property '{ConnectorPluginKeyPropertyName}' must identify a connector plugin.");
+            }
         }
 
-        if (!string.IsNullOrWhiteSpace(current?.ConnectorPluginKey))
+        if (!string.IsNullOrWhiteSpace(current?.ConnectorPluginKey) &&
+            IsConnectorCompatibleWithEditor(
+                current.ConnectorPluginKey,
+                model))
         {
             return current.ConnectorPluginKey;
         }
@@ -324,12 +349,20 @@ internal static class AgentFrameworkProviderMetadata
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var configuration = ParseObject(model.ConfigurationJson);
-        if (configuration[ConfigSchemaVersionPropertyName] is JsonValue value &&
-            value.TryGetValue<string>(out var configuredVersion) &&
-            !string.IsNullOrWhiteSpace(configuredVersion))
+        var configuration = ParseObjectStrict(model.ConfigurationJson);
+        if (configuration.TryGetPropertyValue(
+                ConfigSchemaVersionPropertyName,
+                out var configuredSchemaVersion))
         {
-            return configuredVersion.Trim();
+            if (configuredSchemaVersion is JsonValue value &&
+                value.TryGetValue<string>(out var configuredVersion) &&
+                !string.IsNullOrWhiteSpace(configuredVersion))
+            {
+                return configuredVersion.Trim();
+            }
+
+            throw new InvalidOperationException(
+                $"Provider configuration property '{ConfigSchemaVersionPropertyName}' must identify a schema version.");
         }
 
         if (!string.IsNullOrWhiteSpace(current?.ConfigSchemaVersion))
@@ -346,11 +379,20 @@ internal static class AgentFrameworkProviderMetadata
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var configuration = ParseObject(model.ConfigurationJson);
-        if (configuration[TimeoutSecondsPropertyName] is JsonValue value &&
-            value.TryGetValue<int>(out var timeoutSeconds))
+        var configuration = ParseObjectStrict(model.ConfigurationJson);
+        if (configuration.TryGetPropertyValue(
+                TimeoutSecondsPropertyName,
+                out var configuredTimeout))
         {
-            return Math.Max(5, timeoutSeconds);
+            if (configuredTimeout is JsonValue value &&
+                value.TryGetValue<int>(out var timeoutSeconds) &&
+                timeoutSeconds >= 5)
+            {
+                return timeoutSeconds;
+            }
+
+            throw new InvalidOperationException(
+                $"Provider configuration property '{TimeoutSecondsPropertyName}' must be an integer of at least 5 seconds.");
         }
 
         return Math.Max(5, fallbackValue);
@@ -359,19 +401,7 @@ internal static class AgentFrameworkProviderMetadata
     private static JsonObject ParseObject(
         string? json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return new JsonObject();
-        }
-
-        try
-        {
-            return JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
-        }
-        catch (JsonException)
-        {
-            return new JsonObject();
-        }
+        return ParseObjectStrict(json);
     }
 
     private static JsonObject ParseObjectStrict(string? json)
@@ -383,15 +413,154 @@ internal static class AgentFrameworkProviderMetadata
 
         try
         {
-            return JsonNode.Parse(json) as JsonObject
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidOperationException(
+                    "Provider configuration must be a JSON object.");
+            }
+
+            RejectDuplicateMetadataPropertyAliases(document.RootElement);
+            var configuration = JsonNode.Parse(json) as JsonObject
                 ?? throw new InvalidOperationException(
                     "Provider configuration must be a JSON object.");
+            CanonicalizeMetadataPropertyAliases(configuration);
+            return configuration;
         }
         catch (JsonException exception)
         {
             throw new InvalidOperationException(
                 "Provider configuration is not valid JSON.",
                 exception);
+        }
+    }
+
+    private static void RejectDuplicateMetadataPropertyAliases(
+        JsonElement configuration)
+    {
+        var seenProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in configuration.EnumerateObject())
+        {
+            var canonicalName = ResolveCanonicalMetadataPropertyName(property.Name);
+            if (canonicalName is null || seenProperties.Add(canonicalName))
+            {
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"Provider configuration property '{canonicalName}' cannot be defined more than once with case-insensitive aliases.");
+        }
+    }
+
+    private static void CanonicalizeMetadataPropertyAliases(
+        JsonObject configuration)
+    {
+        foreach (var canonicalName in CanonicalMetadataPropertyNames)
+        {
+            var aliases = configuration
+                .Select(property => property.Key)
+                .Where(propertyName => string.Equals(
+                    propertyName,
+                    canonicalName,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (aliases.Count == 0)
+            {
+                continue;
+            }
+
+            var selectedAlias = aliases.FirstOrDefault(alias => string.Equals(
+                alias,
+                canonicalName,
+                StringComparison.Ordinal)) ?? aliases[0];
+            var value = configuration[selectedAlias];
+            foreach (var alias in aliases)
+            {
+                configuration.Remove(alias);
+            }
+
+            configuration[canonicalName] = value;
+        }
+    }
+
+    private static string? ResolveCanonicalMetadataPropertyName(
+        string propertyName)
+    {
+        return CanonicalMetadataPropertyNames.FirstOrDefault(candidate =>
+            string.Equals(
+                candidate,
+                propertyName,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static Guid? ReadConfiguredSecretRecordId(
+        JsonObject configuration)
+    {
+        if (!configuration.TryGetPropertyValue(
+                SecretRecordIdPropertyName,
+                out var configuredSecretRecord))
+        {
+            return null;
+        }
+
+        if (configuredSecretRecord is JsonValue value &&
+            value.TryGetValue<string>(out var secretValue) &&
+            Guid.TryParse(secretValue, out var secretRecordId) &&
+            secretRecordId != Guid.Empty)
+        {
+            return secretRecordId;
+        }
+
+        throw new InvalidOperationException(
+            $"Provider configuration property '{SecretRecordIdPropertyName}' must identify a non-empty secret record id.");
+    }
+
+    private static Guid? ReadInlineSecretRecordId(
+        string? secretReference,
+        bool rejectEnvironmentVariableName)
+    {
+        var normalizedReference = secretReference?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedReference))
+        {
+            return null;
+        }
+
+        const string SecretPrefix = "secret:";
+        if (!normalizedReference.StartsWith(
+                SecretPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            if (!rejectEnvironmentVariableName)
+            {
+                return null;
+            }
+
+            throw new InvalidOperationException(
+                "Provider credential bindings must use 'secret:<non-empty-record-id>'.");
+        }
+
+        if (Guid.TryParse(
+                normalizedReference[SecretPrefix.Length..],
+                out var secretRecordId) &&
+            secretRecordId != Guid.Empty)
+        {
+            return secretRecordId;
+        }
+
+        throw new InvalidOperationException(
+            "Provider credential bindings must use 'secret:<non-empty-record-id>'.");
+    }
+
+    private static void EnsureCompatibleSecretRecordIds(
+        Guid? configuredSecretRecordId,
+        Guid? inlineSecretRecordId)
+    {
+        if (configuredSecretRecordId.HasValue &&
+            inlineSecretRecordId.HasValue &&
+            configuredSecretRecordId != inlineSecretRecordId)
+        {
+            throw new InvalidOperationException(
+                "Provider configuration contains conflicting explicit secret record references.");
         }
     }
 
@@ -503,5 +672,34 @@ internal static class AgentFrameworkProviderMetadata
         return baseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
                baseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
                baseUrl.Contains(":11434", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsConnectorCompatibleWithEditor(
+        string connectorPluginKey,
+        AgentFrameworkProviderProfileEditorModel model)
+    {
+        return connectorPluginKey switch
+        {
+            ScenarioHarnessProviderAdapter.PluginKey => string.Equals(
+                model.BaseUrl,
+                ScenarioHarnessProviderAdapter.BaseUrl,
+                StringComparison.OrdinalIgnoreCase),
+            ProcessMockProviderAdapter.PluginKey => string.Equals(
+                model.BaseUrl,
+                ProcessMockProviderAdapter.BaseUrl,
+                StringComparison.OrdinalIgnoreCase),
+            OpenAiProviderAdapter.PluginKey =>
+                model.Kind is AgentFrameworkProviderKind.OpenAi or
+                    AgentFrameworkProviderKind.AzureOpenAi,
+            OllamaProviderAdapter.PluginKey =>
+                model.Kind == AgentFrameworkProviderKind.Ollama &&
+                LooksLikeLocalOllama(model.BaseUrl),
+            OllamaRemoteProviderAdapter.PluginKey =>
+                model.Kind == AgentFrameworkProviderKind.Ollama &&
+                !LooksLikeLocalOllama(model.BaseUrl),
+            ComfyUiProviderAdapter.PluginKey =>
+                model.Kind == AgentFrameworkProviderKind.ComfyUi,
+            _ => true
+        };
     }
 }

@@ -903,13 +903,22 @@ public sealed class ProjectStructureTaskCreationServiceTests
             return inner.DeleteAssignmentsForNodesAsync(projectId, nodeReferences, cancellationToken);
         }
 
+        public Task DeleteAssignmentsForProjectAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+        {
+            return inner.DeleteAssignmentsForProjectAsync(projectId, cancellationToken);
+        }
+
         public Task MoveAssignmentsToProjectAsync(
+            ProjectPartyAssignmentMoveOperationId operationId,
             Guid sourceProjectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
             Guid targetProjectId,
             CancellationToken cancellationToken = default)
         {
             return inner.MoveAssignmentsToProjectAsync(
+                operationId,
                 sourceProjectId,
                 nodeReferences,
                 targetProjectId,

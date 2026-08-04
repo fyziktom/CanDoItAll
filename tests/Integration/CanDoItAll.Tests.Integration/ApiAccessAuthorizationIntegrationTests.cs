@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -71,6 +73,75 @@ public sealed class ApiAccessAuthorizationIntegrationTests
             new ApiTokenIssueRequest());
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Project_structure_routes_require_write_scope_and_bind_lease_owner_to_token_subject()
+    {
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: true,
+            useInMemoryDatabase: true);
+        Guid projectId;
+        await using (var scope = host.App.Services.CreateAsyncScope())
+        {
+            var savedProject = await scope.ServiceProvider.GetRequiredService<ProjectsService>()
+                .SaveAsync(new ProjectEditorModel
+                {
+                    Name = "Authorized lease project",
+                    Objective = "Validate authenticated lease ownership.",
+                    CurrentPhase = "Validation"
+                });
+            Assert.True(savedProject.IsSuccess);
+            projectId = savedProject.Value;
+        }
+
+        var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
+        SetBearerToken(
+            host,
+            tokenService.IssueToken(new ApiTokenIssueRequest
+            {
+                Subject = "memory-only-client",
+                DisplayName = "Memory-only client",
+                Scopes = [ApiAccessScopeNames.ReadMemoryProviders]
+            }));
+
+        using var forbiddenResponse = await host.Client.GetAsync(
+            "/api/project-structure/node-catalog");
+
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenResponse.StatusCode);
+
+        const string authenticatedSubject = "project-structure-operator";
+        SetBearerToken(
+            host,
+            tokenService.IssueToken(new ApiTokenIssueRequest
+            {
+                Subject = authenticatedSubject,
+                DisplayName = "Project Structure Operator",
+                Scopes = [ApiAccessScopeNames.WriteProjectStructure]
+            }));
+        host.Client.DefaultRequestHeaders.Add(
+            ProjectStructureAgentHttpHeaders.AgentId,
+            "spoofed-agent");
+        host.Client.DefaultRequestHeaders.Add(
+            ProjectStructureAgentHttpHeaders.MachineName,
+            "spoofed-machine");
+        host.Client.DefaultRequestHeaders.Add(
+            ProjectStructureAgentHttpHeaders.RepositoryRoot,
+            "C:/spoofed/repository");
+        using var leaseResponse = await host.Client.PostAsJsonAsync(
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                "JWT identity boundary acceptance"));
+
+        Assert.Equal(HttpStatusCode.OK, leaseResponse.StatusCode);
+        var lease = await leaseResponse.Content.ReadFromJsonAsync<ProjectStructureLeaseSnapshot>();
+        Assert.NotNull(lease);
+        Assert.Equal(authenticatedSubject, lease.AgentId);
+        Assert.Equal(Environment.MachineName, lease.MachineName);
+        Assert.Empty(lease.RepositoryRoot);
+        Assert.Empty(lease.BranchName);
     }
 
     private static void SetBearerToken(

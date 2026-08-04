@@ -44,15 +44,16 @@ public sealed class InMemoryDatabaseDriver : IDatabaseDriver
         => Task.CompletedTask;
 }
 
-public sealed class PostgreSqlDatabaseDriver : IDatabaseDriver
+internal sealed class PostgreSqlDatabaseDriver(PostgreSqlStartupReadinessPolicy startupReadinessPolicy) : IDatabaseDriver
 {
     public DatabaseProviderKind ProviderKind => DatabaseProviderKind.PostgreSql;
 
     public async Task EnsureDatabaseAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(profile.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-        await connection.CloseAsync();
+        await using var connection = await OpenConnectionWhenReadyAsync(
+            profile.Profile.Id,
+            profile.ConnectionString,
+            cancellationToken);
     }
 
     public async Task CreateEmptyAsync(ResolvedDatabaseProfile profile, CancellationToken cancellationToken = default)
@@ -68,8 +69,10 @@ public sealed class PostgreSqlDatabaseDriver : IDatabaseDriver
             Database = adminDatabase
         };
 
-        await using var connection = new NpgsqlConnection(adminBuilder.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionWhenReadyAsync(
+            profile.Profile.Id,
+            adminBuilder.ConnectionString,
+            cancellationToken);
 
         await using var existsCommand = connection.CreateCommand();
         existsCommand.CommandText = "select 1 from pg_database where datname = @databaseName;";
@@ -83,6 +86,30 @@ public sealed class PostgreSqlDatabaseDriver : IDatabaseDriver
         await using var createCommand = connection.CreateCommand();
         createCommand.CommandText = $"create database {QuoteIdentifier(descriptor.DatabaseName)};";
         await createCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private async Task<NpgsqlConnection> OpenConnectionWhenReadyAsync(
+        Guid profileId,
+        string connectionString,
+        CancellationToken cancellationToken)
+    {
+        return await startupReadinessPolicy.ExecuteAsync(
+            profileId,
+            async operationCancellationToken =>
+            {
+                var connection = new NpgsqlConnection(connectionString);
+                try
+                {
+                    await connection.OpenAsync(operationCancellationToken);
+                    return connection;
+                }
+                catch
+                {
+                    await connection.DisposeAsync();
+                    throw;
+                }
+            },
+            cancellationToken);
     }
 
     private static string QuoteIdentifier(string value)

@@ -9,7 +9,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
 {
     [Fact]
-    public async Task GetDashboardAsync_counts_recent_active_and_failed_runs_from_split_execution_storage()
+    public async Task GetDashboardAsync_counts_state_based_active_and_failed_runs_from_split_execution_storage()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -54,7 +54,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         var dashboard = await workspaceService.GetDashboardAsync();
 
         Assert.Equal(baseline.SessionCount, dashboard.SessionCount);
-        Assert.Equal(baseline.ActiveRuns + 1, dashboard.ActiveRuns);
+        Assert.Equal(baseline.ActiveRuns + 2, dashboard.ActiveRuns);
         Assert.Equal(baseline.FailedRuns + 1, dashboard.FailedRuns);
     }
 

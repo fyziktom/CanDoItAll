@@ -458,6 +458,7 @@ public partial class AgentChatPanel : IAsyncDisposable
 
         var executionAgentId = selectedAgentId.Value;
         var executionSessionId = selectedSessionId;
+        var executionWorkspaceGeneration = Volatile.Read(ref workspaceLoadGeneration);
         var executionHandleId = ActiveChatHandleId;
         var executionAttachmentPaths = draftAttachmentPaths;
         if (!TryBeginChatOperation(executionHandleId))
@@ -476,6 +477,7 @@ public partial class AgentChatPanel : IAsyncDisposable
         trackedChatOperation = RunMessageOperationAsync(
             executionAgentId,
             executionSessionId,
+            executionWorkspaceGeneration,
             executionHandleId,
             prompt,
             executionAttachmentPaths,
@@ -486,12 +488,14 @@ public partial class AgentChatPanel : IAsyncDisposable
     private async Task RunMessageOperationAsync(
         Guid executionAgentId,
         Guid? executionSessionId,
+        long executionWorkspaceGeneration,
         AgentChatHandleId? executionHandleId,
         string prompt,
         IReadOnlyList<string> attachmentPaths,
         string previousDraft)
     {
         var executionCompleted = false;
+        var continuationWorkspaceGeneration = executionWorkspaceGeneration;
         try
         {
             var operation = ChatExecutionOrchestrator.StartSendMessage(
@@ -503,14 +507,20 @@ public partial class AgentChatPanel : IAsyncDisposable
             await InvokeAsync(StateHasChanged);
             var result = await operation.Completion;
             executionCompleted = true;
-            if (isDisposed || selectedAgentId != executionAgentId)
+            if (!IsOperationWorkspaceCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionWorkspaceGeneration))
             {
                 return;
             }
 
             draftAttachmentPaths = [];
+            continuationWorkspaceGeneration = unchecked(executionWorkspaceGeneration + 1);
             await LoadWorkspaceAsync(executionAgentId, result.ChatSessionId);
-            if (isDisposed || selectedAgentId != executionAgentId)
+            if (Volatile.Read(ref workspaceLoadGeneration) != continuationWorkspaceGeneration ||
+                selectedAgentId != executionAgentId ||
+                selectedSessionId != result.ChatSessionId)
             {
                 return;
             }
@@ -521,13 +531,67 @@ public partial class AgentChatPanel : IAsyncDisposable
                 await SpeakTextAsync(result.AssistantMessage.Content);
             }
         }
+        catch (AgentChatRunFailedException exception) when (isDisposed)
+        {
+            LogDetachedRunFailure(
+                exception,
+                executionHandleId,
+                "send");
+        }
         catch (Exception exception) when (isDisposed)
         {
             LogDetachedOperationFailure(exception, executionAgentId, executionSessionId, executionHandleId, "send");
         }
+        catch (AgentChatRunFailedException exception)
+        {
+            if (exception.AgentId == executionAgentId &&
+                (!executionSessionId.HasValue ||
+                 exception.ChatSessionId == executionSessionId) &&
+                IsOperationWorkspaceCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionWorkspaceGeneration))
+            {
+                var reloadGeneration = Volatile.Read(ref workspaceLoadGeneration);
+                var workspaceReloaded = await TryReloadFailedWorkspaceAsync(exception);
+                if (WasFailedRunReloadSuperseded(reloadGeneration) ||
+                    selectedAgentId != exception.AgentId ||
+                    selectedSessionId != exception.ChatSessionId)
+                {
+                    LogInactiveSelectionRunFailure(
+                        exception,
+                        executionHandleId,
+                        "send");
+                    return;
+                }
+
+                SetMessage(
+                    "Attention",
+                    "danger",
+                    BuildFailedRunMessage(
+                        exception.SanitizedDisplayMessage,
+                        workspaceReloaded));
+                return;
+            }
+
+            LogInactiveSelectionRunFailure(
+                exception,
+                executionHandleId,
+                "send");
+        }
         catch (Exception exception)
         {
-            if (selectedAgentId == executionAgentId)
+            LogOperationFailure(
+                exception,
+                executionAgentId,
+                executionSessionId,
+                executionHandleId,
+                "send",
+                executionCompleted);
+            if (IsOperationWorkspaceCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    continuationWorkspaceGeneration))
             {
                 if (!executionCompleted)
                 {
@@ -540,8 +604,8 @@ public partial class AgentChatPanel : IAsyncDisposable
                     executionCompleted ? "Refresh needed" : "Attention",
                     executionCompleted ? "warning" : "danger",
                     executionCompleted
-                        ? $"The prompt completed, but the latest thread state could not be loaded: {exception.Message}"
-                        : exception.Message);
+                        ? "The prompt completed, but the latest thread state could not be loaded. Reload this thread to see the persisted result."
+                        : "The prompt could not be completed. Retry, or inspect runtime details for the persisted failure.");
             }
         }
         finally
@@ -572,6 +636,7 @@ public partial class AgentChatPanel : IAsyncDisposable
 
         var executionAgentId = selectedAgentId.Value;
         var executionSessionId = selectedSessionId.Value;
+        var executionWorkspaceGeneration = Volatile.Read(ref workspaceLoadGeneration);
         var executionHandleId = ActiveChatHandleId;
         if (!TryBeginChatOperation(executionHandleId))
         {
@@ -581,6 +646,7 @@ public partial class AgentChatPanel : IAsyncDisposable
         trackedChatOperation = RunApprovalOperationAsync(
             executionAgentId,
             executionSessionId,
+            executionWorkspaceGeneration,
             executionHandleId,
             approved,
             autoApprovePendingToolCalls);
@@ -590,12 +656,14 @@ public partial class AgentChatPanel : IAsyncDisposable
     private async Task RunApprovalOperationAsync(
         Guid executionAgentId,
         Guid executionSessionId,
+        long executionWorkspaceGeneration,
         AgentChatHandleId? executionHandleId,
         bool approved,
         bool autoApprovePendingToolCalls)
     {
         await Task.Yield();
         var executionCompleted = false;
+        var continuationWorkspaceGeneration = executionWorkspaceGeneration;
         try
         {
             var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
@@ -607,15 +675,17 @@ public partial class AgentChatPanel : IAsyncDisposable
             await InvokeAsync(StateHasChanged);
             await operation.Completion;
             executionCompleted = true;
-            if (isDisposed ||
-                selectedAgentId != executionAgentId ||
-                selectedSessionId != executionSessionId)
+            if (!IsOperationWorkspaceCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionWorkspaceGeneration))
             {
                 return;
             }
 
+            continuationWorkspaceGeneration = unchecked(executionWorkspaceGeneration + 1);
             await LoadWorkspaceAsync(executionAgentId, executionSessionId);
-            if (isDisposed ||
+            if (Volatile.Read(ref workspaceLoadGeneration) != continuationWorkspaceGeneration ||
                 selectedAgentId != executionAgentId ||
                 selectedSessionId != executionSessionId)
             {
@@ -631,21 +701,73 @@ public partial class AgentChatPanel : IAsyncDisposable
                         : "Approval resumed the run."
                     : "Approval was rejected and the thread was refreshed.");
         }
+        catch (AgentChatRunFailedException exception) when (isDisposed)
+        {
+            LogDetachedRunFailure(
+                exception,
+                executionHandleId,
+                "approval");
+        }
         catch (Exception exception) when (isDisposed)
         {
             LogDetachedOperationFailure(exception, executionAgentId, executionSessionId, executionHandleId, "approval");
         }
+        catch (AgentChatRunFailedException exception)
+        {
+            if (exception.AgentId == executionAgentId &&
+                exception.ChatSessionId == executionSessionId &&
+                IsOperationWorkspaceCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionWorkspaceGeneration))
+            {
+                var reloadGeneration = Volatile.Read(ref workspaceLoadGeneration);
+                var workspaceReloaded = await TryReloadFailedWorkspaceAsync(exception);
+                if (WasFailedRunReloadSuperseded(reloadGeneration) ||
+                    selectedAgentId != exception.AgentId ||
+                    selectedSessionId != exception.ChatSessionId)
+                {
+                    LogInactiveSelectionRunFailure(
+                        exception,
+                        executionHandleId,
+                        "approval");
+                    return;
+                }
+
+                SetMessage(
+                    "Attention",
+                    "danger",
+                    BuildFailedRunMessage(
+                        exception.SanitizedDisplayMessage,
+                        workspaceReloaded));
+                return;
+            }
+
+            LogInactiveSelectionRunFailure(
+                exception,
+                executionHandleId,
+                "approval");
+        }
         catch (Exception exception)
         {
-            if (selectedAgentId == executionAgentId &&
-                selectedSessionId == executionSessionId)
+            LogOperationFailure(
+                exception,
+                executionAgentId,
+                executionSessionId,
+                executionHandleId,
+                "approval",
+                executionCompleted);
+            if (IsOperationWorkspaceCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    continuationWorkspaceGeneration))
             {
                 SetMessage(
                     executionCompleted ? "Refresh needed" : "Attention",
                     executionCompleted ? "warning" : "danger",
                     executionCompleted
-                        ? $"The approval completed, but the latest thread state could not be loaded: {exception.Message}"
-                        : exception.Message);
+                        ? "The approval completed, but the latest thread state could not be loaded. Reload this thread to see the persisted result."
+                        : "The approval could not be completed. Retry, or inspect runtime details for the persisted failure.");
             }
         }
         finally
@@ -671,6 +793,17 @@ public partial class AgentChatPanel : IAsyncDisposable
         return true;
     }
 
+    private bool IsOperationWorkspaceCurrent(
+        Guid agentId,
+        Guid? sessionId,
+        long workspaceGeneration)
+    {
+        return !isDisposed &&
+               workspaceGeneration == Volatile.Read(ref workspaceLoadGeneration) &&
+               selectedAgentId == agentId &&
+               selectedSessionId == sessionId;
+    }
+
     private async Task FinishChatOperationAsync(
         AgentChatHandleId? handleId,
         Guid agentId,
@@ -689,7 +822,6 @@ public partial class AgentChatPanel : IAsyncDisposable
         catch (Exception exception)
         {
             Logger.LogError(
-                exception,
                 "Detached agent chat operation cleanup failed. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} HandleId={HandleId} FailureType={FailureType}.",
                 operationKind,
                 agentId,
@@ -707,13 +839,101 @@ public partial class AgentChatPanel : IAsyncDisposable
         string operationKind)
     {
         Logger.LogWarning(
-            exception,
             "Detached agent chat operation finished after its panel was disposed. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} HandleId={HandleId} FailureType={FailureType}.",
             operationKind,
             agentId,
             sessionId,
             handleId?.Value,
             exception.GetType().Name);
+    }
+
+    private void LogOperationFailure(
+        Exception exception,
+        Guid agentId,
+        Guid? sessionId,
+        AgentChatHandleId? handleId,
+        string operationKind,
+        bool executionCompleted)
+    {
+        Logger.LogWarning(
+            "Agent chat operation failed. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} HandleId={HandleId} ExecutionCompleted={ExecutionCompleted} FailureType={FailureType}.",
+            operationKind,
+            agentId,
+            sessionId,
+            handleId?.Value,
+            executionCompleted,
+            exception.GetType().Name);
+    }
+
+    private void LogDetachedRunFailure(
+        AgentChatRunFailedException exception,
+        AgentChatHandleId? handleId,
+        string operationKind)
+    {
+        Logger.LogWarning(
+            "Detached agent chat run failed after its panel was disposed. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} HandleId={HandleId} FailureCategory={FailureCategory}.",
+            operationKind,
+            exception.AgentId,
+            exception.ChatSessionId,
+            exception.ExecutionRunId,
+            handleId?.Value,
+            exception.FailureCategory);
+    }
+
+    private void LogInactiveSelectionRunFailure(
+        AgentChatRunFailedException exception,
+        AgentChatHandleId? handleId,
+        string operationKind)
+    {
+        Logger.LogWarning(
+            "Agent chat run failure did not match the active panel selection. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} SelectedAgentId={SelectedAgentId} SelectedChatSessionId={SelectedChatSessionId} HandleId={HandleId} FailureCategory={FailureCategory}.",
+            operationKind,
+            exception.AgentId,
+            exception.ChatSessionId,
+            exception.ExecutionRunId,
+            selectedAgentId,
+            selectedSessionId,
+            handleId?.Value,
+            exception.FailureCategory);
+    }
+
+    private async Task<bool> TryReloadFailedWorkspaceAsync(
+        AgentChatRunFailedException exception)
+    {
+        try
+        {
+            await LoadWorkspaceAsync(
+                exception.AgentId,
+                exception.ChatSessionId,
+                exception.ExecutionRunId);
+            return !isDisposed &&
+                   selectedAgentId == exception.AgentId &&
+                   selectedSessionId == exception.ChatSessionId &&
+                   workspace?.SelectedRun?.Id == exception.ExecutionRunId;
+        }
+        catch (Exception reloadException)
+        {
+            Logger.LogWarning(
+                "Unable to reload the persisted failed agent run. AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} FailureCategory={FailureCategory} ReloadFailureType={ReloadFailureType}.",
+                exception.AgentId,
+                exception.ChatSessionId,
+                exception.ExecutionRunId,
+                exception.FailureCategory,
+                reloadException.GetType().Name);
+            return false;
+        }
+    }
+
+    private bool WasFailedRunReloadSuperseded(long generationBeforeReload)
+        => Volatile.Read(ref workspaceLoadGeneration) != unchecked(generationBeforeReload + 1);
+
+    private static string BuildFailedRunMessage(
+        string sanitizedDisplayMessage,
+        bool workspaceReloaded)
+    {
+        return workspaceReloaded
+            ? sanitizedDisplayMessage
+            : $"{sanitizedDisplayMessage} The failed run was persisted, but runtime details could not be refreshed. Reload this workspace to see the persisted failure.";
     }
 
     private async Task StageAttachmentsAsync()
@@ -802,7 +1022,10 @@ public partial class AgentChatPanel : IAsyncDisposable
         }
     }
 
-    private async Task LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId)
+    private async Task LoadWorkspaceAsync(
+        Guid agentId,
+        Guid? preferredSessionId,
+        Guid? preferredExecutionRunId = null)
     {
         if (selectedAgentId != agentId ||
             selectedSessionId.HasValue &&
@@ -821,7 +1044,11 @@ public partial class AgentChatPanel : IAsyncDisposable
 
         try
         {
-            await LoadWorkspaceCoreAsync(agentId, preferredSessionId, loadGeneration);
+            await LoadWorkspaceCoreAsync(
+                agentId,
+                preferredSessionId,
+                preferredExecutionRunId,
+                loadGeneration);
         }
         catch
         {
@@ -837,6 +1064,7 @@ public partial class AgentChatPanel : IAsyncDisposable
     private async Task LoadWorkspaceCoreAsync(
         Guid agentId,
         Guid? preferredSessionId,
+        Guid? preferredExecutionRunId,
         long loadGeneration)
     {
         var nextAgent = agents.FirstOrDefault(item => item.Id == agentId);
@@ -861,11 +1089,36 @@ public partial class AgentChatPanel : IAsyncDisposable
             return;
         }
 
+        ExecutionRunDetail? preferredRunDetail = null;
+        if (preferredExecutionRunId is { } executionRunId)
+        {
+            if (nextWorkspace.AgentId != agentId ||
+                nextWorkspace.SelectedSessionId != preferredSessionId)
+            {
+                throw new InvalidOperationException(
+                    "The agent workspace does not belong to the persisted failed run thread.");
+            }
+
+            preferredRunDetail = await WorkspaceService.GetExecutionRunDetailAsync(executionRunId);
+            if (preferredRunDetail.Run.AgentId != agentId ||
+                preferredRunDetail.Run.ChatSessionId != preferredSessionId)
+            {
+                throw new InvalidOperationException(
+                    "The persisted failed run does not belong to the requested agent thread.");
+            }
+
+            nextWorkspace = nextWorkspace with
+            {
+                SelectedRun = preferredRunDetail.Run
+            };
+        }
+
         IReadOnlyList<ExecutionLogEntry> nextExecutionLog;
         IReadOnlyList<AgentRunMetric> nextMetrics;
         if (nextWorkspace.SelectedRun is { } selectedRun)
         {
-            var runDetail = await WorkspaceService.GetExecutionRunDetailAsync(selectedRun.Id);
+            var runDetail = preferredRunDetail ??
+                await WorkspaceService.GetExecutionRunDetailAsync(selectedRun.Id);
             if (isDisposed || loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
             {
                 return;

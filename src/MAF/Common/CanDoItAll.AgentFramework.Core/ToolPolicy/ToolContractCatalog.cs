@@ -327,6 +327,7 @@ public static class ToolContractCatalog
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeMove,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeRecompose,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeReparent,
+        AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeDescendantsToProjectMove,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
         AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,

@@ -248,20 +248,26 @@ public sealed class ProviderFeatureMatrixTests
             "CanDoItAll.Modules.AgentFramework",
             "Providers",
             "AgentFrameworkProviderMetadata.cs");
+        var mapperSource = ReadRepositoryFile(
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Providers",
+            "WorkspaceAgentProviderProfileMapper.cs");
 
         Assert.DoesNotContain("SupportsStructuredOutput = model.Transport == ProviderTransportKind.Responses", source, StringComparison.Ordinal);
-        Assert.Contains("var selectedTransport = model.Transport;", source, StringComparison.Ordinal);
+        Assert.Contains("capabilityProfile.Transport", source, StringComparison.Ordinal);
         Assert.Contains("ResolveFeatureMatrix", source, StringComparison.Ordinal);
         Assert.Contains("entity.SupportsVision = featureMatrix.SupportsVision;", source, StringComparison.Ordinal);
-        Assert.Contains("ResolveTransport", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveTransport", mapperSource, StringComparison.Ordinal);
         Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
         Assert.Contains("supportsVision", metadataSource, StringComparison.Ordinal);
-        Assert.Contains("ComfyUiProviderAdapter.PluginKey", source, StringComparison.Ordinal);
-        Assert.Contains("ProviderProfilePurpose.ImageGeneration", source, StringComparison.Ordinal);
+        Assert.Contains("ComfyUiProviderAdapter.PluginKey", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderProfilePurpose.ImageGeneration", mapperSource, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderKind.ComfyUi", metadataSource, StringComparison.Ordinal);
-        Assert.Contains("ResolveWorkspaceProviderSuggestedModels", source, StringComparison.Ordinal);
-        Assert.Contains("ManagedSeedProviderFallbacks.OpenAiSuggestedModels", source, StringComparison.Ordinal);
-        Assert.Contains("provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveWorkspaceProviderSuggestedModels", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("ManagedSeedProviderFallbacks.OpenAiSuggestedModels", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey", mapperSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -341,6 +347,12 @@ public sealed class ProviderFeatureMatrixTests
             "CanDoItAll.Modules.AgentFramework",
             "Providers",
             "WorkspaceBackedAgentProviderProfileRegistry.cs");
+        var mapperSource = ReadRepositoryFile(
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Providers",
+            "WorkspaceAgentProviderProfileMapper.cs");
         var metadataSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -362,10 +374,11 @@ public sealed class ProviderFeatureMatrixTests
             "Components",
             "ProviderProfileTreeNodeBuilder.cs");
 
-        Assert.Contains("ResolveMappedProviderKind", registrySource, StringComparison.Ordinal);
-        Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", registrySource, StringComparison.Ordinal);
-        Assert.Contains("No AgentFramework provider transport mapping exists for connector plugin", registrySource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", registrySource, StringComparison.Ordinal);
+        Assert.Contains("ResolveMappedProviderKind", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("No AgentFramework provider transport mapping exists for connector plugin", mapperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", mapperSource, StringComparison.Ordinal);
+        Assert.Contains("providerProfileService.CreateProfile", registrySource, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey", metadataSource, StringComparison.Ordinal);
         Assert.Contains("No workspace connector plugin mapping exists for provider kind", metadataSource, StringComparison.Ordinal);
 

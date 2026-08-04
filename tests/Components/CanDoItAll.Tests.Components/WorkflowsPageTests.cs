@@ -952,14 +952,14 @@ public sealed class WorkflowsPageTests
         });
         var component = Assert.Single(await componentLibrary.ListComponentsAsync());
 
-        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-routes");
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(component.Name, cut.Markup);
             Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-edge-row']"));
         });
 
-        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-node");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-node");
         Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-prompt-identity']"));
         Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-provider']"));
         Assert.NotEmpty(cut.FindAll("[data-testid='workflow-canvas-node-model-selector']"));
@@ -972,7 +972,7 @@ public sealed class WorkflowsPageTests
         });
 
         cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
-        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
         cut.WaitForAssertion(() =>
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow preview completed");
@@ -1157,7 +1157,7 @@ public sealed class WorkflowsPageTests
         cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
         cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
         cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
-        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
         {
@@ -1310,7 +1310,7 @@ public sealed class WorkflowsPageTests
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
         cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
-        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-preview");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
         {
@@ -1439,7 +1439,7 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Gallery prompt bound");
         });
-        ClickWorkflowCanvasTab(cut, "workflow-canvas-tab-routes");
+        await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-routes");
         cut.WaitForElement("[data-testid='workflow-canvas-edit-edge']");
 
         cut.Find("[data-testid='workflow-canvas-edit-edge']").Click();
@@ -2143,20 +2143,21 @@ public sealed class WorkflowsPageTests
             createdAtUtc,
             createdAtUtc);
 
-    private static void ClickWorkflowCanvasTab(IRenderedComponent<IComponent> cut, string testId)
-    {
-        var tab = cut.Find($"[data-testid='{testId}']");
-        if (string.Equals(tab.TagName, "button", StringComparison.OrdinalIgnoreCase))
+    private static Task ClickWorkflowCanvasTabAsync(IRenderedComponent<IComponent> cut, string testId)
+        => cut.InvokeAsync(() =>
         {
-            tab.Click();
-            return;
-        }
+            var tab = cut.Find($"[data-testid='{testId}']");
+            if (string.Equals(tab.TagName, "button", StringComparison.OrdinalIgnoreCase))
+            {
+                tab.Click();
+                return;
+            }
 
-        var button = tab.QuerySelector("button") ??
-                     tab.QuerySelector("[role='tab']") ??
-                     throw new InvalidOperationException($"Workflow canvas tab '{testId}' did not render a clickable tab element.");
-        button.Click();
-    }
+            var button = tab.QuerySelector("button") ??
+                         tab.QuerySelector("[role='tab']") ??
+                         throw new InvalidOperationException($"Workflow canvas tab '{testId}' did not render a clickable tab element.");
+            button.Click();
+        });
 
     private static void ClickTabButton(IRenderedComponent<IComponent> cut, string text)
     {

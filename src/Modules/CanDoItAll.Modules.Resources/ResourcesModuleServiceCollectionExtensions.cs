@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -12,6 +13,9 @@ public static class ResourcesModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddResourcesModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            ResourcesProjectTransferTargetStateParticipant>());
         services.TryAddScoped<ConnectorPluginRegistry>();
         services.AddScoped<IResourceConnectorPlugin, WebhookResourceConnectorPlugin>();
         services.AddScoped<IResourceConnectorPlugin, StorageObjectResourceConnectorPlugin>();
@@ -32,5 +36,4 @@ public static class ResourcesModuleServiceCollectionExtensions
 }
 
 public static class ResourcesModuleAssemblyMarker;
-
 

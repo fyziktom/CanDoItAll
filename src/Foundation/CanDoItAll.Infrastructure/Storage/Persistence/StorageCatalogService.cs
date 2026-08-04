@@ -40,6 +40,8 @@ public sealed class StorageCatalogService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var existingStorage = await dbContext.Set<StorageCatalogRecord>()
             .OrderBy(item => item.DisplayOrder)
+            .ThenBy(item => item.CreatedAtUtc)
+            .ThenBy(item => item.Id)
             .FirstOrDefaultAsync(item => item.IsSystemDefault, cancellationToken);
         var workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
         if (existingStorage is not null)

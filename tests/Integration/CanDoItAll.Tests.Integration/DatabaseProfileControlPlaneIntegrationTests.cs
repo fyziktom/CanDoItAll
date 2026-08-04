@@ -104,6 +104,8 @@ internal static class DatabaseProfileControlPlaneIntegrationHost
             ["Storage:ExportsFolder"] = "exports",
             ["Storage:EvidenceFolder"] = "evidence",
             ["Storage:ManagerArtifactsFolder"] = Path.Combine(testEnvironment.RootPath, "manager-artifacts"),
+            ["SecretVault:Provider"] = "DataProtectionFile",
+            ["SecretVault:VaultPath"] = Path.Combine(testEnvironment.ControlPlaneRootPath, "secrets"),
             ["Workbench:MaxWarmTabs"] = "3",
             ["Workbench:SleepAfterMinutes"] = "15",
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",

@@ -16,9 +16,21 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
     ];
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Terra_function_tools_force_none_without_mutating_caller_options(bool streaming)
+    [InlineData(OpenAiModelIds.Gpt56Terra, false)]
+    [InlineData(OpenAiModelIds.Gpt56Terra, true)]
+    [InlineData(OpenAiModelIds.Gpt56Luna, false)]
+    [InlineData(OpenAiModelIds.Gpt56Luna, true)]
+    [InlineData(OpenAiModelIds.Gpt54Mini, false)]
+    [InlineData(OpenAiModelIds.Gpt54Mini, true)]
+    [InlineData("gpt-5.4-mini-2026-08-01", false)]
+    [InlineData("gpt-5.4-mini-2026-08-01", true)]
+    [InlineData("gpt-5.6-luna-2026-08-01", false)]
+    [InlineData("gpt-5.6-luna-2026-08-01", true)]
+    [InlineData("gpt-5.6-terra-2026-08-01", false)]
+    [InlineData("gpt-5.6-terra-2026-08-01", true)]
+    public async Task Affected_models_force_none_without_mutating_caller_options(
+        string model,
+        bool streaming)
     {
         var function = AIFunctionFactory.Create(
             () => "ok",
@@ -26,6 +38,7 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
             "A local test function.");
         var options = new ChatOptions
         {
+            Temperature = 0.25f,
             Reasoning = new ReasoningOptions
             {
                 Effort = ReasoningEffort.Medium
@@ -33,15 +46,42 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
             Tools = [function]
         };
         using var innerClient = new RecordingChatClient();
-        using var client = CreateClient(innerClient, OpenAiModelIds.Gpt56Terra);
+        using var client = CreateClient(innerClient, model);
 
         await InvokeAsync(client, streaming, options);
 
         var observedOptions = Assert.IsType<ChatOptions>(innerClient.ObservedOptions);
         Assert.NotSame(options, observedOptions);
+        Assert.Equal(0.25f, observedOptions.Temperature);
         Assert.Equal(ReasoningEffort.Medium, options.Reasoning!.Effort);
+        Assert.Same(function, Assert.Single(options.Tools!));
         Assert.Equal(ReasoningEffort.None, observedOptions.Reasoning!.Effort);
         Assert.Same(function, Assert.Single(observedOptions.Tools!));
+    }
+
+    [Fact]
+    public async Task Already_explicit_none_preserves_caller_options()
+    {
+        var function = AIFunctionFactory.Create(
+            () => "ok",
+            "already_none_test_function",
+            "An already-none test function.");
+        var options = new ChatOptions
+        {
+            Reasoning = new ReasoningOptions
+            {
+                Effort = ReasoningEffort.None
+            },
+            Tools = [function]
+        };
+        using var innerClient = new RecordingChatClient();
+        using var client = CreateClient(innerClient, OpenAiModelIds.Gpt56Luna);
+
+        await client.GetResponseAsync(Messages, options);
+
+        Assert.Same(options, innerClient.ObservedOptions);
+        Assert.Equal(ReasoningEffort.None, options.Reasoning.Effort);
+        Assert.Same(function, Assert.Single(options.Tools));
     }
 
     [Theory]
@@ -69,8 +109,10 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
         Assert.Equal(ReasoningEffort.None, observedOptions.Reasoning!.Effort);
     }
 
-    [Fact]
-    public async Task Approval_required_function_is_treated_as_a_function_tool()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Approval_required_function_is_treated_as_a_function_tool(bool streaming)
     {
         var function = AIFunctionFactory.Create(
             () => "ok",
@@ -83,15 +125,17 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
         using var innerClient = new RecordingChatClient();
         using var client = CreateClient(innerClient, OpenAiModelIds.Gpt56Terra);
 
-        await client.GetResponseAsync(Messages, options);
+        await InvokeAsync(client, streaming, options);
 
         var observedOptions = Assert.IsType<ChatOptions>(innerClient.ObservedOptions);
         Assert.Equal(ReasoningEffort.None, observedOptions.Reasoning!.Effort);
         Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(observedOptions.Tools!));
     }
 
-    [Fact]
-    public async Task Declaration_only_function_is_treated_as_a_function_tool()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Declaration_only_function_is_treated_as_a_function_tool(bool streaming)
     {
         var declaration = AIFunctionFactory.Create(
                 () => "ok",
@@ -105,7 +149,7 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
         using var innerClient = new RecordingChatClient();
         using var client = CreateClient(innerClient, OpenAiModelIds.Gpt56Terra);
 
-        await client.GetResponseAsync(Messages, options);
+        await InvokeAsync(client, streaming, options);
 
         var observedOptions = Assert.IsType<ChatOptions>(innerClient.ObservedOptions);
         Assert.Equal(ReasoningEffort.None, observedOptions.Reasoning!.Effort);
@@ -224,9 +268,11 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
     }
 #pragma warning restore OPENAI001
 
-    [Fact]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
 #pragma warning disable OPENAI001
-    public async Task Native_raw_function_tools_force_none_when_generic_tools_are_absent()
+    public async Task Native_raw_function_tools_force_none_when_generic_tools_are_absent(bool streaming)
     {
         var options = new ChatOptions
         {
@@ -239,7 +285,7 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
         using var innerClient = new RecordingChatClient();
         using var client = CreateClient(innerClient, OpenAiModelIds.Gpt56Terra);
 
-        await client.GetResponseAsync(Messages, options);
+        await InvokeAsync(client, streaming, options);
 
         var observedOptions = Assert.IsType<ChatOptions>(innerClient.ObservedOptions);
         var rawOptions = Assert.IsType<ChatCompletionOptions>(observedOptions.RawRepresentationFactory!(null!));
@@ -294,6 +340,9 @@ public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
 
     [Theory]
     [InlineData(OpenAiModelIds.Gpt56Sol, true)]
+    [InlineData("gpt-5.6-sol-2026-08-01", true)]
+    [InlineData(OpenAiModelIds.Gpt56, true)]
+    [InlineData("gpt-5.6-2026-08-01", true)]
     [InlineData(OpenAiModelIds.Gpt56Terra, false)]
     public async Task Unproven_shapes_preserve_reasoning(string model, bool useFunctionTool)
     {

@@ -27,11 +27,32 @@ public static class InfrastructureServiceCollectionExtensions
     {
         AppDbContextModelRegistry.ConfigureAssemblies(moduleAssemblies);
         services.TryAddSingleton(environment);
+        services.TryAddSingleton(TimeProvider.System);
 
         services
             .AddOptions<DatabaseOptions>()
             .Bind(configuration.GetSection("Database"))
             .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services
+            .AddOptions<PostgreSqlStartupReadinessOptions>()
+            .Bind(configuration.GetSection(PostgreSqlStartupReadinessOptions.SectionName))
+            .Validate(
+                options => options.Timeout >= TimeSpan.FromSeconds(1) &&
+                    options.Timeout <= TimeSpan.FromHours(1),
+                "PostgreSQL startup readiness timeout must be between one second and one hour.")
+            .Validate(
+                options => options.InitialRetryDelay >= TimeSpan.FromMilliseconds(100) &&
+                    options.InitialRetryDelay <= TimeSpan.FromSeconds(30),
+                "PostgreSQL startup readiness initial retry delay must be between 100 milliseconds and 30 seconds.")
+            .Validate(
+                options => options.MaximumRetryDelay >= options.InitialRetryDelay &&
+                    options.MaximumRetryDelay <= TimeSpan.FromMinutes(1),
+                "PostgreSQL startup readiness maximum retry delay must be at least the initial delay and no more than one minute.")
+            .Validate(
+                options => options.MaximumRetryDelay <= options.Timeout,
+                "PostgreSQL startup readiness maximum retry delay cannot exceed the timeout.")
             .ValidateOnStart();
 
         services
@@ -81,6 +102,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<DatabaseProfileControlPlaneService>();
         services.AddSingleton<IDatabaseProfileService>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            InfrastructureProjectTransferTargetStateParticipant>());
         services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         services.AddSingleton<ICanonicalRuntimeDatabase, CanonicalRuntimeDatabase>();
@@ -88,6 +112,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IActiveDatabaseProfileResolver>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
         services.AddSingleton<IDatabaseProfileRuntimeAccessor>(serviceProvider => serviceProvider.GetRequiredService<CanonicalDatabaseProfileRuntimeAccessor>());
         services.AddSingleton<IDatabaseDriver, InMemoryDatabaseDriver>();
+        services.AddSingleton<PostgreSqlStartupReadinessPolicy>();
         services.AddSingleton<IDatabaseDriver, PostgreSqlDatabaseDriver>();
         services.AddSingleton<IDatabaseDriverRegistry, DatabaseDriverRegistry>();
         services.AddSingleton<ILegacyCognitiveMemoryExportServiceFactory, LegacyCognitiveMemoryExportServiceFactory>();

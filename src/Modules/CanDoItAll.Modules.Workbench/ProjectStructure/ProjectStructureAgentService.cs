@@ -11,22 +11,22 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectStructureAgentService(
     ProjectsService projectsService,
     ProjectWorkbenchService projectWorkbenchService,
+    ProjectStructureSubprojectTransferCoordinator subprojectTransferCoordinator,
+    ProjectStructureBatchDeletionCoordinator batchDeletionCoordinator,
     ProjectStructureLeaseService leaseService,
     ProjectStructureChecklistService checklistService,
     ProjectStructureImportService importService,
     IProjectStructureRuntimeLauncher runtimeLauncher,
     ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary,
     IProjectStructureLocalFileOpener localFileOpener,
-    IWorkspacePathAccessGuard pathAccessGuard,
     IWorkspacePathResolver workspacePathResolver,
-    FileSystemStoragePathPolicy fileSystemPathPolicy,
+    ProjectStructureAssetContentReader assetContentReader,
     IHttpClientFactory httpClientFactory,
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService)
 {
     private const long MaxExternalAssetSourceBytes = ProjectStructureAssetUploadLimits.MaximumFileBytes;
-    private const long MaxAssetContentBytes = ProjectStructureAssetUploadLimits.MaximumFileBytes;
 
     private static readonly ProjectStructureReadRequest FullNodeReadRequest = new(
         IncludeLinks: true,
@@ -54,24 +54,26 @@ public sealed class ProjectStructureAgentService(
         ValidateProjectRequest(request);
 
         var editor = BuildProjectEditor(projectId, request);
-
-        if (projectId.HasValue)
+        return await ExecuteWithAgentFailureMappingAsync(async () =>
         {
-            return await leaseService.RunWithProjectMutationLeaseAsync(
-                projectId.Value,
-                request.LeaseToken,
-                agent,
-                "save-project",
-                async cancellationToken =>
-                {
-                    var saveResult = await projectsService.SaveAsync(editor, cancellationToken);
-                    return await ResolveSavedProjectAsync(saveResult, cancellationToken);
-                },
-                cancellationToken);
-        }
+            if (projectId.HasValue)
+            {
+                return await leaseService.RunWithProjectMutationLeaseAsync(
+                    projectId.Value,
+                    request.LeaseToken,
+                    agent,
+                    "save-project",
+                    async cancellationToken =>
+                    {
+                        var saveResult = await projectsService.SaveAsync(editor, cancellationToken);
+                        return await ResolveSavedProjectAsync(saveResult, cancellationToken);
+                    },
+                    cancellationToken);
+            }
 
-        var createResult = await projectsService.SaveAsync(editor, cancellationToken);
-        return await ResolveSavedProjectAsync(createResult, cancellationToken);
+            var createResult = await projectsService.SaveAsync(editor, cancellationToken);
+            return await ResolveSavedProjectAsync(createResult, cancellationToken);
+        });
     }
 
     public async Task<ProjectSummary> CreateProjectAsync(
@@ -86,11 +88,14 @@ public sealed class ProjectStructureAgentService(
         }
 
         ValidateProjectRequest(request);
-        var createResult = await projectsService.CreateAsync(
-            newProjectId,
-            BuildProjectEditor(projectId: null, request),
-            cancellationToken);
-        return await ResolveSavedProjectAsync(createResult, cancellationToken);
+        return await ExecuteWithAgentFailureMappingAsync(async () =>
+        {
+            var createResult = await projectsService.CreateAsync(
+                newProjectId,
+                BuildProjectEditor(projectId: null, request),
+                cancellationToken);
+            return await ResolveSavedProjectAsync(createResult, cancellationToken);
+        });
     }
 
     public Task<ProjectSummary> CreateSubprojectAsync(
@@ -107,7 +112,7 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public Task<ProjectSummary> CreateSubprojectAsync(
+    public async Task<ProjectSummary> CreateSubprojectAsync(
         Guid parentProjectId,
         Guid newProjectId,
         ProjectStructureProjectSaveRequest request,
@@ -125,21 +130,22 @@ public sealed class ProjectStructureAgentService(
         }
 
         ValidateProjectRequest(request);
-        return leaseService.RunWithProjectMutationLeaseAsync(
-            parentProjectId,
-            request.LeaseToken,
-            agent,
-            "create-subproject",
-            async cancellationToken =>
-            {
-                var createResult = await projectsService.CreateSubprojectAsync(
-                    parentProjectId,
-                    newProjectId,
-                    BuildProjectEditor(projectId: null, request),
-                    cancellationToken);
-                return await ResolveSavedProjectAsync(createResult, cancellationToken);
-            },
-            cancellationToken);
+        return await ExecuteWithAgentFailureMappingAsync(() =>
+            leaseService.RunWithProjectMutationLeaseAsync(
+                parentProjectId,
+                request.LeaseToken,
+                agent,
+                "create-subproject",
+                async cancellationToken =>
+                {
+                    var createResult = await projectsService.CreateSubprojectAsync(
+                        parentProjectId,
+                        newProjectId,
+                        BuildProjectEditor(projectId: null, request),
+                        cancellationToken);
+                    return await ResolveSavedProjectAsync(createResult, cancellationToken);
+                },
+                cancellationToken));
     }
 
     public async Task ChangeSubprojectAsync(
@@ -231,6 +237,10 @@ public sealed class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        ProjectStructureManagedAssetCreationPolicy.EnsureGenericNodeCreateAllowed(
+            request.ObjectType,
+            request.ObjectSubtype);
+
         return CreateNodeCoreAsync(
             projectId,
             request,
@@ -682,6 +692,117 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
+    public async Task<ProjectStructureNodesCopyResult> CopyNodesAsync(
+        Guid projectId,
+        ProjectStructureNodesCopyInput request,
+        ProjectStructureAgentContext agent,
+        ProjectStructureClipboardCopyTaskPolicy taskPolicy,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(agent);
+
+        if (request.SourceNodeIds is not { Count: > 0 })
+        {
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                400,
+                "NodeCopySourceRequired",
+                "At least one explicit source node id is required for a project-structure copy.",
+                canRetryWithCorrectedInput: true);
+        }
+
+        if (request.SourceNodeIds.Any(string.IsNullOrWhiteSpace))
+        {
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                400,
+                "NodeCopySourceInvalid",
+                "Project-structure copy source node ids cannot be blank.",
+                canRetryWithCorrectedInput: true);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.DestinationParentNodeId))
+        {
+            throw ProjectStructureAgentException.CreateAgentVisible(
+                400,
+                "NodeCopyDestinationRequired",
+                "An explicit destination parent node id is required for a project-structure copy.",
+                canRetryWithCorrectedInput: true);
+        }
+
+        var sourceNodeIds = request.SourceNodeIds
+            .Select(nodeId => nodeId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var destinationParentNodeId = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(
+            projectId,
+            request.DestinationParentNodeId);
+
+        return await leaseService.RunWithProjectMutationLeaseAsync(
+            projectId,
+            request.LeaseToken,
+            agent,
+            "copy-structure-nodes",
+            async cancellationToken =>
+            {
+                await EnsureParentAuthorityAllowedAsync(
+                    projectId,
+                    destinationParentNodeId,
+                    cancellationToken);
+
+                ProjectStructureClipboardCopyResult copy;
+                try
+                {
+                    copy = await projectWorkbenchService.CopySubtreesAsync(
+                        projectId,
+                        sourceNodeIds,
+                        destinationParentNodeId,
+                        taskPolicy,
+                        cancellationToken);
+                }
+                catch (ProjectStructureClipboardMutationInputException exception)
+                {
+                    throw CreateNodeCopyRejectedException(exception);
+                }
+
+                var sourceNodeIdsByCopiedNodeId = copy.NodeIdMap.ToDictionary(
+                    mapping => mapping.Value,
+                    mapping => mapping.Key,
+                    StringComparer.Ordinal);
+                var sourceRootNodeIds = copy.RootNodeIds
+                    .Select(copiedRootNodeId => sourceNodeIdsByCopiedNodeId[copiedRootNodeId])
+                    .ToArray();
+                var nodeMappings = copy.NodeIdMap
+                    .OrderBy(mapping => mapping.Key, StringComparer.Ordinal)
+                    .Select(mapping => new ProjectStructureNodeCopyMapping(mapping.Key, mapping.Value))
+                    .ToArray();
+
+                return new ProjectStructureNodesCopyResult(
+                    projectId,
+                    destinationParentNodeId,
+                    sourceRootNodeIds,
+                    copy.RootNodeIds,
+                    nodeMappings,
+                    copy.OmittedBoundaryLinks);
+            },
+            cancellationToken);
+    }
+
+    private static ProjectStructureAgentException CreateNodeCopyRejectedException(
+        ProjectStructureClipboardMutationInputException exception)
+    {
+        return ProjectStructureAgentException.CreateAgentVisible(
+            409,
+            exception.ErrorCode,
+            exception.AgentMessage,
+            canRetryWithCorrectedInput: true,
+            diagnosticDetails: new
+            {
+                reason = exception.Reason.ToString(),
+                subjectNodeId = exception.SubjectNodeId,
+                deferredState = exception.DeferredState?.ToString()
+            });
+    }
+
     public Task<ProjectStructureLinkChangeResult> LinkNodesAsync(
         Guid projectId,
         ProjectStructureLinkInput request,
@@ -914,9 +1035,19 @@ public sealed class ProjectStructureAgentService(
             throw new ProjectStructureAgentException(400, "TargetProjectRequired", "A target project id is required.");
         }
 
-        return await leaseService.RunWithProjectMutationLeaseAsync(
-            sourceProjectId,
-            request.LeaseToken,
+        if (request.TargetProjectId == sourceProjectId)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                "TargetProjectMustDiffer",
+                "The target project must differ from the source project.");
+        }
+
+        return await leaseService.RunWithProjectMutationLeasesAsync(
+            [
+                new ProjectStructureProjectMutationLeaseRequest(sourceProjectId, request.LeaseToken),
+                new ProjectStructureProjectMutationLeaseRequest(request.TargetProjectId, request.TargetLeaseToken)
+            ],
             agent,
             "move-descendants-to-project",
             async cancellationToken =>
@@ -960,7 +1091,7 @@ public sealed class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
-        var requestedNodeIds = NormalizeNodeIds(request.NodeIds);
+        var requestedNodeIds = NormalizeTransferNodeIds(request.NodeIds);
         if (targetProjectId == Guid.Empty)
         {
             throw new ProjectStructureAgentException(400, "SubprojectIdRequired", "A reserved subproject id is required.");
@@ -976,44 +1107,44 @@ public sealed class ProjectStructureAgentService(
             throw new ProjectStructureAgentException(400, "SelectedNodesRequired", "At least one selected project-structure node id is required.");
         }
 
-        return await leaseService.RunWithProjectMutationLeaseAsync(
-            sourceProjectId,
-            request.LeaseToken,
-            agent,
-            "move-selected-nodes-to-new-subproject",
-            async cancellationToken =>
-            {
-                var warnings = new List<string>();
-                var sourceSurface = await projectWorkbenchService.GetStructureAsync(sourceProjectId, cancellationToken);
-                var sourceNodeIds = sourceSurface.Nodes
-                    .Where(node => node.ObjectType != ProjectObjectType.ProjectRoot)
-                    .Select(node => node.Id)
-                    .ToHashSet(StringComparer.Ordinal);
-                var existingRequestedNodeIds = requestedNodeIds
-                    .Where(sourceNodeIds.Contains)
-                    .ToList();
-                var missingNodeIds = requestedNodeIds
-                    .Where(nodeId => !sourceNodeIds.Contains(nodeId))
-                    .ToList();
-
-                if (missingNodeIds.Count > 0)
+        return await ExecuteWithAgentFailureMappingAsync(() =>
+            leaseService.RunWithProjectMutationLeaseAsync(
+                sourceProjectId,
+                request.LeaseToken,
+                agent,
+                "move-selected-nodes-to-new-subproject",
+                async cancellationToken =>
                 {
-                    warnings.Add($"Ignored {missingNodeIds.Count} selected node id(s) that were not found in the source project.");
-                }
+                    var warnings = new List<string>();
+                    var sourceSurface = await projectWorkbenchService.GetStructureAsync(sourceProjectId, cancellationToken);
+                    var sourceNodeIds = sourceSurface.Nodes
+                        .Where(node =>
+                            !node.IsSystemManaged &&
+                            node.ObjectType != ProjectObjectType.ProjectRoot)
+                        .Select(node => node.Id)
+                        .ToHashSet(StringComparer.Ordinal);
+                    var existingRequestedNodeIds = requestedNodeIds
+                        .Where(sourceNodeIds.Contains)
+                        .ToList();
+                    var missingNodeIds = requestedNodeIds
+                        .Where(nodeId => !sourceNodeIds.Contains(nodeId))
+                        .ToList();
 
-                if (existingRequestedNodeIds.Count == 0)
-                {
-                    throw new ProjectStructureAgentException(
-                        404,
-                        "SelectedNodesNotFound",
-                        "None of the selected project-structure node ids were found in the source project.",
-                        new { requestedNodeIds });
-                }
+                    if (missingNodeIds.Count > 0)
+                    {
+                        warnings.Add($"Ignored {missingNodeIds.Count} selected node id(s) that were not found in the source project.");
+                    }
 
-                var createResult = await projectsService.CreateSubprojectAsync(
-                    sourceProjectId,
-                    targetProjectId,
-                    new ProjectEditorModel
+                    if (existingRequestedNodeIds.Count == 0)
+                    {
+                        throw new ProjectStructureAgentException(
+                            404,
+                            "SelectedNodesNotFound",
+                            "None of the selected project-structure node ids were found in the source project.",
+                            new { requestedNodeIds });
+                    }
+
+                    var targetEditor = new ProjectEditorModel
                     {
                         Name = request.Name.Trim(),
                         Description = string.IsNullOrWhiteSpace(request.Description)
@@ -1026,48 +1157,33 @@ public sealed class ProjectStructureAgentService(
                             ? "Execution"
                             : request.CurrentPhase.Trim(),
                         Status = request.Status
-                    },
-                    cancellationToken);
-                var targetProject = await ResolveSavedProjectAsync(createResult, cancellationToken);
+                    };
+                    var result = await subprojectTransferCoordinator.MoveNodesToNewSubprojectAsync(
+                        sourceProjectId,
+                        targetProjectId,
+                        targetEditor,
+                        existingRequestedNodeIds,
+                        request.IncludeDescendants,
+                        cancellationToken);
+                    var transfer = result.Transfer;
 
-                var transfer = await projectWorkbenchService.MoveNodesToProjectAsync(
-                    sourceProjectId,
-                    existingRequestedNodeIds,
-                    targetProject.Id,
-                    request.IncludeDescendants,
-                    cancellationToken);
-                if (transfer is null)
-                {
-                    throw new ProjectStructureAgentException(
-                        400,
-                        "SelectedNodesTransferUnavailable",
-                        "The selected nodes could not be moved to the new subproject.",
-                        new { sourceProjectId, targetProject.Id, existingRequestedNodeIds });
-                }
+                    if (transfer.RemovedBoundaryLinks.Count > 0)
+                    {
+                        warnings.Add($"Removed {transfer.RemovedBoundaryLinks.Count} boundary-crossing link(s) whose endpoints now belong to different projects.");
+                    }
 
-                var targetSurface = await projectWorkbenchService.GetStructureAsync(targetProject.Id, cancellationToken);
-                var movedNodeIds = targetSurface.Nodes
-                    .Where(node => node.ObjectType != ProjectObjectType.ProjectRoot)
-                    .Select(node => node.Id)
-                    .OrderBy(nodeId => nodeId, StringComparer.Ordinal)
-                    .ToList();
-
-                if (transfer.MovedNodeCount != movedNodeIds.Count)
-                {
-                    warnings.Add($"Moved {transfer.MovedNodeCount} node(s), but {movedNodeIds.Count} node id(s) were found in the new subproject.");
-                }
-
-                return new ProjectStructureNodesToSubprojectResult(
-                    sourceProjectId,
-                    targetProject.Id,
-                    targetProject.Name,
-                    requestedNodeIds,
-                    movedNodeIds,
-                    transfer.MovedNodeCount,
-                    transfer.MovedRootCount,
-                    warnings);
-            },
-            cancellationToken);
+                    return new ProjectStructureNodesToSubprojectResult(
+                        sourceProjectId,
+                        result.TargetProjectId,
+                        targetEditor.Name,
+                        requestedNodeIds,
+                        transfer.MovedNodeIds,
+                        transfer.MovedRootCount,
+                        transfer.MovedLinkCount,
+                        transfer.RemovedBoundaryLinks,
+                        warnings);
+                },
+                cancellationToken));
     }
 
     public async Task<ArtifactReference> ExecuteNodeCommandAsync(
@@ -1166,21 +1282,92 @@ public sealed class ProjectStructureAgentService(
         return workflowNodeService.GetStatusAsync(projectId, nodeId, cancellationToken);
     }
 
-    public Task<int> DeleteNodeAsync(
+    public async Task<int> DeleteNodeAsync(
+        Guid projectId,
+        string nodeId,
+        ProjectStructureNodeDeleteInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+        => (await DeleteNodeDetailedAsync(
+                projectId,
+                nodeId,
+                request,
+                agent,
+                cancellationToken))
+            .DeletedNodeCount;
+
+    public Task<ProjectStructureDeletionResult> DeleteNodeDetailedAsync(
         Guid projectId,
         string nodeId,
         ProjectStructureNodeDeleteInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
-        return leaseService.RunWithProjectMutationLeaseAsync(
-            projectId,
-            request.LeaseToken,
-            agent,
-            "delete-structure-node",
-            cancellationToken => projectWorkbenchService.DeleteObjectAsync(projectId, nodeId, cancellationToken),
-            cancellationToken);
+        return ExecuteWithAgentFailureMappingAsync(() =>
+            leaseService.RunWithProjectMutationLeaseAsync(
+                projectId,
+                request.LeaseToken,
+                agent,
+                "delete-structure-node",
+                cancellationToken => DeleteOrRetryNodeAsync(
+                    projectId,
+                    nodeId,
+                    request.DurableMutationId,
+                    cancellationToken),
+                cancellationToken));
     }
+
+    private async Task<ProjectStructureDeletionResult> DeleteOrRetryNodeAsync(
+        Guid projectId,
+        string nodeId,
+        Guid? durableMutationId,
+        CancellationToken cancellationToken)
+    {
+        if (!durableMutationId.HasValue)
+        {
+            return await projectWorkbenchService.DeleteObjectDetailedAsync(
+                projectId,
+                nodeId,
+                cancellationToken);
+        }
+
+        try
+        {
+            return await projectWorkbenchService.RetryDeletionCleanupDetailedAsync(
+                projectId,
+                nodeId,
+                durableMutationId.Value,
+                cancellationToken);
+        }
+        catch (ProjectStructureDeletionRecoveryNotFoundException exception)
+        {
+            throw new ProjectStructureAgentException(
+                404,
+                "ProjectStructureDeletionRecoveryNotFound",
+                "The exact durable deletion cleanup was not found for the requested project and root.",
+                new
+                {
+                    ProjectId = projectId,
+                    RootNodeId = nodeId,
+                    DurableMutationId = durableMutationId.Value,
+                    FailureType = exception.GetType().Name
+                });
+        }
+    }
+
+    public Task<IReadOnlyList<ProjectStructureDeletionCompletionNotice>> ListDeletionCompletionNoticesAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => projectWorkbenchService.ListDeletionCompletionNoticesAsync(
+            projectId,
+            cancellationToken);
+
+    public Task<IReadOnlyList<ProjectStructureDeletionRecovery>> ListPendingDeletionRecoveriesAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => projectWorkbenchService.ListPendingDeletionRecoveriesAsync(
+            projectId,
+            cancellationToken);
 
     internal Task<int> DeleteCanonicalTaskResourceAsync(
         Guid projectId,
@@ -1201,45 +1388,38 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public Task<int> DeleteNodesAsync(
+    public async Task<int> DeleteNodesAsync(
+        Guid projectId,
+        ProjectStructureNodeDeleteBatchInput request,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+        => (await DeleteNodesDetailedAsync(
+                projectId,
+                request,
+                agent,
+                cancellationToken))
+            .DeletedNodeCount;
+
+    public Task<ProjectStructureDeletionResult> DeleteNodesDetailedAsync(
         Guid projectId,
         ProjectStructureNodeDeleteBatchInput request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
-        var requestedNodeIds = NormalizeNodeIds(request.NodeIds);
-        if (requestedNodeIds.Count == 0)
+        return ExecuteWithAgentFailureMappingAsync(async () =>
         {
-            throw new ProjectStructureAgentException(400, "SelectedNodesRequired", "At least one project-structure node id is required.");
-        }
-
-        return leaseService.RunWithProjectMutationLeaseAsync(
-            projectId,
-            request.LeaseToken,
-            agent,
-            "delete-structure-nodes",
-            async cancellationToken =>
-            {
-                var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
-                var deleteRootIds = ResolveDeleteRootNodeIds(surface.Nodes, requestedNodeIds);
-                if (deleteRootIds.Count == 0)
-                {
-                    throw new ProjectStructureAgentException(
-                        404,
-                        "SelectedNodesNotFound",
-                        "None of the selected project-structure node ids were found.",
-                        new { requestedNodeIds });
-                }
-
-                var deletedCount = 0;
-                foreach (var nodeId in deleteRootIds)
-                {
-                    deletedCount += await projectWorkbenchService.DeleteObjectAsync(projectId, nodeId, cancellationToken);
-                }
-
-                return deletedCount;
-            },
-            cancellationToken);
+            var selection = batchDeletionCoordinator.NormalizeSelection(request.NodeIds);
+            return await leaseService.RunWithProjectMutationLeaseAsync(
+                projectId,
+                request.LeaseToken,
+                agent,
+                "delete-structure-nodes",
+                cancellationToken => batchDeletionCoordinator.DeleteNodesAsync(
+                    projectId,
+                    selection,
+                    cancellationToken),
+                cancellationToken);
+        });
     }
 
     public async Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(
@@ -1351,14 +1531,8 @@ public sealed class ProjectStructureAgentService(
 
     public async Task<ProjectStructureAssetDescriptor> GetAssetAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default)
     {
-        var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
-        var node = surface.Nodes.FirstOrDefault(item => string.Equals(item.Id, nodeId, StringComparison.Ordinal));
-        if (node is null)
-        {
-            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
-        }
-
-        return MapAsset(node, projectId);
+        var (_, asset) = await GetAssetStateAsync(projectId, nodeId, cancellationToken);
+        return asset;
     }
 
     public async Task<ProjectStructureAssetContentDescriptor> GetAssetContentAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default)
@@ -1378,165 +1552,9 @@ public sealed class ProjectStructureAgentService(
         string nodeId,
         CancellationToken cancellationToken = default)
     {
-        ProjectStructureNode node = await GetNodeAsync(projectId, nodeId, cancellationToken);
-        ProjectStructureAssetDescriptor asset = MapAsset(node, projectId);
-        WorkspacePathAccessResult resolution = ResolveAssetContentPath(node);
-        if (!resolution.IsSuccess)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "AssetPathInvalid",
-                resolution.Message,
-                new { asset.MediaRelativePath });
-        }
-
-        if (!File.Exists(resolution.FullPath))
-        {
-            throw new ProjectStructureAgentException(
-                404,
-                "AssetContentNotFound",
-                $"Asset content for node '{nodeId}' was not found.",
-                new { asset.MediaRelativePath });
-        }
-
-        byte[] bytes = await ReadAssetContentBytesAsync(resolution.FullPath, cancellationToken);
+        var (node, asset) = await GetAssetStateAsync(projectId, nodeId, cancellationToken);
+        byte[] bytes = await assetContentReader.ReadAsync(node, asset, cancellationToken);
         return new ProjectStructureAssetBinaryContent(asset, bytes);
-    }
-
-    private async Task<byte[]> ReadAssetContentBytesAsync(
-        string fullPath,
-        CancellationToken cancellationToken)
-    {
-        await using var stream = new FileStream(
-            fullPath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 80 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        EnsureAssetContentPathRemainsTrusted(fullPath);
-        long initialLength = stream.Length;
-        if (initialLength > MaxAssetContentBytes)
-        {
-            throw AssetContentTooLarge();
-        }
-
-        using var memory = new MemoryStream((int)initialLength);
-        var buffer = new byte[80 * 1024];
-        long totalBytes = 0;
-        while (true)
-        {
-            int read = await stream.ReadAsync(buffer, cancellationToken);
-            if (read == 0)
-            {
-                break;
-            }
-
-            if (read > MaxAssetContentBytes - totalBytes)
-            {
-                throw AssetContentTooLarge();
-            }
-
-            totalBytes += read;
-            memory.Write(buffer, 0, read);
-        }
-
-        return memory.ToArray();
-    }
-
-    private static ProjectStructureAgentException AssetContentTooLarge()
-        => new(
-            413,
-            "AssetContentTooLarge",
-            $"Asset content exceeds the {MaxAssetContentBytes} byte limit.");
-
-    private void EnsureAssetContentPathRemainsTrusted(string fullPath)
-    {
-        if (!TryResolveTrustedAssetContentPath(fullPath, out _))
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "AssetContentPathInvalid",
-                "The asset path traverses an unsupported filesystem link.");
-        }
-    }
-
-    private WorkspacePathAccessResult ResolveAssetContentPath(ProjectStructureNode node)
-    {
-        WorkspacePathAccessResult resolution = TryResolveProjectedProcessScreenshotPath(
-            node,
-            out string screenshotPath)
-            ? pathAccessGuard.ResolveWorkspacePath(screenshotPath)
-            : pathAccessGuard.ResolveManagedFilePath(node.MediaRelativePath);
-        if (!resolution.IsSuccess)
-        {
-            return resolution;
-        }
-
-        return TryResolveTrustedAssetContentPath(resolution.FullPath, out string trustedPath)
-            ? WorkspacePathAccessResult.Success(trustedPath)
-            : WorkspacePathAccessResult.Failure(
-                "The asset path traverses an unsupported filesystem link.");
-    }
-
-    private bool TryResolveTrustedAssetContentPath(string fullPath, out string trustedPath)
-    {
-        trustedPath = string.Empty;
-        try
-        {
-            trustedPath = fileSystemPathPolicy.ResolveTrustedWorkspacePath(fullPath);
-            return true;
-        }
-        catch (Exception exception) when (
-            exception is ArgumentException
-                or IOException
-                or NotSupportedException
-                or StorageBrowseException
-                or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    private static bool TryResolveProjectedProcessScreenshotPath(
-        ProjectStructureNode node,
-        out string normalizedPath)
-    {
-        normalizedPath = node.MediaRelativePath.Trim().Replace('\\', '/');
-        string[] segments = normalizedPath.Split(
-            '/',
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (!node.IsSystemManaged ||
-            node.ObjectType != ProjectObjectType.ImageAsset ||
-            !string.Equals(
-                node.ArtifactKind,
-                ProjectStructureProcessNodeKeys.ProcessRunScreenshotArtifactKind,
-                StringComparison.Ordinal) ||
-            Path.IsPathRooted(node.MediaRelativePath) ||
-            segments.Any(segment => segment is "." or "..") ||
-            !ProjectStructureProcessNodeKeys.TryParseProcessRunScreenshotNodeKey(node.Id, out Guid runId) ||
-            node.ArtifactId != runId ||
-            !string.Equals(
-                node.Id,
-                ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId, normalizedPath),
-                StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        ProcessRunArtifactRootResolution runRoot = ProcessRunArtifactRootPolicy.Resolve(
-            normalizedPath,
-            runId);
-        string managedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(
-            new ProcessRunId(runId));
-        return runRoot.Kind == ProcessRunArtifactRootKind.ManagedArtifactRunRoot &&
-               string.Equals(
-                   runRoot.DirectoryPath,
-                   managedArtifactRoot,
-                   StringComparison.OrdinalIgnoreCase) &&
-               normalizedPath.StartsWith(
-                   $"{managedArtifactRoot}/",
-                   StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<ProjectStructureNodeSummary> CreateAssetAsync(
@@ -1550,9 +1568,10 @@ public sealed class ProjectStructureAgentService(
             throw new ProjectStructureAgentException(400, "AssetTypeRequired", "Asset nodes must be File, ImageAsset, or VideoAsset.");
         }
 
-        var media = await ResolveAssetCreateMediaAsync(request, cancellationToken);
+        ProjectStructureManagedAssetCreationPolicy.EnsureExplicitParent(request.ParentNodeKey);
+        var media = await ResolveAssetCreateMediaAsync(projectId, request, cancellationToken);
 
-        return await CreateNodeAsync(
+        return await CreateNodeCoreAsync(
             projectId,
             new ProjectStructureNodeCreateInput(
                 request.ObjectType,
@@ -1565,6 +1584,7 @@ public sealed class ProjectStructureAgentService(
                 MetadataJson: request.MetadataJson,
                 LeaseToken: request.LeaseToken),
             agent,
+            allowCanonicalTask: false,
             cancellationToken);
     }
 
@@ -1613,10 +1633,7 @@ public sealed class ProjectStructureAgentService(
 
                 await projectWorkbenchService.LinkObjectsAsync(projectId, createdRevision.Id, nodeId, ProjectObjectLinkKind.DerivedFrom, cancellationToken);
 
-                return MapAsset(createdRevision, projectId) with
-                {
-                    RevisionParentNodeId = nodeId
-                };
+                return MapAsset(createdRevision, projectId, nodeId);
             },
             cancellationToken);
     }
@@ -1635,9 +1652,29 @@ public sealed class ProjectStructureAgentService(
             cancellationToken);
     }
 
+    private static async Task<T> ExecuteWithAgentFailureMappingAsync<T>(
+        Func<Task<T>> executeAsync)
+    {
+        ArgumentNullException.ThrowIfNull(executeAsync);
+
+        try
+        {
+            return await executeAsync();
+        }
+        catch (Exception exception) when (
+            ProjectStructureAgentTransferFailureMapper.TryMap(
+                exception,
+                out var mappedException))
+        {
+            throw mappedException;
+        }
+    }
+
     private async Task<ProjectSummary> ResolveSavedProjectAsync(Result<Guid> result, CancellationToken cancellationToken)
     {
-        ThrowIfProjectCreationRejected(result);
+        ProjectStructureProjectCreationResult.ThrowIfRejected(
+            result,
+            "The project could not be created.");
         var projectId = result.Value;
         if (projectId == Guid.Empty)
         {
@@ -1676,10 +1713,58 @@ public sealed class ProjectStructureAgentService(
         return MapNodeSummary(node, node.Priority, FullNodeReadRequest);
     }
 
-    private static ProjectStructureAssetDescriptor MapAsset(ProjectStructureNode node, Guid projectId)
+    private async Task<(ProjectStructureNode Node, ProjectStructureAssetDescriptor Asset)> GetAssetStateAsync(
+        Guid projectId,
+        string nodeId,
+        CancellationToken cancellationToken)
+    {
+        var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
+        var node = surface.Nodes.FirstOrDefault(item => string.Equals(item.Id, nodeId, StringComparison.Ordinal));
+        if (node is null)
+        {
+            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
+        }
+
+        string? revisionParentNodeId = ResolveRevisionParentNodeId(surface, node);
+        return (node, MapAsset(node, projectId, revisionParentNodeId));
+    }
+
+    private static string? ResolveRevisionParentNodeId(
+        ProjectStructureSurface surface,
+        ProjectStructureNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.ParentId))
+        {
+            return null;
+        }
+
+        var matchingLinks = surface.Links
+            .Where(link =>
+                link.Kind == ProjectObjectLinkKind.DerivedFrom &&
+                string.Equals(link.SourceId, node.Id, StringComparison.Ordinal) &&
+                string.Equals(link.TargetId, node.ParentId, StringComparison.Ordinal))
+            .Take(2)
+            .ToList();
+
+        return matchingLinks.Count switch
+        {
+            0 => null,
+            1 => node.ParentId,
+            _ => throw new ProjectStructureAgentException(
+                409,
+                "AssetRevisionLineageInvalid",
+                $"Asset node '{node.Id}' has duplicate revision-parent links.")
+        };
+    }
+
+    private static ProjectStructureAssetDescriptor MapAsset(
+        ProjectStructureNode node,
+        Guid projectId,
+        string? revisionParentNodeId = null)
     {
         if (node.ObjectType is not (ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset) ||
-            string.IsNullOrWhiteSpace(node.MediaRelativePath))
+            (string.IsNullOrWhiteSpace(node.MediaRelativePath) &&
+             string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson)))
         {
             throw new ProjectStructureAgentException(400, "AssetRequired", $"Node '{node.Id}' is not a managed asset node.");
         }
@@ -1697,7 +1782,7 @@ public sealed class ProjectStructureAgentService(
             node.MediaOriginalFileName,
             string.IsNullOrWhiteSpace(node.MetadataJson) ? "{}" : node.MetadataJson,
             true,
-            node.Id);
+            revisionParentNodeId);
     }
 
     private static void EnsureValidMediaPayload(ProjectObjectMediaPayload? media)
@@ -1736,6 +1821,7 @@ public sealed class ProjectStructureAgentService(
     }
 
     private async Task<ProjectObjectMediaPayload> ResolveAssetCreateMediaAsync(
+        Guid projectId,
         ProjectStructureAssetCreateInput request,
         CancellationToken cancellationToken)
     {
@@ -1752,7 +1838,7 @@ public sealed class ProjectStructureAgentService(
                 return await ResolveExternalSourceMediaAsync(request, workspacePathSourceUri, cancellationToken);
             }
 
-            return await ResolveWorkspaceSourceMediaAsync(request, cancellationToken);
+            return await ResolveWorkspaceSourceMediaAsync(projectId, request, cancellationToken);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SourceUrl))
@@ -1770,13 +1856,14 @@ public sealed class ProjectStructureAgentService(
     }
 
     private async Task<ProjectObjectMediaPayload> ResolveWorkspaceSourceMediaAsync(
+        Guid projectId,
         ProjectStructureAssetCreateInput request,
         CancellationToken cancellationToken)
     {
-        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(request.SourceWorkspacePath!);
-        var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
+        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(projectId, request.SourceWorkspacePath!);
+        var bytes = await ProjectStructureWorkspaceAssetReader.ReadAsync(resolution.FullPath, cancellationToken);
         var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
-        var contentType = ResolveSourceAssetContentType(request.SourceContentType, fileName);
+        var contentType = ProjectStructureAssetMediaTypePolicy.Resolve(request.SourceContentType, fileName);
         return new ProjectObjectMediaPayload(
             fileName,
             contentType,
@@ -1788,66 +1875,91 @@ public sealed class ProjectStructureAgentService(
         Uri sourceUri,
         CancellationToken cancellationToken)
     {
-        ValidateExternalSourceUri(sourceUri);
-
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, sourceUri);
-        var httpClient = httpClientFactory.CreateClient("ProjectStructureExternalAssetSource");
+        var httpClient = httpClientFactory.CreateClient(ProjectStructureExternalAssetSourcePolicy.HttpClientName);
+        var currentSourceUri = sourceUri;
 
-        HttpResponseMessage response;
-        try
+        for (var redirectCount = 0; ; redirectCount++)
         {
-            response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-        }
-        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new ProjectStructureAgentException(
-                504,
-                "SourceUrlTimeout",
-                $"External asset source '{sourceUri}' did not respond before the download timeout.",
-                ex.Message);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new ProjectStructureAgentException(
-                502,
-                "SourceUrlDownloadFailed",
-                $"External asset source '{sourceUri}' could not be downloaded.",
-                ex.Message);
-        }
+            ValidateExternalSourceUri(currentSourceUri);
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, currentSourceUri);
 
-        using (response)
-        {
-            if (!response.IsSuccessStatusCode)
+            HttpResponseMessage response;
+            try
+            {
+                response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            }
+            catch (ProjectStructureExternalAssetSourcePolicyException ex)
+            {
+                throw CreateSourceUrlNotAllowedException(ex);
+            }
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new ProjectStructureAgentException(
+                    504,
+                    "SourceUrlTimeout",
+                    $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' did not respond before the download timeout.",
+                    new { failureType = ex.GetType().Name });
+            }
+            catch (HttpRequestException ex) when (ContainsExternalSourcePolicyRejection(ex))
+            {
+                throw CreateSourceUrlNotAllowedException(ex);
+            }
+            catch (HttpRequestException ex)
             {
                 throw new ProjectStructureAgentException(
                     502,
                     "SourceUrlDownloadFailed",
-                    $"External asset source '{sourceUri}' returned {(int)response.StatusCode} {response.ReasonPhrase}.");
+                    $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' could not be downloaded.",
+                    new { failureType = ex.GetType().Name });
             }
 
-            var declaredLength = response.Content.Headers.ContentLength;
-            if (declaredLength is > MaxExternalAssetSourceBytes)
+            using (response)
             {
-                throw new ProjectStructureAgentException(
-                    413,
-                    "SourceUrlTooLarge",
-                    $"External asset source '{sourceUri}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
+                if (IsExternalSourceRedirect(response.StatusCode))
+                {
+                    if (redirectCount >= ProjectStructureExternalAssetSourcePolicy.MaximumRedirects)
+                    {
+                        throw CreateSourceUrlNotAllowedException(
+                            new ProjectStructureExternalAssetSourcePolicyException(
+                                $"External asset sources are limited to {ProjectStructureExternalAssetSourcePolicy.MaximumRedirects} redirects."));
+                    }
+
+                    currentSourceUri = ResolveExternalSourceRedirectUri(currentSourceUri, response.Headers.Location);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new ProjectStructureAgentException(
+                        502,
+                        "SourceUrlDownloadFailed",
+                        $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' returned {(int)response.StatusCode} {response.ReasonPhrase}.");
+                }
+
+                var declaredLength = response.Content.Headers.ContentLength;
+                if (declaredLength is > MaxExternalAssetSourceBytes)
+                {
+                    throw new ProjectStructureAgentException(
+                        413,
+                        "SourceUrlTooLarge",
+                        $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(currentSourceUri)}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
+                }
+
+                var bytes = await ReadExternalSourceBytesAsync(response.Content, currentSourceUri, timeout.Token);
+                var fileName = ResolveSourceAssetFileName(request.SourceFileName, currentSourceUri);
+                var contentType = ProjectStructureAssetMediaTypePolicy.Resolve(
+                    string.IsNullOrWhiteSpace(request.SourceContentType)
+                        ? response.Content.Headers.ContentType?.MediaType
+                        : request.SourceContentType,
+                    fileName);
+
+                return new ProjectObjectMediaPayload(
+                    fileName,
+                    contentType,
+                    Convert.ToBase64String(bytes));
             }
-
-            var bytes = await ReadExternalSourceBytesAsync(response.Content, sourceUri, timeout.Token);
-            var fileName = ResolveSourceAssetFileName(request.SourceFileName, sourceUri);
-            var contentType = ResolveSourceAssetContentType(
-                string.IsNullOrWhiteSpace(request.SourceContentType)
-                    ? response.Content.Headers.ContentType?.MediaType
-                    : request.SourceContentType,
-                fileName);
-
-            return new ProjectObjectMediaPayload(
-                fileName,
-                contentType,
-                Convert.ToBase64String(bytes));
         }
     }
 
@@ -1875,7 +1987,7 @@ public sealed class ProjectStructureAgentService(
                 throw new ProjectStructureAgentException(
                     413,
                     "SourceUrlTooLarge",
-                    $"External asset source '{sourceUri}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
+                    $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(sourceUri)}' is larger than the {MaxExternalAssetSourceBytes} byte limit.");
             }
 
             memory.Write(buffer, 0, read);
@@ -1886,7 +1998,7 @@ public sealed class ProjectStructureAgentService(
             throw new ProjectStructureAgentException(
                 400,
                 "SourceUrlEmpty",
-                $"External asset source '{sourceUri}' returned no content.");
+                $"External asset source '{ProjectStructureExternalAssetSourcePolicy.FormatForDisplay(sourceUri)}' returned no content.");
         }
 
         return memory.ToArray();
@@ -1894,7 +2006,8 @@ public sealed class ProjectStructureAgentService(
 
     private static Uri ResolveExternalSourceUri(string? sourceUrl)
     {
-        if (!TryResolveHttpSourceUri(sourceUrl, out var uri))
+        if (string.IsNullOrWhiteSpace(sourceUrl) ||
+            !Uri.TryCreate(sourceUrl.Trim(), UriKind.Absolute, out var uri))
         {
             throw new ProjectStructureAgentException(
                 400,
@@ -1902,6 +2015,7 @@ public sealed class ProjectStructureAgentService(
                 "External asset source URLs must be absolute http or https URLs.");
         }
 
+        ValidateExternalSourceUri(uri);
         return uri;
     }
 
@@ -1915,50 +2029,63 @@ public sealed class ProjectStructureAgentService(
 
     private static void ValidateExternalSourceUri(Uri sourceUri)
     {
-        if (!string.IsNullOrWhiteSpace(sourceUri.UserInfo))
+        try
         {
-            throw new ProjectStructureAgentException(
-                400,
-                "SourceUrlNotAllowed",
-                "External asset source URLs must not contain embedded credentials.");
+            ProjectStructureExternalAssetSourcePolicy.ValidateUri(sourceUri);
         }
-
-        if (sourceUri.IsLoopback ||
-            sourceUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-            sourceUri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) ||
-            (IPAddress.TryParse(sourceUri.Host, out var address) && IsBlockedSourceAddress(address)))
+        catch (ProjectStructureExternalAssetSourcePolicyException ex)
         {
-            throw new ProjectStructureAgentException(
-                400,
-                "SourceUrlNotAllowed",
-                "External asset source URLs must point to public http or https hosts.");
+            throw CreateSourceUrlNotAllowedException(ex);
         }
     }
 
-    private static bool IsBlockedSourceAddress(IPAddress address)
+    private static Uri ResolveExternalSourceRedirectUri(Uri sourceUri, Uri? location)
     {
-        if (IPAddress.IsLoopback(address))
+        if (location is null || !Uri.TryCreate(sourceUri, location, out var redirectUri))
+        {
+            throw CreateSourceUrlNotAllowedException(
+                new ProjectStructureExternalAssetSourcePolicyException(
+                    "External asset source redirects must include a valid Location URL."));
+        }
+
+        ValidateExternalSourceUri(redirectUri);
+        return redirectUri;
+    }
+
+    private static bool IsExternalSourceRedirect(HttpStatusCode statusCode)
+    {
+        return statusCode is HttpStatusCode.MovedPermanently or
+            HttpStatusCode.Redirect or
+            HttpStatusCode.RedirectMethod or
+            HttpStatusCode.TemporaryRedirect or
+            HttpStatusCode.PermanentRedirect;
+    }
+
+    private static bool ContainsExternalSourcePolicyRejection(Exception exception)
+    {
+        if (exception is ProjectStructureExternalAssetSourcePolicyException)
         {
             return true;
         }
 
-        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-        {
-            var bytes = address.GetAddressBytes();
-            return bytes[0] == 10 ||
-                   bytes[0] == 127 ||
-                   (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-                   (bytes[0] == 192 && bytes[1] == 168) ||
-                   (bytes[0] == 169 && bytes[1] == 254) ||
-                   bytes[0] == 0;
-        }
-
-        if (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast)
+        if (exception is AggregateException aggregateException &&
+            aggregateException.InnerExceptions.Any(ContainsExternalSourcePolicyRejection))
         {
             return true;
         }
 
-        return address.Equals(IPAddress.IPv6Loopback) || address.Equals(IPAddress.IPv6None);
+        return exception.InnerException is not null &&
+               ContainsExternalSourcePolicyRejection(exception.InnerException);
+    }
+
+    private static ProjectStructureAgentException CreateSourceUrlNotAllowedException(Exception exception)
+    {
+        return ProjectStructureAgentException.CreateAgentVisible(
+            400,
+            "SourceUrlNotAllowed",
+            "External asset source URLs must point only to public http or https hosts, without embedded credentials or excessive redirects.",
+            canRetryWithCorrectedInput: true,
+            diagnosticDetails: new { failureType = exception.GetType().Name });
     }
 
     private static string ResolveSourceAssetFileName(string? requestedFileName, Uri sourceUri)
@@ -1980,28 +2107,6 @@ public sealed class ProjectStructureAgentService(
         return string.IsNullOrWhiteSpace(candidate)
             ? "project-asset.bin"
             : candidate;
-    }
-
-    private static string ResolveSourceAssetContentType(string? requestedContentType, string fileName)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedContentType))
-        {
-            return requestedContentType.Trim();
-        }
-
-        return Path.GetExtension(fileName).ToLowerInvariant() switch
-        {
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".webp" => "image/webp",
-            ".gif" => "image/gif",
-            ".svg" => "image/svg+xml",
-            ".pdf" => "application/pdf",
-            ".json" => "application/json",
-            ".md" => "text/markdown",
-            ".txt" => "text/plain",
-            _ => "application/octet-stream"
-        };
     }
 
     private static void ValidateLinkInput(ProjectStructureLinkInput request)
@@ -2041,19 +2146,6 @@ public sealed class ProjectStructureAgentService(
         }
     }
 
-    private static void ThrowIfProjectCreationRejected(Result result)
-    {
-        if (result.IsSuccess)
-        {
-            return;
-        }
-
-        var message = string.Join(" ", result.Errors.Select(error => error.Message));
-        throw new ProjectStructureProjectCreationRejectedException(
-            string.IsNullOrWhiteSpace(message) ? "The project could not be created." : message,
-            result.Errors);
-    }
-
     private static void ThrowIfFailure(Result result)
     {
         if (result.IsSuccess)
@@ -2068,56 +2160,13 @@ public sealed class ProjectStructureAgentService(
             string.IsNullOrWhiteSpace(message) ? "The request could not be completed." : message);
     }
 
-    private static IReadOnlyList<string> NormalizeNodeIds(IReadOnlyList<string>? nodeIds)
+    private static IReadOnlyList<string> NormalizeTransferNodeIds(IReadOnlyList<string>? nodeIds)
         => nodeIds?
             .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
             .Select(nodeId => nodeId.Trim())
             .Distinct(StringComparer.Ordinal)
             .ToList()
             ?? [];
-
-    private static IReadOnlyList<string> ResolveDeleteRootNodeIds(
-        IReadOnlyList<ProjectStructureNode> nodes,
-        IReadOnlyList<string> requestedNodeIds)
-    {
-        var nodesById = nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
-        var selectedIds = requestedNodeIds
-            .Where(nodesById.ContainsKey)
-            .ToHashSet(StringComparer.Ordinal);
-        if (selectedIds.Count < 2)
-        {
-            return requestedNodeIds
-                .Where(selectedIds.Contains)
-                .ToList();
-        }
-
-        return requestedNodeIds
-            .Where(selectedIds.Contains)
-            .Where(nodeId => !HasSelectedAncestor(nodesById[nodeId], selectedIds, nodesById))
-            .ToList();
-    }
-
-    private static bool HasSelectedAncestor(
-        ProjectStructureNode node,
-        IReadOnlySet<string> selectedIds,
-        IReadOnlyDictionary<string, ProjectStructureNode> nodesById)
-    {
-        var visitedIds = new HashSet<string>(StringComparer.Ordinal);
-        var parentId = node.ParentId;
-        while (!string.IsNullOrWhiteSpace(parentId) && visitedIds.Add(parentId))
-        {
-            if (selectedIds.Contains(parentId))
-            {
-                return true;
-            }
-
-            parentId = nodesById.TryGetValue(parentId, out var parent)
-                ? parent.ParentId
-                : null;
-        }
-
-        return false;
-    }
 
     private static HashSet<string>? ResolveIncludedNodeIds(IReadOnlyList<ProjectStructureNode> nodes, ProjectStructureReadRequest request)
     {

@@ -9,6 +9,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.AspNetCore.Http;
@@ -197,6 +198,8 @@ public sealed class AgentEventsApiIntegrationTests
         var generation = scope.ServiceProvider
             .GetRequiredService<IAgentExecutionProfileGenerationSource>()
             .GetGeneration();
+        var agentId = Guid.NewGuid();
+        var chatSessionId = Guid.NewGuid();
         var operationId = AgentExecutionOperationId.New();
         var streamId = new AgentExecutionActivityStreamId(
             profile.Profile.Id,
@@ -208,8 +211,8 @@ public sealed class AgentEventsApiIntegrationTests
         var admission = Assert.IsType<AgentExecutionActivityAdmitted>(
             coordinator.AdmitOperation(
                 streamId,
-                Guid.NewGuid(),
-                chatSessionId: null,
+                agentId,
+                chatSessionId,
                 "Test operation admitted."));
         using var operation = admission.Operation;
 
@@ -217,7 +220,8 @@ public sealed class AgentEventsApiIntegrationTests
             "/api/agents/execution-runs/stream",
             new
             {
-                agentId = Guid.NewGuid(),
+                agentId,
+                chatSessionId,
                 prompt = "This command must not start.",
                 activityOperationId = operationId.Value
             });
@@ -227,10 +231,86 @@ public sealed class AgentEventsApiIntegrationTests
             operationId.Value.ToString("D"),
             Assert.Single(response.Headers.GetValues(
                 AgentApiHeaderNames.ActivityOperationId)));
-        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var payload = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
+        Assert.NotNull(payload);
         Assert.Equal(
             AgentActivityApiResults.DuplicateOperationCode,
-            payload.RootElement.GetProperty("errors")[0].GetProperty("code").GetString());
+            Assert.Single(payload.Errors).Code);
+        Assert.False(string.IsNullOrWhiteSpace(payload.CorrelationId));
+        Assert.Equal(agentId, payload.AgentId);
+        Assert.Null(payload.ExecutionRunId);
+        Assert.Equal(chatSessionId, payload.ChatSessionId);
+        Assert.Null(payload.ProviderFailureCategory);
+    }
+
+    [Fact]
+    public async Task Exhausted_activity_capacity_returns_correlated_service_unavailable_from_http_command()
+    {
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: services => services.AddSingleton(
+                new PartitionedSequencedStream<
+                    AgentExecutionActivityStreamId,
+                    AgentExecutionActivity>(
+                    new PartitionedSequencedStreamPolicy(
+                        maxPartitions: 1,
+                        maxEventsPerPartition: 16,
+                        maxTerminalPartitions: 1,
+                        terminalRetention: TimeSpan.FromMinutes(5),
+                        maxTombstones: 1,
+                        tombstoneRetention: TimeSpan.FromMinutes(5)),
+                    TimeProvider.System)),
+            useInMemoryDatabase: true);
+        using var scope = host.App.Services.CreateScope();
+        var profile = scope.ServiceProvider
+            .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+            .ResolveCurrentProfile();
+        var generation = scope.ServiceProvider
+            .GetRequiredService<IAgentExecutionProfileGenerationSource>()
+            .GetGeneration();
+        var coordinator = scope.ServiceProvider
+            .GetRequiredService<IAgentExecutionActivityCoordinator>();
+        var occupiedStreamId = new AgentExecutionActivityStreamId(
+            profile.Profile.Id,
+            WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N")),
+            generation,
+            AgentExecutionOperationId.New());
+        var occupiedAdmission = Assert.IsType<AgentExecutionActivityAdmitted>(
+            coordinator.AdmitOperation(
+                occupiedStreamId,
+                Guid.NewGuid(),
+                chatSessionId: null,
+                "Keep the only activity partition occupied."));
+        using var occupiedOperation = occupiedAdmission.Operation;
+        var agentId = Guid.NewGuid();
+        var chatSessionId = Guid.NewGuid();
+        var rejectedOperationId = AgentExecutionOperationId.New();
+
+        using var response = await host.Client.PostAsJsonAsync(
+            "/api/agents/execution-runs",
+            new
+            {
+                agentId,
+                chatSessionId,
+                prompt = "This command must be rejected at admission.",
+                activityOperationId = rejectedOperationId.Value
+            });
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(
+            rejectedOperationId.Value.ToString("D"),
+            Assert.Single(response.Headers.GetValues(
+                AgentApiHeaderNames.ActivityOperationId)));
+        var payload = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
+        Assert.NotNull(payload);
+        Assert.Equal(
+            AgentActivityApiResults.CapacityExhaustedCode,
+            Assert.Single(payload.Errors).Code);
+        Assert.False(string.IsNullOrWhiteSpace(payload.CorrelationId));
+        Assert.Equal(agentId, payload.AgentId);
+        Assert.Null(payload.ExecutionRunId);
+        Assert.Equal(chatSessionId, payload.ChatSessionId);
+        Assert.Null(payload.ProviderFailureCategory);
     }
 
     [Fact]
@@ -341,7 +421,7 @@ public sealed class AgentEventsApiIntegrationTests
                 StringComparison.Ordinal));
         Assert.DoesNotContain("id: ", failed, StringComparison.Ordinal);
         Assert.Contains(
-            "\"code\":\"agents.command-failed\"",
+            $"\"code\":\"{ApiEndpointResults.RunFailedCode}\"",
             failed,
             StringComparison.Ordinal);
     }

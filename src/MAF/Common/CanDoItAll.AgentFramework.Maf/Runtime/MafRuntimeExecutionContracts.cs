@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
@@ -21,8 +22,15 @@ internal sealed class RuntimeBuildResult(
     Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null,
     Func<IReadOnlyList<AgentContextContributionTrace>>? snapshotContextContributionTraces = null,
     RuntimeCapabilityState? runtimeCapabilityState = null,
-    Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate = null) : IAsyncDisposable
+    Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate = null,
+    ProviderRequestCompatibilityEvidence? entryAgentRequestCompatibilityEvidence = null) : IAsyncDisposable
 {
+    private const string DisposalFailureTypesDataKey =
+        "CanDoItAll.RuntimeBuildDisposalFailureTypes";
+    private static readonly TimeSpan DisposalTimeout = TimeSpan.FromSeconds(5);
+    private readonly object disposalLock = new();
+    private Task<IReadOnlyList<Exception>>? disposalTask;
+
     public AIAgent Agent { get; } = agent;
 
     public ProviderProfile Provider { get; } = provider;
@@ -36,6 +44,8 @@ internal sealed class RuntimeBuildResult(
     public RuntimeCapabilityState? CapabilityState { get; } = runtimeCapabilityState;
 
     public Func<AgentResponseUpdate, bool>? IsTerminalResponseUpdate { get; } = isTerminalResponseUpdate;
+
+    public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; } = entryAgentRequestCompatibilityEvidence;
 
     public IReadOnlyList<AITool> FinalizerTools { get; } = finalizerCapture?.Tools ?? [];
 
@@ -52,25 +62,147 @@ internal sealed class RuntimeBuildResult(
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var disposable in asyncDisposables)
+        await CompleteDisposalAsync(primaryFailure: null).ConfigureAwait(false);
+    }
+
+    public async Task<TResult> ExecuteWithLifetimeAsync<TResult>(Func<Task<TResult>> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        Exception? primaryFailure = null;
+        try
         {
-            await disposable.DisposeAsync();
+            return await action().ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            primaryFailure = exception;
+            throw;
+        }
+        finally
+        {
+            await CompleteDisposalAsync(primaryFailure).ConfigureAwait(false);
+        }
+    }
+
+    internal async ValueTask DisposeAsync(Exception? primaryFailure)
+    {
+        await CompleteDisposalAsync(primaryFailure).ConfigureAwait(false);
+    }
+
+    private async ValueTask CompleteDisposalAsync(Exception? primaryFailure)
+    {
+        var failures = await GetOrCreateDisposalTask().ConfigureAwait(false);
+        if (failures.Count == 0)
+        {
+            return;
         }
 
-        foreach (var disposable in disposables)
+        if (primaryFailure is not null)
         {
-            disposable.Dispose();
+            var existingFailureTypes = primaryFailure.Data[DisposalFailureTypesDataKey] as string;
+            primaryFailure.Data[DisposalFailureTypesDataKey] = string.Join(
+                ",",
+                (existingFailureTypes ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Concat(failures.Select(ResolveDiagnosticFailureType))
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(16));
+            return;
         }
+
+        if (failures.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+
+        throw new AggregateException("Runtime build cleanup failed.", failures);
+    }
+
+    private Task<IReadOnlyList<Exception>> GetOrCreateDisposalTask()
+    {
+        lock (disposalLock)
+        {
+            disposalTask ??= DisposeCoreAsync();
+            return disposalTask;
+        }
+    }
+
+    private async Task<IReadOnlyList<Exception>> DisposeCoreAsync()
+    {
+        var failures = new List<Exception>();
 
         if (Agent is IAsyncDisposable asyncDisposableAgent)
         {
-            await asyncDisposableAgent.DisposeAsync();
+            await CaptureAsyncDisposalFailureAsync(asyncDisposableAgent, failures).ConfigureAwait(false);
         }
         else if (Agent is IDisposable disposableAgent)
         {
-            disposableAgent.Dispose();
+            CaptureDisposalFailure(disposableAgent, failures);
+        }
+
+        foreach (var disposable in asyncDisposables.Reverse())
+        {
+            await CaptureAsyncDisposalFailureAsync(disposable, failures).ConfigureAwait(false);
+        }
+
+        foreach (var disposable in disposables.Reverse())
+        {
+            CaptureDisposalFailure(disposable, failures);
+        }
+
+        return failures;
+    }
+
+    private static async ValueTask CaptureAsyncDisposalFailureAsync(
+        IAsyncDisposable disposable,
+        ICollection<Exception> failures)
+    {
+        Task? disposal = null;
+        try
+        {
+            disposal = disposable.DisposeAsync().AsTask();
+            await disposal.WaitAsync(DisposalTimeout).ConfigureAwait(false);
+        }
+        catch (TimeoutException exception) when (disposal is { IsCompleted: false })
+        {
+            ObserveLateDisposal(disposal);
+            failures.Add(exception);
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
         }
     }
+
+    private static void CaptureDisposalFailure(
+        IDisposable disposable,
+        ICollection<Exception> failures)
+    {
+        try
+        {
+            disposable.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+    }
+
+    private static void ObserveLateDisposal(Task disposal)
+    {
+        _ = disposal.ContinueWith(
+            static completedDisposal =>
+            {
+                _ = completedDisposal.Exception;
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private static string ResolveDiagnosticFailureType(Exception exception)
+        => exception.GetType().FullName ?? exception.GetType().Name;
 }
 
 internal sealed class HostedRuntimeAgent(RuntimeBuildResult runtimeBuild)
@@ -83,7 +215,7 @@ internal sealed class HostedRuntimeAgent(RuntimeBuildResult runtimeBuild)
 
     public void Dispose()
     {
-        _ = DisposeAsync();
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }
 

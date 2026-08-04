@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
@@ -72,6 +73,9 @@ public sealed class ProcessRunFilesDialogTests
         IFileToolsBrowseSessionFactory sessionFactory)
     {
         context.Services.AddLogging();
+        context.Services.AddSingleton(new FileInteractionComponentBuilder()
+            .AddBuiltIns()
+            .Build());
         context.Services.AddSingleton(scopeProvider);
         context.Services.AddSingleton(sessionFactory);
         context.Services.AddSingleton<IFileToolsBrowseItemActivator, ThrowingBrowseItemActivator>();

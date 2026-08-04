@@ -245,15 +245,13 @@ public sealed class ProviderRuntimeImageGenerationServiceTests
                 return new ProviderCredentialResolution(
                     $"credential:{provider.Id:D}",
                     "Scoped test resolver",
-                    string.Empty,
-                    ShouldPromoteToProcessEnvironment: false);
+                    string.Empty);
             }
 
             return new ProviderCredentialResolution(
                 string.Empty,
                 "Scoped test resolver",
-                $"Provider '{provider.Id:D}' was not prepared for the active dispatch.",
-                ShouldPromoteToProcessEnvironment: false);
+                $"Provider '{provider.Id:D}' was not prepared for the active dispatch.");
         }
 
         private IAgentProviderCredentialDispatchScope BeginScope(
@@ -340,8 +338,7 @@ public sealed class ProviderRuntimeImageGenerationServiceTests
             new(
                 string.Empty,
                 "Not called",
-                "The driver has not resolved credentials.",
-                ShouldPromoteToProcessEnvironment: false);
+                "The driver has not resolved credentials.");
 
         public int ObservedScopeDepth { get; private set; }
 

@@ -124,8 +124,10 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var fullPath = pathPolicy.ResolveFullPath(storage, reference.Locator);
+        cancellationToken.ThrowIfCancellationRequested();
         if (File.Exists(fullPath))
         {
             File.Delete(fullPath);

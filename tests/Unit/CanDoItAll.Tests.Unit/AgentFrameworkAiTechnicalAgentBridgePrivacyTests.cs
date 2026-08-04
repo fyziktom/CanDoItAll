@@ -25,7 +25,7 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
         ]);
         var existingPartyId = Guid.Parse("7b3eeb93-5b7f-47cc-888f-058fb441d15b");
         var newPartyId = Guid.Parse("b86c540f-048b-4774-a7ca-7d9c70053176");
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"agent-framework-party-tags-{Guid.NewGuid():N}")
             .Options;
         IDbContextFactory<AppDbContext> dbContextFactory = new TestDbContextFactory(options);
@@ -80,7 +80,7 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
             typeof(AgentFrameworkModuleAssemblyMarker).Assembly
         ]);
         var partyId = Guid.Parse("83bcd274-eeb1-4457-b809-7c6f3388b27c");
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"agent-framework-summary-projection-{Guid.NewGuid():N}")
             .Options;
         IDbContextFactory<AppDbContext> dbContextFactory = new TestDbContextFactory(options);

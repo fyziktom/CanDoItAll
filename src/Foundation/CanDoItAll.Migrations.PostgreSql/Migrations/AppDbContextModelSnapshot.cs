@@ -560,6 +560,49 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Memory_WorkerLeases", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.AgentProjectStructureAccessRevocationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastFailureCode")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_ProjectAccessRevocations_Project");
+
+                    b.HasIndex("Status", "CreatedAtUtc")
+                        .HasDatabaseName("IX_AF_ProjectAccessRevocations_Status");
+
+                    b.ToTable("AgentFramework_ProjectAccessRevocations", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowArtifactRecordEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2651,6 +2694,33 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("ProjectId", "PartyId", "AssignmentKind", "NodeKey");
 
                     b.ToTable("CrmHr_ProjectPartyAssignments", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignmentMoveReceipt", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NodeSetFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("SourceProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetProjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("OperationId");
+
+                    b.HasIndex("SourceProjectId", "TargetProjectId", "CompletedAtUtc");
+
+                    b.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.RecruitmentApplication", b =>

@@ -171,6 +171,7 @@ internal sealed class InputAttachmentPreparer(
             TotalTokens: inputTokens + outputTokens,
             ToolCallCount: 0)
         {
+            ProviderProfileId = provider.Id,
             DiagnosticsJson = JsonSerializer.Serialize(
                 new Dictionary<string, string>
                 {

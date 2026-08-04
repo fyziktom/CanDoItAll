@@ -43,7 +43,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
             Assert.Contains(provider.Name, new[] { "OpenAI default", "OpenAI chat completions" });
             Assert.Equal(ProviderKind.OpenAi, provider.Kind);
             Assert.Equal("https://api.openai.com/v1", provider.BaseUrl);
-            Assert.Equal("OPENAI_API_KEY", provider.ApiKeyEnvironmentVariable);
+            Assert.Empty(provider.ApiKeyEnvironmentVariable);
         }
         finally
         {
@@ -122,6 +122,8 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
             await workspaceService.ListAgentsAsync(includeTemplates: false),
             item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
         var editor = await workspaceService.GetAgentEditorAsync(qaAgent.Id);
+        Assert.Equal(AgentReasoningEffortLevel.Medium, editor.ThinkingEffortOverride);
+
         editor.ProviderProfileId = remoteOllamaProvider.Id;
         editor.Model = remoteOllamaProvider.DefaultModel;
         editor.EnableBackgroundResponses = false;
@@ -137,6 +139,11 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
         Assert.Equal(remoteOllamaProvider.Id, qaAgentAfterRepair.ProviderProfileId);
         Assert.Equal(remoteOllamaProvider.DefaultModel, qaAgentAfterRepair.Model);
         Assert.False(qaAgentAfterRepair.EnableBackgroundResponses);
+        Assert.Equal(
+            AgentReasoningEffortLevel.Medium,
+            AgentThinkingEffortPolicy.ReadConfiguredEffort(
+                qaAgentAfterRepair.ConfigurationJson,
+                "repaired managed-seed agent"));
     }
 
     [Fact]
@@ -158,6 +165,8 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
         var editor = await workspaceService.GetAgentEditorAsync(financialStrategist.Id);
         editor.ProviderProfileId = localOllamaProvider.Id;
         editor.Model = string.Empty;
+        editor.ThinkingEffortOverride = null;
+        editor.IsThinkingEffortOverrideEdited = true;
 
         await workspaceService.SaveAgentAsync(editor);
         await repairService.EnsureCurrentOrganizationCatalogAsync();
@@ -169,6 +178,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
 
         Assert.Equal(localOllamaProvider.Id, savedEditor.ProviderProfileId);
         Assert.Empty(savedEditor.Model);
+        Assert.Null(savedEditor.ThinkingEffortOverride);
         Assert.Equal(localOllamaProvider.Id, savedAgent.ProviderProfileId);
         Assert.Empty(savedAgent.Model);
         Assert.Equal(localOllamaProvider.DefaultModel, ManagedSeedProviderFallbacks.ResolveModel(savedAgent, localOllamaProvider));

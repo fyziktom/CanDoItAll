@@ -430,7 +430,13 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
             CancellationToken cancellationToken = default)
             => throw UnexpectedCall();
 
+        public Task DeleteAssignmentsForProjectAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+            => throw UnexpectedCall();
+
         public Task MoveAssignmentsToProjectAsync(
+            ProjectPartyAssignmentMoveOperationId operationId,
             Guid sourceProjectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
             Guid targetProjectId,

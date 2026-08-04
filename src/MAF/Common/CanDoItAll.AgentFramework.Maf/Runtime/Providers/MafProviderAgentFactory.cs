@@ -20,10 +20,6 @@ internal interface IMafProviderCredentialService
     ProviderCredentialResolution Resolve(ProviderProfile provider);
 
     string ResolveOpenAiCredentialOverride(ProviderProfile provider);
-
-    void PromoteResolvedProviderCredentialEnvironment(ProviderProfile provider);
-
-    void PromoteProviderCredentialEnvironment(ProviderProfile provider, ProviderCredentialResolution credential);
 }
 
 internal interface IMafProviderAgentFactory
@@ -49,6 +45,14 @@ internal sealed class MafProviderCredentialService(IServiceProvider services) : 
         if (primaryResolution is { IsResolved: true })
         {
             return primaryResolution;
+        }
+
+        if (HasExplicitCredentialBinding(provider))
+        {
+            return primaryResolution ?? new ProviderCredentialResolution(
+                string.Empty,
+                "explicit provider credential binding",
+                "The explicitly bound provider credential could not be resolved.");
         }
 
         var configurationFallback = TryResolveConfigurationCredential(provider);
@@ -86,43 +90,7 @@ internal sealed class MafProviderCredentialService(IServiceProvider services) : 
             return string.Empty;
         }
 
-        PromoteProviderCredentialEnvironment(provider, credential);
         return "resolved";
-    }
-
-    public void PromoteResolvedProviderCredentialEnvironment(ProviderProfile provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (provider.Kind is not (ProviderKind.OpenAi or ProviderKind.AzureOpenAi))
-        {
-            return;
-        }
-
-        var credential = Resolve(provider);
-        if (credential.IsResolved)
-        {
-            PromoteProviderCredentialEnvironment(provider, credential);
-        }
-    }
-
-    public void PromoteProviderCredentialEnvironment(
-        ProviderProfile provider,
-        ProviderCredentialResolution credential)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (!credential.IsResolved ||
-            !credential.ShouldPromoteToProcessEnvironment)
-        {
-            return;
-        }
-
-        AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, credential.ApiKey);
-        if (provider.Kind == ProviderKind.OpenAi)
-        {
-            AgentProviderEnvironmentCredential.PromoteProcessValue(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, credential.ApiKey);
-        }
     }
 
     private ProviderCredentialResolution TryResolveConfigurationCredential(ProviderProfile provider)
@@ -142,7 +110,6 @@ internal sealed class MafProviderCredentialService(IServiceProvider services) : 
             }
 
             var trimmedValue = configuredValue.Trim();
-            PromoteResolvedConfigurationCredential(provider, key, trimmedValue);
             return new ProviderCredentialResolution(
                 trimmedValue,
                 $"application configuration key '{key}'",
@@ -165,6 +132,8 @@ internal sealed class MafProviderCredentialService(IServiceProvider services) : 
             {
                 yield return providerKey;
             }
+
+            yield break;
         }
 
         if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi &&
@@ -197,31 +166,53 @@ internal sealed class MafProviderCredentialService(IServiceProvider services) : 
             failureMessage);
     }
 
-    private static void PromoteResolvedConfigurationCredential(
-        ProviderProfile provider,
-        string configurationKey,
-        string value)
+    private static bool HasExplicitCredentialBinding(ProviderProfile provider)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable) &&
+            provider.ApiKeyEnvironmentVariable.Trim().StartsWith(
+                "secret:",
+                StringComparison.OrdinalIgnoreCase))
         {
-            return;
+            return true;
         }
 
-        if (!string.IsNullOrWhiteSpace(provider.ApiKeyEnvironmentVariable))
+        if (string.IsNullOrWhiteSpace(provider.ConfigurationJson))
         {
-            AgentProviderEnvironmentCredential.PromoteProcessValue(provider.ApiKeyEnvironmentVariable, value);
+            return false;
         }
 
-        if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ||
-            string.Equals(configurationKey, MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, StringComparison.OrdinalIgnoreCase))
+        try
         {
-            AgentProviderEnvironmentCredential.PromoteProcessValue(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, value);
+            using var document = JsonDocument.Parse(provider.ConfigurationJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.EnumerateObject().Any(property =>
+                       string.Equals(
+                           property.Name,
+                           ProviderProfileMetadataPropertyNames.SecretRecordId,
+                           StringComparison.OrdinalIgnoreCase) &&
+                       property.Value.ValueKind == JsonValueKind.String &&
+                       !string.IsNullOrWhiteSpace(property.Value.GetString()));
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 }
 
-internal sealed class MafProviderAgentFactory(IMafProviderCredentialService credentialService) : IMafProviderAgentFactory
+internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 {
+    private readonly IMafProviderCredentialService credentialService;
+    private readonly IMafProviderStreamingDispatchGate dispatchGate;
+
+    public MafProviderAgentFactory(
+        IMafProviderCredentialService credentialService,
+        IMafProviderStreamingDispatchGate dispatchGate)
+    {
+        this.credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
+        this.dispatchGate = dispatchGate ?? throw new ArgumentNullException(nameof(dispatchGate));
+    }
+
     public AIAgent CreateFrameworkAgent(
         ProviderProfile provider,
         string model,
@@ -234,12 +225,20 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(services);
 
+        ValidateModel(provider, model);
+        ValidateProviderKind(provider, model);
+        ValidateProviderTransport(provider, model);
+        ValidateRuntimeSettings(provider, model);
+
         return provider.Kind switch
         {
             ProviderKind.OpenAi => CreateOpenAiAgent(provider, model, options, frameworkManagedHistory, allowBackgroundResponses, services),
             ProviderKind.AzureOpenAi => CreateAzureOpenAiAgent(provider, model, options, frameworkManagedHistory, allowBackgroundResponses, services),
             ProviderKind.Ollama => CreateOllamaAgent(provider, model, options, allowBackgroundResponses, services),
-            _ => throw new InvalidOperationException($"Unsupported provider kind '{provider.Kind}'.")
+            _ => throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.UnsupportedProviderKind)
         };
     }
 
@@ -254,11 +253,13 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         var credential = credentialService.Resolve(provider);
         if (!credential.IsResolved)
         {
-            throw new InvalidOperationException(credential.FailureMessage);
+            throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.MissingCredential);
         }
 
-        credentialService.PromoteProviderCredentialEnvironment(provider, credential);
-        var clientOptions = CreateOpenAiClientOptions(provider);
+        var clientOptions = CreateOpenAiClientOptions(provider, model);
         var client = new OpenAIClient(
             credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
             options: clientOptions);
@@ -289,7 +290,10 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                     model: model,
                     clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
-            _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
+            _ => throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.UnsupportedTransport)
         };
     }
 
@@ -304,15 +308,17 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         var credential = credentialService.Resolve(provider);
         if (!credential.IsResolved)
         {
-            throw new InvalidOperationException(credential.FailureMessage);
+            throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.MissingCredential);
         }
 
-        credentialService.PromoteProviderCredentialEnvironment(provider, credential);
         var client = new OpenAIClient(
             credential: new System.ClientModel.ApiKeyCredential(credential.ApiKey),
             options: new OpenAIClientOptions
             {
-                Endpoint = AzureOpenAiEndpoint.Parse(provider).V1Endpoint,
+                Endpoint = ResolveAzureOpenAiEndpoint(provider, model),
                 NetworkTimeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
             });
 
@@ -342,11 +348,14 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                     model: model,
                     clientFactory: chatClient => AddRuntimePolicies(chatClient, provider, model, allowBackgroundResponses, services),
                     services: services),
-            _ => throw new InvalidOperationException($"Unsupported transport '{provider.Transport}' for provider '{provider.Name}'.")
+            _ => throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.UnsupportedTransport)
         };
     }
 
-    private static AIAgent CreateOllamaAgent(
+    private AIAgent CreateOllamaAgent(
         ProviderProfile provider,
         string model,
         ChatClientAgentOptions options,
@@ -364,11 +373,16 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                     model,
                     resilienceLogger)))
         {
-            BaseAddress = new Uri(provider.BaseUrl, UriKind.Absolute),
+            BaseAddress = ResolveProviderEndpoint(provider, model),
             Timeout = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider)
         };
-        IChatClient chatClient = new DefaultOllamaOptionsChatClient(
+        IChatClient chatClient = AddProviderTransportBoundary(
             new OllamaApiClient(httpClient, model, jsonSerializerContext: null),
+            provider,
+            model,
+            services);
+        chatClient = new DefaultOllamaOptionsChatClient(
+            chatClient,
             options.ChatOptions?.MaxOutputTokens ??
             AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
                 provider.ConfigurationJson,
@@ -401,13 +415,14 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
                 providerThinkingEffort.Value);
     }
 
-    private static IChatClient AddRuntimePolicies(
+    private IChatClient AddRuntimePolicies(
         IChatClient chatClient,
         ProviderProfile provider,
         string model,
         bool allowBackgroundResponses,
         IServiceProvider services)
     {
+        chatClient = AddProviderTransportBoundary(chatClient, provider, model, services);
         chatClient = AddOpenAiChatCompletionsCompatibility(
             chatClient,
             provider,
@@ -428,6 +443,27 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
             model,
             allowBackgroundResponses,
             logger);
+    }
+
+    private IChatClient AddProviderTransportBoundary(
+        IChatClient chatClient,
+        ProviderProfile provider,
+        string model,
+        IServiceProvider services)
+    {
+        if (chatClient.GetService<MafProviderTransportBoundaryChatClient>() is not null)
+        {
+            return chatClient;
+        }
+
+        return new MafProviderTransportBoundaryChatClient(
+            chatClient,
+            provider,
+            model,
+            dispatchGate,
+            logger: services
+                .GetService<Microsoft.Extensions.Logging.ILoggerFactory>()
+                ?.CreateLogger<MafProviderTransportBoundaryChatClient>());
     }
 
     private static IChatClient AddOpenAiChatCompletionsCompatibility(
@@ -458,7 +494,9 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
             logger);
     }
 
-    private static OpenAIClientOptions CreateOpenAiClientOptions(ProviderProfile provider)
+    private static OpenAIClientOptions CreateOpenAiClientOptions(
+        ProviderProfile provider,
+        string model)
     {
         ArgumentNullException.ThrowIfNull(provider);
 
@@ -468,10 +506,124 @@ internal sealed class MafProviderAgentFactory(IMafProviderCredentialService cred
         };
         if (!MafProviderRuntimeSettings.ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))
         {
-            options.Endpoint = new Uri(provider.BaseUrl, UriKind.Absolute);
+            options.Endpoint = ResolveProviderEndpoint(provider, model);
         }
 
         return options;
+    }
+
+    private static Uri ResolveAzureOpenAiEndpoint(
+        ProviderProfile provider,
+        string model)
+    {
+        try
+        {
+            _ = ResolveProviderEndpoint(provider, model);
+            return AzureOpenAiEndpoint.Parse(provider).V1Endpoint;
+        }
+        catch (MafProviderConfigurationException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.InvalidEndpoint,
+                exception);
+        }
+    }
+
+    private static Uri ResolveProviderEndpoint(
+        ProviderProfile provider,
+        string model)
+    {
+        var baseUrl = provider.BaseUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(baseUrl) ||
+            !Uri.TryCreate(baseUrl, UriKind.Absolute, out var endpoint) ||
+            endpoint.Scheme is not ("http" or "https") ||
+            !string.IsNullOrEmpty(endpoint.UserInfo) ||
+            !string.IsNullOrEmpty(endpoint.Query) ||
+            !string.IsNullOrEmpty(endpoint.Fragment))
+        {
+            throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.InvalidEndpoint);
+        }
+
+        return endpoint;
+    }
+
+    private static void ValidateRuntimeSettings(
+        ProviderProfile provider,
+        string model)
+    {
+        try
+        {
+            _ = MafProviderRuntimeSettings.ResolveNetworkTimeout(provider);
+        }
+        catch (ProviderProfileValidationException exception)
+        {
+            throw new MafProviderConfigurationException(
+                provider,
+                model,
+                MafProviderConfigurationFailureReason.InvalidRuntimeSettings,
+                exception);
+        }
+    }
+
+    private static void ValidateModel(
+        ProviderProfile provider,
+        string model)
+    {
+        if (!string.IsNullOrWhiteSpace(model))
+        {
+            return;
+        }
+
+        throw new MafProviderConfigurationException(
+            provider,
+            string.Empty,
+            MafProviderConfigurationFailureReason.InvalidModel);
+    }
+
+    private static void ValidateProviderKind(
+        ProviderProfile provider,
+        string model)
+    {
+        if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi or ProviderKind.Ollama)
+        {
+            return;
+        }
+
+        throw new MafProviderConfigurationException(
+            provider,
+            model,
+            MafProviderConfigurationFailureReason.UnsupportedProviderKind);
+    }
+
+    private static void ValidateProviderTransport(
+        ProviderProfile provider,
+        string model)
+    {
+        var supported = provider.Kind switch
+        {
+            ProviderKind.OpenAi or ProviderKind.AzureOpenAi =>
+                provider.Transport is ProviderTransportKind.ChatCompletions or ProviderTransportKind.Responses,
+            ProviderKind.Ollama => provider.Transport == ProviderTransportKind.ChatCompletions,
+            _ => false
+        };
+        if (supported)
+        {
+            return;
+        }
+
+        throw new MafProviderConfigurationException(
+            provider,
+            model,
+            MafProviderConfigurationFailureReason.UnsupportedTransport);
     }
 
     private static bool ShouldIncludeReasoningEncryptedContentForStoredOutputDisabledResponses(
@@ -555,17 +707,32 @@ internal static class MafProviderRuntimeSettings
         try
         {
             using var document = JsonDocument.Parse(provider.ConfigurationJson);
-            if (!document.RootElement.TryGetProperty("timeoutSeconds", out var timeoutElement) ||
-                !timeoutElement.TryGetInt32(out var timeoutSeconds))
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new ProviderProfileValidationException(
+                    "Provider runtime configuration must be a JSON object.");
+            }
+
+            if (!document.RootElement.TryGetProperty("timeoutSeconds", out var timeoutElement))
             {
                 return ModelNetworkTimeout;
             }
 
-            return TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, 5, 3600));
+            if (timeoutElement.ValueKind != JsonValueKind.Number ||
+                !timeoutElement.TryGetInt32(out var timeoutSeconds) ||
+                timeoutSeconds is < 5 or > 3600)
+            {
+                throw new ProviderProfileValidationException(
+                    "Provider timeoutSeconds must be an integer between 5 and 3600.");
+            }
+
+            return TimeSpan.FromSeconds(timeoutSeconds);
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
-            return ModelNetworkTimeout;
+            throw new ProviderProfileValidationException(
+                "Provider runtime configuration must contain valid JSON.",
+                exception);
         }
     }
 

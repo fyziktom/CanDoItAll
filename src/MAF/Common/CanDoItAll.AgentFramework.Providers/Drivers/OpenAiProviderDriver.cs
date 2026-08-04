@@ -42,6 +42,11 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
     {
         try
         {
+            if (provider.Purpose == ProviderProfilePurpose.ImageGeneration)
+            {
+                return await TestImageGenerationHealthAsync(provider, cancellationToken).ConfigureAwait(false);
+            }
+
             var models = await ListModelsAsync(
                 new ProviderModelCatalogRequest(provider, AgentProviderCapabilityKind.ChatCompletion),
                 cancellationToken).ConfigureAwait(false);
@@ -64,6 +69,37 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         {
             return new ProviderHealthResult(false, $"OpenAI health check failed: {exception.Message}", provider.SuggestedModels);
         }
+    }
+
+    private async Task<ProviderHealthResult> TestImageGenerationHealthAsync(
+        ProviderProfile provider,
+        CancellationToken cancellationToken)
+    {
+        var models = await ListModelsAsync(
+            new ProviderModelCatalogRequest(provider, AgentProviderCapabilityKind.ImageGeneration),
+            cancellationToken).ConfigureAwait(false);
+        var suggestedModels = models.Select(model => model.Model).ToList();
+        var configuredModel = provider.DefaultModel?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(configuredModel))
+        {
+            return new ProviderHealthResult(
+                false,
+                "OpenAI image-generation health check requires a configured default model.",
+                suggestedModels);
+        }
+
+        if (!suggestedModels.Contains(configuredModel, StringComparer.OrdinalIgnoreCase))
+        {
+            return new ProviderHealthResult(
+                false,
+                $"OpenAI model catalog did not return the configured image-generation model '{configuredModel}'.",
+                suggestedModels);
+        }
+
+        return new ProviderHealthResult(
+            true,
+            $"OpenAI model catalog returned {models.Count} model(s) and includes the configured image-generation model '{configuredModel}'.",
+            suggestedModels);
     }
 
     public async Task<IReadOnlyList<ProviderModelDescriptor>> ListModelsAsync(

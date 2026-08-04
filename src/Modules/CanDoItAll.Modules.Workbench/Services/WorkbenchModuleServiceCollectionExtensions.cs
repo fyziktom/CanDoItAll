@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
@@ -17,6 +18,7 @@ using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tools.Documents;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -28,14 +30,28 @@ public static class WorkbenchModuleServiceCollectionExtensions
             .AddBuiltIns()
             .AddZoomPanRenderers()
             .AddMarkdown()
-            .AddWorkbenchMermaid());
+            .AddWorkbenchMermaid()
+            .AddWorkbenchSpreadsheetPreview());
+        services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
+        services.TryAddScoped<ISpreadsheetWorkbookContentPreviewService>(serviceProvider =>
+            serviceProvider.GetRequiredService<ISpreadsheetDocumentService>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IMarkdownFencedCodeComponentRegistration,
             WorkbenchMarkdownMermaidComponentRegistration>());
         services.AddHttpClient();
+        services.AddHttpClient(ProjectStructureExternalAssetSourcePolicy.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(ProjectStructureExternalAssetSourceHttpClient.CreatePrimaryHandler);
         services.AddScoped<WorkbenchStateService>();
         services.AddScoped<ProjectCrossModuleMutationCoordinator>();
+        services.AddScoped<ProjectManagedStoragePhysicalIdentityPolicy>();
+        services.AddScoped<ProjectManagedStorageDeletionPlanner>();
+        services.AddScoped<ProjectManagedStorageDeletionService>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton(ProjectCrossModuleMutationProcessingOptions.Default);
         services.AddScoped<ProjectCrossModuleMutationProcessor>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectDeletionParticipant,
+            ProjectWorkbenchDeletionParticipant>());
         services.AddScoped<ProjectWorkbenchCommandService>();
         services.AddScoped<ProjectWorkbenchCrossModuleMutationService>();
         services.AddScoped<ProjectWorkbenchLifecycleService>();
@@ -66,6 +82,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectManagerSummaryQueryService>();
         services.AddScoped<ProjectManagerSummaryStateStore>();
         services.AddScoped<ProjectStructureAgentAuthorizationService>();
+        services.AddScoped<ProjectStructureAgentProjectCreationCoordinator>();
         services.AddScoped<ProjectStructureChecklistService>();
         services.AddScoped<ProjectStructureImportService>();
         services.AddScoped<ProjectStructureWorkItemAssigneeService>();
@@ -123,7 +140,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
             return new WorkspacePathResolutionService(workspaceRoot, scope);
         });
         services.AddScoped<ProjectStructureSourceWorkspacePathResolver>();
+        services.AddScoped<ProjectStructureSubprojectTransferCoordinator>();
+        services.AddScoped<ProjectStructureBatchDeletionCoordinator>();
+        services.AddScoped<ProjectStructureAssetContentReader>();
         services.AddScoped<ProjectStructureAgentService>();
+        services.AddScoped<ProjectStructureAgentNodeCopyCoordinator>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectStructureAgentRuntimeToolProvider>());
         services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();
@@ -141,6 +162,10 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureLocalFileActionCoordinator>();
         services.AddScoped<ProjectStructureFileActionCoordinator>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            WorkbenchProjectTransferTargetStateParticipant>());
+        services.AddScoped<ProjectTransferTargetStateGuard>();
         services.AddScoped<IDatabaseTransferHandler, ProjectsDatabaseTransferHandler>();
         services.AddScoped<IProjectPackageService, ProjectPackageService>();
         return services;

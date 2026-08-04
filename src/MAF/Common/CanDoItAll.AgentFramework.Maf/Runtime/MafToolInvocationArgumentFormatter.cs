@@ -98,13 +98,10 @@ internal static class MafToolInvocationArgumentFormatter
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(toolName))
-        {
-            var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(toolName, arguments);
-            return string.Join(", ", redacted.Select(item => $"{item.Key}={item.Value}"));
-        }
-
-        var parts = arguments
+        var sanitizedArguments = AgentToolInvocationPolicyMetadata.SanitizeArgumentsForDisplay(
+            toolName,
+            arguments);
+        var parts = sanitizedArguments
             .Where(item => item.Value is not null)
             .Select(item => $"{item.Key}={FormatArgumentValue(item.Value)}")
             .ToList();

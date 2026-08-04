@@ -26,9 +26,7 @@ internal static class SandboxWorkspaceSeedBuilder
 
     private static readonly IReadOnlyList<string> OpenAiImageSuggestedModels =
     [
-        "gpt-image-1-mini",
-        "gpt-image-1",
-        "gpt-image-1.5"
+        OpenAiModelIds.GptImage2
     ];
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -110,7 +108,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 ProviderKind.OpenAi,
                 "https://api.openai.com/v1",
                 "OPENAI_API_KEY",
-                "gpt-image-1-mini",
+                OpenAiModelIds.GptImage2,
                 ProviderTransportKind.Responses,
                 true,
                 false,
@@ -118,7 +116,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 false,
                 false,
                 CreateOpenAiImageProviderConfigurationJson(),
-                "Image-generation profile for OpenAI Images API workflows. Defaulted to the lower-cost GPT Image 1 Mini model; runtime image tools should still require explicit agent permission.",
+                "Image-generation profile for OpenAI Images API workflows. Defaults to GPT Image 2; runtime image tools should still require explicit agent permission.",
                 "Not checked",
                 null,
                 OpenAiImageSuggestedModels,

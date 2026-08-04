@@ -20,6 +20,11 @@ public sealed class ProjectWorkbenchCommandService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                cancellationToken);
         var node = await projectStructureAssemblyService.FindNodeAsync(dbContext, projectId, nodeKey, cancellationToken);
         if (node is null)
         {
@@ -36,8 +41,11 @@ public sealed class ProjectWorkbenchCommandService(
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
+            await mutationScope.CommitAsync(cancellationToken);
             return artifact;
         }
+
+        await mutationScope.CommitAsync(cancellationToken);
 
         return commandKind switch
         {

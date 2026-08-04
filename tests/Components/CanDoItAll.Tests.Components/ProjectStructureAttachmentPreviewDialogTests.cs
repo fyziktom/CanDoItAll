@@ -8,6 +8,7 @@ using CanDoItAll.Components.Mermaid;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
@@ -70,20 +71,21 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         RegisterComposition(context);
         var node = CreateNode(
             ProjectObjectType.File,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ProjectStructureFileInteractionPolicy.XlsxMediaType,
             "forecast.xlsx",
             "Reviewed by finance.");
         var file = new FileReference("authorized", "forecast-handle");
+        var source = new StaticContentSource(ProjectStructureFileInteractionPolicy.XlsxMediaType);
         var session = new FileToolsKnownFileSession(
             file,
-            new StaticContentSource("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            source,
             FileToolsKnownFileIntent.ReadOnly);
         var interaction = new ProjectStructureKnownFileInteraction(
             new FileInteractionRequest(
                 file,
                 "forecast.xlsx",
                 FileInteractionMode.View,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ProjectStructureFileInteractionPolicy.XlsxMediaType,
                 3),
             session,
             new NoopSessionReleaser());
@@ -104,6 +106,21 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         var notes = cut.Find("[data-testid='project-structure-file-interaction-notes']");
         Assert.Contains("max-height:min(12rem,35%)", notes.GetAttribute("style"), StringComparison.Ordinal);
         Assert.Contains("overflow:auto", notes.GetAttribute("style"), StringComparison.Ordinal);
+        var fileInteraction = cut.FindComponent<FileInteraction>();
+        fileInteraction.WaitForAssertion(() =>
+        {
+            Assert.True(source.ReadCount > 0);
+            Assert.Single(fileInteraction.FindComponents<WorkbenchSpreadsheetFileView>());
+        });
+        var spreadsheet = fileInteraction.FindComponent<WorkbenchSpreadsheetFileView>();
+        spreadsheet.WaitForAssertion(() =>
+        {
+            Assert.NotNull(spreadsheet.Find("[data-testid='workbench-spreadsheet-preview']"));
+            Assert.NotNull(spreadsheet.Find("[data-testid='workbench-spreadsheet-grid']"));
+            Assert.Contains("Acceptance", spreadsheet.Markup, StringComparison.Ordinal);
+            Assert.Contains("=COUNTA(A1:A2)", spreadsheet.Markup, StringComparison.Ordinal);
+            Assert.Empty(cut.FindAll("iframe"));
+        });
         await cut.FindAll("button")
             .Single(button => button.TextContent.Trim() == "Open in preferred app")
             .ClickAsync(new());
@@ -433,7 +450,10 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
+            .AddWorkbenchSpreadsheetPreview()
             .Build());
+        context.Services.AddSingleton<ISpreadsheetWorkbookContentPreviewService>(
+            new StaticSpreadsheetContentPreviewService());
         context.Services.AddSingleton<IMarkdownFencedCodeComponentRegistration,
             WorkbenchMarkdownMermaidComponentRegistration>();
     }
@@ -522,6 +542,29 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
                 mediaType,
                 bytes.LongLength));
         }
+    }
+
+    private sealed class StaticSpreadsheetContentPreviewService
+        : ISpreadsheetWorkbookContentPreviewService
+    {
+        public SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
+            SpreadsheetWorkbookContentPreviewRequest request)
+            => new(
+                request.WorkbookName,
+                TotalWorksheetCount: 1,
+                [
+                    new SpreadsheetWorksheetPreview(
+                        "Acceptance",
+                        Position: 1,
+                        UsedRangeAddress: "A1:B2",
+                        UsedRowCount: 2,
+                        UsedColumnCount: 2,
+                        Values: [["Metric", "Value"], ["Rows", "=COUNTA(A1:A2)"]],
+                        MarkdownTable: string.Empty,
+                        RowsTruncated: false,
+                        ColumnsTruncated: false)
+                ],
+                WorksheetsTruncated: false);
     }
 
     private sealed class UnknownLengthContentSource(long availableBytes) : IFileContentSource

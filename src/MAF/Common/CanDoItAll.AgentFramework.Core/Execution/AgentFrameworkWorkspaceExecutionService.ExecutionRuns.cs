@@ -1,11 +1,15 @@
 using System.Diagnostics;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService
 {
+    private const string UnclassifiedRunFailureMessage =
+        "The agent run failed outside a confirmed provider failure. Inspect the persisted run and its tool traces using the execution-run ID.";
+
     public Task<ExecutionRunResult> ExecuteRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation,
         ExecutionRunRequest request,
@@ -368,6 +372,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentRuntimeHandoffExecutionOptions? handoffOptions = null;
         AgentDefinition? runtimeAgent = null;
         AgentRuntimeResponse? lastRuntimeResponse = null;
+        var lastEntryAgentRequestCompatibilityEvidence = run.EntryAgentRequestCompatibilityEvidence;
+
+        AgentRuntimeResponse TrackRuntimeResponse(AgentRuntimeResponse response)
+        {
+            lastEntryAgentRequestCompatibilityEvidence =
+                response.EntryAgentRequestCompatibilityEvidence ??
+                lastEntryAgentRequestCompatibilityEvidence;
+            var trackedResponse = response.EntryAgentRequestCompatibilityEvidence is null &&
+                                  lastEntryAgentRequestCompatibilityEvidence is not null
+                ? response with
+                {
+                    EntryAgentRequestCompatibilityEvidence =
+                        lastEntryAgentRequestCompatibilityEvidence
+                }
+                : response;
+            lastRuntimeResponse = trackedResponse;
+            return trackedResponse;
+        }
+
         IAgentExecutionCancellationRegistration? executionCancellation = null;
         AgentProviderCredentialDispatchLease? credentialDispatch = null;
         IAgentProviderCredentialDispatchScope? credentialScope = null;
@@ -400,9 +423,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 agent,
                 provider,
                 currentRun.Model);
-            PrimeProviderCredentialEnvironment(
-                provider,
-                credentialScope.Resolve(provider));
             using var runActivity = AgentFrameworkTelemetry.StartRunActivity(
                 "agent.run.resume",
                 prepared.OriginalRun);
@@ -469,7 +489,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
                     "Waiting for the configured provider to continue the run.");
-                runtimeResponse = await runtime.RespondToPendingApprovalsAsync(
+                runtimeResponse = TrackRuntimeResponse(await runtime.RespondToPendingApprovalsAsync(
                     runtimeAgent,
                     provider,
                     runtimeSession,
@@ -488,8 +508,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
-                    executionOptions: runtimeExecutionOptions);
-                lastRuntimeResponse = runtimeResponse;
+                    executionOptions: runtimeExecutionOptions));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
@@ -518,24 +537,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         structuredOutput,
                         handoffOptions,
-                        response => lastRuntimeResponse = response,
+                        response =>
+                        {
+                            TrackRuntimeResponse(response);
+                        },
                         runtimeCancellationToken);
 
                     runtimeSession = continuation.Session;
-                    runtimeResponse = continuation.Response;
-                    lastRuntimeResponse = runtimeResponse;
+                    runtimeResponse = TrackRuntimeResponse(continuation.Response);
                     totalInputTokens = continuation.TotalInputTokens;
                     totalCachedInputTokens = continuation.TotalCachedInputTokens;
                     totalOutputTokens = continuation.TotalOutputTokens;
                     totalToolCalls = continuation.TotalToolCalls;
                 }
 
-                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
+                runtimeResponse = TrackRuntimeResponse(await ValidateMachineOutputBeforeCompletionAsync(
                     run,
                     structuredOutput,
                     runtimeResponse,
-                    runtimeCancellationToken);
-                lastRuntimeResponse = runtimeResponse;
+                    runtimeCancellationToken));
                 var portableStructuredOutput = await ValidatePortableJsonSchemaOutputBeforeCompletionAsync(
                     run,
                     runtimeResponse,
@@ -693,14 +713,24 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
             var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
-            var failureDisplay = wasCancelled
-                ? null
-                : AgentProviderFailureDisplayFormatter.Format(provider, exception);
+            var failureIdentity = ResolveProviderFailureIdentity(exception);
+            var failureProvider = await ResolveFailureProviderAsync(provider, exception);
+            var failureModel = ResolveFailureProviderModel(
+                runtimeAgent?.Model ?? run.Model,
+                exception);
+            AgentProviderFailureDisplay? failureDisplay = null;
+            if (!wasCancelled)
+            {
+                AgentProviderFailureDisplayFormatter.TryFormat(
+                    failureProvider,
+                    exception,
+                    out failureDisplay!);
+            }
             var resultSummary = cancellationKind switch
             {
                 ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
                 ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
-                _ => failureDisplay!.Message
+                _ => ResolveRunFailureDisplayMessage(exception, failureDisplay)
             };
             var failureToolInvocationTraces = ResolveFailureToolInvocationTraces(
                 lastRuntimeResponse,
@@ -712,8 +742,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ChatSessionId: run.ChatSessionId,
                     CreatedAtUtc: DateTimeOffset.UtcNow,
                     Outcome: outcome,
-                    ProviderName: provider.Name,
-                    Model: runtimeAgent?.Model ?? run.Model,
+                    ProviderName: failureProvider.Name,
+                    Model: failureModel,
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: 0,
                     OutputTokens: 0,
@@ -721,18 +751,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     ExecutionRunId = run.Id
                 },
-                provider);
+                failureProvider);
             var failureUsageObservations = lastRuntimeResponse is null
                 ? BuildFailureUsageObservations(
                     run,
                     runtimeAgent ?? agent,
-                    provider,
+                    failureProvider,
                     failureMetric,
                     exception)
                 : BuildRuntimeResponseUsageObservations(
                     run,
                     runtimeAgent ?? agent,
-                    provider,
+                    failureProvider,
                     failureMetric,
                     lastRuntimeResponse);
             var failureToolReceipts = CreateToolInvocationTraceReceipts(
@@ -747,52 +777,72 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 State = ExecutionState.Failed,
                 Outcome = outcome,
                 ResultSummary = CreateExecutionSummary(resultSummary),
-                PendingApprovals = []
+                PendingApprovals = [],
+                FailureProviderProfileId = failureIdentity?.ProviderProfileId,
+                FailureProviderName = failureIdentity is null ? string.Empty : failureProvider.Name,
+                FailureModel = failureIdentity is null ? string.Empty : failureModel,
+                EntryAgentRequestCompatibilityEvidence = ResolveEntryAgentRequestCompatibilityEvidence(
+                    lastRuntimeResponse,
+                    exception) ?? run.EntryAgentRequestCompatibilityEvidence
             };
             var terminalPersistenceToken = CancellationToken.None;
-
-            if (session is not null)
+            try
             {
-                var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+                var persistence = await PersistFailedExecutionRunAsync(
+                    failedRun,
                     session,
-                    failedRun.UpdatedAtUtc,
-                    failedRun.Id);
-                await PersistExecutionMutationAsync(
-                        new ExecutionStateMutation(
-                            Run: failedRun,
-                            Session: updatedSession,
-                            Metric: failureMetric,
-                            UsageObservations: failureUsageObservations,
-                            ToolReceipts: failureToolReceipts),
-                        terminalPersistenceToken);
-            }
-            else
-            {
-                await PersistExecutionMutationAsync(
-                    new ExecutionStateMutation(
-                        Run: failedRun,
-                        Metric: failureMetric,
-                        UsageObservations: failureUsageObservations,
-                        ToolReceipts: failureToolReceipts),
+                    failureMetric,
+                    failureUsageObservations,
+                    failureToolReceipts,
+                    agent.Id,
+                    wasCancelled ? "Cancelled" : "Failed",
+                    wasCancelled
+                        ? resultSummary
+                        : failureDisplay is null
+                            ? resultSummary
+                            : $"Execution run approval continuation failed for {failureProvider.Name}: {failureDisplay.Message}",
                     terminalPersistenceToken);
+                terminalRunPersisted = persistence.TerminalRunPersisted;
+                if (persistence.ExecutionLogFailure is not null)
+                {
+                    LogTerminalFailurePersistenceFailure(
+                        run.Id,
+                        agent.Id,
+                        run.ChatSessionId,
+                        exception,
+                        persistence.ExecutionLogFailure);
+                }
             }
-            terminalRunPersisted = true;
-            AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
+            catch (Exception persistenceException)
+            {
+                LogTerminalFailurePersistenceFailure(
+                    run.Id,
+                    agent.Id,
+                    run.ChatSessionId,
+                    exception,
+                    persistenceException);
+                TerminalizeFailedActivityBestEffort(
+                    activityOperation,
+                    wasCancelled: false,
+                    run.Id);
+                throw CreateRunFailureException(
+                    agent,
+                    run,
+                    session,
+                    failureProvider,
+                    failureModel,
+                    new AggregateException(
+                        "The agent run failed and its terminal failure state could not be fully persisted.",
+                        exception,
+                        persistenceException),
+                    UnclassifiedRunFailureMessage,
+                    failureCategory: null);
+            }
 
-            await AppendExecutionLogAsync(
-                run.Id,
-                agent.Id,
-                run.ChatSessionId,
-                ExecutionState.Failed,
-                wasCancelled ? "Cancelled" : "Failed",
-                wasCancelled
-                    ? resultSummary
-                    : $"Execution run approval continuation failed for {provider.Name}: {failureDisplay!.Message}",
-                terminalPersistenceToken);
-
-            TerminalizeFailedActivity(
+            TerminalizeFailedActivityBestEffort(
                 activityOperation,
-                wasCancelled);
+                wasCancelled,
+                run.Id);
             if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
@@ -803,23 +853,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw new OperationCanceledException(resultSummary, exception, cancellationToken);
             }
 
-            throw session is not null
-                ? new AgentChatRunFailedException(
-                    agent.Id,
-                    run.Id,
-                    session.Id,
-                    provider.Name,
-                    runtimeAgent?.Model ?? run.Model,
-                    exception,
-                    failureDisplay!.Message)
-                : new AgentRunFailedException(
-                    agent.Id,
-                    run.Id,
-                    run.ChatSessionId,
-                    provider.Name,
-                    runtimeAgent?.Model ?? run.Model,
-                    exception,
-                    failureDisplay!.Message);
+            throw CreateRunFailureException(
+                agent,
+                run,
+                session,
+                failureProvider,
+                failureModel,
+                exception,
+                resultSummary,
+                failureDisplay?.Category);
         }
         finally
         {
@@ -1181,6 +1223,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var startedAt = DateTimeOffset.UtcNow;
         AgentDefinition? runtimeAgent = null;
         AgentRuntimeResponse? lastRuntimeResponse = null;
+        var lastEntryAgentRequestCompatibilityEvidence = run.EntryAgentRequestCompatibilityEvidence;
+
+        AgentRuntimeResponse TrackRuntimeResponse(AgentRuntimeResponse response)
+        {
+            lastEntryAgentRequestCompatibilityEvidence =
+                response.EntryAgentRequestCompatibilityEvidence ??
+                lastEntryAgentRequestCompatibilityEvidence;
+            var trackedResponse = response.EntryAgentRequestCompatibilityEvidence is null &&
+                                  lastEntryAgentRequestCompatibilityEvidence is not null
+                ? response with
+                {
+                    EntryAgentRequestCompatibilityEvidence =
+                        lastEntryAgentRequestCompatibilityEvidence
+                }
+                : response;
+            lastRuntimeResponse = trackedResponse;
+            return trackedResponse;
+        }
+
         IAgentExecutionCancellationRegistration? executionCancellation = null;
         AgentProviderCredentialDispatchLease? credentialDispatch = null;
         IAgentProviderCredentialDispatchScope? credentialScope = null;
@@ -1229,9 +1290,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 agent,
                 provider,
                 run.Model);
-            PrimeProviderCredentialEnvironment(
-                provider,
-                credentialScope.Resolve(provider));
 
             await AppendExecutionLogAsync(
                 run.Id,
@@ -1268,7 +1326,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
                     "Waiting for the configured provider.");
-                runtimeResponse = await runtime.RunAsync(
+                runtimeResponse = TrackRuntimeResponse(await runtime.RunAsync(
                     runtimeAgent,
                     provider,
                     runtimeSession,
@@ -1287,8 +1345,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeCancellationToken,
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
-                    executionOptions: runtimeExecutionOptions);
-                lastRuntimeResponse = runtimeResponse;
+                    executionOptions: runtimeExecutionOptions));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
@@ -1317,24 +1374,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         request.StructuredOutput,
                         handoffOptions,
-                        response => lastRuntimeResponse = response,
+                        response =>
+                        {
+                            TrackRuntimeResponse(response);
+                        },
                         runtimeCancellationToken);
 
                     runtimeSession = continuation.Session;
-                    runtimeResponse = continuation.Response;
-                    lastRuntimeResponse = runtimeResponse;
+                    runtimeResponse = TrackRuntimeResponse(continuation.Response);
                     totalInputTokens = continuation.TotalInputTokens;
                     totalCachedInputTokens = continuation.TotalCachedInputTokens;
                     totalOutputTokens = continuation.TotalOutputTokens;
                     totalToolCalls = continuation.TotalToolCalls;
                 }
 
-                runtimeResponse = await ValidateMachineOutputBeforeCompletionAsync(
+                runtimeResponse = TrackRuntimeResponse(await ValidateMachineOutputBeforeCompletionAsync(
                     run,
                     request.StructuredOutput,
                     runtimeResponse,
-                    runtimeCancellationToken);
-                lastRuntimeResponse = runtimeResponse;
+                    runtimeCancellationToken));
                 var portableStructuredOutput = await ValidatePortableJsonSchemaOutputBeforeCompletionAsync(
                     run,
                     runtimeResponse,
@@ -1492,14 +1550,24 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             var cancellationKind = ClassifyExecutionCancellation(exception, executionCancellation, cancellationToken);
             var wasCancelled = cancellationKind != ExecutionCancellationKind.None;
             var outcome = wasCancelled ? RunOutcome.Cancelled : RunOutcome.Failed;
-            var failureDisplay = wasCancelled
-                ? null
-                : AgentProviderFailureDisplayFormatter.Format(provider, exception);
+            var failureIdentity = ResolveProviderFailureIdentity(exception);
+            var failureProvider = await ResolveFailureProviderAsync(provider, exception);
+            var failureModel = ResolveFailureProviderModel(
+                runtimeAgent?.Model ?? run.Model,
+                exception);
+            AgentProviderFailureDisplay? failureDisplay = null;
+            if (!wasCancelled)
+            {
+                AgentProviderFailureDisplayFormatter.TryFormat(
+                    failureProvider,
+                    exception,
+                    out failureDisplay!);
+            }
             var resultSummary = cancellationKind switch
             {
                 ExecutionCancellationKind.ProcessRegistry => "Execution run cancelled because the owning process run was cancelled.",
                 ExecutionCancellationKind.CallerRequest => "Execution run cancelled because the caller request was cancelled.",
-                _ => failureDisplay!.Message
+                _ => ResolveRunFailureDisplayMessage(exception, failureDisplay)
             };
             var failureToolInvocationTraces = ResolveFailureToolInvocationTraces(
                 lastRuntimeResponse,
@@ -1511,8 +1579,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ChatSessionId: run.ChatSessionId,
                     CreatedAtUtc: DateTimeOffset.UtcNow,
                     Outcome: outcome,
-                    ProviderName: provider.Name,
-                    Model: runtimeAgent?.Model ?? run.Model,
+                    ProviderName: failureProvider.Name,
+                    Model: failureModel,
                     DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                     InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
                     OutputTokens: 0,
@@ -1520,18 +1588,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 {
                     ExecutionRunId = run.Id
                 },
-                provider);
+                failureProvider);
             var failureUsageObservations = lastRuntimeResponse is null
                 ? BuildFailureUsageObservations(
                     run,
                     runtimeAgent ?? agent,
-                    provider,
+                    failureProvider,
                     failureMetric,
                     exception)
                 : BuildRuntimeResponseUsageObservations(
                     run,
                     runtimeAgent ?? agent,
-                    provider,
+                    failureProvider,
                     failureMetric,
                     lastRuntimeResponse);
             var failureToolReceipts = CreateToolInvocationTraceReceipts(
@@ -1545,52 +1613,72 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 State = ExecutionState.Failed,
                 Outcome = outcome,
                 ResultSummary = CreateExecutionSummary(resultSummary),
-                PendingApprovals = []
+                PendingApprovals = [],
+                FailureProviderProfileId = failureIdentity?.ProviderProfileId,
+                FailureProviderName = failureIdentity is null ? string.Empty : failureProvider.Name,
+                FailureModel = failureIdentity is null ? string.Empty : failureModel,
+                EntryAgentRequestCompatibilityEvidence = ResolveEntryAgentRequestCompatibilityEvidence(
+                    lastRuntimeResponse,
+                    exception) ?? run.EntryAgentRequestCompatibilityEvidence
             };
             var terminalPersistenceToken = CancellationToken.None;
-
-            if (session is not null)
+            try
             {
-                var updatedSession = ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+                var persistence = await PersistFailedExecutionRunAsync(
+                    failedRun,
                     session,
-                    failedRun.UpdatedAtUtc,
-                    failedRun.Id);
-                await PersistExecutionMutationAsync(
-                        new ExecutionStateMutation(
-                            Run: failedRun,
-                            Session: updatedSession,
-                            Metric: failureMetric,
-                            UsageObservations: failureUsageObservations,
-                            ToolReceipts: failureToolReceipts),
-                        terminalPersistenceToken);
-            }
-            else
-            {
-                await PersistExecutionMutationAsync(
-                    new ExecutionStateMutation(
-                        Run: failedRun,
-                        Metric: failureMetric,
-                        UsageObservations: failureUsageObservations,
-                        ToolReceipts: failureToolReceipts),
+                    failureMetric,
+                    failureUsageObservations,
+                    failureToolReceipts,
+                    agent.Id,
+                    wasCancelled ? "Cancelled" : "Failed",
+                    wasCancelled
+                        ? resultSummary
+                        : failureDisplay is null
+                            ? resultSummary
+                            : $"Execution run failed for {failureProvider.Name}: {failureDisplay.Message}",
                     terminalPersistenceToken);
+                terminalRunPersisted = persistence.TerminalRunPersisted;
+                if (persistence.ExecutionLogFailure is not null)
+                {
+                    LogTerminalFailurePersistenceFailure(
+                        run.Id,
+                        agent.Id,
+                        run.ChatSessionId,
+                        exception,
+                        persistence.ExecutionLogFailure);
+                }
             }
-            terminalRunPersisted = true;
-            AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
+            catch (Exception persistenceException)
+            {
+                LogTerminalFailurePersistenceFailure(
+                    run.Id,
+                    agent.Id,
+                    run.ChatSessionId,
+                    exception,
+                    persistenceException);
+                TerminalizeFailedActivityBestEffort(
+                    activityOperation,
+                    wasCancelled: false,
+                    run.Id);
+                throw CreateRunFailureException(
+                    agent,
+                    run,
+                    session,
+                    failureProvider,
+                    failureModel,
+                    new AggregateException(
+                        "The agent run failed and its terminal failure state could not be fully persisted.",
+                        exception,
+                        persistenceException),
+                    UnclassifiedRunFailureMessage,
+                    failureCategory: null);
+            }
 
-            await AppendExecutionLogAsync(
-                run.Id,
-                agent.Id,
-                run.ChatSessionId,
-                ExecutionState.Failed,
-                wasCancelled ? "Cancelled" : "Failed",
-                wasCancelled
-                    ? resultSummary
-                    : $"Execution run failed for {provider.Name}: {failureDisplay!.Message}",
-                terminalPersistenceToken);
-
-            TerminalizeFailedActivity(
+            TerminalizeFailedActivityBestEffort(
                 activityOperation,
-                wasCancelled);
+                wasCancelled,
+                run.Id);
             if (cancellationKind == ExecutionCancellationKind.ProcessRegistry)
             {
                 throw new AgentExecutionCancelledException(run.Id, run.ProcessRunId, resultSummary, exception);
@@ -1601,23 +1689,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 throw new OperationCanceledException(resultSummary, exception, cancellationToken);
             }
 
-            throw session is not null
-                ? new AgentChatRunFailedException(
-                    agent.Id,
-                    run.Id,
-                    session.Id,
-                    provider.Name,
-                    runtimeAgent?.Model ?? run.Model,
-                    exception,
-                    failureDisplay!.Message)
-                : new AgentRunFailedException(
-                    agent.Id,
-                    run.Id,
-                    run.ChatSessionId,
-                    provider.Name,
-                    runtimeAgent?.Model ?? run.Model,
-                    exception,
-                    failureDisplay!.Message);
+            throw CreateRunFailureException(
+                agent,
+                run,
+                session,
+                failureProvider,
+                failureModel,
+                exception,
+                resultSummary,
+                failureDisplay?.Category);
         }
         finally
         {
@@ -1833,6 +1913,85 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
     }
 
+    private static Exception CreateRunFailureException(
+        AgentDefinition agent,
+        ExecutionRunRecord run,
+        ChatSessionRecord? session,
+        ProviderProfile provider,
+        string model,
+        Exception innerException,
+        string displayMessage,
+        AgentProviderFailureCategory? failureCategory)
+    {
+        return session is not null
+            ? new AgentChatRunFailedException(
+                agent.Id,
+                run.Id,
+                session.Id,
+                provider.Name,
+                model,
+                innerException,
+                displayMessage,
+                failureCategory)
+            : new AgentRunFailedException(
+                agent.Id,
+                run.Id,
+                run.ChatSessionId,
+                provider.Name,
+                model,
+                innerException,
+                displayMessage,
+                failureCategory);
+    }
+
+    private static string ResolveRunFailureDisplayMessage(
+        Exception exception,
+        AgentProviderFailureDisplay? providerFailureDisplay)
+    {
+        if (providerFailureDisplay is not null)
+        {
+            return providerFailureDisplay.Message;
+        }
+
+        return exception is AgentExecutionGovernanceException governanceException
+            ? governanceException.SanitizedDisplayMessage
+            : UnclassifiedRunFailureMessage;
+    }
+
+    private void LogTerminalFailurePersistenceFailure(
+        Guid executionRunId,
+        Guid agentId,
+        Guid? chatSessionId,
+        Exception originalException,
+        Exception persistenceException)
+    {
+        logger.LogError(
+            "The agent run failed and its terminal failure state could not be fully persisted. ExecutionRunId={ExecutionRunId} AgentId={AgentId} ChatSessionId={ChatSessionId} OriginalFailureType={OriginalFailureType} PersistenceFailureType={PersistenceFailureType}.",
+            executionRunId,
+            agentId,
+            chatSessionId,
+            originalException.GetType().Name,
+            persistenceException.GetType().Name);
+    }
+
+    private void TerminalizeFailedActivityBestEffort(
+        IAgentExecutionActivityOperationLease activityOperation,
+        bool wasCancelled,
+        Guid executionRunId)
+    {
+        try
+        {
+            TerminalizeFailedActivity(activityOperation, wasCancelled);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                "Could not publish the terminal activity state for failed execution run {ExecutionRunId}. FailureType={FailureType}.",
+                executionRunId,
+                exception.GetType().Name);
+        }
+    }
+
     private static void TerminalizeFailedActivity(
         IAgentExecutionActivityOperationLease activityOperation,
         bool wasCancelled)
@@ -1876,28 +2035,6 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ? [provider]
             : [provider, .. handoffOptions.Participants.Select(
                 participant => participant.Provider)];
-    }
-
-    private static void PrimeProviderCredentialEnvironment(
-        ProviderProfile provider,
-        ProviderCredentialResolution resolution)
-    {
-        if (!resolution.IsResolved ||
-            !resolution.ShouldPromoteToProcessEnvironment)
-        {
-            return;
-        }
-
-        AgentProviderEnvironmentCredential.PromoteProcessValue(
-            provider.ApiKeyEnvironmentVariable,
-            resolution.ApiKey);
-
-        if (provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
-        {
-            AgentProviderEnvironmentCredential.PromoteProcessValue(
-                "OPENAI_API_KEY",
-                resolution.ApiKey);
-        }
     }
 
     private static AgentRunMetric PriceMetric(
@@ -1955,10 +2092,25 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AutoApprovePendingToolCalls = run.AutoApprovePendingToolCalls,
             State = state,
             Outcome = outcome,
+            EntryAgentRequestCompatibilityEvidence = response.EntryAgentRequestCompatibilityEvidence ?? run.EntryAgentRequestCompatibilityEvidence,
             ResultSummary = response.PendingApprovals.Count > 0
                 ? $"Awaiting approval for {response.PendingApprovals.Count} tool request(s)."
                 : CreateExecutionSummary(run, response)
         };
+    }
+
+    private static ProviderRequestCompatibilityEvidence? ResolveEntryAgentRequestCompatibilityEvidence(
+        AgentRuntimeResponse? lastRuntimeResponse,
+        Exception exception)
+    {
+        if (lastRuntimeResponse?.EntryAgentRequestCompatibilityEvidence is not null)
+        {
+            return lastRuntimeResponse.EntryAgentRequestCompatibilityEvidence;
+        }
+
+        return exception is AgentRuntimeUsageException usageException
+            ? usageException.EntryAgentRequestCompatibilityEvidence
+            : null;
     }
 
     private static ExecutionRunRecord ApplyPortableJsonSchemaOutputEvidence(
@@ -1995,7 +2147,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         if (IsGovernedMachineCriticalRun(run))
         {
-            throw new InvalidOperationException(
+            throw new AgentExecutionGovernanceException(
+                AgentExecutionGovernanceFailureKind.StructuredOutputContract,
                 $"Execution run '{run.Id:N}' is a governed process-step run, but it does not carry a resolvable structured-output contract for approval continuation.");
         }
 
@@ -2024,7 +2177,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             if (IsGovernedMachineCriticalRun(run))
             {
-                throw new InvalidOperationException(
+                throw new AgentExecutionGovernanceException(
+                    AgentExecutionGovernanceFailureKind.StructuredOutputContract,
                     $"Structured-output contract '{structuredOutput.ContractKey}' does not have a registered machine-output validator.");
             }
 
@@ -2130,7 +2284,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 $"Structured output contract '{structuredOutput.ContractKey}' failed validation. Raw output hash: {validation.RawOutputHash}. Errors: {errorSummary}",
                 cancellationToken);
 
-            throw new InvalidOperationException(
+            throw new AgentExecutionGovernanceException(
+                AgentExecutionGovernanceFailureKind.StructuredOutputValidation,
                 $"Structured output contract '{structuredOutput.ContractKey}' failed validation. Raw output hash: {validation.RawOutputHash}. Errors: {errorSummary}");
         }
 
@@ -2872,7 +3027,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             if (finalizerMode == AgentFinalizerMode.Required)
             {
                 activity?.SetStatus(ActivityStatusCode.Error, message);
-                throw new InvalidOperationException(message);
+                throw new AgentExecutionGovernanceException(
+                    AgentExecutionGovernanceFailureKind.FinalizerValidation,
+                    message);
             }
 
             return response;
@@ -2958,7 +3115,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             if (governedRun)
             {
-                throw new InvalidOperationException(message);
+                throw new AgentExecutionGovernanceException(
+                    AgentExecutionGovernanceFailureKind.FinalizerSequenceValidation,
+                    message);
             }
 
             return;
@@ -2986,7 +3145,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         if (governedRun)
         {
-            throw new InvalidOperationException(validationMessage);
+            throw new AgentExecutionGovernanceException(
+                AgentExecutionGovernanceFailureKind.FinalizerSequenceValidation,
+                validationMessage);
         }
     }
 

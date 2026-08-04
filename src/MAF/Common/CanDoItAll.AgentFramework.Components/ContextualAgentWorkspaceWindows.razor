@@ -2,6 +2,7 @@
 @using System.Text.Json.Serialization
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
 @inject IAgentReferenceDataProvider AgentReferenceDataProvider
@@ -11,6 +12,7 @@
 @inject NotificationService NotificationService
 @inject TooltipService TooltipService
 @inject Microsoft.JSInterop.IJSRuntime JsRuntime
+@inject ILogger<ContextualAgentWorkspaceWindows> Logger
 
 @if (WindowState.IsVisible)
 {
@@ -342,6 +344,7 @@
     private ChatAgentWorkspaceSnapshot? workspace;
     private IReadOnlyList<ExecutionLogEntry> executionLog = [];
     private IReadOnlyList<AgentRunMetric> metrics = [];
+    private long workspaceLoadGeneration;
     private IReadOnlyList<string> draftAttachmentPaths = [];
     private AgentDefinition? selectedAgent;
     private Guid? selectedAgentId;
@@ -641,6 +644,12 @@
             return;
         }
 
+        var executionAgentId = selectedAgentId.Value;
+        var executionSessionId = selectedSessionId;
+        var executionLoadGeneration = Volatile.Read(ref workspaceLoadGeneration);
+        var executionCompleted = false;
+        var continuationLoadGeneration = executionLoadGeneration;
+        var continuationSessionId = executionSessionId;
         isChatBusy = true;
         pendingUserPrompt = draftPrompt;
         var previousDraft = draftPrompt;
@@ -651,33 +660,292 @@
         {
             var result = await WorkspaceService.ExecuteRunAsync(
                 new ExecutionRunRequest(
-                    AgentId: selectedAgentId.Value,
+                    AgentId: executionAgentId,
                     Prompt: BuildContextualPrompt(prompt),
                     InitialActivityOperationId: AgentExecutionOperationId.New(),
-                    ChatSessionId: selectedSessionId,
+                    ChatSessionId: executionSessionId,
                     Context: BuildInvocationContext(),
                     AutoApprovePendingToolCalls: ShouldAutoApproveContextualRun(),
                     InputAttachmentPaths: draftAttachmentPaths));
+            executionCompleted = true;
+            if (!IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionLoadGeneration))
+            {
+                return;
+            }
+
             draftAttachmentPaths = [];
-            await LoadWorkspaceAsync(selectedAgentId.Value, result.ChatSessionId ?? selectedSessionId);
-            await NotifyWorkspaceRefreshRequestedAsync(result.ExecutionRunId);
-            Notify("Prompt sent", "success", "The contextual thread was updated.");
+            continuationLoadGeneration = unchecked(executionLoadGeneration + 1);
+            continuationSessionId = result.ChatSessionId ?? executionSessionId;
+            var workspaceReloaded = await LoadWorkspaceAsync(
+                executionAgentId,
+                continuationSessionId);
+            if (!workspaceReloaded ||
+                !IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    continuationSessionId,
+                    continuationLoadGeneration))
+            {
+                return;
+            }
+
+            var refreshNotified = await TryNotifyCompletedWorkspaceRefreshAsync(
+                result.ExecutionRunId,
+                executionAgentId,
+                continuationSessionId,
+                "send");
+            if (!IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    continuationSessionId,
+                    continuationLoadGeneration))
+            {
+                return;
+            }
+
+            Notify(
+                refreshNotified ? "Prompt sent" : "Refresh needed",
+                refreshNotified ? "success" : "warning",
+                refreshNotified
+                    ? "The contextual thread was updated."
+                    : "The prompt completed and the contextual thread was loaded, but the owning workspace could not be refreshed.");
             if (isVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.ResponseText))
             {
                 await SpeakTextAsync(result.ResponseText);
             }
         }
+        catch (AgentChatRunFailedException exception)
+        {
+            if (exception.AgentId != executionAgentId ||
+                (executionSessionId.HasValue &&
+                 exception.ChatSessionId != executionSessionId) ||
+                !IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionLoadGeneration))
+            {
+                LogInactiveSelectionRunFailure(exception, "send");
+                return;
+            }
+
+            var reloadGeneration = Volatile.Read(ref workspaceLoadGeneration);
+            var workspaceReloaded = await TryReloadFailedWorkspaceAsync(exception);
+            if (Volatile.Read(ref workspaceLoadGeneration) != unchecked(reloadGeneration + 1) ||
+                selectedAgentId != exception.AgentId ||
+                selectedSessionId != exception.ChatSessionId)
+            {
+                LogInactiveSelectionRunFailure(exception, "send");
+                return;
+            }
+
+            Notify(
+                "Prompt failed",
+                "danger",
+                BuildFailedRunMessage(
+                    exception.SanitizedDisplayMessage,
+                    workspaceReloaded));
+        }
         catch (Exception exception)
         {
-            draftPrompt = previousDraft;
-            composerKey++;
-            Notify("Prompt failed", "danger", exception.Message);
+            LogOperationContinuationFailure(
+                exception,
+                executionAgentId,
+                executionSessionId,
+                "send",
+                executionCompleted);
+            if (IsOperationContinuationCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    continuationSessionId,
+                    continuationLoadGeneration,
+                    executionCompleted))
+            {
+                if (!executionCompleted)
+                {
+                    draftPrompt = previousDraft;
+                    composerKey++;
+                }
+
+                Notify(
+                    executionCompleted ? "Refresh needed" : "Prompt failed",
+                    executionCompleted ? "warning" : "danger",
+                    executionCompleted
+                        ? "The prompt completed, but its latest contextual thread state could not be loaded. Reload this workspace to see the persisted result."
+                        : "The prompt could not be completed. Retry, or inspect runtime details for the persisted failure.");
+            }
         }
         finally
         {
             pendingUserPrompt = string.Empty;
             isChatBusy = false;
         }
+    }
+
+    private async Task<bool> TryReloadFailedWorkspaceAsync(
+        AgentChatRunFailedException exception)
+    {
+        var loadGeneration = Interlocked.Increment(ref workspaceLoadGeneration);
+        try
+        {
+            var failedWorkspace = await WorkspaceService.GetChatAgentWorkspaceAsync(
+                exception.AgentId,
+                exception.ChatSessionId);
+            if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+            {
+                return false;
+            }
+
+            if (failedWorkspace.AgentId != exception.AgentId ||
+                failedWorkspace.SelectedSessionId != exception.ChatSessionId)
+            {
+                throw new InvalidOperationException(
+                    "The contextual workspace does not belong to the persisted failed run thread.");
+            }
+
+            var failedRunDetail = await WorkspaceService.GetExecutionRunDetailAsync(
+                exception.ExecutionRunId);
+            if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+            {
+                return false;
+            }
+
+            if (failedRunDetail.Run.AgentId != exception.AgentId ||
+                failedRunDetail.Run.ChatSessionId != exception.ChatSessionId)
+            {
+                throw new InvalidOperationException(
+                    "The persisted failed run does not belong to the requested contextual thread.");
+            }
+
+            selectedAgentId = exception.AgentId;
+            selectedAgent = agents.FirstOrDefault(agent => agent.Id == exception.AgentId) ?? selectedAgent;
+            selectedSessionId = exception.ChatSessionId;
+            workspace = failedWorkspace with
+            {
+                SelectedRun = failedRunDetail.Run
+            };
+            executionLog = failedRunDetail.ExecutionLog;
+            metrics = failedRunDetail.Metrics;
+            ResolveRunState();
+            try
+            {
+                await NotifyWorkspaceRefreshRequestedAsync(exception.ExecutionRunId);
+            }
+            catch (Exception refreshException)
+            {
+                Logger.LogWarning(
+                    "The persisted failed contextual-agent run was reloaded, but its workspace refresh callback failed. AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} FailureCategory={FailureCategory} RefreshFailureType={RefreshFailureType}.",
+                    exception.AgentId,
+                    exception.ChatSessionId,
+                    exception.ExecutionRunId,
+                    exception.FailureCategory,
+                    refreshException.GetType().Name);
+            }
+
+            return true;
+        }
+        catch (Exception reloadException)
+        {
+            Logger.LogWarning(
+                "Unable to reload the persisted failed contextual-agent run. AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} FailureCategory={FailureCategory} ReloadFailureType={ReloadFailureType}.",
+                exception.AgentId,
+                exception.ChatSessionId,
+                exception.ExecutionRunId,
+                exception.FailureCategory,
+                reloadException.GetType().Name);
+            return false;
+        }
+    }
+
+    private bool IsWorkspaceSelectionCurrent(
+        Guid agentId,
+        Guid? chatSessionId,
+        long loadGeneration)
+    {
+        return loadGeneration == Volatile.Read(ref workspaceLoadGeneration) &&
+               selectedAgentId == agentId &&
+               selectedSessionId == chatSessionId;
+    }
+
+    private bool IsOperationContinuationCurrent(
+        Guid agentId,
+        Guid? executionSessionId,
+        Guid? continuationSessionId,
+        long loadGeneration,
+        bool executionCompleted)
+    {
+        if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration) ||
+            selectedAgentId != agentId)
+        {
+            return false;
+        }
+
+        return selectedSessionId == continuationSessionId ||
+               executionCompleted && selectedSessionId == executionSessionId;
+    }
+
+    private async Task<bool> TryNotifyCompletedWorkspaceRefreshAsync(
+        Guid? executionRunId,
+        Guid agentId,
+        Guid? chatSessionId,
+        string operationKind)
+    {
+        try
+        {
+            await NotifyWorkspaceRefreshRequestedAsync(executionRunId);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(
+                "A completed contextual-agent operation could not notify its owning workspace. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} RefreshFailureType={RefreshFailureType}.",
+                operationKind,
+                agentId,
+                chatSessionId,
+                executionRunId,
+                exception.GetType().Name);
+            return false;
+        }
+    }
+
+    private void LogOperationContinuationFailure(
+        Exception exception,
+        Guid agentId,
+        Guid? chatSessionId,
+        string operationKind,
+        bool executionCompleted)
+    {
+        Logger.LogWarning(
+            "Contextual-agent operation failed. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionCompleted={ExecutionCompleted} FailureType={FailureType}.",
+            operationKind,
+            agentId,
+            chatSessionId,
+            executionCompleted,
+            exception.GetType().Name);
+    }
+
+    private void LogInactiveSelectionRunFailure(
+        AgentChatRunFailedException exception,
+        string operationKind)
+    {
+        Logger.LogWarning(
+            "Contextual agent run failure did not match the active workspace selection. Operation={OperationKind} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} SelectedAgentId={SelectedAgentId} SelectedChatSessionId={SelectedChatSessionId} FailureCategory={FailureCategory}.",
+            operationKind,
+            exception.AgentId,
+            exception.ChatSessionId,
+            exception.ExecutionRunId,
+            selectedAgentId,
+            selectedSessionId,
+            exception.FailureCategory);
+    }
+
+    private static string BuildFailedRunMessage(
+        string sanitizedDisplayMessage,
+        bool workspaceReloaded)
+    {
+        return workspaceReloaded
+            ? sanitizedDisplayMessage
+            : $"{sanitizedDisplayMessage} The failed run was persisted, but runtime details could not be refreshed. Reload this workspace to see the persisted failure.";
     }
 
     private async Task HandleApprovalDecisionAsync(bool approved)
@@ -697,25 +965,118 @@
             return;
         }
 
+        var executionAgentId = selectedAgentId.Value;
+        var executionSessionId = selectedSessionId.Value;
+        var executionLoadGeneration = Volatile.Read(ref workspaceLoadGeneration);
+        var executionCompleted = false;
+        var continuationLoadGeneration = executionLoadGeneration;
         isChatBusy = true;
         try
         {
             var result = await WorkspaceService.RespondToPendingApprovalsAsync(
-                selectedAgentId.Value,
-                selectedSessionId.Value,
+                executionAgentId,
+                executionSessionId,
                 AgentExecutionOperationId.New(),
                 approved,
                 autoApprovePendingToolCalls);
-            await LoadWorkspaceAsync(selectedAgentId.Value, selectedSessionId.Value);
-            await NotifyWorkspaceRefreshRequestedAsync(result.ExecutionRunId);
+            executionCompleted = true;
+            if (!IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionLoadGeneration))
+            {
+                return;
+            }
+
+            continuationLoadGeneration = unchecked(executionLoadGeneration + 1);
+            if (!await LoadWorkspaceAsync(executionAgentId, executionSessionId) ||
+                !IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    continuationLoadGeneration))
+            {
+                return;
+            }
+
+            var refreshNotified = await TryNotifyCompletedWorkspaceRefreshAsync(
+                result.ExecutionRunId,
+                executionAgentId,
+                executionSessionId,
+                "approval");
+            if (!IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    continuationLoadGeneration))
+            {
+                return;
+            }
+
+            if (!refreshNotified)
+            {
+                Notify(
+                    "Refresh needed",
+                    "warning",
+                    "The approval completed and the contextual thread was loaded, but the owning workspace could not be refreshed.");
+                return;
+            }
+
             Notify(
                 approved ? "Approval applied" : "Approval rejected",
                 approved ? "success" : "warning",
                 approved ? "The contextual thread resumed." : "The contextual thread was refreshed.");
         }
+        catch (AgentChatRunFailedException exception)
+        {
+            if (exception.AgentId != executionAgentId ||
+                exception.ChatSessionId != executionSessionId ||
+                !IsWorkspaceSelectionCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionLoadGeneration))
+            {
+                LogInactiveSelectionRunFailure(exception, "approval");
+                return;
+            }
+
+            var reloadGeneration = Volatile.Read(ref workspaceLoadGeneration);
+            var workspaceReloaded = await TryReloadFailedWorkspaceAsync(exception);
+            if (Volatile.Read(ref workspaceLoadGeneration) != unchecked(reloadGeneration + 1) ||
+                selectedAgentId != exception.AgentId ||
+                selectedSessionId != exception.ChatSessionId)
+            {
+                LogInactiveSelectionRunFailure(exception, "approval");
+                return;
+            }
+
+            Notify(
+                "Approval failed",
+                "danger",
+                BuildFailedRunMessage(
+                    exception.SanitizedDisplayMessage,
+                    workspaceReloaded));
+        }
         catch (Exception exception)
         {
-            Notify("Approval failed", "danger", exception.Message);
+            LogOperationContinuationFailure(
+                exception,
+                executionAgentId,
+                executionSessionId,
+                "approval",
+                executionCompleted);
+            if (IsOperationContinuationCurrent(
+                    executionAgentId,
+                    executionSessionId,
+                    executionSessionId,
+                    continuationLoadGeneration,
+                    executionCompleted))
+            {
+                Notify(
+                    executionCompleted ? "Refresh needed" : "Approval failed",
+                    executionCompleted ? "warning" : "danger",
+                    executionCompleted
+                        ? "The approval completed, but its latest contextual thread state could not be loaded. Reload this workspace to see the persisted result."
+                        : "The approval could not be completed. Retry, or inspect runtime details for the persisted failure.");
+            }
         }
         finally
         {
@@ -809,22 +1170,38 @@
         }
     }
 
-    private async Task LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId)
+    private async Task<bool> LoadWorkspaceAsync(Guid agentId, Guid? preferredSessionId)
     {
+        var loadGeneration = Interlocked.Increment(ref workspaceLoadGeneration);
+        var nextAgent = agents.FirstOrDefault(agent => agent.Id == agentId) ?? selectedAgent;
+        var nextWorkspace = await WorkspaceService.GetChatAgentWorkspaceAsync(agentId, preferredSessionId);
+        if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+        {
+            return false;
+        }
+
+        var runtimeSnapshot = await WorkspaceService.GetChatRuntimeSnapshotAsync(
+            agentId,
+            nextWorkspace.SelectedSessionId);
+        if (loadGeneration != Volatile.Read(ref workspaceLoadGeneration))
+        {
+            return false;
+        }
+
         selectedAgentId = agentId;
-        selectedAgent = agents.FirstOrDefault(agent => agent.Id == agentId) ?? selectedAgent;
-        workspace = await WorkspaceService.GetChatAgentWorkspaceAsync(agentId, preferredSessionId);
-        selectedSessionId = workspace.SelectedSessionId;
+        selectedAgent = nextAgent;
+        workspace = nextWorkspace;
+        selectedSessionId = nextWorkspace.SelectedSessionId;
         if (!CanUseSelectedAgentVoiceMode)
         {
             isVoiceModeEnabled = false;
             isVoiceRecording = false;
         }
 
-        var runtimeSnapshot = await WorkspaceService.GetChatRuntimeSnapshotAsync(agentId, workspace.SelectedSessionId);
         executionLog = runtimeSnapshot.ExecutionLog;
         metrics = runtimeSnapshot.Metrics;
         ResolveRunState();
+        return true;
     }
 
     private Task NotifyWorkspaceRefreshRequestedAsync(Guid? executionRunId)

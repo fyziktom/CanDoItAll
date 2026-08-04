@@ -208,7 +208,7 @@
       "key": "writing-mstest-tests",
       "displayName": "Writing MSTest Tests Skill",
       "description": "Guidance for writing targeted MSTest validation in C# delivery workflows.",
-      "stableId": "skill:writing-mstest-tests:v1",
+      "stableId": "skill:writing-mstest-tests:v2",
       "stableGuidKey": "capabilities/writing-mstest-tests",
       "endpointOrPath": "inline://writing-mstest-tests",
       "skillSource": "inline",

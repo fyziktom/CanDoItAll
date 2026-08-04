@@ -88,7 +88,8 @@ public sealed class ProjectStructureReadHttpBoundaryTests
     }
 
     private static async Task<T> ReadAsync<T>(HttpResponseMessage response)
-        => await response.Content.ReadFromJsonAsync<T>()
+        => await response.Content.ReadFromJsonAsync<T>(
+                ProjectStructureHttpContractTestJson.SerializerOptions)
             ?? throw new InvalidOperationException(
                 $"No {typeof(T).Name} payload was returned.");
 

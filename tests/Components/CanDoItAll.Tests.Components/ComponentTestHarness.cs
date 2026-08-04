@@ -80,9 +80,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await Context.DisposeComponentsAsync();
-        await Context.Services.DisposeAsync();
-        Context.Dispose();
+        await Context.DisposeAsync();
 
         if (_ownsTestEnvironment)
         {
@@ -90,5 +88,4 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         }
     }
 }
-
 

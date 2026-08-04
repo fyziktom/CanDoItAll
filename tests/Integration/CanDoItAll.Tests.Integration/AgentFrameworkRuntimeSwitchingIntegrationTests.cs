@@ -15,6 +15,22 @@ public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
     public async Task Agentframework_workspace_service_tracks_the_current_profile_after_runtime_switch()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-runtime-switch");
+        var primaryTestProfile = testEnvironment.CreatePostgreSqlProfile("agentframework-primary");
+        Guid primaryProfileId;
+        await using (var setupProvider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment))
+        {
+            var setupProfileService = setupProvider.GetRequiredService<IDatabaseProfileService>();
+            var primarySaveResult = await setupProfileService.SaveAsync(
+                TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                    primaryTestProfile,
+                    "PostgreSQL primary switch source"));
+            Assert.True(
+                primarySaveResult.IsSuccess,
+                string.Join(" ", primarySaveResult.Errors.Select(error => error.Message)));
+            Assert.True((await setupProfileService.ActivateAsync(primarySaveResult.Value)).IsSuccess);
+            primaryProfileId = primarySaveResult.Value;
+        }
+
         await using var provider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
         await using var scope = provider.CreateAsyncScope();
 
@@ -22,20 +38,11 @@ public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
         var profileService = scope.ServiceProvider.GetRequiredService<IDatabaseProfileService>();
         var runtimeAccessor = scope.ServiceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var switchCoordinator = scope.ServiceProvider.GetRequiredService<IDatabaseSwitchCoordinator>();
-        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
         var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
 
-        var primaryProfile = testEnvironment.CreatePostgreSqlProfile("agentframework-primary");
-        var primarySaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
-            primaryProfile,
-            "PostgreSQL primary switch source"));
-        Assert.True(primarySaveResult.IsSuccess, string.Join(" ", primarySaveResult.Errors.Select(error => error.Message)));
-
-        var primaryResolvedProfile = runtimeAccessor.ResolveProfile(primarySaveResult.Value);
-        await bootstrapper.EnsureProfileReadyAsync(primaryResolvedProfile);
-        var primarySwitchResult = await switchCoordinator.SwitchAsync(primaryResolvedProfile.Profile.Id);
-        Assert.True(primarySwitchResult.IsSuccess, string.Join(" ", primarySwitchResult.Errors.Select(error => error.Message)));
+        var primaryResolvedProfile = runtimeAccessor.ResolveCurrentProfile();
+        Assert.Equal(primaryProfileId, primaryResolvedProfile.Profile.Id);
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
 
         var primaryEditor = await workspaceService.GetAgentEditorAsync();
         primaryEditor.Name = "Primary Switch Agent";

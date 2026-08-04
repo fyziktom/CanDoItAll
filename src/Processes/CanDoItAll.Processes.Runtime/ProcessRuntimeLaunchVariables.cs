@@ -43,6 +43,7 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProcessStepCompletionDispositionJson = "ProcessStepCompletionDispositionJson";
     public const string ProcessStepSubprocessDefinitionKey = "ProcessStepSubprocessDefinitionKey";
     public const string ProjectId = "ProjectId";
+    public const string ProjectNodeId = "ProjectNodeId";
     public const string ProjectName = "ProjectName";
     public const string ProductRoot = "ProductRoot";
     public const string OutputRoot = "OutputRoot";
@@ -452,6 +453,20 @@ public static class ProcessRuntimeLaunchVariables
         }
 
         projectName = value;
+        return true;
+    }
+
+    public static bool TryReadProjectNodeId(
+        IReadOnlyDictionary<string, string> launchVariables,
+        out string projectNodeId)
+    {
+        projectNodeId = string.Empty;
+        if (!TryReadNonEmptyString(launchVariables, ProjectNodeId, out var value))
+        {
+            return false;
+        }
+
+        projectNodeId = value;
         return true;
     }
 

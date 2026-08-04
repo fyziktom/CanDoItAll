@@ -12,15 +12,6 @@ public static class MafRuntimeServiceCollectionExtensions
 
         services.TryAddSingleton<IMafRuntimeDependencyResolver, MafRuntimeDependencyResolver>();
         services.TryAddSingleton<IMafProviderCredentialService, MafProviderCredentialService>();
-        services.TryAddSingleton<IMafProviderAgentFactory, MafProviderAgentFactory>();
-        services.TryAddSingleton<IMafProviderStreamingRunner>(serviceProvider =>
-        {
-            var resolver = serviceProvider.GetService(typeof(IMafRuntimeDependencyResolver)) is IMafRuntimeDependencyResolver resolvedResolver
-                ? resolvedResolver
-                : MafRuntimeDependencyResolver.Default;
-            return new MafProviderStreamingRunner(
-                resolver.ResolveProviderDependencies(serviceProvider).ProviderStreamingDispatchGate);
-        });
         services.TryAddSingleton<IRuntimeToolProviderAccessFilter, RuntimeToolProviderAccessFilter>();
         services.TryAddSingleton<IRuntimeToolProviderComposer, RuntimeToolProviderComposer>();
         services.TryAddSingleton<IMafRuntimeCompositionMetrics, NoOpMafRuntimeCompositionMetrics>();

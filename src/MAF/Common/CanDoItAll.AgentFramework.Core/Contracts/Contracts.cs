@@ -331,7 +331,25 @@ public sealed record AgentRuntimeResponse(
     public AgentRuntimeContextAssemblyManifest? ContextAssemblyManifest { get; init; }
 
     public IReadOnlyList<AgentContextContributionTrace> ContextContributionTraces { get; init; } = [];
+
+    public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; init; }
 }
+
+public enum AgentRuntimeFailureOrigin
+{
+    Runtime,
+    Provider,
+    Tool,
+    Finalizer,
+    ProviderConfiguration
+}
+
+public sealed record AgentRuntimeProviderFailureIdentity(
+    Guid ProviderProfileId,
+    string ProviderName,
+    ProviderKind ProviderKind,
+    ProviderTransportKind Transport,
+    string Model);
 
 public sealed class AgentRuntimeUsageException : Exception
 {
@@ -339,16 +357,28 @@ public sealed class AgentRuntimeUsageException : Exception
         string message,
         Exception innerException,
         IReadOnlyList<ProviderUsageObservation> usageObservations,
-        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null)
+        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null,
+        ProviderRequestCompatibilityEvidence? entryAgentRequestCompatibilityEvidence = null,
+        AgentRuntimeFailureOrigin failureOrigin = AgentRuntimeFailureOrigin.Runtime,
+        AgentRuntimeProviderFailureIdentity? providerFailureIdentity = null)
         : base(message, innerException)
     {
         UsageObservations = usageObservations;
         ToolInvocationTraces = toolInvocationTraces ?? [];
+        EntryAgentRequestCompatibilityEvidence = entryAgentRequestCompatibilityEvidence;
+        FailureOrigin = failureOrigin;
+        ProviderFailureIdentity = providerFailureIdentity;
     }
 
     public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; }
 
     public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; }
+
+    public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; }
+
+    public AgentRuntimeFailureOrigin FailureOrigin { get; }
+
+    public AgentRuntimeProviderFailureIdentity? ProviderFailureIdentity { get; }
 }
 
 public interface IAgentRuntime
@@ -408,8 +438,7 @@ public interface ICapabilityProofService
 public sealed record ProviderCredentialResolution(
     string ApiKey,
     string ResolutionSource,
-    string FailureMessage,
-    bool ShouldPromoteToProcessEnvironment = true)
+    string FailureMessage)
 {
     public bool IsResolved => !string.IsNullOrWhiteSpace(ApiKey);
 }
@@ -572,6 +601,12 @@ public interface IAgentFrameworkWorkspaceService :
         CancellationToken cancellationToken = default)
     {
         throw new NotSupportedException("This workspace does not support durable project-structure access revocation.");
+    }
+    Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException("This workspace does not support bulk durable project-structure access revocation.");
     }
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);

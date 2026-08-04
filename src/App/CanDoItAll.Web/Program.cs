@@ -71,6 +71,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        context.Items[DevelopmentEndpointAccess.OriginalRemoteIpItemKey] =
+            context.Connection.RemoteIpAddress;
+        await next();
+    });
+}
+
 app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
@@ -119,7 +129,7 @@ if (app.Environment.IsDevelopment())
             snapshot.LastChangedAtUtc,
             snapshot.ActiveUrls
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
     app.MapGet("/_dev/database/selection", async (
         IDatabaseProfileRuntimeAccessor profileAccessor,
@@ -147,10 +157,9 @@ if (app.Environment.IsDevelopment())
             profile.Profile.ProviderKind,
             profile.Profile.SourceKind,
             profile.Profile.Runtime.Fingerprint,
-            profile.Profile.Storage.WorkspaceRoot,
-            profile.ConnectionString
+            profile.Profile.Storage.WorkspaceRoot
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
     app.MapPost("/_dev/database/profiles/postgresql", async (
         PostgreSqlDevDatabaseProfileRequest request,
@@ -231,7 +240,7 @@ if (app.Environment.IsDevelopment())
             Descriptor = $"{profile.Profile.PostgreSql?.Host}:{profile.Profile.PostgreSql?.Port}/{profile.Profile.PostgreSql?.DatabaseName}",
             Switch = switchResult
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
     app.MapPost("/_dev/database/switch/{profileId:guid}", async (
         Guid profileId,
@@ -267,11 +276,10 @@ if (app.Environment.IsDevelopment())
                 runtimeProfile.Profile.Id,
                 runtimeProfile.Profile.DisplayName,
                 runtimeProfile.Profile.Runtime.Fingerprint,
-                runtimeProfile.Profile.Storage.WorkspaceRoot,
-                runtimeProfile.ConnectionString
+                runtimeProfile.Profile.Storage.WorkspaceRoot
             }
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
     app.MapPost("/_dev/database/seed-profile", async (
         string? label,
@@ -312,7 +320,7 @@ if (app.Environment.IsDevelopment())
             ManagedFileFullPath = fullPath,
             ManagedFileContent = content
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
     app.MapPost("/_dev/projects", async (
         string? name,
@@ -336,9 +344,9 @@ if (app.Environment.IsDevelopment())
             ProjectId = saveResult.Value,
             Route = $"/projects/{saveResult.Value:D}/structure"
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
-    app.MapGet("/_dev/agentframework/diagnostics", async (
+    app.MapPost("/_dev/agentframework/diagnostics", async (
         AiAgentService aiAgentService,
         IAiTechnicalAgentBridge technicalAgentBridge,
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
@@ -404,7 +412,6 @@ if (app.Environment.IsDevelopment())
                 item.TemplateKey,
                 item.IsTemplate,
                 item.ProviderProfileId,
-                item.ConfigurationJson,
                 item.Tags
             }),
             Roster = roster.Select(item => new
@@ -419,10 +426,9 @@ if (app.Environment.IsDevelopment())
                 item.CapabilityCount
             })
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
     app.MapGet("/_dev/agentframework/credential", async (
-        IConfiguration configuration,
         IAgentProviderCredentialResolver providerCredentialResolver,
         ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
     {
@@ -441,8 +447,6 @@ if (app.Environment.IsDevelopment())
         }
 
         var resolution = providerCredentialResolver.Resolve(provider);
-        var processValue = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        var configuredValue = configuration["OPENAI_API_KEY"];
 
         return Results.Ok(new
         {
@@ -451,7 +455,6 @@ if (app.Environment.IsDevelopment())
                 provider.Id,
                 provider.Name,
                 provider.Kind,
-                provider.ApiKeyEnvironmentVariable,
                 provider.DefaultModel,
                 provider.Transport
             },
@@ -460,26 +463,16 @@ if (app.Environment.IsDevelopment())
             {
                 resolution.IsResolved,
                 resolution.ResolutionSource,
-                resolution.FailureMessage
-            },
-            ProcessEnvironment = new
-            {
-                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(processValue),
-                Length = string.IsNullOrWhiteSpace(processValue) ? 0 : processValue.Length
-            },
-            Configuration = new
-            {
-                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(configuredValue),
-                Length = string.IsNullOrWhiteSpace(configuredValue) ? 0 : configuredValue.Length
-            },
-            Presence = AgentProviderEnvironmentCredential.DescribePresence("OPENAI_API_KEY")
+                FailureMessage = WorkflowExecutorRedaction.RedactText(resolution.FailureMessage)
+            }
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
-    app.MapGet("/_dev/agentframework/probe-agent/{agentId:guid}", async (
+    app.MapPost("/_dev/agentframework/probe-agent/{agentId:guid}", async (
         Guid agentId,
         string? promptMode,
         bool persistTranscript,
+        bool? autoApprove,
         Guid? chatSessionId,
         string? sourceKind,
         string? sourceId,
@@ -490,7 +483,6 @@ if (app.Environment.IsDevelopment())
         string? processRunId,
         string? processStepId,
         string? messageId,
-        IConfiguration configuration,
         IAgentProviderCredentialResolver providerCredentialResolver,
         ICanDoItAllAgentWorkspaceFactory workspaceFactory) =>
     {
@@ -516,8 +508,6 @@ if (app.Environment.IsDevelopment())
         }
 
         var resolution = providerCredentialResolver.Resolve(provider);
-        var processValue = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        var configuredValue = configuration["OPENAI_API_KEY"];
         var effectivePromptMode = string.IsNullOrWhiteSpace(promptMode)
             ? "ok"
             : promptMode.Trim();
@@ -572,7 +562,7 @@ if (app.Environment.IsDevelopment())
             {
                 Succeeded = true,
                 providerResult.Model,
-                providerResult.ResponseText,
+                ResponseCharacters = providerResult.ResponseText.Length,
                 providerResult.InputTokens,
                 providerResult.OutputTokens
             };
@@ -582,8 +572,8 @@ if (app.Environment.IsDevelopment())
             providerProbe = new
             {
                 Succeeded = false,
-                Exception = exception.ToString(),
-                InnerException = exception.InnerException?.ToString()
+                FailureType = exception.GetType().Name,
+                FailureMessage = WorkflowExecutorRedaction.RedactText(exception.Message)
             };
         }
 
@@ -629,12 +619,13 @@ if (app.Environment.IsDevelopment())
                     AgentExecutionOperationId.New(),
                     probeChatSessionId,
                     Context: executionContext,
-                    AutoApprovePendingToolCalls: true));
+                    AutoApprovePendingToolCalls: autoApprove == true));
             agentProbe = new
             {
                 Succeeded = true,
                 PromptMode = effectivePromptMode,
                 PersistTranscript = persistTranscript,
+                AutoApprove = autoApprove == true,
                 RequestedChatSessionId = chatSessionId,
                 EffectiveChatSessionId = probeChatSessionId,
                 PromptLength = prompt.Length,
@@ -642,7 +633,7 @@ if (app.Environment.IsDevelopment())
                 Context = executionContext,
                 executionResult.ExecutionRunId,
                 executionResult.ChatSessionId,
-                executionResult.ResponseText,
+                ResponseCharacters = executionResult.ResponseText.Length,
                 Metric = new
                 {
                     executionResult.Metric.ProviderName,
@@ -662,6 +653,7 @@ if (app.Environment.IsDevelopment())
                 Succeeded = false,
                 PromptMode = effectivePromptMode,
                 PersistTranscript = persistTranscript,
+                AutoApprove = autoApprove == true,
                 RequestedChatSessionId = chatSessionId,
                 EffectiveChatSessionId = chatSessionId,
                 PromptLength = prompt.Length,
@@ -681,8 +673,8 @@ if (app.Environment.IsDevelopment())
                 exception.AgentId,
                 exception.ExecutionRunId,
                 exception.ChatSessionId,
-                Exception = exception.ToString(),
-                InnerException = exception.InnerException?.ToString(),
+                FailureType = exception.GetType().Name,
+                FailureMessage = WorkflowExecutorRedaction.RedactText(exception.Message),
                 Run = new
                 {
                     detail.Run.Id,
@@ -690,7 +682,7 @@ if (app.Environment.IsDevelopment())
                     detail.Run.Model,
                     detail.Run.State,
                     detail.Run.Outcome,
-                    detail.Run.ResultSummary
+                    ResultSummary = WorkflowExecutorRedaction.RedactText(detail.Run.ResultSummary)
                 },
                 Log = detail.ExecutionLog
                     .OrderBy(item => item.CreatedAtUtc)
@@ -700,7 +692,7 @@ if (app.Environment.IsDevelopment())
                         item.CreatedAtUtc,
                         item.State,
                         item.Phase,
-                        item.Message
+                        Message = WorkflowExecutorRedaction.RedactText(item.Message)
                     })
                     .ToArray()
             };
@@ -712,6 +704,7 @@ if (app.Environment.IsDevelopment())
                 Succeeded = false,
                 PromptMode = effectivePromptMode,
                 PersistTranscript = persistTranscript,
+                AutoApprove = autoApprove == true,
                 RequestedChatSessionId = chatSessionId,
                 EffectiveChatSessionId = chatSessionId,
                 PromptLength = prompt.Length,
@@ -728,8 +721,8 @@ if (app.Environment.IsDevelopment())
                     processStepId,
                     messageId
                 },
-                Exception = exception.ToString(),
-                InnerException = exception.InnerException?.ToString()
+                FailureType = exception.GetType().Name,
+                FailureMessage = WorkflowExecutorRedaction.RedactText(exception.Message)
             };
         }
 
@@ -741,42 +734,28 @@ if (app.Environment.IsDevelopment())
                 agent.Name,
                 agent.ProviderProfileId,
                 agent.Model,
-                agent.ChatHistoryMode,
-                agent.ConfigurationJson
+                agent.ChatHistoryMode
             },
             Provider = new
             {
                 provider.Id,
                 provider.Name,
                 provider.Kind,
-                provider.ApiKeyEnvironmentVariable,
                 provider.DefaultModel,
-                provider.Transport,
-                provider.ConfigurationJson
+                provider.Transport
             },
             Resolver = new
             {
                 resolution.IsResolved,
                 resolution.ResolutionSource,
-                resolution.FailureMessage
+                FailureMessage = WorkflowExecutorRedaction.RedactText(resolution.FailureMessage)
             },
-            ProcessEnvironment = new
-            {
-                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(processValue),
-                Length = string.IsNullOrWhiteSpace(processValue) ? 0 : processValue.Length
-            },
-            Configuration = new
-            {
-                HasOpenAiApiKey = !string.IsNullOrWhiteSpace(configuredValue),
-                Length = string.IsNullOrWhiteSpace(configuredValue) ? 0 : configuredValue.Length
-            },
-            Presence = AgentProviderEnvironmentCredential.DescribePresence("OPENAI_API_KEY"),
             ProviderProbe = providerProbe,
             AgentProbe = agentProbe
         });
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 
-    app.MapGet("/_dev/agentframework/diagnostics-step/{step}", async (
+    app.MapPost("/_dev/agentframework/diagnostics-step/{step}", async (
         string step,
         AiAgentService aiAgentService,
         IAiTechnicalAgentBridge technicalAgentBridge,
@@ -887,7 +866,7 @@ if (app.Environment.IsDevelopment())
                 });
             }
         }
-    });
+    }).RequireLocalOrAuthorizedDevelopmentAccess();
 }
 
 app.MapProjectStructureAgentApi();
@@ -923,5 +902,3 @@ internal sealed record PostgreSqlDevDatabaseProfileRequest(
     bool? Activate);
 
 public partial class Program;
-
-

@@ -768,6 +768,16 @@ public sealed record ExecutionRunRecord(
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AgentExecutionOperationId? InitialActivityOperationId { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? FailureProviderProfileId { get; init; }
+
+    public string FailureProviderName { get; init; } = string.Empty;
+
+    public string FailureModel { get; init; } = string.Empty;
 }
 
 public sealed record ExecutionApprovalRecord(

@@ -7,6 +7,7 @@ namespace CanDoItAll.Modules.Workbench;
 internal static class ProjectStructureFileInteractionPolicy
 {
     public const string MermaidMediaType = "text/vnd.mermaid";
+    public const string XlsxMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     public const int MaximumContentBytes = 16 * 1024 * 1024;
 
     private static readonly HashSet<string> EditableExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -43,6 +44,7 @@ internal static class ProjectStructureFileInteractionPolicy
         {
             ".mmd" or ".mermaid" => MermaidMediaType,
             ".md" or ".markdown" => "text/markdown",
+            ".xlsx" => XlsxMediaType,
             ".svg" => "image/svg+xml",
             ".pdf" => "application/pdf",
             ".png" => "image/png",
@@ -68,6 +70,7 @@ internal static class ProjectStructureFileInteractionPolicy
             ".svg" => "SVG stays metadata-only and is never inserted as active markup.",
             ".pdf" => "PDF uses the browser-native viewer; embedded PDF actions are controlled by that viewer.",
             ".mmd" or ".mermaid" => "Mermaid renders in strict mode with HTML labels and source actions disabled.",
+            ".xlsx" => "This workbook uses a bounded, read-only preview of its stored cells and formulas.",
             _ when canEdit => "Text edits use bounded history and an awaited revision-aware save.",
             _ => "This file is read-only. Unsupported formats remain inert and expose metadata only."
         };

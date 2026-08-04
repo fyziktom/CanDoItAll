@@ -11,7 +11,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class FileToolsIntegrationBoundaryTests
 {
     [Fact]
-    public async Task SB06_Adapter_PreservesNativeOrderingBudgetsCompletenessAndCursor()
+    public async Task Adapter_preserves_native_ordering_budgets_completeness_and_cursor()
     {
         var native = new FakeBrowseDriver(StorageProviderKind.FileSystem)
         {
@@ -43,7 +43,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB06_Adapter_UnsupportedGlobalOrdering_FailsBeforeNativeIo()
+    public async Task Adapter_unsupported_global_ordering_fails_before_native_io()
     {
         var native = new FakeBrowseDriver(StorageProviderKind.FileSystem);
         StorageFileBrowserProvider adapter = CreateAdapter(native);
@@ -59,7 +59,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB06_Adapter_StaleNativeCursor_MapsToSafeTypedError()
+    public async Task Adapter_stale_native_cursor_maps_to_safe_typed_error()
     {
         var native = new FakeBrowseDriver(StorageProviderKind.FileSystem)
         {
@@ -83,7 +83,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB06_SessionFactory_DuplicateBinding_IsRejected()
+    public async Task Session_factory_rejects_duplicate_binding()
     {
         StorageCatalogRecord storage = CreateStorage();
         FileToolsStorageBinding binding = CreateBinding(storage.Id);
@@ -96,7 +96,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB08_SessionFactory_RejectsUnboundedSourceSetBeforeCatalogAccess()
+    public async Task Session_factory_rejects_unbounded_source_set_before_catalog_access()
     {
         StorageCatalogRecord storage = CreateStorage();
         FileToolsStorageBinding binding = CreateBinding(storage.Id);
@@ -111,7 +111,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB06_CompositionRegistration_ResolvesAndCreatesSessionDeclaratively()
+    public async Task Composition_registration_resolves_and_creates_session_declaratively()
     {
         StorageCatalogRecord storage = CreateStorage();
         var services = new ServiceCollection();
@@ -135,7 +135,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public void SB14_Composition_CurrentBindingGraphIsScoped()
+    public void Composition_current_binding_graph_is_scoped()
     {
         var services = new ServiceCollection();
 
@@ -156,7 +156,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public void SB10_Composition_DoesNotOverrideHostHybridCacheBounds()
+    public void Composition_does_not_override_host_hybrid_cache_bounds()
     {
         var services = new ServiceCollection();
         services.AddHybridCache(options =>
@@ -174,7 +174,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB10_Composition_DuplicateSemanticScopeOwnersFailClosed()
+    public async Task Composition_duplicate_semantic_scope_owners_fail_closed()
     {
         StorageCatalogRecord storage = CreateStorage();
         var services = new ServiceCollection();
@@ -199,7 +199,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB11_Composition_IndependentScopeSourceExtendsWithoutCoordinatorChange()
+    public async Task Composition_independent_scope_source_extends_without_coordinator_change()
     {
         Guid projectStorageId = Guid.NewGuid();
         Guid processStorageId = Guid.NewGuid();
@@ -224,7 +224,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB06_SessionFactory_UnknownStorage_IsRejected()
+    public async Task Session_factory_rejects_unknown_storage()
     {
         StorageCatalogRecord storage = CreateStorage();
         var factory = CreateFactory(storage, [CreateBinding(Guid.NewGuid())]);
@@ -236,7 +236,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public void SB06_Adapter_MismatchedProvider_IsRejected()
+    public void Adapter_rejects_mismatched_provider()
     {
         StorageCatalogRecord storage = CreateStorage();
         var driver = new FakeBrowseDriver(StorageProviderKind.Ftp);
@@ -248,7 +248,7 @@ public sealed class FileToolsIntegrationBoundaryTests
     }
 
     [Fact]
-    public async Task SB06_Adapter_DoesNotGrantContentAuthority()
+    public async Task Adapter_does_not_grant_content_authority()
     {
         var native = new FakeBrowseDriver(StorageProviderKind.FileSystem)
         {

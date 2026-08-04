@@ -95,16 +95,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            throw new InvalidOperationException("Provider profile name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(model.BaseUrl))
-        {
-            throw new InvalidOperationException("Provider base URL is required.");
-        }
-
+        var capabilityProfile = providerProfileService.CreateProfile(model);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var current = model.Id.HasValue
             ? await dbContext.Set<WorkspaceProviderProfile>()
@@ -113,93 +104,102 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var currentProfile = current is null
             ? null
             : providerMapper.Map(current);
-
-        var connectorPluginKey = AgentFrameworkProviderMetadata.ResolveConnectorPluginKey(model, current);
-        if (!providerRegistry.TryResolve(connectorPluginKey, out var providerAdapter))
+        if (currentProfile is not null)
         {
-            throw new InvalidOperationException($"No workspace provider adapter is registered for plugin '{connectorPluginKey}'.");
+            capabilityProfile = providerProfileService.CreateProfile(
+                model,
+                currentProfile);
         }
 
-        var configSchemaVersion = AgentFrameworkProviderMetadata.ResolveConfigSchemaVersion(
+        var connectorPluginKey = ResolveConnectorPluginKeyForSave(model, current);
+        if (!providerRegistry.TryResolve(connectorPluginKey, out var providerAdapter))
+        {
+            throw new ProviderProfileValidationException(
+                $"No workspace provider adapter is registered for plugin '{connectorPluginKey}'.");
+        }
+
+        ValidateConnectorBaseUrl(
+            capabilityProfile.BaseUrl,
+            providerAdapter.Manifest.PluginKey);
+
+        var configSchemaVersion = ResolveConfigSchemaVersionForSave(
             model,
             current,
             providerAdapter.Manifest.ConfigurationSchema.Version);
         if (!string.Equals(configSchemaVersion, providerAdapter.Manifest.ConfigurationSchema.Version, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(
+            throw new ProviderProfileValidationException(
                 $"Provider plugin '{providerAdapter.Manifest.PluginKey}' requires schema '{providerAdapter.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied.");
         }
 
-        var secretRecordId = AgentFrameworkProviderMetadata.ResolveSecretRecordId(model, current?.ApiKeySecretId);
+        var secretRecordId = ResolveSecretRecordIdForSave(model);
         if (providerAdapter.Manifest.SecretRequirements.Any(item => item.IsRequired) &&
-            !secretRecordId.HasValue &&
-            !IsEnvironmentVariableSecretReference(model.ApiKeyEnvironmentVariable))
+            !secretRecordId.HasValue)
         {
-            throw new InvalidOperationException($"{providerAdapter.Manifest.DisplayName} requires a secret reference.");
+            throw new ProviderProfileValidationException(
+                $"{providerAdapter.Manifest.DisplayName} requires an explicit secret record reference.");
         }
 
+        var timeoutSeconds = ResolveTimeoutSecondsForSave(
+            model,
+            current?.TimeoutSeconds ?? 45);
+        var configuredThinkingEffortCapabilities =
+            ResolveThinkingEffortCapabilitiesForSave(model);
+        var normalizedEditor = providerProfileService.CreateEditor(capabilityProfile);
+        normalizedEditor.ModelThinkingEffortCapabilities =
+            configuredThinkingEffortCapabilities.ToList();
+        capabilityProfile = providerProfileService.CreateProfile(
+            normalizedEditor,
+            currentProfile);
+        var defaultModel = string.IsNullOrWhiteSpace(capabilityProfile.DefaultModel)
+            ? WorkspaceAgentProviderProfileMapper.ResolveDefaultModel(
+                providerAdapter.Manifest.PluginKey)
+            : capabilityProfile.DefaultModel;
+        capabilityProfile = capabilityProfile with
+        {
+            DefaultModel = defaultModel,
+            ModelPrices = ProviderPricingDefaults.NormalizeModelPrices(
+                capabilityProfile.Kind,
+                defaultModel,
+                capabilityProfile.ModelPrices)
+        };
+        var featureMatrix = providerProfileService.ResolveFeatureMatrix(capabilityProfile);
         var entity = current ?? new WorkspaceProviderProfile
         {
-            Id = model.Id ?? Guid.NewGuid()
+            Id = capabilityProfile.Id
         };
         if (current is null)
         {
             dbContext.Set<WorkspaceProviderProfile>().Add(entity);
         }
 
-        var timeoutSeconds = AgentFrameworkProviderMetadata.ResolveTimeoutSeconds(model, current?.TimeoutSeconds ?? 45);
-        var selectedTransport = model.Transport;
-        var configuredThinkingEffortCapabilities =
-            AgentFrameworkProviderMetadata.HasThinkingEffortCapabilities(
-                model.ConfigurationJson)
-                ? AgentFrameworkProviderMetadata.ReadThinkingEffortCapabilities(
-                    model.ConfigurationJson)
-                : model.ModelThinkingEffortCapabilities ?? [];
-        model.ModelThinkingEffortCapabilities =
-            configuredThinkingEffortCapabilities.ToList();
-        var capabilityProfile = providerProfileService.CreateProfile(
-            model,
-            currentProfile);
-        var featureMatrix = providerProfileService.ResolveFeatureMatrix(capabilityProfile);
-        entity.Name = model.Name.Trim();
+        entity.Name = capabilityProfile.Name;
         entity.ProviderKind = providerAdapter.LegacyProviderKind;
         entity.ConnectorPluginKey = providerAdapter.Manifest.PluginKey;
         entity.ConfigSchemaVersion = configSchemaVersion;
-        entity.BaseUrl = model.BaseUrl.Trim().TrimEnd('/');
+        entity.BaseUrl = capabilityProfile.BaseUrl;
         entity.ApiKeySecretId = secretRecordId;
-        entity.DefaultModel = string.IsNullOrWhiteSpace(model.DefaultModel)
-            ? WorkspaceAgentProviderProfileMapper.ResolveDefaultModel(
-                providerAdapter.Manifest.PluginKey)
-            : model.DefaultModel.Trim();
+        entity.DefaultModel = capabilityProfile.DefaultModel;
         entity.TimeoutSeconds = timeoutSeconds;
-        entity.IsEnabled = model.IsEnabled;
-        entity.SupportsStreaming = model.SupportsStreaming;
-        entity.SupportsToolCalling = model.SupportsTools;
+        entity.IsEnabled = capabilityProfile.IsEnabled;
+        entity.SupportsStreaming = capabilityProfile.SupportsStreaming;
+        entity.SupportsToolCalling = capabilityProfile.SupportsTools;
         entity.SupportsStructuredOutput = featureMatrix.SupportsStructuredOutput;
         entity.SupportsVision = featureMatrix.SupportsVision;
-        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
-            capabilityProfile.Kind,
-            entity.DefaultModel,
-            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
-        if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var pricingValidationMessage))
-        {
-            throw new InvalidOperationException(pricingValidationMessage);
-        }
-
         entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
             AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
-                model.ConfigurationJson,
+                capabilityProfile.ConfigurationJson,
                 providerAdapter.Manifest.PluginKey,
                 configSchemaVersion,
                 secretRecordId,
                 timeoutSeconds,
                 capabilityProfile.Kind,
-                selectedTransport,
-                model.Purpose,
+                capabilityProfile.Transport,
+                capabilityProfile.Purpose,
                 capabilityProfile.ModelThinkingEffortCapabilities,
-                model.Tags),
-            ProviderPricingDefaults.ResolveIsPrivateProvider(capabilityProfile.Kind, model.IsPrivateProvider),
-            modelPrices);
+                capabilityProfile.Tags),
+            capabilityProfile.IsPrivateProvider,
+            capabilityProfile.ModelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await NotifyProviderSavedAsync(entity.Id);
@@ -377,14 +377,144 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             : providerMapper.Map(provider);
     }
 
-    private static bool IsEnvironmentVariableSecretReference(string apiKeyEnvironmentVariable)
+    private static void ValidateConnectorBaseUrl(
+        string baseUrl,
+        string connectorPluginKey)
     {
-        if (string.IsNullOrWhiteSpace(apiKeyEnvironmentVariable))
+        if (string.Equals(
+                connectorPluginKey,
+                ScenarioHarnessProviderAdapter.PluginKey,
+                StringComparison.Ordinal))
         {
-            return false;
+            if (string.Equals(
+                    baseUrl,
+                    ScenarioHarnessProviderAdapter.BaseUrl,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            throw new ProviderProfileValidationException(
+                "The scenario-harness connector requires its canonical scenario endpoint.");
         }
 
-        return !apiKeyEnvironmentVariable.Trim().StartsWith("secret:", StringComparison.OrdinalIgnoreCase);
+        if (string.Equals(
+                connectorPluginKey,
+                ProcessMockProviderAdapter.PluginKey,
+                StringComparison.Ordinal))
+        {
+            if (string.Equals(
+                    baseUrl,
+                    ProcessMockProviderAdapter.BaseUrl,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            throw new ProviderProfileValidationException(
+                "The process-mock connector requires its canonical process endpoint.");
+        }
+
+        var endpoint = new Uri(baseUrl, UriKind.Absolute);
+        if (string.Equals(
+                endpoint.Scheme,
+                Uri.UriSchemeHttp,
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                endpoint.Scheme,
+                Uri.UriSchemeHttps,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        throw new ProviderProfileValidationException(
+            $"Provider connector '{connectorPluginKey}' requires an HTTP or HTTPS base URL.");
     }
 
+    private static string ResolveConnectorPluginKeyForSave(
+        AgentFrameworkProviderProfileEditorModel model,
+        WorkspaceProviderProfile? current)
+    {
+        try
+        {
+            return AgentFrameworkProviderMetadata.ResolveConnectorPluginKey(
+                model,
+                current);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider connector metadata is invalid.");
+        }
+    }
+
+    private static string ResolveConfigSchemaVersionForSave(
+        AgentFrameworkProviderProfileEditorModel model,
+        WorkspaceProviderProfile? current,
+        string defaultVersion)
+    {
+        try
+        {
+            return AgentFrameworkProviderMetadata.ResolveConfigSchemaVersion(
+                model,
+                current,
+                defaultVersion);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider configuration schema metadata is invalid.");
+        }
+    }
+
+    private static Guid? ResolveSecretRecordIdForSave(
+        AgentFrameworkProviderProfileEditorModel model)
+    {
+        try
+        {
+            return AgentFrameworkProviderMetadata.ResolveSecretRecordId(model);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider secret-reference metadata is invalid.");
+        }
+    }
+
+    private static int ResolveTimeoutSecondsForSave(
+        AgentFrameworkProviderProfileEditorModel model,
+        int fallbackValue)
+    {
+        try
+        {
+            return AgentFrameworkProviderMetadata.ResolveTimeoutSeconds(
+                model,
+                fallbackValue);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider timeout metadata is invalid.");
+        }
+    }
+
+    private static IReadOnlyList<ProviderModelThinkingEffortCapability>
+        ResolveThinkingEffortCapabilitiesForSave(
+            AgentFrameworkProviderProfileEditorModel model)
+    {
+        try
+        {
+            return AgentFrameworkProviderMetadata.HasThinkingEffortCapabilities(
+                    model.ConfigurationJson)
+                ? AgentFrameworkProviderMetadata.ReadThinkingEffortCapabilities(
+                    model.ConfigurationJson)
+                : model.ModelThinkingEffortCapabilities ?? [];
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider thinking-effort capability metadata is invalid.");
+        }
+    }
 }

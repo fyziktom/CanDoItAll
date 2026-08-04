@@ -2646,7 +2646,7 @@ public sealed class AgentChatPreparationPoolTests
         await pool.WarmAsync();
         var acquired = await pool.AcquireAsync(agent.Id);
 
-        Assert.Equal(agent, acquired);
+        Assert.Equivalent(agent, acquired, strict: true);
         Assert.Equal(1, referenceData.RequestCount);
         Assert.Equal(0, pool.Snapshot().PreparedCount);
     }
@@ -2799,7 +2799,7 @@ public sealed class AgentChatPreparationPoolTests
         var acquiredAgents = await Task.WhenAll(firstAcquire, secondAcquire);
 
         Assert.Equal(1, referenceData.RequestCount);
-        Assert.All(acquiredAgents, acquired => Assert.Equal(agent, acquired));
+        Assert.All(acquiredAgents, acquired => Assert.Equivalent(agent, acquired, strict: true));
     }
 
     private static AgentDefinition CreateAgent(string name, DateTimeOffset timestamp)

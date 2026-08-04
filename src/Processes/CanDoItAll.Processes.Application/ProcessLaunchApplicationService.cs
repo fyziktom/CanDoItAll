@@ -35,7 +35,6 @@ public sealed class ProcessLaunchApplicationService(
     private const string CurrentManagedArtifactRootVariableName = "CurrentManagedArtifactRoot";
     private const string ManagedArtifactRootVariableName = "ManagedArtifactRoot";
     private const string ProjectIdVariableName = ProcessRuntimeLaunchVariables.ProjectId;
-    private const string ProjectNodeIdVariableName = "ProjectNodeId";
     private const string OutputFolderVariableName = "OutputFolder";
     private const string OutputRootVariableName = "OutputRoot";
     private const string ProductRootVariableName = "ProductRoot";
@@ -1146,7 +1145,10 @@ public sealed class ProcessLaunchApplicationService(
 
         if (!string.IsNullOrWhiteSpace(request.ProjectNodeId))
         {
-            SetCanonicalLaunchVariable(enriched, ProjectNodeIdVariableName, request.ProjectNodeId.Trim());
+            SetCanonicalLaunchVariable(
+                enriched,
+                ProcessRuntimeLaunchVariables.ProjectNodeId,
+                request.ProjectNodeId.Trim());
         }
 
         return enriched;

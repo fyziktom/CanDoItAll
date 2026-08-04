@@ -187,7 +187,9 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
         Assert.Equal(technicalAgentIds[62], match.Agent.Id);
         Assert.Equal("Directory owner", match.Governance.OwnerName);
         Assert.Equal(AiValidationStatus.Approved, match.Governance.ValidationStatus);
-        Assert.Same(provider, match.Provider);
+        Assert.Same(
+            referenceDataProvider.Snapshot.ProviderById[provider.Id],
+            match.Provider);
         Assert.True(match.IsPrivateProvider);
         Assert.NotNull(deepLinkedItem);
         Assert.Equal(technicalAgentIds[0], deepLinkedItem.Agent.Id);
@@ -332,6 +334,8 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
     private sealed class RecordingReferenceDataProvider(
         AgentReferenceDataSnapshot snapshot) : IAgentReferenceDataProvider
     {
+        public AgentReferenceDataSnapshot Snapshot { get; } = snapshot;
+
         public List<AgentReferenceDataRequest> Requests { get; } = [];
 
         public Task<AgentReferenceDataSnapshot> GetAsync(
@@ -339,7 +343,7 @@ public sealed class AiAgentDirectoryQueryIntegrationTests
             CancellationToken cancellationToken = default)
         {
             Requests.Add(request);
-            return Task.FromResult(snapshot);
+            return Task.FromResult(Snapshot);
         }
     }
 

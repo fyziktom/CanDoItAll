@@ -53,7 +53,6 @@ public sealed class AgentProviderCredentialDispatchScopeTests {
             resolutions,
             resolution => {
                 Assert.Equal("dispatch-secret", resolution.ApiKey);
-                Assert.False(resolution.ShouldPromoteToProcessEnvironment);
             });
     }
 

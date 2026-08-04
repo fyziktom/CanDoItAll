@@ -55,10 +55,32 @@ public sealed class SerializableMutationScope : IAsyncDisposable
 
         if (dbContext.Database.IsRelational())
         {
-            var transaction = await dbContext.Database.BeginTransactionAsync(
-                IsolationLevel.Serializable,
+            var relationalLocks = ResolveProcessLocks(normalizedScopeKeys);
+            var acquiredRelationalLocks = await AcquireProcessLocksAsync(
+                relationalLocks,
                 cancellationToken);
-            return new(transaction, processLocks: null);
+            IDbContextTransaction? transaction = null;
+            try
+            {
+                transaction = await dbContext.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable,
+                    cancellationToken);
+                await AcquireRelationalScopeLocksAsync(
+                    dbContext,
+                    normalizedScopeKeys,
+                    cancellationToken);
+                return new(transaction, acquiredRelationalLocks);
+            }
+            catch
+            {
+                if (transaction is not null)
+                {
+                    await transaction.DisposeAsync();
+                }
+
+                ReleaseProcessLocks(acquiredRelationalLocks);
+                throw;
+            }
         }
 
         if (!string.Equals(
@@ -70,7 +92,51 @@ public sealed class SerializableMutationScope : IAsyncDisposable
                 $"Serializable mutations are not supported by database provider '{dbContext.Database.ProviderName ?? "unknown"}'.");
         }
 
-        var locks = normalizedScopeKeys
+        var locks = ResolveProcessLocks(normalizedScopeKeys);
+        var acquiredLocks = await AcquireProcessLocksAsync(locks, cancellationToken);
+        return new(transaction: null, acquiredLocks);
+    }
+
+    public static async Task AcquireRelationalScopeLocksAsync(
+        DbContext dbContext,
+        IReadOnlyCollection<string> scopeKeys,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(scopeKeys);
+        if (!string.Equals(
+                dbContext.Database.ProviderName,
+                "Npgsql.EntityFrameworkCore.PostgreSQL",
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (dbContext.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "PostgreSQL scoped mutations require an active transaction before an advisory lock can be acquired.");
+        }
+
+        foreach (var scopeKey in scopeKeys
+                     .Select(scopeKey =>
+                     {
+                         ArgumentException.ThrowIfNullOrWhiteSpace(scopeKey);
+                         return scopeKey;
+                     })
+                     .Distinct(StringComparer.Ordinal)
+                     .Order(StringComparer.Ordinal))
+        {
+            await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock(hashtextextended({scopeKey}, 0))",
+                cancellationToken);
+        }
+    }
+
+    private static IReadOnlyList<SemaphoreSlim> ResolveProcessLocks(
+        IReadOnlyCollection<string> normalizedScopeKeys)
+    {
+        return normalizedScopeKeys
             .Select(static scopeKey =>
                 (scopeKey.GetHashCode(StringComparison.Ordinal) & int.MaxValue) %
                 InMemoryLockStripeCount)
@@ -78,7 +144,13 @@ public sealed class SerializableMutationScope : IAsyncDisposable
             .Order()
             .Select(static stripeIndex => InMemoryLockStripes[stripeIndex])
             .ToArray();
-        var acquiredLocks = new List<SemaphoreSlim>(locks.Length);
+    }
+
+    private static async Task<IReadOnlyList<SemaphoreSlim>> AcquireProcessLocksAsync(
+        IReadOnlyList<SemaphoreSlim> locks,
+        CancellationToken cancellationToken)
+    {
+        var acquiredLocks = new List<SemaphoreSlim>(locks.Count);
         try
         {
             foreach (var processLock in locks)
@@ -89,15 +161,20 @@ public sealed class SerializableMutationScope : IAsyncDisposable
         }
         catch
         {
-            for (var index = acquiredLocks.Count - 1; index >= 0; index--)
-            {
-                acquiredLocks[index].Release();
-            }
+            ReleaseProcessLocks(acquiredLocks);
 
             throw;
         }
 
-        return new(transaction: null, locks);
+        return acquiredLocks;
+    }
+
+    private static void ReleaseProcessLocks(IReadOnlyList<SemaphoreSlim> locks)
+    {
+        for (var index = locks.Count - 1; index >= 0; index--)
+        {
+            locks[index].Release();
+        }
     }
 
     public Task CommitAsync(CancellationToken cancellationToken)

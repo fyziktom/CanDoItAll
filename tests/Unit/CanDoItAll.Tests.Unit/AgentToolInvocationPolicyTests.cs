@@ -3179,6 +3179,311 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public void RedactArguments_masks_nested_sensitive_argument_names_without_removing_project_targets()
+    {
+        const string leaseToken = "lease-token-sentinel";
+        const string nestedApiToken = "nested-api-token-sentinel";
+        const string topLevelApiToken = "top-level-api-token-sentinel";
+        var redacted = AgentToolInvocationPolicyMetadata.RedactArguments(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+        [
+            new KeyValuePair<string, object?>("apiToken", topLevelApiToken),
+            new KeyValuePair<string, object?>("request", new
+            {
+                projectId = "project-42",
+                leaseToken,
+                nodes = new[]
+                {
+                    new
+                    {
+                        nodeId = "node-7",
+                        api_key = nestedApiToken
+                    }
+                }
+            })
+        ]);
+
+        var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            redacted);
+
+        Assert.DoesNotContain(leaseToken, signature, StringComparison.Ordinal);
+        Assert.DoesNotContain(nestedApiToken, signature, StringComparison.Ordinal);
+        Assert.DoesNotContain(topLevelApiToken, signature, StringComparison.Ordinal);
+        Assert.Contains("project-42", signature, StringComparison.Ordinal);
+        Assert.Contains("node-7", signature, StringComparison.Ordinal);
+        Assert.Contains("<redacted>", signature, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProtectApprovalArgumentsForAudit_masks_nested_secrets_for_general_tools()
+    {
+        const string leaseToken = "approval-lease-token-sentinel";
+        const string apiToken = "approval-api-token-sentinel";
+        var argumentsJson = JsonSerializer.Serialize(new
+        {
+            request = new
+            {
+                projectId = "project-42",
+                leaseToken,
+                nodes = new[]
+                {
+                    new
+                    {
+                        nodeId = "node-7",
+                        apiToken
+                    }
+                }
+            }
+        });
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            argumentsJson);
+
+        Assert.DoesNotContain(leaseToken, protectedArguments, StringComparison.Ordinal);
+        Assert.DoesNotContain(apiToken, protectedArguments, StringComparison.Ordinal);
+        Assert.Contains("project-42", protectedArguments, StringComparison.Ordinal);
+        Assert.Contains("node-7", protectedArguments, StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(protectedArguments);
+        var request = document.RootElement.GetProperty("request");
+        Assert.Equal("<redacted>", request.GetProperty("leaseToken").GetString());
+        Assert.Equal(
+            "<redacted>",
+            request.GetProperty("nodes")[0].GetProperty("apiToken").GetString());
+    }
+
+    [Fact]
+    public void ProtectApprovalArgumentsForAudit_masks_extended_nested_secret_keys()
+    {
+        string[] secrets =
+        [
+            "approval-access-key-secret",
+            "approval-connection-string-secret",
+            "approval-cookie-secret",
+            "approval-private-key-secret",
+            "approval-account-key-secret",
+            "approval-aws-access-key-secret",
+            "approval-pwd-secret",
+            "approval-shared-access-signature-secret",
+            "approval-sig-secret"
+        ];
+        var argumentsJson = JsonSerializer.Serialize(new
+        {
+            request = new
+            {
+                projectId = "project-42",
+                accessKey = secrets[0],
+                connectionString = secrets[1],
+                cookie = secrets[2],
+                privateKey = secrets[3],
+                AccountKey = secrets[4],
+                AWSAccessKeyId = secrets[5],
+                Pwd = secrets[6],
+                SharedAccessSignature = secrets[7],
+                sig = secrets[8],
+                dashed = new Dictionary<string, string>
+                {
+                    ["api-key"] = "approval-dashed-api-key-secret",
+                    ["connection-string"] = "approval-dashed-connection-secret",
+                    ["api.key"] = "approval-dot-api-key-secret",
+                    ["private key"] = "approval-space-private-key-secret"
+                }
+            }
+        });
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            argumentsJson);
+
+        foreach (var secret in secrets)
+        {
+            Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("project-42", protectedArguments, StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(protectedArguments);
+        var request = document.RootElement.GetProperty("request");
+        Assert.Equal("<redacted>", request.GetProperty("accessKey").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("connectionString").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("cookie").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("privateKey").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("AccountKey").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("AWSAccessKeyId").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("Pwd").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("SharedAccessSignature").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("sig").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("dashed").GetProperty("api-key").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("dashed").GetProperty("connection-string").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("dashed").GetProperty("api.key").GetString());
+        Assert.Equal("<redacted>", request.GetProperty("dashed").GetProperty("private key").GetString());
+    }
+
+    [Fact]
+    public void ProtectApprovalArgumentsForAudit_masks_secret_assignments_in_string_values()
+    {
+        const string secret = "approval-string-value-secret";
+        var argumentsJson = JsonSerializer.Serialize(new
+        {
+            projectId = "project-42",
+            note = $"api_key={secret}"
+        });
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            argumentsJson);
+
+        Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", protectedArguments, StringComparison.Ordinal);
+        Assert.Contains("project-42", protectedArguments, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("{\"password\":\"spoofed-password-secret\"}", "spoofed-password-secret")]
+    [InlineData("{\"safe\":\"api_key=spoofed-leaf-secret\"}", "spoofed-leaf-secret")]
+    public void ProtectApprovalArgumentsForAudit_does_not_trust_spoofed_managed_envelopes(
+        string arguments,
+        string secret)
+    {
+        var spoofedEnvelope = $$"""
+            {
+              "retentionScheme": "hr-approval-redacted-v1",
+              "argumentsSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+              "arguments": {{arguments}}
+            }
+            """;
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.HrAgentCreate,
+            spoofedEnvelope);
+
+        Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
+        Assert.NotEqual(spoofedEnvelope, protectedArguments);
+        using var document = JsonDocument.Parse(protectedArguments);
+        Assert.Equal(
+            "hr-approval-redacted-v1",
+            document.RootElement.GetProperty("retentionScheme").GetString());
+    }
+
+    [Fact]
+    public void ProtectApprovalArgumentsForAudit_does_not_trust_impossible_managed_envelope_shape()
+    {
+        const string spoofedEnvelope = """
+            {
+              "retentionScheme": "hr-approval-redacted-v1",
+              "argumentsSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+              "arguments": 42
+            }
+            """;
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.HrAgentCreate,
+            spoofedEnvelope);
+
+        Assert.NotEqual(spoofedEnvelope, protectedArguments);
+        using var document = JsonDocument.Parse(protectedArguments);
+        Assert.Equal(
+            "hr-approval-redacted-v1",
+            document.RootElement.GetProperty("retentionScheme").GetString());
+        Assert.Equal(
+            JsonValueKind.Object,
+            document.RootElement.GetProperty("arguments").ValueKind);
+    }
+
+    [Fact]
+    public void ProtectApprovalArgumentsForAudit_rehashes_and_redacts_shape_valid_spoofed_envelope()
+    {
+        const string attackerHash =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+        var spoofedEnvelope = $$"""
+            {
+              "retentionScheme": "hr-approval-redacted-v1",
+              "argumentsSha256": "{{attackerHash}}",
+              "arguments": { "nodeId": "attacker-controlled" }
+            }
+            """;
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.HrAgentCreate,
+            spoofedEnvelope);
+
+        using var document = JsonDocument.Parse(protectedArguments);
+        Assert.NotEqual(
+            attackerHash,
+            document.RootElement.GetProperty("argumentsSha256").GetString());
+        var protectedRawInput = document.RootElement.GetProperty("arguments");
+        Assert.Equal(
+            attackerHash,
+            protectedRawInput.GetProperty("argumentsSha256").GetString());
+        var protectedSpoofedArguments = protectedRawInput.GetProperty("arguments");
+        Assert.Equal(JsonValueKind.String, protectedSpoofedArguments.ValueKind);
+        Assert.StartsWith("<redacted>#", protectedSpoofedArguments.GetString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("attacker-controlled", protectedArguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Export_protection_preserves_trusted_previously_protected_approval_envelope()
+    {
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.HrAgentCreate,
+            "{\"name\":\"private employee name\"}");
+
+        var exportedArguments =
+            AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
+                AgentToolInvocationPolicyMetadata.HrAgentCreate,
+                protectedArguments);
+
+        Assert.Equal(protectedArguments, exportedArguments);
+    }
+
+    [Fact]
+    public void ProtectApprovalArgumentsForAudit_fails_closed_for_malformed_general_tool_json()
+    {
+        const string secret = "malformed-approval-secret-sentinel";
+        var malformedArguments = $$"""
+            {"projectId":"project-42","apiKey":"{{secret}}"
+            """;
+
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            malformedArguments);
+
+        Assert.DoesNotContain(secret, protectedArguments, StringComparison.Ordinal);
+        Assert.DoesNotContain("project-42", protectedArguments, StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(protectedArguments);
+        Assert.Equal(
+            "approval-invalid-json-redacted-v1",
+            document.RootElement.GetProperty("retentionScheme").GetString());
+        Assert.Equal(
+            "<redacted>",
+            document.RootElement.GetProperty("arguments").GetString());
+        Assert.Equal(
+            64,
+            document.RootElement.GetProperty("argumentsSha256").GetString()!.Length);
+    }
+
+    [Theory]
+    [InlineData("\"api_key=primitive-secret\"")]
+    [InlineData("[{\"apiKey\":\"array-secret\"}]")]
+    public void ProtectApprovalArgumentsForAudit_fails_closed_for_non_object_json(
+        string argumentsJson)
+    {
+        var protectedArguments = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodeUpdate,
+            argumentsJson);
+
+        Assert.DoesNotContain("primitive-secret", protectedArguments, StringComparison.Ordinal);
+        Assert.DoesNotContain("array-secret", protectedArguments, StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(protectedArguments);
+        Assert.Equal(
+            "approval-invalid-json-redacted-v1",
+            document.RootElement.GetProperty("retentionScheme").GetString());
+        Assert.Equal(
+            "<redacted>",
+            document.RootElement.GetProperty("arguments").GetString());
+    }
+
+    [Fact]
     public void RedactArguments_masks_HR_business_text_without_collapsing_distinct_targets()
     {
         var first = AgentToolInvocationPolicyMetadata.RedactArguments(
@@ -4194,6 +4499,7 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeMove,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeRecompose,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeReparent,
+            AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeDescendantsToProjectMove,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeCommandExecute,
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeProcessDefinitionLink,

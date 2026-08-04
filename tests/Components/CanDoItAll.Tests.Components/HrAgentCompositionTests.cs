@@ -79,7 +79,7 @@ public sealed class HrAgentCompositionTests
                 .OrderBy(key => key, StringComparer.Ordinal));
         Assert.True(imageAccess.CanGenerateImages);
         Assert.Equal(ProviderProfilePurpose.ImageGeneration, imageProvider.Purpose);
-        Assert.Equal("gpt-image-1-mini", imageAccess.DefaultModel);
+        Assert.Equal(OpenAiModelIds.GptImage2, imageAccess.DefaultModel);
         Assert.False(imageAccess.CanStoreImagesAsProjectAssets);
         Assert.False(memoryAccess.CanUseMemoryTools);
         Assert.Contains(MemorySourceScope.Crm, memoryAccess.AllowedSourceScopes);

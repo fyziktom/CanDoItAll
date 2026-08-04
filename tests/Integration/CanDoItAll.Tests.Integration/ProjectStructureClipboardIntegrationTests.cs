@@ -144,7 +144,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
             ProjectObjectLinkKind.DependsOn);
         await workbench.LinkObjectsAsync(
             projectId,
-            sourceChild.Id,
+            sourceRoot.Id,
             external.Id,
             ProjectObjectLinkKind.Uses);
 
@@ -217,7 +217,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
             !link.IsSystemManaged));
         Assert.False(await verificationContext.Set<ProjectObjectLinkRecord>().AnyAsync(link =>
             link.ProjectId == projectId &&
-            link.SourceNodeKey == copiedChildNodeKey &&
+            link.SourceNodeKey == copiedRootNodeKey &&
             link.TargetNodeKey == external.Id));
         Assert.False(await verificationContext.Set<ProjectObjectLinkRecord>().AnyAsync(link =>
             link.ProjectId == projectId &&
@@ -436,7 +436,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         foreach (var incompleteNode in incompleteNodes)
         {
             saveCounter.Reset();
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            var exception = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
                 await workbench.CopySubtreesAsync(projectId, [incompleteNode.Id], target.Id));
             Assert.Contains("before completion", exception.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0, saveCounter.SaveChangesCount);
@@ -512,13 +512,13 @@ public sealed class ProjectStructureClipboardIntegrationTests
         foreach (var rejectedTargetNodeKey in rejectedTargetNodeKeys)
         {
             saveCounter.Reset();
-            var copyException = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            var copyException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
                 await workbench.CopySubtreesAsync(projectId, [source.Id], rejectedTargetNodeKey));
             Assert.Contains("projected project node", copyException.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0, saveCounter.SaveChangesCount);
 
             saveCounter.Reset();
-            var cutException = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            var cutException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
                 await workbench.ReparentSubtreesAsync(projectId, [source.Id], rejectedTargetNodeKey));
             Assert.Contains("projected project node", cutException.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0, saveCounter.SaveChangesCount);
@@ -573,7 +573,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
             [firstRoot.Id, firstChild.Id, secondRoot.Id],
             targetParent.Id);
 
-        Assert.Equal(1, saveCounter.SaveChangesCount);
+        Assert.Equal(2, saveCounter.SaveChangesCount);
         Assert.Equal(new[] { firstRoot.Id, secondRoot.Id }, movedRoots.Select(node => node.Id));
         Assert.All(movedRoots, node => Assert.Equal(targetParent.Id, node.ParentId));
 
@@ -622,7 +622,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         Assert.Equal(0, saveCounter.SaveChangesCount);
 
         saveCounter.Reset();
-        var missingTargetException = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var missingTargetException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
             await workbench.ReparentSubtreesAsync(
                 projectId,
                 [firstRoot.Id, secondRoot.Id],
@@ -631,7 +631,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         Assert.Equal(0, saveCounter.SaveChangesCount);
 
         saveCounter.Reset();
-        var staleSourceException = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var staleSourceException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
             await workbench.ReparentSubtreesAsync(
                 projectId,
                 [firstRoot.Id, "custom:stale-source", secondRoot.Id],

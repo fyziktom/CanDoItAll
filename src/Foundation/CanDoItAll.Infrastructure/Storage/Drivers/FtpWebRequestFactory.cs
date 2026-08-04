@@ -11,7 +11,7 @@ internal static class FtpWebRequestFactory
         string method)
     {
         StorageProviderConfiguration configuration = StorageJson.ParseProviderConfiguration(storage.ConfigJson);
-        Uri requestUri = BuildRequestUri(storage.EndpointOrRoot, configuration, remotePath);
+        Uri requestUri = FtpStorageAddressPolicy.ResolveObjectUri(storage, remotePath);
 #pragma warning disable SYSLIB0014
         var request = (FtpWebRequest)WebRequest.Create(requestUri);
 #pragma warning restore SYSLIB0014
@@ -69,33 +69,34 @@ internal static class FtpWebRequestFactory
                FtpStatusCode.CommandNotImplemented or
                FtpStatusCode.BadCommandSequence;
 
-    private static Uri BuildRequestUri(
-        string endpointOrRoot,
-        StorageProviderConfiguration configuration,
-        string remotePath)
+    public static bool IsFileNotFound(WebException exception)
     {
-        if (string.IsNullOrWhiteSpace(endpointOrRoot))
+        if (exception.Response is not FtpWebResponse
+            {
+                StatusCode: FtpStatusCode.ActionNotTakenFileUnavailable
+            } response)
         {
-            throw new InvalidOperationException("FTP storage requires a host or ftp:// endpoint.");
+            return false;
         }
 
-        string endpoint = endpointOrRoot.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) ||
-                          endpointOrRoot.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase)
-            ? endpointOrRoot
-            : $"ftp://{endpointOrRoot.Trim()}";
-        var builder = new UriBuilder(endpoint);
-        if (configuration.Port.HasValue)
+        return IsFileNotFound(response.StatusCode, response.StatusDescription);
+    }
+
+    internal static bool IsFileNotFound(
+        FtpStatusCode statusCode,
+        string? statusDescription)
+    {
+        if (statusCode != FtpStatusCode.ActionNotTakenFileUnavailable)
         {
-            builder.Port = configuration.Port.Value;
+            return false;
         }
 
-        builder.Path = string.Join('/', new[]
-        {
-            builder.Path.Trim('/'),
-            configuration.BasePath.Trim('/'),
-            remotePath.Trim('/')
-        }.Where(segment => segment.Length > 0));
-        return builder.Uri;
+        var description = statusDescription ?? string.Empty;
+        return description.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+               description.Contains("no such file", StringComparison.OrdinalIgnoreCase) ||
+               description.Contains("does not exist", StringComparison.OrdinalIgnoreCase) ||
+               description.Contains("cannot find", StringComparison.OrdinalIgnoreCase) ||
+               description.Contains("can't find", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CombineRemotePath(string parent, string name)

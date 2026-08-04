@@ -162,6 +162,19 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             cancellationToken);
     }
 
+    public async Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        var changedAgentCount = await ResolveService()
+            .RevokeProjectStructureAccessFromAllAgentsAsync(projectId, cancellationToken);
+        await RefreshBulkProjectStructureAccessProjectionsAsync(
+            projectId,
+            changedAgentCount,
+            cancellationToken);
+        return changedAgentCount;
+    }
+
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteAgentAsync(agentId, cancellationToken);
@@ -1028,6 +1041,47 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         }
 
         InvalidateProjectStructureAccessReferenceData(agentId, projectId, change);
+    }
+
+    private async Task RefreshBulkProjectStructureAccessProjectionsAsync(
+        Guid projectId,
+        int changedAgentCount,
+        CancellationToken cancellationToken)
+    {
+        TryInvalidateBulkProjectStructureAccessReferenceData(projectId, changedAgentCount);
+        try
+        {
+            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Project-structure access for project {ProjectId} was revoked from {ChangedAgentCount} catalog agents, but agent-directory projection synchronization failed.",
+                projectId,
+                changedAgentCount);
+            return;
+        }
+
+        TryInvalidateBulkProjectStructureAccessReferenceData(projectId, changedAgentCount);
+    }
+
+    private void TryInvalidateBulkProjectStructureAccessReferenceData(
+        Guid projectId,
+        int changedAgentCount)
+    {
+        try
+        {
+            referenceDataCacheInvalidator.Invalidate();
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Project-structure access for project {ProjectId} was revoked from {ChangedAgentCount} catalog agents, but reference-data cache invalidation failed.",
+                projectId,
+                changedAgentCount);
+        }
     }
 
     private void InvalidateProjectStructureAccessReferenceData(

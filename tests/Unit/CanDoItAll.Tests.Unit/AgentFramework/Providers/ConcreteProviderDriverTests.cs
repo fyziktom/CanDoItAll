@@ -765,6 +765,56 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
+    public async Task OpenAiProviderDriver_ImageHealthUsesNonBillableModelCatalogProbe()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            request.RequestUri!.AbsolutePath == "/v1/models"
+                ? JsonResponse("""{"data":[{"id":"gpt-image-2"},{"id":"gpt-test"}]}""")
+                : JsonResponse("""{"error":{"message":"unexpected billable probe"}}""", HttpStatusCode.BadRequest));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            "gpt-image-2",
+            purpose: ProviderProfilePurpose.ImageGeneration);
+
+        var result = await driver.TestHealthAsync(provider);
+
+        Assert.True(result.Success);
+        Assert.Contains("gpt-image-2", result.Summary, StringComparison.Ordinal);
+        Assert.Contains("gpt-image-2", result.SuggestedModels);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal("/v1/models", request.PathAndQuery);
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ImageHealthFailsWhenConfiguredModelIsAbsentFromCatalog()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            request.RequestUri!.AbsolutePath == "/v1/models"
+                ? JsonResponse("""{"data":[{"id":"gpt-image-2"}]}""")
+                : JsonResponse("""{"error":{"message":"unexpected billable probe"}}""", HttpStatusCode.BadRequest));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            "gpt-image-1-mini",
+            purpose: ProviderProfilePurpose.ImageGeneration);
+
+        var result = await driver.TestHealthAsync(provider);
+
+        Assert.False(result.Success);
+        Assert.Contains("gpt-image-1-mini", result.Summary, StringComparison.Ordinal);
+        Assert.Contains("gpt-image-2", result.SuggestedModels);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal("/v1/models", request.PathAndQuery);
+    }
+
+    [Fact]
     public async Task OllamaProviderDriver_UsesShowCapabilitiesWhenTagsOmitThinkingMetadata()
     {
         var handler = new CapturingHandler((request, body) =>

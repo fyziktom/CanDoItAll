@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Streaming;
 
 namespace CanDoItAll.Web.Api;
@@ -23,8 +22,15 @@ internal static class AgentActivityApiResults
     }
 
     public static IResult FromAdmissionException(
-        AgentExecutionActivityAdmissionException exception)
+        HttpContext context,
+        AgentExecutionActivityAdmissionException exception,
+        Guid? agentId = null,
+        Guid? executionRunId = null,
+        Guid? chatSessionId = null)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(exception);
+
         var (statusCode, code, message) = exception.Reason switch
         {
             AgentExecutionActivityAdmissionRejectionReason.DuplicateOperation => (
@@ -45,9 +51,13 @@ internal static class AgentActivityApiResults
                 "Unknown agent execution activity admission rejection reason.")
         };
 
-        return Results.Json(
-            new ApiErrorResponse(
-                [new ApiErrorItem(code, message, ErrorSeverity.Error)]),
-            statusCode: statusCode);
+        return ApiEndpointResults.AgentFailure(
+            context,
+            statusCode,
+            message,
+            code,
+            agentId,
+            executionRunId,
+            chatSessionId);
     }
 }

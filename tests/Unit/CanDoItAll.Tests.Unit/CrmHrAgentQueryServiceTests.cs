@@ -230,7 +230,10 @@ public sealed class CrmHrAgentQueryServiceTests
         var services = new ServiceCollection();
         services.AddSingleton<IClock>(new FixedClock(Now));
         services.AddDbContextFactory<AppDbContext>(options =>
-            options.UseInMemoryDatabase($"crm-hr-agent-query-{Guid.NewGuid():N}"));
+        {
+            AppDbContextTestOptionsBuilder.ConfigureModelCacheKey(options);
+            options.UseInMemoryDatabase($"crm-hr-agent-query-{Guid.NewGuid():N}");
+        });
         services.AddCrmHrModule();
         return services.BuildServiceProvider(validateScopes: true);
     }

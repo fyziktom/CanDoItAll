@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -8,6 +9,9 @@ public static class PromptsModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddPromptsModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            PromptsProjectTransferTargetStateParticipant>());
         services.TryAddScoped<IPromptGallerySearchDriver, EfPromptGallerySearchDriver>();
         services.TryAddSingleton<DisabledPromptGalleryProjectionDriver>();
         services.TryAddSingleton<IPromptGalleryProjectionDriver>(serviceProvider =>
@@ -38,5 +42,4 @@ public static class PromptsModuleServiceCollectionExtensions
 }
 
 public static class PromptsModuleAssemblyMarker;
-
 

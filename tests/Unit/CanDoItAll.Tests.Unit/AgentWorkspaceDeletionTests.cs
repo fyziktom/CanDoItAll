@@ -107,6 +107,79 @@ public sealed class AgentWorkspaceDeletionTests
     }
 
     [Fact]
+    public async Task Deletion_reconciles_a_stale_session_count_before_building_the_deletion_plan()
+    {
+        var rootPath = TestFileSystem.CreateTemporaryRoot(
+            "agent-deletion-session-count-reconciliation");
+        try
+        {
+            var store = new FileSandboxWorkspaceStore(rootPath);
+            var target = await CreateAgentAsync(store, "Session count target");
+            var detail = CreateRunDetail(target, DateTimeOffset.UtcNow);
+            await store.SaveExecutionRunDetailAsync(detail);
+
+            var layout = new FileSandboxWorkspaceStorageLayout(rootPath);
+            var jsonStore = new FileSandboxWorkspaceJsonStore();
+            var index = Assert.IsType<ExecutionStorageIndex>(
+                await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+                    layout.ExecutionIndexPath,
+                    CancellationToken.None));
+            var persistedSessionCount = Directory
+                .EnumerateFiles(layout.ExecutionSessionsRoot, "*.json")
+                .Count();
+            var persistedRunCount = Directory
+                .EnumerateDirectories(layout.ExecutionRunsRoot)
+                .Count(directory => File.Exists(
+                    Path.Combine(directory, "run.json")));
+            Assert.Equal(persistedSessionCount, index.SessionCount);
+            Assert.Equal(persistedRunCount, index.RunCount);
+            await jsonStore.WriteJsonAtomicallyAsync(
+                layout.ExecutionIndexPath,
+                index with
+                {
+                    SessionCount = index.SessionCount + 1
+                },
+                CancellationToken.None);
+
+            var result = await store.DeleteAgentWorkspaceDataAsync(target.Id);
+
+            Assert.True(result.Deleted);
+            Assert.Equal(1, result.DeletedChatSessionCount);
+            Assert.Equal(1, result.DeletedExecutionRunCount);
+            Assert.DoesNotContain(
+                (await store.LoadCatalogAsync()).Agents,
+                item => item.Id == target.Id);
+            Assert.Null(await store.GetExecutionRunDetailAsync(detail.Run.Id));
+            Assert.Null(await store.GetChatSessionAsync(detail.ChatSession!.Id));
+            var repairedIndex = Assert.IsType<ExecutionStorageIndex>(
+                await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+                    layout.ExecutionIndexPath,
+                    CancellationToken.None));
+            Assert.Equal(
+                persistedSessionCount - 1,
+                repairedIndex.SessionCount);
+            Assert.Equal(
+                persistedRunCount - 1,
+                repairedIndex.RunCount);
+            Assert.Equal(
+                repairedIndex.SessionCount,
+                Directory
+                    .EnumerateFiles(layout.ExecutionSessionsRoot, "*.json")
+                    .Count());
+            Assert.Equal(
+                repairedIndex.RunCount,
+                Directory
+                    .EnumerateDirectories(layout.ExecutionRunsRoot)
+                    .Count(directory => File.Exists(
+                        Path.Combine(directory, "run.json"))));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(rootPath);
+        }
+    }
+
+    [Fact]
     public async Task Deleting_agent_without_history_does_not_enumerate_unrelated_run_payloads()
     {
         var rootPath = TestFileSystem.CreateTemporaryRoot("agent-deletion-indexed");

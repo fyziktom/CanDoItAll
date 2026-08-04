@@ -1,4 +1,9 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -12,6 +17,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -46,7 +52,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
     public static async Task<ApiTestHost> CreateAsync(
         bool jwtEnabled,
         Action<IServiceCollection>? configureServices = null,
-        bool useInMemoryDatabase = false)
+        bool useInMemoryDatabase = false,
+        string? environmentName = null,
+        IAgentRuntime? agentRuntimeOverride = null)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
         var activeProfile = useInMemoryDatabase
@@ -73,7 +81,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             ContentRootPath = testEnvironment.RootPath,
-            EnvironmentName = Environments.Development,
+            EnvironmentName = environmentName ?? Environments.Development,
             ApplicationName = "CanDoItAll.Tests.Integration"
         });
         builder.Configuration.AddInMemoryCollection(activeProfile.CreateConfigurationValues(configurationOverrides));
@@ -87,8 +95,23 @@ internal sealed class ApiTestHost : IAsyncDisposable
         builder.Logging.AddConsole();
         builder.Services.AddCanDoItAllApi(builder.Configuration);
         configureServices?.Invoke(builder.Services);
+        if (agentRuntimeOverride is not null)
+        {
+            ConfigureAgentRuntimeOverride(
+                builder.Services,
+                agentRuntimeOverride);
+        }
 
         var app = builder.Build();
+        if (agentRuntimeOverride is not null &&
+            !ReferenceEquals(
+                agentRuntimeOverride,
+                app.Services.GetRequiredService<IAgentRuntime>()))
+        {
+            throw new InvalidOperationException(
+                "The API test host did not preserve its explicit agent runtime override.");
+        }
+
         app.Urls.Add("http://127.0.0.1:0");
 
         var options = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
@@ -108,6 +131,57 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
         var client = CreateClient(app);
         return new ApiTestHost(testEnvironment, activeProfile, app, client);
+    }
+
+    private static void ConfigureAgentRuntimeOverride(
+        IServiceCollection services,
+        IAgentRuntime runtime)
+    {
+        services.RemoveAll<IAgentRuntime>();
+        services.AddSingleton(runtime);
+        services.RemoveAll<IAgentFrameworkWorkspaceService>();
+        services.RemoveAll<IAgentPackageService>();
+        services.RemoveAll<IProviderDiagnosticsService>();
+        services.RemoveAll<IAgentExecutionCheckpointBridge>();
+        services.RemoveAll<IAgentExecutionGovernanceBridge>();
+        services.RemoveAll<IAgentExecutionEventSink>();
+        services.AddScoped<IAgentPackageService>(serviceProvider => new ZipAgentPackageService(
+            serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+            ResolveWorkspaceScope(serviceProvider)));
+        services.AddScoped<IProviderDiagnosticsService>(_ => new ProviderDiagnosticsService(runtime));
+        services.AddScoped<IAgentExecutionCheckpointBridge>(serviceProvider =>
+            new WorkflowBackedAgentExecutionCheckpointBridge(
+                serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),
+                serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+                ResolveWorkspaceScope(serviceProvider)));
+        services.AddScoped<IAgentExecutionGovernanceBridge>(serviceProvider =>
+            new DurableAgentExecutionGovernanceBridge(
+                serviceProvider.GetRequiredService<IAgentExecutionCheckpointBridge>()));
+        services.AddScoped<IAgentExecutionEventSink, NullAgentExecutionEventSink>();
+        services.AddScoped(serviceProvider =>
+        {
+            var profile = serviceProvider
+                .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+                .ResolveCurrentProfile()
+                .Profile;
+            return new AgentExecutionActivityWorkspaceIdentity(
+                profile.Id,
+                WorkspaceScopeDescriptor.Organization(profile.Id.ToString("N")),
+                serviceProvider
+                    .GetRequiredService<IAgentExecutionProfileGenerationSource>()
+                    .GetGeneration());
+        });
+        services.AddScoped<IAgentFrameworkWorkspaceService, AgentFrameworkWorkspaceService>();
+    }
+
+    private static WorkspaceScopeDescriptor ResolveWorkspaceScope(
+        IServiceProvider serviceProvider)
+    {
+        var profile = serviceProvider
+            .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+            .ResolveCurrentProfile();
+        return WorkspaceScopeDescriptor.Organization(
+            profile.Profile.Id.ToString("N"));
     }
 
     public HttpClient CreateClient()

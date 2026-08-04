@@ -108,6 +108,7 @@ public sealed class WorkflowSourceIngestionArchitectureTests
     [InlineData("WorkflowSourceCandidateCollector.cs", "WorkflowSourceCandidateCollector")]
     [InlineData("WorkflowSourceFileResolver.cs", "WorkflowSourceFileResolver")]
     [InlineData("WorkflowSourceDocumentReader.cs", "WorkflowSourceDocumentReader")]
+    [InlineData("WorkflowSourceFileContentIdentityResolver.cs", "WorkflowSourceFileContentIdentityResolver")]
     public void SourceIngestionCollaboratorIsSeparateSealedNonPartialType(
         string fileName,
         string typeName)

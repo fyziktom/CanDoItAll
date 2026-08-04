@@ -82,8 +82,12 @@ public static class WorkflowExecutorPayloadPolicy
 public static class WorkflowExecutorRedaction
 {
     private static readonly JsonSerializerOptions RedactedJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly Regex SensitiveLineValueRegex = new(
+        "(\"?(?:auth|authorization|connection[\\s._-]*strings?|cookies?|headers?|private[\\s._-]*keys?|subscription[\\s._-]*keys?|[A-Za-z0-9._-]*signatures?)\"?\\s*[:=]\\s*)(\"[^\"]*\"|'[^']*'|[^\\r\\n]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly Regex SecretKeyValueRegex = new(
-        "(\"?(?:api[_-]?key|authorization|bearer|client[_-]?secret|password|secret|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^;\\s,}]+)",
+        "(\"?(?:access[\\s._-]*keys?|account[\\s._-]*keys?|api[\\s._-]*keys?|auth|authorization|aws[\\s._-]*access[\\s._-]*key[\\s._-]*ids?|bearer|client[\\s._-]*secrets?|credentials?|passwords?|pwd|secrets?|shared[\\s._-]*access[\\s._-]*signatures?|sig|subscription[\\s._-]*keys?|[A-Za-z0-9._-]*signatures?|tokens?)\"?\\s*[:=]\\s*)(\"[^\"]*\"|'[^']*'|[^;\\s,}]+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex BearerTokenRegex = new(
@@ -94,21 +98,38 @@ public static class WorkflowExecutorRedaction
         "sk-[A-Za-z0-9_-]{8,}",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private static readonly HashSet<string> SensitivePropertyNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "apiKey",
-        "api_key",
+    private static readonly Regex PemPrivateKeyRegex = new(
+        "-----BEGIN [^-\\r\\n]*PRIVATE KEY-----[\\s\\S]*?-----END [^-\\r\\n]*PRIVATE KEY-----",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly string[] SensitivePropertyNameFragments =
+    [
+        "accesskey",
+        "accountkey",
         "apikey",
+        "subscriptionkey",
         "authorization",
+        "awsaccesskeyid",
         "bearer",
-        "clientSecret",
-        "client_secret",
+        "clientsecret",
+        "connectionstring",
+        "cookie",
+        "credential",
+        "header",
         "password",
+        "privatekey",
         "secret",
-        "secretId",
-        "secretNameSnapshot",
+        "sharedaccesssignature",
+        "signature",
         "token"
-    };
+    ];
+
+    private static readonly string[] SensitiveExactPropertyNames =
+    [
+        "pwd",
+        "sig",
+        "auth"
+    ];
 
     public static string RedactText(string? value)
     {
@@ -117,7 +138,11 @@ public static class WorkflowExecutorRedaction
             return string.Empty;
         }
 
-        var redacted = BearerTokenRegex.Replace(value, "Bearer [REDACTED]");
+        var redacted = PemPrivateKeyRegex.Replace(value, "[REDACTED PRIVATE KEY]");
+        redacted = BearerTokenRegex.Replace(redacted, "Bearer [REDACTED]");
+        redacted = SensitiveLineValueRegex.Replace(
+            redacted,
+            match => $"{match.Groups[1].Value}[REDACTED]");
         redacted = SecretKeyValueRegex.Replace(
             redacted,
             match => $"{match.Groups[1].Value}[REDACTED]");
@@ -137,7 +162,7 @@ public static class WorkflowExecutorRedaction
         try
         {
             var node = JsonNode.Parse(json);
-            RedactNode(node);
+            node = RedactNode(node);
             var redactedJson = node?.ToJsonString(RedactedJsonOptions) ?? "{}";
             return Truncate(redactedJson, maxCharacters);
         }
@@ -190,38 +215,61 @@ public static class WorkflowExecutorRedaction
             SanitizeException(exception.InnerException));
     }
 
-    private static void RedactNode(JsonNode? node)
+    private static JsonNode? RedactNode(JsonNode? node)
     {
         if (node is JsonObject jsonObject)
         {
             foreach (var propertyName in jsonObject.Select(property => property.Key).ToArray())
             {
-                if (IsSensitiveProperty(propertyName))
+                if (IsSensitivePropertyName(propertyName))
                 {
                     jsonObject[propertyName] = "[REDACTED]";
                     continue;
                 }
 
-                RedactNode(jsonObject[propertyName]);
+                var child = jsonObject[propertyName];
+                var redactedChild = RedactNode(child);
+                if (!ReferenceEquals(child, redactedChild))
+                {
+                    jsonObject[propertyName] = redactedChild;
+                }
             }
 
-            return;
+            return jsonObject;
         }
 
         if (node is JsonArray jsonArray)
         {
-            foreach (var item in jsonArray)
+            for (var index = 0; index < jsonArray.Count; index++)
             {
-                RedactNode(item);
+                var child = jsonArray[index];
+                var redactedChild = RedactNode(child);
+                if (!ReferenceEquals(child, redactedChild))
+                {
+                    jsonArray[index] = redactedChild;
+                }
             }
+
+            return jsonArray;
         }
+
+        return node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var value)
+            ? JsonValue.Create(RedactText(value))
+            : node;
     }
 
-    private static bool IsSensitiveProperty(string propertyName)
-        => SensitivePropertyNames.Contains(propertyName) ||
-           propertyName.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
-           propertyName.Contains("token", StringComparison.OrdinalIgnoreCase) ||
-           propertyName.Contains("password", StringComparison.OrdinalIgnoreCase);
+    public static bool IsSensitivePropertyName(string propertyName)
+    {
+        var normalizedPropertyName = NormalizeSensitivePropertyName(propertyName);
+        return SensitiveExactPropertyNames.Contains(
+                   normalizedPropertyName,
+                   StringComparer.OrdinalIgnoreCase) ||
+               SensitivePropertyNameFragments.Any(fragment =>
+            normalizedPropertyName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeSensitivePropertyName(string propertyName)
+        => string.Concat(propertyName.Where(char.IsLetterOrDigit));
 
     private static string Truncate(string value, int maxCharacters)
         => value.Length <= maxCharacters

@@ -34,6 +34,34 @@ public sealed class ProjectWorkspaceScopePolicyTests
     }
 
     [Fact]
+    public void EvaluateProjectScope_allows_current_project_managed_video_directly()
+    {
+        var policy = new ProjectWorkspaceScopePolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            "managed-files/project-media/videos/3324868f66e2478abb8f14f32a5db1e9/walkthrough.mp4");
+
+        var decision = policy.EvaluateProjectScope(context, "signature");
+
+        Assert.Null(decision);
+    }
+
+    [Fact]
+    public void EvaluateProjectScope_denies_foreign_project_managed_video_directly()
+    {
+        var policy = new ProjectWorkspaceScopePolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceReadFile,
+            "managed-files/project-media/videos/be2ebfd7776643f99b2e8051d0b0d99d/foreign.mp4");
+
+        var decision = policy.EvaluateProjectScope(context, "signature");
+
+        Assert.NotNull(decision);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not owned by project", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void EvaluateProjectScope_ignores_non_project_scope()
     {
         var policy = new ProjectWorkspaceScopePolicy();

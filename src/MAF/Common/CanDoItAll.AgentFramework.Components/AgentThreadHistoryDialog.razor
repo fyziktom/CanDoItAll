@@ -26,8 +26,7 @@
                     <button type="button"
                             class="agent-thread-history-dialog__row @(isSelected ? "is-selected" : string.Empty)"
                             aria-label="@($"Open thread {ResolveThreadTitle(session)}")"
-                            @ondblclick="@(() => SelectSessionAsync(session.Id))"
-                            @onkeydown="@((KeyboardEventArgs args) => HandleThreadKeyDownAsync(args, session.Id))"
+                            @onclick="@(() => SelectSessionAsync(session.Id))"
                             data-testid="agent-thread-history-row">
                         <span class="agent-thread-history-dialog__row-main">
                             <span class="agent-thread-history-dialog__title">@ResolveThreadTitle(session)</span>
@@ -87,16 +86,6 @@
     private Task SelectSessionAsync(Guid sessionId)
     {
         return DialogService.CloseAsync(sessionId);
-    }
-
-    private async Task HandleThreadKeyDownAsync(KeyboardEventArgs args, Guid sessionId)
-    {
-        if (args.Key is not ("Enter" or " "))
-        {
-            return;
-        }
-
-        await SelectSessionAsync(sessionId);
     }
 
     private static string ResolveAgentName(AgentDefinition agent)

@@ -29,6 +29,13 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.RevokeAgentProjectStructureAccessAsync(agentId, projectId, cancellationToken);
 
+    public Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => catalogService.RevokeProjectStructureAccessFromAllAgentsAsync(
+            projectId,
+            cancellationToken);
+
     public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentAsync(agentId, cancellationToken);
 

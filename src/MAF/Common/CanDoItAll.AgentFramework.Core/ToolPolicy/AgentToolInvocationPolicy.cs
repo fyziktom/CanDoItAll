@@ -2725,6 +2725,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
 public static class AgentToolInvocationPolicyMetadata
 {
+    private const string RedactedArgumentValue = "<redacted>";
+    private const string InvalidApprovalArgumentsRetentionScheme = "approval-invalid-json-redacted-v1";
     private const string HrApprovalAuditRetentionScheme = "hr-approval-redacted-v1";
     private const string PromptCuratorApprovalAuditRetentionScheme = "prompt-curator-approval-redacted-v1";
     private const string WorkflowCuratorApprovalAuditRetentionScheme = "workflow-curator-approval-redacted-v1";
@@ -2832,6 +2834,40 @@ public static class AgentToolInvocationPolicyMetadata
         "title",
         "visualBrief",
         "workingDirectory"
+    };
+
+    private static readonly IReadOnlySet<string> SafeDisplayArgumentPropertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "action",
+        "contentType",
+        "count",
+        "format",
+        "includeArchived",
+        "includeChildren",
+        "includeDeleted",
+        "kind",
+        "limit",
+        "marker",
+        "maxColumns",
+        "maxRows",
+        "mode",
+        "model",
+        "objectSubtype",
+        "objectType",
+        "offset",
+        "operation",
+        "path",
+        "paths",
+        "priority",
+        "progressMode",
+        "progressPercent",
+        "revision",
+        "scope",
+        "scopeKind",
+        "source",
+        "status",
+        "transport",
+        "type"
     };
 
     public const string LoadSkill = "load_skill";
@@ -2942,6 +2978,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProjectStructureNodeMove = "project_structure_node_move";
     public const string ProjectStructureNodeRecompose = "project_structure_node_recompose";
     public const string ProjectStructureNodeReparent = "project_structure_node_reparent";
+    public const string ProjectStructureNodesCopy = "project_structure_nodes_copy";
     public const string ProjectStructureNodeDescendantsToProjectMove = "project_structure_node_descendants_to_project_move";
     public const string ProjectStructureNodeCommandExecute = "project_structure_node_command_execute";
     public const string ProjectStructureNodeProcessDefinitionLink = "project_structure_node_process_definition_link";
@@ -3018,6 +3055,7 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureNodeMove,
         ProjectStructureNodeRecompose,
         ProjectStructureNodeReparent,
+        ProjectStructureNodesCopy,
         ProjectStructureNodeDescendantsToProjectMove,
         ProjectStructureNodeCommandExecute,
         ProjectStructureNodeProcessDefinitionLink,
@@ -3039,17 +3077,17 @@ public static class AgentToolInvocationPolicyMetadata
         ProjectStructureLeaseRelease
     ];
 
-    private static readonly string[] SensitiveArgumentNameFragments =
-    [
-        "api_key",
-        "apikey",
-        "authorization",
-        "credential",
-        "header",
-        "password",
-        "secret",
-        "token"
-    ];
+    private enum ToolArgumentSanitizationMode
+    {
+        SecretKeys,
+        SecretKeysAndManagedBusinessContent,
+        DisplayKnownSafeFields,
+        DisplayUnknownIdentityOnly
+    }
+
+    private readonly record struct SanitizedArgumentNode(
+        JsonNode? Value,
+        bool WasRedacted);
 
     public static IReadOnlyCollection<AgentToolPolicyMetadata> Tools => ToolCapabilityRegistry.PolicyMetadata;
 
@@ -3082,21 +3120,48 @@ public static class AgentToolInvocationPolicyMetadata
         string? toolName,
         IEnumerable<KeyValuePair<string, object?>> arguments)
     {
-        var redactManagedContent = HasSensitiveHrArguments(toolName) ||
-                                   HasSensitivePromptCuratorArguments(toolName) ||
-                                   HasSensitiveWorkflowCuratorArguments(toolName) ||
-                                   HasSensitiveCapabilityCuratorArguments(toolName) ||
-                                   HasSensitiveSchedulerArguments(toolName);
-        return arguments
-            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+        return SanitizeArguments(toolName, arguments)
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 item => item.Key,
-                item => ShouldRedact(item.Key)
-                    ? "<redacted>"
-                    : redactManagedContent
-                        ? FormatSensitiveArgumentValue(item.Value)
-                        : FormatArgumentValue(item.Value),
+                item => FormatArgumentValue(item.Value),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static IReadOnlyDictionary<string, object?> SanitizeArguments(
+        string? toolName,
+        IEnumerable<KeyValuePair<string, object?>> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        var mode = HasSensitiveBusinessArguments(toolName)
+            ? ToolArgumentSanitizationMode.SecretKeysAndManagedBusinessContent
+            : ToolArgumentSanitizationMode.SecretKeys;
+        return SanitizeArguments(arguments, mode);
+    }
+
+    public static IReadOnlyDictionary<string, object?> SanitizeArgumentsForDisplay(
+        string? toolName,
+        IEnumerable<KeyValuePair<string, object?>> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        return SanitizeArguments(
+            arguments,
+            ToolCapabilityRegistry.TryResolve(toolName, out _)
+                ? ToolArgumentSanitizationMode.DisplayKnownSafeFields
+                : ToolArgumentSanitizationMode.DisplayUnknownIdentityOnly);
+    }
+
+    private static IReadOnlyDictionary<string, object?> SanitizeArguments(
+        IEnumerable<KeyValuePair<string, object?>> arguments,
+        ToolArgumentSanitizationMode mode)
+    {
+        return arguments
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key))
+            .ToDictionary(
+                item => item.Key,
+                item => SanitizeArgumentValue(item.Key, item.Value, mode),
                 StringComparer.OrdinalIgnoreCase);
     }
 
@@ -3130,16 +3195,20 @@ public static class AgentToolInvocationPolicyMetadata
                SensitiveSchedulerArgumentToolNames.Contains(toolName.Trim());
     }
 
+    public static bool HasSensitiveBusinessArguments(string? toolName)
+    {
+        return HasSensitiveHrArguments(toolName) ||
+               HasSensitivePromptCuratorArguments(toolName) ||
+               HasSensitiveWorkflowCuratorArguments(toolName) ||
+               HasSensitiveCapabilityCuratorArguments(toolName) ||
+               HasSensitiveSchedulerArguments(toolName);
+    }
+
     internal static string ProtectApprovalArgumentsForAudit(
         string? toolName,
         string? argumentsJson)
     {
         var retentionScheme = ResolveApprovalAuditRetentionScheme(toolName);
-        if (retentionScheme is null)
-        {
-            return argumentsJson ?? "{}";
-        }
-
         var normalizedArgumentsJson = string.IsNullOrWhiteSpace(argumentsJson)
             ? "{}"
             : argumentsJson.Trim();
@@ -3147,23 +3216,46 @@ public static class AgentToolInvocationPolicyMetadata
         try
         {
             using var document = JsonDocument.Parse(normalizedArgumentsJson);
-            if (IsProtectedApprovalAudit(document.RootElement, retentionScheme))
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
-                return document.RootElement.GetRawText();
+                throw new JsonException("Approval arguments must be a JSON object.");
             }
 
             var canonicalArgumentsJson = CanonicalizeJson(document.RootElement)?.ToJsonString() ?? "null";
-            var protectedArguments = SanitizeSensitiveArgumentElement(document.RootElement, propertyName: null);
+            var mode = retentionScheme is null
+                ? ToolArgumentSanitizationMode.SecretKeys
+                : ToolArgumentSanitizationMode.SecretKeysAndManagedBusinessContent;
+            var protectedArguments = SanitizeArgumentElement(
+                document.RootElement,
+                propertyName: null,
+                mode: mode);
+            if (retentionScheme is null)
+            {
+                return protectedArguments.WasRedacted
+                    ? protectedArguments.Value?.ToJsonString() ?? "null"
+                    : argumentsJson ?? "{}";
+            }
+
             var audit = new JsonObject
             {
                 ["retentionScheme"] = retentionScheme,
                 ["argumentsSha256"] = ComputeSha256Hash(canonicalArgumentsJson),
-                ["arguments"] = protectedArguments
+                ["arguments"] = protectedArguments.Value
             };
             return audit.ToJsonString();
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
         {
+            if (retentionScheme is null)
+            {
+                return new JsonObject
+                {
+                    ["retentionScheme"] = InvalidApprovalArgumentsRetentionScheme,
+                    ["argumentsSha256"] = ComputeSha256Hash(normalizedArgumentsJson),
+                    ["arguments"] = RedactedArgumentValue
+                }.ToJsonString();
+            }
+
             var audit = new JsonObject
             {
                 ["retentionScheme"] = retentionScheme,
@@ -3171,6 +3263,29 @@ public static class AgentToolInvocationPolicyMetadata
                 ["arguments"] = JsonValue.Create("<redacted-invalid-json>")
             };
             return audit.ToJsonString();
+        }
+    }
+
+    internal static string ProtectPreviouslyProtectedApprovalArgumentsForExport(
+        string? toolName,
+        string? argumentsJson)
+    {
+        var retentionScheme = ResolveApprovalAuditRetentionScheme(toolName);
+        if (retentionScheme is null || string.IsNullOrWhiteSpace(argumentsJson))
+        {
+            return ProtectApprovalArgumentsForAudit(toolName, argumentsJson);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(argumentsJson);
+            return IsProtectedApprovalAudit(document.RootElement, retentionScheme)
+                ? document.RootElement.GetRawText()
+                : ProtectApprovalArgumentsForAudit(toolName, argumentsJson);
+        }
+        catch (JsonException)
+        {
+            return ProtectApprovalArgumentsForAudit(toolName, argumentsJson);
         }
     }
 
@@ -3195,10 +3310,7 @@ public static class AgentToolInvocationPolicyMetadata
     }
 
     private static bool ShouldRedact(string key)
-    {
-        return SensitiveArgumentNameFragments.Any(fragment =>
-            key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
-    }
+        => WorkflowExecutorRedaction.IsSensitivePropertyName(key);
 
     private static string FormatArgumentValue(object? value)
     {
@@ -3218,11 +3330,19 @@ public static class AgentToolInvocationPolicyMetadata
         return text.Length <= 160 ? text : text[..160] + $"...#{ComputeStableHash(text)}";
     }
 
-    private static string FormatSensitiveArgumentValue(object? value)
+    private static object? SanitizeArgumentValue(
+        string propertyName,
+        object? value,
+        ToolArgumentSanitizationMode mode)
     {
+        if (ShouldRedact(propertyName))
+        {
+            return RedactedArgumentValue;
+        }
+
         if (value is null)
         {
-            return "<null>";
+            return null;
         }
 
         try
@@ -3230,43 +3350,170 @@ public static class AgentToolInvocationPolicyMetadata
             var element = value is JsonElement jsonElement
                 ? jsonElement
                 : JsonSerializer.SerializeToElement(value, AgentOutputJson.SerializerOptions);
-            var sanitized = SanitizeSensitiveArgumentElement(element, propertyName: null);
-            return FormatArgumentValue(sanitized?.ToJsonString() ?? "<null>");
+            var sanitized = SanitizeArgumentElement(element, propertyName, mode);
+            return sanitized.WasRedacted ||
+                   mode == ToolArgumentSanitizationMode.SecretKeysAndManagedBusinessContent
+                ? sanitized.Value
+                : value;
         }
         catch (Exception exception) when (exception is JsonException or NotSupportedException)
         {
-            return $"<redacted>#{ComputeStableHash(value.GetType().FullName ?? "unknown")}";
+            var valueTypeName = value.GetType().FullName ?? "unknown";
+            return $"{RedactedArgumentValue}#{ComputeStableHash(valueTypeName)}";
         }
     }
 
-    private static JsonNode? SanitizeSensitiveArgumentElement(JsonElement element, string? propertyName)
+    private static SanitizedArgumentNode SanitizeArgumentElement(
+        JsonElement element,
+        string? propertyName,
+        ToolArgumentSanitizationMode mode)
     {
-        if (!string.IsNullOrWhiteSpace(propertyName) &&
+        if (!string.IsNullOrWhiteSpace(propertyName) && ShouldRedact(propertyName))
+        {
+            return new SanitizedArgumentNode(
+                JsonValue.Create(RedactedArgumentValue),
+                WasRedacted: true);
+        }
+
+        if (mode == ToolArgumentSanitizationMode.SecretKeysAndManagedBusinessContent &&
+            !string.IsNullOrWhiteSpace(propertyName) &&
             SensitiveManagedArgumentPropertyNames.Contains(propertyName))
         {
-            return JsonValue.Create($"<redacted>#{ComputeStableHash(element.GetRawText())}");
+            return new SanitizedArgumentNode(
+                JsonValue.Create($"{RedactedArgumentValue}#{ComputeStableHash(element.GetRawText())}"),
+                WasRedacted: true);
+        }
+
+        if ((mode == ToolArgumentSanitizationMode.DisplayKnownSafeFields ||
+             mode == ToolArgumentSanitizationMode.DisplayUnknownIdentityOnly) &&
+            element.ValueKind is not (JsonValueKind.Object or JsonValueKind.Array) &&
+            !IsSafeDisplayValue(propertyName, element, mode))
+        {
+            return new SanitizedArgumentNode(
+                JsonValue.Create($"{RedactedArgumentValue}#{ComputeStableHash(element.GetRawText())}"),
+                WasRedacted: true);
         }
 
         return element.ValueKind switch
         {
-            JsonValueKind.Object => SanitizeSensitiveArgumentObject(element),
-            JsonValueKind.Array => new JsonArray(element.EnumerateArray()
-                .Select(item => SanitizeSensitiveArgumentElement(item, propertyName: null))
-                .ToArray()),
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            _ => JsonNode.Parse(element.GetRawText())
+            JsonValueKind.Object => SanitizeArgumentObject(element, mode),
+            JsonValueKind.Array => SanitizeArgumentArray(element, propertyName, mode),
+            JsonValueKind.String => SanitizeArgumentString(element),
+            JsonValueKind.Null or JsonValueKind.Undefined => new SanitizedArgumentNode(null, WasRedacted: false),
+            _ => new SanitizedArgumentNode(JsonNode.Parse(element.GetRawText()), WasRedacted: false)
         };
     }
 
-    private static JsonObject SanitizeSensitiveArgumentObject(JsonElement element)
+    private static SanitizedArgumentNode SanitizeArgumentString(JsonElement element)
+    {
+        var value = element.GetString() ?? string.Empty;
+        var sanitizedValue = WorkflowExecutorRedaction.RedactText(value);
+        return new SanitizedArgumentNode(
+            JsonValue.Create(sanitizedValue),
+            WasRedacted: !string.Equals(value, sanitizedValue, StringComparison.Ordinal));
+    }
+
+    private static SanitizedArgumentNode SanitizeArgumentObject(
+        JsonElement element,
+        ToolArgumentSanitizationMode mode)
     {
         var result = new JsonObject();
-        foreach (var property in element.EnumerateObject().OrderBy(property => property.Name, StringComparer.Ordinal))
+        var wasRedacted = false;
+        IEnumerable<JsonProperty> properties = element.EnumerateObject().ToArray();
+        if (mode is ToolArgumentSanitizationMode.DisplayKnownSafeFields or
+            ToolArgumentSanitizationMode.DisplayUnknownIdentityOnly)
         {
-            result[property.Name] = SanitizeSensitiveArgumentElement(property.Value, property.Name);
+            properties = properties
+                .OrderBy(property =>
+                    !ShouldRedact(property.Name) && IsIdentityPropertyName(property.Name)
+                        ? 0
+                        : 1)
+                .ThenBy(property => property.Name, StringComparer.Ordinal);
+        }
+        else if (mode is not ToolArgumentSanitizationMode.SecretKeys)
+        {
+            properties = properties.OrderBy(property => property.Name, StringComparer.Ordinal);
         }
 
-        return result;
+        foreach (var property in properties)
+        {
+            var sanitized = SanitizeArgumentElement(property.Value, property.Name, mode);
+            result[property.Name] = sanitized.Value;
+            wasRedacted |= sanitized.WasRedacted;
+        }
+
+        return new SanitizedArgumentNode(result, wasRedacted);
+    }
+
+    private static SanitizedArgumentNode SanitizeArgumentArray(
+        JsonElement element,
+        string? propertyName,
+        ToolArgumentSanitizationMode mode)
+    {
+        var result = new JsonArray();
+        var wasRedacted = false;
+        foreach (var item in element.EnumerateArray())
+        {
+            var sanitized = SanitizeArgumentElement(item, propertyName, mode);
+            result.Add(sanitized.Value);
+            wasRedacted |= sanitized.WasRedacted;
+        }
+
+        return new SanitizedArgumentNode(result, wasRedacted);
+    }
+
+    private static bool IsSafeDisplayValue(
+        string? propertyName,
+        JsonElement element,
+        ToolArgumentSanitizationMode mode)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            return false;
+        }
+
+        var normalized = string.Concat(propertyName.Where(char.IsLetterOrDigit));
+        var isIdentity = IsIdentityPropertyName(propertyName);
+        if (!isIdentity &&
+            (mode == ToolArgumentSanitizationMode.DisplayUnknownIdentityOnly ||
+             !SafeDisplayArgumentPropertyNames.Contains(normalized)))
+        {
+            return false;
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => IsBoundedSingleLineDisplayValue(
+                element.GetString(),
+                isIdentity ? 160 : 260),
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => !isIdentity,
+            JsonValueKind.Null or JsonValueKind.Undefined => true,
+            _ => false
+        };
+    }
+
+    private static bool IsIdentityPropertyName(string propertyName)
+    {
+        var trimmed = propertyName.Trim();
+        return trimmed.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("ids", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("key", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("keys", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.EndsWith("Id", StringComparison.Ordinal) ||
+               trimmed.EndsWith("Ids", StringComparison.Ordinal) ||
+               trimmed.EndsWith("Key", StringComparison.Ordinal) ||
+               trimmed.EndsWith("Keys", StringComparison.Ordinal) ||
+               trimmed.EndsWith("_id", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.EndsWith("_ids", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.EndsWith("_key", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.EndsWith("_keys", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBoundedSingleLineDisplayValue(string? value, int maxLength)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               value.Length <= maxLength &&
+               !value.Any(char.IsControl);
     }
 
     private static string? ResolveApprovalAuditRetentionScheme(string? toolName)
@@ -3298,13 +3545,78 @@ public static class AgentToolInvocationPolicyMetadata
 
     private static bool IsProtectedApprovalAudit(JsonElement element, string retentionScheme)
     {
-        return element.ValueKind == JsonValueKind.Object &&
-               element.TryGetProperty("retentionScheme", out var retentionSchemeElement) &&
-               retentionSchemeElement.ValueKind == JsonValueKind.String &&
-               string.Equals(
-                   retentionSchemeElement.GetString(),
-                   retentionScheme,
-                   StringComparison.Ordinal);
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var properties = element.EnumerateObject().ToArray();
+        if (properties.Length != 3 ||
+            !element.TryGetProperty("retentionScheme", out var retentionSchemeElement) ||
+            retentionSchemeElement.ValueKind != JsonValueKind.String ||
+            !string.Equals(retentionSchemeElement.GetString(), retentionScheme, StringComparison.Ordinal) ||
+            !element.TryGetProperty("argumentsSha256", out var argumentsHashElement) ||
+            argumentsHashElement.ValueKind != JsonValueKind.String ||
+            !IsLowercaseHex(argumentsHashElement.GetString(), 64) ||
+            !element.TryGetProperty("arguments", out var argumentsElement))
+        {
+            return false;
+        }
+
+        return argumentsElement.ValueKind switch
+        {
+            JsonValueKind.Object => IsSanitizedApprovalArgumentElement(
+                argumentsElement,
+                propertyName: null),
+            JsonValueKind.String => string.Equals(
+                argumentsElement.GetString(),
+                "<redacted-invalid-json>",
+                StringComparison.Ordinal),
+            _ => false
+        };
+    }
+
+    private static bool IsSanitizedApprovalArgumentElement(
+        JsonElement element,
+        string? propertyName)
+    {
+        if (!string.IsNullOrWhiteSpace(propertyName) && ShouldRedact(propertyName))
+        {
+            return element.ValueKind == JsonValueKind.String &&
+                   string.Equals(element.GetString(), RedactedArgumentValue, StringComparison.Ordinal);
+        }
+
+        if (!string.IsNullOrWhiteSpace(propertyName) &&
+            SensitiveManagedArgumentPropertyNames.Contains(propertyName))
+        {
+            const string hashPrefix = RedactedArgumentValue + "#";
+            return element.ValueKind == JsonValueKind.String &&
+                   element.GetString() is { } value &&
+                   value.StartsWith(hashPrefix, StringComparison.Ordinal) &&
+                   IsLowercaseHex(value[hashPrefix.Length..], 12);
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => element.EnumerateObject().All(property =>
+                IsSanitizedApprovalArgumentElement(property.Value, property.Name)),
+            JsonValueKind.Array => element.EnumerateArray().All(item =>
+                IsSanitizedApprovalArgumentElement(item, propertyName: null)),
+            JsonValueKind.String => element.GetString() is { } value &&
+                                    string.Equals(
+                                        WorkflowExecutorRedaction.RedactText(value),
+                                        value,
+                                        StringComparison.Ordinal),
+            _ => true
+        };
+    }
+
+    private static bool IsLowercaseHex(string? value, int expectedLength)
+    {
+        return value is { Length: var length } &&
+               length == expectedLength &&
+               value.All(character =>
+                   character is >= '0' and <= '9' or >= 'a' and <= 'f');
     }
 
     private static JsonNode? CanonicalizeJson(JsonElement element)

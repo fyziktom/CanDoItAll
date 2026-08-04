@@ -2,6 +2,7 @@ using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -12,6 +13,9 @@ public static class CrmHrModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddCrmHrModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            CrmHrProjectTransferTargetStateParticipant>());
         services.AddScoped<PartyDirectoryService>();
         services.AddScoped<PartyDirectoryManagementService>();
         services.AddScoped<ICrmPartyCommandService, CrmPartyCommandService>();

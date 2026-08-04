@@ -19,9 +19,9 @@ internal static class ApiCommandTaskLifetime
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Cancelling API command {ApiOperationId} after its response stream ended failed.",
-                operationId);
+                "Cancelling API command after its response stream ended failed. ApiOperationId={ApiOperationId} FailureType={FailureType}.",
+                operationId,
+                exception.GetType().Name);
             cancellation = Task.CompletedTask;
         }
 
@@ -89,9 +89,9 @@ internal static class ApiCommandTaskLifetime
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Cancelling API command {ApiOperationId} after its response stream ended failed.",
-                operationId);
+                "Cancelling API command after its response stream ended failed. ApiOperationId={ApiOperationId} FailureType={FailureType}.",
+                operationId,
+                exception.GetType().Name);
         }
     }
 
@@ -113,9 +113,9 @@ internal static class ApiCommandTaskLifetime
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "API command {ApiOperationId} failed while its terminated response stream was being drained.",
-                operationId);
+                "API command failed while its terminated response stream was being drained. ApiOperationId={ApiOperationId} FailureType={FailureType}.",
+                operationId,
+                exception.GetType().Name);
         }
     }
 }

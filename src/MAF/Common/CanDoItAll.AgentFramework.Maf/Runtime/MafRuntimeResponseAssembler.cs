@@ -206,19 +206,24 @@ internal static class MafRuntimeResponseAssembler
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        var builder = new StringBuilder("Provider streaming failed before a successful runtime response.");
+        var builder = new StringBuilder("Provider transport failed before a successful runtime response.");
         var current = exception;
         var depth = 0;
         while (current is not null && depth < 4)
         {
             builder
-                .Append(" Exception")
+                .Append(" FailureType")
                 .Append(depth)
                 .Append('=')
-                .Append(current.GetType().FullName ?? current.GetType().Name)
-                .Append(": ")
-                .Append(WorkflowExecutorRedaction.RedactText(current.Message))
-                .Append('.');
+                .Append(current.GetType().FullName ?? current.GetType().Name);
+            if (current is HttpRequestException { StatusCode: { } statusCode })
+            {
+                builder
+                    .Append("; HttpStatus=")
+                    .Append((int)statusCode);
+            }
+
+            builder.Append('.');
 
             current = current.InnerException;
             depth++;
@@ -350,6 +355,7 @@ internal static class MafRuntimeResponseAssembler
             TotalTokens: 0,
             ToolCallCount: 0)
         {
+            ProviderProfileId = provider.Id,
             RuntimeSessionKey = runtimeSessionKey,
             DiagnosticsJson = JsonSerializer.Serialize(
                 new Dictionary<string, string>
