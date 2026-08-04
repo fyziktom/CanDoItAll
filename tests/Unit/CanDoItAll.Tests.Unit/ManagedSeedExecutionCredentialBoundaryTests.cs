@@ -14,7 +14,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ManagedSeedExecutionCredentialBoundaryTests
 {
     [Fact]
-    public async Task Managed_seed_openai_chat_reaches_runtime_with_only_the_core_credential_prime()
+    public async Task Managed_seed_openai_chat_reaches_runtime_without_mutating_process_environment()
     {
         using var workspace = new TemporaryWorkspace();
         var workspaceScope = WorkspaceScopeDescriptor.Project(
@@ -26,7 +26,14 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
         var store = new FileSandboxWorkspaceStore(
             workspace.Path,
             workspaceScope);
-        var provider = CreateProvider();
+        var credentialVariableName = $"CANDOITALL_CREDENTIAL_BOUNDARY_{Guid.NewGuid():N}";
+        var originalOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var resolvedApiKey = $"unit-test-api-key-{Guid.NewGuid():N}";
+        var provider = CreateProvider() with
+        {
+            ApiKeyEnvironmentVariable = credentialVariableName
+        };
+        Assert.Null(Environment.GetEnvironmentVariable(credentialVariableName));
         var agent = CreateAgent(provider.Id);
         await store.SaveCatalogAsync(
             new SandboxWorkspaceCatalog(
@@ -35,7 +42,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
                 Providers: [provider],
                 Capabilities: [],
                 Memory: []));
-        var credentialResolver = new CountingCredentialResolver();
+        var credentialResolver = new CountingCredentialResolver(resolvedApiKey);
         var runtime = new RuntimeBoundaryProbe(credentialResolver);
         using var preparationCache = new AgentExecutionPreparationCache(
             AgentExecutionPreparationCachePolicy.Default);
@@ -62,6 +69,8 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
         Assert.NotEqual(
             ManagedSeedProviderFallbacks.FallbackModel,
             runtime.AgentAtEntry?.Model);
+        Assert.Null(Environment.GetEnvironmentVariable(credentialVariableName));
+        Assert.Equal(originalOpenAiApiKey, Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
     }
 
     [Fact]
@@ -74,7 +83,9 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
                 credentialResolver)
             .BuildServiceProvider();
         var credentialService = new MafProviderCredentialService(services);
-        var factory = new MafProviderAgentFactory(credentialService);
+        var factory = new MafProviderAgentFactory(
+            credentialService,
+            NoOpMafProviderStreamingDispatchGate.Instance);
         var options = new ChatClientAgentOptions
         {
             Id = Guid.NewGuid().ToString("D"),
@@ -186,7 +197,8 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
             UpdatedAtUtc: now);
     }
 
-    private sealed class CountingCredentialResolver :
+    private sealed class CountingCredentialResolver(
+        string apiKey = "unit-test-api-key") :
         IAgentProviderCredentialResolver
     {
         private int callCount;
@@ -200,10 +212,9 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
             LastProvider = provider;
             Interlocked.Increment(ref callCount);
             return new(
-                "unit-test-api-key",
+                apiKey,
                 "unit-test credential resolver",
-                string.Empty,
-                ShouldPromoteToProcessEnvironment: false);
+                string.Empty);
         }
     }
 

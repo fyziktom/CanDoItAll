@@ -566,7 +566,7 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
 
         return approval with
         {
-            ArgumentsJson = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            ArgumentsJson = AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
                 approval.ToolName,
                 approval.ArgumentsJson)
         };
@@ -584,7 +584,7 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
                     : approval.Details,
                 ArgumentsJson = protectAll
                     ? HrAgentExecutionRetention.ManagerReviewApprovalArgumentsJson
-                    : AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+                    : AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
                         approval.ToolName,
                         approval.ArgumentsJson)
             })

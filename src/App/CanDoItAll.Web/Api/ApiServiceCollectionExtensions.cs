@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.FileTools.Integration;
@@ -39,7 +41,12 @@ public static class ApiServiceCollectionExtensions
         services.TryAddSingleton(
             typeof(ProfileBoundedReplayEventStream<>),
             typeof(ProfileBoundedReplayEventStream<>));
-        services.AddOpenApi();
+        services.ConfigureAgentApiJson();
+        services.AddOpenApi(options =>
+        {
+            options.AddOperationTransformer(
+                ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
+        });
         services.AddAuthorization(options =>
         {
             options.AddPolicy(ApiAuthorizationPolicies.IssueTokens, policy =>
@@ -73,6 +80,14 @@ public static class ApiServiceCollectionExtensions
                     ApiAuthorizationPolicies.HasApiOrSpecificScope(
                         context.User,
                         ApiAccessScopeNames.QueryMemoryProviders));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.WriteProjectStructure, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.WriteProjectStructure));
             });
         });
         services.AddHttpContextAccessor();
@@ -127,6 +142,19 @@ public static class ApiServiceCollectionExtensions
                 };
             });
 
+        return services;
+    }
+
+    internal static IServiceCollection ConfigureAgentApiJson(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<AgentProviderFailureCategory>(
+                    JsonNamingPolicy.CamelCase,
+                    allowIntegerValues: false)));
         return services;
     }
 

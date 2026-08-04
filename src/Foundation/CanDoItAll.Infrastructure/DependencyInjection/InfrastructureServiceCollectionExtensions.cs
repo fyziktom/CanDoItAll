@@ -81,6 +81,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<DatabaseProfileControlPlaneService>();
         services.AddSingleton<IDatabaseProfileService>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            InfrastructureProjectTransferTargetStateParticipant>());
         services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
         services.AddSingleton<ICanonicalRuntimeDatabase, CanonicalRuntimeDatabase>();

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -338,6 +339,8 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
         }
 
         builder.Configuration.AddInMemoryCollection(configurationValues);
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
         TestApplicationBootstrap.ConfigureDefaultServices(
             builder.Services,
             builder.Configuration,
@@ -402,6 +405,8 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
             ["Storage:ExportsFolder"] = "exports",
             ["Storage:EvidenceFolder"] = "evidence",
             ["Storage:ManagerArtifactsFolder"] = Path.Combine(testEnvironment.RootPath, "manager-artifacts"),
+            ["SecretVault:Provider"] = "DataProtectionFile",
+            ["SecretVault:VaultPath"] = Path.Combine(testEnvironment.ControlPlaneRootPath, "secrets"),
             ["Workbench:MaxWarmTabs"] = "3",
             ["Workbench:SleepAfterMinutes"] = "15",
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",

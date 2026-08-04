@@ -22,6 +22,18 @@ public sealed class AgentProjectStructureAccessSettings
     public List<Guid> AllowedProjectIds { get; set; } = [];
 }
 
+public readonly record struct AgentProjectStructureAccessRevocationResult(
+    bool Changed,
+    string ConfigurationJson);
+
+public sealed class AgentProjectStructureAccessMetadataException : Exception
+{
+    public AgentProjectStructureAccessMetadataException(string message, Exception? innerException = null)
+        : base(message, innerException)
+    {
+    }
+}
+
 public static class AgentProjectStructureAccessMetadata
 {
     private const string RootPropertyName = "projectStructure";
@@ -121,6 +133,58 @@ public static class AgentProjectStructureAccessMetadata
         return root.ToJsonString();
     }
 
+    public static AgentProjectStructureAccessRevocationResult RevokeProject(
+        string? configurationJson,
+        Guid projectId)
+    {
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException("A project id is required.", nameof(projectId));
+        }
+
+        var originalConfigurationJson = configurationJson ?? string.Empty;
+        var root = ParseObjectForMutation(configurationJson);
+        if (!root.TryGetPropertyValue(RootPropertyName, out var projectStructureNode))
+        {
+            return new AgentProjectStructureAccessRevocationResult(
+                Changed: false,
+                ConfigurationJson: originalConfigurationJson);
+        }
+
+        if (projectStructureNode is not JsonObject projectStructure)
+        {
+            throw CreateMalformedMetadataException(
+                $"'{RootPropertyName}' must contain a JSON object.");
+        }
+
+        ValidateBooleanForMutation(projectStructure, CanReadPropertyName);
+        ValidateBooleanForMutation(projectStructure, CanWritePropertyName);
+        ValidateBooleanForMutation(projectStructure, CanWriteNonTaskStructurePropertyName);
+        ValidateBooleanForMutation(projectStructure, CanWriteTasksPropertyName);
+        ValidateBooleanForMutation(projectStructure, CanCreateProjectsPropertyName);
+        ValidateBooleanForMutation(projectStructure, CanCreateSubprojectsPropertyName);
+        var allowAllProjects = ReadBooleanForMutation(
+            projectStructure,
+            AllowAllProjectsPropertyName);
+        var allowedProjectIds = ReadProjectIdsForMutation(projectStructure);
+        if (allowAllProjects || !allowedProjectIds.Any(item => item.ProjectId == projectId))
+        {
+            return new AgentProjectStructureAccessRevocationResult(
+                Changed: false,
+                ConfigurationJson: originalConfigurationJson);
+        }
+
+        projectStructure[AllowedProjectIdsPropertyName] = new JsonArray(
+            allowedProjectIds
+                .Where(item => item.ProjectId != projectId)
+                .Select(item => JsonValue.Create(item.RawValue))
+                .ToArray());
+
+        return new AgentProjectStructureAccessRevocationResult(
+            Changed: true,
+            ConfigurationJson: root.ToJsonString());
+    }
+
     public static AgentProjectStructureAccessSettings Normalize(AgentProjectStructureAccessSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -187,6 +251,94 @@ public static class AgentProjectStructureAccessMetadata
         return projectIds.ToList();
     }
 
+    private static JsonObject ParseObjectForMutation(string? configurationJson)
+    {
+        if (string.IsNullOrWhiteSpace(configurationJson))
+        {
+            return new JsonObject();
+        }
+
+        try
+        {
+            return JsonNode.Parse(configurationJson) as JsonObject
+                ?? throw CreateMalformedMetadataException(
+                    "Agent configuration must contain a JSON object.");
+        }
+        catch (AgentProjectStructureAccessMetadataException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException)
+        {
+            throw CreateMalformedMetadataException(
+                "Agent configuration is not valid JSON metadata.",
+                exception);
+        }
+    }
+
+    private static bool ReadBooleanForMutation(JsonObject node, string propertyName)
+    {
+        if (!node.TryGetPropertyValue(propertyName, out var propertyNode))
+        {
+            return false;
+        }
+
+        if (propertyNode is JsonValue value &&
+            value.TryGetValue<bool>(out var parsedValue))
+        {
+            return parsedValue;
+        }
+
+        throw CreateMalformedMetadataException(
+            $"'{RootPropertyName}.{propertyName}' must contain a JSON boolean.");
+    }
+
+    private static void ValidateBooleanForMutation(JsonObject node, string propertyName)
+    {
+        _ = ReadBooleanForMutation(node, propertyName);
+    }
+
+    private static IReadOnlyList<ProjectIdMetadataValue> ReadProjectIdsForMutation(
+        JsonObject projectStructure)
+    {
+        if (!projectStructure.TryGetPropertyValue(
+                AllowedProjectIdsPropertyName,
+                out var allowedProjectIdsNode))
+        {
+            return [];
+        }
+
+        if (allowedProjectIdsNode is not JsonArray allowedProjectIds)
+        {
+            throw CreateMalformedMetadataException(
+                $"'{RootPropertyName}.{AllowedProjectIdsPropertyName}' must contain a JSON array.");
+        }
+
+        var parsedProjectIds = new List<ProjectIdMetadataValue>(allowedProjectIds.Count);
+        foreach (var item in allowedProjectIds)
+        {
+            if (item is not JsonValue value ||
+                !value.TryGetValue<string>(out var rawProjectId) ||
+                !Guid.TryParse(rawProjectId, out var projectId) ||
+                projectId == Guid.Empty)
+            {
+                throw CreateMalformedMetadataException(
+                    $"'{RootPropertyName}.{AllowedProjectIdsPropertyName}' contains an invalid project id.");
+            }
+
+            parsedProjectIds.Add(new ProjectIdMetadataValue(projectId, rawProjectId));
+        }
+
+        return parsedProjectIds;
+    }
+
+    private static AgentProjectStructureAccessMetadataException CreateMalformedMetadataException(
+        string message,
+        Exception? innerException = null)
+        => new(
+            $"Project-structure access metadata is malformed. {message}",
+            innerException);
+
     private static JsonObject ParseObject(string? configurationJson)
     {
         if (string.IsNullOrWhiteSpace(configurationJson))
@@ -203,4 +355,6 @@ public static class AgentProjectStructureAccessMetadata
             return new JsonObject();
         }
     }
+
+    private readonly record struct ProjectIdMetadataValue(Guid ProjectId, string RawValue);
 }

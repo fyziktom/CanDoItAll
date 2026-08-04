@@ -10,6 +10,7 @@ public sealed partial class ProjectWorkbenchService
         Guid projectId,
         IReadOnlyCollection<string> sourceRootNodeKeys,
         string targetParentNodeKey,
+        ProjectStructureClipboardCopyTaskPolicy taskPolicy = ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
@@ -17,7 +18,7 @@ public sealed partial class ProjectWorkbenchService
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
@@ -39,6 +40,7 @@ public sealed partial class ProjectWorkbenchService
             projectId,
             editableNodes,
             sourceRootNodeKeys);
+        EnsureTaskPolicyAllowed(forest.Nodes, taskPolicy);
         foreach (var rootNodeKey in forest.RootNodeKeys)
         {
             EnsureCanonicalTaskResourceChildAllowed(
@@ -142,16 +144,35 @@ public sealed partial class ProjectWorkbenchService
         var copiedNodeKeys = forest.Nodes
             .Select(node => node.NodeKey)
             .ToHashSet(StringComparer.Ordinal);
-        var internalUserLinks = await dbContext.Set<ProjectObjectLinkRecord>()
+        var relatedUserLinks = await dbContext.Set<ProjectObjectLinkRecord>()
             .AsNoTracking()
             .Where(link =>
                 link.ProjectId == projectId &&
                 !link.IsSystemManaged &&
                 link.LinkKind != ProjectObjectLinkKind.Contains &&
                 link.LinkKind != ProjectObjectLinkKind.BelongsTo &&
+                (copiedNodeKeys.Contains(link.SourceNodeKey) ||
+                 copiedNodeKeys.Contains(link.TargetNodeKey)))
+            .ToListAsync(cancellationToken);
+        var internalUserLinks = relatedUserLinks
+            .Where(link =>
                 copiedNodeKeys.Contains(link.SourceNodeKey) &&
                 copiedNodeKeys.Contains(link.TargetNodeKey))
-            .ToListAsync(cancellationToken);
+            .ToList();
+        var omittedBoundaryLinks = relatedUserLinks
+            .Where(link =>
+                copiedNodeKeys.Contains(link.SourceNodeKey) !=
+                copiedNodeKeys.Contains(link.TargetNodeKey))
+            .OrderBy(link => link.SourceNodeKey, StringComparer.Ordinal)
+            .ThenBy(link => link.TargetNodeKey, StringComparer.Ordinal)
+            .ThenBy(link => link.LinkKind)
+            .ThenBy(link => link.Id)
+            .Select(link => new ProjectStructureCopyOmittedLink(
+                link.Id,
+                link.SourceNodeKey,
+                link.TargetNodeKey,
+                link.LinkKind))
+            .ToList();
         if (internalUserLinks.Count > 0)
         {
             await dbContext.Set<ProjectObjectLinkRecord>().AddRangeAsync(
@@ -173,7 +194,8 @@ public sealed partial class ProjectWorkbenchService
 
         return new ProjectStructureClipboardCopyResult(
             forest.RootNodeKeys.Select(nodeKey => nodeKeyMap[nodeKey]).ToList(),
-            nodeKeyMap);
+            nodeKeyMap,
+            omittedBoundaryLinks);
     }
 
     private ProjectObjectRecord CloneNode(
@@ -224,6 +246,31 @@ public sealed partial class ProjectWorkbenchService
             CreatedAtUtc = copiedAtUtc,
             UpdatedAtUtc = copiedAtUtc
         };
+    }
+
+    private static void EnsureTaskPolicyAllowed(
+        IReadOnlyCollection<ProjectObjectRecord> copiedNodes,
+        ProjectStructureClipboardCopyTaskPolicy taskPolicy)
+    {
+        if (taskPolicy == ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks)
+        {
+            return;
+        }
+
+        if (taskPolicy != ProjectStructureClipboardCopyTaskPolicy.NonTaskStructureOnly)
+        {
+            throw new ArgumentOutOfRangeException(nameof(taskPolicy), taskPolicy, null);
+        }
+
+        var canonicalTask = copiedNodes.FirstOrDefault(node =>
+            ProjectStructureCanonicalTaskMutationPolicy.IsTask(
+                node.ObjectType,
+                node.ObjectSubtype));
+        if (canonicalTask is not null)
+        {
+            throw ProjectStructureClipboardMutationInputException.CanonicalTaskRequiresAuthority(
+                canonicalTask.NodeKey);
+        }
     }
 
     private static string ResolveCopiedParentNodeKey(
@@ -357,8 +404,9 @@ internal static class ProjectObjectClipboardCopyPolicy
         {
             if (deferredCompletion.State != ProjectStructureDeferredNodeCompletionState.Completed)
             {
-                throw new InvalidOperationException(
-                    $"Node '{source.NodeKey}' has deferred completion state '{deferredCompletion.State}' and cannot be copied before completion.");
+                throw ProjectStructureClipboardMutationInputException.DeferredCompletionIncomplete(
+                    source.NodeKey,
+                    deferredCompletion.State);
             }
 
             metadata.DeferredCompletion = null;
@@ -478,8 +526,9 @@ internal static class ProjectStructureEditableForestResolver
         {
             if (!editableNodesByKey.ContainsKey(requestedNodeKey))
             {
-                throw new InvalidOperationException(
-                    $"Source node '{requestedNodeKey}' is not a persisted editable node in project '{projectId}'.");
+                throw ProjectStructureClipboardMutationInputException.SourceNotEditable(
+                    requestedNodeKey,
+                    projectId);
             }
         }
 
@@ -542,14 +591,16 @@ internal static class ProjectStructureEditableForestResolver
                 out _,
                 out _))
         {
-            throw new InvalidOperationException(
-                $"Target parent node '{targetParentNodeKey}' is a projected project node and cannot receive editable children in project '{projectId}'.");
+            throw ProjectStructureClipboardMutationInputException.DestinationProjected(
+                targetParentNodeKey,
+                projectId);
         }
 
         if (!assembledNodes.Any(node => string.Equals(node.NodeKey, targetParentNodeKey, StringComparison.Ordinal)))
         {
-            throw new InvalidOperationException(
-                $"Target parent node '{targetParentNodeKey}' was not found in project '{projectId}'.");
+            throw ProjectStructureClipboardMutationInputException.DestinationNotFound(
+                targetParentNodeKey,
+                projectId);
         }
     }
 
@@ -614,4 +665,91 @@ internal static class ProjectStructureEditableForestResolver
 
         return result;
     }
+}
+
+internal enum ProjectStructureClipboardMutationRejectionReason
+{
+    DeferredCompletionIncomplete,
+    SourceNotEditable,
+    DestinationProjected,
+    DestinationNotFound,
+    CanonicalTaskRequiresAuthority
+}
+
+internal sealed class ProjectStructureClipboardMutationInputException : InvalidOperationException
+{
+    private ProjectStructureClipboardMutationInputException(
+        ProjectStructureClipboardMutationRejectionReason reason,
+        string subjectNodeId,
+        string errorCode,
+        string agentMessage,
+        string diagnosticMessage,
+        ProjectStructureDeferredNodeCompletionState? deferredState = null)
+        : base(diagnosticMessage)
+    {
+        Reason = reason;
+        SubjectNodeId = subjectNodeId;
+        ErrorCode = errorCode;
+        AgentMessage = agentMessage;
+        DeferredState = deferredState;
+    }
+
+    public ProjectStructureClipboardMutationRejectionReason Reason { get; }
+
+    public string SubjectNodeId { get; }
+
+    public string ErrorCode { get; }
+
+    public string AgentMessage { get; }
+
+    public ProjectStructureDeferredNodeCompletionState? DeferredState { get; }
+
+    public static ProjectStructureClipboardMutationInputException DeferredCompletionIncomplete(
+        string nodeId,
+        ProjectStructureDeferredNodeCompletionState state)
+        => new(
+            ProjectStructureClipboardMutationRejectionReason.DeferredCompletionIncomplete,
+            nodeId,
+            "NodeCopyDeferredCompletionIncomplete",
+            $"Node '{nodeId}' cannot be copied until its deferred completion has finished.",
+            $"Node '{nodeId}' has deferred completion state '{state}' and cannot be copied before completion.",
+            state);
+
+    public static ProjectStructureClipboardMutationInputException SourceNotEditable(
+        string nodeId,
+        Guid projectId)
+        => new(
+            ProjectStructureClipboardMutationRejectionReason.SourceNotEditable,
+            nodeId,
+            "NodeCopySourceNotEditable",
+            $"Source node '{nodeId}' is stale, projected, missing, or not editable. Read the canonical structure and retry with an editable node id.",
+            $"Source node '{nodeId}' is not a persisted editable node in project '{projectId}'.");
+
+    public static ProjectStructureClipboardMutationInputException DestinationProjected(
+        string nodeId,
+        Guid projectId)
+        => new(
+            ProjectStructureClipboardMutationRejectionReason.DestinationProjected,
+            nodeId,
+            "NodeCopyDestinationProjected",
+            $"Destination node '{nodeId}' is a projected project node and cannot receive editable copies.",
+            $"Target parent node '{nodeId}' is a projected project node and cannot receive editable children in project '{projectId}'.");
+
+    public static ProjectStructureClipboardMutationInputException DestinationNotFound(
+        string nodeId,
+        Guid projectId)
+        => new(
+            ProjectStructureClipboardMutationRejectionReason.DestinationNotFound,
+            nodeId,
+            "NodeCopyDestinationNotFound",
+            $"Destination node '{nodeId}' was not found. Read the canonical structure and retry with an editable parent id.",
+            $"Target parent node '{nodeId}' was not found in project '{projectId}'.");
+
+    public static ProjectStructureClipboardMutationInputException CanonicalTaskRequiresAuthority(string nodeId)
+        => new(
+            ProjectStructureClipboardMutationRejectionReason.CanonicalTaskRequiresAuthority,
+            nodeId,
+            "NodeCopyTaskAuthorityRequired",
+            $"The selected subtree contains canonical task '{nodeId}', but this caller has non-task structure authority only.",
+            $"Canonical task '{nodeId}' cannot be copied through a non-task-only structure authority boundary.");
 }

@@ -58,10 +58,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         if (exception is AgentRuntimeUsageException usageException &&
             usageException.UsageObservations.Count > 0)
         {
-            return usageException.UsageObservations
+            var observations = usageException.UsageObservations
+                .Where(observation => !IsSupersededSyntheticFailureObservation(
+                    observation,
+                    usageException.ProviderFailureIdentity))
                 .Select(observation => EnrichUsageObservation(run, agent, provider, observation))
                 .Select(observation => PriceUsageObservation(observation, provider))
                 .ToList();
+            if (usageException.ProviderFailureIdentity is not null)
+            {
+                observations.Add(CreateProviderFailureObservation(
+                    run,
+                    agent,
+                    provider,
+                    usageException.ProviderFailureIdentity));
+            }
+
+            return observations;
         }
 
         return
@@ -78,6 +91,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ProviderUsageSourcePhases.LegacyAgentRunMetric)),
                 provider)
         ];
+    }
+
+    private static bool IsSupersededSyntheticFailureObservation(
+        ProviderUsageObservation observation,
+        AgentRuntimeProviderFailureIdentity? identity)
+    {
+        return identity is not null &&
+               observation.ProviderProfileId != identity.ProviderProfileId &&
+               observation.UsageStatus == ProviderUsageObservationStatus.MissingAfterProviderActivity &&
+               observation.InputTokens == 0 &&
+               observation.CachedInputTokens == 0 &&
+               observation.OutputTokens == 0 &&
+               observation.ReasoningTokens == 0 &&
+               observation.TotalTokens == 0;
     }
 
     private IReadOnlyList<ProviderUsageObservation> BuildRepairUsageObservations(
@@ -149,6 +176,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             TotalTokens: totalTokens,
             ToolCallCount: Math.Max(0, metric.ToolCalls))
         {
+            ProviderProfileId = provider.Id,
             ExecutionRunId = metric.ExecutionRunId == Guid.Empty ? null : metric.ExecutionRunId,
             AgentId = metric.AgentId,
             ChatSessionId = metric.ChatSessionId,
@@ -183,6 +211,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             TotalTokens: inputTokens + outputTokens,
             ToolCallCount: Math.Max(0, runtimeResponse.ToolCalls))
         {
+            ProviderProfileId = provider.Id,
             ExecutionRunId = metric.ExecutionRunId == Guid.Empty ? null : metric.ExecutionRunId,
             AgentId = metric.AgentId,
             ChatSessionId = metric.ChatSessionId,
@@ -196,13 +225,26 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ProviderProfile provider,
         ProviderUsageObservation observation)
     {
+        var preserveObservationProvider = observation.ProviderProfileId.HasValue &&
+                                          observation.ProviderProfileId.Value != provider.Id;
         return observation with
         {
             Id = observation.Id == Guid.Empty ? Guid.NewGuid() : observation.Id,
-            ProviderName = string.IsNullOrWhiteSpace(observation.ProviderName) ? provider.Name : observation.ProviderName,
-            ProviderKind = provider.Kind,
-            Model = string.IsNullOrWhiteSpace(observation.Model) ? ResolveEffectiveManagedSeedModel(agent, provider) : observation.Model,
-            TransportKind = provider.Transport,
+            ProviderProfileId = observation.ProviderProfileId ?? provider.Id,
+            ProviderName = preserveObservationProvider
+                ? observation.ProviderName
+                : provider.Name,
+            ProviderKind = preserveObservationProvider
+                ? observation.ProviderKind
+                : provider.Kind,
+            Model = preserveObservationProvider
+                ? observation.Model
+                : string.IsNullOrWhiteSpace(observation.Model)
+                    ? ResolveEffectiveManagedSeedModel(agent, provider)
+                    : observation.Model,
+            TransportKind = preserveObservationProvider
+                ? observation.TransportKind
+                : provider.Transport,
             ExecutionRunId = run.Id,
             AgentId = agent.Id,
             ChatSessionId = run.ChatSessionId,
@@ -217,9 +259,49 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ProviderUsageObservation observation,
         ProviderProfile provider)
     {
+        if (observation.ProviderProfileId.HasValue &&
+            observation.ProviderProfileId.Value != provider.Id)
+        {
+            return observation;
+        }
+
         return ProviderPricingCalculator.TryResolveObservationCost(observation, [provider], out var costUsd)
             ? observation with { CalculatedCostUsd = costUsd }
             : observation;
+    }
+
+    private static ProviderUsageObservation CreateProviderFailureObservation(
+        ExecutionRunRecord run,
+        AgentDefinition agent,
+        ProviderProfile provider,
+        AgentRuntimeProviderFailureIdentity identity)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: provider.Name,
+            ProviderKind: provider.Kind,
+            Model: identity.Model,
+            TransportKind: provider.Transport,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: ProviderUsageObservationStatus.MissingAfterProviderActivity,
+            InputTokens: 0,
+            CachedInputTokens: 0,
+            OutputTokens: 0,
+            ReasoningTokens: 0,
+            TotalTokens: 0,
+            ToolCallCount: 0)
+        {
+            ProviderProfileId = provider.Id,
+            ExecutionRunId = run.Id,
+            AgentId = agent.Id,
+            ChatSessionId = run.ChatSessionId,
+            RuntimeSessionKey = run.RuntimeSessionKey,
+            ProcessRunId = run.ProcessRunId,
+            ProcessStepId = run.ProcessStepId,
+            CorrelationId = run.CorrelationId,
+            DiagnosticsJson = """{"diagnostic":"provider failure identity captured without attributable token usage"}"""
+        };
     }
 
     private static ProviderUsageObservation AttachRuntimeContextDiagnostics(

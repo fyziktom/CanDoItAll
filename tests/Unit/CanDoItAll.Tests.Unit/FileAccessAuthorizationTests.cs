@@ -11,7 +11,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class FileAccessAuthorizationTests
 {
     [Fact]
-    public async Task SB10_HandleResolve_RechecksCurrentSemanticBinding()
+    public async Task HandleResolve_rechecks_current_semantic_binding()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View);
@@ -28,7 +28,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_BrowserActivation_ReResolvesCurrentOccurrenceBeforeGrant()
+    public async Task Browser_activation_reresolves_current_occurrence_before_grant()
     {
         await using TestFixture fixture = CreateFixture();
         var browseDriver = new FakeBrowseDriver();
@@ -81,7 +81,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_BrowserActivation_RejectsLocatorOutsideSemanticRoot()
+    public async Task Browser_activation_rejects_locator_outside_semantic_root()
     {
         await using TestFixture fixture = CreateFixture();
         var browseDriver = new FakeBrowseDriver { EntryId = "secret.txt" };
@@ -121,7 +121,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_ForgedCrossContextWrongOperationRevokedAndExpiredHandles_FailBeforeStorage()
+    public async Task Forged_cross_context_wrong_operation_revoked_and_expired_handles_fail_before_storage()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View);
@@ -177,7 +177,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_SourceRemovalAndAuthorizationRevisionChange_FailBeforeStorage()
+    public async Task Source_removal_and_authorization_revision_change_fail_before_storage()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View);
@@ -200,7 +200,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_HandleRegistry_EvictsOldestDeterministicallyAtCapacity()
+    public async Task Handle_registry_evicts_oldest_deterministically_at_capacity()
     {
         await using TestFixture fixture = CreateFixture();
         var handles = new List<FileReference>();
@@ -231,7 +231,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_KnownFileContent_OpensWithoutAnyBrowserDependency()
+    public async Task Known_file_content_opens_without_any_browser_dependency()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View);
@@ -258,7 +258,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB13_KnownOccurrenceActivation_GrantsWithoutBrowserOrContentCalls()
+    public async Task Known_occurrence_activation_grants_without_browser_or_content_calls()
     {
         await using TestFixture fixture = CreateFixture();
         await using AsyncServiceScope serviceScope = fixture.Services.CreateAsyncScope();
@@ -286,7 +286,7 @@ public sealed class FileAccessAuthorizationTests
     [Theory]
     [InlineData(FakeSaveOutcome.Conflict, FileSaveOperationStatus.Conflict)]
     [InlineData(FakeSaveOutcome.Failure, FileSaveOperationStatus.Failed)]
-    public async Task SB07_SaveConflictFailureAndCancellation_KeepDirtyRevision(
+    public async Task Save_conflict_failure_and_cancellation_keep_dirty_revision(
         FakeSaveOutcome outcome,
         FileSaveOperationStatus expectedStatus)
     {
@@ -316,7 +316,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_SaveCancellation_KeepsDirtyRevision()
+    public async Task Save_cancellation_keeps_dirty_revision()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View | FileAccessOperation.Edit);
@@ -346,7 +346,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_SuccessfulSave_UpdatesPersistedRevisionAfterWrite()
+    public async Task Successful_save_updates_persisted_revision_after_write()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View | FileAccessOperation.Edit);
@@ -372,7 +372,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB16_SequentialSaves_AcceptPersistedRevisionBeyondGrantSnapshot()
+    public async Task Sequential_saves_accept_persisted_revision_beyond_grant_snapshot()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View | FileAccessOperation.Edit);
@@ -402,7 +402,7 @@ public sealed class FileAccessAuthorizationTests
     }
 
     [Fact]
-    public async Task SB07_OverwriteWithoutExplicitPermission_FailsBeforeWrite()
+    public async Task Overwrite_without_explicit_permission_fails_before_write()
     {
         await using TestFixture fixture = CreateFixture();
         FileReference file = await fixture.GrantAsync(FileAccessOperation.View | FileAccessOperation.Edit);

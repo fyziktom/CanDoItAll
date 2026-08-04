@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using System.Text.Json;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -71,6 +72,71 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
     }
 
     [Fact]
+    public void Redaction_removes_normalized_and_plural_sensitive_json_properties()
+    {
+        const string connectionSecret = "Server=sensitive-host;Password=sensitive-password";
+        const string dashedSecret = "dashed-property-secret";
+        var redacted = WorkflowExecutorRedaction.RedactSettingsJson($$"""
+            {
+              "ConnectionStrings": {
+                "DefaultConnection": "{{connectionSecret}}"
+              },
+              "api-key": "{{dashedSecret}}",
+              "api.key": "dot-property-secret",
+              "private key": "space-property-secret",
+              "safe": "visible"
+            }
+            """);
+
+        Assert.DoesNotContain(connectionSecret, redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain(dashedSecret, redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("dot-property-secret", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("space-property-secret", redacted, StringComparison.Ordinal);
+        Assert.Contains("visible", redacted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Redaction_preserves_nested_nodes_and_replaces_sensitive_values()
+    {
+        var redacted = WorkflowExecutorRedaction.RedactSettingsJson("""
+            {
+              "safeObject": {
+                "enabled": true,
+                "values": [1, { "name": "visible", "token": "nested-secret" }]
+              },
+              "safeArray": [{ "label": "alpha" }, false]
+            }
+            """);
+
+        using var document = JsonDocument.Parse(redacted);
+        var root = document.RootElement;
+        var safeObject = root.GetProperty("safeObject");
+        var values = safeObject.GetProperty("values");
+
+        Assert.True(safeObject.GetProperty("enabled").GetBoolean());
+        Assert.Equal(1, values[0].GetInt32());
+        Assert.Equal("visible", values[1].GetProperty("name").GetString());
+        Assert.Equal("[REDACTED]", values[1].GetProperty("token").GetString());
+        Assert.Equal("alpha", root.GetProperty("safeArray")[0].GetProperty("label").GetString());
+        Assert.False(root.GetProperty("safeArray")[1].GetBoolean());
+        Assert.DoesNotContain("nested-secret", redacted, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("[\"safe\",\"api_key=array-secret\"]", "array-secret")]
+    [InlineData("\"authorization=Bearer root-secret\"", "root-secret")]
+    public void Redaction_removes_secrets_from_json_string_values(
+        string json,
+        string secret)
+    {
+        var redacted = WorkflowExecutorRedaction.RedactJson(json, 4096);
+
+        Assert.DoesNotContain(secret, redacted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Redaction_removes_bearer_value_when_authorization_is_key_value_text()
     {
         const string secret = "raw-bearer-secret";
@@ -79,6 +145,66 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
             $"authorization=Bearer {secret}");
 
         Assert.DoesNotContain(secret, redacted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("api_key='single quoted secret value'", "single quoted secret value")]
+    [InlineData("Authorization: Basic dXNlcjpwYXNz", "dXNlcjpwYXNz")]
+    [InlineData("authorization='quoted authorization secret'", "quoted authorization secret")]
+    public void Redaction_removes_quoted_and_basic_authorization_values(
+        string value,
+        string secret)
+    {
+        var redacted = WorkflowExecutorRedaction.RedactText(value);
+
+        Assert.DoesNotContain(secret, redacted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("credential")]
+    [InlineData("credentials")]
+    [InlineData("connectionString")]
+    [InlineData("cookie")]
+    [InlineData("privateKey")]
+    [InlineData("accessKey")]
+    [InlineData("header")]
+    [InlineData("api.key")]
+    [InlineData("private key")]
+    [InlineData("AccountKey")]
+    [InlineData("AWSAccessKeyId")]
+    [InlineData("Pwd")]
+    [InlineData("SharedAccessSignature")]
+    [InlineData("sig")]
+    [InlineData("auth")]
+    [InlineData("subscriptionKey")]
+    [InlineData("x-api-signature")]
+    [InlineData("requestSignature")]
+    public void Redaction_removes_extended_sensitive_key_value_text(string key)
+    {
+        const string secret = "extended-redaction-secret";
+
+        var redacted = WorkflowExecutorRedaction.RedactText($"{key}={secret}");
+
+        Assert.DoesNotContain(secret, redacted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Redaction_removes_connection_strings_and_multiline_private_keys()
+    {
+        const string databaseHost = "sensitive-db-host";
+        const string privateKeyBody = "sensitive-private-key-body";
+        var value = $"connectionString=Server={databaseHost};User Id=app;Password=secret{Environment.NewLine}" +
+                    $"privateKey=-----BEGIN PRIVATE KEY-----{Environment.NewLine}" +
+                    $"{privateKeyBody}{Environment.NewLine}" +
+                    "-----END PRIVATE KEY-----";
+
+        var redacted = WorkflowExecutorRedaction.RedactText(value);
+
+        Assert.DoesNotContain(databaseHost, redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain(privateKeyBody, redacted, StringComparison.Ordinal);
         Assert.Contains("[REDACTED]", redacted, StringComparison.Ordinal);
     }
 

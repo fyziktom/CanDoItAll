@@ -1384,6 +1384,7 @@ public static class AgentProcessReadinessEvaluator
         "project_structure_node_move",
         "project_structure_node_recompose",
         "project_structure_node_reparent",
+        "project_structure_nodes_copy",
         "project_structure_node_descendants_to_project_move",
         "project_structure_node_command_execute",
         "project_structure_node_process_definition_link",

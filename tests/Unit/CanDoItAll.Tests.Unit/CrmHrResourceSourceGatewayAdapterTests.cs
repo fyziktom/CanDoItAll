@@ -345,7 +345,10 @@ public sealed class CrmHrResourceSourceGatewayAdapterTests
 
         var services = new ServiceCollection();
         services.AddDbContextFactory<AppDbContext>(options =>
-            options.UseInMemoryDatabase($"crm-resource-source-{Guid.NewGuid():N}"));
+        {
+            AppDbContextTestOptionsBuilder.ConfigureModelCacheKey(options);
+            options.UseInMemoryDatabase($"crm-resource-source-{Guid.NewGuid():N}");
+        });
         services.AddCrmHrModule();
         services.AddResourcesModule();
         services.AddScoped<IMemorySourceGateway>(serviceProvider =>

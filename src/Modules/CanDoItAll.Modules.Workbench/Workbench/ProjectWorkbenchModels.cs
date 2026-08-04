@@ -342,8 +342,40 @@ public sealed record ProjectNodeMoveRequest(
 
 public sealed record ProjectStructureSubprojectTransferResult(
     Guid TargetProjectId,
-    int MovedNodeCount,
-    int MovedRootCount);
+    IReadOnlyList<string> MovedNodeIds,
+    int MovedRootCount,
+    int MovedLinkCount,
+    IReadOnlyList<ProjectStructureBoundaryLinkRemoval> RemovedBoundaryLinks)
+{
+    public int MovedNodeCount => MovedNodeIds.Count;
+}
+
+public enum ProjectStructureTransferCommitState
+{
+    WorkbenchCommitted = 1
+}
+
+public enum ProjectStructureTransferReconciliationStatus
+{
+    Pending = 0,
+    WorkbenchCommitted = 1,
+    Completed = 2,
+    Failed = 4
+}
+
+public sealed record ProjectStructureTransferRecovery(
+    Guid TargetProjectId,
+    Guid DurableMutationId,
+    ProjectStructureTransferReconciliationStatus DurableMutationStatus,
+    ProjectStructureTransferCommitState CommitState,
+    string RetryGuidance);
+
+public sealed record ProjectStructureBoundaryLinkRemoval(
+    Guid LinkId,
+    string SourceNodeId,
+    string TargetNodeId,
+    ProjectObjectLinkKind LinkKind,
+    bool IsSystemManaged);
 
 public sealed record ProjectStructureSubtreeRecompositionResult(
     string RootNodeId,
@@ -352,7 +384,20 @@ public sealed record ProjectStructureSubtreeRecompositionResult(
 
 public sealed record ProjectStructureClipboardCopyResult(
     IReadOnlyList<string> RootNodeIds,
-    IReadOnlyDictionary<string, string> NodeIdMap);
+    IReadOnlyDictionary<string, string> NodeIdMap,
+    IReadOnlyList<ProjectStructureCopyOmittedLink> OmittedBoundaryLinks);
+
+public enum ProjectStructureClipboardCopyTaskPolicy
+{
+    AllowCanonicalTasks = 0,
+    NonTaskStructureOnly = 1
+}
+
+public sealed record ProjectStructureCopyOmittedLink(
+    Guid LinkId,
+    string SourceNodeId,
+    string TargetNodeId,
+    ProjectObjectLinkKind LinkKind);
 
 internal sealed record SavedMediaDescriptor(
     string RelativePath,
@@ -389,6 +434,7 @@ public sealed partial class ProjectWorkbenchService(
         IDbContextFactory<AppDbContext> dbContextFactory,
         IClock clock,
         IStoragePlacementService storagePlacementService,
+        ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
         ProjectStructureAssemblyService projectStructureAssemblyService,
         ProjectWorkbenchRelationService relationService,
         ProjectWorkbenchLifecycleService lifecycleService,
@@ -400,7 +446,8 @@ public sealed partial class ProjectWorkbenchService(
             clock,
             new ProjectAssetStorageService(
                 storagePlacementService,
-                new ProjectAssetCreationService()),
+                new ProjectAssetCreationService(),
+                physicalIdentityPolicy),
             projectStructureAssemblyService,
             relationService,
             lifecycleService,
@@ -418,7 +465,10 @@ public sealed partial class ProjectWorkbenchService(
     {
         var loadResult = await TryGetStructureAsync(projectId, cancellationToken);
         return loadResult.Surface
-            ?? throw new InvalidOperationException($"Project '{projectId}' was not found in the active database profile.");
+            ?? throw new ProjectStructureAgentException(
+                404,
+                "ProjectNotFound",
+                $"Project '{projectId:D}' does not exist in the active database profile.");
     }
 
     public async Task<ProjectStructureLoadResult> TryGetStructureAsync(Guid projectId, CancellationToken cancellationToken = default)
@@ -530,7 +580,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);
@@ -726,6 +776,11 @@ public sealed partial class ProjectWorkbenchService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                cancellationToken);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var index = 0;
         var projectRootNodeKey = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
@@ -791,6 +846,7 @@ public sealed partial class ProjectWorkbenchService(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
     }
 
     async Task IProjectWorkbenchSeedService.SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedDraft> seeds, CancellationToken cancellationToken)
@@ -866,6 +922,71 @@ public sealed partial class ProjectWorkbenchService(
     {
         return await crossModuleMutationService.DeleteObjectAsync(projectId, nodeKey, cancellationToken);
     }
+
+    public Task<ProjectStructureDeletionResult> DeleteObjectDetailedAsync(
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken = default)
+        => crossModuleMutationService.DeleteObjectDetailedAsync(
+            projectId,
+            nodeKey,
+            cancellationToken);
+
+    public async Task<int> RetryDeletionCleanupAsync(
+        Guid projectId,
+        string rootNodeKey,
+        Guid durableMutationId,
+        CancellationToken cancellationToken = default)
+    {
+        var replay = await crossModuleMutationService.ReplayDeletionAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId,
+            cancellationToken);
+        return replay?.DeletedNodeKeys.Count ?? 0;
+    }
+
+    public async Task<ProjectStructureDeletionResult> RetryDeletionCleanupDetailedAsync(
+        Guid projectId,
+        string rootNodeKey,
+        Guid durableMutationId,
+        CancellationToken cancellationToken = default)
+    {
+        var replay = await crossModuleMutationService.ReplayDeletionAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId,
+            cancellationToken);
+        return replay is null
+            ? new ProjectStructureDeletionResult(0, [])
+            : new ProjectStructureDeletionResult(
+                replay.DeletedNodeKeys.Count,
+                replay.Warnings);
+    }
+
+    internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
+        Guid projectId,
+        string rootNodeKey,
+        CancellationToken cancellationToken = default)
+        => crossModuleMutationService.ReplayDeletionAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId: null,
+            cancellationToken: cancellationToken);
+
+    public Task<IReadOnlyList<ProjectStructureDeletionRecovery>> ListPendingDeletionRecoveriesAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => crossModuleMutationService.ListPendingDeletionRecoveriesAsync(
+            projectId,
+            cancellationToken);
+
+    public Task<IReadOnlyList<ProjectStructureDeletionCompletionNotice>> ListDeletionCompletionNoticesAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+        => crossModuleMutationService.ListDeletionCompletionNoticesAsync(
+            projectId,
+            cancellationToken);
 
     internal Task<int> DeleteCanonicalTaskResourceObjectAsync(
         Guid projectId,
@@ -968,7 +1089,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -1134,7 +1255,7 @@ public sealed partial class ProjectWorkbenchService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);
@@ -1220,6 +1341,11 @@ public sealed partial class ProjectWorkbenchService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var mutationScope =
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId),
+                cancellationToken);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
@@ -1266,6 +1392,7 @@ public sealed partial class ProjectWorkbenchService(
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken);
         ProjectNodeBindingStorage.Apply(node, bindingPlan);
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }

@@ -13,7 +13,8 @@ public sealed class ProjectAssetStorageServiceTests
         var placementService = new RecordingStoragePlacementService();
         var service = new ProjectAssetStorageService(
             placementService,
-            new ProjectAssetCreationService());
+            new ProjectAssetCreationService(),
+            CreatePhysicalIdentityPolicy());
         byte[] content = Encoding.UTF8.GetBytes("{\"enabled\":true}");
 
         SavedMediaDescriptor? saved = await service.SaveAsync(
@@ -40,7 +41,8 @@ public sealed class ProjectAssetStorageServiceTests
         var placementService = new RecordingStoragePlacementService();
         var service = new ProjectAssetStorageService(
             placementService,
-            new ProjectAssetCreationService());
+            new ProjectAssetCreationService(),
+            CreatePhysicalIdentityPolicy());
 
         InvalidDataException exception = await Assert.ThrowsAsync<InvalidDataException>(
             () => service.SaveAsync(
@@ -62,7 +64,8 @@ public sealed class ProjectAssetStorageServiceTests
         var placementService = new RecordingStoragePlacementService();
         var service = new ProjectAssetStorageService(
             placementService,
-            new ProjectAssetCreationService());
+            new ProjectAssetCreationService(),
+            CreatePhysicalIdentityPolicy());
         byte[] content = Encoding.UTF8.GetBytes(
             "sequenceDiagram\n    Alice->>Bob: Hello");
 
@@ -140,5 +143,25 @@ public sealed class ProjectAssetStorageServiceTests
                 Path.Combine(Path.GetTempPath(), request.FileName),
                 request.RelativePathHint ?? request.FileName));
         }
+    }
+
+    private static ProjectManagedStoragePhysicalIdentityPolicy CreatePhysicalIdentityPolicy()
+        => new(new FileSystemStoragePathPolicy(new StubWorkspacePathResolver()));
+
+    private sealed class StubWorkspacePathResolver : IWorkspacePathResolver
+    {
+        private static readonly string Root = Path.Combine(
+            Path.GetTempPath(),
+            "candoitall-project-asset-storage-tests");
+
+        public string ResolveWorkspaceRoot() => Root;
+
+        public string ResolveManagedFilesRoot() => Path.Combine(Root, "managed-files");
+
+        public string ResolveExportsRoot() => Path.Combine(Root, "exports");
+
+        public string ResolveEvidenceRoot() => Path.Combine(Root, "evidence");
+
+        public string ResolveManagerArtifactsRoot() => Path.Combine(Root, "manager-artifacts");
     }
 }

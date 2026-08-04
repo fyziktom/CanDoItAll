@@ -120,8 +120,7 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
                 return new ProviderCredentialResolution(
                     secretValue,
                     $"secret record '{secretRecordId.Value:D}'",
-                    string.Empty,
-                    ShouldPromoteToProcessEnvironment: false);
+                    string.Empty);
             }
             catch (OperationCanceledException)
                 when (cancellationToken.IsCancellationRequested)
@@ -148,7 +147,7 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
 
         var variableName = provider.ApiKeyEnvironmentVariable.Trim();
         var value =
-            AgentProviderEnvironmentCredential.ResolveAndPromote(variableName);
+            AgentProviderEnvironmentCredential.Resolve(variableName);
         if (!string.IsNullOrWhiteSpace(value))
         {
             return new ProviderCredentialResolution(
@@ -160,9 +159,6 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         var configuredValue = configuration[variableName];
         if (!string.IsNullOrWhiteSpace(configuredValue))
         {
-            AgentProviderEnvironmentCredential.PromoteProcessValue(
-                variableName,
-                configuredValue);
             return new ProviderCredentialResolution(
                 configuredValue.Trim(),
                 $"application configuration key '{variableName}'",

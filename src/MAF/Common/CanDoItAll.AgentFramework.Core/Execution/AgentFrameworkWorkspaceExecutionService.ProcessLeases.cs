@@ -30,9 +30,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             catch (Exception exception)
             {
                 logger.LogError(
-                    exception,
-                    "Could not verify whether execution run {ExecutionRunId} reached a persisted terminal state before workspace process lease cleanup.",
-                    run.Id);
+                    "Could not verify whether execution run {ExecutionRunId} reached a persisted terminal state before workspace process lease cleanup. FailureType={FailureType}.",
+                    run.Id,
+                    exception.GetType().Name);
                 return;
             }
         }
@@ -59,15 +59,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     "Failed to clean ExecutionRun workspace process lease for execution run {ExecutionRunId} and startup receipt {StartupReceiptPath}. The durable lease remains available for retry. Failure: {CleanupFailure}.",
                     terminalRun.Id,
                     failure.StartupReceiptPath,
-                    failure.Message);
+                    WorkflowExecutorRedaction.RedactText(failure.Message));
             }
         }
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "ExecutionRun workspace process lease cleanup failed unexpectedly after execution run {ExecutionRunId} reached a persisted terminal state. The primary execution outcome remains authoritative.",
-                terminalRun.Id);
+                "ExecutionRun workspace process lease cleanup failed unexpectedly after execution run {ExecutionRunId} reached a persisted terminal state. The primary execution outcome remains authoritative. FailureType={FailureType}.",
+                terminalRun.Id,
+                exception.GetType().Name);
         }
     }
 }

@@ -100,7 +100,6 @@ internal sealed class MafRuntimeAgentFactory
         var toolInvocationTraceRecorder = new ToolInvocationTraceRecorder();
         var openAiCredentialOverride = ResolveOpenAiCredentialOverride(provider);
         var effectiveProvider = ManagedSeedProviderFallbacks.Apply(agent, provider, openAiCredentialOverride);
-        PromoteResolvedProviderCredentialEnvironment(effectiveProvider);
         var requestedModel = ManagedSeedProviderFallbacks.ResolveModel(agent, effectiveProvider, openAiCredentialOverride);
         var model = InputAttachmentSupport.ResolveRuntimeModel(effectiveProvider, requestedModel, runtimeOptions);
         if (string.IsNullOrWhiteSpace(model))
@@ -116,7 +115,7 @@ internal sealed class MafRuntimeAgentFactory
                 $"Using provider image-analysis model '{model}' for request-scoped image attachment(s) because runtime model '{requestedModel}' is not vision-capable.");
         }
 
-        _ = MafModelParametersBuilder.ResolveEffectiveThinkingEffort(
+        var requestedReasoningEffort = MafModelParametersBuilder.ResolveEffectiveThinkingEffort(
             effectiveProvider,
             model,
             agent.ConfigurationJson);
@@ -180,6 +179,23 @@ internal sealed class MafRuntimeAgentFactory
             chatOptions.Tools = [.. capabilityState.Tools];
         }
 
+        var requestCompatibilityEvidence = MafProviderRequestCompatibilityEvidenceFactory.Create(
+            effectiveProvider,
+            requestedModel,
+            model,
+            capabilityState.Tools,
+            requestedReasoningEffort);
+        var compatibilityProgressMessage =
+            MafProviderRequestCompatibilityEvidenceFactory.CreateAdjustmentProgressMessage(
+                requestCompatibilityEvidence);
+        if (compatibilityProgressMessage is not null)
+        {
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Provider request compatibility",
+                $"Agent '{agent.Name}' ({agent.Id:D}): {compatibilityProgressMessage}");
+        }
+
         var options = MafChatClientAgentOptionsFactory.Create(chatOptions);
         options.Id = agent.Id.ToString("D");
         options.Name = agent.Name;
@@ -214,7 +230,8 @@ internal sealed class MafRuntimeAgentFactory
             finalizerCapture,
             toolInvocationTraceRecorder,
             capabilityState.ContextContributionTraceCollector,
-            runtimeCapabilityState: capabilityState);
+            runtimeCapabilityState: capabilityState,
+            entryAgentRequestCompatibilityEvidence: requestCompatibilityEvidence);
     }
 
     internal static void AttachTransientContextProvider(
@@ -347,13 +364,14 @@ internal sealed class MafRuntimeAgentFactory
                 snapshotContextContributionTraces: () => participantBuilds
                     .SelectMany(item => item.SnapshotContextContributionTraces())
                     .ToList(),
-                isTerminalResponseUpdate: buildResult.IsTerminalResponseUpdate);
+                isTerminalResponseUpdate: buildResult.IsTerminalResponseUpdate,
+                entryAgentRequestCompatibilityEvidence: entryBuild.EntryAgentRequestCompatibilityEvidence);
         }
-        catch
+        catch (Exception exception)
         {
             foreach (var participantBuild in participantBuilds)
             {
-                await participantBuild.DisposeAsync();
+                await participantBuild.DisposeAsync(exception);
             }
 
             throw;
@@ -589,13 +607,17 @@ internal sealed class MafRuntimeAgentFactory
                     toolFailure.CanRetryWithCorrectedInput);
                 return toolFailure;
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception exception)
             {
-                failureMessage = exception.Message;
+                failureMessage = ToolInvocationTraceRecorder.UnexposedFailureMessage;
                 activity?.SetStatus(
                     ActivityStatusCode.Error,
                     ToolInvocationTraceRecorder.UnexposedFailureMessage);
-                throw;
+                throw new MafToolInvocationBoundaryException(functionName, exception);
             }
             finally
             {
@@ -745,9 +767,5 @@ internal sealed class MafRuntimeAgentFactory
 
     private string ResolveOpenAiCredentialOverride(ProviderProfile provider)
         => providerCredentialService.ResolveOpenAiCredentialOverride(provider);
-
-    private void PromoteResolvedProviderCredentialEnvironment(
-        ProviderProfile provider)
-        => providerCredentialService.PromoteResolvedProviderCredentialEnvironment(provider);
 
 }

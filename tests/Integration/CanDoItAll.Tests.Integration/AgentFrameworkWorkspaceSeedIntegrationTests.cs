@@ -3,13 +3,20 @@ using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
+using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {
+    private static readonly Guid ManagedOpenAiImageProviderId = Guid.Parse("8958FA61-4BD6-1451-8123-4E4E4FEA2E26");
+
     [Fact]
     public void Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_skills()
     {
@@ -1188,10 +1195,207 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Guid.TryParse(
                 imageProvider.ApiKeyEnvironmentVariable["secret:".Length..],
                 out _));
-        Assert.Equal("gpt-image-1-mini", imageProvider.DefaultModel);
+        Assert.Equal(OpenAiModelIds.GptImage2, imageProvider.DefaultModel);
         Assert.False(imageProvider.SupportsTools);
-        Assert.Contains("gpt-image-1-mini", imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(OpenAiModelIds.GptImage2, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
         Assert.True(matrix.SupportsImageGeneration);
+    }
+
+    [Fact]
+    public async Task Organization_workspace_migrates_exact_legacy_managed_openai_image_model()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var beforeMigration = await ConfigureLegacyManagedOpenAiImageProviderAsync(dbContextFactory);
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        var afterFirstBootstrap = await ReadManagedOpenAiImageProviderStateAsync(dbContextFactory);
+        Assert.Equal(
+            beforeMigration with
+            {
+                DefaultModel = OpenAiModelIds.GptImage2,
+                ConcurrencyToken = afterFirstBootstrap.ConcurrencyToken
+            },
+            afterFirstBootstrap);
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        Assert.Equal(
+            afterFirstBootstrap,
+            await ReadManagedOpenAiImageProviderStateAsync(dbContextFactory));
+    }
+
+    [Fact]
+    public async Task Organization_workspace_preserves_custom_managed_openai_image_model_override()
+    {
+        const string CustomModel = "customer-image-model-v7";
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await SetManagedOpenAiImageProviderModelAsync(dbContextFactory, CustomModel);
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        Assert.Equal(
+            CustomModel,
+            await ReadManagedOpenAiImageProviderModelAsync(dbContextFactory));
+    }
+
+    [Theory]
+    [InlineData(OpenAiModelIds.GptImage1Mini, OpenAiModelIds.GptImage2)]
+    [InlineData("GPT-IMAGE-1-MINI", "GPT-IMAGE-1-MINI")]
+    [InlineData("customer-image-model-v7", "customer-image-model-v7")]
+    public void Catalog_normalization_migrates_only_legacy_managed_openai_image_model(
+        string configuredModel,
+        string expectedModel)
+    {
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededProvider = Assert.Single(
+            seed.Providers,
+            provider => provider.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                        string.Equals(provider.Name, "OpenAI image generation", StringComparison.Ordinal));
+        Assert.Equal(OpenAiModelIds.GptImage2, seededProvider.DefaultModel);
+        Assert.Equal([OpenAiModelIds.GptImage2], seededProvider.SuggestedModels);
+        var catalog = seed.ToCatalog() with
+        {
+            Providers = seed.Providers
+                .Select(provider => provider.Id == seededProvider.Id
+                    ? provider with
+                    {
+                        DefaultModel = configuredModel,
+                        SuggestedModels = [configuredModel, OpenAiModelIds.GptImage1Mini]
+                    }
+                    : provider)
+                .ToArray()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+
+        var normalizedProvider = Assert.Single(
+            normalized.Providers,
+            provider => provider.Id == seededProvider.Id);
+        Assert.Equal(expectedModel, normalizedProvider.DefaultModel);
+        Assert.Contains(OpenAiModelIds.GptImage2, normalizedProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        if (string.Equals(configuredModel, OpenAiModelIds.GptImage1Mini, StringComparison.Ordinal))
+        {
+            Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, normalizedProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains(configuredModel, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Catalog_normalization_uses_stable_image_seed_identity_after_provider_rename()
+    {
+        const string RenamedProvider = "Customer-renamed image provider";
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededProvider = Assert.Single(
+            seed.Providers,
+            provider => provider.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                        string.Equals(provider.Name, "OpenAI image generation", StringComparison.Ordinal));
+        var catalog = seed.ToCatalog() with
+        {
+            Providers = seed.Providers
+                .Select(provider => provider.Id == seededProvider.Id
+                    ? provider with
+                    {
+                        Name = RenamedProvider,
+                        Kind = ProviderKind.Ollama,
+                        DefaultModel = OpenAiModelIds.GptImage1Mini,
+                        SuggestedModels = [OpenAiModelIds.GptImage1Mini]
+                    }
+                    : provider)
+                .ToArray()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+
+        var normalizedProvider = Assert.Single(
+            normalized.Providers,
+            provider => provider.Id == seededProvider.Id);
+        Assert.Equal(RenamedProvider, normalizedProvider.Name);
+        Assert.Equal(ProviderKind.Ollama, normalizedProvider.Kind);
+        Assert.Equal(OpenAiModelIds.GptImage2, normalizedProvider.DefaultModel);
+        Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.Contains(OpenAiModelIds.GptImage2, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void Catalog_normalization_preserves_legacy_image_configuration_for_same_name_provider_with_different_id()
+    {
+        const string CustomSuggestedModel = "customer-image-model-v7";
+        var customProviderId = Guid.Parse("07C5DF13-90AD-4AED-9F2C-DB2F38458E16");
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededProvider = Assert.Single(
+            seed.Providers,
+            provider => provider.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                        string.Equals(provider.Name, "OpenAI image generation", StringComparison.Ordinal));
+        var catalog = seed.ToCatalog() with
+        {
+            Providers = seed.Providers
+                .Select(provider => provider.Id == seededProvider.Id
+                    ? provider with
+                    {
+                        Id = customProviderId,
+                        DefaultModel = OpenAiModelIds.GptImage1Mini,
+                        SuggestedModels = [OpenAiModelIds.GptImage1Mini, CustomSuggestedModel]
+                    }
+                    : provider)
+                .ToArray()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+
+        var normalizedProvider = Assert.Single(
+            normalized.Providers,
+            provider => provider.Id == customProviderId);
+        Assert.Equal(OpenAiModelIds.GptImage1Mini, normalizedProvider.DefaultModel);
+        Assert.Contains(OpenAiModelIds.GptImage1Mini, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.Contains(CustomSuggestedModel, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.Contains(OpenAiModelIds.GptImage2, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.DoesNotContain(normalized.Providers, provider => provider.Id == seededProvider.Id);
+    }
+
+    [Fact]
+    public void Catalog_normalization_keeps_name_based_managed_chat_merge_behavior()
+    {
+        const string ExistingSuggestedModel = "customer-chat-model-v7";
+        var customProviderId = Guid.Parse("58EB9AFE-536D-472D-8B3E-3E71FD6E4CAA");
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededProvider = Assert.Single(
+            seed.Providers,
+            provider => provider.Purpose == ProviderProfilePurpose.Chat &&
+                        string.Equals(provider.Name, "OpenAI default", StringComparison.Ordinal));
+        var catalog = seed.ToCatalog() with
+        {
+            Providers = seed.Providers
+                .Select(provider => provider.Id == seededProvider.Id
+                    ? provider with
+                    {
+                        Id = customProviderId,
+                        DefaultModel = ExistingSuggestedModel,
+                        SuggestedModels = [ExistingSuggestedModel]
+                    }
+                    : provider)
+                .ToArray()
+        };
+
+        var normalized = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+
+        var normalizedProvider = Assert.Single(
+            normalized.Providers,
+            provider => provider.Id == customProviderId);
+        Assert.Equal(seededProvider.DefaultModel, normalizedProvider.DefaultModel);
+        Assert.Contains(seededProvider.DefaultModel, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.Contains(ExistingSuggestedModel, normalizedProvider.SuggestedModels, StringComparer.Ordinal);
+        Assert.DoesNotContain(normalized.Providers, provider => provider.Id == seededProvider.Id);
     }
 
     [Fact]
@@ -1397,8 +1601,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.False(captureEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
         Assert.Contains("Start the application once", captureEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Use Playwright MCP", captureEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("DotNetAppProjectFileAlias", captureEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not pass `.sln`, `.slnx`", captureEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Use only the stack-specific startup and cleanup capabilities explicitly declared by the current launch contract", captureEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Use the declared executable entrypoint exactly", captureEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not substitute a solution, product root, project directory, or other container path", captureEditor.Instructions, StringComparison.Ordinal);
 
         Assert.True(reviewTemplate.IsTemplate);
         Assert.Equal("screenshot-review-storage-agent", reviewTemplate.TemplateKey);
@@ -1456,7 +1661,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, layoutEditor.WorkspaceToolAccess.Profile);
         Assert.True(layoutEditor.ImageGenerationAccess.CanGenerateImages);
         Assert.Equal(openAiImageProvider.Id, layoutEditor.ImageGenerationAccess.PreferredProviderProfileId);
-        Assert.Equal("gpt-image-1-mini", layoutEditor.ImageGenerationAccess.DefaultModel);
+        Assert.Equal(OpenAiModelIds.GptImage2, layoutEditor.ImageGenerationAccess.DefaultModel);
         Assert.True(layoutEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
         Assert.Contains("sourceProjectAssets", layoutEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", layoutEditor.Instructions, StringComparison.Ordinal);
@@ -1558,7 +1763,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
         var financialStrategistEditor = await workspaceService.GetAgentEditorAsync(financialStrategist.Id);
         Assert.True(financialStrategistEditor.ProjectStructureAccess.CanRead);
-        Assert.True(financialStrategistEditor.ProjectStructureAccess.CanWrite);
+        Assert.False(financialStrategistEditor.ProjectStructureAccess.CanWrite);
+        Assert.False(financialStrategistEditor.ProjectStructureAccess.CanWriteNonTaskStructure);
+        Assert.False(financialStrategistEditor.ProjectStructureAccess.CanWriteTasks);
         Assert.True(financialStrategistEditor.ProjectStructureAccess.AllowAllProjects);
         Assert.True(financialStrategistEditor.ProcessAccess.CanRead);
         Assert.False(financialStrategistEditor.ProcessAccess.CanWrite);
@@ -1567,15 +1774,16 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(financialStrategistEditor.WorkspaceToolAccess.CanTransformArtifacts);
         Assert.True(financialStrategistEditor.ImageGenerationAccess.CanGenerateImages);
         Assert.True(financialStrategistEditor.ImageGenerationAccess.CanStoreImagesAsProjectAssets);
-        Assert.Equal("gpt-image-1-mini", financialStrategistEditor.ImageGenerationAccess.DefaultModel);
+        Assert.Equal(OpenAiModelIds.GptImage2, financialStrategistEditor.ImageGenerationAccess.DefaultModel);
         Assert.True(financialStrategistEditor.Permissions.AutoApproveExternalCallsByDefault);
-        Assert.Contains("project_structure_node_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("project_structure_node_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_read", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_content_get", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("project_structure_node_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_convert_document", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_write_spreadsheet", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
 
         var qaObserver = Assert.Single(
             await workspaceService.ListAgentsAsync(includeTemplates: false),
@@ -2005,27 +2213,32 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             await workspaceService.ListAgentsAsync(includeTemplates: false),
             item => string.Equals(item.Name, "Programming Workspace Analyst", StringComparison.Ordinal));
         var editor = await workspaceService.GetAgentEditorAsync(programmingAgent.Id);
+        var mstestSkill = Assert.Single(
+            await workspaceService.ListCapabilitiesAsync(),
+            item => string.Equals(item.Key, "writing-mstest-tests", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(programmingAgent.Capabilities, assignment => assignment.CapabilityId == mstestSkill.Id);
+        var mstestInstructions = ReadInlineSkillInstructions(mstestSkill.ConfigurationJson);
 
-        Assert.Contains("dotnet new mstest", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Assert.Throws<T>", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Assert.ThrowsExactly<T>", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Assert.ThrowsException", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("[ExpectedException]", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not introduce legacy", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Choose one test runner for each test project before scaffolding and keep it consistent", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("dotnet new mstest", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("preserve its generated package family and versions", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("Assert.Throws<T>", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("Assert.ThrowsExactly<T>", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("Reject legacy `Assert.ThrowsException` and `[ExpectedException]` patterns", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("Assert.HasCount(expected, collection)", mstestInstructions, StringComparison.Ordinal);
+        Assert.Contains("analyzer-approved assertion", mstestInstructions, StringComparison.Ordinal);
         Assert.Contains("expected pre-bootstrap state rather than a blocker", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Run the provided bootstrap or init script first", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a required build, test, or browser validation fails", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Do not create Razor components whose type names collide with domain services, value types, or enums", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("default Bootstrap-looking page structure", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("keep the on-disk solution, project, and folder names short", editor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frontend-theme", editor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frontend-skill", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("For .NET app delivery, use the .NET app delivery skill and .NET developer agent", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Route framework-specific implementation, test-runner, component-library, or rendering details to the corresponding specialist", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_read", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project-structure-context-brief", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("source-of-truth app root", editor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("external-target/<drive>/...", editor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("source-of-truth product root", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Use mapped aliases and workspace tools exactly as documented", editor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not treat managed `artifacts/...`, `output/...`, or execution-run folders as the product working directory", editor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("scaffold directly into that directory instead of creating an extra nested app folder", editor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("For greenfield implementation, create the smallest real deliverable structure that fits the request", editor.Instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2084,22 +2297,22 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_write_file", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_write_file", securityEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_write_file", releaseEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("component-library", codeReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("component-library", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frontend-theme", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frontend-skill", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(codeReviewAgent.Capabilities, assignment => string.Equals(assignment.CapabilityKey, "candoitall-components-mcp", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(qaAgent.Capabilities, assignment => string.Equals(assignment.CapabilityKey, "candoitall-components-mcp", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(qaAgent.Capabilities, assignment => string.Equals(assignment.CapabilityKey, "candoitall-frontend-theme", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(qaAgent.Capabilities, assignment => string.Equals(assignment.CapabilityKey, "frontend-skill", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("When a review needs framework-specific, runtime, or UI expertise, require the matching specialist evidence", codeReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Apply framework-specific visual and hosting checks only when the current run's declared stack and inspected source establish that framework", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If the process step includes `LaunchRuntime` and `CaptureRuntimeProof`", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("When Playwright or screenshot review exposes a defect", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not assume legacy route names from earlier sample runs", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("stale evidence", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("path-length failures", qaEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Treat untouched scaffold styling, flat stacked forms, stock navigation such as default sample routes, or placeholder-looking navigation as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("loaded CSS or scoped CSS applies to the primary route classes with computed styles", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("rendered as unstyled DOM is a QA failure", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Treat untouched template/demo styling, stock navigation, placeholder-looking content, or a custom visual surface rendered as unstyled DOM as QA defects", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("meaningful filled, selected, or changed state", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("click a representative sequence", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Blazor render-mode or static-SSR implementation defect", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("framework error UI", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("For a .NET target explicitly identified by current-run `DotNet*` launch variables", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_image", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_images", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("source visual target ImageAsset", qaEditor.Instructions, StringComparison.Ordinal);
@@ -2121,12 +2334,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_analyze_images", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("provider/model is not vision-capable", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("mark conflicting prior screenshots or notes as stale evidence", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Call out flat Bootstrap-default composition, bare stacked form sections, or template navigation chrome", uiReviewEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("backed by loaded CSS or scoped CSS", uiReviewEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("rendered by stock scaffold CSS only", uiReviewEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("stock scaffold", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frontend-theme", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frontend-skill", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Prefer the existing design system or component library when the inspected product establishes one", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not assume a framework, host, route shape, scaffold, or starter output", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("If a UI uses custom classes, verify that loaded styles visibly affect the primary surface", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("effectively rendered by starter styling only", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("current-run evidence", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not accept vague statements like \"secure enough.\"", securityEditor.Instructions, StringComparison.Ordinal);
@@ -2182,21 +2393,22 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.Contains("workspace_dotnet_new", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_run", dotnetDeveloper.Instructions, StringComparison.Ordinal);
-        Assert.Contains("checking that the grounded product root is missing or safe to scaffold", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Prefer `workspace_dotnet_new` only when the authoritative solution context declares `initialize`", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("do not change a declared `initialize` or `verify-existing` mode", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", dotnetDeveloper.Instructions, StringComparison.Ordinal);
-        Assert.Contains("host and tests as siblings", dotnetDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not infer or prefer a `src`/`tests`, inside-root, sibling-project, or product-root-host layout", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("source visual target ImageAsset", dotnetDeveloper.Instructions, StringComparison.Ordinal);
-        Assert.Contains("stock visible scaffold chrome", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Do not leave starter content, stock navigation, placeholder routes", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("BaseLib", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("component-library", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Before scaffolding, check the mapped product root", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Before bootstrapping or repairing, inspect the grounded root", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_run", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("source visual target ImageAsset", blazorDeveloper.Instructions, StringComparison.Ordinal);
-        Assert.Contains("stock visible scaffold chrome", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Replace any observed starter content, stock navigation, placeholder routes", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
@@ -2223,14 +2435,15 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_convert_document", research.Instructions, StringComparison.Ordinal);
         Assert.Contains("unit economics", financialStrategist.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("assumptions.csv", financialStrategist.Instructions, StringComparison.Ordinal);
-        Assert.Contains("project_structure_node_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
-        Assert.Contains("project_structure_node_create", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_read", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_content_get", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("project_structure_node_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_convert_document", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_write_spreadsheet", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_image", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategist.Instructions, StringComparison.Ordinal);
-        Assert.Contains("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("go-to-market", marketingSpecialist.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("campaign-brief.md", marketingSpecialist.Instructions, StringComparison.Ordinal);
     }
@@ -2610,6 +2823,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         editor.Summary = "Tracks what agents are doing, reviews proofs, and highlights missing gates.";
         editor.ProviderProfileId = ollamaProviderId;
         editor.Model = string.Empty;
+        editor.ThinkingEffortOverride = null;
+        editor.IsThinkingEffortOverrideEdited = true;
         editor.ConfigurationJson = "{}";
         editor.SelectedCapabilityIds = editor.SelectedCapabilityIds
             .Where(id => id != capabilityIdsByKey["candoitall-frontend-theme"] &&
@@ -2801,6 +3016,132 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             .GetString()
             ?? string.Empty;
     }
+
+    private static async Task SetManagedOpenAiImageProviderModelAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        string model)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+            .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
+        provider.DefaultModel = model;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task<ManagedOpenAiImageProviderState>
+        ConfigureLegacyManagedOpenAiImageProviderAsync(
+            IDbContextFactory<AppDbContext> dbContextFactory)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+            .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
+        provider.ProviderKind = WorkspaceProviderKind.OllamaRemote;
+        provider.ConnectorPluginKey =
+            CanDoItAll.Modules.Workspace.OllamaRemoteProviderAdapter.PluginKey;
+        provider.ConfigSchemaVersion = "customer-v7";
+        provider.BaseUrl = "https://customer.example.test/image-api";
+        provider.ApiKeySecretId = Guid.Parse("9EFFD604-8A0C-497C-AD48-7FB9BB405EDD");
+        provider.DefaultModel = OpenAiModelIds.GptImage1Mini;
+        provider.TimeoutSeconds = 137;
+        provider.IsEnabled = false;
+        provider.SupportsStreaming = true;
+        provider.SupportsToolCalling = true;
+        provider.SupportsStructuredOutput = true;
+        provider.SupportsVision = true;
+        provider.LastHealthCheckAtUtc = new DateTimeOffset(2026, 7, 19, 12, 34, 56, TimeSpan.Zero);
+        provider.LastHealthStatus = "Customer image provider healthy";
+        provider.ExtraSettingsJson = BuildManagedOpenAiImageProviderPreservationSettingsJson();
+        provider.ConcurrencyToken = Guid.Parse("7E9AABAD-BE9F-4F25-9E91-BF4D06A105F8");
+        await dbContext.SaveChangesAsync();
+        return CaptureManagedOpenAiImageProviderState(provider);
+    }
+
+    private static async Task<string> ReadManagedOpenAiImageProviderModelAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Set<WorkspaceProviderProfile>()
+            .Where(item => item.Id == ManagedOpenAiImageProviderId)
+            .Select(item => item.DefaultModel)
+            .SingleAsync();
+    }
+
+    private static async Task<ManagedOpenAiImageProviderState>
+        ReadManagedOpenAiImageProviderStateAsync(
+            IDbContextFactory<AppDbContext> dbContextFactory)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
+        return CaptureManagedOpenAiImageProviderState(provider);
+    }
+
+    private static ManagedOpenAiImageProviderState CaptureManagedOpenAiImageProviderState(
+        WorkspaceProviderProfile provider)
+    {
+        return new ManagedOpenAiImageProviderState(
+            provider.Id,
+            provider.Name,
+            provider.ProviderKind,
+            provider.ConnectorPluginKey,
+            provider.ConfigSchemaVersion,
+            provider.BaseUrl,
+            provider.ApiKeySecretId,
+            provider.DefaultModel,
+            provider.TimeoutSeconds,
+            provider.IsEnabled,
+            provider.SupportsStreaming,
+            provider.SupportsToolCalling,
+            provider.SupportsStructuredOutput,
+            provider.SupportsVision,
+            provider.LastHealthCheckAtUtc,
+            provider.LastHealthStatus,
+            provider.ExtraSettingsJson,
+            provider.ConcurrencyToken);
+    }
+
+    private static string BuildManagedOpenAiImageProviderPreservationSettingsJson()
+    {
+        var configurationJson = JsonSerializer.Serialize(new
+        {
+            configuration = new
+            {
+                background = "transparent",
+                quality = "high"
+            },
+            apiKeyEnvironmentVariable = "CUSTOM_IMAGE_API_KEY",
+            providerTransport = nameof(ProviderTransportKind.ChatCompletions),
+            providerPurpose = nameof(ProviderProfilePurpose.ImageGeneration),
+            notes = "Customer-owned image provider settings.",
+            tags = new[] { "customer", "image" },
+            suggestedModels = new[] { OpenAiModelIds.GptImage1Mini, "customer-image-model-v7" }
+        });
+        return ProviderPricingMetadata.Write(
+            configurationJson,
+            isPrivateProvider: true,
+            [new ProviderModelTokenPrice("customer-image-model-v7", 1.25m, 0.25m, 2.5m)]);
+    }
+
+    private sealed record ManagedOpenAiImageProviderState(
+        Guid Id,
+        string Name,
+        WorkspaceProviderKind? ProviderKind,
+        string ConnectorPluginKey,
+        string ConfigSchemaVersion,
+        string BaseUrl,
+        Guid? ApiKeySecretId,
+        string DefaultModel,
+        int TimeoutSeconds,
+        bool IsEnabled,
+        bool SupportsStreaming,
+        bool SupportsToolCalling,
+        bool SupportsStructuredOutput,
+        bool SupportsVision,
+        DateTimeOffset? LastHealthCheckAtUtc,
+        string? LastHealthStatus,
+        string ExtraSettingsJson,
+        Guid ConcurrencyToken);
 
     private static void MutateAgentSnapshotInCatalog(string catalogPath, string agentName, string model, string configurationJson)
     {

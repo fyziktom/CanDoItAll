@@ -25,7 +25,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_zero_registered_providers_does_not_attach_process_tools()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var progressMessages = new List<string>();
 
         var state = await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), progressMessages);
@@ -44,7 +44,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     {
         var lateProvider = new TestRuntimeToolProvider(20, AgentToolInvocationPolicyMetadata.ProcessesRunsList);
         var earlyProvider = new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(lateProvider);
         services.AddSingleton<IAgentRuntimeToolProvider>(earlyProvider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
@@ -81,7 +81,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         var runtimeProvider = new TestRuntimeToolProvider(
             10,
             AgentToolInvocationPolicyMetadata.HrAgentCreate);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
@@ -113,7 +113,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         var runtimeProvider = new TestRuntimeToolProvider(
             10,
             AgentToolInvocationPolicyMetadata.ProcessesRunsList);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
@@ -145,7 +145,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             10,
             descriptor,
             AgentToolInvocationPolicyMetadata.HrAgentCreate);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
@@ -179,7 +179,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeToolProviderComposition_propagates_authoritative_runtime_session_key()
     {
         var provider = new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesRunsList);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(provider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
@@ -201,7 +201,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         var runtimeProvider = new TestRuntimeToolProvider(
             10,
             AgentToolInvocationPolicyMetadata.ProcessesRunsList);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(runtimeProvider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
@@ -265,7 +265,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeToolProviderComposition_skips_registered_providers_when_context_disables_them()
     {
         var provider = new TestRuntimeToolProvider(10, "runtime_tool_should_not_attach");
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(provider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
@@ -292,7 +292,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeToolProviderComposition_tool_free_context_skips_every_capability_attachment_path()
     {
         var provider = new TestRuntimeToolProvider(10, "runtime_tool_should_not_attach");
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(provider);
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
         var workspaceAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
@@ -347,7 +347,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_records_provider_descriptor_metadata()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.provider-a"),
@@ -370,7 +370,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_rejects_duplicate_provider_keys()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.duplicate-provider"),
@@ -414,7 +414,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_infers_tool_operation_metadata_from_policy_catalog()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.process-provider"),
@@ -441,7 +441,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeToolProviderComposition_rejects_unregistered_internal_tool_even_with_declared_read_metadata()
     {
         const string unregisteredToolName = "unclassified_provider_tool";
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.unregistered-provider"),
@@ -467,7 +467,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeToolProviderComposition_allows_recognized_dynamic_provider_native_tool_family()
     {
         const string providerNativeToolName = "provider_native_test_search";
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(10, providerNativeToolName));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
@@ -481,7 +481,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_rejects_tool_metadata_for_unknown_tool_name()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.metadata-provider"),
@@ -505,7 +505,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_rejects_duplicate_provider_tool_names()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(10, AgentToolInvocationPolicyMetadata.ProcessesRunsList));
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(20, AgentToolInvocationPolicyMetadata.ProcessesRunsList));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
@@ -521,7 +521,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_wraps_policy_mutation_tools_from_providers()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             "processes_runs_list",
@@ -538,7 +538,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_read_only_step_filters_registered_runtime_tool_providers()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.project-structure-provider"),
@@ -570,7 +570,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_start_project_node_step_keeps_only_matching_runtime_mutation_tool()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.project-structure-provider"),
@@ -595,7 +595,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_external_action_project_structure_write_step_keeps_node_and_asset_create_tools()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.project-structure-provider"),
@@ -626,7 +626,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task INV_MAF_ACCESS_002_runtime_provider_filter_uses_shared_policy_diagnostics()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.project-structure-provider"),
@@ -659,7 +659,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
         try
         {
-            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
             var state = await InvokeCreateCapabilityStateCoreAsync(
                 runtime,
                 CreateToolEnabledAgent(),
@@ -687,7 +687,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task Default_template_agent_runtime_composes_app_owned_skills_tools_process_workflow_and_mcp_descriptors()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
             10,
             CreateDescriptor("tests.project-process-workflow-provider"),
@@ -822,7 +822,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 {
                     [toolName] = """{"content":[{"type":"text","text":"snapshot ok"}]}"""
                 }));
-            var services = new ServiceCollection();
+            var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
             services.AddSingleton<IMcpClientFactory>(fakeFactory);
             var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, services.BuildServiceProvider());
             var progressMessages = new List<string>();
@@ -870,7 +870,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_read_only_step_does_not_attach_broad_workspace_tools()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -893,7 +893,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_validation_step_attaches_validation_tools_without_write_tools()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -916,7 +916,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task INV_MAF_ACCESS_001_process_policy_records_effective_capability_diagnostics()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -940,7 +940,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_managed_artifact_write_step_attaches_workspace_writes_without_product_mutation_tools()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -978,9 +978,10 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProjectStructureContext_business_analysis_agent_attaches_workspace_spreadsheet_writer()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.BusinessAnalysis)));
         var projectId = Guid.NewGuid();
+        var projectScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
             runtime,
@@ -990,9 +991,9 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             AgentRuntimeContextIntent.Empty with
             {
                 SourceKind = "project-structure",
-                SourceId = projectId.ToString("D"),
-                WorkspaceScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
-            });
+                SourceId = projectId.ToString("D")
+            },
+            contextWorkspaceScope: projectScope);
 
         Assert.Contains(ReadTools(state), tool => tool.Name == "workspace_write_spreadsheet");
         Assert.Contains(ReadEffectiveCapabilities(state).AllowedCapabilities, capability =>
@@ -1002,7 +1003,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_read_only_profile_attaches_read_tools_without_mutation_tools()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var readOnlyAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.ReadOnly);
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(readOnlyAccess));
 
@@ -1023,7 +1024,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_authorized_external_target_attaches_discovery_context_with_discovery_tool()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var access = new AgentWorkspaceToolAccessSettings
         {
             CanReadFiles = true,
@@ -1052,7 +1053,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeStorageTools_read_access_attaches_bounded_browse_tool()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
         services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
         services.AddSingleton<IStorageBrowseDriverRegistry>(new StorageBrowseDriverRegistry([new EmptyStorageBrowseDriver()]));
@@ -1077,7 +1078,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeStorageTools_missing_browse_registry_preserves_existing_content_tools()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
         services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
@@ -1099,7 +1100,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeStorageTools_empty_driver_registries_do_not_attach_dead_tools()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
         services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([]));
         services.AddSingleton<IStorageBrowseDriverRegistry>(new StorageBrowseDriverRegistry([]));
@@ -1125,7 +1126,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeStorageTools_mismatched_browse_provider_does_not_attach_browse_tool()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
         services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
         services.AddSingleton<IStorageBrowseDriverRegistry>(
@@ -1149,7 +1150,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_skips_configured_tools_when_context_disables_them()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -1175,7 +1176,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_skips_catalog_workspace_tools_when_context_disables_them()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var capabilities = new[]
         {
             CreateToolCapability("workspace-read-file", "workspace_read_file"),
@@ -1205,7 +1206,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_runtime_proof_step_attaches_image_analysis_tool()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.QualityValidation)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -1225,7 +1226,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_mutating_product_step_keeps_scaffold_tool_for_software_development_agent()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -1248,7 +1249,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_mutating_product_step_keeps_configured_workspace_tools_when_catalog_contains_same_tool()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var workspaceAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(workspaceAccess));
         var capabilities = LoadDefaultTemplateCapabilities(
@@ -1292,7 +1293,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_mutating_product_step_keeps_git_mutation_tools_for_software_development_agent()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
 
         var state = await InvokeCreateCapabilityStateCoreAsync(
@@ -1320,7 +1321,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeProcessContext_two_step_process_reduces_tool_surface_against_agent_baseline()
     {
-        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), new ServiceCollection().BuildServiceProvider());
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
         var provider = CreateProviderProfile();
 
@@ -1366,7 +1367,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
         try
         {
-            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
             var state = await InvokeCreateCapabilityStateCoreAsync(
                 runtime,
                 CreateToolEnabledAgent(),
@@ -1395,7 +1396,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
         try
         {
-            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
             var state = await InvokeCreateCapabilityStateCoreAsync(
                 runtime,
                 CreateToolEnabledAgent(),
@@ -1425,7 +1426,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         await File.WriteAllTextAsync(Path.Combine(skillRoot, "SKILL.md"), "# Sample skill");
         try
         {
-            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, new ServiceCollection().BuildServiceProvider());
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
             var state = await InvokeCreateCapabilityStateCoreAsync(
                 runtime,
                 CreateToolEnabledAgent(),
@@ -1449,7 +1450,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     [Fact]
     public async Task MafAgentRuntimeToolProviderComposition_reports_provider_failures_with_provider_type()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentRuntimeToolProvider>(new ThrowingRuntimeToolProvider());
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
 
@@ -1480,7 +1481,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         };
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
-            new ServiceCollection().BuildServiceProvider());
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await InvokeCreateCapabilityStateCoreAsync(
@@ -1615,7 +1616,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         List<string>? progressMessages = null,
         bool suppressApprovalRequirements = true,
         string runtimeSessionKey = "",
-        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+        WorkspaceScopeDescriptor? contextWorkspaceScope = null)
     {
         return await composer.CreateCapabilityStateCoreAsync(
             agent,
@@ -1630,7 +1632,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             },
             CancellationToken.None,
             suppressApprovalRequirements,
-            WorkspaceScopeDescriptor.Sandbox,
+            contextWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox,
             contextIntent,
             runtimeSessionKey,
             contextAttachments);

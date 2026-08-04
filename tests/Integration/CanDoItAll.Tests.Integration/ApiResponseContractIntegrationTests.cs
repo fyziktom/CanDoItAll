@@ -193,7 +193,7 @@ public sealed class ApiResponseContractIntegrationTests
     ];
 
     [Fact]
-    public async Task Named_and_SB01_through_SB06_operations_publish_typed_success_and_error_responses()
+    public async Task Named_and_numbered_operations_publish_typed_success_and_error_responses()
     {
         await using var host = await CreateHostAsync(jwtEnabled: false);
         using var openApi = await ReadOpenApiAsync(host);

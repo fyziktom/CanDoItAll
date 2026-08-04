@@ -5,7 +5,8 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectAssetStorageService(
     IStoragePlacementService storagePlacementService,
-    ProjectAssetCreationService assetCreationService)
+    ProjectAssetCreationService assetCreationService,
+    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy)
 {
     internal async Task<SavedMediaDescriptor?> SaveAsync(
         Guid projectId,
@@ -62,7 +63,11 @@ public sealed class ProjectAssetStorageService(
                 RelativePathHint: relativePath,
                 PreviewRequired: StorageContentClassifier.SupportsInlinePreview(contentKind)),
             cancellationToken);
-        StorageObjectReference storageObjectReference = placement.WriteResult.Reference;
+        StorageObjectReference storageObjectReference = ProjectManagedStorageProvenancePolicy.Stamp(
+            placement.WriteResult.Reference,
+            relativePath,
+            placement.Storage,
+            physicalIdentityPolicy);
 
         return new SavedMediaDescriptor(
             placement.RelativePath,

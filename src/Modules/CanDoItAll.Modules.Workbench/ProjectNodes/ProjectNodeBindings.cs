@@ -307,6 +307,10 @@ internal static class ProjectNodeBindingStorage
         ProjectObjectRecord node,
         CancellationToken cancellationToken = default)
     {
+        await SerializableMutationScope.AcquireRelationalScopeLocksAsync(
+            dbContext,
+            [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey],
+            cancellationToken);
         var plan = CreatePersistencePlan(node);
         var existingBinding = await dbContext.Set<ProjectNodeBindingRecord>()
             .FirstOrDefaultAsync(item => item.ProjectObjectId == node.Id, cancellationToken);

@@ -1,15 +1,26 @@
+using System.Buffers;
 using System.Globalization;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Xml;
 using ClosedXML.Excel;
+using ClosedXML.Graphics;
 
 namespace CanDoItAll.Tools.Documents;
 
 public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentService
 {
+    private const string FallbackFontResourceName =
+        "ClosedXML.Graphics.Fonts.CarlitoBare-Regular.ttf";
+
+    private static readonly Lazy<IXLGraphicEngine> PortableGraphicEngine =
+        new(CreatePortableGraphicEngine, LazyThreadSafetyMode.ExecutionAndPublication);
+
     public SpreadsheetWorkbookSummary InspectWorkbook(string workbookPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workbookPath);
-        using var workbook = new XLWorkbook(workbookPath);
+        using var workbook = new XLWorkbook(workbookPath, CreateLoadOptions());
         var worksheets = workbook.Worksheets
             .Select((worksheet, index) =>
             {
@@ -30,35 +41,65 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.WorkbookPath);
-        ValidatePreviewLimit(
-            request.MaxWorksheets,
-            SpreadsheetWorkbookPreviewRequest.MaximumWorksheets,
-            nameof(request.MaxWorksheets));
-        ValidatePreviewLimit(
-            request.MaxRows,
-            SpreadsheetWorkbookPreviewRequest.MaximumRows,
-            nameof(request.MaxRows));
-        ValidatePreviewLimit(
-            request.MaxColumns,
-            SpreadsheetWorkbookPreviewRequest.MaximumColumns,
-            nameof(request.MaxColumns));
+        ValidatePreviewLimits(request.MaxWorksheets, request.MaxRows, request.MaxColumns);
 
         using var workbook = OpenPreviewWorkbook(request.WorkbookPath);
-        var totalWorksheetCount = workbook.Worksheets.Count;
-        var worksheets = workbook.Worksheets
-            .Take(request.MaxWorksheets)
-            .Select((worksheet, index) => CreateWorksheetPreview(
-                worksheet,
-                index + 1,
-                request.MaxRows,
-                request.MaxColumns))
-            .ToArray();
+        return CreateWorkbookPreview(
+            request.WorkbookPath,
+            workbook,
+            request.MaxWorksheets,
+            request.MaxRows,
+            request.MaxColumns);
+    }
+
+    public SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
+        SpreadsheetWorkbookContentPreviewRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.WorkbookName);
+        ValidatePreviewLimits(request.MaxWorksheets, request.MaxRows, request.MaxColumns);
+
+        if (request.Content.IsEmpty)
+        {
+            throw new InvalidDataException(
+                $"Spreadsheet workbook '{request.WorkbookName}' is empty.");
+        }
+
+        if (request.Content.Length > SpreadsheetWorkbookContentPreviewRequest.MaximumContentBytes)
+        {
+            throw new InvalidDataException(
+                $"Spreadsheet workbook '{request.WorkbookName}' exceeds the " +
+                $"{SpreadsheetWorkbookContentPreviewRequest.MaximumContentBytes} byte preview limit.");
+        }
+
+        ValidateWorkbookArchive(request.WorkbookName, request.Content);
+        using var workbook = OpenPreviewWorkbook(request.WorkbookName, request.Content);
+        var preview = CreateWorksheetPreviews(
+            workbook,
+            request.MaxWorksheets,
+            request.MaxRows,
+            request.MaxColumns);
+        return new SpreadsheetWorkbookContentPreviewResult(
+            request.WorkbookName,
+            preview.TotalWorksheetCount,
+            preview.Worksheets,
+            WorksheetsTruncated: preview.TotalWorksheetCount > preview.Worksheets.Length);
+    }
+
+    private static SpreadsheetWorkbookPreviewResult CreateWorkbookPreview(
+        string workbookReference,
+        XLWorkbook workbook,
+        int maxWorksheets,
+        int maxRows,
+        int maxColumns)
+    {
+        var preview = CreateWorksheetPreviews(workbook, maxWorksheets, maxRows, maxColumns);
 
         return new SpreadsheetWorkbookPreviewResult(
-            request.WorkbookPath,
-            totalWorksheetCount,
-            worksheets,
-            WorksheetsTruncated: totalWorksheetCount > worksheets.Length);
+            workbookReference,
+            preview.TotalWorksheetCount,
+            preview.Worksheets,
+            WorksheetsTruncated: preview.TotalWorksheetCount > preview.Worksheets.Length);
     }
 
     public SpreadsheetCellValue ReadCell(string workbookPath, string worksheetName, string cellAddress)
@@ -67,7 +108,7 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
         ArgumentException.ThrowIfNullOrWhiteSpace(worksheetName);
         ArgumentException.ThrowIfNullOrWhiteSpace(cellAddress);
 
-        using var workbook = new XLWorkbook(workbookPath);
+        using var workbook = new XLWorkbook(workbookPath, CreateLoadOptions());
         var worksheet = GetWorksheet(workbook, worksheetName);
         var cell = worksheet.Cell(cellAddress);
 
@@ -89,7 +130,7 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
         var rowLimit = Math.Clamp(maxRows, 1, 1000);
         var columnLimit = Math.Clamp(maxColumns, 1, 100);
-        using var workbook = new XLWorkbook(workbookPath);
+        using var workbook = new XLWorkbook(workbookPath, CreateLoadOptions());
         var worksheet = GetWorksheet(workbook, worksheetName);
         var range = worksheet.Range(rangeAddress);
         var rowCount = Math.Min(range.RowCount(), rowLimit);
@@ -130,7 +171,7 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
         }
 
         using var workbook = File.Exists(request.WorkbookPath)
-            ? new XLWorkbook(request.WorkbookPath)
+            ? new XLWorkbook(request.WorkbookPath, CreateLoadOptions())
             : CreateWorkbook(request);
         var worksheet = workbook.Worksheets.FirstOrDefault(item => string.Equals(item.Name, request.WorksheetName, StringComparison.OrdinalIgnoreCase))
             ?? workbook.Worksheets.Add(request.WorksheetName);
@@ -184,7 +225,7 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
         try
         {
-            return new XLWorkbook(fullPath);
+            return new XLWorkbook(fullPath, CreateLoadOptions());
         }
         catch (UnauthorizedAccessException)
         {
@@ -194,6 +235,333 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
         {
             throw new InvalidDataException($"Spreadsheet workbook '{fullPath}' could not be opened as an XLSX workbook.", exception);
         }
+    }
+
+    private static XLWorkbook OpenPreviewWorkbook(
+        string workbookName,
+        ReadOnlyMemory<byte> content)
+    {
+        try
+        {
+            using var stream = OpenContentStream(content);
+            return new XLWorkbook(stream, CreateLoadOptions());
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            throw new InvalidDataException(
+                $"Spreadsheet workbook '{workbookName}' could not be opened as an XLSX workbook.",
+                exception);
+        }
+    }
+
+    private static void ValidateWorkbookArchive(
+        string workbookName,
+        ReadOnlyMemory<byte> content)
+    {
+        try
+        {
+            using var stream = OpenContentStream(content);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            if (archive.Entries.Count > SpreadsheetWorkbookContentPreviewRequest.MaximumArchiveEntries)
+            {
+                throw new InvalidDataException(
+                    $"Spreadsheet workbook '{workbookName}' contains too many archive entries for preview.");
+            }
+
+            var entryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            long expandedBytes = 0;
+            long worksheetXmlBytes = 0;
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                var normalizedName = NormalizeArchiveEntryName(entry.FullName);
+                if (!entryNames.Add(normalizedName))
+                {
+                    throw new InvalidDataException(
+                        $"Spreadsheet workbook '{workbookName}' contains duplicate package entries.");
+                }
+
+                var entryExpandedBytes = DrainArchiveEntry(
+                    workbookName,
+                    entry,
+                    ref expandedBytes);
+                ValidateXmlPartSize(workbookName, normalizedName, entryExpandedBytes);
+                if (IsWorksheetPart(normalizedName))
+                {
+                    worksheetXmlBytes = checked(worksheetXmlBytes + entryExpandedBytes);
+                    EnsureWithinLimit(
+                        workbookName,
+                        worksheetXmlBytes,
+                        SpreadsheetWorkbookContentPreviewRequest.MaximumWorksheetXmlBytes,
+                        "worksheet XML");
+                }
+            }
+
+            ValidatePackageComplexity(workbookName, archive);
+        }
+        catch (InvalidDataException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            throw new InvalidDataException(
+                $"Spreadsheet workbook '{workbookName}' is not a valid bounded XLSX archive.",
+                exception);
+        }
+    }
+
+    private static (int TotalWorksheetCount, SpreadsheetWorksheetPreview[] Worksheets)
+        CreateWorksheetPreviews(
+            XLWorkbook workbook,
+            int maxWorksheets,
+            int maxRows,
+            int maxColumns)
+    {
+        var totalWorksheetCount = workbook.Worksheets.Count;
+        var worksheets = workbook.Worksheets
+            .Take(maxWorksheets)
+            .Select((worksheet, index) => CreateWorksheetPreview(
+                worksheet,
+                index + 1,
+                maxRows,
+                maxColumns))
+            .ToArray();
+        return (totalWorksheetCount, worksheets);
+    }
+
+    private static Stream OpenContentStream(ReadOnlyMemory<byte> content)
+    {
+        if (MemoryMarshal.TryGetArray(content, out ArraySegment<byte> segment))
+        {
+            return new MemoryStream(
+                segment.Array!,
+                segment.Offset,
+                segment.Count,
+                writable: false,
+                publiclyVisible: false);
+        }
+
+        return new MemoryStream(content.ToArray(), writable: false);
+    }
+
+    private static LoadOptions CreateLoadOptions()
+        => new()
+        {
+            RecalculateAllFormulas = false,
+            GraphicEngine = PortableGraphicEngine.Value
+        };
+
+    private static IXLGraphicEngine CreatePortableGraphicEngine()
+    {
+        using Stream fallbackFont = typeof(DefaultGraphicEngine).Assembly.GetManifestResourceStream(
+            FallbackFontResourceName) ?? throw new InvalidOperationException(
+            $"ClosedXML fallback font resource '{FallbackFontResourceName}' was not found.");
+        return DefaultGraphicEngine.CreateOnlyWithFonts(fallbackFont);
+    }
+
+    private static long DrainArchiveEntry(
+        string workbookName,
+        ZipArchiveEntry entry,
+        ref long totalExpandedBytes)
+    {
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        try
+        {
+            using Stream entryStream = entry.Open();
+            long entryExpandedBytes = 0;
+            int bytesRead;
+            while ((bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                entryExpandedBytes = checked(entryExpandedBytes + bytesRead);
+                totalExpandedBytes = checked(totalExpandedBytes + bytesRead);
+                EnsureWithinLimit(
+                    workbookName,
+                    totalExpandedBytes,
+                    SpreadsheetWorkbookContentPreviewRequest.MaximumExpandedBytes,
+                    "expanded package");
+            }
+
+            return entryExpandedBytes;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private static void ValidateXmlPartSize(
+        string workbookName,
+        string entryName,
+        long expandedBytes)
+    {
+        if (!IsXmlPart(entryName))
+        {
+            return;
+        }
+
+        if (entryName.Equals("xl/styles.xml", StringComparison.OrdinalIgnoreCase))
+        {
+            EnsureWithinLimit(
+                workbookName,
+                expandedBytes,
+                SpreadsheetWorkbookContentPreviewRequest.MaximumStylesXmlBytes,
+                "styles XML");
+        }
+
+        if (entryName.Equals("xl/sharedStrings.xml", StringComparison.OrdinalIgnoreCase))
+        {
+            EnsureWithinLimit(
+                workbookName,
+                expandedBytes,
+                SpreadsheetWorkbookContentPreviewRequest.MaximumSharedStringsXmlBytes,
+                "shared-strings XML");
+        }
+
+        EnsureWithinLimit(
+            workbookName,
+            expandedBytes,
+            SpreadsheetWorkbookContentPreviewRequest.MaximumXmlPartBytes,
+            "XML part");
+    }
+
+    private static void ValidatePackageComplexity(
+        string workbookName,
+        ZipArchive archive)
+    {
+        var worksheetCount = 0;
+        var cellCount = 0;
+        var styleCount = 0;
+        var sharedStringCount = 0;
+
+        foreach (ZipArchiveEntry entry in archive.Entries)
+        {
+            var entryName = NormalizeArchiveEntryName(entry.FullName);
+            PackagePartKind partKind = ResolvePackagePartKind(entryName);
+            if (partKind is PackagePartKind.None)
+            {
+                continue;
+            }
+
+            using Stream entryStream = entry.Open();
+            using XmlReader reader = XmlReader.Create(entryStream, CreateSecureXmlReaderSettings());
+            while (reader.Read())
+            {
+                if (reader.NodeType is not XmlNodeType.Element)
+                {
+                    continue;
+                }
+
+                switch (partKind, reader.LocalName)
+                {
+                    case (PackagePartKind.Workbook, "sheet"):
+                        EnsureCountWithinLimit(
+                            workbookName,
+                            ++worksheetCount,
+                            SpreadsheetWorkbookContentPreviewRequest.MaximumPackageWorksheets,
+                            "worksheets");
+                        break;
+                    case (PackagePartKind.Worksheet, "c"):
+                        EnsureCountWithinLimit(
+                            workbookName,
+                            ++cellCount,
+                            SpreadsheetWorkbookContentPreviewRequest.MaximumPackageCells,
+                            "cells");
+                        break;
+                    case (PackagePartKind.Styles, "xf"):
+                        EnsureCountWithinLimit(
+                            workbookName,
+                            ++styleCount,
+                            SpreadsheetWorkbookContentPreviewRequest.MaximumPackageStyles,
+                            "styles");
+                        break;
+                    case (PackagePartKind.SharedStrings, "si"):
+                        EnsureCountWithinLimit(
+                            workbookName,
+                            ++sharedStringCount,
+                            SpreadsheetWorkbookContentPreviewRequest.MaximumPackageSharedStrings,
+                            "shared strings");
+                        break;
+                }
+            }
+        }
+    }
+
+    private static XmlReaderSettings CreateSecureXmlReaderSettings()
+        => new()
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            CloseInput = false,
+            IgnoreComments = true,
+            IgnoreProcessingInstructions = true
+        };
+
+    private static PackagePartKind ResolvePackagePartKind(string entryName)
+    {
+        if (entryName.Equals("xl/workbook.xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return PackagePartKind.Workbook;
+        }
+
+        if (IsWorksheetPart(entryName))
+        {
+            return PackagePartKind.Worksheet;
+        }
+
+        if (entryName.Equals("xl/styles.xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return PackagePartKind.Styles;
+        }
+
+        return entryName.Equals("xl/sharedStrings.xml", StringComparison.OrdinalIgnoreCase)
+            ? PackagePartKind.SharedStrings
+            : PackagePartKind.None;
+    }
+
+    private static bool IsWorksheetPart(string entryName)
+        => entryName.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase)
+            && entryName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsXmlPart(string entryName)
+        => entryName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+            || entryName.EndsWith(".rels", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeArchiveEntryName(string entryName)
+        => entryName.Replace('\\', '/').TrimStart('/');
+
+    private static void EnsureWithinLimit(
+        string workbookName,
+        long actual,
+        long maximum,
+        string subject)
+    {
+        if (actual > maximum)
+        {
+            throw new InvalidDataException(
+                $"Spreadsheet workbook '{workbookName}' exceeds the {subject} preview limit.");
+        }
+    }
+
+    private static void EnsureCountWithinLimit(
+        string workbookName,
+        int actual,
+        int maximum,
+        string subject)
+    {
+        if (actual > maximum)
+        {
+            throw new InvalidDataException(
+                $"Spreadsheet workbook '{workbookName}' contains too many {subject} for preview.");
+        }
+    }
+
+    private enum PackagePartKind
+    {
+        None,
+        Workbook,
+        Worksheet,
+        Styles,
+        SharedStrings
     }
 
     private static SpreadsheetWorksheetPreview CreateWorksheetPreview(
@@ -255,6 +623,22 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
                 value,
                 $"Spreadsheet preview limit '{parameterName}' must be between 1 and {maximum}.");
         }
+    }
+
+    private static void ValidatePreviewLimits(int maxWorksheets, int maxRows, int maxColumns)
+    {
+        ValidatePreviewLimit(
+            maxWorksheets,
+            SpreadsheetWorkbookPreviewRequest.MaximumWorksheets,
+            nameof(SpreadsheetWorkbookPreviewRequest.MaxWorksheets));
+        ValidatePreviewLimit(
+            maxRows,
+            SpreadsheetWorkbookPreviewRequest.MaximumRows,
+            nameof(SpreadsheetWorkbookPreviewRequest.MaxRows));
+        ValidatePreviewLimit(
+            maxColumns,
+            SpreadsheetWorkbookPreviewRequest.MaximumColumns,
+            nameof(SpreadsheetWorkbookPreviewRequest.MaxColumns));
     }
 
     private static void WriteRange(IXLRange range, IReadOnlyList<IReadOnlyList<string>> values)

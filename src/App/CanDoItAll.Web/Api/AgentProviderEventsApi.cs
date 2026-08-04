@@ -79,10 +79,11 @@ internal static class AgentProviderEventsApi
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Provider chat completion {ProviderOperationId} failed to start for provider {ProviderId}.",
+                "Provider chat completion failed to start. CorrelationId={CorrelationId} ProviderOperationId={ProviderOperationId} ProviderId={ProviderId} FailureType={FailureType}.",
+                context.TraceIdentifier,
                 operationId,
-                providerId);
+                providerId,
+                exception.GetType().Name);
             await WriteFailureAsync(
                 context,
                 operationId,
@@ -123,10 +124,11 @@ internal static class AgentProviderEventsApi
                 }
 
                 logger.LogError(
-                    completionFailure,
-                    "Provider chat completion {ProviderOperationId} failed for provider {ProviderId}.",
+                    "Provider chat completion failed. CorrelationId={CorrelationId} ProviderOperationId={ProviderOperationId} ProviderId={ProviderId} FailureType={FailureType}.",
+                    context.TraceIdentifier,
                     operationId,
-                    providerId);
+                    providerId,
+                    completionFailure.GetType().Name);
                 await WriteFailureAsync(
                     context,
                     operationId,

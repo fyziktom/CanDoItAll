@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Persistence;
@@ -5825,7 +5827,8 @@ public sealed class ProjectPartyIntegrationService(
     ProjectPartyAffiliationContextService
         projectPartyAffiliationContextService,
     IProjectWorkItemAssignmentMutationBridge
-        workItemAssignmentMutationBridge) :
+        workItemAssignmentMutationBridge,
+    IClock clock) :
     IProjectPartyIntegrationBridge,
     IProjectPartyCostRateBridge
 {
@@ -7065,13 +7068,48 @@ public sealed class ProjectPartyIntegrationService(
         await mutationScope.CommitAsync(cancellationToken);
     }
 
+    public async Task DeleteAssignmentsForProjectAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException("A project identifier is required.", nameof(projectId));
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutationScope = await SerializableMutationScope.BeginAsync(
+            dbContext,
+            ProjectMutationScopeKeys.ForProject(projectId),
+            cancellationToken);
+        var assignments = await dbContext.Set<ProjectPartyAssignment>()
+            .Where(item => item.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+        if (assignments.Count > 0)
+        {
+            dbContext.RemoveRange(assignments);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        await mutationScope.CommitAsync(cancellationToken);
+    }
+
     public async Task MoveAssignmentsToProjectAsync(
+        ProjectPartyAssignmentMoveOperationId operationId,
         Guid sourceProjectId,
         IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         Guid targetProjectId,
         CancellationToken cancellationToken = default)
     {
+        if (operationId.Value == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A project-party assignment move operation identifier is required.",
+                nameof(operationId));
+        }
+
         var normalizedNodeKeys = NormalizeNodeKeys(nodeReferences);
+        var nodeSetFingerprint = BuildNodeSetFingerprint(normalizedNodeKeys);
         if (sourceProjectId == Guid.Empty ||
             targetProjectId == Guid.Empty ||
             sourceProjectId == targetProjectId ||
@@ -7085,10 +7123,34 @@ public sealed class ProjectPartyIntegrationService(
             dbContext,
             new[]
             {
+                $"crmhr:project-assignment-move:{operationId.Value:D}",
                 $"project:{sourceProjectId:D}",
                 $"project:{targetProjectId:D}"
             },
             cancellationToken);
+        var existingReceipt = await dbContext
+            .Set<ProjectPartyAssignmentMoveReceipt>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                item => item.OperationId == operationId.Value,
+                cancellationToken);
+        if (existingReceipt is not null)
+        {
+            if (existingReceipt.SourceProjectId != sourceProjectId ||
+                existingReceipt.TargetProjectId != targetProjectId ||
+                !string.Equals(
+                    existingReceipt.NodeSetFingerprint,
+                    nodeSetFingerprint,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "The project-party assignment move operation identifier was already used for a different request.");
+            }
+
+            await mutationScope.CommitAsync(cancellationToken);
+            return;
+        }
+
         var targetProjectExists = await dbContext.Set<Project>()
             .AnyAsync(item => item.Id == targetProjectId, cancellationToken);
         if (!targetProjectExists)
@@ -7134,8 +7196,27 @@ public sealed class ProjectPartyIntegrationService(
                 cancellationToken);
         }
 
+        dbContext.Set<ProjectPartyAssignmentMoveReceipt>().Add(
+            new ProjectPartyAssignmentMoveReceipt
+            {
+                OperationId = operationId.Value,
+                SourceProjectId = sourceProjectId,
+                TargetProjectId = targetProjectId,
+                NodeSetFingerprint = nodeSetFingerprint,
+                CompletedAtUtc = clock.GetUtcNow()
+            });
+
         await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
+    }
+
+    private static string BuildNodeSetFingerprint(
+        IReadOnlyCollection<string> normalizedNodeKeys)
+    {
+        var canonicalPayload = JsonSerializer.Serialize(
+            normalizedNodeKeys.Order(StringComparer.Ordinal));
+        return Convert.ToHexStringLower(
+            SHA256.HashData(Encoding.UTF8.GetBytes(canonicalPayload)));
     }
 
     private async Task<ProjectWorkItemDirectAssignmentMutationResult>

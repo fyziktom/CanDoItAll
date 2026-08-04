@@ -363,6 +363,10 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
                 WorksheetsTruncated: false);
         }
 
+        public SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
+            SpreadsheetWorkbookContentPreviewRequest request)
+            => throw new NotSupportedException();
+
         public SpreadsheetCellValue ReadCell(string workbookPath, string worksheetName, string cellAddress)
             => throw new NotSupportedException();
 

@@ -22,12 +22,12 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
     };
 
     [Fact]
-    public async Task WorkflowScenarioHarness_runs_twenty_project_structure_workflow_cases()
+    public async Task WorkflowScenarioHarness_runs_twenty_one_project_structure_workflow_cases()
     {
         var proofRoot = Path.Combine(
             IntegrationTestPaths.RepositoryRoot,
-            ".codex",
-            "bundles",
+            "artifacts",
+            "codex-bundles",
             "project-structure-workflow-runs",
             "proof",
             "scenarios");
@@ -35,7 +35,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
         await PrepareSyntheticInputsAsync(syntheticRoot);
         var scenarios = BuildScenarios(syntheticRoot);
-        Assert.Equal(20, scenarios.Count);
+        Assert.Equal(21, scenarios.Count);
         Assert.All(scenarios, ValidateScenarioSources);
 
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
@@ -53,7 +53,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
     }
 
     [Fact]
-    public async Task WorkflowScenarioHarness_runs_twenty_project_structure_workflow_cases_on_postgresql()
+    public async Task WorkflowScenarioHarness_runs_twenty_one_project_structure_workflow_cases_on_postgresql()
     {
         var availability = await PostgresTestAvailability.EnsureAvailableAsync(IntegrationTestPaths.RepositoryRoot);
         Assert.True(availability.IsAvailable, availability.Message);
@@ -61,8 +61,8 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
         var proofRoot = Path.Combine(
             IntegrationTestPaths.RepositoryRoot,
-            ".codex",
-            "bundles",
+            "artifacts",
+            "codex-bundles",
             "project-structure-workflow-runs",
             "proof",
             "scenarios");
@@ -70,7 +70,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
         await PrepareSyntheticInputsAsync(syntheticRoot);
         var scenarios = BuildScenarios(syntheticRoot);
-        Assert.Equal(20, scenarios.Count);
+        Assert.Equal(21, scenarios.Count);
         Assert.All(scenarios, ValidateScenarioSources);
 
         var databaseName = $"cditall_wf_{Guid.NewGuid():N}"[..30];
@@ -115,7 +115,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
                 "Workflow scenario harness",
-                "Twenty real-world project-structure workflow cases",
+                "Twenty-one real-world project-structure workflow cases",
                 "Validates workflow nodes, input preview, result-node projection, and file-summary artifacts.",
                 "Validation",
                 ProjectStatus.Active));
@@ -195,17 +195,12 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
         var childNodes = new List<ProjectStructureNodeSummary>();
         foreach (var child in scenario.ChildNodes)
         {
-            childNodes.Add(await PostAndReadAsync<ProjectStructureNodeSummary>(
+            childNodes.Add(await CreateScenarioChildAsync(
                 host.Client,
-                $"/api/project-structure/projects/{project.Id}/nodes",
-                new ProjectStructureNodeCreateInput(
-                    child.ObjectType,
-                    child.Title,
-                    child.Subtitle,
-                    child.Notes,
-                    parent.Id,
-                    ObjectSubtype: child.ObjectSubtype,
-                    LeaseToken: leaseToken)));
+                project.Id,
+                parent.Id,
+                leaseToken,
+                child));
         }
 
         var component = await PostAndReadAsync<LlmCallComponent>(
@@ -313,6 +308,110 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             scenario.ExpectedPhrases
                 .Select(phrase => $"Validated result contains '{phrase}'.")
                 .ToArray());
+    }
+
+    private static async Task<ProjectStructureNodeSummary> CreateScenarioChildAsync(
+        HttpClient client,
+        Guid projectId,
+        string parentNodeKey,
+        string leaseToken,
+        ScenarioChildNode child)
+    {
+        if (!RequiresManagedAssetCreation(child))
+        {
+            if (child.ManagedAssetSource is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Scenario child '{child.Title}' provides a managed asset source but is not a File or Mermaid asset.");
+            }
+
+            return await PostAndReadAsync<ProjectStructureNodeSummary>(
+                client,
+                $"/api/project-structure/projects/{projectId}/nodes",
+                new ProjectStructureNodeCreateInput(
+                    child.ObjectType,
+                    child.Title,
+                    child.Subtitle,
+                    child.Notes,
+                    parentNodeKey,
+                    ObjectSubtype: child.ObjectSubtype,
+                    LeaseToken: leaseToken));
+        }
+
+        var source = child.ManagedAssetSource ?? throw new InvalidOperationException(
+            $"Scenario asset child '{child.Title}' requires an explicit managed asset source.");
+        var fileName = Path.GetFileName(source.Path);
+        var content = await File.ReadAllBytesAsync(source.Path);
+        var media = new ProjectObjectMediaPayload(
+            fileName,
+            ProjectStructureAssetMediaTypePolicy.Resolve(null, fileName),
+            Convert.ToBase64String(content));
+
+        var created = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            client,
+            $"/api/project-structure/projects/{projectId}/assets",
+            new ProjectStructureAssetCreateInput(
+                child.ObjectType,
+                child.Title,
+                child.Subtitle,
+                child.Notes,
+                media,
+                ParentNodeKey: parentNodeKey,
+                ObjectSubtype: child.ObjectSubtype,
+                LeaseToken: leaseToken));
+
+        if (source.VerifyPersistedContent)
+        {
+            await AssertManagedAssetRoundTripAsync(
+                client,
+                projectId,
+                created,
+                fileName,
+                media.ContentType,
+                content);
+        }
+
+        return created;
+    }
+
+    private static async Task AssertManagedAssetRoundTripAsync(
+        HttpClient client,
+        Guid projectId,
+        ProjectStructureNodeSummary created,
+        string expectedFileName,
+        string expectedContentType,
+        byte[] expectedContent)
+    {
+        var asset = await GetAndReadAsync<ProjectStructureAssetDescriptor>(
+            client,
+            $"/api/project-structure/projects/{projectId}/assets/{created.Id}");
+        Assert.Equal(projectId, asset.ProjectId);
+        Assert.Equal(created.Id, asset.NodeId);
+        Assert.Equal(created.ObjectType, asset.ObjectType);
+        Assert.Equal(created.ObjectSubtype, asset.ObjectSubtype);
+        Assert.Equal(expectedFileName, asset.MediaOriginalFileName);
+        Assert.Equal(expectedContentType, asset.MediaContentType);
+        Assert.Equal(created.MediaRelativePath, asset.MediaRelativePath);
+
+        var persistedContent = await GetAndReadAsync<ProjectStructureAssetContentDescriptor>(
+            client,
+            $"/api/project-structure/projects/{projectId}/assets/{created.Id}/content");
+        Assert.False(persistedContent.Base64DataOmitted);
+        Assert.Equal(expectedContent.LongLength, persistedContent.ContentLength);
+        Assert.Equal(asset, persistedContent.Asset);
+        Assert.Equal(Convert.ToBase64String(expectedContent), persistedContent.Base64Data);
+    }
+
+    private static bool RequiresManagedAssetCreation(ScenarioChildNode child)
+    {
+        var normalizedSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(
+            child.ObjectType,
+            child.ObjectSubtype);
+        return child.ObjectType == ProjectObjectType.File ||
+               string.Equals(
+                   normalizedSubtype,
+                   ProjectFileSubtype.Mermaid.ToString(),
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ValidateInputPreview(
@@ -601,6 +700,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
         var projectSubtree = Path.Combine(syntheticRoot, "project-subtree.md");
         var promptSession = Path.Combine(syntheticRoot, "prompt-session-cleanup.md");
         var complianceMemo = Path.Combine(syntheticRoot, "compliance-checklist.md");
+        var managedAssetOnly = Path.Combine(syntheticRoot, "managed-asset-only.md");
 
         return
         [
@@ -824,7 +924,18 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 [NoteChild("Evidence gap", "Retention evidence for exports is incomplete.")],
                 true,
                 true,
-                ["compliance", "checklist", "retention"])
+                ["compliance", "checklist", "retention"]),
+            CreateScenario(
+                "S21",
+                "Managed asset child ingestion",
+                "Managed asset source",
+                "Use only the attached managed asset as grounded workflow input.",
+                "Prove that a selected managed asset child is persisted and loaded into workflow source documents.",
+                [],
+                [FileChild("Managed asset evidence", managedAssetOnly, verifyPersistedContent: true)],
+                true,
+                true,
+                ["cedar-orbit-421", "asset-review-board"])
         ];
     }
 
@@ -879,8 +990,17 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
     private static WorkflowInputSourceSpec FolderSource(string key, string label, string value)
         => new(ProjectStructureWorkflowInputSourceKind.FolderPath, key, label, value);
 
-    private static ScenarioChildNode FileChild(string title, string sourcePath)
-        => new(ProjectObjectType.File, title, "Source file", sourcePath, "source-file");
+    private static ScenarioChildNode FileChild(
+        string title,
+        string sourcePath,
+        bool verifyPersistedContent = false)
+        => new(
+            ProjectObjectType.File,
+            title,
+            "Source file",
+            sourcePath,
+            "source-file",
+            new ScenarioManagedAssetSource(sourcePath, verifyPersistedContent));
 
     private static ScenarioChildNode NoteChild(string title, string notes)
         => new(ProjectObjectType.Note, title, "Scenario note", notes, "scenario-note");
@@ -975,6 +1095,13 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             """
             Compliance memo requires export retention evidence, reviewer sign-off, and deletion policy confirmation before launch.
             """);
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "managed-asset-only.md"),
+            """
+            Managed asset verification record.
+            Evidence token: cedar-orbit-421.
+            Approval owner: asset-review-board.
+            """);
 
         var folderIntakeRoot = Path.Combine(syntheticRoot, "folder-intake");
         Directory.CreateDirectory(folderIntakeRoot);
@@ -997,7 +1124,8 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}). Body: {errorBody}");
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<T>();
+        var payload = await response.Content.ReadFromJsonAsync<T>(
+            ProjectStructureHttpContractTestJson.SerializerOptions);
         return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
     }
 
@@ -1010,7 +1138,8 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}). Body: {errorBody}");
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<T>();
+        var payload = await response.Content.ReadFromJsonAsync<T>(
+            ProjectStructureHttpContractTestJson.SerializerOptions);
         return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
     }
 
@@ -1412,7 +1541,12 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
         string Title,
         string Subtitle,
         string Notes,
-        string ObjectSubtype);
+        string ObjectSubtype,
+        ScenarioManagedAssetSource? ManagedAssetSource = null);
+
+    private sealed record ScenarioManagedAssetSource(
+        string Path,
+        bool VerifyPersistedContent);
 
     private sealed record ScenarioManualInput(
         string ScenarioId,

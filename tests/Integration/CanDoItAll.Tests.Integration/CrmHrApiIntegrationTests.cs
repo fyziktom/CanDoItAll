@@ -126,6 +126,7 @@ public sealed class CrmHrApiIntegrationTests
             "/api/crm-hr/workforce/skills");
         Assert.Contains(skillCatalog, item => item.Id == skillId);
 
+        var availableFrom = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14));
         var applicationId = await PostAsync<Guid>(
             host.Client,
             "/api/crm-hr/recruiting/applications",
@@ -138,7 +139,7 @@ public sealed class CrmHrApiIntegrationTests
                 desiredRole = "Senior Platform Engineer",
                 source = "Employee referral",
                 stage = RecruitmentStage.Interviewing,
-                availableFrom = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)),
+                availableFrom,
                 decision = RecruitmentDecision.Pending,
                 stageNotes = "Passed screening."
             });
@@ -157,6 +158,25 @@ public sealed class CrmHrApiIntegrationTests
                 feedback = "Strong systems reasoning.",
                 recommendation = "Proceed to offer."
             });
+
+        var approvedApplicationId = await PostAsync<Guid>(
+            host.Client,
+            "/api/crm-hr/recruiting/applications",
+            new
+            {
+                id = applicationId,
+                partyId = candidateId,
+                targetUnitPartyId = deliveryUnitId,
+                recruiterPartyId = managerId,
+                hiringManagerPartyId = managerId,
+                desiredRole = "Senior Platform Engineer",
+                source = "Employee referral",
+                stage = RecruitmentStage.Offer,
+                availableFrom,
+                decision = RecruitmentDecision.Approved,
+                stageNotes = "Offer approved after the technical interview."
+            });
+        Assert.Equal(applicationId, approvedApplicationId);
 
         var supportResponse = await host.Client.PostAsJsonAsync(
             "/api/crm-hr/recruiting/support-assignments",
@@ -188,6 +208,8 @@ public sealed class CrmHrApiIntegrationTests
             $"/api/crm-hr/recruiting/applications/{applicationId:D}");
         Assert.True(recruitmentWorkspace.HasSelectedApplication);
         Assert.Equal(candidateId, recruitmentWorkspace.Application.PartyId);
+        Assert.Equal(RecruitmentStage.Offer, recruitmentWorkspace.Application.Stage);
+        Assert.Equal(RecruitmentDecision.Approved, recruitmentWorkspace.Application.Decision);
         Assert.Single(recruitmentWorkspace.Interviews);
         Assert.Single(recruitmentWorkspace.LifecycleTasks);
         Assert.Equal(managerId, recruitmentWorkspace.SupportAssignments.ManagerPartyId);

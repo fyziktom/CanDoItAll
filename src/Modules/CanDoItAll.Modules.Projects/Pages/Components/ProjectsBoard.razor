@@ -1,5 +1,6 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
+@using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 
@@ -219,6 +220,23 @@
                                placeholder="Package path"
                                data-testid="projects-package-path-input" />
                     </PrefixedField>
+                    <PrefixedField Prefix="TARGET"
+                                   Suffix="V"
+                                   PrefixPaddingRem="5.4"
+                                   SuffixPaddingRem="2.25"
+                                   StackOnMobile="true"
+                                   Class="min-w-0">
+                        <InputSelect TValue="Guid?"
+                                     @bind-Value="ProjectPackageTargetProfileIdProxy"
+                                     class="cda-input cda-input--toolbar h-10 appearance-none"
+                                     data-testid="projects-package-target-profile-select">
+                            <option value="">Select an inactive target profile</option>
+                            @foreach (var profile in ProjectPackageTargetProfiles)
+                            {
+                                <option value="@profile.Id">@profile.DisplayName · @profile.Descriptor</option>
+                            }
+                        </InputSelect>
+                    </PrefixedField>
                     <Cluster Gap="LayoutGap.Small"
                              JustifyContent="JustifyContent.End"
                              Class="min-w-0">
@@ -240,7 +258,7 @@
                                     Class="cda-button--quick"
                                     Icon="file_upload"
                                     aria-label="Import projects package"
-                                    Disabled="@IsProjectPackageBusy"
+                                    Disabled="@(IsProjectPackageBusy || !ProjectPackageTargetProfileId.HasValue)"
                                     data-testid="projects-import-package-button"
                                     Click="ImportProjectsPackage" />
                         </TooltipTarget>
@@ -430,6 +448,15 @@
     public EventCallback<string> ProjectPackagePathChanged { get; set; }
 
     [Parameter]
+    public IReadOnlyList<DatabaseProfileSummary> ProjectPackageTargetProfiles { get; set; } = [];
+
+    [Parameter]
+    public Guid? ProjectPackageTargetProfileId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> ProjectPackageTargetProfileIdChanged { get; set; }
+
+    [Parameter]
     public string? ProjectPackageMessage { get; set; }
 
     [Parameter]
@@ -533,6 +560,12 @@
     private Task HandleProjectPackagePathInput(ChangeEventArgs args)
     {
         return ProjectPackagePathChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Guid? ProjectPackageTargetProfileIdProxy
+    {
+        get => ProjectPackageTargetProfileId;
+        set => _ = ProjectPackageTargetProfileIdChanged.InvokeAsync(value);
     }
 
     private void OpenProjectPackageDialog()

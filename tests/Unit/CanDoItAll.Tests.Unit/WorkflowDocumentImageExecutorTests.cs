@@ -442,7 +442,9 @@ public sealed class WorkflowDocumentImageExecutorTests
             InspectionResult = CreateImageInspectionResult(succeeded: true),
             ContentResult = CreateImageContentResult(succeeded: true)
         });
-        services.AddSingleton<IProviderProfileRegistry>(new RecordingProviderRegistry([CreateProvider()]));
+        var providerRegistry = new RecordingProviderRegistry([CreateProvider()]);
+        services.AddSingleton<IProviderProfileRegistry>(providerRegistry);
+        services.AddSingleton<IProviderRuntimeProfileSource>(providerRegistry);
         services.AddSingleton<IAgentImageAnalysisService>(new RecordingImageAnalysisService());
         services.AddWorkflowExecutorContribution<DocumentToMarkdownWorkflowExecutor>(
             BuiltInWorkflowExecutorDescriptors.DocumentToMarkdown,

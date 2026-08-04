@@ -27,6 +27,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProjectsService ProjectsService
 @inject IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge
 @inject ProjectWorkbenchService ProjectWorkbenchService
+@inject ProjectStructureSubprojectTransferCoordinator SubprojectTransferCoordinator
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
@@ -150,7 +151,17 @@ else
                                        aria-live="polite"
                                        data-testid="project-structure-clipboard-feedback"
                                        data-tone="@workflowFeedbackTone">
-                                @workflowFeedback
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock Value="@workflowFeedback" />
+                                    @if (pendingDeletionRecoveries.Count > 0)
+                                    {
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="Retry cleanup"
+                                                Disabled="@isRetryingDeletionCleanup"
+                                                data-testid="project-structure-deletion-retry"
+                                                Click="RetryPendingDeletionCleanupAsync" />
+                                    }
+                                </Stack>
                             </PanelCard>
                         }
                         @if (ToolboxWindowState.IsVisible)
@@ -1009,7 +1020,15 @@ else
             pendingWorkbenchSelectionId = null;
             var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(request.ProjectId);
             var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
-            await Task.WhenAll(loadStructureTask, loadStorageCatalogTask);
+            var loadDeletionRecoveriesTask =
+                ProjectWorkbenchService.ListPendingDeletionRecoveriesAsync(request.ProjectId);
+            var loadDeletionNoticesTask =
+                ProjectWorkbenchService.ListDeletionCompletionNoticesAsync(request.ProjectId);
+            await Task.WhenAll(
+                loadStructureTask,
+                loadStorageCatalogTask,
+                loadDeletionRecoveriesTask,
+                loadDeletionNoticesTask);
             if (!IsCurrentSurfaceReload(request))
             {
                 return;
@@ -1022,6 +1041,32 @@ else
             }
 
             var nextStorageCatalog = await loadStorageCatalogTask;
+            var nextDeletionRecoveries = await loadDeletionRecoveriesTask;
+            var nextDeletionNotices = await loadDeletionNoticesTask;
+            pendingDeletionRecoveries.Clear();
+            pendingDeletionRecoveries.AddRange(nextDeletionRecoveries);
+            deletionCompletionNotices.Clear();
+            deletionCompletionNotices.AddRange(
+                nextDeletionNotices.Where(notice => notice.Warnings.Count > 0));
+            if (pendingDeletionRecoveries.Count > 0 &&
+                string.IsNullOrWhiteSpace(workflowFeedback))
+            {
+                workflowFeedback =
+                    $"{pendingDeletionRecoveries.Count} deleted branch cleanup operation(s) remain pending. Retry cleanup by exact durable mutation id.";
+                if (deletionCompletionNotices.Count > 0)
+                {
+                    workflowFeedback =
+                        $"{workflowFeedback} {BuildDeletionCompletionNoticeFeedback(deletionCompletionNotices)}";
+                }
+                workflowFeedbackTone = "warn";
+            }
+            else if (deletionCompletionNotices.Count > 0 &&
+                     string.IsNullOrWhiteSpace(workflowFeedback))
+            {
+                workflowFeedback = BuildDeletionCompletionNoticeFeedback(
+                    deletionCompletionNotices);
+                workflowFeedbackTone = "warn";
+            }
             var loadResult = await loadStructureTask;
             if (!IsCurrentSurfaceReload(request))
             {

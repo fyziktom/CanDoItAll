@@ -85,6 +85,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
             DesiredRole = "Senior Platform Engineer",
             Source = "Referral",
             Stage = RecruitmentStage.Interviewing,
+            Decision = RecruitmentDecision.Approved,
             Notes = "Strong architecture profile.",
             LastChangedBy = "integration-tests"
         });
@@ -120,7 +121,9 @@ public sealed class CrmHrCrossModuleIntegrationTests
             Notes = "Converted during cross-module integration proof.",
             LastChangedBy = "integration-tests"
         });
-        Assert.True(convertResult.IsSuccess);
+        Assert.True(
+            convertResult.IsSuccess,
+            string.Join(" | ", convertResult.Errors.Select(error => $"{error.Code}: {error.Message}")));
 
         var interactionResult = await crmService.AddInteractionAsync(
             accountId,

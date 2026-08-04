@@ -387,6 +387,131 @@ public sealed class WorkflowSourceIngestionTests
     }
 
     [Fact]
+    public async Task DuplicateContentAtDifferentPathsLoadsFirstSourceOnce()
+    {
+        using var temp = new TempDirectory();
+        temp.Write("sources/first.pdf", "identical document bytes");
+        temp.Write("managed/second.pdf", "identical document bytes");
+        var converter = new RecordingDocumentMarkdownConverter
+        {
+            Markdown = "converted evidence"
+        };
+
+        using var result = await ExecuteAsync(
+            temp.Path,
+            converter,
+            CreateSettings(".pdf"),
+            CreateSourcesPayload(
+                ("first", "sources/first.pdf"),
+                ("second", "managed/second.pdf")));
+
+        var request = Assert.Single(converter.Requests);
+        Assert.Equal(temp.FullPath("sources/first.pdf"), request.SourcePath);
+        var source = Assert.Single(result.RootElement.GetProperty("sourceDocuments").EnumerateArray());
+        Assert.Equal("first", source.GetProperty("key").GetString());
+        Assert.Equal("sources/first.pdf", source.GetProperty("path").GetString());
+    }
+
+    [Fact]
+    public async Task SameSizeDifferentContentsLoadBothSources()
+    {
+        using var temp = new TempDirectory();
+        temp.Write("sources/first.pdf", "AAAA");
+        temp.Write("sources/second.pdf", "BBBB");
+        var converter = new RecordingDocumentMarkdownConverter();
+
+        using var result = await ExecuteAsync(
+            temp.Path,
+            converter,
+            CreateSettings(".pdf"),
+            CreateSourcesPayload(
+                ("first", "sources/first.pdf"),
+                ("second", "sources/second.pdf")));
+
+        Assert.Equal(2, converter.Requests.Count);
+        Assert.Equal(2, result.RootElement.GetProperty("loadedSourceCount").GetInt32());
+        Assert.Equal(2, result.RootElement.GetProperty("sourceDocuments").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task FailedFirstAliasDoesNotSuppressIdenticalSecondAlias()
+    {
+        using var temp = new TempDirectory();
+        temp.Write("sources/first.pdf", "identical document bytes");
+        temp.Write("managed/second.pdf", "identical document bytes");
+        var converter = new RecordingDocumentMarkdownConverter
+        {
+            Handler = (request, _) => Task.FromResult(
+                request.SourcePath.EndsWith("first.pdf", StringComparison.OrdinalIgnoreCase)
+                    ? new WorkspaceDocumentMarkdownConversionResult(
+                        false,
+                        "first alias failed",
+                        request.SourcePath,
+                        string.Empty,
+                        0,
+                        false,
+                        "first alias failed")
+                    : RecordingDocumentMarkdownConverter.Success(request, "converted evidence"))
+        };
+
+        using var result = await ExecuteAsync(
+            temp.Path,
+            converter,
+            CreateSettings(".pdf"),
+            CreateSourcesPayload(
+                ("first", "sources/first.pdf"),
+                ("second", "managed/second.pdf")));
+
+        Assert.Equal(2, converter.Requests.Count);
+        Assert.Equal(1, result.RootElement.GetProperty("failedSourceCount").GetInt32());
+        var source = Assert.Single(result.RootElement.GetProperty("sourceDocuments").EnumerateArray());
+        Assert.Equal("second", source.GetProperty("key").GetString());
+    }
+
+    [Fact]
+    public async Task SourceMutationDuringConversionFailsExplicitly()
+    {
+        using var temp = new TempDirectory();
+        temp.Write("sources/mutable.pdf", "original bytes");
+        var sourcePath = temp.FullPath("sources/mutable.pdf");
+        var originalLastWriteTimeUtc = File.GetLastWriteTimeUtc(sourcePath);
+        var converter = new RecordingDocumentMarkdownConverter
+        {
+            Handler = (request, _) =>
+            {
+                File.WriteAllText(request.SourcePath, "mutated bytes!");
+                File.SetLastWriteTimeUtc(request.SourcePath, originalLastWriteTimeUtc);
+                return Task.FromResult(RecordingDocumentMarkdownConverter.Success(request, "converted evidence"));
+            }
+        };
+
+        using var result = await ExecuteAsync(
+            temp.Path,
+            converter,
+            CreateSettings(".pdf"),
+            CreateSourcesPayload(("mutable", "sources/mutable.pdf")));
+
+        Assert.Equal(0, result.RootElement.GetProperty("loadedSourceCount").GetInt32());
+        var error = Assert.Single(result.RootElement.GetProperty("sourceErrors").EnumerateArray());
+        Assert.Contains("changed while it was being ingested", error.GetProperty("message").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ContentHashingObservesCancellationDuringRead()
+    {
+        using var stream = new BlockingReadStream();
+        using var cancellationSource = new CancellationTokenSource();
+
+        var hashing = WorkflowSourceFileContentIdentityResolver
+            .ComputeSha256Async(stream, cancellationSource.Token)
+            .AsTask();
+        await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cancellationSource.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => hashing);
+    }
+
+    [Fact]
     public async Task AbsolutePathRequiresExplicitOptIn()
     {
         using var workspace = new TempDirectory();
@@ -594,6 +719,55 @@ public sealed class WorkflowSourceIngestionTests
                 markdown.Length,
                 truncated,
                 string.Empty);
+        }
+    }
+
+    private sealed class BlockingReadStream : Stream
+    {
+        public TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+            => throw new NotSupportedException();
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            ReadStarted.TrySetResult();
+            return new ValueTask<int>(WaitForCancellationAsync(cancellationToken));
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+            => throw new NotSupportedException();
+
+        public override void SetLength(long value)
+            => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+            => throw new NotSupportedException();
+
+        private static async Task<int> WaitForCancellationAsync(CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return 0;
         }
     }
 

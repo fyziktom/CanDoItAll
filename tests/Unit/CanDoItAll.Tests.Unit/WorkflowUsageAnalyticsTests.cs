@@ -338,7 +338,7 @@ public sealed class WorkflowUsageAnalyticsTests
     public async Task PersistentStoreRoundTripsImmutableFactsAndAggregatesWithoutDoubleCounting()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(PersistentWorkflowUsageObservationStore).Assembly]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"workflow-usage-{Guid.NewGuid():N}")
             .Options;
         var store = new PersistentWorkflowUsageObservationStore(
@@ -377,7 +377,7 @@ public sealed class WorkflowUsageAnalyticsTests
     [Fact]
     public void ModuleCompositionUsesOnePersistentStoreForRawFactsAndDatabaseAggregates()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase($"workflow-usage-composition-{Guid.NewGuid():N}")
             .Options;
         var services = new ServiceCollection();

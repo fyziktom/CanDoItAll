@@ -22,6 +22,26 @@ public sealed record SpreadsheetWorkbookPreviewRequest(
     public const int MaximumColumns = 100;
 }
 
+public sealed record SpreadsheetWorkbookContentPreviewRequest(
+    string WorkbookName,
+    ReadOnlyMemory<byte> Content,
+    int MaxWorksheets = 2,
+    int MaxRows = 8,
+    int MaxColumns = 8)
+{
+    public const int MaximumContentBytes = 16 * 1024 * 1024;
+    public const int MaximumArchiveEntries = 2048;
+    public const long MaximumExpandedBytes = 64L * 1024L * 1024L;
+    public const long MaximumXmlPartBytes = 16L * 1024L * 1024L;
+    public const long MaximumWorksheetXmlBytes = 32L * 1024L * 1024L;
+    public const long MaximumStylesXmlBytes = 4L * 1024L * 1024L;
+    public const long MaximumSharedStringsXmlBytes = 16L * 1024L * 1024L;
+    public const int MaximumPackageWorksheets = 256;
+    public const int MaximumPackageCells = 250_000;
+    public const int MaximumPackageStyles = 20_000;
+    public const int MaximumPackageSharedStrings = 250_000;
+}
+
 public sealed record SpreadsheetWorksheetPreview(
     string Name,
     int Position,
@@ -38,6 +58,15 @@ public sealed record SpreadsheetWorksheetPreview(
 
 public sealed record SpreadsheetWorkbookPreviewResult(
     string WorkbookPath,
+    int TotalWorksheetCount,
+    IReadOnlyList<SpreadsheetWorksheetPreview> Worksheets,
+    bool WorksheetsTruncated)
+{
+    public bool IsTruncated => WorksheetsTruncated || Worksheets.Any(worksheet => worksheet.IsTruncated);
+}
+
+public sealed record SpreadsheetWorkbookContentPreviewResult(
+    string DisplayName,
     int TotalWorksheetCount,
     IReadOnlyList<SpreadsheetWorksheetPreview> Worksheets,
     bool WorksheetsTruncated)
@@ -87,7 +116,13 @@ public sealed record SpreadsheetWriteResult(
     int CellWriteCount,
     int RangeWriteCount);
 
-public interface ISpreadsheetDocumentService
+public interface ISpreadsheetWorkbookContentPreviewService
+{
+    SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
+        SpreadsheetWorkbookContentPreviewRequest request);
+}
+
+public interface ISpreadsheetDocumentService : ISpreadsheetWorkbookContentPreviewService
 {
     SpreadsheetWorkbookSummary InspectWorkbook(string workbookPath);
 

@@ -32,17 +32,27 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var gateway = services.GetService(typeof(IMafProviderRuntimeGateway)) is IMafProviderRuntimeGateway resolvedGateway
-            ? resolvedGateway
-            : MafProviderRuntimeGateway.CreateFallback(services);
-        var streamingDispatchGate = services.GetService(typeof(IMafProviderStreamingDispatchGate)) is IMafProviderStreamingDispatchGate resolvedGate
-            ? resolvedGate
-            : CreateFallbackProviderStreamingDispatchGate(services);
-        var imageAnalysisService = services.GetService(typeof(IAgentImageAnalysisService)) is IAgentImageAnalysisService resolvedImageAnalysisService
-            ? resolvedImageAnalysisService
-            : new ProviderRuntimeImageAnalysisService(gateway);
+        var gateway = services.GetService(typeof(IMafProviderRuntimeGateway)) as IMafProviderRuntimeGateway;
+        var streamingDispatchGate = services.GetService(typeof(IMafProviderStreamingDispatchGate)) as IMafProviderStreamingDispatchGate;
+        var imageAnalysisService = services.GetService(typeof(IAgentImageAnalysisService)) as IAgentImageAnalysisService;
+        if (gateway is null || streamingDispatchGate is null || imageAnalysisService is null)
+        {
+            var missingServices = new[]
+                {
+                    (Service: nameof(IMafProviderRuntimeGateway), IsMissing: gateway is null),
+                    (Service: nameof(IMafProviderStreamingDispatchGate), IsMissing: streamingDispatchGate is null),
+                    (Service: nameof(IAgentImageAnalysisService), IsMissing: imageAnalysisService is null)
+                }
+                .Where(item => item.IsMissing)
+                .Select(item => item.Service);
+            throw new InvalidOperationException(
+                $"The MAF provider runtime service graph is incomplete. Missing: {string.Join(", ", missingServices)}. Register AddMafProviderRuntimeServices().");
+        }
 
-        return new MafRuntimeProviderDependencies(gateway, streamingDispatchGate, imageAnalysisService);
+        return new MafRuntimeProviderDependencies(
+            gateway,
+            streamingDispatchGate,
+            imageAnalysisService);
     }
 
     public MafWorkspaceRuntimeServices ResolveWorkspaceServices(
@@ -89,15 +99,4 @@ internal sealed class MafRuntimeDependencyResolver : IMafRuntimeDependencyResolv
             ? extractors
             : [];
 
-    private static IMafProviderStreamingDispatchGate CreateFallbackProviderStreamingDispatchGate(IServiceProvider services)
-    {
-        var providerFactory = services.GetService(typeof(IAgentProviderFactory)) is IAgentProviderFactory resolvedFactory
-            ? resolvedFactory
-            : MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
-        var dispatchLaneGate = services.GetService(typeof(IProviderDispatchLaneGate)) is IProviderDispatchLaneGate resolvedGate
-            ? resolvedGate
-            : new ProviderDispatchLaneGate(providerFactory);
-
-        return new MafProviderStreamingDispatchGate(dispatchLaneGate);
-    }
 }

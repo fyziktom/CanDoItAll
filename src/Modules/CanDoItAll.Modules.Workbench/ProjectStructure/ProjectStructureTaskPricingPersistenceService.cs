@@ -22,7 +22,7 @@ public sealed class ProjectStructureTaskPricingPersistenceService(
             dbContext,
             cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(
                     plan.ProjectId),

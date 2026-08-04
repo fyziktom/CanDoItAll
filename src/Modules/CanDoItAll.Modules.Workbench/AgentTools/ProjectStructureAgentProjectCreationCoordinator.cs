@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -12,7 +14,8 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
         AgentDefinition agent,
         Func<Guid, CancellationToken, Task<T>> create,
         Func<T, Guid> projectIdSelector,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<Guid>? retainProjectAccessForSession = null)
     {
         var reservedProjectId = projectIdFactory();
         if (reservedProjectId == Guid.Empty)
@@ -37,24 +40,78 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
 
             return result;
         }
-        catch (ProjectStructureProjectCreationRejectedException exception)
+        catch (Exception exception) when (ProjectStructureExceptionGraph.TryFind(
+            exception,
+            (ProjectStructureCompensatedSubprojectTransferException candidate) =>
+                candidate.RemovedProjectId == reservedProjectId,
+            out var compensatedTransfer))
+        {
+            var failureToSurface = ReferenceEquals(exception, compensatedTransfer)
+                ? compensatedTransfer.TransferFailure
+                : exception;
+            await RevokeReservedAccessOrThrowAsync(
+                agent.Id,
+                reservedProjectId,
+                failureToSurface,
+                "The empty subproject was removed after transfer failure, but its reserved access grant could not be revoked.");
+            ExceptionDispatchInfo.Capture(failureToSurface).Throw();
+            throw new UnreachableException();
+        }
+        catch (Exception exception) when (ProjectStructureExceptionGraph.TryFind(
+            exception,
+            (ProjectStructureTransferPartialCommitException candidate) =>
+                candidate.Recovery.TargetProjectId == reservedProjectId &&
+                candidate.Recovery.CommitState == ProjectStructureTransferCommitState.WorkbenchCommitted,
+            out _))
         {
             try
             {
-                await authorizationService.RevokeCreatedProjectAccessAsync(
-                    agent.Id,
-                    reservedProjectId,
-                    CancellationToken.None);
+                retainProjectAccessForSession?.Invoke(reservedProjectId);
             }
-            catch (Exception compensationException)
+            catch (Exception sessionAccessFailure)
             {
                 throw new AggregateException(
-                    "Project creation was rejected and its reserved access grant could not be revoked.",
+                    "The subproject transfer committed, but current-session access to the retained project could not be granted.",
                     exception,
-                    compensationException);
+                    sessionAccessFailure);
             }
 
             throw;
+        }
+        catch (Exception exception) when (ProjectStructureExceptionGraph.TryFind(
+            exception,
+            (ProjectStructureProjectCreationRejectedException _) => true,
+            out _))
+        {
+            await RevokeReservedAccessOrThrowAsync(
+                agent.Id,
+                reservedProjectId,
+                exception,
+                "Project creation was rejected and its reserved access grant could not be revoked.");
+
+            throw;
+        }
+    }
+
+    private async Task RevokeReservedAccessOrThrowAsync(
+        Guid agentId,
+        Guid reservedProjectId,
+        Exception originalFailure,
+        string compensationFailureMessage)
+    {
+        try
+        {
+            await authorizationService.RevokeCreatedProjectAccessAsync(
+                agentId,
+                reservedProjectId,
+                CancellationToken.None);
+        }
+        catch (Exception compensationException)
+        {
+            throw new AggregateException(
+                compensationFailureMessage,
+                originalFailure,
+                compensationException);
         }
     }
 }

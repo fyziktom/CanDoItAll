@@ -85,6 +85,10 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(agent);
 
+        ProjectStructureManagedAssetCreationPolicy.EnsureGenericNodeCreateAllowed(
+            request.ObjectType,
+            request.ObjectSubtype);
+
         var idempotencyKey = NormalizeIdempotencyKey(request.IdempotencyKey);
         return await RunWithIdempotencyLockAsync(
             projectId,
@@ -153,8 +157,9 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
             throw new ProjectStructureAgentException(400, "AssetTypeRequired", "Asset nodes must be File, ImageAsset, or VideoAsset.");
         }
 
+        ProjectStructureManagedAssetCreationPolicy.EnsureExplicitParent(request.ParentNodeKey);
         var idempotencyKey = NormalizeIdempotencyKey(request.IdempotencyKey);
-        var media = await ResolveAssetCreateMediaAsync(request, cancellationToken);
+        var media = await ResolveAssetCreateMediaAsync(projectId, request, cancellationToken);
         return await RunWithIdempotencyLockAsync(
             projectId,
             idempotencyKey,
@@ -418,6 +423,7 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
             : new ProjectObjectMediaPayload(media.FileName, media.ContentType, media.Base64Data);
 
     private async Task<ProjectObjectMediaPayload> ResolveAssetCreateMediaAsync(
+        Guid projectId,
         ProjectStructureRuntimeAssetCreateRequest request,
         CancellationToken cancellationToken)
     {
@@ -437,10 +443,10 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                 "Asset creation requires either a media payload or a source workspace path.");
         }
 
-        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(request.SourceWorkspacePath);
-        var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
+        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(projectId, request.SourceWorkspacePath);
+        var bytes = await ProjectStructureWorkspaceAssetReader.ReadAsync(resolution.FullPath, cancellationToken);
         var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
-        var contentType = ResolveSourceAssetContentType(request.SourceContentType, fileName);
+        var contentType = ProjectStructureAssetMediaTypePolicy.Resolve(request.SourceContentType, fileName);
         var resolvedMedia = new ProjectObjectMediaPayload(
             fileName,
             contentType,
@@ -479,28 +485,6 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
         return string.IsNullOrWhiteSpace(candidate)
             ? "project-asset.bin"
             : candidate;
-    }
-
-    private static string ResolveSourceAssetContentType(string? requestedContentType, string fileName)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedContentType))
-        {
-            return requestedContentType.Trim();
-        }
-
-        return Path.GetExtension(fileName).ToLowerInvariant() switch
-        {
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".webp" => "image/webp",
-            ".gif" => "image/gif",
-            ".svg" => "image/svg+xml",
-            ".pdf" => "application/pdf",
-            ".json" => "application/json",
-            ".md" => "text/markdown",
-            ".txt" => "text/plain",
-            _ => "application/octet-stream"
-        };
     }
 
     private static ProjectStructureAgentContext MapAgent(ProjectStructureRuntimeAgentContext agent)

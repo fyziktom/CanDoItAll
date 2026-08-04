@@ -18,6 +18,7 @@ public sealed class ProjectStructureFileInteractionPolicyTests
     [InlineData("hostile.svg", "image/png", FileInteractionBuiltInProfileIds.Svg, false)]
     [InlineData("clip.mp4", "video/mp4", FileInteractionBuiltInProfileIds.Object, false)]
     [InlineData("archive.zip", "application/zip", FileInteractionBuiltInProfileIds.Object, false)]
+    [InlineData("forecast.xlsx", "application/octet-stream", WorkbenchFileInteractionProfileIds.SpreadsheetPreview, false)]
     public void Explicit_composition_resolves_only_claimed_profiles(
         string fileName,
         string rawMediaType,
@@ -85,6 +86,7 @@ public sealed class ProjectStructureFileInteractionPolicyTests
     [InlineData("diagram.mmd", "text/plain", ProjectStructureFileInteractionPolicy.MermaidMediaType)]
     [InlineData("notes.md", "text/plain", "text/markdown")]
     [InlineData("report.pdf", "text/html", "application/pdf")]
+    [InlineData("forecast.xlsx", "text/plain", ProjectStructureFileInteractionPolicy.XlsxMediaType)]
     public void Known_extension_normalizes_renderer_evidence_fail_closed(
         string fileName,
         string suppliedMediaType,
@@ -95,11 +97,43 @@ public sealed class ProjectStructureFileInteractionPolicyTests
             ProjectStructureFileInteractionPolicy.NormalizeMediaType(fileName, suppliedMediaType));
     }
 
+    [Fact]
+    public void Xlsx_renderer_requires_bounded_full_content()
+    {
+        FileInteractionComponentComposition composition = BuildComposition();
+
+        FileInteractionRendererResolution resolution = composition.Renderers.Resolve(
+            WorkbenchFileInteractionProfileIds.SpreadsheetPreview,
+            FileInteractionMode.View);
+
+        Assert.True(resolution.IsResolved);
+        Assert.Equal(
+            FileInteractionContentRequirement.FullContent,
+            resolution.Renderer?.ContentRequirement);
+    }
+
+    [Fact]
+    public void Xlsx_host_notice_describes_the_bounded_cell_preview()
+    {
+        var request = new FileInteractionRequest(
+            new FileReference("test", "forecast"),
+            "forecast.xlsx",
+            FileInteractionMode.View,
+            ProjectStructureFileInteractionPolicy.XlsxMediaType);
+
+        string notice = ProjectStructureFileInteractionPolicy.ResolveHostNotice(request, canEdit: false);
+
+        Assert.Contains("bounded, read-only preview", notice, StringComparison.Ordinal);
+        Assert.Contains("cells and formulas", notice, StringComparison.Ordinal);
+        Assert.DoesNotContain("without loading", notice, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static FileInteractionComponentComposition BuildComposition()
         => new FileInteractionComponentBuilder()
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
+            .AddWorkbenchSpreadsheetPreview()
             .Build();
 
     private static StorageCatalogRecord CreateStorage(bool isReadOnly)

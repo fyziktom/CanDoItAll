@@ -62,7 +62,8 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         Assert.Equal(
             [
                 typeof(IStoragePlacementService),
-                typeof(ProjectAssetCreationService)
+                typeof(ProjectAssetCreationService),
+                typeof(ProjectManagedStoragePhysicalIdentityPolicy)
             ],
             parameterTypes);
     }

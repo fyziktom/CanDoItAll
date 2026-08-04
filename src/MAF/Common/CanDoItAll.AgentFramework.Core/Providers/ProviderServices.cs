@@ -38,7 +38,11 @@ public sealed class ProviderProfileService : IProviderProfileService
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var normalizedBaseUrl = NormalizeBaseUrl(model.BaseUrl);
+        ValidateEditorSelections(model);
+        var normalizedName = NormalizeRequiredName(model.Name);
+        var normalizedBaseUrl = NormalizeEditorBaseUrl(model.BaseUrl);
+        var normalizedConfigurationJson =
+            NormalizeEditorConfigurationJson(model.ConfigurationJson);
         var providerIdentityChanged = current is not null &&
                                       (current.Kind != model.Kind ||
                                        !string.Equals(
@@ -59,12 +63,12 @@ public sealed class ProviderProfileService : IProviderProfileService
             ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
         if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var validationMessage))
         {
-            throw new InvalidOperationException(validationMessage);
+            throw new ProviderProfileValidationException(validationMessage);
         }
 
         var profile = new ProviderProfile(
             Id: model.Id ?? Guid.NewGuid(),
-            Name: NormalizeText(model.Name),
+            Name: normalizedName,
             Kind: model.Kind,
             BaseUrl: normalizedBaseUrl,
             ApiKeyEnvironmentVariable: NormalizeEnvironmentVariable(model.ApiKeyEnvironmentVariable),
@@ -76,7 +80,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsTools: model.SupportsTools,
             PreferFrameworkManagedChatHistory: model.PreferFrameworkManagedChatHistory,
             SupportsBackgroundResponses: model.SupportsBackgroundResponses,
-            ConfigurationJson: NormalizeConfigurationJson(model.ConfigurationJson),
+            ConfigurationJson: normalizedConfigurationJson,
             Notes: NormalizeText(model.Notes),
             HealthStatus: NormalizeHealthStatus(current?.HealthStatus),
             LastCheckedAtUtc: current?.LastCheckedAtUtc,
@@ -85,7 +89,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider),
             ModelPrices = modelPrices,
             Tags = NormalizeTags(model.Tags),
-            ModelThinkingEffortCapabilities = NormalizeThinkingEffortCapabilities(
+            ModelThinkingEffortCapabilities = NormalizeEditorThinkingEffortCapabilities(
                 retainedThinkingEffortCapabilities)
         };
 
@@ -487,12 +491,16 @@ public sealed class ProviderProfileService : IProviderProfileService
     }
 
     private static IReadOnlyList<ProviderModelThinkingEffortCapability> NormalizeThinkingEffortCapabilities(
-        IEnumerable<ProviderModelThinkingEffortCapability>? capabilities)
+        IEnumerable<ProviderModelThinkingEffortCapability>? capabilities,
+        Func<string, Exception>? validationExceptionFactory = null)
     {
         var configuredCapabilities = capabilities?.ToList() ?? [];
-        if (configuredCapabilities.Any(item => string.IsNullOrWhiteSpace(item.Model)))
+        if (configuredCapabilities.Any(item =>
+                item is null ||
+                string.IsNullOrWhiteSpace(item.Model)))
         {
-            throw new InvalidOperationException("Provider thinking-effort capabilities must identify a model.");
+            throw CreateValidationException(
+                "Provider thinking-effort capabilities must identify a model.");
         }
 
         var normalizedCapabilities = configuredCapabilities
@@ -503,14 +511,26 @@ public sealed class ProviderProfileService : IProviderProfileService
             .FirstOrDefault(group => group.Count() > 1)?.Key;
         if (!string.IsNullOrWhiteSpace(duplicateModel))
         {
-            throw new InvalidOperationException(
+            throw CreateValidationException(
                 $"Provider thinking-effort capabilities contain duplicate model '{duplicateModel}'.");
         }
 
         return normalizedCapabilities
             .OrderBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        Exception CreateValidationException(string message)
+        {
+            return validationExceptionFactory?.Invoke(message) ??
+                   new InvalidOperationException(message);
+        }
     }
+
+    private static IReadOnlyList<ProviderModelThinkingEffortCapability> NormalizeEditorThinkingEffortCapabilities(
+        IEnumerable<ProviderModelThinkingEffortCapability>? capabilities)
+        => NormalizeThinkingEffortCapabilities(
+            capabilities,
+            static message => new ProviderProfileValidationException(message));
 
     private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
     {
@@ -529,6 +549,95 @@ public sealed class ProviderProfileService : IProviderProfileService
         return string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : value.Trim().TrimEnd('/');
+    }
+
+    private static string NormalizeEditorBaseUrl(string? value)
+    {
+        var normalized = NormalizeBaseUrl(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new ProviderProfileValidationException(
+                "Provider base URL is required.");
+        }
+
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri) ||
+            !string.IsNullOrEmpty(uri.UserInfo) ||
+            !string.IsNullOrEmpty(uri.Query) ||
+            !string.IsNullOrEmpty(uri.Fragment))
+        {
+            throw new ProviderProfileValidationException(
+                "Provider base URL must be an absolute URI without user information, a query, or a fragment.");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeRequiredName(string? value)
+    {
+        var normalized = NormalizeText(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new ProviderProfileValidationException(
+                "Provider profile name is required.");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeEditorConfigurationJson(string? value)
+    {
+        var normalized = NormalizeConfigurationJson(value);
+        try
+        {
+            using var document = JsonDocument.Parse(normalized);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new ProviderProfileValidationException(
+                    "Provider configuration must be a JSON object.");
+            }
+
+            return normalized;
+        }
+        catch (JsonException exception)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider configuration must be a valid JSON object.",
+                exception);
+        }
+    }
+
+    private static void ValidateEditorSelections(ProviderProfileEditorModel model)
+    {
+        if (model.Id == Guid.Empty)
+        {
+            throw new ProviderProfileValidationException(
+                "Provider id cannot be empty.");
+        }
+
+        if (!Enum.IsDefined(model.Kind))
+        {
+            throw new ProviderProfileValidationException(
+                "Provider kind is invalid.");
+        }
+
+        if (!Enum.IsDefined(model.Transport))
+        {
+            throw new ProviderProfileValidationException(
+                "Provider transport is invalid.");
+        }
+
+        if (!Enum.IsDefined(model.Purpose))
+        {
+            throw new ProviderProfileValidationException(
+                "Provider purpose is invalid.");
+        }
+
+        if (model.Kind == ProviderKind.Ollama &&
+            model.Transport != ProviderTransportKind.ChatCompletions)
+        {
+            throw new ProviderProfileValidationException(
+                "Ollama provider profiles require the Chat Completions transport.");
+        }
     }
 
     private static string NormalizeConfigurationJson(string? value)
@@ -652,7 +761,7 @@ public sealed class EnvironmentVariableAgentProviderCredentialResolver : IAgentP
         }
 
         var normalizedVariableName = provider.ApiKeyEnvironmentVariable.Trim();
-        var apiKey = AgentProviderEnvironmentCredential.ResolveAndPromote(normalizedVariableName);
+        var apiKey = AgentProviderEnvironmentCredential.Resolve(normalizedVariableName);
         return string.IsNullOrWhiteSpace(apiKey)
             ? new ProviderCredentialResolution(
                 string.Empty,
@@ -669,7 +778,7 @@ public static class AgentProviderEnvironmentCredential
 {
     private static readonly ConcurrentDictionary<string, string> ApplicationConfigurationCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public static string ResolveAndPromote(
+    public static string Resolve(
         string variableName)
     {
         if (string.IsNullOrWhiteSpace(variableName))
@@ -694,21 +803,7 @@ public static class AgentProviderEnvironmentCredential
             return string.Empty;
         }
 
-        var resolvedValue = scopedValue.Trim();
-        PromoteProcessValue(normalizedVariableName, resolvedValue);
-        return resolvedValue;
-    }
-
-    public static void PromoteProcessValue(
-        string variableName,
-        string value)
-    {
-        if (string.IsNullOrWhiteSpace(variableName) || string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        Environment.SetEnvironmentVariable(variableName.Trim(), value.Trim(), EnvironmentVariableTarget.Process);
+        return scopedValue.Trim();
     }
 
     private static string? FirstNonEmpty(

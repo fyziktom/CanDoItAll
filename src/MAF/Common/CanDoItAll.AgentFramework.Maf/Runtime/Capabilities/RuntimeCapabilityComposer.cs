@@ -48,7 +48,6 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     private const int DefaultCompactionSlidingWindowTurns = 32;
     private const int DefaultCompactionTruncationTokenLimit = 64000;
     private const int DefaultToolCompactionMessageThreshold = 40;
-    private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
 
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
@@ -969,19 +968,6 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             return;
         }
 
-        if (!EnsureCompactionCredentialAvailable())
-        {
-            composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
-                AgentRuntimeContextSourceCategories.Compaction,
-                "microsoft-agent-framework-compaction",
-                "OPENAI_API_KEY unavailable for compaction provider"));
-            await progressCallback(
-                ExecutionState.Preparing,
-                "Compaction",
-                "Skipped Microsoft Agent Framework compaction because OPENAI_API_KEY is not available to the runtime. Core provider execution will resolve credentials through the configured provider profile.");
-            return;
-        }
-
         composition.State.ContextProviders.Add(CreateCompactionProvider(composition.AgentConfiguration));
         composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
             AgentRuntimeContextSourceCategories.Compaction,
@@ -1111,24 +1097,6 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         return auditScope is not null &&
                (!string.IsNullOrWhiteSpace(auditScope.ProcessRunId) ||
                 !string.IsNullOrWhiteSpace(auditScope.ProcessStepId));
-    }
-
-    private bool EnsureCompactionCredentialAvailable()
-    {
-        var processValue = AgentProviderEnvironmentCredential.ResolveAndPromote(OpenAiApiKeyEnvironmentVariable);
-        if (!string.IsNullOrWhiteSpace(processValue))
-        {
-            return true;
-        }
-
-        var configuredValue = services.GetService<IConfiguration>()?[OpenAiApiKeyEnvironmentVariable];
-        if (string.IsNullOrWhiteSpace(configuredValue))
-        {
-            return false;
-        }
-
-        AgentProviderEnvironmentCredential.PromoteProcessValue(OpenAiApiKeyEnvironmentVariable, configuredValue.Trim());
-        return true;
     }
 
     private static CompactionProvider CreateCompactionProvider(AgentRuntimeConfiguration configuration)

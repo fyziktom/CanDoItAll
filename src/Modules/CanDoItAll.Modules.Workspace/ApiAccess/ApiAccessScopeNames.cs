@@ -11,4 +11,6 @@ public static class ApiAccessScopeNames
     public const string WriteMemoryProviders = "api.memory-providers.write";
 
     public const string QueryMemoryProviders = "api.memory-providers.query";
+
+    public const string WriteProjectStructure = "api.project-structure.write";
 }

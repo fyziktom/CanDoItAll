@@ -61,7 +61,7 @@
     "imageGeneration": {
       "canGenerateImages": true,
       "preferredProviderProfileKey": "openai-image-generation",
-      "defaultModel": "gpt-image-1-mini",
+      "defaultModel": "gpt-image-2",
       "canStoreImagesAsProjectAssets": false
     }
   },

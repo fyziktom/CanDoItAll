@@ -285,18 +285,9 @@ public partial class AgentsHomePage
 
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return Task.CompletedTask;
-        }
-
-        _ = InitializeShellAsync();
-        return Task.CompletedTask;
-    }
-
-    private async Task InitializeShellAsync()
-    {
-        await RefreshShellAsync();
+        return firstRender
+            ? RefreshShellAsync()
+            : Task.CompletedTask;
     }
 
     private async Task RefreshShellAsync()

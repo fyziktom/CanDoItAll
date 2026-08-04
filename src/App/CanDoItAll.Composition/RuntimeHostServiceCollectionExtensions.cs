@@ -38,16 +38,12 @@ namespace CanDoItAll.Composition;
 
 public static class RuntimeHostServiceCollectionExtensions
 {
-    private const string OpenAiApiKeyConfigurationKey = "OPENAI_API_KEY";
-
     public static IServiceCollection AddCanDoItAllRuntimeModules(
         this IServiceCollection services,
         IConfiguration configuration,
         string? contentRootPath = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-
-        PromoteConfiguredOpenAiCredential(configuration);
 
         services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
@@ -68,20 +64,6 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddSchedulerPlannerWorkflowInputOptionProviders();
         services.AddCanDoItAllFileToolsIntegration();
         return services;
-    }
-
-    private static void PromoteConfiguredOpenAiCredential(
-        IConfiguration configuration)
-    {
-        var configuredOpenAiApiKey = configuration[OpenAiApiKeyConfigurationKey];
-        if (string.IsNullOrWhiteSpace(configuredOpenAiApiKey))
-        {
-            return;
-        }
-
-        AgentProviderEnvironmentCredential.PromoteProcessValue(
-            OpenAiApiKeyConfigurationKey,
-            configuredOpenAiApiKey);
     }
 
     public static IServiceCollection AddCanDoItAllRuntimeDatabaseSwitching(this IServiceCollection services)
@@ -119,7 +101,8 @@ public sealed class AppDatabaseBootstrapper(
     private const string RuntimeBootstrapOpenAiBaseUrl = "https://api.openai.com/v1";
     private const string RuntimeBootstrapOpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string RuntimeBootstrapOpenAiModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
-    private const string RuntimeBootstrapOpenAiImageModel = "gpt-image-1-mini";
+    private const string RuntimeBootstrapLegacyOpenAiImageModel = OpenAiModelIds.GptImage1Mini;
+    private const string RuntimeBootstrapOpenAiImageModel = OpenAiModelIds.GptImage2;
     private const string RuntimeBootstrapLocalOllamaProviderName = "Local Ollama";
     private const string RuntimeBootstrapLocalOllamaBaseUrl = "http://127.0.0.1:11434";
     private const string RuntimeBootstrapLocalOllamaModel = "llama3.1";
@@ -851,6 +834,7 @@ public sealed class AppDatabaseBootstrapper(
 
             if (byId is not null)
             {
+                changed |= UpgradeManagedOpenAiImageProviderModel(byId);
                 continue;
             }
 
@@ -861,6 +845,22 @@ public sealed class AppDatabaseBootstrapper(
         }
 
         return changed;
+    }
+
+    private static bool UpgradeManagedOpenAiImageProviderModel(
+        CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    {
+        if (provider.Id != RuntimeBootstrapOpenAiImageProviderId ||
+            !string.Equals(
+                provider.DefaultModel,
+                RuntimeBootstrapLegacyOpenAiImageModel,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        provider.DefaultModel = RuntimeBootstrapOpenAiImageModel;
+        return true;
     }
 
     private static IReadOnlyList<ManagedCatalogProviderSeed>

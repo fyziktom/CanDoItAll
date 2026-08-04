@@ -11,12 +11,508 @@ using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Components;
 
 public sealed class AgentChatPanelResponsivenessTests
 {
+    [Fact]
+    public async Task Failed_send_reloads_and_selects_the_exact_persisted_run()
+    {
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var failedRun = CreateRunningRun(agent.Id, session.Id) with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "The configured provider rejected the request.",
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            CompletedAtUtc = DateTimeOffset.UtcNow
+        };
+        var unrelatedRun = CreateRunningRun(agent.Id, session.Id);
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, session);
+        workspace.InitialRunDetail = new ExecutionRunDetail(failedRun, session, [], []);
+        workspace.PostRunWorkspace.SetResult(CreateWorkspace(agent.Id, session, unrelatedRun));
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Failure = new AgentChatRunFailedException(
+            agent.Id,
+            failedRun.Id,
+            session.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            failedRun.ResultSummary,
+            AgentProviderFailureCategory.RequestCompatibility);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, session);
+        cut.WaitForElement("[data-testid='chat-prompt-input']")
+            .Input("Use the selected project structure.");
+
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs())
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "Failed",
+                cut.Find("[data-testid='agent-chat-run-state']").TextContent.Trim());
+            Assert.Contains(failedRun.Id, workspace.ExecutionRunDetailRequests);
+            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Failed_send_does_not_reload_a_run_from_another_thread()
+    {
+        var agent = CreateAgent();
+        var executionSession = CreateSession(agent.Id);
+        var unrelatedSession = CreateSession(agent.Id) with
+        {
+            Title = "Unrelated thread"
+        };
+        var unrelatedRun = CreateRunningRun(agent.Id, unrelatedSession.Id) with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "This failure belongs to another thread."
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, executionSession);
+        workspace.InitialRunDetail = new ExecutionRunDetail(
+            unrelatedRun,
+            unrelatedSession,
+            [],
+            []);
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Failure = new AgentChatRunFailedException(
+            agent.Id,
+            unrelatedRun.Id,
+            unrelatedSession.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            unrelatedRun.ResultSummary,
+            AgentProviderFailureCategory.ProviderError);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, executionSession);
+        cut.WaitForElement("[data-testid='chat-prompt-input']")
+            .Input("Keep this failure scoped to its actual thread.");
+
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs())
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(unrelatedSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(unrelatedRun.ResultSummary, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(unrelatedRun.Id, workspace.ExecutionRunDetailRequests);
+            Assert.Equal(1, workspace.WorkspaceRequestCount);
+        });
+        Assert.DoesNotContain(
+            context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary == "Attention");
+    }
+
+    [Fact]
+    public async Task Failed_send_keeps_the_current_thread_when_reload_returns_another_thread()
+    {
+        var agent = CreateAgent();
+        var executionSession = CreateSession(agent.Id);
+        var unrelatedSession = CreateSession(agent.Id) with
+        {
+            Title = "Incorrect reload thread"
+        };
+        var failedRun = CreateRunningRun(agent.Id, executionSession.Id) with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "The provider rejected the scoped request."
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, executionSession);
+        workspace.InitialRunDetail = new ExecutionRunDetail(
+            failedRun,
+            executionSession,
+            [],
+            []);
+        workspace.PostRunWorkspace.SetResult(
+            CreateWorkspace(agent.Id, unrelatedSession));
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Failure = new AgentChatRunFailedException(
+            agent.Id,
+            failedRun.Id,
+            executionSession.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            failedRun.ResultSummary,
+            AgentProviderFailureCategory.ProviderError);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, executionSession);
+        cut.WaitForElement("[data-testid='chat-prompt-input']")
+            .Input("Reject a cross-thread reload response.");
+
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs())
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        cut.WaitForAssertion(() =>
+        {
+            var notification = context.Services
+                .GetRequiredService<NotificationService>()
+                .Messages
+                .Last();
+            Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(unrelatedSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.Equal("Attention", notification.Summary);
+            Assert.Contains(
+                failedRun.ResultSummary,
+                notification.Detail,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "failed run was persisted",
+                notification.Detail,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(failedRun.Id, workspace.ExecutionRunDetailRequests);
+        });
+    }
+
+    [Fact]
+    public async Task Failed_approval_reloads_and_selects_the_exact_persisted_run()
+    {
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var waitingRun = CreateWaitingApprovalRun(agent.Id, session.Id);
+        var failedRun = waitingRun with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "The configured provider rejected the approval continuation.",
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            CompletedAtUtc = DateTimeOffset.UtcNow
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, session, waitingRun);
+        workspace.InitialRunDetail = new ExecutionRunDetail(failedRun, session, [], []);
+        workspace.PostRunWorkspace.SetResult(
+            CreateWorkspace(agent.Id, session, CreateRunningRun(agent.Id, session.Id)));
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Failure = new AgentChatRunFailedException(
+            agent.Id,
+            failedRun.Id,
+            session.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            failedRun.ResultSummary,
+            AgentProviderFailureCategory.ProviderError);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, session);
+
+        await cut.WaitForElement("[data-testid='chat-approve-once-button']")
+            .ClickAsync(new MouseEventArgs())
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        await orchestrator.ApprovalStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(
+                "Failed",
+                cut.Find("[data-testid='agent-chat-run-state']").TextContent.Trim());
+            Assert.Contains(failedRun.Id, workspace.ExecutionRunDetailRequests);
+            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Failed_send_does_not_publish_reload_message_after_session_selection_supersedes_reload()
+    {
+        var agent = CreateAgent();
+        var executionSession = CreateSession(agent.Id);
+        var selectedSession = CreateSession(agent.Id) with
+        {
+            Title = "Newly selected thread"
+        };
+        var failedRun = CreateRunningRun(agent.Id, executionSession.Id) with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "The configured provider rejected the request.",
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            CompletedAtUtc = DateTimeOffset.UtcNow
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, executionSession);
+        workspace.InitialRunDetail = new ExecutionRunDetail(failedRun, executionSession, [], []);
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Failure = new AgentChatRunFailedException(
+            agent.Id,
+            failedRun.Id,
+            executionSession.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            failedRun.ResultSummary,
+            AgentProviderFailureCategory.ProviderError);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, executionSession);
+        cut.WaitForElement("[data-testid='chat-prompt-input']")
+            .Input("Use the selected project structure.");
+
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs())
+            .WaitAsync(TimeSpan.FromSeconds(2));
+        await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var selectionTask = cut.InvokeAsync(() => cut.Render(parameters => parameters
+            .Add(component => component.PreferredAgentId, agent.Id)
+            .Add(component => component.PreferredAgent, agent)
+            .Add(component => component.PreferredSessionId, selectedSession.Id)
+            .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating)));
+        await Task.Yield();
+        workspace.PostRunWorkspace.SetResult(CreateWorkspace(agent.Id, selectedSession));
+        await selectionTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(selectedSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(failedRun.ResultSummary, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("failed run was persisted", cut.Markup, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task Successful_send_does_not_apply_after_same_agent_session_aba_selection()
+    {
+        var agent = CreateAgent();
+        var executionSession = CreateSession(agent.Id);
+        var intermediateSession = CreateSession(agent.Id) with
+        {
+            Title = "Intermediate thread"
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, executionSession);
+        workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, intermediateSession));
+        workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, executionSession));
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Result = CreateRunResult(agent.Id, executionSession.Id);
+        orchestrator.SendCompletion = new TaskCompletionSource<AgentChatRunResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, executionSession);
+        cut.WaitForElement("[data-testid='chat-prompt-input']")
+            .Input("Complete after an ABA selection.");
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs());
+        await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await RerenderFocusedChatAsync(cut, agent, intermediateSession);
+        await RerenderFocusedChatAsync(cut, agent, executionSession);
+        orchestrator.SendCompletion.SetResult(orchestrator.Result);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                orchestrator.Result.AssistantMessage.Content,
+                cut.Markup,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "Prompt sent through the integrated runtime",
+                cut.Markup,
+                StringComparison.Ordinal);
+            Assert.Equal(3, workspace.WorkspaceRequestCount);
+        });
+    }
+
+    [Fact]
+    public async Task Failed_send_does_not_apply_after_same_agent_session_aba_selection()
+    {
+        var agent = CreateAgent();
+        var executionSession = CreateSession(agent.Id);
+        var intermediateSession = CreateSession(agent.Id);
+        var failedRun = CreateRunningRun(agent.Id, executionSession.Id) with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "The configured provider rejected the ABA request."
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, executionSession);
+        workspace.InitialRunDetail = new ExecutionRunDetail(failedRun, executionSession, [], []);
+        workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, intermediateSession));
+        workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, executionSession));
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        var failure = new AgentChatRunFailedException(
+            agent.Id,
+            failedRun.Id,
+            executionSession.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            failedRun.ResultSummary,
+            AgentProviderFailureCategory.ProviderError);
+        orchestrator.SendCompletion = new TaskCompletionSource<AgentChatRunResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, executionSession);
+        cut.WaitForElement("[data-testid='chat-prompt-input']")
+            .Input("Fail after an ABA selection.");
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs());
+        await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await RerenderFocusedChatAsync(cut, agent, intermediateSession);
+        await RerenderFocusedChatAsync(cut, agent, executionSession);
+        orchestrator.SendCompletion.SetException(failure);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(failure.SanitizedDisplayMessage, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(failedRun.Id, workspace.ExecutionRunDetailRequests);
+            Assert.Equal(3, workspace.WorkspaceRequestCount);
+        });
+    }
+
+    [Fact]
+    public async Task Failed_approval_does_not_apply_after_same_agent_session_aba_selection()
+    {
+        var agent = CreateAgent();
+        var executionSession = CreateSession(agent.Id);
+        var intermediateSession = CreateSession(agent.Id);
+        var waitingRun = CreateWaitingApprovalRun(agent.Id, executionSession.Id);
+        var failedRun = waitingRun with
+        {
+            State = ExecutionState.Failed,
+            Outcome = RunOutcome.Failed,
+            ResultSummary = "The configured provider rejected the ABA approval."
+        };
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, executionSession, waitingRun);
+        workspace.InitialRunDetail = new ExecutionRunDetail(waitingRun, executionSession, [], []);
+        workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, intermediateSession));
+        workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, executionSession, waitingRun));
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        var failure = new AgentChatRunFailedException(
+            agent.Id,
+            failedRun.Id,
+            executionSession.Id,
+            "OpenAI default",
+            "gpt-5.4-mini",
+            new InvalidOperationException("api_key=provider-secret"),
+            failedRun.ResultSummary,
+            AgentProviderFailureCategory.ProviderError);
+        orchestrator.ApprovalCompletion = new TaskCompletionSource<AgentChatRunResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        var cut = RenderFocusedChat(context, agent, executionSession);
+        await cut.WaitForElement("[data-testid='chat-approve-once-button']")
+            .ClickAsync(new MouseEventArgs());
+        await orchestrator.ApprovalStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await RerenderFocusedChatAsync(cut, agent, intermediateSession);
+        await RerenderFocusedChatAsync(cut, agent, executionSession);
+        var detailRequestCountBeforeCompletion = workspace.ExecutionRunDetailRequests.Count;
+        orchestrator.ApprovalCompletion.SetException(failure);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='chat-approve-once-button']").HasAttribute("disabled"));
+            Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(failure.SanitizedDisplayMessage, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+            Assert.Equal(
+                detailRequestCountBeforeCompletion,
+                workspace.ExecutionRunDetailRequests.Count);
+            Assert.Equal(3, workspace.WorkspaceRequestCount);
+        });
+    }
+
     [Fact]
     public async Task Send_releases_the_ui_event_while_the_post_run_workspace_refresh_is_pending()
     {
@@ -65,6 +561,61 @@ public sealed class AgentChatPanelResponsivenessTests
             }));
 
         cut.WaitForAssertion(() => Assert.Contains(assistantMessage.Content, cut.Markup, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Successful_send_workspace_reload_failure_hides_secret_and_does_not_restore_draft()
+    {
+        const string prompt = "successful-floating-draft-must-not-return";
+        const string secret = "floating-refresh-secret";
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var workspaceService = DispatchProxy.Create<
+            IAgentFrameworkWorkspaceService,
+            DeferredWorkspaceProxy>();
+        var workspace = (DeferredWorkspaceProxy)(object)workspaceService;
+        workspace.Service = workspaceService;
+        workspace.InitialWorkspace = CreateWorkspace(agent.Id, session);
+
+        var orchestratorService = DispatchProxy.Create<
+            IAgentChatExecutionOrchestrator,
+            CompletedRunOrchestratorProxy>();
+        var orchestrator = (CompletedRunOrchestratorProxy)(object)orchestratorService;
+        orchestrator.Result = CreateRunResult(agent.Id, session.Id);
+        var logger = new RecordingLogger<AgentChatPanel>("Agent chat operation failed.");
+
+        using var context = CreateContext(workspaceService, orchestratorService);
+        context.Services.AddSingleton<ILogger<AgentChatPanel>>(logger);
+        var cut = RenderFocusedChat(context, agent, session);
+        cut.WaitForElement("[data-testid='chat-prompt-input']").Input(prompt);
+
+        await cut.Find("[data-testid='chat-send-button']")
+            .ClickAsync(new MouseEventArgs());
+        await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        workspace.PostRunWorkspace.SetException(
+            new InvalidOperationException($"api_key={secret}"));
+
+        cut.WaitForAssertion(() =>
+        {
+            var notification = context.Services
+                .GetRequiredService<NotificationService>()
+                .Messages
+                .Last();
+            Assert.Equal("Refresh needed", notification.Summary);
+            Assert.Contains(
+                "latest thread state could not be loaded",
+                notification.Detail,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(prompt, cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(secret, notification.Detail, StringComparison.Ordinal);
+            Assert.DoesNotContain(secret, cut.Markup, StringComparison.Ordinal);
+        });
+        var log = await logger.Entry.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Null(log.Exception);
+        Assert.Contains(nameof(InvalidOperationException), log.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("api_key", log.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(secret, log.Message, StringComparison.Ordinal);
+        Assert.Contains(agent.Id.ToString(), log.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -287,6 +838,18 @@ public sealed class AgentChatPanelResponsivenessTests
             .Add(component => component.PreferredSessionId, session.Id)
             .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating));
 
+    private static Task RerenderFocusedChatAsync(
+        IRenderedComponent<AgentChatPanel> cut,
+        AgentDefinition agent,
+        ChatSessionRecord session)
+    {
+        return cut.InvokeAsync(() => cut.Render(parameters => parameters
+            .Add(component => component.PreferredAgentId, agent.Id)
+            .Add(component => component.PreferredAgent, agent)
+            .Add(component => component.PreferredSessionId, session.Id)
+            .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating)));
+    }
+
     private static AgentDefinition CreateAgent()
     {
         var now = DateTimeOffset.UtcNow;
@@ -502,11 +1065,15 @@ public sealed class AgentChatPanelResponsivenessTests
 
         public ExecutionRunDetail? InitialRunDetail { get; set; }
 
+        public List<Guid> ExecutionRunDetailRequests { get; } = [];
+
         public int WorkspaceRequestCount => Volatile.Read(ref workspaceRequestCount);
 
         public TaskCompletionSource PostRunRefreshStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource<ChatAgentWorkspaceSnapshot> PostRunWorkspace { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Queue<ChatAgentWorkspaceSnapshot> WorkspaceResponses { get; } = [];
 
         public TaskCompletionSource SendStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -524,8 +1091,7 @@ public sealed class AgentChatPanelResponsivenessTests
                 nameof(IAgentFrameworkWorkspaceService.SendMessageAsync) => SendMessage(args!),
                 nameof(IAgentFrameworkWorkspaceActivityExecutionService.SendMessageWithinOperationAsync) =>
                     SendMessageWithinOperationAsync(args!),
-                nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) => Task.FromResult(
-                    InitialRunDetail ?? throw new InvalidOperationException("No initial execution detail was configured.")),
+                nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) => GetExecutionRunDetail(args!),
                 _ => throw new InvalidOperationException(
                     $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
             };
@@ -533,6 +1099,13 @@ public sealed class AgentChatPanelResponsivenessTests
 
         public void RaiseExecutionUpdated(ExecutionLogEntry entry)
             => executionUpdated?.Invoke(Service, entry);
+
+        private Task<ExecutionRunDetail> GetExecutionRunDetail(object?[] args)
+        {
+            ExecutionRunDetailRequests.Add(Assert.IsType<Guid>(args[0]));
+            return Task.FromResult(
+                InitialRunDetail ?? throw new InvalidOperationException("No initial execution detail was configured."));
+        }
 
         private object? AddExecutionUpdated(EventHandler<ExecutionLogEntry> handler)
         {
@@ -554,6 +1127,11 @@ public sealed class AgentChatPanelResponsivenessTests
             }
 
             PostRunRefreshStarted.TrySetResult();
+            if (WorkspaceResponses.TryDequeue(out var response))
+            {
+                return Task.FromResult(response);
+            }
+
             return PostRunWorkspace.Task;
         }
 
@@ -655,6 +1233,12 @@ public sealed class AgentChatPanelResponsivenessTests
     {
         public AgentChatRunResult Result { get; set; } = default!;
 
+        public Exception? Failure { get; set; }
+
+        public TaskCompletionSource<AgentChatRunResult>? SendCompletion { get; set; }
+
+        public TaskCompletionSource<AgentChatRunResult>? ApprovalCompletion { get; set; }
+
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource ApprovalStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -669,7 +1253,10 @@ public sealed class AgentChatPanelResponsivenessTests
                 LastStreamId = CreateActivityStreamId();
                 return new AgentChatOperationHandle(
                     LastStreamId,
-                    Task.FromResult(Result));
+                    SendCompletion?.Task ??
+                    (Failure is null
+                        ? Task.FromResult(Result)
+                        : Task.FromException<AgentChatRunResult>(Failure)));
             }
 
             if (targetMethod?.Name == nameof(IAgentChatExecutionOrchestrator.StartApprovalContinuation))
@@ -678,7 +1265,10 @@ public sealed class AgentChatPanelResponsivenessTests
                 LastStreamId = CreateActivityStreamId();
                 return new AgentChatOperationHandle(
                     LastStreamId,
-                    Task.FromResult(Result));
+                    ApprovalCompletion?.Task ??
+                    (Failure is null
+                        ? Task.FromResult(Result)
+                        : Task.FromException<AgentChatRunResult>(Failure)));
             }
 
             throw new InvalidOperationException(
@@ -720,5 +1310,48 @@ public sealed class AgentChatPanelResponsivenessTests
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
             => throw new InvalidOperationException(
                 $"Service member '{targetMethod?.Name}' was not expected in this component test.");
+    }
+
+    private sealed class RecordingLogger<T>(string messagePrefix) : ILogger<T>
+    {
+        public TaskCompletionSource<CapturedLog> Entry { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public IDisposable BeginScope<TState>(TState state)
+            where TState : notnull
+        {
+            return NullScope.Instance;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            if (logLevel >= LogLevel.Warning &&
+                message.StartsWith(messagePrefix, StringComparison.Ordinal))
+            {
+                Entry.TrySetResult(new CapturedLog(message, exception));
+            }
+        }
+    }
+
+    private sealed record CapturedLog(string Message, Exception? Exception);
+
+    private sealed class NullScope : IDisposable
+    {
+        public static NullScope Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
     }
 }

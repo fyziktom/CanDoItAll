@@ -672,6 +672,13 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var createCounter = harness.Context.Services.GetRequiredService<DbContextCreateCounter>();
+        var runtimeProjectPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "CanDoItAll.Tests.Components.csproj"));
+        Assert.True(File.Exists(runtimeProjectPath), $"Runtime fixture project was not found at '{runtimeProjectPath}'.");
 
         var projectId = await CreateProjectAsync(projectsService, "Runtime edit patch");
         var runtimeNode = await workbenchService.CreateObjectAsync(
@@ -693,7 +700,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                     Environment = new ProjectEnvironmentMetadata
                     {
                         EnvironmentKind = ProjectEnvironmentKind.DotNetWatch,
-                        ProjectPath = @"C:\repos\api\Api.csproj",
+                        ProjectPath = runtimeProjectPath,
                         LaunchProfileName = "https",
                         RuntimeProtocol = ProjectRuntimeProtocol.Https,
                         LocalhostUrl = "https://localhost:7143"
@@ -725,7 +732,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 null,
                 [
                     new CanvasWorkbenchInputValue { Key = "environmentKind", Value = "dotNetWatch" },
-                    new CanvasWorkbenchInputValue { Key = "projectPath", Value = @"C:\repos\api\Updated\Api.csproj" },
+                    new CanvasWorkbenchInputValue { Key = "projectPath", Value = runtimeProjectPath },
                     new CanvasWorkbenchInputValue { Key = "launchProfileName", Value = "staging" },
                     new CanvasWorkbenchInputValue { Key = "runtimeProtocol", Value = "http" },
                     new CanvasWorkbenchInputValue { Key = "localhostUrl", Value = "http://localhost:5099" }
@@ -1539,7 +1546,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         });
 
         createCounter.Reset();
-        cut.Find("[data-testid='project-structure-signals-action-marker-question']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='project-structure-signals-action-marker-question']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -1551,7 +1559,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.Find("[data-testid='project-structure-signals-action-marker-risk']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='project-structure-signals-action-marker-risk']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -2012,7 +2021,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Name = name,
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            ApiKeyEnvironmentVariable = $"secret:{Guid.NewGuid():D}",
             DefaultModel = "gpt-image-1-mini",
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.ImageGeneration,

@@ -164,7 +164,8 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             "PlanHash",
             "Status",
             "UpdatedAtUtc",
-            "ConcurrencyToken")
+            "ConcurrencyToken",
+            "BlockedRecoveryActionsJson")
         SELECT
             ('10000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
             ('10000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
@@ -172,7 +173,8 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             'plan-' || run.value,
             CASE WHEN run.value = 5 THEN 'Active' ELSE 'Completed' END,
             now() - make_interval(secs => run.value),
-            ('30000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid
+            ('30000000-0000-0000-0000-' || lpad(run.value::text, 12, '0'))::uuid,
+            '[]'
         FROM generate_series(1, 200) AS run(value);
 
         INSERT INTO "process_runtime_steps" (
@@ -184,6 +186,10 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             "AttemptNumber",
             "DependencyStepIds",
             "RequiredArtifactSlotIds",
+            "ProducedArtifactSlotIds",
+            "RequiredRuntimeToolNamesJson",
+            "ArtifactDescriptorsJson",
+            "SubprocessArtifactMappingsJson",
             "ActiveClaimToken",
             "CompletedResultKey")
         SELECT
@@ -198,6 +204,10 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             END,
             true,
             step.value,
+            '',
+            '',
+            '',
+            '[]',
             '[]',
             '[]',
             NULL,

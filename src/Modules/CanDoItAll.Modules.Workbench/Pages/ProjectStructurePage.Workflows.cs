@@ -2,6 +2,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -30,6 +31,9 @@ public partial class ProjectStructurePage
     private ProjectStructureNode? mermaidPreviewNode;
     private string? workflowFeedback;
     private string workflowFeedbackTone = "neutral";
+    private readonly List<ProjectStructureDeletionRecovery> pendingDeletionRecoveries = [];
+    private readonly List<ProjectStructureDeletionCompletionNotice> deletionCompletionNotices = [];
+    private bool isRetryingDeletionCleanup;
 
     private bool CanOpenSelectedSummary
         => selectedNode is not null &&
@@ -220,27 +224,72 @@ public partial class ProjectStructurePage
         string failureMessage)
     {
         var deletedAny = false;
+        var failedAny = false;
+        var deletionWarnings = new List<ProjectStructureDeletionWarning>();
         foreach (var requestedNode in targetNodes)
         {
-            var targetNode = ResolveNode(requestedNode.Id) ?? requestedNode;
-            var deletedCount = await ProjectWorkbenchService.DeleteObjectAsync(ProjectId, targetNode.Id);
-            if (deletedCount > 0)
+            try
             {
-                deletedAny = true;
-                continue;
-            }
+                var targetNode = ResolveNode(requestedNode.Id) ?? requestedNode;
+                var deletion = await ProjectWorkbenchService.DeleteObjectDetailedAsync(
+                    ProjectId,
+                    targetNode.Id);
+                deletionWarnings.AddRange(deletion.DeletionWarnings);
+                if (deletion.DeletedNodeCount > 0)
+                {
+                    deletedAny = true;
+                    continue;
+                }
 
-            if (await TryDetachProjectedNodeAsync(targetNode))
+                if (await TryDetachProjectedNodeAsync(targetNode))
+                {
+                    deletedAny = true;
+                }
+            }
+            catch (ProjectStructureDeletionPartialCommitException exception)
             {
                 deletedAny = true;
+                failedAny = true;
+                AddOrReplacePendingDeletionRecovery(exception.Recovery);
             }
+            catch (Exception exception)
+            {
+                failedAny = true;
+                Logger.LogWarning(
+                    "Project structure deletion failed before durable completion. ProjectId={ProjectId} RootNodeId={RootNodeId} FailureType={FailureType}.",
+                    ProjectId,
+                    requestedNode.Id,
+                    exception.GetType().Name);
+            }
+        }
+
+        if (failedAny)
+        {
+            await ReloadSurfaceAsync();
+            workflowFeedback = pendingDeletionRecoveries.Count > 0
+                ? AppendDeletionWarningFeedback(
+                    $"{pendingDeletionRecoveries.Count} deleted branch cleanup operation(s) remain pending. Retry cleanup to finish managed-storage and assignment reconciliation.",
+                    deletionWarnings)
+                : "One or more selected branches could not be deleted. No unsafe cleanup was attempted.";
+            workflowFeedbackTone = "warn";
+            return false;
         }
 
         if (deletedAny)
         {
             await ReloadSurfaceAsync();
-            workflowFeedback = successMessage;
-            workflowFeedbackTone = "mint";
+            if (pendingDeletionRecoveries.Count > 0)
+            {
+                workflowFeedback =
+                    $"The selected branch deletion completed, but {pendingDeletionRecoveries.Count} earlier cleanup operation(s) remain pending.";
+                workflowFeedbackTone = "warn";
+                return false;
+            }
+
+            workflowFeedback = AppendDeletionWarningFeedback(
+                successMessage,
+                deletionWarnings);
+            workflowFeedbackTone = deletionWarnings.Count > 0 ? "warn" : "mint";
             return true;
         }
 
@@ -248,6 +297,93 @@ public partial class ProjectStructurePage
         workflowFeedbackTone = "warn";
         await InvokeAsync(StateHasChanged);
         return false;
+    }
+
+    private async Task RetryPendingDeletionCleanupAsync()
+    {
+        if (pendingDeletionRecoveries.Count == 0 || isRetryingDeletionCleanup)
+        {
+            return;
+        }
+
+        isRetryingDeletionCleanup = true;
+        var pending = pendingDeletionRecoveries.ToArray();
+        pendingDeletionRecoveries.Clear();
+        var deletionWarnings = new List<ProjectStructureDeletionWarning>();
+        try
+        {
+            foreach (var recovery in pending)
+            {
+                try
+                {
+                    var deletion = await ProjectWorkbenchService.RetryDeletionCleanupDetailedAsync(
+                        recovery.ProjectId,
+                        recovery.RootNodeId,
+                        recovery.DurableMutationId,
+                        deferredCompletionCts.Token);
+                    deletionWarnings.AddRange(deletion.DeletionWarnings);
+                }
+                catch (ProjectStructureDeletionPartialCommitException exception)
+                {
+                    AddOrReplacePendingDeletionRecovery(exception.Recovery);
+                }
+                catch (Exception exception)
+                {
+                    AddOrReplacePendingDeletionRecovery(recovery);
+                    Logger.LogWarning(
+                        "Project structure durable deletion retry failed. ProjectId={ProjectId} MutationId={MutationId} FailureType={FailureType}.",
+                        recovery.ProjectId,
+                        recovery.DurableMutationId,
+                        exception.GetType().Name);
+                }
+            }
+
+            await ReloadSurfaceAsync();
+            if (pendingDeletionRecoveries.Count == 0)
+            {
+                workflowFeedback = AppendDeletionWarningFeedback(
+                    "Deleted branch cleanup completed.",
+                    deletionWarnings);
+                workflowFeedbackTone = deletionWarnings.Count > 0 ? "warn" : "mint";
+            }
+            else
+            {
+                workflowFeedback =
+                    $"{pendingDeletionRecoveries.Count} deleted branch cleanup operation(s) are still pending. Retry cleanup again after resolving the storage or assignment failure.";
+                workflowFeedbackTone = "warn";
+            }
+        }
+        finally
+        {
+            isRetryingDeletionCleanup = false;
+        }
+    }
+
+    private static string AppendDeletionWarningFeedback(
+        string message,
+        IReadOnlyCollection<ProjectStructureDeletionWarning> warnings)
+    {
+        if (warnings.Count == 0)
+        {
+            return message;
+        }
+
+        return $"{message} {string.Join(" ", warnings.Select(warning => $"{warning.Message} {warning.Remediation}"))}";
+    }
+
+    private static string BuildDeletionCompletionNoticeFeedback(
+        IReadOnlyCollection<ProjectStructureDeletionCompletionNotice> notices)
+    {
+        return string.Join(" ", notices.SelectMany(notice => notice.Warnings.Select(warning =>
+            $"Completed deletion {notice.DurableMutationId:D} for {notice.RootNodeId} retained {warning.RetainedObject.Provider} object {warning.RetainedObject.Locator} on storage {warning.RetainedObject.StorageId?.ToString("D") ?? "bootstrap"}: {warning.RetainedObject.Reason} {warning.Remediation}")));
+    }
+
+    private void AddOrReplacePendingDeletionRecovery(
+        ProjectStructureDeletionRecovery recovery)
+    {
+        pendingDeletionRecoveries.RemoveAll(item =>
+            item.DurableMutationId == recovery.DurableMutationId);
+        pendingDeletionRecoveries.Add(recovery);
     }
 
     private IReadOnlyList<ProjectStructureNode> ResolveDeleteTargetNodes(IReadOnlyCollection<string> nodeIds)

@@ -6,6 +6,8 @@ namespace CanDoItAll.Infrastructure.Search;
 
 public sealed class SearchDocument
 {
+    public const string ProjectSourceType = "project";
+
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public string SourceType { get; set; } = string.Empty;

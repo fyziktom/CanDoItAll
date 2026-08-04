@@ -98,7 +98,17 @@ public sealed class FtpWebStorageTransport : IFtpStorageTransport
             password,
             remotePath,
             WebRequestMethods.Ftp.DeleteFile);
-        using FtpWebResponse response = await FtpWebRequestFactory.GetResponseAsync(request, cancellationToken);
+        try
+        {
+            using FtpWebResponse response = await FtpWebRequestFactory.GetResponseAsync(
+                request,
+                cancellationToken);
+        }
+        catch (WebException exception) when (
+            FtpWebRequestFactory.IsFileNotFound(exception))
+        {
+            exception.Response?.Dispose();
+        }
     }
 
     public async Task<RemoteBrowseTransportPage> BrowseAsync(

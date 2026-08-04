@@ -49,6 +49,9 @@ public sealed class WorkspaceBackedProviderProfileRegistry(
         ProviderProfileEditorModel model,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var validatedProfile = providerProfileService.CreateProfile(model);
         Guid providerId = Guid.Empty;
         await store.UpdateCatalogAsync(catalog =>
         {
@@ -56,7 +59,9 @@ public sealed class WorkspaceBackedProviderProfileRegistry(
                 ? catalog.Providers.FirstOrDefault(item => item.Id == model.Id.Value)
                 : null;
 
-            var provider = providerProfileService.CreateProfile(model, current);
+            var provider = current is null
+                ? validatedProfile
+                : providerProfileService.CreateProfile(model, current);
             providerId = provider.Id;
             EnsureUniqueProviderIdentity(catalog.Providers, provider);
 
@@ -100,7 +105,16 @@ public sealed class WorkspaceBackedProviderProfileRegistry(
         {
             var currentProvider = catalog.Providers.FirstOrDefault(item => item.Id == providerId)
                 ?? throw new InvalidOperationException("Provider profile was not found.");
-            updatedProvider = update(currentProvider);
+            var candidate = update(currentProvider);
+            if (candidate.Id != providerId)
+            {
+                throw new ProviderProfileValidationException(
+                    "Provider updates cannot change the provider id.");
+            }
+
+            _ = providerProfileService.CreateProfile(
+                ProviderProfileEditorModel.FromDefinition(candidate));
+            updatedProvider = providerProfileService.NormalizeImportedProfile(candidate);
             EnsureUniqueProviderIdentity(catalog.Providers, updatedProvider);
 
             return catalog with

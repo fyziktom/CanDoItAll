@@ -120,7 +120,7 @@ public sealed class AgentContextContributionTests
     [Fact]
     public async Task Maf_runtime_attaches_enabled_contributors_in_deterministic_order()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("late", 20, _ => AgentContextContributionResult.Skipped()));
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("disabled", 0, _ => AgentContextContributionResult.Skipped(), enabled: false));
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("early", 10, _ => AgentContextContributionResult.Skipped()));
@@ -165,7 +165,7 @@ public sealed class AgentContextContributionTests
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
-            new ServiceCollection().BuildServiceProvider());
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
         var agent = CreateAgent();
         var legacyMemory = new AgentMemoryRecord(
             Guid.NewGuid(),
@@ -200,7 +200,7 @@ public sealed class AgentContextContributionTests
     {
         var projectId = Guid.Parse("29fbb9a8-8422-4b8b-89ed-9d515103b801");
         WorkspaceScopeDescriptor? capturedScope = null;
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor(
             "scope.capture",
             10,
@@ -233,7 +233,7 @@ public sealed class AgentContextContributionTests
     [Fact]
     public async Task Maf_runtime_rejects_duplicate_contributor_ids()
     {
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("duplicate", 10, _ => AgentContextContributionResult.Skipped()));
         services.AddSingleton<IAgentContextContributor>(new TestContextContributor("duplicate", 20, _ => AgentContextContributionResult.Skipped()));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());

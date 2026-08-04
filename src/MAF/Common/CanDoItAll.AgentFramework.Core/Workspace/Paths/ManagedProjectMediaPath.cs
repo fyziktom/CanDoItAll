@@ -4,6 +4,7 @@ public static class ManagedProjectMediaPath
 {
     public const string FilesRoot = "managed-files/project-media/files";
     public const string ImagesRoot = "managed-files/project-media/images";
+    public const string VideosRoot = "managed-files/project-media/videos";
     public const string RelativeRoot = "managed-files/project-media";
 
     public static IReadOnlyList<string> ResolveProjectSegments(string projectKey)
@@ -57,7 +58,8 @@ public static class ManagedProjectMediaPath
             string.Equals(segments[0], "managed-files", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(segments[1], "project-media", StringComparison.OrdinalIgnoreCase) &&
             (string.Equals(segments[2], "files", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(segments[2], "images", StringComparison.OrdinalIgnoreCase)))
+             string.Equals(segments[2], "images", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(segments[2], "videos", StringComparison.OrdinalIgnoreCase)))
         {
             projectSegment = segments[3];
             return true;

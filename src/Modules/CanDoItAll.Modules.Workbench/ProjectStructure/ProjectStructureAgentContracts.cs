@@ -385,12 +385,33 @@ public sealed record ProjectStructureNodeReparentInput(
     string? ParentNodeKey,
     string? LeaseToken = null);
 
+public sealed record ProjectStructureNodesCopyInput(
+    IReadOnlyList<string> SourceNodeIds,
+    string DestinationParentNodeId,
+    string? LeaseToken = null);
+
+public sealed record ProjectStructureNodeCopyMapping(
+    string SourceNodeId,
+    string CopiedNodeId);
+
+public sealed record ProjectStructureNodesCopyResult(
+    Guid ProjectId,
+    string DestinationParentNodeId,
+    IReadOnlyList<string> SourceRootNodeIds,
+    IReadOnlyList<string> CopiedRootNodeIds,
+    IReadOnlyList<ProjectStructureNodeCopyMapping> NodeMappings,
+    IReadOnlyList<ProjectStructureCopyOmittedLink> OmittedBoundaryLinks)
+{
+    public int CopiedNodeCount => NodeMappings.Count;
+}
+
 public sealed record ProjectStructureNodeParentInput(
     string? ParentNodeKey,
     string? LeaseToken = null);
 
 public sealed record ProjectStructureNodeDeleteInput(
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    Guid? DurableMutationId = null);
 
 public sealed record ProjectStructureNodeDeleteBatchInput(
     IReadOnlyList<string> NodeIds,
@@ -589,7 +610,8 @@ public sealed record ProjectStructureNodeCommandInput(
 
 public sealed record ProjectStructureSubtreeTransferInput(
     Guid TargetProjectId,
-    string? LeaseToken = null);
+    string? LeaseToken = null,
+    string? TargetLeaseToken = null);
 
 public sealed record ProjectStructureNodesToSubprojectInput(
     string Name,
@@ -607,9 +629,13 @@ public sealed record ProjectStructureNodesToSubprojectResult(
     string TargetProjectName,
     IReadOnlyList<string> RequestedNodeIds,
     IReadOnlyList<string> MovedNodeIds,
-    int MovedNodeCount,
     int MovedRootCount,
-    IReadOnlyList<string> Warnings);
+    int MovedLinkCount,
+    IReadOnlyList<ProjectStructureBoundaryLinkRemoval> RemovedBoundaryLinks,
+    IReadOnlyList<string> Warnings)
+{
+    public int MovedNodeCount => MovedNodeIds.Count;
+}
 
 public sealed record ProjectStructureAssetCreateInput(
     ProjectObjectType ObjectType,
@@ -632,7 +658,7 @@ public sealed record ProjectStructureAgentAssetCreateInput(
     string Subtitle,
     string Notes,
     ProjectObjectMediaPayload? Media,
-    string? ParentNodeKey = null,
+    [property: JsonRequired] string? ParentNodeKey = null,
     string? ObjectSubtype = null,
     string? LeaseToken = null,
     string? SourceWorkspacePath = null,
@@ -682,7 +708,7 @@ public sealed record ProjectStructureAssetDescriptor(
     string MediaOriginalFileName,
     string MetadataJson,
     bool IsReadonly,
-    string RevisionParentNodeId);
+    string? RevisionParentNodeId);
 
 public sealed record ProjectStructureAssetContentDescriptor(
     ProjectStructureAssetDescriptor Asset,
@@ -976,14 +1002,15 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
     {
     }
 
-    private ProjectStructureAgentException(
+    protected ProjectStructureAgentException(
         int statusCode,
         string errorCode,
         string message,
         object? details,
         bool isSafeToExpose,
-        bool canRetryWithCorrectedInput)
-        : base(message)
+        bool canRetryWithCorrectedInput,
+        Exception? innerException = null)
+        : base(message, innerException)
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;
@@ -1008,6 +1035,25 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
             canRetryWithCorrectedInput);
     }
 
+    internal static ProjectStructureAgentException CreateMapped(
+        int statusCode,
+        string errorCode,
+        string message,
+        object? details,
+        bool isSafeToExpose,
+        bool canRetryWithCorrectedInput,
+        Exception innerException)
+    {
+        return new ProjectStructureAgentException(
+            statusCode,
+            errorCode,
+            message,
+            details,
+            isSafeToExpose,
+            canRetryWithCorrectedInput,
+            innerException);
+    }
+
     public int StatusCode { get; }
 
     public string ErrorCode { get; }
@@ -1020,9 +1066,6 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
 
     public bool CanRetryWithCorrectedInput => canRetryWithCorrectedInput;
 }
-
-public sealed class ProjectStructureProjectCreationRejectedException(string message, object? details = null)
-    : ProjectStructureAgentException(400, "ProjectCreationRejected", message, details);
 
 public sealed class ProjectStructureLeaseConflictException : ProjectStructureAgentException
 {

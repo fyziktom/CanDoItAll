@@ -2,7 +2,9 @@ using System.IO.Compression;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -296,21 +298,6 @@ public sealed class DatabaseTransferIntegrationTests
         var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
         await bootstrapper.EnsureProfileReadyAsync(targetProfile);
 
-        await using (var targetContext = await profileFactory.CreateDbContextForProfileAsync(targetProfile))
-        {
-            targetContext.Set<Project>().Add(new Project
-            {
-                Name = "Target-only Project",
-                Slug = "target-only-project",
-                Description = "Should be replaced",
-                Objective = "Should be replaced",
-                CurrentPhase = "Legacy",
-                CreatedAtUtc = DateTimeOffset.UtcNow,
-                UpdatedAtUtc = DateTimeOffset.UtcNow
-            });
-            await targetContext.SaveChangesAsync();
-        }
-
         DatabaseTransferResult transferResult;
         await using (var transferScope = provider.CreateAsyncScope())
         {
@@ -320,7 +307,7 @@ public sealed class DatabaseTransferIntegrationTests
             var projectPreview = Assert.Single(previews, item => item.Descriptor.Key == "projects");
             Assert.True(projectPreview.IsAvailable);
             Assert.True(projectPreview.SourceRecordCount >= 6);
-            Assert.True(projectPreview.TargetRecordCount >= 1);
+            Assert.Equal(0, projectPreview.TargetRecordCount);
 
             transferResult = await transferService.TransferAsync(new DatabaseTransferRequest
             {
@@ -340,8 +327,6 @@ public sealed class DatabaseTransferIntegrationTests
             var projects = await targetContext.Set<Project>().ToListAsync();
             var transferredProject = Assert.Single(projects, item => item.Id == sourceProjectId);
             Assert.Equal(sourceProjectName, transferredProject.Name);
-            Assert.DoesNotContain(projects, item => item.Name == "Target-only Project");
-
             Assert.True(await targetContext.Set<ProjectPhase>().AnyAsync(item => item.ProjectId == sourceProjectId && item.Name == "Discovery"));
             Assert.True(await targetContext.Set<ProjectOptionSelection>().AnyAsync(item => item.ProjectId == sourceProjectId && item.OptionName == "C#"));
 
@@ -419,8 +404,23 @@ public sealed class DatabaseTransferIntegrationTests
                 ]);
         }
 
-        var mediaRelativePath = $"managed-files/project-packages/{sourceProjectId:N}/alpha.txt";
         var mediaContent = "project package media";
+        SavedMediaDescriptor savedMedia;
+        await using (var mediaScope = provider.CreateAsyncScope())
+        {
+            savedMedia = (await mediaScope.ServiceProvider
+                .GetRequiredService<ProjectAssetStorageService>()
+                .SaveAsync(
+                    sourceProjectId,
+                    ProjectObjectType.Note,
+                    string.Empty,
+                    new ProjectObjectMediaPayload(
+                        "alpha.txt",
+                        "text/plain",
+                        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(mediaContent)))))!;
+        }
+
+        var mediaRelativePath = savedMedia.RelativePath;
         await using (var sourceContext = await profileFactory.CreateDbContextForProfileAsync(sourceProfile))
         {
             var seededNode = await sourceContext.Set<ProjectObjectRecord>()
@@ -429,17 +429,13 @@ public sealed class DatabaseTransferIntegrationTests
 
             var binding = await sourceContext.Set<ProjectNodeBindingRecord>()
                 .SingleAsync(item => item.ProjectObjectId == seededNode.Id);
-            binding.MediaRelativePath = mediaRelativePath;
-            binding.MediaContentType = "text/plain";
-            binding.MediaOriginalFileName = "alpha.txt";
+            binding.MediaRelativePath = savedMedia.RelativePath;
+            binding.Route = savedMedia.Route;
+            binding.MediaContentType = savedMedia.ContentType;
+            binding.MediaOriginalFileName = savedMedia.OriginalFileName;
+            binding.StorageObjectReferenceJson = savedMedia.StorageObjectReferenceJson;
             await sourceContext.SaveChangesAsync();
         }
-
-        var sourceMediaPath = Path.Combine(
-            sourceProfile.Profile.Storage.WorkspaceRoot,
-            mediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
-        Directory.CreateDirectory(Path.GetDirectoryName(sourceMediaPath)!);
-        await File.WriteAllTextAsync(sourceMediaPath, mediaContent);
 
         var targetTestProfile = testEnvironment.CreatePostgreSqlProfile("project-package-target");
         var targetSaveResult = await profileService.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
@@ -472,7 +468,7 @@ public sealed class DatabaseTransferIntegrationTests
             {
                 Assert.Contains(archive.Entries, entry => entry.FullName == "manifest.json");
                 Assert.Contains(archive.Entries, entry => entry.FullName == "tables/projects.json");
-                Assert.Contains(archive.Entries, entry => entry.FullName == $"storage/{mediaRelativePath}");
+                Assert.Contains(archive.Entries, entry => entry.FullName == "storage/00000000.payload");
             }
 
             var manifestResult = await packageService.ReadManifestAsync(exportResult.PackagePath);
@@ -503,7 +499,17 @@ public sealed class DatabaseTransferIntegrationTests
                 .SingleAsync(item => item.ProjectId == sourceProjectId && item.NodeKey == sourceNodeKey);
             var transferredBinding = await targetContext.Set<ProjectNodeBindingRecord>()
                 .SingleAsync(item => item.ProjectObjectId == transferredNode.Id);
-            Assert.Equal(mediaRelativePath, transferredBinding.MediaRelativePath);
+            Assert.NotEqual(mediaRelativePath, transferredBinding.MediaRelativePath);
+            Assert.StartsWith(
+                $"managed-files/project-media/imports/{exportResult.Manifest.PackageId:N}/",
+                transferredBinding.MediaRelativePath,
+                StringComparison.Ordinal);
+            Assert.True(StorageJson.TryParseReference(
+                transferredBinding.StorageObjectReferenceJson,
+                out var importedReference));
+            Assert.NotNull(importedReference);
+            Assert.True(ProjectManagedStorageProvenancePolicy.HasManagedMarker(importedReference!));
+            mediaRelativePath = transferredBinding.MediaRelativePath;
         }
 
         var targetMediaPath = Path.Combine(
@@ -511,6 +517,97 @@ public sealed class DatabaseTransferIntegrationTests
             mediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(targetMediaPath));
         Assert.Equal(mediaContent, await File.ReadAllTextAsync(targetMediaPath));
+    }
+
+    [Fact]
+    public async Task Project_import_lock_blocks_concurrent_participant_write_and_final_recheck_detects_it()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create(
+            "integration-project-import-lock");
+        await using var provider =
+            DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(
+                testEnvironment,
+                new Dictionary<string, string?>
+                {
+                    ["SecretVault:Provider"] = "InMemory"
+                });
+        var profileService = provider.GetRequiredService<IDatabaseProfileService>();
+        var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
+        var bootstrapper = provider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var profileFactory = provider.GetRequiredService<IProfileAppDbContextFactory>();
+        var targetTestProfile = testEnvironment.CreatePostgreSqlProfile(
+            "project-import-lock-target");
+        var targetSaveResult = await profileService.SaveAsync(
+            TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(
+                targetTestProfile,
+                "PostgreSQL project import lock target"));
+        Assert.True(targetSaveResult.IsSuccess, DescribeErrors(targetSaveResult.Errors));
+        var targetProfile = runtimeAccessor.ResolveProfile(targetSaveResult.Value);
+        await bootstrapper.EnsureProfileReadyAsync(targetProfile);
+
+        await using var guardScope = provider.CreateAsyncScope();
+        var guard = guardScope.ServiceProvider
+            .GetRequiredService<ProjectTransferTargetStateGuard>();
+        await using var lockingContext =
+            await profileFactory.CreateDbContextForProfileAsync(targetProfile);
+        await using var transaction = await lockingContext.Database.BeginTransactionAsync();
+        await guard.AcquireExclusiveImportLocksAsync(
+            lockingContext,
+            CancellationToken.None);
+
+        var insertStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var planId = Guid.NewGuid();
+        var insertTask = InsertSchedulerPlanAsync();
+        await insertStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            var firstCompletion = await Task.WhenAny(
+                insertTask,
+                Task.Delay(TimeSpan.FromMilliseconds(500)));
+            Assert.NotSame(insertTask, firstCompletion);
+        }
+        finally
+        {
+            await transaction.CommitAsync();
+        }
+
+        await insertTask.WaitAsync(TimeSpan.FromSeconds(10));
+        await using var recheckContext =
+            await profileFactory.CreateDbContextForProfileAsync(targetProfile);
+        var residues = await guard.FindResiduesAsync(
+            recheckContext,
+            CancellationToken.None);
+
+        Assert.Contains(
+            residues,
+            residue => residue.Area ==
+                ProjectTransferTargetStateArea.SchedulerPlanner);
+
+        async Task InsertSchedulerPlanAsync()
+        {
+            await using var insertingContext =
+                await profileFactory.CreateDbContextForProfileAsync(targetProfile);
+            insertingContext.Set<SchedulerPlan>().Add(new SchedulerPlan
+            {
+                Id = planId,
+                Name = "Concurrent project plan",
+                Description = "Must wait for the import exclusion lock",
+                TargetKind = SchedulerPlanTargetKind.Workflow,
+                TargetId = Guid.NewGuid(),
+                TargetNameSnapshot = "Project workflow",
+                CronExpression = "0 * * * * ?",
+                CronDescription = "Every minute",
+                InputJson = $"{{\"projectId\":\"{Guid.NewGuid():D}\"}}",
+                SchedulerTriggerId = Guid.NewGuid(),
+                SchedulerTriggerKey = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+            insertStarted.TrySetResult();
+            await insertingContext.SaveChangesAsync();
+        }
     }
 
     private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)

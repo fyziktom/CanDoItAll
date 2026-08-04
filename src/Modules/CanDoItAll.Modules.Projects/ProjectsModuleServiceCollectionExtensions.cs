@@ -1,4 +1,5 @@
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -25,10 +26,12 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddScoped<IProjectFileScopeProvider, ProjectFileScopeProvider>();
         services.AddScoped<IProjectFilesPilotCoordinator, ProjectFilesPilotCoordinator>();
         services.AddScoped<IProjectFilePortfolioCoordinator, ProjectFilePortfolioCoordinator>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            ProjectsProjectTransferTargetStateParticipant>());
         return services;
     }
 }
 
 public static class ProjectsModuleAssemblyMarker;
-
 

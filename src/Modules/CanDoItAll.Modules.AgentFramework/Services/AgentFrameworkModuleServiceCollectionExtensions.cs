@@ -14,10 +14,12 @@ using CanDoItAll.AgentFramework.Tools;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
@@ -36,6 +38,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            AgentFrameworkProjectTransferTargetStateParticipant>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectDeletionParticipant,
+            AgentProjectStructureAccessDeletionParticipant>());
         ArgumentNullException.ThrowIfNull(configuration);
         var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],

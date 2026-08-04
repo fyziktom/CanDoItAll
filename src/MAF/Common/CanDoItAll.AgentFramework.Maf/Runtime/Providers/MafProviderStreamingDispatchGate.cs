@@ -11,6 +11,27 @@ internal interface IMafProviderStreamingDispatchGate
         CancellationToken cancellationToken = default);
 }
 
+internal sealed class NoOpMafProviderStreamingDispatchGate : IMafProviderStreamingDispatchGate
+{
+    public static NoOpMafProviderStreamingDispatchGate Instance { get; } = new();
+
+    public ValueTask<IAsyncDisposable> EnterAsync(
+        ProviderProfile provider,
+        string model,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult<IAsyncDisposable>(NoOpAsyncDisposable.Instance);
+    }
+
+    private sealed class NoOpAsyncDisposable : IAsyncDisposable
+    {
+        public static NoOpAsyncDisposable Instance { get; } = new();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+}
+
 internal sealed class MafProviderStreamingDispatchGate(IProviderDispatchLaneGate dispatchLaneGate)
     : IMafProviderStreamingDispatchGate
 {

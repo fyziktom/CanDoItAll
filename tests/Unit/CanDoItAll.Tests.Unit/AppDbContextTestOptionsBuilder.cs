@@ -8,7 +8,12 @@ internal static class AppDbContextTestOptionsBuilder
     public static DbContextOptionsBuilder<AppDbContext> Create()
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(optionsBuilder);
+        ConfigureModelCacheKey(optionsBuilder);
         return optionsBuilder;
+    }
+
+    public static void ConfigureModelCacheKey(DbContextOptionsBuilder optionsBuilder)
+    {
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(optionsBuilder);
     }
 }

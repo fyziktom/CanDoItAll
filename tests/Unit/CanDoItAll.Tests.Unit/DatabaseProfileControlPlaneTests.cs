@@ -1,8 +1,11 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json;
 using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
@@ -523,7 +526,9 @@ internal static class DatabaseProfileControlPlaneTestHost
     public static ServiceProvider BuildServiceProvider(
         CanDoItAllTestEnvironment testEnvironment,
         bool includeDatabaseOverride,
-        IReadOnlyDictionary<string, string?>? additionalValues = null)
+        IReadOnlyDictionary<string, string?>? additionalValues = null,
+        IDataProtectionProvider? dataProtectionProvider = null,
+        ISecretVault? secretVault = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(CreateConfigurationValues(testEnvironment, includeDatabaseOverride, additionalValues))
@@ -534,6 +539,17 @@ internal static class DatabaseProfileControlPlaneTestHost
             services,
             configuration,
             testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Unit"));
+        if (dataProtectionProvider is not null)
+        {
+            services.RemoveAll<IDataProtectionProvider>();
+            services.AddSingleton(dataProtectionProvider);
+        }
+
+        if (secretVault is not null)
+        {
+            services.RemoveAll<ISecretVault>();
+            services.AddSingleton(secretVault);
+        }
 
         return services.BuildServiceProvider(new ServiceProviderOptions
         {

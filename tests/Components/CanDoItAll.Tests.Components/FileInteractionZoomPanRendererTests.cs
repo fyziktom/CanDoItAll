@@ -4,6 +4,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -64,6 +65,133 @@ public sealed class FileInteractionZoomPanRendererTests
             typeof(ZoomPanSvgFileView),
             composition.Renderers.Resolve(FileInteractionBuiltInProfileIds.Svg, FileInteractionMode.View)
                 .Renderer?.ComponentType);
+    }
+
+    [Fact]
+    public void Workbench_registration_selects_the_spreadsheet_preview_renderer()
+    {
+        var services = new ServiceCollection();
+        services.AddWorkbenchModule();
+        using ServiceProvider provider = services.BuildServiceProvider();
+        FileInteractionComponentComposition composition =
+            provider.GetRequiredService<FileInteractionComponentComposition>();
+        var request = new FileInteractionRequest(
+            new FileReference("test", "forecast"),
+            "forecast.xlsx",
+            FileInteractionMode.View,
+            ProjectStructureFileInteractionPolicy.XlsxMediaType);
+
+        FileInteractionResolution profileResolution = composition.Core.Profiles.Resolve(request);
+
+        Assert.Equal(FileInteractionResolutionStatus.Resolved, profileResolution.Status);
+        Assert.Equal(WorkbenchFileInteractionProfileIds.SpreadsheetPreview, profileResolution.Profile?.Id);
+
+        FileInteractionRendererResolution rendererResolution = composition.Renderers.Resolve(
+            WorkbenchFileInteractionProfileIds.SpreadsheetPreview,
+            FileInteractionMode.View);
+        Assert.True(rendererResolution.IsResolved);
+        FileInteractionRendererDescriptor renderer = Assert.IsType<FileInteractionRendererDescriptor>(
+            rendererResolution.Renderer);
+        Assert.Equal(WorkbenchFileInteractionRendererIds.SpreadsheetPreviewView, renderer.Id);
+        Assert.Equal(typeof(WorkbenchSpreadsheetFileView), renderer.ComponentType);
+        Assert.Equal(FileInteractionContentKind.Binary, renderer.ContentKind);
+        Assert.Equal(FileInteractionContentRequirement.FullContent, renderer.ContentRequirement);
+    }
+
+    [Fact]
+    public void Spreadsheet_renderer_presents_bounded_typed_cells_from_managed_content()
+    {
+        using var context = CreateBunitContext();
+        var spreadsheets = new RecordingSpreadsheetContentPreviewService();
+        context.Services.AddSingleton<ISpreadsheetWorkbookContentPreviewService>(spreadsheets);
+        byte[] content = [1, 2, 3];
+
+        var cut = context.Render<WorkbenchSpreadsheetFileView>(parameters => parameters
+            .Add(component => component.Context, CreateRenderContext(
+                "acceptance.xlsx",
+                ProjectStructureFileInteractionPolicy.XlsxMediaType,
+                content: content)));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(content, spreadsheets.ContentPreviewRequest?.Content.ToArray());
+            Assert.Equal("acceptance.xlsx", spreadsheets.ContentPreviewRequest?.WorkbookName);
+            Assert.NotNull(cut.Find("[data-testid='workbench-spreadsheet-preview']"));
+            Assert.NotNull(cut.Find("[data-testid='workbench-spreadsheet-grid']"));
+            Assert.Contains("Acceptance", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Metric", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("=COUNTA(A1:A2)", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("metadata only", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    [Fact]
+    public void Spreadsheet_renderer_reloads_same_length_replacement_content()
+    {
+        using var context = CreateBunitContext();
+        var spreadsheets = new RecordingSpreadsheetContentPreviewService();
+        context.Services.AddSingleton<ISpreadsheetWorkbookContentPreviewService>(spreadsheets);
+        var cut = context.Render<WorkbenchSpreadsheetFileView>(parameters => parameters
+            .Add(component => component.Context, CreateRenderContext(
+                "acceptance.xlsx",
+                ProjectStructureFileInteractionPolicy.XlsxMediaType,
+                content: [1, 2, 3])));
+        cut.WaitForAssertion(() => Assert.Equal(1, spreadsheets.ContentPreviewCallCount));
+
+        cut.Render(parameters => parameters
+            .Add(component => component.Context, CreateRenderContext(
+                "acceptance.xlsx",
+                ProjectStructureFileInteractionPolicy.XlsxMediaType,
+                content: [9, 8, 7])));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(2, spreadsheets.ContentPreviewCallCount);
+            Assert.Equal([9, 8, 7], spreadsheets.ContentPreviewRequest?.Content.ToArray());
+        });
+    }
+
+    [Fact]
+    public void Spreadsheet_renderer_truncates_long_cell_text_for_the_dom()
+    {
+        using var context = CreateBunitContext();
+        string longCell = new('x', 600);
+        context.Services.AddSingleton<ISpreadsheetWorkbookContentPreviewService>(
+            new RecordingSpreadsheetContentPreviewService(previewCellValue: longCell));
+
+        var cut = context.Render<WorkbenchSpreadsheetFileView>(parameters => parameters
+            .Add(component => component.Context, CreateRenderContext(
+                "long-cell.xlsx",
+                ProjectStructureFileInteractionPolicy.XlsxMediaType,
+                content: [1])));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Long cell text truncated", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(new string('x', 512), cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain(longCell, cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Spreadsheet_renderer_sanitizes_invalid_workbook_failures()
+    {
+        using var context = CreateBunitContext();
+        context.Services.AddSingleton<ISpreadsheetWorkbookContentPreviewService>(
+            new RecordingSpreadsheetContentPreviewService(
+                new InvalidDataException("TopSecret workbook detail")));
+
+        var cut = context.Render<WorkbenchSpreadsheetFileView>(parameters => parameters
+            .Add(component => component.Context, CreateRenderContext(
+                "invalid.xlsx",
+                ProjectStructureFileInteractionPolicy.XlsxMediaType,
+                content: [1])));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='workbench-spreadsheet-preview-unavailable']"));
+            Assert.DoesNotContain("TopSecret", cut.Markup, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -216,5 +344,63 @@ public sealed class FileInteractionZoomPanRendererTests
             content ?? [1],
             editRevision,
             mediaType);
+    }
+
+    private sealed class RecordingSpreadsheetContentPreviewService(
+        InvalidDataException? contentPreviewException = null,
+        string? previewCellValue = null) : ISpreadsheetWorkbookContentPreviewService
+    {
+        private readonly object gate = new();
+        private SpreadsheetWorkbookContentPreviewRequest? contentPreviewRequest;
+        private int contentPreviewCallCount;
+
+        public SpreadsheetWorkbookContentPreviewRequest? ContentPreviewRequest
+        {
+            get
+            {
+                lock (gate)
+                {
+                    return contentPreviewRequest;
+                }
+            }
+        }
+
+        public int ContentPreviewCallCount => Volatile.Read(ref contentPreviewCallCount);
+
+        public SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
+            SpreadsheetWorkbookContentPreviewRequest request)
+        {
+            lock (gate)
+            {
+                contentPreviewRequest = request;
+            }
+
+            Interlocked.Increment(ref contentPreviewCallCount);
+            if (contentPreviewException is not null)
+            {
+                throw contentPreviewException;
+            }
+
+            return new SpreadsheetWorkbookContentPreviewResult(
+                request.WorkbookName,
+                TotalWorksheetCount: 1,
+                [
+                    new SpreadsheetWorksheetPreview(
+                        "Acceptance",
+                        Position: 1,
+                        UsedRangeAddress: "A1:B2",
+                        UsedRowCount: 2,
+                        UsedColumnCount: 2,
+                        Values:
+                        [
+                            ["Metric", "Value"],
+                            ["Rows", previewCellValue ?? "=COUNTA(A1:A2)"]
+                        ],
+                        MarkdownTable: string.Empty,
+                        RowsTruncated: false,
+                        ColumnsTruncated: false)
+                ],
+                WorksheetsTruncated: false);
+        }
     }
 }

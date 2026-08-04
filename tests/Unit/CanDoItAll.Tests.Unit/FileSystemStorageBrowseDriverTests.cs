@@ -8,7 +8,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 {
     [Fact]
-    public async Task SB03_INV_BOUNDED_PAGE_ONE_LargeDirectory_DoesNotEnumerateWholeDirectory()
+    public async Task First_page_of_large_directory_stays_within_enumeration_budget()
     {
         string root = CreateRoot();
         try
@@ -37,7 +37,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 new StorageBrowseRequest(StorageBrowseContainer.Root, pageSize: 25, budget: budget));
 
             output.WriteLine(
-                "SB03_INV_BOUNDED_PAGE_ONE returned={0} reported-inspected={1} enumerated={2} retained={3}",
+                "Bounded first page returned={0} reported-inspected={1} enumerated={2} retained={3}",
                 page.Metrics.ReturnedItems,
                 page.Metrics.InspectedItems,
                 enumeratedEntries,
@@ -55,7 +55,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
     [Fact]
     [Trait("Category", "Scale")]
-    public async Task SB03_INV_SCALE_100K_FirstAndSecondPages_StayWithinStructuralBudgets()
+    public async Task Hundred_thousand_entry_fixture_pages_stay_within_structural_budgets()
     {
         string root = CreateRoot();
         try
@@ -105,7 +105,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             string[] secondIds = second.Entries.Select(entry => entry.Id.Value).ToArray();
 
             output.WriteLine(
-                "SB03_INV_SCALE_100K runtime={0} os={1} fixture={2} median-ms={3:F3} worst-ms={4:F3} worst-allocated={5} first-inspected={6} second-inspected={7} retained={8}",
+                "Large-directory pagination runtime={0} os={1} fixture={2} median-ms={3:F3} worst-ms={4:F3} worst-allocated={5} first-inspected={6} second-inspected={7} retained={8}",
                 Environment.Version,
                 Environment.OSVersion.VersionString,
                 fixtureSize,
@@ -126,7 +126,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_CONFINEMENT_TraversalContainer_IsRejectedWithoutRootDisclosure()
+    public async Task Traversal_container_is_rejected_without_root_disclosure()
     {
         string root = CreateRoot();
         try
@@ -148,7 +148,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_CONFINEMENT_ReparseContainer_IsRejected()
+    public async Task Reparse_container_is_rejected()
     {
         string root = CreateRoot();
         string outside = CreateRoot();
@@ -228,7 +228,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_CURSOR_DirectoryMutation_InvalidatesContinuation()
+    public async Task Directory_mutation_invalidates_continuation()
     {
         string root = CreateRoot();
         try
@@ -259,7 +259,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_FRESHNESS_ReplacedContentAndMetadata_AreVisibleWithoutBrowserState()
+    public async Task Replaced_content_and_metadata_are_visible_without_browser_state()
     {
         string root = CreateRoot();
         try
@@ -301,7 +301,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB07_RevisionedReplace_RejectsStaleRevisionAndPersistsOnlyOnSuccess()
+    public async Task Revisioned_replace_rejects_stale_revision_and_persists_only_on_success()
     {
         string root = CreateRoot();
         try
@@ -352,7 +352,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_CANCELLATION_CancelledEnumeration_DoesNotPublishSuccess()
+    public async Task Cancelled_enumeration_does_not_publish_success()
     {
         string root = CreateRoot();
         try
@@ -393,7 +393,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_ORDERING_GlobalNameOrder_IsExplicitlyUnsupported()
+    public async Task Global_name_order_is_explicitly_unsupported()
     {
         string root = CreateRoot();
         try
@@ -418,7 +418,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_BUDGET_InspectionLimit_ReturnsTypedPartialPageAndContinuation()
+    public async Task Inspection_limit_returns_typed_partial_page_and_continuation()
     {
         string root = CreateRoot();
         try
@@ -451,7 +451,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB03_INV_REDACTION_ProviderFailure_MasksRootAndRawError()
+    public async Task Provider_failure_masks_root_and_raw_error()
     {
         string root = CreateRoot();
         try

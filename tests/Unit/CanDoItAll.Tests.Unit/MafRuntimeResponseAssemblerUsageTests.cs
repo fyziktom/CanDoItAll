@@ -8,6 +8,26 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class MafRuntimeResponseAssemblerUsageTests
 {
     [Fact]
+    public void Provider_failure_diagnostic_uses_bounded_allowlisted_fields_only()
+    {
+        var secret = $"AccountKey={new string('s', 20_000)}";
+        var exception = new MafProviderTransportException(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "unit-model",
+            new HttpRequestException(
+                secret,
+                inner: null,
+                System.Net.HttpStatusCode.BadGateway));
+
+        var diagnostic = MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception);
+
+        Assert.DoesNotContain(secret, diagnostic, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccountKey", diagnostic, StringComparison.Ordinal);
+        Assert.Contains("HttpStatus=502", diagnostic, StringComparison.Ordinal);
+        Assert.True(diagnostic.Length < 1024);
+    }
+
+    [Fact]
     public void Usage_observations_preserve_provider_request_boundaries_for_long_context_pricing()
     {
         var provider = CreateProvider();
@@ -40,7 +60,7 @@ public sealed class MafRuntimeResponseAssemblerUsageTests
                 Assert.Equal(200_000, second.InputTokens);
             });
         Assert.Equal(400_000, summary.InputTokens);
-        Assert.Equal(1.00m, summary.KnownCostUsd);
+        Assert.Equal(0.80m, summary.KnownCostUsd);
     }
 
     private static AgentResponseUpdate CreateUsageUpdate(string responseId, int inputTokens)

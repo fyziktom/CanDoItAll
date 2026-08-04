@@ -402,8 +402,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             return new(
                 "unit-test-api-key",
                 "unit-test credential resolver",
-                string.Empty,
-                ShouldPromoteToProcessEnvironment: false);
+                string.Empty);
         }
     }
 

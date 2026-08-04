@@ -1,10 +1,11 @@
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
 
 public sealed class ProjectPackageManifest
 {
-    public const string CurrentFormat = "candoitall.projects.v1";
+    public const string CurrentFormat = "candoitall.projects.v2";
 
     public Guid PackageId { get; set; }
 
@@ -22,6 +23,8 @@ public sealed class ProjectPackageManifest
 
     public List<ProjectPackageStorageFileManifest> StorageFiles { get; set; } = [];
 
+    public List<ProjectPackageImmutableStorageReferenceManifest> ImmutableStorageReferences { get; set; } = [];
+
     public List<string> Warnings { get; set; } = [];
 }
 
@@ -32,10 +35,22 @@ public sealed class ProjectPackageTableManifest
     public string FilePath { get; set; } = string.Empty;
 
     public int RowCount { get; set; }
+
+    public long Length { get; set; }
+
+    public string Sha256 { get; set; } = string.Empty;
 }
 
 public sealed class ProjectPackageStorageFileManifest
 {
+    public Guid? SourceStorageId { get; set; }
+
+    public StorageProviderKind ProviderKind { get; set; }
+
+    public StorageLocatorKind LocatorKind { get; set; }
+
+    public string Locator { get; set; } = string.Empty;
+
     public string RelativePath { get; set; } = string.Empty;
 
     public string PackagePath { get; set; } = string.Empty;
@@ -45,6 +60,27 @@ public sealed class ProjectPackageStorageFileManifest
     public string OriginalFileName { get; set; } = string.Empty;
 
     public long Length { get; set; }
+
+    public string Sha256 { get; set; } = string.Empty;
+}
+
+public sealed class ProjectPackageImmutableStorageReferenceManifest
+{
+    public Guid? SourceStorageId { get; set; }
+
+    public StorageProviderKind ProviderKind { get; set; }
+
+    public StorageLocatorKind LocatorKind { get; set; }
+
+    public string Locator { get; set; } = string.Empty;
+
+    public string ContentType { get; set; } = string.Empty;
+
+    public string OriginalFileName { get; set; } = string.Empty;
+
+    public long Length { get; set; }
+
+    public string Sha256 { get; set; } = string.Empty;
 }
 
 public sealed class ProjectPackageExportRequest

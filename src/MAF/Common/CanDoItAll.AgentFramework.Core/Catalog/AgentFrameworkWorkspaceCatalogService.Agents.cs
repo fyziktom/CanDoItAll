@@ -35,6 +35,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
     {
         var now = DateTimeOffset.UtcNow;
         var id = model.Id ?? Guid.NewGuid();
+        var selectedProvider = model.ProviderProfileId is { } providerProfileId
+            ? await providerRegistry.GetProviderAsync(providerProfileId, cancellationToken)
+            : null;
         await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);
@@ -55,8 +58,17 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     existingAgent?.UpdatedAtUtc);
             }
 
+            var validationCatalog = selectedProvider is null
+                ? catalog
+                : catalog with
+                {
+                    Providers = catalog.Providers
+                        .Where(item => item.Id != selectedProvider.Id)
+                        .Append(selectedProvider)
+                        .ToList()
+                };
             var definition = AgentDefinitionFactory.Create(
-                catalog,
+                validationCatalog,
                 model,
                 id,
                 existingAgent,
@@ -64,7 +76,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 providerProfileService,
                 "Agent save");
 
-            return catalog with
+            return validationCatalog with
             {
                 Agents = catalog.Agents
                     .Where(item => item.Id != id)
@@ -104,6 +116,53 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             projectId,
             static (access, id) => access.AllowedProjectIds.Remove(id),
             cancellationToken);
+
+    public async Task<int> RevokeProjectStructureAccessFromAllAgentsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException("A project id is required.", nameof(projectId));
+        }
+
+        var changedAgentCount = 0;
+        var now = DateTimeOffset.UtcNow;
+        await UpdateCatalogAsync(catalog =>
+        {
+            changedAgentCount = 0;
+            var updatedAgents = new List<AgentDefinition>(catalog.Agents.Count);
+            foreach (var agent in catalog.Agents)
+            {
+                var revocation = AgentProjectStructureAccessMetadata.RevokeProject(
+                    agent.ConfigurationJson,
+                    projectId);
+                if (!revocation.Changed)
+                {
+                    updatedAgents.Add(agent);
+                    continue;
+                }
+
+                changedAgentCount++;
+                updatedAgents.Add(agent with
+                {
+                    ConfigurationJson = revocation.ConfigurationJson,
+                    UpdatedAtUtc = now
+                });
+            }
+
+            return changedAgentCount == 0
+                ? catalog
+                : catalog with
+                {
+                    Agents = updatedAgents
+                        .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                };
+        }, cancellationToken);
+
+        return changedAgentCount;
+    }
 
     private async Task UpdateAgentProjectStructureAccessAsync(
         Guid agentId,

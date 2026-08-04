@@ -24,8 +24,6 @@ public sealed class MafAgentRuntime : IAgentRuntime
     private readonly IMafProviderAgentFactory providerAgentFactory;
     private readonly IMafProviderRuntimeGateway providerRuntimeGateway;
     private readonly IAgentImageAnalysisService imageAnalysisService;
-    private readonly IMafProviderStreamingDispatchGate providerStreamingDispatchGate;
-    private readonly IMafProviderStreamingRunner providerStreamingRunner;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
     private readonly IMafRuntimeCompositionMetrics compositionMetrics;
     private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
@@ -33,6 +31,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
     private readonly InputAttachmentPreparer inputAttachmentPreparer;
     private readonly IMafApprovalContinuationDriver approvalContinuationDriver;
     private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
+    private readonly MafProviderUpdatePump providerUpdatePump = new();
 
     public MafAgentRuntime(
         string workspaceRoot,
@@ -53,17 +52,15 @@ public sealed class MafAgentRuntime : IAgentRuntime
         providerCredentialService = services.GetService(typeof(IMafProviderCredentialService)) is IMafProviderCredentialService resolvedCredentialService
             ? resolvedCredentialService
             : new MafProviderCredentialService(services);
+        var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
         providerAgentFactory = services.GetService(typeof(IMafProviderAgentFactory)) is IMafProviderAgentFactory resolvedAgentFactory
             ? resolvedAgentFactory
-            : new MafProviderAgentFactory(providerCredentialService);
-        var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
+            : new MafProviderAgentFactory(
+                providerCredentialService,
+                providerDependencies.ProviderStreamingDispatchGate);
         providerRuntimeGateway = providerDependencies.ProviderRuntimeGateway;
         imageAnalysisService = providerDependencies.ImageAnalysisService;
         inputAttachmentPreparer = new InputAttachmentPreparer(providerCredentialService, providerRuntimeGateway);
-        providerStreamingDispatchGate = providerDependencies.ProviderStreamingDispatchGate;
-        providerStreamingRunner = services.GetService(typeof(IMafProviderStreamingRunner)) is IMafProviderStreamingRunner resolvedStreamingRunner
-            ? resolvedStreamingRunner
-            : new MafProviderStreamingRunner(providerStreamingDispatchGate);
         runtimeToolProviderComposer = services.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
             ? resolvedComposer
             : RuntimeToolProviderComposer.Default;
@@ -220,23 +217,34 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 executionOptions,
                 forceOmitTemperature: false);
         }
+        catch (MafProviderConfigurationException exception)
+        {
+            throw CreateProviderConfigurationUsageException(exception);
+        }
         catch (Exception exception) when (MafModelParametersBuilder.ShouldRetryWithoutTemperature(provider, model, exception))
         {
             await progressCallback(ExecutionState.Preparing, "Model parameters", MafModelParametersBuilder.BuildTemperatureRetryMessage(model));
-            return await RunCoreAsync(
-                agent,
-                provider,
-                session,
-                capabilities,
-                memory,
-                prompt,
-                runtimeSessionKey,
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements,
-                structuredOutput,
-                executionOptions,
-                forceOmitTemperature: true);
+            try
+            {
+                return await RunCoreAsync(
+                    agent,
+                    provider,
+                    session,
+                    capabilities,
+                    memory,
+                    prompt,
+                    runtimeSessionKey,
+                    progressCallback,
+                    cancellationToken,
+                    suppressApprovalRequirements,
+                    structuredOutput,
+                    executionOptions,
+                    forceOmitTemperature: true);
+            }
+            catch (MafProviderConfigurationException configurationException)
+            {
+                throw CreateProviderConfigurationUsageException(configurationException);
+            }
         }
     }
 
@@ -271,7 +279,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             await progressCallback(ExecutionState.Preparing, "Approval policy", "Auto-approve is active for this run, so future tool approval gates will be suppressed.");
         }
 
-        await using var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
+        var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
             agent,
             provider,
             capabilities,
@@ -282,6 +290,11 @@ public sealed class MafAgentRuntime : IAgentRuntime
             forceOmitTemperature,
             runtimeOptions,
             ResolveRuntimeToolProviderSessionKey(session, runtimeSessionKey));
+
+        return await runtimeBuild.ExecuteWithLifetimeAsync(ExecuteWithBuildAsync);
+
+        async Task<AgentRuntimeResponse> ExecuteWithBuildAsync()
+        {
         InputAttachmentSupport.EnsureSupported(runtimeBuild.Provider, runtimeBuild.Model, runtimeOptions);
 
         if (runtimeBuild.IsTemperatureOmitted)
@@ -342,9 +355,11 @@ public sealed class MafAgentRuntime : IAgentRuntime
             runtimeBuild.SnapshotToolInvocationTraces,
             runtimeBuild.SnapshotContextContributionTraces,
             contextManifest,
-            runtimeBuild.IsTerminalResponseUpdate);
+            runtimeBuild.IsTerminalResponseUpdate,
+            runtimeBuild.EntryAgentRequestCompatibilityEvidence);
 
-        return AttachPreparedInputUsageObservations(response, preparedInput.UsageObservations);
+            return AttachPreparedInputUsageObservations(response, preparedInput.UsageObservations);
+        }
     }
 
     public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
@@ -379,23 +394,34 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 executionOptions,
                 forceOmitTemperature: false);
         }
+        catch (MafProviderConfigurationException exception)
+        {
+            throw CreateProviderConfigurationUsageException(exception);
+        }
         catch (Exception exception) when (MafModelParametersBuilder.ShouldRetryWithoutTemperature(provider, model, exception))
         {
             await progressCallback(ExecutionState.Preparing, "Model parameters", MafModelParametersBuilder.BuildTemperatureRetryMessage(model));
-            return await RespondToPendingApprovalsCoreAsync(
-                agent,
-                provider,
-                session,
-                capabilities,
-                memory,
-                approved,
-                runtimeSessionKey,
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements,
-                structuredOutput,
-                executionOptions,
-                forceOmitTemperature: true);
+            try
+            {
+                return await RespondToPendingApprovalsCoreAsync(
+                    agent,
+                    provider,
+                    session,
+                    capabilities,
+                    memory,
+                    approved,
+                    runtimeSessionKey,
+                    progressCallback,
+                    cancellationToken,
+                    suppressApprovalRequirements,
+                    structuredOutput,
+                    executionOptions,
+                    forceOmitTemperature: true);
+            }
+            catch (MafProviderConfigurationException configurationException)
+            {
+                throw CreateProviderConfigurationUsageException(configurationException);
+            }
         }
     }
 
@@ -421,7 +447,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             await progressCallback(ExecutionState.Preparing, "Approval policy", "Auto-approve remains active, so future tool approval gates will be suppressed after this decision is replayed.");
         }
 
-        await using var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
+        var runtimeBuild = await runtimeAgentFactory.CreateRuntimeBuildAsync(
             agent,
             provider,
             capabilities,
@@ -432,6 +458,11 @@ public sealed class MafAgentRuntime : IAgentRuntime
             forceOmitTemperature,
             runtimeOptions,
             ResolveRuntimeToolProviderSessionKey(session, runtimeSessionKey));
+
+        return await runtimeBuild.ExecuteWithLifetimeAsync(ExecuteWithBuildAsync);
+
+        async Task<AgentRuntimeResponse> ExecuteWithBuildAsync()
+        {
 
         if (runtimeBuild.IsTemperatureOmitted)
         {
@@ -469,7 +500,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
             capabilityState?.RuntimeToolProviderDescriptors.Count ?? 0,
             inputMessages);
 
-        return await ExecuteRunAsync(
+            return await ExecuteRunAsync(
             agent,
             runtimeBuild.Provider,
             runtimeBuild.Model,
@@ -491,7 +522,9 @@ public sealed class MafAgentRuntime : IAgentRuntime
             runtimeBuild.SnapshotToolInvocationTraces,
             runtimeBuild.SnapshotContextContributionTraces,
             contextManifest,
-            runtimeBuild.IsTerminalResponseUpdate);
+            runtimeBuild.IsTerminalResponseUpdate,
+                runtimeBuild.EntryAgentRequestCompatibilityEvidence);
+        }
     }
 
     private async Task<AgentRuntimeResponse> ExecuteRunAsync(
@@ -516,7 +549,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
         Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces,
         Func<IReadOnlyList<AgentContextContributionTrace>> snapshotContextContributionTraces,
         AgentRuntimeContextAssemblyManifest contextManifest,
-        Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate)
+        Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate,
+        ProviderRequestCompatibilityEvidence? entryAgentRequestCompatibilityEvidence)
     {
         var updates = new List<AgentResponseUpdate>();
         AgentResponseUpdate? lastTerminalResponseUpdate = null;
@@ -543,7 +577,8 @@ public sealed class MafAgentRuntime : IAgentRuntime
             => response with
             {
                 ContextAssemblyManifest = contextManifest,
-                ContextContributionTraces = snapshotContextContributionTraces()
+                ContextContributionTraces = snapshotContextContributionTraces(),
+                EntryAgentRequestCompatibilityEvidence = entryAgentRequestCompatibilityEvidence
             };
 
         async Task<AgentRuntimeResponse?> RecordStreamingUpdateAsync(
@@ -592,6 +627,19 @@ public sealed class MafAgentRuntime : IAgentRuntime
                 snapshotEffectiveToolInvocationTraces);
         }
 
+        MafProviderUpdatePumpContext CreateProviderUpdatePumpContext(
+            AgentSession sourceSession,
+            string usageSourcePhase)
+            => new(
+                provider,
+                resolvedModel,
+                sourceSession,
+                runtimeSessionKey,
+                updates,
+                usageSourcePhase,
+                snapshotEffectiveToolInvocationTraces,
+                entryAgentRequestCompatibilityEvidence);
+
         async Task<AgentRuntimeResponse?> TryRunMissingRequiredFinalizerRepairAsync(
             AgentResponse response,
             IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
@@ -631,82 +679,116 @@ public sealed class MafAgentRuntime : IAgentRuntime
 
             try
             {
-                await foreach (var repairUpdate in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, repairMessages, repairRunOptions, cancellationToken))
-                {
-                    var finalizerResponse = await RecordStreamingUpdateAsync(
+                var repairResponse = await providerUpdatePump.PumpAsync(
+                    MafProviderStreamingInvocation.RunStreamingAsync(
+                        provider,
+                        resolvedModel,
+                        runtimeAgent,
+                        runtimeSession,
+                        repairMessages,
+                        repairRunOptions,
+                        cancellationToken),
+                    CreateProviderUpdatePumpContext(
+                        runtimeSession,
+                        ProviderUsageSourcePhases.FinalizerRecovery),
+                    repairUpdate => RecordStreamingUpdateAsync(
                         repairUpdate,
-                        ProviderUsageSourcePhases.FinalizerRecovery);
-                    if (finalizerResponse is not null)
+                        ProviderUsageSourcePhases.FinalizerRecovery),
+                    async () =>
                     {
-                        return AttachContextDiagnostics(finalizerResponse);
-                    }
-                }
+                        var requiredFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                            provider,
+                            resolvedModel,
+                            structuredOutput,
+                            finalizerMode,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            runtimeOptions,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerRecovery,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotEffectiveFinalizerInvocations,
+                            snapshotEffectiveToolInvocationTraces);
+                        if (requiredFinalizerResponse is not null)
+                        {
+                            return requiredFinalizerResponse;
+                        }
 
-                var requiredFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
-                    provider,
-                    resolvedModel,
-                    structuredOutput,
-                    finalizerMode,
-                    runtimeAgent,
-                    runtimeSession,
-                    runtimeSessionKey,
-                    runtimeOptions,
-                    updates,
-                    ProviderUsageSourcePhases.FinalizerRecovery,
-                    progressCallback,
-                    cancellationToken,
-                    snapshotEffectiveFinalizerInvocations,
-                    snapshotEffectiveToolInvocationTraces);
-                if (requiredFinalizerResponse is not null)
-                {
-                    return AttachContextDiagnostics(requiredFinalizerResponse);
-                }
+                        var jsonRepairResponse = await TryRunRequiredFinalizerJsonRepairAsync(
+                            finalizerPolicy,
+                            response,
+                            repairContext,
+                            toolInvocationTraceRecorder);
+                        if (jsonRepairResponse is not null)
+                        {
+                            return jsonRepairResponse;
+                        }
 
-                var jsonRepairResponse = await TryRunRequiredFinalizerJsonRepairAsync(
-                    finalizerPolicy,
-                    response,
-                    repairContext,
-                    toolInvocationTraceRecorder);
-                if (jsonRepairResponse is not null)
-                {
-                    return AttachContextDiagnostics(jsonRepairResponse);
-                }
-
-                var recoveredArtifactResponse = await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
-                    provider,
-                    resolvedModel,
-                    runtimeAgent,
-                    runtimeSession,
-                    runtimeSessionKey,
-                    runtimeOptions,
-                    finalizerPolicy,
-                    updates,
-                    ProviderUsageSourcePhases.FinalizerRecovery,
-                    ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
-                    progressCallback,
-                    cancellationToken,
-                    snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
-                return recoveredArtifactResponse is null
+                        return await TryCreateFinalizerResponseFromRecoveredProcessArtifactAsync(
+                            provider,
+                            resolvedModel,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            runtimeOptions,
+                            finalizerPolicy,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerRecovery,
+                            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotEffectiveToolInvocationTraces).ConfigureAwait(false);
+                    },
+                    cancellationToken);
+                return repairResponse is null
                     ? null
-                    : AttachContextDiagnostics(recoveredArtifactResponse);
+                    : AttachContextDiagnostics(repairResponse);
             }
             catch (RequiredFinalizerCapturedException exception)
             {
-                var finalizerResponse = await TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
-                    provider,
-                    resolvedModel,
-                    structuredOutput,
-                    finalizerMode,
-                    runtimeAgent,
-                    runtimeSession,
-                    runtimeSessionKey,
-                    runtimeOptions,
-                    updates,
-                    ProviderUsageSourcePhases.FinalizerRecovery,
-                    progressCallback,
-                    cancellationToken,
-                    snapshotEffectiveFinalizerInvocations,
-                    snapshotEffectiveToolInvocationTraces);
+                AgentRuntimeResponse? finalizerResponse;
+                try
+                {
+                    finalizerResponse = await TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+                        provider,
+                        resolvedModel,
+                        structuredOutput,
+                        finalizerMode,
+                        runtimeAgent,
+                        runtimeSession,
+                        runtimeSessionKey,
+                        runtimeOptions,
+                        updates,
+                        ProviderUsageSourcePhases.FinalizerRecovery,
+                        progressCallback,
+                        cancellationToken,
+                        snapshotEffectiveFinalizerInvocations,
+                        snapshotEffectiveToolInvocationTraces);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception recoveryException)
+                {
+                    throw new AgentRuntimeUsageException(
+                        "Required finalizer repair was captured, but governed recovery failed.",
+                        new AggregateException(exception, recoveryException),
+                        MafRuntimeResponseAssembler.CreateProviderUsageObservations(
+                            provider,
+                            resolvedModel,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerRecovery,
+                            "Required finalizer recovery failed after capture."),
+                        snapshotEffectiveToolInvocationTraces(),
+                        entryAgentRequestCompatibilityEvidence,
+                        AgentRuntimeFailureOrigin.Finalizer);
+                }
+
                 if (finalizerResponse is not null)
                 {
                     return AttachContextDiagnostics(finalizerResponse);
@@ -723,32 +805,73 @@ public sealed class MafAgentRuntime : IAgentRuntime
                         updates,
                         ProviderUsageSourcePhases.FinalizerRecovery,
                         $"Required finalizer repair captured '{exception.ToolName}' but validation failed."),
-                    snapshotEffectiveToolInvocationTraces());
+                    snapshotEffectiveToolInvocationTraces(),
+                    entryAgentRequestCompatibilityEvidence,
+                    AgentRuntimeFailureOrigin.Finalizer);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception exception)
             {
-                var finalizerResponse = await TryCreateFinalizerResponseAfterProviderFailureAsync(
-                    provider,
-                    resolvedModel,
-                    structuredOutput,
-                    runtimeAgent,
-                    runtimeSession,
-                    runtimeSessionKey,
-                    runtimeOptions,
-                    finalizerMode,
-                    exception,
-                    updates,
-                    progressCallback,
-                    cancellationToken,
-                    snapshotEffectiveFinalizerInvocations,
-                    snapshotEffectiveToolInvocationTraces);
-                if (finalizerResponse is not null)
+                var failureOrigin = MafRuntimeFailureOriginClassifier.ResolveOutsideProviderBoundary(exception);
+                if (failureOrigin == AgentRuntimeFailureOrigin.Provider)
                 {
-                    return AttachContextDiagnostics(finalizerResponse);
+                    AgentRuntimeResponse? finalizerResponse;
+                    try
+                    {
+                        finalizerResponse = await TryCreateFinalizerResponseAfterProviderFailureAsync(
+                            provider,
+                            resolvedModel,
+                            structuredOutput,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            runtimeOptions,
+                            finalizerMode,
+                            exception,
+                            updates,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotEffectiveFinalizerInvocations,
+                            snapshotEffectiveToolInvocationTraces);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception recoveryException)
+                    {
+                        throw new AgentRuntimeUsageException(
+                            "Provider failure finalizer recovery failed.",
+                            new AggregateException(exception, recoveryException),
+                            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
+                                provider,
+                                resolvedModel,
+                                runtimeSession,
+                                runtimeSessionKey,
+                                updates,
+                                ProviderUsageSourcePhases.FinalizerRecovery,
+                                "Provider failure finalizer recovery failed."),
+                            snapshotEffectiveToolInvocationTraces(),
+                            entryAgentRequestCompatibilityEvidence,
+                            AgentRuntimeFailureOrigin.Finalizer);
+                    }
+
+                    if (finalizerResponse is not null)
+                    {
+                        return AttachContextDiagnostics(finalizerResponse);
+                    }
+                }
+
+                if (exception is AgentRuntimeUsageException)
+                {
+                    throw;
                 }
 
                 throw new AgentRuntimeUsageException(
-                    "Provider runtime failed during the bounded required-finalizer repair turn. Usage was captured when available.",
+                    "Agent runtime failed during the bounded required-finalizer repair turn. Usage was captured when available.",
                     exception,
                     MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                         provider,
@@ -757,8 +880,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
                         runtimeSessionKey,
                         updates,
                         ProviderUsageSourcePhases.FinalizerRecovery,
-                        MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)),
-                    snapshotEffectiveToolInvocationTraces());
+                        MafProviderUpdatePump.BuildFailureDiagnostic(exception, failureOrigin)),
+                    snapshotEffectiveToolInvocationTraces(),
+                    entryAgentRequestCompatibilityEvidence,
+                    failureOrigin,
+                    MafRuntimeFailureOriginClassifier.ResolveProviderFailureIdentity(
+                        exception,
+                        failureOrigin));
             }
         }
 
@@ -789,56 +917,67 @@ public sealed class MafAgentRuntime : IAgentRuntime
 
             try
             {
-                await foreach (var jsonRepairUpdate in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, jsonRepairAgent, jsonRepairSession, jsonRepairMessages, jsonRepairRunOptions, cancellationToken))
-                {
-                    jsonRepairUpdates.Add(MafAgentResponseSnapshotter.SnapshotUpdate(jsonRepairUpdate));
-                    var streamedFinalizerResponse = await RecordStreamingUpdateAsync(
-                        jsonRepairUpdate,
-                        ProviderUsageSourcePhases.FinalizerRecovery);
-                    if (streamedFinalizerResponse is not null)
+                var jsonRepairResponse = await providerUpdatePump.PumpAsync(
+                    MafProviderStreamingInvocation.RunStreamingAsync(
+                        provider,
+                        resolvedModel,
+                        jsonRepairAgent,
+                        jsonRepairSession,
+                        jsonRepairMessages,
+                        jsonRepairRunOptions,
+                        cancellationToken),
+                    CreateProviderUpdatePumpContext(
+                        jsonRepairSession,
+                        ProviderUsageSourcePhases.FinalizerRecovery),
+                    async jsonRepairUpdate =>
                     {
-                        return AttachContextDiagnostics(streamedFinalizerResponse);
-                    }
-                }
+                        jsonRepairUpdates.Add(MafAgentResponseSnapshotter.SnapshotUpdate(jsonRepairUpdate));
+                        return await RecordStreamingUpdateAsync(
+                            jsonRepairUpdate,
+                            ProviderUsageSourcePhases.FinalizerRecovery);
+                    },
+                    async () =>
+                    {
+                        var jsonRepairProviderResponse = jsonRepairUpdates.ToAgentResponse();
+                        if (!TryCaptureSynthesizedFinalizerInvocation(
+                            finalizerPolicy,
+                            jsonRepairProviderResponse.Text,
+                            toolInvocationTraceRecorder,
+                            synthesizedFinalizerInvocations,
+                            out var captureFailure))
+                        {
+                            await progressCallback(
+                                ExecutionState.Running,
+                                "Finalizer repair",
+                                $"Typed JSON fallback did not produce a valid '{finalizerPolicy.OutputContract.ContractKey}' payload: {captureFailure}");
+                            return null;
+                        }
 
-                var jsonRepairProviderResponse = jsonRepairUpdates.ToAgentResponse();
-                if (!TryCaptureSynthesizedFinalizerInvocation(
-                        finalizerPolicy,
-                        jsonRepairProviderResponse.Text,
-                        toolInvocationTraceRecorder,
-                        synthesizedFinalizerInvocations,
-                        out var captureFailure))
-                {
-                    await progressCallback(
-                        ExecutionState.Running,
-                        "Finalizer repair",
-                        $"Typed JSON fallback did not produce a valid '{finalizerPolicy.OutputContract.ContractKey}' payload: {captureFailure}");
-                    return null;
-                }
+                        await progressCallback(
+                            ExecutionState.Running,
+                            "Finalizer repair",
+                            $"Typed JSON fallback produced a valid '{finalizerPolicy.OutputContract.ContractKey}' payload. Validating it through the same required-finalizer contract.");
 
-                await progressCallback(
-                    ExecutionState.Running,
-                    "Finalizer repair",
-                    $"Typed JSON fallback produced a valid '{finalizerPolicy.OutputContract.ContractKey}' payload. Validating it through the same required-finalizer contract.");
-
-                var synthesizedFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
-                    provider,
-                    resolvedModel,
-                    structuredOutput,
-                    finalizerMode,
-                    runtimeAgent,
-                    runtimeSession,
-                    runtimeSessionKey,
-                    runtimeOptions,
-                    updates,
-                    ProviderUsageSourcePhases.FinalizerRecovery,
-                    progressCallback,
-                    cancellationToken,
-                    snapshotEffectiveFinalizerInvocations,
-                    snapshotEffectiveToolInvocationTraces);
-                return synthesizedFinalizerResponse is null
+                        return await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                            provider,
+                            resolvedModel,
+                            structuredOutput,
+                            finalizerMode,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            runtimeOptions,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerRecovery,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotEffectiveFinalizerInvocations,
+                            snapshotEffectiveToolInvocationTraces);
+                    },
+                    cancellationToken);
+                return jsonRepairResponse is null
                     ? null
-                    : AttachContextDiagnostics(synthesizedFinalizerResponse);
+                    : AttachContextDiagnostics(jsonRepairResponse);
             }
             finally
             {
@@ -866,88 +1005,189 @@ public sealed class MafAgentRuntime : IAgentRuntime
 
                 try
                 {
-                    await foreach (var update in providerStreamingRunner.RunStreamingAsync(provider, resolvedModel, runtimeAgent, runtimeSession, inputMessages, runOptions, cancellationToken))
-                    {
-                        var finalizerResponse = await RecordStreamingUpdateAsync(
+                    var streamedFinalizerResponse = await providerUpdatePump.PumpAsync(
+                        MafProviderStreamingInvocation.RunStreamingAsync(
+                            provider,
+                            resolvedModel,
+                            runtimeAgent,
+                            runtimeSession,
+                            inputMessages,
+                            runOptions,
+                            cancellationToken),
+                        CreateProviderUpdatePumpContext(
+                            runtimeSession,
+                            ProviderUsageSourcePhases.AgentRuntime),
+                        update => RecordStreamingUpdateAsync(
                             update,
-                            ProviderUsageSourcePhases.FinalizerShortCircuit);
+                            ProviderUsageSourcePhases.FinalizerShortCircuit),
+                        () => TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                            provider,
+                            resolvedModel,
+                            structuredOutput,
+                            finalizerMode,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            runtimeOptions,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerShortCircuit,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotEffectiveFinalizerInvocations,
+                            snapshotEffectiveToolInvocationTraces),
+                        cancellationToken);
+                    if (streamedFinalizerResponse is not null)
+                    {
+                        return AttachContextDiagnostics(streamedFinalizerResponse);
+                    }
+                }
+                catch (RequiredFinalizerCapturedException exception)
+                {
+                    providerActivity?.SetTag("agentframework.required_finalizer_tool_name", exception.ToolName);
+                    AgentRuntimeResponse? finalizerResponse;
+                    try
+                    {
+                        finalizerResponse = await TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+                            provider,
+                            resolvedModel,
+                            structuredOutput,
+                            finalizerMode,
+                            runtimeAgent,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            runtimeOptions,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerShortCircuit,
+                            progressCallback,
+                            cancellationToken,
+                            snapshotEffectiveFinalizerInvocations,
+                            snapshotEffectiveToolInvocationTraces);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception recoveryException)
+                    {
+                        providerActivity?.SetStatus(
+                            ActivityStatusCode.Error,
+                            "Required finalizer recovery failed.");
+                        throw new AgentRuntimeUsageException(
+                            "Required finalizer was captured, but governed recovery failed.",
+                            new AggregateException(exception, recoveryException),
+                            MafRuntimeResponseAssembler.CreateProviderUsageObservations(
+                                provider,
+                                resolvedModel,
+                                runtimeSession,
+                                runtimeSessionKey,
+                                updates,
+                                ProviderUsageSourcePhases.FinalizerRecovery,
+                                "Required finalizer recovery failed after capture."),
+                            snapshotEffectiveToolInvocationTraces(),
+                            entryAgentRequestCompatibilityEvidence,
+                            AgentRuntimeFailureOrigin.Finalizer);
+                    }
+
+                    if (finalizerResponse is not null)
+                    {
+                        return AttachContextDiagnostics(finalizerResponse);
+                    }
+
+                    providerActivity?.SetStatus(
+                        ActivityStatusCode.Error,
+                        "Required finalizer capture could not be validated.");
+                    throw new AgentRuntimeUsageException(
+                        $"Required finalizer '{exception.ToolName}' was captured, but the governed result could not be validated.",
+                        exception,
+                        MafRuntimeResponseAssembler.CreateProviderUsageObservations(
+                            provider,
+                            resolvedModel,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerRecovery,
+                            $"Required finalizer '{exception.ToolName}' capture validation failed."),
+                        snapshotEffectiveToolInvocationTraces(),
+                        entryAgentRequestCompatibilityEvidence,
+                        AgentRuntimeFailureOrigin.Finalizer);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    var failureOrigin = MafRuntimeFailureOriginClassifier.ResolveOutsideProviderBoundary(exception);
+                    if (failureOrigin == AgentRuntimeFailureOrigin.Provider)
+                    {
+                        AgentFrameworkTelemetry.RecordProviderError(provider, resolvedModel);
+                    }
+
+                    providerActivity?.SetTag(
+                        "agentframework.failure_origin",
+                        failureOrigin.ToString());
+                    providerActivity?.SetTag(
+                        "agentframework.failure_type",
+                        exception.GetType().FullName ?? exception.GetType().Name);
+                    providerActivity?.SetStatus(
+                        ActivityStatusCode.Error,
+                        "Agent runtime failure.");
+                    if (failureOrigin == AgentRuntimeFailureOrigin.Provider)
+                    {
+                        AgentRuntimeResponse? finalizerResponse;
+                        try
+                        {
+                            finalizerResponse = await TryCreateFinalizerResponseAfterProviderFailureAsync(
+                                provider,
+                                resolvedModel,
+                                structuredOutput,
+                                runtimeAgent,
+                                runtimeSession,
+                                runtimeSessionKey,
+                                runtimeOptions,
+                                finalizerMode,
+                                exception,
+                                updates,
+                                progressCallback,
+                                cancellationToken,
+                                snapshotEffectiveFinalizerInvocations,
+                                snapshotEffectiveToolInvocationTraces);
+                        }
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception recoveryException)
+                        {
+                            throw new AgentRuntimeUsageException(
+                                "Provider failure finalizer recovery failed.",
+                                new AggregateException(exception, recoveryException),
+                                MafRuntimeResponseAssembler.CreateProviderUsageObservations(
+                                    provider,
+                                    resolvedModel,
+                                    runtimeSession,
+                                    runtimeSessionKey,
+                                    updates,
+                                    ProviderUsageSourcePhases.FinalizerRecovery,
+                                    "Provider failure finalizer recovery failed."),
+                                snapshotEffectiveToolInvocationTraces(),
+                                entryAgentRequestCompatibilityEvidence,
+                                AgentRuntimeFailureOrigin.Finalizer);
+                        }
+
                         if (finalizerResponse is not null)
                         {
                             return AttachContextDiagnostics(finalizerResponse);
                         }
                     }
 
-                    var postStreamingFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
-                        provider,
-                        resolvedModel,
-                        structuredOutput,
-                        finalizerMode,
-                        runtimeAgent,
-                        runtimeSession,
-                        runtimeSessionKey,
-                        runtimeOptions,
-                        updates,
-                        ProviderUsageSourcePhases.FinalizerShortCircuit,
-                        progressCallback,
-                        cancellationToken,
-                        snapshotEffectiveFinalizerInvocations,
-                        snapshotEffectiveToolInvocationTraces);
-                    if (postStreamingFinalizerResponse is not null)
+                    if (exception is AgentRuntimeUsageException)
                     {
-                        return AttachContextDiagnostics(postStreamingFinalizerResponse);
-                    }
-                }
-                catch (RequiredFinalizerCapturedException exception)
-                {
-                    providerActivity?.SetTag("agentframework.required_finalizer_tool_name", exception.ToolName);
-                    var finalizerResponse = await TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
-                        provider,
-                        resolvedModel,
-                        structuredOutput,
-                        finalizerMode,
-                        runtimeAgent,
-                        runtimeSession,
-                        runtimeSessionKey,
-                        runtimeOptions,
-                        updates,
-                        ProviderUsageSourcePhases.FinalizerShortCircuit,
-                        progressCallback,
-                        cancellationToken,
-                        snapshotEffectiveFinalizerInvocations,
-                        snapshotEffectiveToolInvocationTraces);
-                    if (finalizerResponse is not null)
-                    {
-                        return AttachContextDiagnostics(finalizerResponse);
-                    }
-
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    AgentFrameworkTelemetry.RecordProviderError(provider, resolvedModel);
-                    providerActivity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-                    var finalizerResponse = await TryCreateFinalizerResponseAfterProviderFailureAsync(
-                        provider,
-                        resolvedModel,
-                        structuredOutput,
-                        runtimeAgent,
-                        runtimeSession,
-                        runtimeSessionKey,
-                        runtimeOptions,
-                        finalizerMode,
-                        exception,
-                        updates,
-                        progressCallback,
-                        cancellationToken,
-                        snapshotEffectiveFinalizerInvocations,
-                        snapshotEffectiveToolInvocationTraces);
-                    if (finalizerResponse is not null)
-                    {
-                        return AttachContextDiagnostics(finalizerResponse);
+                        throw;
                     }
 
                     throw new AgentRuntimeUsageException(
-                        "Provider runtime failed after provider activity. Usage was captured when available.",
+                        "Agent runtime failed after provider activity. Usage was captured when available.",
                         exception,
                         MafRuntimeResponseAssembler.CreateProviderUsageObservations(
                             provider,
@@ -956,8 +1196,13 @@ public sealed class MafAgentRuntime : IAgentRuntime
                             runtimeSessionKey,
                             updates,
                             ProviderUsageSourcePhases.AgentRuntime,
-                            MafRuntimeResponseAssembler.BuildProviderFailureDiagnostic(exception)),
-                        snapshotEffectiveToolInvocationTraces());
+                            MafProviderUpdatePump.BuildFailureDiagnostic(exception, failureOrigin)),
+                        snapshotEffectiveToolInvocationTraces(),
+                        entryAgentRequestCompatibilityEvidence,
+                        failureOrigin,
+                        MafRuntimeFailureOriginClassifier.ResolveProviderFailureIdentity(
+                            exception,
+                            failureOrigin));
                 }
             }
 
@@ -1300,7 +1545,7 @@ public sealed class MafAgentRuntime : IAgentRuntime
         await progressCallback(
             ExecutionState.Persisting,
             "Finalizer recovery",
-            $"Provider streaming failed after required finalizer '{policy.ToolName}' was captured. Persisting the governed finalizer outcome and preserving the provider error for diagnostics: {exception.Message}");
+            $"Provider streaming failed after required finalizer '{policy.ToolName}' was captured. Persisting the governed finalizer outcome and preserving the redacted provider error for diagnostics: {WorkflowExecutorRedaction.RedactText(exception.Message)}");
 
         var serializedSessionStateJson = await sessionPersistenceDriver.TrySerializePersistableRuntimeSessionAsync(
             runtimeAgent,
@@ -1519,5 +1764,14 @@ public sealed class MafAgentRuntime : IAgentRuntime
             SerializedSessionStateJson = serializedSessionStateJson
         };
     }
+
+    private static AgentRuntimeUsageException CreateProviderConfigurationUsageException(
+        MafProviderConfigurationException exception)
+        => new(
+            "Provider runtime configuration validation failed before dispatch.",
+            exception,
+            [],
+            failureOrigin: AgentRuntimeFailureOrigin.ProviderConfiguration,
+            providerFailureIdentity: exception.ProviderIdentity);
 
 }

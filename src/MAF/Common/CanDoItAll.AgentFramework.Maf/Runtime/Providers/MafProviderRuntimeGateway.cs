@@ -52,6 +52,7 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         });
         services.TryAddSingleton<IProviderDispatchLaneGate, ProviderDispatchLaneGate>();
         services.TryAddSingleton<IMafProviderStreamingDispatchGate, MafProviderStreamingDispatchGate>();
+        services.TryAddSingleton<IMafProviderAgentFactory, MafProviderAgentFactory>();
         services.TryAddSingleton<IProviderRuntimeHandleFactory, ProviderRuntimeHandleFactory>();
         services.TryAddSingleton<IProviderRuntimePool, ProviderRuntimePool>();
         services.TryAddSingleton<IProviderBatchJobBalancer, ProviderBatchJobBalancer>();
@@ -60,16 +61,6 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IMafProviderRuntimeGateway, MafProviderRuntimeGateway>();
 
         return services;
-    }
-
-    internal static IAgentProviderFactory CreateDefaultProviderFactory(IServiceProvider services)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        var httpClients = new MafProviderDriverHttpClientPool();
-        var credentialResolver = new MafProviderDriverCredentialResolver(
-            services.GetService<IAgentProviderCredentialResolver>() ?? new EnvironmentVariableAgentProviderCredentialResolver());
-        return CreateDefaultProviderFactory(httpClients, credentialResolver);
     }
 
     private static IAgentProviderFactory CreateDefaultProviderFactory(
@@ -89,19 +80,6 @@ internal sealed class MafProviderRuntimeGateway(
     IProviderRuntimeDescriptorStore descriptorStore,
     IProviderRuntimePool runtimePool) : IMafProviderRuntimeGateway
 {
-    public static IMafProviderRuntimeGateway CreateFallback(IServiceProvider services)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        var descriptorStore = new ProviderProfileRuntimeDescriptorStore();
-        var providerFactory = MafProviderRuntimeServiceCollectionExtensions.CreateDefaultProviderFactory(services);
-        var dispatchLaneGate = new ProviderDispatchLaneGate(providerFactory);
-        var runtimePool = new ProviderRuntimePool(
-            descriptorStore,
-            new ProviderRuntimeHandleFactory(providerFactory, dispatchLaneGate));
-        return new MafProviderRuntimeGateway(descriptorStore, runtimePool);
-    }
-
     public async Task<ProviderHealthResult> TestProviderAsync(
         ProviderProfile provider,
         CancellationToken cancellationToken = default)

@@ -2,8 +2,8 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,22 +17,22 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
     private readonly IAgentImageGenerationService imageGenerationService;
-    private readonly string workspaceRoot;
+    private readonly IWorkspacePathResolutionService workspacePaths;
     private readonly ImageGenerationToolBuilder toolBuilder;
 
     public ImageGenerationAgentRuntimeToolProvider(
         IProviderRuntimeProfileSource providerSource,
-        IWorkspacePathResolver workspacePathResolver,
+        IWorkspacePathResolutionService workspacePaths,
         IAgentImageGenerationService imageGenerationService,
         IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(providerSource);
-        ArgumentNullException.ThrowIfNull(workspacePathResolver);
+        ArgumentNullException.ThrowIfNull(workspacePaths);
         ArgumentNullException.ThrowIfNull(imageGenerationService);
         ArgumentNullException.ThrowIfNull(services);
 
         this.imageGenerationService = imageGenerationService;
-        workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        this.workspacePaths = workspacePaths;
 
         toolBuilder = new ImageGenerationToolBuilder(
             this,
@@ -91,7 +91,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 AIFunctionFactory.Create(
                     (ImageGenerationCreateInput request, CancellationToken cancellationToken = default) => ImageGenerationCreateAsync(agent, runtimeProvider, access, request, cancellationToken),
                     AgentToolInvocationPolicyMetadata.ImageGenerationCreate,
-                    "Generates one image through the agent's allowed image-generation provider and writes the generated binary to a managed workspace path. When project asset storage is enabled, use project_structure_asset_create afterwards to store the image as a project asset.")
+                    "Generates one image through the agent's allowed image-generation provider and writes the generated binary to a managed workspace path. To prepare a canonical project-asset attachment, supply projectAssetTarget with the exact projectId and parentNodeKey. The result then contains a strongly typed projectAssetCreateDraft for a separate project_structure_asset_create call. Image generation never mutates project structure itself, and the asset tool must be independently attached and authorized.")
             ];
         }
 
@@ -109,6 +109,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             }
 
             ValidateRequest(request);
+            var projectAssetTarget = NormalizeProjectAssetTarget(normalizedAccess, request.ProjectAssetTarget);
             var provider = await ResolveImageProviderAsync(normalizedAccess, request.ProviderProfileId, runtimeProvider, cancellationToken);
             var model = ResolveImageModel(provider, normalizedAccess, request.Model);
             var providerConfiguration = ReadProviderConfiguration(provider);
@@ -148,6 +149,10 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath.FullPath)!);
             await File.WriteAllBytesAsync(outputPath.FullPath, imageBytes, cancellationToken);
+            var projectAssetCreateDraft = BuildProjectAssetCreateDraft(
+                projectAssetTarget,
+                outputPath,
+                contentType);
 
             return new ImageGenerationCreateResult(
                 Success: true,
@@ -163,7 +168,8 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 OutputFormat: outputFormat,
                 SourceCount: sourceImages.Count,
                 SourceSummaries: sourceImages.Select(item => item.Summary).ToList(),
-                ProjectAssetStorageInstruction: ResolveProjectAssetStorageInstruction(normalizedAccess, outputPath, outputFormat));
+                ProjectAssetCreateDraft: projectAssetCreateDraft,
+                ProjectAssetStorageInstruction: ResolveProjectAssetStorageInstruction(normalizedAccess, projectAssetCreateDraft));
         }
 
         private async Task<ProviderProfile> ResolveImageProviderAsync(
@@ -348,15 +354,101 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
         private static string ResolveProjectAssetStorageInstruction(
             AgentImageGenerationAccessSettings access,
-            ImageGenerationOutputPath outputPath,
-            string outputFormat)
+            ImageGenerationProjectAssetCreateDraft? projectAssetCreateDraft)
         {
             if (!access.CanStoreImagesAsProjectAssets)
             {
                 return "Project asset storage is not enabled for this agent. Keep this generated image in the managed workspace until image project-asset storage is enabled.";
             }
 
-            return $"Call project_structure_asset_create with sourceWorkspacePath '{outputPath.RelativePath}', sourceContentType '{ResolveOutputContentType(outputFormat)}', and sourceFileName '{Path.GetFileName(outputPath.FullPath)}'.";
+            if (projectAssetCreateDraft is null)
+            {
+                return "To register this image as a managed project asset, identify the exact projectId and canonical parentNodeKey, then call project_structure_asset_create with the generated outputWorkspacePath as sourceWorkspacePath. Image generation itself does not mutate project structure.";
+            }
+
+            return "Submit projectAssetCreateDraft.projectId and projectAssetCreateDraft.request unchanged to project_structure_asset_create. That separate mutation tool must be attached and authorized; image-generation storage access does not grant project-structure write authority.";
+        }
+
+        private static ImageGenerationProjectAssetTarget? NormalizeProjectAssetTarget(
+            AgentImageGenerationAccessSettings access,
+            ImageGenerationProjectAssetTarget? target)
+        {
+            if (target is null)
+            {
+                return null;
+            }
+
+            if (!access.CanStoreImagesAsProjectAssets)
+            {
+                throw new ImageGenerationToolException(
+                    "ProjectAssetStorageDenied",
+                    "This agent is not allowed to prepare generated images for project-asset storage. Enable image project-asset storage or omit projectAssetTarget.",
+                    canRetryWithCorrectedInput: false);
+            }
+
+            if (target.ProjectId == Guid.Empty)
+            {
+                throw new ImageGenerationToolException(
+                    "ProjectAssetTargetInvalid",
+                    "A generated-image project asset target requires a non-empty projectId.",
+                    canRetryWithCorrectedInput: true);
+            }
+
+            if (string.IsNullOrWhiteSpace(target.ParentNodeKey))
+            {
+                throw new ImageGenerationToolException(
+                    "ProjectAssetParentRequired",
+                    "A generated-image project asset target requires an explicit canonical parentNodeKey. Use project:{projectId} for the project root or an existing canonical node id.",
+                    canRetryWithCorrectedInput: true);
+            }
+
+            if (string.IsNullOrWhiteSpace(target.Title))
+            {
+                throw new ImageGenerationToolException(
+                    "ProjectAssetTitleRequired",
+                    "A generated-image project asset target requires a title.",
+                    canRetryWithCorrectedInput: true);
+            }
+
+            return target with
+            {
+                ParentNodeKey = target.ParentNodeKey.Trim(),
+                Title = target.Title.Trim(),
+                Subtitle = target.Subtitle?.Trim(),
+                Notes = target.Notes?.Trim(),
+                ObjectSubtype = string.IsNullOrWhiteSpace(target.ObjectSubtype)
+                    ? "generated"
+                    : target.ObjectSubtype.Trim(),
+                LeaseToken = string.IsNullOrWhiteSpace(target.LeaseToken)
+                    ? null
+                    : target.LeaseToken.Trim()
+            };
+        }
+
+        private static ImageGenerationProjectAssetCreateDraft? BuildProjectAssetCreateDraft(
+            ImageGenerationProjectAssetTarget? target,
+            ImageGenerationOutputPath outputPath,
+            string contentType)
+        {
+            if (target is null)
+            {
+                return null;
+            }
+
+            return new ImageGenerationProjectAssetCreateDraft(
+                target.ProjectId,
+                new ProjectStructureAgentAssetCreateInput(
+                    ProjectObjectType.ImageAsset,
+                    target.Title,
+                    target.Subtitle ?? string.Empty,
+                    target.Notes ?? string.Empty,
+                    Media: null,
+                    ParentNodeKey: target.ParentNodeKey,
+                    ObjectSubtype: target.ObjectSubtype,
+                    LeaseToken: target.LeaseToken,
+                    SourceWorkspacePath: outputPath.RelativePath,
+                    SourceFileName: Path.GetFileName(outputPath.FullPath),
+                    SourceContentType: contentType));
         }
 
         private static string ResolveInputContentType(string fileName)
@@ -427,7 +519,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         string errorCode,
         string message,
         bool canRetryWithCorrectedInput,
-        Exception innerException) : InvalidOperationException(message, innerException), IAgentToolFailure
+        Exception? innerException = null) : InvalidOperationException(message, innerException), IAgentToolFailure
     {
         public string ErrorCode { get; } = errorCode;
 
@@ -440,20 +532,30 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
 
     private WorkspaceImagePathResolution ResolveWorkspaceImagePath(string path)
     {
-        var fullPath = ResolvePathFromWorkspace(path, false);
-        if (!File.Exists(fullPath))
+        WorkspaceResolvedPath resolution;
+        try
         {
-            throw new InvalidOperationException($"Source image '{path}' was not found.");
+            resolution = workspacePaths.ResolveFilePath(path, allowMissing: false);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidOperationException($"Source image '{path}' could not be resolved inside the active workspace scope. {exception.Message}", exception);
         }
 
-        var extension = Path.GetExtension(fullPath).ToLowerInvariant();
+        if (!resolution.IsWorkspacePath)
+        {
+            throw new InvalidOperationException($"Source image '{path}' must resolve inside the active workspace scope.");
+        }
+
+        var extension = Path.GetExtension(resolution.FullPath).ToLowerInvariant();
         if (extension is not ".png" and not ".jpg" and not ".jpeg" and not ".webp")
         {
             throw new InvalidOperationException($"Source image '{path}' must be a PNG, JPEG, or WEBP file.");
         }
 
-        var relativePath = NormalizeWorkspaceRelativePath(Path.GetRelativePath(workspaceRoot, fullPath));
-        return new WorkspaceImagePathResolution(fullPath, relativePath);
+        return new WorkspaceImagePathResolution(
+            resolution.FullPath,
+            NormalizeWorkspaceRelativePath(resolution.RelativePath));
     }
 
     private ImageGenerationOutputPath ResolveImageGenerationOutputPath(
@@ -467,96 +569,34 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             normalizedPath += extension;
         }
 
-        var fullPath = ResolvePathFromWorkspace(normalizedPath, false);
-        if (Directory.Exists(fullPath))
+        WorkspaceResolvedPath resolution;
+        try
+        {
+            resolution = workspacePaths.ResolveFilePath(normalizedPath, allowMissing: true);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidOperationException($"Output path '{normalizedPath}' could not be resolved inside the active workspace scope. {exception.Message}", exception);
+        }
+
+        if (!resolution.IsWorkspacePath)
+        {
+            throw new InvalidOperationException($"Output path '{normalizedPath}' must resolve inside the active workspace scope.");
+        }
+
+        if (Directory.Exists(resolution.FullPath))
         {
             throw new InvalidOperationException($"Output path '{normalizedPath}' resolves to a directory.");
         }
 
-        var relativePath = NormalizeWorkspaceRelativePath(Path.GetRelativePath(workspaceRoot, fullPath));
-        return new ImageGenerationOutputPath(fullPath, relativePath);
+        return new ImageGenerationOutputPath(
+            resolution.FullPath,
+            NormalizeWorkspaceRelativePath(resolution.RelativePath));
     }
 
     private static string NormalizeWorkspaceRelativePath(string path)
     {
         return path.Replace('\\', '/').Trim();
-    }
-
-    private string ResolvePathFromWorkspace(string path, bool allowExternal, IReadOnlyList<string>? allowedExternalRoots = null)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return workspaceRoot;
-        }
-
-        var expandedPath = ExpandPortablePath(path);
-        var fullPath = Path.GetFullPath(Path.IsPathRooted(expandedPath) ? expandedPath : Path.Combine(workspaceRoot, expandedPath));
-        if (IsPathWithinRoot(fullPath, workspaceRoot))
-        {
-            return fullPath;
-        }
-
-        if (!allowExternal)
-        {
-            throw new InvalidOperationException($"Path '{path}' resolves outside the workspace root. Use a workspace-relative path or import the external file into chat attachments first.");
-        }
-
-        var allowedRoots = allowedExternalRoots?
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(ExpandPortablePath)
-            .Select(item => Path.GetFullPath(Path.IsPathRooted(item) ? item : Path.Combine(workspaceRoot, item)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList()
-            ?? [];
-
-        if (allowedRoots.Any(allowedRoot => IsPathWithinRoot(fullPath, allowedRoot)))
-        {
-            return fullPath;
-        }
-
-        throw new InvalidOperationException($"Path '{path}' resolves outside the workspace root and is not covered by an explicit external-root allowlist.");
-    }
-
-    private static string ExpandPortablePath(string path)
-    {
-        var expanded = Environment.ExpandEnvironmentVariables(path.Trim());
-        if (string.Equals(expanded, "~", StringComparison.Ordinal))
-        {
-            var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            return string.IsNullOrWhiteSpace(homeDirectory)
-                ? expanded
-                : homeDirectory;
-        }
-
-        if (!expanded.StartsWith("~" + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
-            !expanded.StartsWith("~" + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
-        {
-            return expanded;
-        }
-
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (string.IsNullOrWhiteSpace(home))
-        {
-            return expanded;
-        }
-
-        var relativePath = expanded[2..]
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        return Path.Combine(home, relativePath);
-    }
-
-    private static bool IsPathWithinRoot(string fullPath, string rootPath)
-    {
-        var normalizedRoot = Path.GetFullPath(rootPath);
-        if (string.Equals(fullPath, normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        var rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar) || normalizedRoot.EndsWith(Path.AltDirectorySeparatorChar)
-            ? normalizedRoot
-            : normalizedRoot + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed record WorkspaceImagePathResolution(
@@ -577,11 +617,25 @@ public sealed record ImageGenerationCreateInput(
     string? Quality = null,
     string? OutputFormat = null,
     IReadOnlyList<string>? SourceWorkspacePaths = null,
-    IReadOnlyList<ImageGenerationProjectAssetSource>? SourceProjectAssets = null);
+    IReadOnlyList<ImageGenerationProjectAssetSource>? SourceProjectAssets = null,
+    ImageGenerationProjectAssetTarget? ProjectAssetTarget = null);
 
 public sealed record ImageGenerationProjectAssetSource(
     Guid ProjectId,
     string NodeId);
+
+public sealed record ImageGenerationProjectAssetTarget(
+    Guid ProjectId,
+    string ParentNodeKey,
+    string Title,
+    string? Subtitle = null,
+    string? Notes = null,
+    string ObjectSubtype = "generated",
+    string? LeaseToken = null);
+
+public sealed record ImageGenerationProjectAssetCreateDraft(
+    Guid ProjectId,
+    ProjectStructureAgentAssetCreateInput Request);
 
 public sealed record ImageGenerationCreateResult(
     bool Success,
@@ -597,4 +651,5 @@ public sealed record ImageGenerationCreateResult(
     string OutputFormat,
     int SourceCount,
     IReadOnlyList<string> SourceSummaries,
+    ImageGenerationProjectAssetCreateDraft? ProjectAssetCreateDraft,
     string ProjectAssetStorageInstruction);

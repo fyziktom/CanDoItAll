@@ -10,7 +10,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 {
     [Fact]
-    public async Task SB04_IPFS_CidAndMfs_UseDistinctTypedAddressesAndConsistency()
+    public async Task Ipfs_cid_and_mfs_use_distinct_typed_addresses_and_consistency()
     {
         var transport = new FakeIpfsTransport();
         var driver = CreateIpfsDriver(transport);
@@ -32,7 +32,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_MutableRevisionChange_InvalidatesContinuation()
+    public async Task Ipfs_mutable_revision_change_invalidates_continuation()
     {
         var transport = new FakeIpfsTransport { HasMore = true };
         var driver = CreateIpfsDriver(transport);
@@ -55,7 +55,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_TransportFactsOutsideBudget_AreRejected()
+    public async Task Ipfs_transport_facts_outside_budget_are_rejected()
     {
         var transport = new FakeIpfsTransport { ReportedInspectedItems = 20_000 };
         var driver = CreateIpfsDriver(transport);
@@ -69,7 +69,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_Cancellation_DoesNotPublishCompletedDiagnostic()
+    public async Task Ipfs_cancellation_does_not_publish_completed_diagnostic()
     {
         var transport = new FakeIpfsTransport { WaitForCancellation = true };
         var logger = new ListLogger<IpfsStorageBrowseDriver>();
@@ -87,7 +87,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_FTP_ReliableFacts_MapWithoutWriteAuthority()
+    public async Task Ftp_reliable_facts_map_without_write_authority()
     {
         var transport = new FakeFtpTransport();
         var driver = CreateFtpDriver(transport);
@@ -114,7 +114,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_FTP_AmbiguousClassification_IsExplicitlyUnsupported()
+    public async Task Ftp_ambiguous_classification_is_explicitly_unsupported()
     {
         var transport = new FakeFtpTransport { ClassificationReliable = false };
         var driver = CreateFtpDriver(transport);
@@ -128,7 +128,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void SB04_FTP_MachineFacts_ClassifyOnlyStandardFileAndDirectoryEntries()
+    public void Ftp_machine_facts_classify_only_standard_file_and_directory_entries()
     {
         bool directoryParsed = FtpMachineListEntryParser.TryParse(
             "root",
@@ -157,7 +157,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     [InlineData("type=file;size=12; ../escape.txt")]
     [InlineData("type=file;type=dir; duplicate")]
     [InlineData("type=unknown; item")]
-    public void SB04_FTP_MalformedOrAmbiguousMachineFacts_AreRejected(string line)
+    public void Ftp_malformed_or_ambiguous_machine_facts_are_rejected(string line)
     {
         bool parsed = FtpMachineListEntryParser.TryParse(
             "root",
@@ -169,7 +169,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_RemoteContentDrivers_ReturnUnreadOwnedStreamsWithoutBridgeBuffering()
+    public async Task Remote_content_drivers_return_unread_owned_streams_without_bridge_buffering()
     {
         var ipfsTransport = new FakeIpfsTransport();
         var ftpTransport = new FakeFtpTransport();
@@ -197,7 +197,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_RemoteFailure_MasksEndpointCredentialAndRawTransportMessage()
+    public async Task Remote_failure_masks_endpoint_credential_and_raw_transport_message()
     {
         const string secret = "credential-secret";
         const string endpoint = "https://private.example.test:5001";
@@ -231,7 +231,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_HTTP_ReusesInjectedClientAndLeavesContentUnreadUntilConsumerReads()
+    public async Task Ipfs_http_reuses_injected_client_and_leaves_content_unread_until_consumer_reads()
     {
         var contentStream = new TrackingStream(Encoding.UTF8.GetBytes("streamed-content"));
         var handler = new RecordingHttpHandler(request =>
@@ -272,7 +272,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_HTTP_MfsEntryId_ReadsThroughMutableFileEndpoint()
+    public async Task Ipfs_http_mfs_entry_id_reads_through_mutable_file_endpoint()
     {
         HttpMethod? observedMethod = null;
         Uri? observedUri = null;
@@ -301,7 +301,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_HTTP_MfsBrowse_UsesBeforeAndAfterRevisionChecks()
+    public async Task Ipfs_http_mfs_browse_uses_before_and_after_revision_checks()
     {
         var handler = new RecordingHttpHandler(request =>
         {
@@ -337,7 +337,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_HTTP_LargeListing_PageOneStopsBeforeConsumingWholeResponse()
+    public async Task Ipfs_http_large_listing_first_page_stops_before_consuming_whole_response()
     {
         var json = new StringBuilder("{\"Objects\":[{\"Links\":[");
         for (int index = 0; index < 10_000; index++)
@@ -382,7 +382,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
         Assert.True(listingStream.PositionAtDispose < listingStream.OriginalLength);
         Assert.True(page.ResponseBytes < payload.Length);
         output.WriteLine(
-            "SB05_IPFS_STREAMING total-bytes={0} consumed-bytes={1} reported-bytes={2} inspected={3} returned={4}",
+            "IPFS streaming total-bytes={0} consumed-bytes={1} reported-bytes={2} inspected={3} returned={4}",
             payload.Length,
             listingStream.PositionAtDispose,
             page.ResponseBytes,
@@ -391,7 +391,7 @@ public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task SB04_IPFS_HTTP_OversizedContent_IsRejectedBeforeBodyRead()
+    public async Task Ipfs_http_oversized_content_is_rejected_before_body_read()
     {
         var contentStream = new TrackingStream([1, 2, 3]);
         var handler = new RecordingHttpHandler(_ =>

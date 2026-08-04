@@ -342,13 +342,30 @@ public sealed class ApiStreamingTransportTests
             TimeSpan.FromMilliseconds(10));
 
         Assert.True(commandLifetime.IsCancellationRequested);
+        const string accountKeySecret = "late-account-key-secret";
+        const string awsAccessKeySecret = "late-aws-access-key-secret";
+        const string passwordSecret = "late-password-secret";
+        const string sasSignatureSecret = "late-sas-signature-secret";
         var expectedFailure = new InvalidOperationException(
-            "Late command failure.");
+            $"AccountKey={accountKeySecret}; AWSAccessKeyId={awsAccessKeySecret}; " +
+            $"Pwd={passwordSecret}; sig={sasSignatureSecret}.");
         completion.SetException(expectedFailure);
         var observedFailure = await logger.Failure.Task.WaitAsync(
             TimeSpan.FromSeconds(1));
 
-        Assert.Same(expectedFailure, observedFailure);
+        Assert.Null(observedFailure.Exception);
+        Assert.Contains(
+            nameof(InvalidOperationException),
+            observedFailure.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("AccountKey", observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("AWSAccessKeyId", observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Pwd=", observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("sig=", observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(accountKeySecret, observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(awsAccessKeySecret, observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(passwordSecret, observedFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(sasSignatureSecret, observedFailure.Message, StringComparison.Ordinal);
         Assert.False(releaseCancellation.IsSet);
         releaseCancellation.Set();
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -369,7 +386,7 @@ public sealed class ApiStreamingTransportTests
 
     private sealed class RecordingLogger : ILogger
     {
-        public TaskCompletionSource<Exception> Failure { get; } =
+        public TaskCompletionSource<CapturedLog> Failure { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public IDisposable BeginScope<TState>(TState state)
@@ -390,13 +407,16 @@ public sealed class ApiStreamingTransportTests
             Exception? exception,
             Func<TState, Exception?, string> formatter)
         {
-            if (logLevel >= LogLevel.Error &&
-                exception is not null)
+            if (logLevel >= LogLevel.Error)
             {
-                Failure.TrySetResult(exception);
+                Failure.TrySetResult(new CapturedLog(
+                    formatter(state, exception),
+                    exception));
             }
         }
     }
+
+    private sealed record CapturedLog(string Message, Exception? Exception);
 
     private sealed class NoopDisposable : IDisposable
     {

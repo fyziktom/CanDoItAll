@@ -61,6 +61,7 @@ public sealed class DefaultProviderUsageNormalizer : IProviderUsageNormalizer
             TotalTokens: normalized.TotalTokens,
             ToolCallCount: Math.Max(0, request.ToolCallCount))
         {
+            ProviderProfileId = request.Provider.Id,
             ProviderResponseId = normalized.ProviderResponseId,
             ProviderRequestId = normalized.ProviderRequestId,
             RuntimeSessionKey = request.RuntimeSessionKey,

@@ -27,8 +27,7 @@ public sealed class MafRuntimeArchitectureServicesTests
         using var provider = services.BuildServiceProvider();
         Assert.IsType<MafRuntimeDependencyResolver>(provider.GetRequiredService<IMafRuntimeDependencyResolver>());
         Assert.IsType<MafProviderCredentialService>(provider.GetRequiredService<IMafProviderCredentialService>());
-        Assert.IsType<MafProviderAgentFactory>(provider.GetRequiredService<IMafProviderAgentFactory>());
-        Assert.IsType<MafProviderStreamingRunner>(provider.GetRequiredService<IMafProviderStreamingRunner>());
+        Assert.Null(provider.GetService<IMafProviderAgentFactory>());
         Assert.IsType<RuntimeToolProviderComposer>(provider.GetRequiredService<IRuntimeToolProviderComposer>());
         Assert.IsType<RuntimeToolProviderAccessFilter>(provider.GetRequiredService<IRuntimeToolProviderAccessFilter>());
         Assert.IsType<NoOpMafRuntimeCompositionMetrics>(provider.GetRequiredService<IMafRuntimeCompositionMetrics>());
@@ -37,15 +36,44 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public async Task MafProviderStreamingRunner_does_not_use_provider_timeout_as_runtime_agent_cancellation()
+    public void Missing_provider_runtime_graph_fails_fast()
     {
-        var runner = new MafProviderStreamingRunner(new TestMafProviderStreamingDispatchGate());
+        using var provider = new ServiceCollection().BuildServiceProvider();
+        var resolver = new MafRuntimeDependencyResolver();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            resolver.ResolveProviderDependencies(provider));
+
+        Assert.Contains(nameof(IMafProviderRuntimeGateway), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(IMafProviderStreamingDispatchGate), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(IAgentImageAnalysisService), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("AddMafProviderRuntimeServices", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Partial_provider_runtime_registration_fails_fast()
+    {
+        using var provider = new ServiceCollection()
+            .AddSingleton<IMafProviderStreamingDispatchGate>(
+                NoOpMafProviderStreamingDispatchGate.Instance)
+            .BuildServiceProvider();
+        var resolver = new MafRuntimeDependencyResolver();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            resolver.ResolveProviderDependencies(provider));
+
+        Assert.Contains("incomplete", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafProviderStreamingInvocation_does_not_use_provider_timeout_as_runtime_agent_cancellation()
+    {
         var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMilliseconds(1200));
         var runtimeSession = await runtimeAgent.CreateSessionAsync();
         var provider = CreateProviderProfile(configurationJson: "{\"timeoutSeconds\":1}");
         var updates = new List<AgentResponseUpdate>();
 
-        await foreach (var update in runner.RunStreamingAsync(
+        await foreach (var update in MafProviderStreamingInvocation.RunStreamingAsync(
                            provider,
                            "unit-model",
                            runtimeAgent,
@@ -63,122 +91,81 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public async Task MafProviderStreamingRunner_times_out_an_idle_stream_and_cancels_the_underlying_enumerator()
+    public async Task Runtime_build_preserves_primary_failure_and_disposes_all_resources_in_ownership_order()
     {
-        var runner = new MafProviderStreamingRunner(
-            new TestMafProviderStreamingDispatchGate(),
-            _ => TimeSpan.FromMilliseconds(50));
-        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMinutes(1));
-        var runtimeSession = await runtimeAgent.CreateSessionAsync();
+        var disposalOrder = new List<string>();
         var provider = CreateProviderProfile();
+        var agent = new DelayedStreamingAgent(
+            TimeSpan.Zero,
+            onDispose: () => disposalOrder.Add("agent"));
+        var primaryFailure = new MafProviderTransportException(
+            provider,
+            "participant-model",
+            new HttpRequestException("provider failed"));
+        var runtimeBuild = new RuntimeBuildResult(
+            agent,
+            provider,
+            "unit-model",
+            [
+                new RecordingAsyncDisposable("async-1", disposalOrder),
+                new RecordingAsyncDisposable(
+                    "async-2",
+                    disposalOrder,
+                    new IOException("async cleanup failed"))
+            ],
+            [
+                new RecordingDisposable("sync-1", disposalOrder),
+                new RecordingDisposable("sync-2", disposalOrder)
+            ],
+            hasApprovalTools: false,
+            isTemperatureOmitted: false,
+            finalizerCapture: null,
+            toolInvocationTraceRecorder: null,
+            contextContributionTraceCollector: null);
 
-        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
-        {
-            await foreach (var _ in runner.RunStreamingAsync(
-                               provider,
-                               "unit-model",
-                               runtimeAgent,
-                               runtimeSession,
-                               [new ChatMessage(ChatRole.User, "run")],
-                               new ChatClientAgentRunOptions(new ChatOptions()),
-                               CancellationToken.None))
-            {
-            }
-        });
+        var exception = await Assert.ThrowsAsync<MafProviderTransportException>(() =>
+            runtimeBuild.ExecuteWithLifetimeAsync<AgentRuntimeResponse>(() =>
+                Task.FromException<AgentRuntimeResponse>(primaryFailure)));
 
-        Assert.Contains("made no semantic progress", exception.Message, StringComparison.Ordinal);
-        Assert.True(runtimeAgent.DelayTokenWasCanceled);
+        Assert.Same(primaryFailure, exception);
+        Assert.Equal(
+            ["agent", "async-2", "async-1", "sync-2", "sync-1"],
+            disposalOrder);
+        Assert.Contains(
+            typeof(IOException).FullName!,
+            Assert.IsType<string>(
+                exception.Data["CanDoItAll.RuntimeBuildDisposalFailureTypes"]),
+            StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task MafProviderStreamingRunner_resets_the_semantic_idle_deadline_after_each_update()
+    public async Task Concurrent_runtime_build_disposal_callers_await_the_same_cleanup()
     {
-        var runner = new MafProviderStreamingRunner(
-            new TestMafProviderStreamingDispatchGate(),
-            _ => TimeSpan.FromSeconds(2),
-            _ => TimeSpan.FromSeconds(15));
-        var runtimeAgent = new DelayedStreamingAgent(TimeSpan.FromMilliseconds(800), updateCount: 3);
-        var runtimeSession = await runtimeAgent.CreateSessionAsync();
         var provider = CreateProviderProfile();
-        var updates = new List<AgentResponseUpdate>();
+        var cleanup = new BlockingAsyncDisposable();
+        var runtimeBuild = new RuntimeBuildResult(
+            new DelayedStreamingAgent(TimeSpan.Zero),
+            provider,
+            "unit-model",
+            [cleanup],
+            [],
+            hasApprovalTools: false,
+            isTemperatureOmitted: false,
+            finalizerCapture: null,
+            toolInvocationTraceRecorder: null,
+            contextContributionTraceCollector: null);
 
-        await foreach (var update in runner.RunStreamingAsync(
-                           provider,
-                           "unit-model",
-                           runtimeAgent,
-                           runtimeSession,
-                           [new ChatMessage(ChatRole.User, "run")],
-                           new ChatClientAgentRunOptions(new ChatOptions()),
-                           CancellationToken.None))
-        {
-            updates.Add(update);
-        }
+        var firstDisposal = runtimeBuild.DisposeAsync().AsTask();
+        await cleanup.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        var secondDisposal = runtimeBuild.DisposeAsync().AsTask();
 
-        Assert.True(runtimeAgent.DelayCompleted);
-        Assert.False(runtimeAgent.DelayTokenWasCanceled);
-        Assert.Equal(3, updates.Count);
-    }
+        Assert.False(firstDisposal.IsCompleted);
+        Assert.False(secondDisposal.IsCompleted);
 
-    [Fact]
-    public async Task MafProviderStreamingRunner_does_not_treat_empty_heartbeat_updates_as_semantic_progress()
-    {
-        var runner = new MafProviderStreamingRunner(
-            new TestMafProviderStreamingDispatchGate(),
-            _ => TimeSpan.FromMilliseconds(80));
-        var runtimeAgent = new DelayedStreamingAgent(
-            TimeSpan.FromMilliseconds(10),
-            emitSemanticUpdates: false,
-            runUntilCancelled: true);
-        var runtimeSession = await runtimeAgent.CreateSessionAsync();
-        var provider = CreateProviderProfile();
+        cleanup.Release.TrySetResult();
+        await Task.WhenAll(firstDisposal, secondDisposal);
 
-        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
-        {
-            await foreach (var _ in runner.RunStreamingAsync(
-                               provider,
-                               "unit-model",
-                               runtimeAgent,
-                               runtimeSession,
-                               [new ChatMessage(ChatRole.User, "run")],
-                               new ChatClientAgentRunOptions(new ChatOptions()),
-                               CancellationToken.None))
-            {
-            }
-        });
-
-        Assert.Contains("made no semantic progress", exception.Message, StringComparison.Ordinal);
-        Assert.True(runtimeAgent.StreamCancellationWasRequested);
-    }
-
-    [Fact]
-    public async Task MafProviderStreamingRunner_enforces_absolute_deadline_when_semantic_updates_continue()
-    {
-        var runner = new MafProviderStreamingRunner(
-            new TestMafProviderStreamingDispatchGate(),
-            _ => TimeSpan.FromSeconds(1),
-            _ => TimeSpan.FromMilliseconds(80));
-        var runtimeAgent = new DelayedStreamingAgent(
-            TimeSpan.FromMilliseconds(10),
-            runUntilCancelled: true);
-        var runtimeSession = await runtimeAgent.CreateSessionAsync();
-        var provider = CreateProviderProfile();
-
-        var exception = await Assert.ThrowsAsync<TimeoutException>(async () =>
-        {
-            await foreach (var _ in runner.RunStreamingAsync(
-                               provider,
-                               "unit-model",
-                               runtimeAgent,
-                               runtimeSession,
-                               [new ChatMessage(ChatRole.User, "run")],
-                               new ChatClientAgentRunOptions(new ChatOptions()),
-                               CancellationToken.None))
-            {
-            }
-        });
-
-        Assert.Contains("absolute stream deadline", exception.Message, StringComparison.Ordinal);
-        Assert.True(runtimeAgent.StreamCancellationWasRequested);
+        Assert.Equal(1, cleanup.DisposeCount);
     }
 
     [Fact]
@@ -205,6 +192,7 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(RequestScopedSessionContentScrubber),
             typeof(ProcessArtifactRecoveryService),
             typeof(ProviderRuntimeDiagnostics),
+            typeof(MafProviderUpdatePump),
             typeof(OllamaChatResponseResilienceHandler),
             typeof(ProjectWorkspaceScopePolicy),
             typeof(RequiredFinalizerCapturedException)
@@ -324,6 +312,27 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.DoesNotContain("private static PendingToolApprovalRecord MapPendingApproval", runtimeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("private static async Task<string?> TrySerializePersistableRuntimeSessionAsync", runtimeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("private IEnumerable<ChatMessage> CreateApprovalInputMessages", runtimeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MafAgentRuntime_delegates_provider_enumerator_lifetime_to_update_pump()
+    {
+        var root = FindRepoRoot();
+        var runtimeSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "MafAgentRuntime.cs"));
+
+        Assert.Contains(nameof(MafProviderUpdatePump), runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(".GetAsyncEnumerator(", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("MafProviderEnumeratorLifetime", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("providerEnumerator", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("repairEnumerator", runtimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("jsonRepairEnumerator", runtimeSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -866,9 +875,11 @@ public sealed class MafRuntimeArchitectureServicesTests
     {
         var gateway = new TestMafProviderRuntimeGateway();
         var streamingGate = new TestMafProviderStreamingDispatchGate();
+        var imageAnalysisService = new UnavailableAgentImageAnalysisService();
         var services = new ServiceCollection();
         services.AddSingleton<IMafProviderRuntimeGateway>(gateway);
         services.AddSingleton<IMafProviderStreamingDispatchGate>(streamingGate);
+        services.AddSingleton<IAgentImageAnalysisService>(imageAnalysisService);
         using var provider = services.BuildServiceProvider();
         var resolver = new MafRuntimeDependencyResolver();
 
@@ -876,6 +887,7 @@ public sealed class MafRuntimeArchitectureServicesTests
 
         Assert.Same(gateway, dependencies.ProviderRuntimeGateway);
         Assert.Same(streamingGate, dependencies.ProviderStreamingDispatchGate);
+        Assert.Same(imageAnalysisService, dependencies.ImageAnalysisService);
     }
 
     [Fact]
@@ -1425,13 +1437,20 @@ public sealed class MafRuntimeArchitectureServicesTests
         TimeSpan delay,
         int updateCount = 1,
         bool emitSemanticUpdates = true,
-        bool runUntilCancelled = false) : AIAgent
+        bool runUntilCancelled = false,
+        Action? onDispose = null) : AIAgent, IAsyncDisposable
     {
         public bool DelayCompleted { get; private set; }
 
         public bool DelayTokenWasCanceled { get; private set; }
 
         public bool StreamCancellationWasRequested { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            onDispose?.Invoke();
+            return ValueTask.CompletedTask;
+        }
 
         protected override ValueTask<AgentSession> CreateSessionCoreAsync(CancellationToken cancellationToken = default)
             => ValueTask.FromResult<AgentSession>(new DelayedStreamingAgentSession());
@@ -1489,6 +1508,50 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     private sealed class DelayedStreamingAgentSession : AgentSession;
+
+    private sealed class RecordingAsyncDisposable(
+        string name,
+        ICollection<string> disposalOrder,
+        Exception? failure = null) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            disposalOrder.Add(name);
+            return failure is null
+                ? ValueTask.CompletedTask
+                : ValueTask.FromException(failure);
+        }
+    }
+
+    private sealed class RecordingDisposable(
+        string name,
+        ICollection<string> disposalOrder) : IDisposable
+    {
+        public void Dispose()
+        {
+            disposalOrder.Add(name);
+        }
+    }
+
+    private sealed class BlockingAsyncDisposable : IAsyncDisposable
+    {
+        private int disposeCount;
+
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int DisposeCount => Volatile.Read(ref disposeCount);
+
+        public async ValueTask DisposeAsync()
+        {
+            Interlocked.Increment(ref disposeCount);
+            Started.TrySetResult();
+            await Release.Task;
+        }
+    }
 
     private sealed class ThrowingSerializationAgent : AIAgent
     {

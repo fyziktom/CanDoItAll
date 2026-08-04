@@ -7,13 +7,8 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
-using CanDoItAll.Web.Api;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -26,7 +21,7 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
     {
         var launchService = new RecordingLaunchService();
         var runtimeManager = new OutcomeRuntimeManager();
-        await using var host = await FocusedWorkflowApiTestHost.CreateAsync(
+        await using var host = await CreateApiHostAsync(
             launchService,
             runtimeManager,
             jwtEnabled: true);
@@ -95,7 +90,7 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
     {
         var launchService = new RecordingLaunchService();
         var runtimeManager = new OutcomeRuntimeManager();
-        await using var host = await FocusedWorkflowApiTestHost.CreateAsync(
+        await using var host = await CreateApiHostAsync(
             launchService,
             runtimeManager,
             jwtEnabled: false);
@@ -190,6 +185,23 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
         Assert.Equal(
             Assert.IsType<WorkflowLaunchIdempotency.CallerSupplied>(launchService.Intents[0].Idempotency).Key,
             Assert.IsType<WorkflowLaunchIdempotency.CallerSupplied>(launchService.Intents[1].Idempotency).Key);
+    }
+
+    private static Task<ApiTestHost> CreateApiHostAsync(
+        IWorkflowLaunchService launchService,
+        IWorkflowRuntimeManager runtimeManager,
+        bool jwtEnabled)
+    {
+        return ApiTestHost.CreateAsync(
+            jwtEnabled,
+            services =>
+            {
+                services.RemoveAll<IWorkflowLaunchService>();
+                services.RemoveAll<IWorkflowRuntimeManager>();
+                services.AddSingleton(launchService);
+                services.AddSingleton(runtimeManager);
+            },
+            useInMemoryDatabase: true);
     }
 
     private sealed class RecordingLaunchService : IWorkflowLaunchService
@@ -334,86 +346,6 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
             string responseJson,
             CancellationToken cancellationToken = default)
             => Task.FromResult(ExternalResponseResult);
-    }
-
-    private sealed class FocusedWorkflowApiTestHost : IAsyncDisposable
-    {
-        private FocusedWorkflowApiTestHost(WebApplication app, HttpClient client)
-        {
-            App = app;
-            Client = client;
-        }
-
-        public WebApplication App { get; }
-
-        public HttpClient Client { get; }
-
-        public static async Task<FocusedWorkflowApiTestHost> CreateAsync(
-            IWorkflowLaunchService launchService,
-            IWorkflowRuntimeManager runtimeManager,
-            bool jwtEnabled)
-        {
-            var configurationValues = new Dictionary<string, string?>
-            {
-                ["Api:Enabled"] = "true",
-                ["Api:OpenApiEnabled"] = "false",
-                ["Api:Authorization:Enabled"] = jwtEnabled.ToString(),
-                ["Api:Authorization:Issuer"] = "CanDoItAll.WorkflowCaller.Tests",
-                ["Api:Authorization:Audience"] = "CanDoItAll.WorkflowCaller.Tests",
-                ["Api:Authorization:SigningKey"] = "workflow-caller-test-signing-key-32-bytes-minimum",
-                ["Api:Authorization:DefaultTokenLifetimeMinutes"] = "30",
-                ["Api:Authorization:MaxTokenLifetimeMinutes"] = "120"
-            };
-            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-            {
-                EnvironmentName = Environments.Development,
-                ApplicationName = typeof(WorkflowCallerLaunchBoundaryIntegrationTests).Assembly.FullName
-            });
-            builder.Configuration.AddInMemoryCollection(configurationValues);
-            builder.Services.AddSingleton<IClock, SystemClock>();
-            builder.Services.AddSingleton(launchService);
-            builder.Services.AddSingleton(runtimeManager);
-            builder.Services.AddSingleton<IWorkflowLaunchService>(launchService);
-            builder.Services.AddSingleton<IWorkflowRuntimeManager>(runtimeManager);
-            builder.Services.AddSingleton<IWorkflowRunStore, InMemoryWorkflowRunStore>();
-            builder.Services.AddCanDoItAllApi(builder.Configuration);
-
-            var app = builder.Build();
-            app.Urls.Add("http://127.0.0.1:0");
-            if (jwtEnabled)
-            {
-                app.UseAuthentication();
-                app.UseAuthorization();
-            }
-
-            var api = app.MapGroup("/api").DisableAntiforgery();
-            if (jwtEnabled)
-            {
-                api.RequireAuthorization();
-            }
-
-            api.MapGroup("/workflows")
-                .DisableAntiforgery()
-                .MapWorkflowRunControlApi();
-            await app.StartAsync();
-            var server = app.Services.GetRequiredService<IServer>();
-            var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses
-                ?? throw new InvalidOperationException("Focused workflow API host did not expose an address.");
-            return new FocusedWorkflowApiTestHost(
-                app,
-                new HttpClient
-                {
-                    BaseAddress = new Uri(addresses.Single()),
-                    Timeout = TimeSpan.FromSeconds(15)
-                });
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            Client.Dispose();
-            await App.StopAsync();
-            await App.DisposeAsync();
-        }
     }
 
 }

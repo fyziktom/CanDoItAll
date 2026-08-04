@@ -13,9 +13,9 @@ internal static class AgentsApi
             .WithTags("Agents");
 
         agents.MapGet("/", async (
-                bool includeTemplates,
                 IAgentFrameworkWorkspaceService workspaceService,
-                CancellationToken cancellationToken) =>
+                CancellationToken cancellationToken,
+                bool includeTemplates = false) =>
             Results.Ok(await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken)))
             .WithName("ListAgents")
             .Produces<AgentDefinition[]>(StatusCodes.Status200OK)
@@ -24,9 +24,9 @@ internal static class AgentsApi
                 StatusCodes.Status403Forbidden);
 
         agents.MapGet("/bootstrap", async (
-                bool includeTemplates,
                 IAgentFrameworkWorkspaceService workspaceService,
-                CancellationToken cancellationToken) =>
+                CancellationToken cancellationToken,
+                bool includeTemplates = false) =>
             Results.Ok(await workspaceService.GetChatPageBootstrapAsync(includeTemplates, cancellationToken)))
             .WithName("GetAgentBootstrap");
 
@@ -148,9 +148,9 @@ internal static class AgentsApi
 
         agents.MapGet("/teams/{teamId:guid}/agents", async (
                 Guid teamId,
-                bool includeTemplates,
                 IAgentFrameworkWorkspaceService workspaceService,
-                CancellationToken cancellationToken) =>
+                CancellationToken cancellationToken,
+                bool includeTemplates = false) =>
         {
             var team = (await workspaceService.ListAgentTeamsAsync(cancellationToken))
                 .FirstOrDefault(item => item.Id == teamId);
@@ -233,10 +233,19 @@ internal static class AgentsApi
 
         agents.MapPost("/providers", async (
                 ProviderProfileEditorModel request,
+                HttpContext context,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.SaveProviderAsync(request, cancellationToken)))
-            .WithName("SaveAgentProvider");
+            await SaveProviderResultAsync(
+                request,
+                context,
+                workspaceService,
+                cancellationToken))
+            .WithName("SaveAgentProvider")
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(
+                StatusCodes.Status400BadRequest,
+                StatusCodes.Status500InternalServerError);
 
         agents.MapDelete("/providers/{providerId:guid}", async (
                 Guid providerId,
@@ -401,11 +410,12 @@ internal static class AgentsApi
         agents.MapPost("/{agentId:guid}/chat", async (
                 Guid agentId,
                 AgentChatApiRequest request,
-                HttpResponse response,
+                HttpContext context,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             {
                 var validation = AgentApiRequestValidation.ValidateCommand(
+                    context,
                     agentId,
                     request.ChatSessionId,
                     request.Prompt);
@@ -415,7 +425,7 @@ internal static class AgentsApi
                 }
 
                 var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
-                AgentActivityApiResults.SetOperationIdHeader(response, operationId);
+                AgentActivityApiResults.SetOperationIdHeader(context.Response, operationId);
                 try
                 {
                     var result = await workspaceService.SendMessageAsync(
@@ -429,7 +439,19 @@ internal static class AgentsApi
                 }
                 catch (AgentExecutionActivityAdmissionException exception)
                 {
-                    return AgentActivityApiResults.FromAdmissionException(exception);
+                    return AgentActivityApiResults.FromAdmissionException(
+                        context,
+                        exception,
+                        agentId,
+                        chatSessionId: request.ChatSessionId);
+                }
+                catch (AgentChatRunFailedException exception)
+                {
+                    return ApiEndpointResults.AgentRunFailure(context, exception);
+                }
+                catch (AgentRunFailedException exception)
+                {
+                    return ApiEndpointResults.AgentRunFailure(context, exception);
                 }
             })
             .WithName("SendAgentChatMessage")
@@ -437,23 +459,27 @@ internal static class AgentsApi
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/execution-runs/{executionRunId:guid}/pending-approvals", async (
                 Guid executionRunId,
                 PendingApprovalApiRequest request,
-                HttpResponse response,
+                HttpContext context,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             {
-                var validation = AgentApiRequestValidation.ValidateExecutionRun(executionRunId);
+                var validation = AgentApiRequestValidation.ValidateExecutionRun(
+                    context,
+                    executionRunId);
                 if (validation is not null)
                 {
                     return validation;
                 }
 
                 var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
-                AgentActivityApiResults.SetOperationIdHeader(response, operationId);
+                AgentActivityApiResults.SetOperationIdHeader(context.Response, operationId);
                 try
                 {
                     var result = await workspaceService.ContinueExecutionRunAsync(
@@ -466,7 +492,18 @@ internal static class AgentsApi
                 }
                 catch (AgentExecutionActivityAdmissionException exception)
                 {
-                    return AgentActivityApiResults.FromAdmissionException(exception);
+                    return AgentActivityApiResults.FromAdmissionException(
+                        context,
+                        exception,
+                        executionRunId: executionRunId);
+                }
+                catch (AgentChatRunFailedException exception)
+                {
+                    return ApiEndpointResults.AgentRunFailure(context, exception);
+                }
+                catch (AgentRunFailedException exception)
+                {
+                    return ApiEndpointResults.AgentRunFailure(context, exception);
                 }
             })
             .WithName("RespondToAgentExecutionApprovals")
@@ -474,6 +511,8 @@ internal static class AgentsApi
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
     }
 
@@ -481,7 +520,7 @@ internal static class AgentsApi
     {
         agents.MapPost("/execution-runs", async (
                 AgentExecutionRunApiRequest request,
-                HttpResponse response,
+                HttpContext context,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             await StartExecutionRunAsync(
@@ -495,7 +534,7 @@ internal static class AgentsApi
                     InputAttachmentPaths: request.InputAttachmentPaths,
                     JsonSchemaOutput: request.StructuredOutput),
                 workspaceService,
-                response,
+                context,
                 cancellationToken))
             .WithName("StartAgentExecutionRun")
             .Accepts<AgentExecutionRunApiRequest>("application/json")
@@ -506,12 +545,14 @@ internal static class AgentsApi
                 StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/{agentId:guid}/execution-runs", async (
                 Guid agentId,
                 AgentExecutionRunStartApiRequest request,
-                HttpResponse response,
+                HttpContext context,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
             await StartExecutionRunAsync(
@@ -525,7 +566,7 @@ internal static class AgentsApi
                     InputAttachmentPaths: request.InputAttachmentPaths,
                     JsonSchemaOutput: request.StructuredOutput),
                 workspaceService,
-                response,
+                context,
                 cancellationToken))
             .WithName("StartAgentScopedExecutionRun")
             .Accepts<AgentExecutionRunStartApiRequest>("application/json")
@@ -536,6 +577,8 @@ internal static class AgentsApi
                 StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapGet("/execution-runs", async (
@@ -716,10 +759,11 @@ internal static class AgentsApi
     private static async Task<IResult> StartExecutionRunAsync(
         ExecutionRunRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
-        HttpResponse response,
+        HttpContext context,
         CancellationToken cancellationToken)
     {
         var validation = AgentApiRequestValidation.ValidateCommand(
+            context,
             request.AgentId,
             request.ChatSessionId,
             request.Prompt);
@@ -729,7 +773,7 @@ internal static class AgentsApi
         }
 
         AgentActivityApiResults.SetOperationIdHeader(
-            response,
+            context.Response,
             request.InitialActivityOperationId);
         try
         {
@@ -738,11 +782,28 @@ internal static class AgentsApi
         }
         catch (AgentJsonSchemaOutputContractException exception)
         {
-            return ApiEndpointResults.BadRequest(exception.Message, exception.Code);
+            return ApiEndpointResults.AgentValidationFailure(
+                context,
+                exception.Message,
+                exception.Code,
+                request.AgentId,
+                chatSessionId: request.ChatSessionId);
         }
         catch (AgentExecutionActivityAdmissionException exception)
         {
-            return AgentActivityApiResults.FromAdmissionException(exception);
+            return AgentActivityApiResults.FromAdmissionException(
+                context,
+                exception,
+                request.AgentId,
+                chatSessionId: request.ChatSessionId);
+        }
+        catch (AgentChatRunFailedException exception)
+        {
+            return ApiEndpointResults.AgentRunFailure(context, exception);
+        }
+        catch (AgentRunFailedException exception)
+        {
+            return ApiEndpointResults.AgentRunFailure(context, exception);
         }
     }
 
@@ -757,11 +818,37 @@ internal static class AgentsApi
         }
         catch (ArgumentException exception)
         {
-            return ApiEndpointResults.BadRequest(exception.Message, "agents.request-invalid");
+            return ApiEndpointResults.BadRequest(
+                exception.Message,
+                AgentApiRequestValidation.InvalidRequestCode);
         }
         catch (InvalidOperationException exception)
         {
-            return ApiEndpointResults.BadRequest(exception.Message, "agents.request-invalid");
+            return ApiEndpointResults.BadRequest(
+                exception.Message,
+                AgentApiRequestValidation.InvalidRequestCode);
+        }
+    }
+
+    private static async Task<IResult> SaveProviderResultAsync(
+        ProviderProfileEditorModel request,
+        HttpContext context,
+        IAgentFrameworkWorkspaceService workspaceService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(
+                await workspaceService.SaveProviderAsync(
+                    request,
+                    cancellationToken));
+        }
+        catch (ProviderProfileValidationException)
+        {
+            return ApiEndpointResults.AgentValidationFailure(
+                context,
+                "The provider configuration is invalid.",
+                ApiEndpointResults.ProviderRequestInvalidCode);
         }
     }
 
