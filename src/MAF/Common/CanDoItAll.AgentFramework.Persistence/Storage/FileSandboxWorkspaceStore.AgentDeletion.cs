@@ -33,7 +33,8 @@ public sealed partial class FileSandboxWorkspaceStore
 
             EnsureAgentCanBeDeleted(agent);
             var deletedAtUtc = DateTimeOffset.UtcNow;
-            var currentExecutionIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
+            var currentExecutionIndex = await executionSliceStore
+                .LoadIndexForAgentDeletionAsync(cancellationToken);
             var currentChatIndex = await chatProjectionStore.LoadCurrentIndexAsync(
                 currentExecutionIndex,
                 cancellationToken);

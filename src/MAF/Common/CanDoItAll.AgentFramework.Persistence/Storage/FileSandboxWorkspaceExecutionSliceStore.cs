@@ -25,6 +25,28 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return ResolveExecutionIndexAsync(cancellationToken);
     }
 
+    public async Task<ExecutionStorageIndex> LoadIndexForAgentDeletionAsync(
+        CancellationToken cancellationToken)
+    {
+        var currentIndex = await ResolveExecutionIndexAsync(cancellationToken);
+        var persistedSessionCount = CountJsonFiles(
+            layout.ExecutionSessionsRoot);
+        if (currentIndex.SessionCount == persistedSessionCount)
+        {
+            return currentIndex;
+        }
+
+        var reconciledIndex = currentIndex with
+        {
+            SessionCount = persistedSessionCount
+        };
+        await jsonStore.WriteJsonAtomicallyAsync(
+            layout.ExecutionIndexPath,
+            reconciledIndex,
+            cancellationToken);
+        return reconciledIndex;
+    }
+
     public Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken)
     {
         return LoadOrBuildUsageProjectionAsync(cancellationToken);

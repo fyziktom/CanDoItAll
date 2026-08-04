@@ -11,6 +11,17 @@ public sealed class DatabaseOptions
     public bool EnableEntityFrameworkConsoleLogging { get; set; }
 }
 
+public sealed class PostgreSqlStartupReadinessOptions
+{
+    public const string SectionName = "Database:PostgreSqlStartupReadiness";
+
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(10);
+
+    public TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    public TimeSpan MaximumRetryDelay { get; set; } = TimeSpan.FromSeconds(10);
+}
+
 public sealed class StorageOptions
 {
     public string WorkspaceRoot { get; set; } = ".artifacts/workspace";

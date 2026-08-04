@@ -76,6 +76,7 @@ public static class RuntimeHostServiceCollectionExtensions
 
 public sealed class AppDatabaseBootstrapper(
     IDatabaseProfileRuntimeAccessor profileAccessor,
+    IDatabaseDriverRegistry driverRegistry,
     IProfileAppDbContextFactory dbContextFactory,
     ISecretVault secretVault,
     IEnumerable<IProviderRuntimeProfileSnapshotInitializer>
@@ -148,6 +149,8 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.ProviderKind,
             profile.Profile.SourceKind);
 
+        await driverRegistry.Resolve(profile.Profile.ProviderKind)
+            .EnsureDatabaseAsync(profile, cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextForProfileAsync(profile, cancellationToken);
         if (!dbContext.Database.IsRelational())
         {
@@ -1348,7 +1351,6 @@ public sealed class AppDatabaseBootstrapper(
 public sealed class DatabaseSwitchCoordinator(
     IDatabaseProfileRuntimeAccessor profileAccessor,
     IDatabaseProfileService profileService,
-    IDatabaseDriverRegistry driverRegistry,
     IAppDatabaseBootstrapper bootstrapper,
     ILogger<DatabaseSwitchCoordinator> logger) : IDatabaseSwitchCoordinator
 {
@@ -1389,8 +1391,6 @@ public sealed class DatabaseSwitchCoordinator(
 
         try
         {
-            await driverRegistry.Resolve(targetProfile.Profile.ProviderKind)
-                .EnsureDatabaseAsync(targetProfile, cancellationToken);
             await bootstrapper.EnsureProfileReadyAsync(targetProfile, cancellationToken);
 
             var activationResult = await profileService.ActivateAsync(targetProfileId, cancellationToken);
