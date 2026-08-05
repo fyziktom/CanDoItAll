@@ -13,6 +13,8 @@ internal static class ApiAuthorizationPolicies
 
     public const string QueryMemoryProviders = "Api.MemoryProviders.Query";
 
+    public const string WriteProjectStructure = "Api.ProjectStructure.Write";
+
     public static bool HasScope(ClaimsPrincipal principal, string requiredScope)
     {
         ArgumentNullException.ThrowIfNull(principal);

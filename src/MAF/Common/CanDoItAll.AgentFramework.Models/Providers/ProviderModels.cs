@@ -4,6 +4,7 @@ public static class ProviderProfileMetadataPropertyNames
 {
     public const string ProviderKind = "agentFrameworkProviderKind";
     public const string ModelThinkingEffortCapabilities = "modelThinkingEffortCapabilities";
+    public const string SecretRecordId = "secretRecordId";
 }
 
 public enum ProviderNativeToolFamily

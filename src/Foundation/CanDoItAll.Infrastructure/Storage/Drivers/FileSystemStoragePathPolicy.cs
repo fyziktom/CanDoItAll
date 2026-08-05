@@ -2,6 +2,9 @@ namespace CanDoItAll.Infrastructure.Storage;
 
 public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspacePathResolver)
 {
+    public string ResolveWorkspaceRootPath()
+        => Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+
     public string ResolveRootPath(StorageCatalogRecord storage)
     {
         ArgumentNullException.ThrowIfNull(storage);

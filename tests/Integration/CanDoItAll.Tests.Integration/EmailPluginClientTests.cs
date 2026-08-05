@@ -36,7 +36,7 @@ public sealed class EmailPluginClientTests
                         executor.SideEffects.AllowsIdempotentRetry);
         Assert.Contains(
             services,
-            descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorContribution) &&
+            descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor) &&
                           descriptor.ImplementationType?.GenericTypeArguments.Contains(
                               typeof(Office365DownloadByAddressWorkflowExecutor)) == true);
     }

@@ -59,7 +59,7 @@ public sealed class MafAgentRuntimeProviderHealthTests
     public async Task MafRuntimeProviderDiagnostics_UseProviderRuntimeGateway()
     {
         var gateway = new CapturingMafProviderRuntimeGateway();
-        var services = new ServiceCollection()
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection()
             .AddSingleton<IMafProviderRuntimeGateway>(gateway)
             .BuildServiceProvider();
         var runtime = new MafAgentRuntime(Path.GetTempPath(), services);

@@ -20,7 +20,7 @@ public sealed class ProjectWorkbenchLifecycleService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
             cancellationToken);

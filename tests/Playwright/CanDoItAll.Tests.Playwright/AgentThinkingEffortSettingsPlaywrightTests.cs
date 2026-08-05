@@ -33,7 +33,7 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
             "bundles",
             "agent-thinking-effort-configuration",
             "evidence",
-            "SB04");
+            "Thinking effort acceptance");
         Directory.CreateDirectory(evidenceDirectory);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions

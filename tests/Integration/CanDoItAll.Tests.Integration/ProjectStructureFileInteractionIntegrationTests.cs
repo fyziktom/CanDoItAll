@@ -6,6 +6,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tools.Documents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,7 +22,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             fixture.ProjectId,
             fixture.NodeKey);
         FileCatalogRevision before = fixture.Revisions.Get(fixture.Scope, fixture.Storage.Id);
-        const string replacement = "# SB16 persisted\n\nAwaited authorized save.";
+        const string replacement = "# Persisted interaction\n\nAwaited authorized save.";
         var args = CreateSaveArgs(interaction, replacement, interaction.Request.ContentRevision);
 
         await interaction.SaveAsync(args);
@@ -57,6 +58,50 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
         Assert.Equal(before, fixture.Revisions.Get(fixture.Scope, fixture.Storage.Id));
     }
 
+    [Fact]
+    public async Task Read_only_xlsx_preview_uses_only_authorized_session_content()
+    {
+        await using var fixture = await InteractionFixture.CreateSpreadsheetAsync();
+        await using ProjectStructureKnownFileInteraction interaction = await fixture.Coordinator.OpenAsync(
+            fixture.ProjectId,
+            fixture.NodeKey);
+
+        Assert.False(interaction.CanEdit);
+        Assert.Equal(FileToolsKnownFileIntent.ReadOnly, interaction.Session.Intent);
+        Assert.Null(interaction.Session.SaveTarget);
+        Assert.Equal(ProjectStructureFileInteractionPolicy.XlsxMediaType, interaction.Request.MediaType);
+
+        await using FileContentLease content = await interaction.Session.ContentSource.OpenReadAsync(
+            new FileContentReadRequest(interaction.Session.File));
+        using var authorizedContent = new MemoryStream();
+        await content.Stream.CopyToAsync(authorizedContent);
+        byte[] workbookBytes = authorizedContent.ToArray();
+        Assert.NotEmpty(workbookBytes);
+
+        var previewRequest = new SpreadsheetWorkbookContentPreviewRequest(
+            interaction.Request.FileName,
+            workbookBytes,
+            MaxWorksheets: 1,
+            MaxRows: 2,
+            MaxColumns: 2);
+        SpreadsheetWorkbookContentPreviewResult preview = fixture.SpreadsheetPreviews.PreviewWorkbook(previewRequest);
+
+        Assert.Equal(Path.GetFileName(previewRequest.WorkbookName), previewRequest.WorkbookName);
+        Assert.NotEqual(fixture.FullPath, previewRequest.WorkbookName);
+        Assert.DoesNotContain(
+            fixture.Storage.EndpointOrRoot,
+            previewRequest.WorkbookName,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(previewRequest.WorkbookName, preview.DisplayName);
+        SpreadsheetWorksheetPreview worksheet = Assert.Single(preview.Worksheets);
+        Assert.Equal("Acceptance", worksheet.Name);
+        Assert.Equal("A1:B2", worksheet.UsedRangeAddress);
+        Assert.Equal("Check", worksheet.Values[0][0]);
+        Assert.Equal("Value", worksheet.Values[0][1]);
+        Assert.Equal("Formula", worksheet.Values[1][0]);
+        Assert.Equal("=COUNTA(A1:A2)", worksheet.Values[1][1]);
+    }
+
     private static FileInteractionSaveRequestedEventArgs CreateSaveArgs(
         ProjectStructureKnownFileInteraction interaction,
         string content,
@@ -79,6 +124,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             AsyncServiceScope scope,
             ProjectStructureKnownFileInteractionCoordinator coordinator,
             IFileCatalogRevisionReader revisions,
+            ISpreadsheetWorkbookContentPreviewService spreadsheetPreviews,
             FileToolsSemanticScope semanticScope,
             Guid projectId,
             string nodeKey,
@@ -89,6 +135,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             this.scope = scope;
             Coordinator = coordinator;
             Revisions = revisions;
+            SpreadsheetPreviews = spreadsheetPreviews;
             Scope = semanticScope;
             ProjectId = projectId;
             NodeKey = nodeKey;
@@ -100,6 +147,8 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
 
         public IFileCatalogRevisionReader Revisions { get; }
 
+        public ISpreadsheetWorkbookContentPreviewService SpreadsheetPreviews { get; }
+
         public FileToolsSemanticScope Scope { get; }
 
         public Guid ProjectId { get; }
@@ -110,7 +159,13 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
 
         public string FullPath { get; }
 
-        public static async Task<InteractionFixture> CreateAsync()
+        public static Task<InteractionFixture> CreateAsync()
+            => CreateAsync(FixtureFileKind.Markdown);
+
+        public static Task<InteractionFixture> CreateSpreadsheetAsync()
+            => CreateAsync(FixtureFileKind.Spreadsheet);
+
+        private static async Task<InteractionFixture> CreateAsync(FixtureFileKind fileKind)
         {
             TestApplication application = await TestApplication.CreateAsync();
             AsyncServiceScope scope = application.Services.CreateAsyncScope();
@@ -121,9 +176,11 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             var scopeProvider = services.GetRequiredService<IProjectStructureNodeFileScopeProvider>();
             var coordinator = services.GetRequiredService<ProjectStructureKnownFileInteractionCoordinator>();
             var revisions = services.GetRequiredService<IFileCatalogRevisionReader>();
+            var documents = services.GetRequiredService<ISpreadsheetDocumentService>();
+            var spreadsheetPreviews = services.GetRequiredService<ISpreadsheetWorkbookContentPreviewService>();
             var projectResult = await projects.SaveAsync(new ProjectEditorModel
             {
-                Name = "SB16 interaction integration",
+                Name = "Project interaction integration",
                 Description = "Governed direct FileInteraction proof",
                 Objective = "Prove revision-aware save",
                 CurrentPhase = "Verification"
@@ -131,10 +188,39 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             Assert.True(projectResult.IsSuccess, string.Join(" ", projectResult.Errors.Select(error => error.Message)));
             Guid projectId = projectResult.Value;
             StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
-            string fileName = $"sb16-interaction-{Guid.NewGuid():N}.md";
+            (string extension, string objectSubtype, string mediaType) = fileKind switch
+            {
+                FixtureFileKind.Markdown => (".md", "markdown", "text/plain"),
+                FixtureFileKind.Spreadsheet => (
+                    ".xlsx",
+                    "excel",
+                    ProjectStructureFileInteractionPolicy.XlsxMediaType),
+                _ => throw new ArgumentOutOfRangeException(nameof(fileKind))
+            };
+            string fileName = $"project-interaction-{Guid.NewGuid():N}{extension}";
             string relativePath = fileName;
             string fullPath = Path.Combine(storage.EndpointOrRoot, fileName);
-            await File.WriteAllTextAsync(fullPath, "# SB16 initial");
+            if (fileKind == FixtureFileKind.Spreadsheet)
+            {
+                documents.Write(new SpreadsheetWriteRequest(
+                    fullPath,
+                    fullPath,
+                    "Acceptance",
+                    [
+                        new SpreadsheetCellWrite("A1", "Check"),
+                        new SpreadsheetCellWrite("B1", "Value"),
+                        new SpreadsheetCellWrite("A2", "Formula"),
+                        new SpreadsheetCellWrite("B2", "=COUNTA(A1:A2)")
+                    ],
+                    [],
+                    CreateWorkbookIfMissing: true,
+                    Overwrite: true));
+            }
+            else
+            {
+                await File.WriteAllTextAsync(fullPath, "# Initial interaction");
+            }
+
             string nodeKey = $"file:{Guid.NewGuid():N}";
             await using (AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync())
             {
@@ -144,7 +230,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
                     ProjectId = projectId,
                     NodeKey = nodeKey,
                     ObjectType = ProjectObjectType.File,
-                    ObjectSubtype = "markdown",
+                    ObjectSubtype = objectSubtype,
                     Title = fileName,
                     MetadataJson = "{}"
                 };
@@ -152,7 +238,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
                 dbContext.Set<ProjectNodeBindingRecord>().Add(new ProjectNodeBindingRecord
                 {
                     ProjectObjectId = node.Id,
-                    MediaContentType = "text/plain",
+                    MediaContentType = mediaType,
                     MediaOriginalFileName = fileName,
                     StorageObjectReferenceJson = StorageJson.SerializeReference(new StorageObjectReference(
                         storage.Id,
@@ -160,7 +246,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
                         StorageLocatorKind.RelativePath,
                         relativePath,
                         fileName,
-                        "text/plain",
+                        mediaType,
                         new FileInfo(fullPath).Length))
                 });
                 await dbContext.SaveChangesAsync();
@@ -172,6 +258,7 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
                 scope,
                 coordinator,
                 revisions,
+                spreadsheetPreviews,
                 resolved.Scope,
                 projectId,
                 nodeKey,
@@ -184,6 +271,12 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             File.Delete(FullPath);
             await scope.DisposeAsync();
             await application.DisposeAsync();
+        }
+
+        private enum FixtureFileKind
+        {
+            Markdown,
+            Spreadsheet
         }
     }
 }

@@ -11,14 +11,17 @@ public sealed class AgentRunFailedException : InvalidOperationException
         string providerName,
         string modelName,
         Exception innerException,
-        string? displayMessage = null)
-        : base($"The run failed: {displayMessage ?? innerException.Message}", innerException)
+        string displayMessage,
+        AgentProviderFailureCategory? failureCategory = null)
+        : base($"The run failed: {AgentProviderFailureDisplayFormatter.NormalizeDisplayMessage(displayMessage)}", innerException)
     {
         AgentId = agentId;
         ExecutionRunId = executionRunId;
         ChatSessionId = chatSessionId;
         ProviderName = providerName;
         ModelName = modelName;
+        SanitizedDisplayMessage = AgentProviderFailureDisplayFormatter.NormalizeDisplayMessage(displayMessage);
+        FailureCategory = failureCategory;
     }
 
     public Guid AgentId { get; }
@@ -30,4 +33,8 @@ public sealed class AgentRunFailedException : InvalidOperationException
     public string ProviderName { get; }
 
     public string ModelName { get; }
+
+    public string SanitizedDisplayMessage { get; }
+
+    public AgentProviderFailureCategory? FailureCategory { get; }
 }

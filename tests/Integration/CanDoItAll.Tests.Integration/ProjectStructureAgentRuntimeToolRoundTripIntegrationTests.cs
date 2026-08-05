@@ -17,6 +17,179 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = CreateFunctionResultJsonOptions();
 
     [Fact]
+    public async Task Asset_create_contract_requires_an_explicit_parent_node_key()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var assetCreate = Assert.IsAssignableFrom<AIFunction>(
+            FindTool(tools, "project_structure_asset_create"));
+        var requestSchema = assetCreate.JsonSchema
+            .GetProperty("properties")
+            .GetProperty("request");
+        var requiredProperties = requestSchema
+            .GetProperty("required")
+            .EnumerateArray()
+            .Select(property => property.GetString())
+            .ToArray();
+
+        Assert.Contains("parentNodeKey", requiredProperties);
+    }
+
+    [Fact]
+    public async Task Asset_create_rejects_an_omitted_parent_without_mutating_the_project()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var before = await workbench.GetStructureAsync(projectId);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
+            () => InvokeAsync<ProjectStructureNodeSummary>(
+                FindTool(tools, "project_structure_asset_create"),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["request"] = new ProjectStructureAgentAssetCreateInput(
+                        ProjectObjectType.File,
+                        "Parentless planning note",
+                        "Invalid placement probe",
+                        "This asset must not silently fall back to the project root.",
+                        new ProjectObjectMediaPayload(
+                            "parentless.md",
+                            "text/markdown",
+                            Convert.ToBase64String(Encoding.UTF8.GetBytes("# Parentless"))),
+                        ObjectSubtype: "md")
+                }));
+
+        Assert.Equal("AssetParentRequired", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        var after = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(before.Nodes.Count, after.Nodes.Count);
+    }
+
+    [Fact]
+    public async Task Generic_node_create_contract_routes_mermaid_to_managed_assets()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var nodeCreate = FindTool(tools, "project_structure_node_create");
+
+        Assert.Contains(
+            "project_structure_asset_create",
+            nodeCreate.Description,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Generic_node_create_contract_does_not_instruct_notes_only_mermaid()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var nodeCreate = FindTool(tools, "project_structure_node_create");
+
+        Assert.DoesNotContain(
+            "Mermaid source in notes",
+            nodeCreate.Description,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Generic_node_create_rejects_mermaid_notes_without_mutating_the_project()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var before = await workbench.GetStructureAsync(projectId);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(
+            () => InvokeAsync<ProjectStructureNodeSummary>(
+                FindTool(tools, "project_structure_node_create"),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["request"] = new ProjectStructureNodeCreateInput(
+                        ProjectObjectType.File,
+                        "Planning flow",
+                        "Invalid notes-only Mermaid probe",
+                        "flowchart LR\n    Idea --> Plan",
+                        $"project:{projectId:D}",
+                        ObjectSubtype: "mermaid")
+                }));
+
+        Assert.Equal("ManagedAssetCreationRequired", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        var after = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(before.Nodes.Count, after.Nodes.Count);
+    }
+
+    [Fact]
+    public async Task Asset_create_round_trips_mermaid_source_as_managed_content()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        const string mermaid = "flowchart LR\n    Idea --> Plan";
+
+        var assetNode = await InvokeAsync<ProjectStructureNodeSummary>(
+            FindTool(tools, "project_structure_asset_create"),
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureAgentAssetCreateInput(
+                    ProjectObjectType.File,
+                    "Planning flow",
+                    "Managed Mermaid asset",
+                    "Diagram source is stored in managed asset content.",
+                    new ProjectObjectMediaPayload(
+                        "planning-flow.mmd",
+                        ProjectStructureFileInteractionPolicy.MermaidMediaType,
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(mermaid))),
+                    ParentNodeKey: $"project:{projectId:D}",
+                    ObjectSubtype: "mermaid")
+            });
+        var content = await InvokeAsync<ProjectStructureAssetContentDescriptor>(
+            FindTool(tools, "project_structure_asset_content_get"),
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["nodeId"] = assetNode.Id
+            });
+
+        Assert.Equal(ProjectObjectType.File, assetNode.ObjectType);
+        Assert.Equal($"project:{projectId:D}", assetNode.ParentId);
+        Assert.Equal("mermaid", content.Asset.ObjectSubtype);
+        Assert.Equal("planning-flow.mmd", content.Asset.MediaOriginalFileName);
+        Assert.Equal(
+            ProjectStructureFileInteractionPolicy.MermaidMediaType,
+            content.Asset.MediaContentType);
+        Assert.Equal(
+            MermaidDiagramKind.Flowchart,
+            ProjectObjectMetadataSerializer.Parse(content.Asset.MetadataJson).File?.MermaidDiagramKind);
+        Assert.Equal(
+            mermaid,
+            Encoding.UTF8.GetString(Convert.FromBase64String(content.Base64Data)));
+    }
+
+    [Fact]
     public async Task Runtime_tools_round_trip_selected_subtree_non_task_node_and_managed_markdown_asset()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -419,6 +592,20 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             RuntimeSessionKey: $"project-structure-integration:{projectId:D}",
             intent,
             Tags: new Dictionary<string, string>());
+    }
+
+    private static async Task<IReadOnlyList<AITool>> CreateToolsAsync(
+        IServiceProvider services,
+        Guid projectId)
+    {
+        var provider = services
+            .GetServices<IAgentRuntimeToolProvider>()
+            .OfType<ProjectStructureAgentRuntimeToolProvider>()
+            .Single();
+
+        return await provider.CreateToolsAsync(
+            CreateContext(CreateAgent(projectId), projectId),
+            CancellationToken.None);
     }
 
     private static JsonSerializerOptions CreateFunctionResultJsonOptions()

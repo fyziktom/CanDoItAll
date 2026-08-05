@@ -442,6 +442,15 @@ public sealed class ProjectPartyAssignment
     public string Notes { get; set; } = string.Empty;
 }
 
+public sealed class ProjectPartyAssignmentMoveReceipt
+{
+    public Guid OperationId { get; set; }
+    public Guid SourceProjectId { get; set; }
+    public Guid TargetProjectId { get; set; }
+    public string NodeSetFingerprint { get; set; } = string.Empty;
+    public DateTimeOffset CompletedAtUtc { get; set; }
+}
+
 internal sealed class InteractionRecordConfiguration : IEntityTypeConfiguration<InteractionRecord>
 {
     public void Configure(EntityTypeBuilder<InteractionRecord> builder)
@@ -738,5 +747,24 @@ internal sealed class ProjectPartyAssignmentConfiguration : IEntityTypeConfigura
             .WithMany()
             .HasForeignKey(assignment => assignment.PartyOrganizationAffiliationId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ProjectPartyAssignmentMoveReceiptConfiguration
+    : IEntityTypeConfiguration<ProjectPartyAssignmentMoveReceipt>
+{
+    public void Configure(EntityTypeBuilder<ProjectPartyAssignmentMoveReceipt> builder)
+    {
+        builder.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts");
+        builder.HasKey(receipt => receipt.OperationId);
+        builder.Property(receipt => receipt.NodeSetFingerprint)
+            .HasMaxLength(64)
+            .IsRequired();
+        builder.HasIndex(receipt => new
+        {
+            receipt.SourceProjectId,
+            receipt.TargetProjectId,
+            receipt.CompletedAtUtc
+        });
     }
 }

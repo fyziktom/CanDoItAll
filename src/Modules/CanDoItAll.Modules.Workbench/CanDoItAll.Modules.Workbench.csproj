@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj" />
     <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />
     <ProjectReference Include="..\..\MAF\Tools\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
+    <ProjectReference Include="..\..\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
@@ -54,4 +55,3 @@
   </ItemGroup>
 
 </Project>
-

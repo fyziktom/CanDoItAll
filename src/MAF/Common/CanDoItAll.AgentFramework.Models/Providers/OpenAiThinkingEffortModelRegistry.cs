@@ -83,7 +83,7 @@ internal static class OpenAiThinkingEffortModelRegistry
         Supported("gpt-5.5-pro", MediumThroughExtraHigh, ResponsesOnly),
         Supported("gpt-5.5", NoneThroughExtraHigh),
         Supported("gpt-5.4-pro", MediumThroughExtraHigh, ResponsesOnly),
-        Supported("gpt-5.4-mini", NoneThroughExtraHigh),
+        Supported(OpenAiModelIds.Gpt54Mini, NoneThroughExtraHigh),
         Supported("gpt-5.4-nano", NoneThroughExtraHigh),
         Supported("gpt-5.4", NoneThroughExtraHigh),
         Supported("gpt-5.3-codex", LowThroughExtraHigh),

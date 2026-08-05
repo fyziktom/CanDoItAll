@@ -23,6 +23,9 @@ public sealed class HrAgentAuthorizationTests
             configuration,
             environment.CreateHostEnvironment("CanDoItAll.HrAgentAuthorizationTests"));
         await using var serviceProvider = services.BuildServiceProvider();
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            serviceProvider,
+            TestSchemaBootstrapModules.None);
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agents = await workspace.ListAgentsAsync(includeTemplates: true);
@@ -120,6 +123,9 @@ public sealed class HrAgentAuthorizationTests
             configuration,
             environment.CreateHostEnvironment("CanDoItAll.HrAgentAuthorizationTests"));
         await using var serviceProvider = services.BuildServiceProvider();
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            serviceProvider,
+            TestSchemaBootstrapModules.None);
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agents = await workspace.ListAgentsAsync(includeTemplates: true);
@@ -201,6 +207,9 @@ public sealed class HrAgentAuthorizationTests
             configuration,
             environment.CreateHostEnvironment("CanDoItAll.HrAgentAuthorizationTests"));
         await using var serviceProvider = services.BuildServiceProvider();
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            serviceProvider,
+            TestSchemaBootstrapModules.None);
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agents = await workspace.ListAgentsAsync(includeTemplates: true);
@@ -280,6 +289,9 @@ public sealed class HrAgentAuthorizationTests
             configuration,
             environment.CreateHostEnvironment("CanDoItAll.HrAgentAuthorizationTests"));
         await using var serviceProvider = services.BuildServiceProvider();
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            serviceProvider,
+            TestSchemaBootstrapModules.None);
         await using var scope = serviceProvider.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var agents = await workspace.ListAgentsAsync(includeTemplates: true);

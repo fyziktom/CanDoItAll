@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Text.Json;
+using System.Xml;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -52,6 +54,137 @@ public sealed class SpreadsheetPreviewTests
         Assert.True(first.RowsTruncated);
         Assert.True(first.ColumnsTruncated);
         Assert.True(first.IsTruncated);
+    }
+
+    [Fact]
+    public void PreviewWorkbookFromContentReturnsTypedCellsWithoutAFileSystemAuthority()
+    {
+        using var temp = new TempDirectory();
+        var workbookPath = Path.Combine(temp.Path, "managed-source.xlsx");
+        var service = new ClosedXmlSpreadsheetDocumentService();
+        WriteWorksheet(
+            service,
+            workbookPath,
+            "Acceptance",
+            [["Check", "Value"], ["Formula", "=COUNTA(A1:A2)"]],
+            createWorkbookIfMissing: true);
+        byte[] content = File.ReadAllBytes(workbookPath);
+        var envelope = new byte[content.Length + 8];
+        content.AsSpan().CopyTo(envelope.AsSpan(4));
+        ReadOnlyMemory<byte> managedContent = envelope.AsMemory(4, content.Length);
+
+        var missingDirectory = Path.Combine(temp.Path, "does-not-exist");
+        var displayName = Path.Combine(missingDirectory, "managed-asset.xlsx");
+        SpreadsheetWorkbookContentPreviewResult result = service.PreviewWorkbook(
+            new SpreadsheetWorkbookContentPreviewRequest(
+                displayName,
+                managedContent,
+                MaxWorksheets: 1,
+                MaxRows: 2,
+                MaxColumns: 2));
+
+        Assert.Equal(displayName, result.DisplayName);
+        Assert.False(Directory.Exists(missingDirectory));
+        SpreadsheetWorksheetPreview worksheet = Assert.Single(result.Worksheets);
+        Assert.Equal("Acceptance", worksheet.Name);
+        Assert.Equal("Check", worksheet.Values[0][0]);
+        Assert.Equal("=COUNTA(A1:A2)", worksheet.Values[1][1]);
+    }
+
+    [Fact]
+    public void PreviewWorkbookFromContentRejectsMalformedPackage()
+    {
+        var service = new ClosedXmlSpreadsheetDocumentService();
+
+        Assert.Throws<InvalidDataException>(() => service.PreviewWorkbook(
+            new SpreadsheetWorkbookContentPreviewRequest(
+                "malformed.xlsx",
+                "not an xlsx package"u8.ToArray())));
+    }
+
+    [Fact]
+    public void PreviewWorkbookFromContentRejectsActualExpandedBytesOverLimit()
+    {
+        byte[] content = CreateArchive(archive =>
+        {
+            ZipArchiveEntry entry = archive.CreateEntry(
+                "payload.bin",
+                CompressionLevel.SmallestSize);
+            using Stream stream = entry.Open();
+            var buffer = new byte[64 * 1024];
+            long remaining = SpreadsheetWorkbookContentPreviewRequest.MaximumExpandedBytes + 1;
+            while (remaining > 0)
+            {
+                var bytesToWrite = (int)Math.Min(buffer.Length, remaining);
+                stream.Write(buffer, 0, bytesToWrite);
+                remaining -= bytesToWrite;
+            }
+        });
+        var service = new ClosedXmlSpreadsheetDocumentService();
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            service.PreviewWorkbook(new SpreadsheetWorkbookContentPreviewRequest(
+                "expanded-limit.xlsx",
+                content)));
+
+        Assert.Contains("expanded package", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PreviewWorkbookFromContentRejectsTooManyPackageEntries()
+    {
+        byte[] content = CreateArchive(archive =>
+        {
+            for (var index = 0;
+                index <= SpreadsheetWorkbookContentPreviewRequest.MaximumArchiveEntries;
+                index++)
+            {
+                archive.CreateEntry($"parts/{index}.bin");
+            }
+        });
+        var service = new ClosedXmlSpreadsheetDocumentService();
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            service.PreviewWorkbook(new SpreadsheetWorkbookContentPreviewRequest(
+                "entry-limit.xlsx",
+                content)));
+
+        Assert.Contains("archive entries", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(PackageComplexityKind.Worksheets, "worksheets")]
+    [InlineData(PackageComplexityKind.Cells, "cells")]
+    [InlineData(PackageComplexityKind.Styles, "styles")]
+    [InlineData(PackageComplexityKind.SharedStrings, "shared strings")]
+    public void PreviewWorkbookFromContentRejectsExcessivePackageComplexity(
+        PackageComplexityKind complexityKind,
+        string expectedSubject)
+    {
+        byte[] content = CreateComplexPackage(complexityKind);
+        var service = new ClosedXmlSpreadsheetDocumentService();
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            service.PreviewWorkbook(new SpreadsheetWorkbookContentPreviewRequest(
+                "complexity-limit.xlsx",
+                content)));
+
+        Assert.Contains(expectedSubject, exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PreviewWorkbookFromContentRejectsOversizedPayloadBeforeArchiveParsing()
+    {
+        var service = new ClosedXmlSpreadsheetDocumentService();
+        var content = new byte[
+            SpreadsheetWorkbookContentPreviewRequest.MaximumContentBytes + 1];
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            service.PreviewWorkbook(new SpreadsheetWorkbookContentPreviewRequest(
+                "oversized.xlsx",
+                content)));
+
+        Assert.Contains("preview limit", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -249,6 +382,64 @@ public sealed class SpreadsheetPreviewTests
         return $"A1:{(char)('A' + columnCount - 1)}{values.Count}";
     }
 
+    private static byte[] CreateArchive(Action<ZipArchive> write)
+    {
+        using var output = new MemoryStream();
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            write(archive);
+        }
+
+        return output.ToArray();
+    }
+
+    private static byte[] CreateComplexPackage(PackageComplexityKind complexityKind)
+    {
+        var (entryName, rootName, elementName, count) = complexityKind switch
+        {
+            PackageComplexityKind.Worksheets => (
+                "xl/workbook.xml",
+                "workbook",
+                "sheet",
+                SpreadsheetWorkbookContentPreviewRequest.MaximumPackageWorksheets + 1),
+            PackageComplexityKind.Cells => (
+                "xl/worksheets/sheet1.xml",
+                "worksheet",
+                "c",
+                SpreadsheetWorkbookContentPreviewRequest.MaximumPackageCells + 1),
+            PackageComplexityKind.Styles => (
+                "xl/styles.xml",
+                "styleSheet",
+                "xf",
+                SpreadsheetWorkbookContentPreviewRequest.MaximumPackageStyles + 1),
+            PackageComplexityKind.SharedStrings => (
+                "xl/sharedStrings.xml",
+                "sst",
+                "si",
+                SpreadsheetWorkbookContentPreviewRequest.MaximumPackageSharedStrings + 1),
+            _ => throw new ArgumentOutOfRangeException(nameof(complexityKind), complexityKind, null)
+        };
+
+        return CreateArchive(archive =>
+        {
+            ZipArchiveEntry entry = archive.CreateEntry(entryName, CompressionLevel.SmallestSize);
+            using Stream stream = entry.Open();
+            using XmlWriter writer = XmlWriter.Create(stream, new XmlWriterSettings
+            {
+                CloseOutput = false,
+                Encoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+            });
+            writer.WriteStartElement(rootName);
+            for (var index = 0; index < count; index++)
+            {
+                writer.WriteStartElement(elementName);
+                writer.WriteEndElement();
+            }
+
+            writer.WriteEndElement();
+        });
+    }
+
     private static WorkspaceSpreadsheetRuntimePlugin CreatePlugin(
         string workspaceRoot,
         ISpreadsheetDocumentService documents,
@@ -340,6 +531,10 @@ public sealed class SpreadsheetPreviewTests
                 WorksheetsTruncated: false);
         }
 
+        public SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
+            SpreadsheetWorkbookContentPreviewRequest request)
+            => throw new NotSupportedException();
+
         public SpreadsheetWorkbookSummary InspectWorkbook(string workbookPath)
             => throw new NotSupportedException();
 
@@ -356,6 +551,14 @@ public sealed class SpreadsheetPreviewTests
 
         public SpreadsheetWriteResult Write(SpreadsheetWriteRequest request)
             => throw new NotSupportedException();
+    }
+
+    public enum PackageComplexityKind
+    {
+        Worksheets,
+        Cells,
+        Styles,
+        SharedStrings
     }
 
     private sealed class TempDirectory : IDisposable

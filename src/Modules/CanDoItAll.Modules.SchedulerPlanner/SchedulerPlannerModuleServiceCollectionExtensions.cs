@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,9 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            SchedulerPlannerProjectTransferTargetStateParticipant>());
         var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);

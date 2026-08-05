@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Diagnostics;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,6 +15,7 @@ using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Processes.Abstractions;
@@ -59,10 +61,13 @@ public sealed class ProjectStructureAgentIntegrationTests
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var projectId = await CreateProjectAsync(projects, "Lease conflict project");
+        var projectScopeKey = projectId.ToString("D");
 
         var initialLease = await leaseService.AcquireAsync(
-            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, "project:alpha", "Initial mutation", 15),
+            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectScopeKey, "Initial mutation", 15),
             DefaultAgent);
 
         Assert.True(initialLease.IsActive);
@@ -76,11 +81,11 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         var conflict = await Assert.ThrowsAsync<ProjectStructureLeaseConflictException>(() =>
             leaseService.AcquireAsync(
-                new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, "project:alpha", "Competing mutation", 15),
+                new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectScopeKey, "Competing mutation", 15),
                 competitor));
 
         Assert.Equal(ProjectStructureLeaseScopeKind.Project, conflict.Conflict.ScopeKind);
-        Assert.Equal("project:alpha", conflict.Conflict.ScopeKey);
+        Assert.Equal(projectScopeKey, conflict.Conflict.ScopeKey);
         Assert.Equal(DefaultAgent.AgentId, conflict.Conflict.AgentId);
         Assert.Equal(DefaultAgent.AgentName, conflict.Conflict.AgentName);
         Assert.Equal(DefaultAgent.MachineName, conflict.Conflict.MachineName);
@@ -91,11 +96,12 @@ public sealed class ProjectStructureAgentIntegrationTests
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
 
-        var projectId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projects, "Existing owned lease project");
         var initialLease = await leaseService.AcquireAsync(
-            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString(), "Long-lived validation lease", 30),
+            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString("D"), "Long-lived validation lease", 30),
             DefaultAgent);
 
         var result = await leaseService.RunWithProjectMutationLeaseAsync(
@@ -107,7 +113,7 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         var preservedLease = await leaseService.ValidateOwnedLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
-            projectId.ToString(),
+            projectId.ToString("D"),
             initialLease.LeaseToken,
             DefaultAgent);
 
@@ -121,9 +127,10 @@ public sealed class ProjectStructureAgentIntegrationTests
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
 
-        var projectId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projects, "Cancelled temporary lease project");
         using var cancellation = new CancellationTokenSource();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
@@ -142,7 +149,7 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         var activeLease = await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
-            projectId.ToString(),
+            projectId.ToString("D"),
             CancellationToken.None);
 
         Assert.Null(activeLease);
@@ -153,12 +160,13 @@ public sealed class ProjectStructureAgentIntegrationTests
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var projectId = Guid.NewGuid();
+        var projectId = await CreateProjectAsync(projects, "Near-expiry lease project");
         var competingLease = await leaseService.AcquireAsync(
-            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString(), "Competing short mutation", 1),
+            new ProjectStructureLeaseAcquireRequest(ProjectStructureLeaseScopeKind.Project, projectId.ToString("D"), "Competing short mutation", 1),
             DefaultAgent);
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
@@ -190,7 +198,7 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         var activeLease = await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
-            projectId.ToString(),
+            projectId.ToString("D"),
             CancellationToken.None);
 
         Assert.Equal("ok", result);
@@ -949,7 +957,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 null,
                 null,
                 "delivery",
-                MetadataJson: "{}"));
+                MetadataJson: CreateProjectBlockMetadata(outputRoot)));
         var architectureNode = await workbench.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -2347,6 +2355,16 @@ public sealed class ProjectStructureAgentIntegrationTests
         var workspaceService = scope.ServiceProvider
             .GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()
             .GetOrganizationWorkspaceService();
+        var secretService = scope.ServiceProvider.GetRequiredService<SecretService>();
+        var secretResult = await secretService.SaveAsync(new SecretEditorModel
+        {
+            Name = "Process HR matching provider key",
+            Kind = SecretKind.ApiKey,
+            SecretValue = "integration-test-provider-key",
+            Scope = "workspace"
+        });
+        Assert.True(secretResult.IsSuccess);
+        var providerSecretReference = $"secret:{secretResult.Value:D}";
 
         var existingAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
         foreach (var existingAgent in existingAgents.Where(agent => agent.Status == AgentLifecycleStatus.Active))
@@ -2361,7 +2379,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             Name = "Process regression Ollama",
             Kind = ProviderKind.Ollama,
             BaseUrl = "http://ollama.internal:11434",
-            ApiKeyEnvironmentVariable = string.Empty,
+            ApiKeyEnvironmentVariable = providerSecretReference,
             DefaultModel = "gptoss32k:latest",
             Transport = ProviderTransportKind.ChatCompletions,
             Purpose = ProviderProfilePurpose.Chat,
@@ -2378,7 +2396,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             Name = "Process regression OpenAI",
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            ApiKeyEnvironmentVariable = providerSecretReference,
             DefaultModel = "gpt-5.4-mini",
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.Chat,
@@ -2821,6 +2839,64 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task AgentService_MoveNodesToNewSubprojectAsync_rejects_duplicate_reserved_target_id_without_mutation()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+
+        var sourceProjectId = await CreateProjectAsync(projects, "Duplicate reserved target source");
+        var sourceNote = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Source note",
+                string.Empty,
+                "This note must remain in the source project after the duplicate id is rejected.",
+                $"project:{sourceProjectId:D}"));
+        var reservedTargetProjectId = Guid.NewGuid();
+        var initialTargetCreate = await projects.CreateAsync(
+            reservedTargetProjectId,
+            new ProjectEditorModel
+            {
+                Name = "Existing reserved target",
+                Description = "Claims the reserved target id before the move operation.",
+                Objective = "Prove that a reserved project id cannot be created twice.",
+                CurrentPhase = "Execution"
+            });
+        Assert.True(initialTargetCreate.IsSuccess);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.MoveNodesToNewSubprojectAsync(
+                sourceProjectId,
+                reservedTargetProjectId,
+                new ProjectStructureNodesToSubprojectInput(
+                    "Rejected duplicate child",
+                    [sourceNote.Id]),
+                DefaultAgent));
+
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Equal("ProjectCreationRejected", exception.ErrorCode);
+        var errors = Assert.IsAssignableFrom<IReadOnlyList<Error>>(exception.Details);
+        Assert.Contains(errors, error => error.Code == "projects.reserved-id-conflict");
+        var sourceAfter = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.Contains(sourceAfter.Nodes, node => node.Id == sourceNote.Id);
+        var targetAfter = await workbench.GetStructureAsync(reservedTargetProjectId);
+        Assert.DoesNotContain(targetAfter.Nodes, node => node.Id == sourceNote.Id);
+        var hierarchy = await projects.GetHierarchyAsync(sourceProjectId);
+        Assert.DoesNotContain(hierarchy.ChildProjects, child => child.Id == reservedTargetProjectId);
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            sourceProjectId.ToString("D")));
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            reservedTargetProjectId.ToString("D")));
+    }
+
+    [Fact]
     public async Task AgentService_MoveNodesToNewSubprojectAsync_without_descendants_reparents_left_behind_children()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -2887,6 +2963,485 @@ public sealed class ProjectStructureAgentIntegrationTests
         var targetSurface = await workbench.GetStructureAsync(result.TargetProjectId);
         var movedTask = Assert.Single(targetSurface.Nodes, node => node.Id == selectedTask.Id);
         Assert.Equal($"project:{result.TargetProjectId}", movedTask.ParentId);
+    }
+
+    [Fact]
+    public async Task AgentService_MoveNodesToNewSubprojectAsync_preserves_managed_asset_content_and_hierarchy()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Managed asset transfer source");
+        var group = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Planning assets",
+                string.Empty,
+                "Move this group and every managed asset below it.",
+                $"project:{sourceProjectId:D}",
+                ObjectSubtype: "planning"));
+        var specifications = new[]
+        {
+            new
+            {
+                ObjectType = ProjectObjectType.File,
+                Title = "Planning brief",
+                ObjectSubtype = "md",
+                FileName = "planning-brief.md",
+                ContentType = "text/markdown",
+                Bytes = Encoding.UTF8.GetBytes("# Planning brief\n\nExact managed content.")
+            },
+            new
+            {
+                ObjectType = ProjectObjectType.File,
+                Title = "Planning flow",
+                ObjectSubtype = "mermaid",
+                FileName = "planning-flow.mmd",
+                ContentType = ProjectStructureFileInteractionPolicy.MermaidMediaType,
+                Bytes = Encoding.UTF8.GetBytes("flowchart LR\n    Idea --> Delivery")
+            },
+            new
+            {
+                ObjectType = ProjectObjectType.File,
+                Title = "Planning workbook",
+                ObjectSubtype = "xlsx",
+                FileName = "planning-budget.xlsx",
+                ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                Bytes = new byte[] { 0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00, 0x58, 0x4C, 0x53, 0x58 }
+            },
+            new
+            {
+                ObjectType = ProjectObjectType.ImageAsset,
+                Title = "Planning preview",
+                ObjectSubtype = "generated",
+                FileName = "planning-preview.png",
+                ContentType = "image/png",
+                Bytes = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x02, 0x03 }
+            }
+        };
+        var assets = new List<(ProjectStructureNodeSummary Node, string FileName, string ContentType, byte[] Bytes)>();
+        foreach (var specification in specifications)
+        {
+            var node = await agentService.CreateAssetAsync(
+                sourceProjectId,
+                new ProjectStructureAssetCreateInput(
+                    specification.ObjectType,
+                    specification.Title,
+                    "Managed transfer acceptance asset",
+                    "The descriptor and bytes must survive a subproject transfer unchanged.",
+                    CreateMediaPayload(specification.FileName, specification.ContentType, specification.Bytes),
+                    group.Id,
+                    specification.ObjectSubtype),
+                DefaultAgent);
+            assets.Add((node, specification.FileName, specification.ContentType, specification.Bytes));
+        }
+
+        var result = await agentService.MoveNodesToNewSubprojectAsync(
+            sourceProjectId,
+            new ProjectStructureNodesToSubprojectInput(
+                "Extracted planning assets",
+                [group.Id],
+                IncludeDescendants: true),
+            DefaultAgent);
+        var expectedMovedNodeIds = assets
+            .Select(asset => asset.Node.Id)
+            .Append(group.Id)
+            .OrderBy(nodeId => nodeId, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expectedMovedNodeIds, result.MovedNodeIds);
+        Assert.Equal(expectedMovedNodeIds.Length, result.MovedNodeCount);
+        Assert.Equal(1, result.MovedRootCount);
+
+        var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.DoesNotContain(sourceSurface.Nodes, node => expectedMovedNodeIds.Contains(node.Id, StringComparer.Ordinal));
+
+        var targetSurface = await workbench.GetStructureAsync(result.TargetProjectId);
+        var movedGroup = Assert.Single(targetSurface.Nodes, node => node.Id == group.Id);
+        Assert.Equal($"project:{result.TargetProjectId:D}", movedGroup.ParentId);
+        var systemManagedNodeIds = targetSurface.Nodes
+            .Where(node => node.IsSystemManaged)
+            .Select(node => node.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.DoesNotContain(result.MovedNodeIds, systemManagedNodeIds.Contains);
+
+        foreach (var expected in assets)
+        {
+            var movedAssetNode = Assert.Single(targetSurface.Nodes, node => node.Id == expected.Node.Id);
+            Assert.Equal(group.Id, movedAssetNode.ParentId);
+
+            var descriptor = await agentService.GetAssetAsync(result.TargetProjectId, expected.Node.Id);
+            var content = await agentService.GetAssetContentAsync(result.TargetProjectId, expected.Node.Id);
+            var actualBytes = Convert.FromBase64String(content.Base64Data);
+
+            Assert.Equal(result.TargetProjectId, descriptor.ProjectId);
+            Assert.Equal(expected.FileName, descriptor.MediaOriginalFileName);
+            Assert.Equal(expected.ContentType, descriptor.MediaContentType);
+            Assert.Equal(expected.Bytes.Length, content.ContentLength);
+            Assert.Equal(expected.Bytes, actualBytes);
+            Assert.Equal(
+                Convert.ToHexString(SHA256.HashData(expected.Bytes)),
+                Convert.ToHexString(SHA256.HashData(actualBytes)));
+        }
+    }
+
+    [Fact]
+    public async Task Workbench_MoveNodesToProjectAsync_returns_only_exact_transactional_node_ids()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Exact move source");
+        var targetProjectId = await CreateProjectAsync(projects, "Exact move target");
+        var sourceGroup = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Moved group",
+                string.Empty,
+                string.Empty,
+                $"project:{sourceProjectId:D}",
+                ObjectSubtype: "planning"));
+        var sourceChild = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Moved child",
+                string.Empty,
+                string.Empty,
+                sourceGroup.Id));
+        var existingTargetNode = await workbench.CreateObjectAsync(
+            targetProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Existing target note",
+                string.Empty,
+                string.Empty,
+                $"project:{targetProjectId:D}"));
+        var targetEditor = await projects.GetAsync(targetProjectId);
+        targetEditor.Phases.Add(new ProjectPhaseEditorModel
+        {
+            Name = "Existing target phase",
+            Goal = "Proves projected nodes are not reported as moved.",
+            Status = ProjectPhaseStatus.Active
+        });
+        Assert.True((await projects.SaveAsync(targetEditor)).IsSuccess);
+        var targetBefore = await workbench.GetStructureAsync(targetProjectId);
+        var projectedTargetNode = Assert.Single(targetBefore.Nodes, node =>
+            node.IsSystemManaged &&
+            node.ObjectType == ProjectObjectType.Phase &&
+            node.Title == "Existing target phase");
+
+        var result = await workbench.MoveNodesToProjectAsync(
+            sourceProjectId,
+            [sourceGroup.Id],
+            targetProjectId,
+            includeDescendants: true);
+        var transfer = Assert.IsType<ProjectStructureSubprojectTransferResult>(result);
+        var expectedNodeIds = new[] { sourceGroup.Id, sourceChild.Id }
+            .OrderBy(nodeId => nodeId, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expectedNodeIds, transfer.MovedNodeIds);
+        Assert.Equal(expectedNodeIds.Length, transfer.MovedNodeCount);
+        Assert.DoesNotContain(existingTargetNode.Id, transfer.MovedNodeIds);
+        Assert.DoesNotContain(projectedTargetNode.Id, transfer.MovedNodeIds);
+    }
+
+    [Fact]
+    public async Task LeaseService_RunWithProjectMutationLeasesAsync_holds_both_projects_and_releases_internally_acquired_leases()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Dual lease source");
+        var targetProjectId = await CreateProjectAsync(projects, "Dual lease target");
+        var callbackExecuted = false;
+
+        var result = await leaseService.RunWithProjectMutationLeasesAsync(
+            [
+                new ProjectStructureProjectMutationLeaseRequest(targetProjectId),
+                new ProjectStructureProjectMutationLeaseRequest(sourceProjectId)
+            ],
+            DefaultAgent,
+            "integration-dual-project-mutation",
+            async cancellationToken =>
+            {
+                var sourceLease = await leaseService.GetActiveLeaseAsync(
+                    ProjectStructureLeaseScopeKind.Project,
+                    sourceProjectId.ToString("D"),
+                    cancellationToken);
+                var targetLease = await leaseService.GetActiveLeaseAsync(
+                    ProjectStructureLeaseScopeKind.Project,
+                    targetProjectId.ToString("D"),
+                    cancellationToken);
+
+                Assert.NotNull(sourceLease);
+                Assert.NotNull(targetLease);
+                Assert.Equal(DefaultAgent.AgentId, sourceLease.AgentId);
+                Assert.Equal(DefaultAgent.AgentId, targetLease.AgentId);
+                callbackExecuted = true;
+                return true;
+            });
+
+        Assert.True(result);
+        Assert.True(callbackExecuted);
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            sourceProjectId.ToString("D")));
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            targetProjectId.ToString("D")));
+    }
+
+    [Fact]
+    public async Task AgentService_MoveDescendantsToProjectAsync_reports_removed_boundary_links_and_preserves_internal_links()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Boundary link source");
+        var targetProjectId = await CreateProjectAsync(projects, "Boundary link target");
+        var transferScope = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Transfer scope",
+                string.Empty,
+                "Its descendants move to the target.",
+                $"project:{sourceProjectId}",
+                320,
+                220,
+                null,
+                null,
+                "implementation"));
+        var movedTask = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Moved task",
+                string.Empty,
+                "Moves with the scope descendants.",
+                transferScope.Id,
+                520,
+                280,
+                null,
+                null,
+                "task"));
+        var movedNote = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Moved note",
+                string.Empty,
+                "Moves as the task descendant.",
+                movedTask.Id,
+                720,
+                340));
+        var sourceOnlyNote = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Source-only note",
+                string.Empty,
+                "Stays in the source project.",
+                $"project:{sourceProjectId}",
+                900,
+                420));
+        await workbench.LinkObjectsAsync(
+            sourceProjectId,
+            movedTask.Id,
+            movedNote.Id,
+            ProjectObjectLinkKind.DependsOn);
+        await workbench.LinkObjectsAsync(
+            sourceProjectId,
+            movedTask.Id,
+            sourceOnlyNote.Id,
+            ProjectObjectLinkKind.Validates);
+        var sourceBefore = await workbench.GetStructureAsync(sourceProjectId);
+        var boundaryLinkBefore = Assert.Single(sourceBefore.Links, link =>
+            link.SourceId == movedTask.Id &&
+            link.TargetId == sourceOnlyNote.Id &&
+            link.Kind == ProjectObjectLinkKind.Validates);
+        var boundaryLinkId = Assert.IsType<Guid>(boundaryLinkBefore.RecordId);
+
+        var result = await agentService.MoveDescendantsToProjectAsync(
+            sourceProjectId,
+            transferScope.Id,
+            new ProjectStructureSubtreeTransferInput(targetProjectId),
+            DefaultAgent);
+
+        Assert.Equal(targetProjectId, result.TargetProjectId);
+        Assert.Equal(2, result.MovedNodeCount);
+        Assert.Equal(1, result.MovedRootCount);
+        Assert.Equal(1, result.MovedLinkCount);
+        var removedBoundaryLink = Assert.Single(result.RemovedBoundaryLinks);
+        Assert.Equal(boundaryLinkId, removedBoundaryLink.LinkId);
+        Assert.Equal(movedTask.Id, removedBoundaryLink.SourceNodeId);
+        Assert.Equal(sourceOnlyNote.Id, removedBoundaryLink.TargetNodeId);
+        Assert.Equal(ProjectObjectLinkKind.Validates, removedBoundaryLink.LinkKind);
+
+        var sourceAfter = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.Contains(sourceAfter.Nodes, node => node.Id == transferScope.Id);
+        Assert.Contains(sourceAfter.Nodes, node => node.Id == sourceOnlyNote.Id);
+        Assert.DoesNotContain(sourceAfter.Nodes, node => node.Id == movedTask.Id);
+        Assert.DoesNotContain(sourceAfter.Links, link => link.RecordId == boundaryLinkId);
+
+        var targetAfter = await workbench.GetStructureAsync(targetProjectId);
+        Assert.Contains(targetAfter.Nodes, node => node.Id == movedTask.Id);
+        Assert.Contains(targetAfter.Nodes, node => node.Id == movedNote.Id);
+        Assert.Contains(targetAfter.Links, link =>
+            link.SourceId == movedTask.Id &&
+            link.TargetId == movedNote.Id &&
+            link.Kind == ProjectObjectLinkKind.DependsOn);
+        Assert.DoesNotContain(targetAfter.Links, link => link.RecordId == boundaryLinkId);
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            sourceProjectId.ToString("D")));
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            targetProjectId.ToString("D")));
+    }
+
+    [Fact]
+    public async Task AgentService_MoveNodesToNewSubprojectAsync_rejects_projected_nodes_before_creating_child()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Compensated transfer source");
+        var sourceEditor = await projects.GetAsync(sourceProjectId);
+        sourceEditor.Phases.Add(new ProjectPhaseEditorModel
+        {
+            Name = "Projected phase",
+            Goal = "Supplies a system-managed node that cannot be moved as an editable object.",
+            Status = ProjectPhaseStatus.Active
+        });
+        var sourceSaveResult = await projects.SaveAsync(sourceEditor);
+        Assert.True(sourceSaveResult.IsSuccess);
+        var sourceSurface = await workbench.GetStructureAsync(sourceProjectId);
+        var projectedPhaseNode = Assert.Single(sourceSurface.Nodes, node =>
+            node.IsSystemManaged &&
+            node.ObjectType == ProjectObjectType.Phase &&
+            node.Title == "Projected phase");
+        var reservedTargetProjectId = Guid.NewGuid();
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.MoveNodesToNewSubprojectAsync(
+                sourceProjectId,
+                reservedTargetProjectId,
+                new ProjectStructureNodesToSubprojectInput(
+                    "Must be compensated",
+                    [projectedPhaseNode.Id]),
+                DefaultAgent));
+
+        Assert.Equal("SelectedNodesNotFound", exception.ErrorCode);
+        Assert.Equal(404, exception.StatusCode);
+        var allProjects = await projects.ListAsync();
+        Assert.Contains(allProjects, project => project.Id == sourceProjectId);
+        Assert.DoesNotContain(allProjects, project => project.Id == reservedTargetProjectId);
+        var hierarchy = await projects.GetHierarchyAsync(sourceProjectId);
+        Assert.DoesNotContain(hierarchy.ChildProjects, project => project.Id == reservedTargetProjectId);
+        var sourceAfterFailure = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.Contains(sourceAfterFailure.Nodes, node => node.Id == projectedPhaseNode.Id);
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            sourceProjectId.ToString("D")));
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            reservedTargetProjectId.ToString("D")));
+    }
+
+    [Fact]
+    public async Task AgentService_MoveNodesToNewSubprojectAsync_reports_post_commit_recovery_and_retains_child()
+    {
+        var bridge = DispatchProxy.Create<IProjectPartyIntegrationBridge, FailingProjectPartyIntegrationBridgeProxy>();
+        var bridgeProxy = (FailingProjectPartyIntegrationBridgeProxy)(object)bridge;
+        bridgeProxy.Failure = new InvalidOperationException("Expected assignment reconciliation failure.");
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<IProjectPartyIntegrationBridge>();
+                services.AddSingleton(bridge);
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var sourceProjectId = await CreateProjectAsync(projects, "Partial commit source");
+        var reservedTargetProjectId = Guid.NewGuid();
+        var sourceGroup = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.ProjectBlock,
+                "Committed transfer group",
+                string.Empty,
+                "This group remains in the target when assignment reconciliation fails.",
+                $"project:{sourceProjectId:D}",
+                ObjectSubtype: "planning"));
+        var sourceChild = await workbench.CreateObjectAsync(
+            sourceProjectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Committed transfer child",
+                string.Empty,
+                string.Empty,
+                sourceGroup.Id));
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.MoveNodesToNewSubprojectAsync(
+                sourceProjectId,
+                reservedTargetProjectId,
+                new ProjectStructureNodesToSubprojectInput(
+                    "Retained partial-commit child",
+                    [sourceGroup.Id],
+                    IncludeDescendants: true),
+                DefaultAgent));
+
+        Assert.Equal(409, exception.StatusCode);
+        Assert.Equal("ProjectStructureTransferPartialCommit", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.False(exception.CanRetryWithCorrectedInput);
+        var recovery = Assert.IsType<ProjectStructureTransferRecovery>(exception.Details);
+        Assert.Equal(reservedTargetProjectId, recovery.TargetProjectId);
+        Assert.NotEqual(Guid.Empty, recovery.DurableMutationId);
+        Assert.Equal(ProjectStructureTransferReconciliationStatus.Failed, recovery.DurableMutationStatus);
+        Assert.Equal(ProjectStructureTransferCommitState.WorkbenchCommitted, recovery.CommitState);
+        Assert.Contains("Do not repeat the node move", recovery.RetryGuidance, StringComparison.Ordinal);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.True(await dbContext.Set<ProjectHierarchyLink>().AnyAsync(
+            link => link.ParentProjectId == sourceProjectId && link.ChildProjectId == reservedTargetProjectId));
+        var sourceAfter = await workbench.GetStructureAsync(sourceProjectId);
+        Assert.DoesNotContain(sourceAfter.Nodes, node => node.Id == sourceGroup.Id || node.Id == sourceChild.Id);
+        var targetAfter = await workbench.GetStructureAsync(reservedTargetProjectId);
+        Assert.Equal(sourceGroup.Id, Assert.Single(targetAfter.Nodes, node => node.Id == sourceGroup.Id).Id);
+        Assert.Equal(sourceGroup.Id, Assert.Single(targetAfter.Nodes, node => node.Id == sourceChild.Id).ParentId);
+
+        var mutation = await dbContext.Set<ProjectCrossModuleMutationRecord>()
+            .SingleAsync(record => record.Id == recovery.DurableMutationId);
+        Assert.Equal(ProjectCrossModuleMutationStatus.Failed, mutation.Status);
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            sourceProjectId.ToString("D")));
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            reservedTargetProjectId.ToString("D")));
     }
 
     [Fact]
@@ -3025,6 +3580,12 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         Assert.Equal(projectId, revision.ProjectId);
         Assert.Equal(original.Id, revision.RevisionParentNodeId);
+
+        var originalReadback = await agentService.GetAssetAsync(projectId, original.Id);
+        var revisionReadback = await agentService.GetAssetAsync(projectId, revision.NodeId);
+
+        Assert.Null(originalReadback.RevisionParentNodeId);
+        Assert.Equal(original.Id, revisionReadback.RevisionParentNodeId);
 
         var surface = await workbench.GetStructureAsync(projectId);
         var revisionNode = Assert.Single(surface.Nodes, node => node.Id == revision.NodeId);
@@ -3299,6 +3860,123 @@ public sealed class ProjectStructureAgentIntegrationTests
                 DefaultAgent));
 
         Assert.Equal("SourceUrlNotAllowed", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateAssetAsync_rejects_public_redirect_to_loopback_without_graph_mutation()
+    {
+        var requestCount = 0;
+        var handler = new DelegateHttpMessageHandler(request =>
+        {
+            Interlocked.Increment(ref requestCount);
+            Assert.Equal("https://assets.example.test/start.pdf", request.RequestUri?.ToString());
+            return new HttpResponseMessage(HttpStatusCode.Redirect)
+            {
+                Headers =
+                {
+                    Location = new Uri("http://127.0.0.1/internal.pdf")
+                }
+            };
+        });
+
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<IHttpClientFactory>();
+                services.AddSingleton<IHttpClientFactory>(_ => new StaticHttpClientFactory(handler));
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "Blocked redirected asset");
+        var before = await workbench.GetStructureAsync(projectId);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateAssetAsync(
+                projectId,
+                new ProjectStructureAssetCreateInput(
+                    ObjectType: ProjectObjectType.File,
+                    Title: "Redirected internal asset",
+                    Subtitle: "Blocked",
+                    Notes: "A public URL must not redirect to a loopback service.",
+                    Media: null,
+                    ParentNodeKey: $"project:{projectId}",
+                    ObjectSubtype: "pdf",
+                    SourceFileName: "internal.pdf",
+                    SourceContentType: "application/pdf",
+                    SourceUrl: "https://assets.example.test/start.pdf"),
+                DefaultAgent));
+
+        var after = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Equal("SourceUrlNotAllowed", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(1, requestCount);
+        AssertStructureIdentityUnchanged(before, after);
+    }
+
+    [Fact]
+    public async Task AgentService_CreateAssetAsync_rejects_excessive_redirects_without_graph_mutation()
+    {
+        var requestCount = 0;
+        var handler = new DelegateHttpMessageHandler(_ =>
+        {
+            var sequence = Interlocked.Increment(ref requestCount);
+            return new HttpResponseMessage(HttpStatusCode.Redirect)
+            {
+                Headers =
+                {
+                    Location = new Uri($"https://assets.example.test/redirect/{sequence}")
+                }
+            };
+        });
+
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+            {
+                services.RemoveAll<IHttpClientFactory>();
+                services.AddSingleton<IHttpClientFactory>(_ => new StaticHttpClientFactory(handler));
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+
+        var projectId = await CreateProjectAsync(projects, "Redirect limit asset");
+        var before = await workbench.GetStructureAsync(projectId);
+
+        var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateAssetAsync(
+                projectId,
+                new ProjectStructureAssetCreateInput(
+                    ObjectType: ProjectObjectType.File,
+                    Title: "Redirect loop asset",
+                    Subtitle: "Blocked",
+                    Notes: "The download must stop at the bounded redirect limit.",
+                    Media: null,
+                    ParentNodeKey: $"project:{projectId}",
+                    ObjectSubtype: "pdf",
+                    SourceFileName: "redirect-loop.pdf",
+                    SourceContentType: "application/pdf",
+                    SourceUrl: "https://assets.example.test/redirect/0"),
+                DefaultAgent));
+
+        var after = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Equal("SourceUrlNotAllowed", exception.ErrorCode);
+        Assert.True(exception.IsSafeToExpose);
+        Assert.True(exception.CanRetryWithCorrectedInput);
+        Assert.Equal(ProjectStructureExternalAssetSourcePolicy.MaximumRedirects + 1, requestCount);
+        AssertStructureIdentityUnchanged(before, after);
     }
 
     [Fact]
@@ -4383,9 +5061,45 @@ public sealed class ProjectStructureAgentIntegrationTests
         return response;
     }
 
+    private static void AssertStructureIdentityUnchanged(
+        ProjectStructureSurface before,
+        ProjectStructureSurface after)
+    {
+        Assert.Equal(
+            before.Nodes.Select(node => node.Id).OrderBy(nodeId => nodeId, StringComparer.Ordinal),
+            after.Nodes.Select(node => node.Id).OrderBy(nodeId => nodeId, StringComparer.Ordinal));
+        Assert.Equal(
+            before.Links
+                .Select(link => (link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored, link.RecordId))
+                .OrderBy(link => link.SourceId, StringComparer.Ordinal)
+                .ThenBy(link => link.TargetId, StringComparer.Ordinal)
+                .ThenBy(link => link.Kind),
+            after.Links
+                .Select(link => (link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored, link.RecordId))
+                .OrderBy(link => link.SourceId, StringComparer.Ordinal)
+                .ThenBy(link => link.TargetId, StringComparer.Ordinal)
+                .ThenBy(link => link.Kind));
+    }
+
     private sealed record ProductCompletionRequiredFileContentCheckJson(
         string[] PathCandidates,
         string[][] RequiredTextAnyGroups);
+
+    private class FailingProjectPartyIntegrationBridgeProxy : DispatchProxy
+    {
+        public Exception Failure { get; set; } = null!;
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            ArgumentNullException.ThrowIfNull(targetMethod);
+            if (targetMethod.Name == nameof(IProjectPartyIntegrationBridge.MoveAssignmentsToProjectAsync))
+            {
+                return Task.FromException(Failure);
+            }
+
+            throw new NotSupportedException($"Unexpected project-party bridge call '{targetMethod.Name}'.");
+        }
+    }
 
     private sealed class StaticHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {

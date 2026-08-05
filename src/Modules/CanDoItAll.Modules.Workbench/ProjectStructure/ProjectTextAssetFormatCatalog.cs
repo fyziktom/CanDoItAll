@@ -45,6 +45,13 @@ internal static class ProjectTextAssetFormatCatalog
         [".mmd", ".mermaid", ".txt"],
         [MermaidContentType, PlainTextContentType]);
 
+    private static readonly ProjectTextAssetFormat Log = new(
+        ".log",
+        PlainTextContentType,
+        [".log"],
+        [".log", ".txt"],
+        [PlainTextContentType]);
+
     public static ProjectTextAssetFormat Resolve(ProjectFileSubtype subtype)
         => subtype switch
         {
@@ -52,10 +59,29 @@ internal static class ProjectTextAssetFormatCatalog
             ProjectFileSubtype.Json => Json,
             ProjectFileSubtype.Markdown => Markdown,
             ProjectFileSubtype.Mermaid => Mermaid,
+            ProjectFileSubtype.Log => Log,
             _ => throw new ProjectAssetCreationException(
                 ProjectAssetCreationErrorCode.UnsupportedFileSubtype,
-                $"File subtype '{subtype}' is not supported by the text asset generator.")
+                $"File subtype '{subtype}' is not supported for text asset creation.")
         };
+
+    public static bool IsSupported(ProjectFileSubtype subtype)
+        => subtype is
+            ProjectFileSubtype.Text or
+            ProjectFileSubtype.Json or
+            ProjectFileSubtype.Markdown or
+            ProjectFileSubtype.Mermaid or
+            ProjectFileSubtype.Log;
+
+    public static string ResolveBrowserAcceptedFileTypes(ProjectFileSubtype subtype)
+    {
+        ProjectTextAssetFormat format = Resolve(subtype);
+        return string.Join(
+            ',',
+            format.UploadExtensions
+                .Concat(format.AdvisoryContentTypes)
+                .Distinct(StringComparer.OrdinalIgnoreCase));
+    }
 
     public static string NormalizeGeneratedFileName(string fileName, ProjectTextAssetFormat format)
         => NormalizeFileName(fileName, format, format.GeneratedExtensions);

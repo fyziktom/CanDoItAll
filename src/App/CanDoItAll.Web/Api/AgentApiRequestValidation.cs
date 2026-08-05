@@ -2,37 +2,62 @@ namespace CanDoItAll.Web.Api;
 
 internal static class AgentApiRequestValidation
 {
-    private const string InvalidRequestCode = "agents.request-invalid";
+    internal const string InvalidRequestCode = "agents.request-invalid";
 
     public static IResult? ValidateCommand(
+        HttpContext context,
         Guid agentId,
         Guid? chatSessionId,
         string? prompt)
     {
         if (agentId == Guid.Empty)
         {
-            return Invalid("Agent id cannot be empty.");
+            return Invalid(context, "Agent id cannot be empty.");
         }
 
         if (chatSessionId == Guid.Empty)
         {
-            return Invalid("Chat session id cannot be empty.");
+            return Invalid(
+                context,
+                "Chat session id cannot be empty.",
+                agentId,
+                chatSessionId: null);
         }
 
         return string.IsNullOrWhiteSpace(prompt)
-            ? Invalid("Prompt cannot be empty.")
+            ? Invalid(
+                context,
+                "Prompt cannot be empty.",
+                agentId,
+                chatSessionId: chatSessionId)
             : null;
     }
 
-    public static IResult? ValidateExecutionRun(Guid executionRunId)
+    public static IResult? ValidateExecutionRun(
+        HttpContext context,
+        Guid executionRunId)
     {
         return executionRunId == Guid.Empty
-            ? Invalid("Agent execution run id cannot be empty.")
+            ? Invalid(
+                context,
+                "Agent execution run id cannot be empty.",
+                executionRunId: null)
             : null;
     }
 
-    private static IResult Invalid(string message)
+    private static IResult Invalid(
+        HttpContext context,
+        string message,
+        Guid? agentId = null,
+        Guid? executionRunId = null,
+        Guid? chatSessionId = null)
     {
-        return ApiEndpointResults.BadRequest(message, InvalidRequestCode);
+        return ApiEndpointResults.AgentValidationFailure(
+            context,
+            message,
+            InvalidRequestCode,
+            agentId,
+            executionRunId,
+            chatSessionId);
     }
 }

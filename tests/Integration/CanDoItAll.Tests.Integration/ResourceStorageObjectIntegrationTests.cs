@@ -27,9 +27,9 @@ public sealed class ResourceStorageObjectIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         Guid projectId = await CreateProjectAsync(projects);
         StorageCatalogRecord storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
-        string fileName = $"sb15-resource-{Guid.NewGuid():N}.txt";
+        string fileName = $"governed-resource-{Guid.NewGuid():N}.txt";
         string fullPath = Path.Combine(storage.EndpointOrRoot, fileName);
-        const string expectedContent = "SB15 governed storage-object integration proof";
+        const string expectedContent = "Governed storage-object integration proof";
         await File.WriteAllTextAsync(fullPath, expectedContent);
 
         try
@@ -82,7 +82,7 @@ public sealed class ResourceStorageObjectIntegrationTests
         var result = await projects.SaveAsync(new ProjectEditorModel
         {
             Name = "Storage-object integration project",
-            Description = "SB15 integration proof",
+            Description = "Governed integration proof",
             Objective = "Prove governed promotion and reopen",
             CurrentPhase = "Execution"
         });

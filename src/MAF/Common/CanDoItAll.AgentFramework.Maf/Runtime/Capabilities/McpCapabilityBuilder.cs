@@ -762,7 +762,7 @@ internal sealed class McpCapabilityBuilder(
                     continue;
                 }
 
-                var resolvedValue = AgentProviderEnvironmentCredential.ResolveAndPromote(binding.Value);
+                var resolvedValue = AgentProviderEnvironmentCredential.Resolve(binding.Value);
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     throw new InvalidOperationException(

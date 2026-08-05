@@ -38,6 +38,8 @@ public sealed record ProviderUsageObservation(
 {
     public int CacheWriteTokens { get; init; }
 
+    public Guid? ProviderProfileId { get; init; }
+
     public Guid? ExecutionRunId { get; init; }
 
     public Guid? AgentId { get; init; }

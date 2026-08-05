@@ -28,6 +28,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            ProcessesProjectTransferTargetStateParticipant>());
         var backgroundWorkersEnabled = LocalRuntimeHostedWorkerPolicy.AreBackgroundHostedWorkersEnabled(
             configuration[LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey],
             configuration["LaneKind"]);

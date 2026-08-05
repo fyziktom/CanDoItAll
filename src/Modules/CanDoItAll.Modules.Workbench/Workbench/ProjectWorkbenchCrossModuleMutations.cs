@@ -8,7 +8,8 @@ internal enum ProjectCrossModuleMutationKind
 {
     DeleteSubtree = 1,
     MoveDescendants = 2,
-    MoveSelectedNodes = 3
+    MoveSelectedNodes = 3,
+    DeleteProject = 4
 }
 
 internal enum ProjectCrossModuleMutationStatus
@@ -16,6 +17,7 @@ internal enum ProjectCrossModuleMutationStatus
     Pending = 0,
     WorkbenchCommitted = 1,
     Completed = 2,
+    Processing = 3,
     Failed = 4
 }
 

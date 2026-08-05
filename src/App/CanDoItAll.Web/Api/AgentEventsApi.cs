@@ -42,6 +42,8 @@ internal static class AgentEventsApi
                 StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/execution-runs/stream", StreamExecutionRunAsync)
@@ -56,6 +58,8 @@ internal static class AgentEventsApi
                 StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/{agentId:guid}/execution-runs/stream", StreamScopedExecutionRunAsync)
@@ -70,6 +74,8 @@ internal static class AgentEventsApi
                 StatusCodes.Status403Forbidden,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost(
@@ -87,6 +93,8 @@ internal static class AgentEventsApi
                 StatusCodes.Status404NotFound,
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status410Gone,
+                StatusCodes.Status422UnprocessableEntity,
+                StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
         return group;
@@ -166,6 +174,7 @@ internal static class AgentEventsApi
         ILoggerFactory loggerFactory)
     {
         var validation = AgentApiRequestValidation.ValidateCommand(
+            context,
             agentId,
             request.ChatSessionId,
             request.Prompt);
@@ -178,6 +187,9 @@ internal static class AgentEventsApi
         return StreamCommandAsync(
             context,
             operationId,
+            agentId,
+            null,
+            request.ChatSessionId,
             cancellationToken => workspaceService.SendMessageAsync(
                 agentId,
                 request.ChatSessionId,
@@ -201,6 +213,7 @@ internal static class AgentEventsApi
         ILoggerFactory loggerFactory)
     {
         var validation = AgentApiRequestValidation.ValidateCommand(
+            context,
             request.AgentId,
             request.ChatSessionId,
             request.Prompt);
@@ -222,6 +235,9 @@ internal static class AgentEventsApi
         return StreamCommandAsync(
             context,
             operationId,
+            request.AgentId,
+            null,
+            request.ChatSessionId,
             cancellationToken => workspaceService.ExecuteRunAsync(
                 executionRequest,
                 cancellationToken),
@@ -242,6 +258,7 @@ internal static class AgentEventsApi
         ILoggerFactory loggerFactory)
     {
         var validation = AgentApiRequestValidation.ValidateCommand(
+            context,
             agentId,
             request.ChatSessionId,
             request.Prompt);
@@ -263,6 +280,9 @@ internal static class AgentEventsApi
         return StreamCommandAsync(
             context,
             operationId,
+            agentId,
+            null,
+            request.ChatSessionId,
             cancellationToken => workspaceService.ExecuteRunAsync(
                 executionRequest,
                 cancellationToken),
@@ -282,7 +302,9 @@ internal static class AgentEventsApi
         IOptions<ApiAccessOptions> apiOptions,
         ILoggerFactory loggerFactory)
     {
-        var validation = AgentApiRequestValidation.ValidateExecutionRun(executionRunId);
+        var validation = AgentApiRequestValidation.ValidateExecutionRun(
+            context,
+            executionRunId);
         if (validation is not null)
         {
             return Task.FromResult(validation);
@@ -292,6 +314,9 @@ internal static class AgentEventsApi
         return StreamCommandAsync(
             context,
             operationId,
+            null,
+            executionRunId,
+            null,
             cancellationToken => workspaceService.ContinueExecutionRunAsync(
                 executionRunId,
                 operationId,
@@ -308,6 +333,9 @@ internal static class AgentEventsApi
     private static async Task<IResult> StreamCommandAsync<TResult>(
         HttpContext context,
         AgentExecutionOperationId operationId,
+        Guid? agentId,
+        Guid? knownExecutionRunId,
+        Guid? chatSessionId,
         Func<CancellationToken, Task<TResult>> startCommand,
         Func<TResult, Guid> executionRunId,
         IAgentFrameworkWorkspaceService workspaceService,
@@ -327,17 +355,40 @@ internal static class AgentEventsApi
         }
         catch (AgentExecutionActivityAdmissionException exception)
         {
-            return AgentActivityApiResults.FromAdmissionException(exception);
+            return AgentActivityApiResults.FromAdmissionException(
+                context,
+                exception,
+                agentId,
+                knownExecutionRunId,
+                chatSessionId);
         }
         catch (AgentJsonSchemaOutputContractException exception)
         {
-            return ApiEndpointResults.BadRequest(exception.Message, exception.Code);
+            return ApiEndpointResults.AgentValidationFailure(
+                context,
+                exception.Message,
+                exception.Code,
+                agentId,
+                knownExecutionRunId,
+                chatSessionId);
         }
         catch (ArgumentException)
         {
-            return ApiEndpointResults.BadRequest(
+            return ApiEndpointResults.AgentValidationFailure(
+                context,
                 "The agent command request was invalid.",
-                "agents.request-invalid");
+                AgentApiRequestValidation.InvalidRequestCode,
+                agentId,
+                knownExecutionRunId,
+                chatSessionId);
+        }
+        catch (AgentChatRunFailedException exception)
+        {
+            return ApiEndpointResults.AgentRunFailure(context, exception);
+        }
+        catch (AgentRunFailedException exception)
+        {
+            return ApiEndpointResults.AgentRunFailure(context, exception);
         }
 
         var completionObserved = false;
@@ -370,19 +421,68 @@ internal static class AgentEventsApi
             {
                 return Results.Empty;
             }
-            catch (Exception exception)
+            catch (AgentChatRunFailedException exception)
             {
-                logger.LogError(
-                    exception,
-                    "Agent API operation {AgentExecutionOperationId} failed after its activity stream started.",
-                    operationId);
+                logger.LogWarning(
+                    "Agent API operation failed after its activity stream started. CorrelationId={CorrelationId} AgentExecutionOperationId={AgentExecutionOperationId} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} FailureCategory={FailureCategory}.",
+                    context.TraceIdentifier,
+                    operationId,
+                    exception.AgentId,
+                    exception.ChatSessionId,
+                    exception.ExecutionRunId,
+                    exception.FailureCategory);
                 await ServerSentEventResponseWriter.WriteEventAsync(
                     context.Response,
                     AgentServerEventNames.CommandFailed,
-                    new AgentCommandFailed(
+                    CreateCommandFailed(
                         operationId,
-                        "agents.command-failed",
-                        "The agent command failed."),
+                        ApiEndpointResults.AgentRunFailureResponse(
+                            context,
+                            exception)),
+                    context.RequestAborted);
+                return Results.Empty;
+            }
+            catch (AgentRunFailedException exception)
+            {
+                logger.LogWarning(
+                    "Agent API operation failed after its activity stream started. CorrelationId={CorrelationId} AgentExecutionOperationId={AgentExecutionOperationId} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} FailureCategory={FailureCategory}.",
+                    context.TraceIdentifier,
+                    operationId,
+                    exception.AgentId,
+                    exception.ChatSessionId,
+                    exception.ExecutionRunId,
+                    exception.FailureCategory);
+                await ServerSentEventResponseWriter.WriteEventAsync(
+                    context.Response,
+                    AgentServerEventNames.CommandFailed,
+                    CreateCommandFailed(
+                        operationId,
+                        ApiEndpointResults.AgentRunFailureResponse(
+                            context,
+                            exception)),
+                    context.RequestAborted);
+                return Results.Empty;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    "Agent API operation failed after its activity stream started. CorrelationId={CorrelationId} AgentExecutionOperationId={AgentExecutionOperationId} AgentId={AgentId} ChatSessionId={ChatSessionId} ExecutionRunId={ExecutionRunId} FailureType={FailureType}.",
+                    context.TraceIdentifier,
+                    operationId,
+                    agentId,
+                    chatSessionId,
+                    knownExecutionRunId,
+                    exception.GetType().Name);
+                await ServerSentEventResponseWriter.WriteEventAsync(
+                    context.Response,
+                    AgentServerEventNames.CommandFailed,
+                    CreateCommandFailed(
+                        operationId,
+                        ApiEndpointResults.AgentCommandFailureResponse(
+                            context,
+                            agentId,
+                            knownExecutionRunId,
+                            chatSessionId)),
                     context.RequestAborted);
                 return Results.Empty;
             }
@@ -427,5 +527,21 @@ internal static class AgentEventsApi
                     operationId);
             }
         }
+    }
+
+    private static AgentCommandFailed CreateCommandFailed(
+        AgentExecutionOperationId operationId,
+        ApiErrorResponse response)
+    {
+        var error = response.Errors.Single();
+        return new AgentCommandFailed(
+            operationId,
+            error.Code,
+            error.Message,
+            response.CorrelationId,
+            response.AgentId,
+            response.ExecutionRunId,
+            response.ChatSessionId,
+            response.ProviderFailureCategory);
     }
 }

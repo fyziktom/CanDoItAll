@@ -365,7 +365,7 @@ public partial class AgentProviderProfilesPanel
             Name = "New OpenAI provider",
             Kind = ProviderKind.OpenAi,
             BaseUrl = ManagedSeedProviderFallbacks.OpenAiBaseUrl,
-            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            ApiKeyEnvironmentVariable = string.Empty,
             DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.Chat,

@@ -1,6 +1,7 @@
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -185,19 +186,20 @@ public partial class ProjectStructurePage
 
     private async Task ExecuteSubprojectTransferAsync()
     {
-        if (subprojectTransferDialog is null)
+        var transferDialog = subprojectTransferDialog;
+        if (transferDialog is null)
         {
             return;
         }
 
-        var projectName = subprojectTransferDialog.ProjectName?.Trim() ?? string.Empty;
+        var projectName = transferDialog.ProjectName?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(projectName))
         {
-            subprojectTransferDialog = subprojectTransferDialog with { Error = "Enter a subproject name before continuing." };
+            subprojectTransferDialog = transferDialog with { Error = "Enter a subproject name before continuing." };
             return;
         }
 
-        var sourceNode = ResolveNode(subprojectTransferDialog.SourceNodeId);
+        var sourceNode = ResolveNode(transferDialog.SourceNodeId);
         if (sourceNode is null)
         {
             subprojectTransferDialog = null;
@@ -219,42 +221,89 @@ public partial class ProjectStructurePage
             : sourceProject.CurrentPhase;
         editor.Status = sourceProject.Status;
 
-        var saveResult = await ProjectsService.SaveAsync(editor);
-        if (saveResult.IsFailure)
+        try
         {
-            subprojectTransferDialog = subprojectTransferDialog with
+            var result = await SubprojectTransferCoordinator.MoveDescendantsToNewSubprojectAsync(
+                ProjectId,
+                editor,
+                sourceNode.Id);
+
+            subprojectTransferDialog = null;
+            await ReloadSurfaceAsync($"project-child:{result.TargetProjectId}");
+            workflowFeedback = result.Transfer.MovedNodeCount == 1
+                ? $"Created {projectName} and moved 1 descendant into it."
+                : $"Created {projectName} and moved {result.Transfer.MovedNodeCount} descendants into it.";
+            workflowFeedbackTone = "mint";
+        }
+        catch (ProjectStructureCompensatedSubprojectTransferException exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Subproject transfer failed and removed empty child {TargetProjectId} for source project {SourceProjectId} and source node {SourceNodeId}.",
+                exception.RemovedProjectId,
+                ProjectId,
+                sourceNode.Id);
+            subprojectTransferDialog = transferDialog with
             {
-                Error = saveResult.Errors.FirstOrDefault()?.Message ?? "The new subproject could not be created."
+                Error = "The transfer failed. The empty child project was removed, and the source structure was left unchanged."
             };
-            return;
+        }
+        catch (ProjectStructureTransferPartialCommitException exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Subproject transfer retained child {TargetProjectId} after a partial commit for source project {SourceProjectId} and source node {SourceNodeId}. Durable mutation {DurableMutationId} has status {DurableMutationStatus}.",
+                exception.Recovery.TargetProjectId,
+                ProjectId,
+                sourceNode.Id,
+                exception.Recovery.DurableMutationId,
+                exception.Recovery.DurableMutationStatus);
+            subprojectTransferDialog = null;
+            await ReloadSurfaceAsync($"project-child:{exception.Recovery.TargetProjectId}");
+            workflowFeedback = $"Created {projectName} and moved its descendants, but assignment reconciliation still requires recovery. {exception.Recovery.RetryGuidance}";
+            workflowFeedbackTone = "warn";
+        }
+        catch (ProjectStructureProjectCreationRejectedException exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Subproject creation was rejected for source project {SourceProjectId} and source node {SourceNodeId} with {ErrorCount} validation error(s).",
+                ProjectId,
+                sourceNode.Id,
+                exception.Errors.Count);
+            subprojectTransferDialog = transferDialog with
+            {
+                Error = exception.Message
+            };
+        }
+        catch (ProjectStructureTransferRejectedException exception)
+        {
+            Logger.LogWarning(
+                exception,
+                "Subproject transfer was rejected for source project {SourceProjectId} and source node {SourceNodeId} with reason {RejectionReason}.",
+                ProjectId,
+                sourceNode.Id,
+                exception.Reason);
+            subprojectTransferDialog = transferDialog with
+            {
+                Error = exception.Reason == ProjectStructureTransferRejectionReason.TargetProjectMismatch
+                    ? "The subproject transfer returned inconsistent target information. Review the logs before retrying."
+                    : exception.Message
+            };
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Subproject transfer failed unexpectedly for source project {SourceProjectId} and source node {SourceNodeId}.",
+                ProjectId,
+                sourceNode.Id);
+            subprojectTransferDialog = transferDialog with
+            {
+                Error = "The subproject transfer failed unexpectedly. Review the logs before retrying."
+            };
         }
 
-        var transferResult = await ProjectWorkbenchService.MoveDescendantsToProjectAsync(ProjectId, sourceNode.Id, saveResult.Value);
-        if (transferResult is null)
-        {
-            subprojectTransferDialog = subprojectTransferDialog with
-            {
-                Error = "The new subproject was created, but the descendants could not be moved into it."
-            };
-            return;
-        }
-
-        var attachResult = await ProjectsService.AddSubprojectAsync(ProjectId, saveResult.Value);
-        if (attachResult.IsFailure)
-        {
-            subprojectTransferDialog = subprojectTransferDialog with
-            {
-                Error = attachResult.Errors.FirstOrDefault()?.Message ?? "The descendants were moved, but the subproject could not be attached."
-            };
-            return;
-        }
-
-        subprojectTransferDialog = null;
-        await ReloadSurfaceAsync($"project-child:{saveResult.Value}");
-        workflowFeedback = transferResult.MovedNodeCount == 1
-            ? $"Created {projectName} and moved 1 descendant into it."
-            : $"Created {projectName} and moved {transferResult.MovedNodeCount} descendants into it.";
-        workflowFeedbackTone = "mint";
         await InvokeAsync(StateHasChanged);
     }
 }

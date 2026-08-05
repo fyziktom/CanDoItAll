@@ -12,7 +12,7 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeToolProvider
+internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeToolProvider
 {
     private const int ProviderOrder = 900;
     private const int GovernedProcessDefaultStructureReadTake = 80;
@@ -44,7 +44,10 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
         ProjectManagementKnowledgeService knowledgeService,
         IAgentImageAnalysisService imageAnalysisService,
+        IWorkspaceCommandExecutionService workspaceCommandExecutionService,
         IWorkspacePathResolutionService workspacePaths,
+        ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
+        ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator,
         IDatabaseRuntimeState databaseRuntimeState,
         TimeProvider timeProvider)
     {
@@ -58,17 +61,14 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ArgumentNullException.ThrowIfNull(taskResourceAttachmentService);
         ArgumentNullException.ThrowIfNull(knowledgeService);
         ArgumentNullException.ThrowIfNull(imageAnalysisService);
+        ArgumentNullException.ThrowIfNull(workspaceCommandExecutionService);
         ArgumentNullException.ThrowIfNull(workspacePaths);
+        ArgumentNullException.ThrowIfNull(projectCreationCoordinator);
+        ArgumentNullException.ThrowIfNull(nodeCopyCoordinator);
         ArgumentNullException.ThrowIfNull(databaseRuntimeState);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
-        var workspaceCommandExecutionService = new WorkspaceCommandExecutionService(
-            workspaceRoot,
-            new LocalWorkspaceProcessHost());
-        var projectCreationCoordinator = new ProjectStructureAgentProjectCreationCoordinator(
-            authorizationService);
-
         toolBuilder = new ProjectStructureToolBuilder(
             agentService,
             leaseService,
@@ -76,6 +76,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             planAnalyticsService,
             authorizationService,
             projectCreationCoordinator,
+            nodeCopyCoordinator,
             taskCreationService,
             taskDetailsService,
             taskResourceAttachmentService,
@@ -212,6 +213,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ProjectPlanAnalyticsQueryService planAnalyticsService,
         ProjectStructureAgentAuthorizationService authorizationService,
         ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
+        ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator,
         ProjectStructureTaskCreationService taskCreationService,
         ProjectStructureTaskDetailsService taskDetailsService,
         ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
@@ -229,6 +231,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private readonly ProjectPlanAnalyticsQueryService planAnalyticsService = planAnalyticsService;
         private readonly ProjectStructureAgentAuthorizationService authorizationService = authorizationService;
         private readonly ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator = projectCreationCoordinator;
+        private readonly ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator = nodeCopyCoordinator;
         private readonly ProjectStructureTaskCreationService taskCreationService = taskCreationService;
         private readonly ProjectStructureTaskDetailsService taskDetailsService = taskDetailsService;
         private readonly ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService =
@@ -278,7 +281,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated runtime handoff actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). Runtime actions prove only that a launch plan can be handed to the shell; terminal output is required to prove that the application started."),
+                    "Reads a filtered project structure. The response includes exact nodeCount and linkCount values; use them instead of manually counting arrays. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated runtime handoff actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). Runtime actions prove only that a launch plan can be handed to the shell; terminal output is required to prove that the application started."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
                     "project_structure_node_catalog",
@@ -302,11 +305,11 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_create",
-                    "Creates a new non-task project-structure node through the internal workspace service. Canonical WorkItem/task nodes are rejected here and must use project_task_create so lifecycle, assignment, and authoritative pricing are applied. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. For dotnet-runtime, dotnet-watch, and dotnet-release, recursively inspect the selected project root first and set metadata.environment.projectPath to the exact existing .csproj, .fsproj, or .vbproj application file. A directory is valid only with exactly one top-level project file; solution files and recursive guessing are rejected. If inspection is denied, preserve the current node and report the access blocker instead of inventing or saving a target. When adding Mermaid diagrams, always create a File asset node with objectType File, objectSubtype mermaid, and Mermaid source in notes. Other generated files should also use objectType File with an appropriate file subtype, not a ProjectBlock. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
+                    "Creates a new non-task, non-file project-structure node through the internal workspace service. Canonical WorkItem/task nodes are rejected here and must use project_task_create so lifecycle, assignment, and authoritative pricing are applied. File and Mermaid assets cannot be created with this tool; use project_structure_asset_create with media, sourceWorkspacePath, or sourceUrl so content is stored in the managed asset pipeline. Notes are descriptive only and are never asset content. For typed block variants, keep objectType as ProjectBlock and set objectSubtype to a lowercase key such as feature, architecture, implementation, testing, delivery, research, risk, deployment, operations, repos, or dockers. Delivery target blocks should set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder. Runnable commands must not be ProjectBlock delivery nodes: use Script for shell/test/build commands, Environment for language runtimes such as dotnet-runtime or python, or Infrastructure for container/runtime commands, and include the matching runtime metadata. For dotnet-runtime, dotnet-watch, and dotnet-release, recursively inspect the selected project root first and set metadata.environment.projectPath to the exact existing .csproj, .fsproj, or .vbproj application file. A directory is valid only with exactly one top-level project file; solution files and recursive guessing are rejected. If inspection is denied, preserve the current node and report the access blocker instead of inventing or saving a target. Every created node needs parentNodeKey: use project:{projectId} for top-level nodes or an existing parent node id."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing non-task project-structure node, including optional title, notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, action capability, or shell handoff as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker. Mermaid diagrams must remain File asset nodes with objectSubtype mermaid and Mermaid source in notes; other generated files should remain File nodes with file subtypes."),
+                    "Updates an existing non-task project-structure node, including optional title, descriptive notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Asset content cannot be changed through notes or this generic update path; use project_structure_asset_create_revision to store changed File, ImageAsset, VideoAsset, or Mermaid content. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, action capability, or shell handoff as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_type_update",
@@ -360,9 +363,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                     "project_structure_node_reparent",
                     "Reconnects an existing project-structure node under a new logical parent node or back to the project root."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, ProjectStructureNodesCopyInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesCopyAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureNodesCopy,
+                    "Copies the explicitly supplied editable source node ids, including each source subtree, under one explicit destination parent in the same project. The operation reuses the UI copy semantics: internal links and node references are remapped, omitted user-authored non-hierarchy links crossing the copied forest boundary are returned explicitly as omittedBoundaryLinks, and managed asset bindings keep the exact stored content. The returned source-to-copied node mapping is authoritative. This operation is non-idempotent; repeating it creates another copy."),
+                AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureSubtreeTransferInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeDescendantsToProjectMoveAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_descendants_to_project_move",
-                    "Moves all descendants of a source node into an existing target project. Use project_structure_nodes_to_new_subproject when the target project should be created first."),
+                    "Moves all descendants of a source node into an existing target project while leasing both projects. Internal links move with the nodes; links whose endpoints would span projects are removed and returned in removedBoundaryLinks. Use project_structure_nodes_to_new_subproject when the target project should be created first."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeCommandInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeCommandExecuteAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_command_execute",
@@ -410,7 +417,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureAgentAssetCreateInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_asset_create",
-                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. Use title, subtitle, and notes for descriptive evidence; typed storage metadata is derived by the service and is not caller-controlled. Provide media base64 data, sourceWorkspacePath for a file inside the managed workspace, or sourceUrl for a public http/https file that should be downloaded and stored as a managed asset."),
+                    "Creates a managed File, ImageAsset, or VideoAsset node through the internal project-structure asset pipeline. An explicit parentNodeKey is required: use project:{projectId} for a top-level asset or an existing node id for a child asset. Use title, subtitle, and notes for descriptive evidence; notes are never asset content, and typed storage metadata is derived by the service and is not caller-controlled. Provide media base64 data, sourceWorkspacePath for a file inside the managed workspace, or sourceUrl for a public http/https file that should be downloaded and stored as a managed asset."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, CancellationToken cancellationToken = default) => ProjectStructureAssetGetAsync(agent, accessState, projectId, nodeId, cancellationToken),
                     "project_structure_asset_get",
@@ -511,7 +518,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 tools.Add(AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodesToSubprojectInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesToNewSubprojectAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     AgentToolInvocationPolicyMetadata.ProjectStructureNodesToNewSubproject,
-                    "Creates a new subproject under the opened project and moves the supplied node ids, optionally with descendants, into that subproject in one operation. Use this for prompts like 'take selected nodes and move them to their own new subproject named XYZ'. If the contextual prompt lists selected node ids, pass those exact ids as nodeIds."));
+                    "Creates a new subproject under the opened project and moves the supplied node ids, optionally with descendants, into that subproject as a compensated operation. A failed transfer removes an empty child; a committed non-empty child is retained for durable recovery. Internal links move with the nodes, and removed boundary-crossing links are returned explicitly. If the contextual prompt lists selected node ids, pass those exact ids as nodeIds."));
             }
 
             if (accessState.CanRead &&
@@ -915,7 +922,8 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                             BuildAgentContext(agent, accessState, projectId),
                             cancellationToken),
                         response => response.TargetProjectId,
-                        cancellationToken);
+                        cancellationToken,
+                        retainedProjectId => GrantSessionCreatedProjectAccess(accessState, retainedProjectId));
                     GrantSessionCreatedProjectAccess(accessState, result.TargetProjectId);
                     return result;
                 },
@@ -1624,6 +1632,35 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 cancellationToken);
         }
 
+        private Task<ProjectStructureNodesCopyResult> ProjectStructureNodesCopyAsync(
+            AgentDefinition agent,
+            ProjectStructureAccessState accessState,
+            Guid projectId,
+            ProjectStructureNodesCopyInput request,
+            int? estimatedMinutes,
+            CancellationToken cancellationToken)
+        {
+            return ExecuteAsync(
+                agent,
+                "structure.nodes-copy",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString("D"),
+                request,
+                async cancellationToken =>
+                {
+                    EnsureProjectWriteAllowed(accessState, projectId);
+                    return await nodeCopyCoordinator.CopyAsync(
+                        projectId,
+                        request,
+                        BuildAgentContext(agent, accessState, projectId),
+                        accessState.RequiresNonTaskWriteGuard,
+                        cancellationToken);
+                },
+                cancellationToken);
+        }
+
         private Task<ProjectStructureSubprojectTransferResult> ProjectStructureNodeDescendantsToProjectMoveAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
@@ -1878,8 +1915,15 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: true, cancellationToken);
-                    var count = await agentService.DeleteNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
-                    return new OperationCount(count);
+                    var result = await agentService.DeleteNodeDetailedAsync(
+                        projectId,
+                        nodeId,
+                        request,
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
+                    return new OperationCount(
+                        result.DeletedNodeCount,
+                        result.DeletionWarnings);
                 },
                 cancellationToken);
         }
@@ -1904,8 +1948,14 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 {
                     EnsureProjectWriteAllowed(accessState, projectId);
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, request.NodeIds, includeDescendants: true, cancellationToken);
-                    var count = await agentService.DeleteNodesAsync(projectId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
-                    return new OperationCount(count);
+                    var result = await agentService.DeleteNodesDetailedAsync(
+                        projectId,
+                        request,
+                        BuildAgentContext(agent, accessState, projectId),
+                        cancellationToken);
+                    return new OperationCount(
+                        result.DeletedNodeCount,
+                        result.DeletionWarnings);
                 },
                 cancellationToken);
         }
@@ -3250,6 +3300,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 ProjectStructureChecklistResponse checklistResponse => checklistResponse.Warnings,
                 ProjectStructureDependencyResponse dependencyResponse => dependencyResponse.Warnings,
                 ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
+                OperationCount operationCount => operationCount.Warnings,
                 ProjectStructureImportResult importResult => importResult.Warnings,
                 ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
                 ProjectStructureProcessSubprocessLaunchResult subprocessLaunchResult => subprocessLaunchResult.Warnings,
@@ -3369,111 +3420,6 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         Guid? ProjectId,
         string BranchName,
         string? RepositoryRoot);
-}
-
-internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
-{
-    private const long MaxInlineAgentAssetContentBytes = 32 * 1024;
-
-    public static ProjectStructureAssetContentDescriptor BoundForAgentRuntime(
-        ProjectStructureAssetContentDescriptor content,
-        bool canAnalyzeImages = true)
-    {
-        ArgumentNullException.ThrowIfNull(content);
-
-        if (ShouldInlineAssetContent(content))
-        {
-            return content with
-            {
-                Base64DataOmitted = false,
-                ContentSummary = $"Base64Data contains {content.ContentLength:N0} byte(s) from a small non-media asset."
-            };
-        }
-
-        var mediaPath = string.IsNullOrWhiteSpace(content.Asset.MediaRelativePath)
-            ? "the returned asset media path"
-            : content.Asset.MediaRelativePath;
-        var reason = IsBinaryMediaContentType(content.Asset.MediaContentType)
-            ? $"Base64Data is omitted because '{content.Asset.MediaContentType}' is binary media."
-            : $"Base64Data is omitted because the asset is {content.ContentLength:N0} byte(s), exceeding the {MaxInlineAgentAssetContentBytes:N0}-byte runtime inline limit.";
-        var nextAction = ResolveOmittedContentNextAction(content.Asset, mediaPath, canAnalyzeImages);
-
-        return content with
-        {
-            Base64Data = string.Empty,
-            Base64DataOmitted = true,
-            ContentSummary = $"{reason} {nextAction}"
-        };
-    }
-
-    private static bool ShouldInlineAssetContent(ProjectStructureAssetContentDescriptor content)
-    {
-        return content.ContentLength <= MaxInlineAgentAssetContentBytes &&
-               !IsBinaryMediaContentType(content.Asset.MediaContentType);
-    }
-
-    private static bool IsBinaryMediaContentType(string contentType)
-    {
-        return IsImageContentType(contentType) ||
-               contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ||
-               contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ||
-               contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ResolveOmittedContentNextAction(
-        ProjectStructureAssetDescriptor asset,
-        string mediaPath,
-        bool canAnalyzeImages)
-    {
-        var contentType = asset.MediaContentType;
-        var assetArguments = $"projectId '{asset.ProjectId:D}' and nodeId '{asset.NodeId}'";
-        if (IsSvgContentType(contentType))
-        {
-            return $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet} with {assetArguments} to inspect the SVG source as inert text.";
-        }
-
-        if (IsImageContentType(contentType))
-        {
-            return canAnalyzeImages
-                ? $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze} with {assetArguments}; do not pass this asset path to a workspace image tool."
-                : "The selected agent lacks artifact-transformation access. Choose a project-authorized agent that can analyze images; do not pass this asset path to a workspace image tool.";
-        }
-
-        if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Contains("wordprocessingml.document", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("text/markdown", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"Use workspace_convert_document with '{mediaPath}' and analyze the returned markdown preview or output path.";
-        }
-
-        if (IsSpreadsheetContentType(contentType))
-        {
-            return $"Use workspace_inspect_spreadsheet or workspace_spreadsheet_summary with '{mediaPath}', then use workspace_read_spreadsheet_range when tabular content is required.";
-        }
-
-        if (ProjectStructureAgentRuntimeAssetTextReader.IsSupported(asset))
-        {
-            return $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetTextGet} with {assetArguments} to inspect bounded UTF-8 text.";
-        }
-
-        return $"Use a bounded workspace tool against '{mediaPath}' only when the step contract requires inspecting the asset bytes.";
-    }
-
-    private static bool IsImageContentType(string contentType)
-        => contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsSvgContentType(string contentType)
-        => contentType.Split(';', 2, StringSplitOptions.TrimEntries)[0]
-            .Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsSpreadsheetContentType(string contentType)
-    {
-        return contentType.Contains("spreadsheetml.sheet", StringComparison.OrdinalIgnoreCase) ||
-               contentType.Contains("ms-excel", StringComparison.OrdinalIgnoreCase) ||
-               contentType.Equals("text/csv", StringComparison.OrdinalIgnoreCase) ||
-               contentType.Equals("text/tab-separated-values", StringComparison.OrdinalIgnoreCase);
-    }
 }
 
 internal static class ProjectStructureAgentRuntimeAssetTextReader
@@ -3655,44 +3601,3 @@ internal static class ProjectStructureAgentRuntimeImageAssetPolicy
         };
     }
 }
-
-public sealed record OperationAck(bool Ok);
-
-public sealed record OperationCount(int Count);
-
-public sealed record ProjectStructureScopeInput(
-    ProjectStructureLeaseScopeKind ScopeKind,
-    Guid? ProjectId = null,
-    string? NodeId = null,
-    string? RepositoryRoot = null,
-    string? BranchName = null);
-
-public sealed record ProjectStructureCompactNode(
-    string Id,
-    string? ParentId,
-    ProjectObjectType ObjectType,
-    string ObjectSubtype,
-    string Title,
-    string Subtitle,
-    string Status,
-    string Route,
-    int EffectivePriority,
-    string ProgressMode,
-    int ProgressPercent,
-    string? Notes = null,
-    string? MetadataJson = null,
-    string? MediaOriginalFileName = null,
-    string? MediaRelativePath = null,
-    string? MediaContentType = null,
-    double? X = null,
-    double? Y = null,
-    int? DurationSeconds = null,
-    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
-
-public sealed record ProjectStructureReadToolData(
-    Guid ProjectId,
-    string ProjectName,
-    IReadOnlyList<ProjectStructureCompactNode> Nodes,
-    IReadOnlyList<ProjectStructureLinkSummary> Links,
-    IReadOnlyList<string> Warnings,
-    ProjectStructureReadSource Source = ProjectStructureReadSource.CanonicalCurrent);

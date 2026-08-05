@@ -75,7 +75,7 @@ public sealed class DashboardOperationalSnapshotPlaywrightTests
             "bundles",
             "candoitall-main-dashboard-operational-snapshot",
             "evidence",
-            "SB03");
+            "Dashboard acceptance");
         Directory.CreateDirectory(evidenceDirectory);
         await page.ScreenshotAsync(new PageScreenshotOptions
         {

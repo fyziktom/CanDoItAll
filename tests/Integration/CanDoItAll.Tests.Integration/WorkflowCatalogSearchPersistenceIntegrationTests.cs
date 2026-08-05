@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -18,9 +19,10 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
 {
     private static readonly DateTimeOffset BaselineUtc = new(2026, 7, 19, 18, 0, 0, TimeSpan.Zero);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task PostgreSql_SearchDefinitions_FiltersCurrentHeadAndExecutesStableBoundedMetadataPages()
+    public async Task PostgreSql_SearchDefinitions_FiltersCurrentHeadAndExecutesStableBoundedCatalogPages()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
         await using var database = PostgresTestDatabaseLease.Create("workflowcatalogsearch");
@@ -65,6 +67,9 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
         Assert.Equal(3, lastPage.TotalPages);
         Assert.Equal([seededCatalog.MatchingIds[4]], lastPage.Items.Select(item => item.Id));
         Assert.Equal(lastPage.Items, repeatedLastPage.Items);
+        Assert.All(
+            firstPage.Items.Concat(lastPage.Items),
+            item => Assert.Equal($"catalog-search:{item.Id.Value:D}", item.TemplateKey));
         Assert.DoesNotContain(firstPage.Items, item => item.Id == seededCatalog.HistoricalMatchId);
         Assert.DoesNotContain(firstPage.Items, item => item.Id == seededCatalog.WrongStatusId);
 
@@ -74,14 +79,21 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
                 StringComparison.Ordinal))
             .ToArray();
         Assert.Equal(6, catalogCommands.Length);
-        Assert.All(catalogCommands, command => Assert.False(
-            command.CommandText.Contains(nameof(WorkflowDefinitionRecord.DefinitionJson), StringComparison.Ordinal),
-            command.CommandText));
 
         var pageCommands = catalogCommands
             .Where(command => command.CommandText.Contains("LIMIT", StringComparison.OrdinalIgnoreCase))
             .ToArray();
         Assert.Equal(3, pageCommands.Length);
+        Assert.All(
+            catalogCommands.Except(pageCommands),
+            command => Assert.DoesNotContain(
+                nameof(WorkflowDefinitionRecord.DefinitionJson),
+                command.CommandText,
+                StringComparison.Ordinal));
+        Assert.All(pageCommands, command => Assert.Contains(
+            nameof(WorkflowDefinitionRecord.DefinitionJson),
+            command.CommandText,
+            StringComparison.Ordinal));
         Assert.All(pageCommands, command => Assert.Contains(
             "OFFSET",
             command.CommandText,
@@ -176,11 +188,76 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests
             Description = description,
             Status = status,
             PreferredBackend = WorkflowRuntimeBackendKind.InProcess,
-            DefinitionJson = "{\"payload\":\"catalog search must not select this column\"}",
+            DefinitionJson = CreateDefinitionJson(
+                workflowId,
+                versionId,
+                name,
+                description,
+                status,
+                updatedAtUtc),
             InstructionSnapshotSchemaVersion = 3,
             CreatedAtUtc = BaselineUtc.AddHours(-1),
             UpdatedAtUtc = updatedAtUtc
         };
+
+    private static string CreateDefinitionJson(
+        Guid workflowId,
+        Guid versionId,
+        string name,
+        string description,
+        WorkflowLifecycleStatus status,
+        DateTimeOffset updatedAtUtc)
+    {
+        var startNode = CreateNode("start", WorkflowNodeKind.Start);
+        var endNode = CreateNode("end", WorkflowNodeKind.End);
+        var definition = new WorkflowDefinition(
+            new WorkflowId(workflowId),
+            new WorkflowVersionId(versionId),
+            name,
+            description,
+            status,
+            new WorkflowGraph(
+                startNode.Id,
+                [startNode, endNode],
+                [
+                    new WorkflowEdge(
+                        new WorkflowEdgeId("start-to-end"),
+                        startNode.Id,
+                        SourcePortId: null,
+                        endNode.Id,
+                        TargetPortId: null,
+                        WorkflowEdgeKind.Direct,
+                        ConditionExpression: string.Empty)
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            BaselineUtc.AddHours(-1),
+            updatedAtUtc)
+        {
+            TemplateKey = $"catalog-search:{workflowId:D}"
+        };
+
+        return JsonSerializer.Serialize(definition, JsonOptions);
+    }
+
+    private static WorkflowNode CreateNode(string id, WorkflowNodeKind kind)
+        => new(
+            new WorkflowNodeId(id),
+            kind,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: WorkflowValueShape.Text,
+                ResultShape: WorkflowValueShape.Text));
 
     private static WorkflowDefinitionHeadRecord CreateHead(Guid workflowId, Guid versionId)
         => new()

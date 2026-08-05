@@ -187,7 +187,7 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public void Live_processes_publishes_selected_run_and_focused_dialog_without_runtime_ledgers()
+    public async Task Live_processes_publishes_selected_run_and_focused_dialog_without_runtime_ledgers()
     {
         using var context = CreateContext(out _);
         var selectedRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
@@ -213,7 +213,8 @@ public sealed class ProcessWorkspaceShellTests
         });
         var initialScopeId = Assert.IsType<AgentChatContextSnapshot>(registry.Capture()).Scope.Id;
 
-        cut.Find("[data-testid='live-processes-run-open-details']").Click();
+        cut.WaitForElement("[data-testid='live-processes-run-open-details']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='live-processes-run-open-details']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -762,8 +763,8 @@ public sealed class ProcessWorkspaceShellTests
         {
             Assert.True(client.Requests.Last().ForceRefresh);
             Assert.Null(client.Requests.Last().RuntimeQuery?.PreviouslyLoadedRuns);
+            Assert.Contains("Refresh requested", cut.Markup, StringComparison.Ordinal);
         });
-        Assert.Contains("Refresh requested", cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]

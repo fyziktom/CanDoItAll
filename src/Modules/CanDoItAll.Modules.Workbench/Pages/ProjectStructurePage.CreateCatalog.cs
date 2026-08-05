@@ -28,6 +28,8 @@ public partial class ProjectStructurePage
     {
         var useSecretReferenceDialog = IsSecretReferenceCreateAction(action.ActionId);
         var useTaskCreateDialog = IsTaskCreateAction(action.ActionId);
+        var useTextAssetDialog = IsTextAssetCreateAction(action.ActionId);
+        var useDedicatedDialog = useSecretReferenceDialog || useTaskCreateDialog || useTextAssetDialog;
         return new CanvasWorkbenchAction
         {
             ActionId = action.ActionId,
@@ -40,7 +42,7 @@ public partial class ProjectStructurePage
             SubmenuLayout = action.SubmenuLayout,
             Tone = action.Tone,
             SetupRendererKey = action.SetupRendererKey,
-            RequiresInput = useSecretReferenceDialog || useTaskCreateDialog ? false : action.RequiresInput,
+            RequiresInput = useDedicatedDialog ? false : action.RequiresInput,
             CreateMode = useSecretReferenceDialog
                 ? "secret-reference-picker"
                 : useTaskCreateDialog
@@ -109,6 +111,11 @@ public partial class ProjectStructurePage
 
     private static bool IsTaskCreateAction(string? actionId)
         => string.Equals(actionId, ProjectStructureCanvasCatalog.WorkTaskActionId, StringComparison.Ordinal);
+
+    private static bool IsTextAssetCreateAction(string? actionId)
+        => !string.IsNullOrWhiteSpace(actionId) &&
+            ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition) &&
+            ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition);
 
     private IReadOnlyList<CanvasWorkbenchInputOption> BuildNodeOptions(params ProjectObjectType[] objectTypes)
     {

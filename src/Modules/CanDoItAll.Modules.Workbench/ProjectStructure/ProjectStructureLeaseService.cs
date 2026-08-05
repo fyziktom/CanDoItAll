@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,17 @@ public sealed class ProjectStructureLeaseService(
 
         var now = clock.GetUtcNow();
         var scopeKey = NormalizeScopeKey(request.ScopeKind, request.ScopeKey);
+        var projectId = await ResolveLeaseProjectIdAsync(
+            dbContext,
+            request.ScopeKind,
+            scopeKey,
+            cancellationToken);
+        await using var mutationScope = projectId.HasValue
+            ? await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId.Value),
+                cancellationToken)
+            : null;
         var durationMinutes = Math.Clamp(request.DurationMinutes, 1, 120);
         var activeLease = await FindActiveLeaseAsync(dbContext, request.ScopeKind, scopeKey, now, cancellationToken);
 
@@ -37,6 +49,11 @@ public sealed class ProjectStructureLeaseService(
             activeLease.RenewedAtUtc = now;
             activeLease.ExpiresAtUtc = now.AddMinutes(durationMinutes);
             await dbContext.SaveChangesAsync(cancellationToken);
+            if (mutationScope is not null)
+            {
+                await mutationScope.CommitAsync(cancellationToken);
+            }
+
             return MapSnapshot(activeLease, now);
         }
 
@@ -58,7 +75,54 @@ public sealed class ProjectStructureLeaseService(
 
         await dbContext.Set<ProjectStructureLeaseRecord>().AddAsync(lease, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (mutationScope is not null)
+        {
+            await mutationScope.CommitAsync(cancellationToken);
+        }
+
         return MapSnapshot(lease, now);
+    }
+
+    private static async Task<Guid?> ResolveLeaseProjectIdAsync(
+        AppDbContext dbContext,
+        ProjectStructureLeaseScopeKind scopeKind,
+        string scopeKey,
+        CancellationToken cancellationToken)
+    {
+        if (scopeKind == ProjectStructureLeaseScopeKind.RepoBranch)
+        {
+            return null;
+        }
+
+        if (scopeKind == ProjectStructureLeaseScopeKind.Project)
+        {
+            return Guid.TryParse(scopeKey, out var projectId)
+                ? projectId
+                : throw new ProjectStructureAgentException(
+                    400,
+                    "InvalidProjectScope",
+                    "A project lease requires a valid project id scope key.");
+        }
+
+        var projectIds = await dbContext.Set<ProjectObjectRecord>()
+            .AsNoTracking()
+            .Where(record => record.NodeKey == scopeKey)
+            .Select(record => record.ProjectId)
+            .Distinct()
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        return projectIds.Count switch
+        {
+            1 => projectIds[0],
+            0 => throw new ProjectStructureAgentException(
+                404,
+                "ProjectNodeNotFound",
+                $"Project node '{scopeKey}' does not exist and cannot be leased."),
+            _ => throw new ProjectStructureAgentException(
+                409,
+                "AmbiguousProjectNodeScope",
+                $"Project node scope '{scopeKey}' is not unique across projects.")
+        };
     }
 
     public async Task<ProjectStructureLeaseSnapshot?> GetActiveLeaseAsync(
@@ -90,11 +154,24 @@ public sealed class ProjectStructureLeaseService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectStructureAgentSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
 
+        var scopeKey = NormalizeScopeKey(request.ScopeKind, request.ScopeKey);
+        var projectId = await ResolveLeaseProjectIdAsync(
+            dbContext,
+            request.ScopeKind,
+            scopeKey,
+            cancellationToken);
+        await using var mutationScope = projectId.HasValue
+            ? await ProjectStructureSerializableMutationScope.BeginAsync(
+                dbContext,
+                ProjectStructureSerializableMutationScope.ForProject(projectId.Value),
+                cancellationToken)
+            : null;
+
         var now = clock.GetUtcNow();
         var lease = await dbContext.Set<ProjectStructureLeaseRecord>()
             .FirstOrDefaultAsync(
                 item => item.ScopeKind == request.ScopeKind &&
-                        item.ScopeKey == NormalizeScopeKey(request.ScopeKind, request.ScopeKey) &&
+                        item.ScopeKey == scopeKey &&
                         item.LeaseToken == request.LeaseToken.Trim() &&
                         item.ReleasedAtUtc == null,
                 cancellationToken);
@@ -112,6 +189,11 @@ public sealed class ProjectStructureLeaseService(
         lease.RenewedAtUtc = now;
         lease.ExpiresAtUtc = now.AddMinutes(Math.Clamp(request.DurationMinutes, 1, 120));
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (mutationScope is not null)
+        {
+            await mutationScope.CommitAsync(cancellationToken);
+        }
+
         return MapSnapshot(lease, now);
     }
 
@@ -197,32 +279,80 @@ public sealed class ProjectStructureLeaseService(
         Func<CancellationToken, Task<T>> callback,
         CancellationToken cancellationToken = default)
     {
-        var scopeKey = NormalizeScopeKey(ProjectStructureLeaseScopeKind.Project, projectId.ToString());
-        if (!string.IsNullOrWhiteSpace(leaseToken))
-        {
-            await ValidateOwnedLeaseAsync(ProjectStructureLeaseScopeKind.Project, scopeKey, leaseToken, agent, cancellationToken);
-            return await callback(cancellationToken);
-        }
+        return await RunWithProjectMutationLeasesAsync(
+            [new ProjectStructureProjectMutationLeaseRequest(projectId, leaseToken)],
+            agent,
+            reason,
+            callback,
+            cancellationToken);
+    }
 
-        var activeLease = await GetActiveLeaseAsync(ProjectStructureLeaseScopeKind.Project, scopeKey, cancellationToken);
-        if (activeLease is not null && IsSameOwner(activeLease, agent))
-        {
-            return await callback(cancellationToken);
-        }
-
-        var acquiredLease = await AcquireMutationLeaseWithShortConflictRetryAsync(scopeKey, agent, reason, cancellationToken);
+    internal async Task<T> RunWithProjectMutationLeasesAsync<T>(
+        IReadOnlyCollection<ProjectStructureProjectMutationLeaseRequest> requests,
+        ProjectStructureAgentContext agent,
+        string reason,
+        Func<CancellationToken, Task<T>> callback,
+        CancellationToken cancellationToken = default)
+    {
+        var orderedRequests = ProjectStructureProjectMutationLeasePlan.Create(requests);
+        var acquiredLeases = new List<ProjectStructureLeaseSnapshot>();
+        Exception? operationFailure = null;
+        T result = default!;
 
         try
         {
-            return await callback(cancellationToken);
+            foreach (var request in orderedRequests)
+            {
+                var scopeKey = NormalizeScopeKey(
+                    ProjectStructureLeaseScopeKind.Project,
+                    request.ProjectId.ToString("D"));
+                if (!string.IsNullOrWhiteSpace(request.LeaseToken))
+                {
+                    await ValidateOwnedLeaseAsync(
+                        ProjectStructureLeaseScopeKind.Project,
+                        scopeKey,
+                        request.LeaseToken,
+                        agent,
+                        cancellationToken);
+                    continue;
+                }
+
+                var activeLease = await GetActiveLeaseAsync(
+                    ProjectStructureLeaseScopeKind.Project,
+                    scopeKey,
+                    cancellationToken);
+                if (activeLease is not null && IsSameOwner(activeLease, agent))
+                {
+                    continue;
+                }
+
+                var acquiredLease = await AcquireMutationLeaseWithShortConflictRetryAsync(
+                    scopeKey,
+                    agent,
+                    reason,
+                    cancellationToken);
+                acquiredLeases.Add(acquiredLease);
+            }
+
+            result = await callback(cancellationToken);
         }
-        finally
+        catch (Exception exception)
         {
-            await ReleaseAsync(
-                new ProjectStructureLeaseReleaseRequest(ProjectStructureLeaseScopeKind.Project, scopeKey, acquiredLease.LeaseToken),
-                agent,
-                CancellationToken.None);
+            operationFailure = exception;
         }
+
+        await ProjectStructureMutationLeaseCleanup.CompleteAsync(
+            acquiredLeases,
+            acquiredLease => ReleaseAsync(
+                new ProjectStructureLeaseReleaseRequest(
+                    ProjectStructureLeaseScopeKind.Project,
+                    acquiredLease.ScopeKey,
+                    acquiredLease.LeaseToken),
+                agent,
+                CancellationToken.None),
+            operationFailure);
+
+        return result;
     }
 
     private async Task<ProjectStructureLeaseSnapshot> AcquireMutationLeaseWithShortConflictRetryAsync(
@@ -360,5 +490,94 @@ public sealed class ProjectStructureLeaseService(
                            item.ExpiresAtUtc > now)
             .OrderByDescending(item => item.RenewedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+}
+
+internal static class ProjectStructureMutationLeaseCleanup
+{
+    public static async Task CompleteAsync(
+        IReadOnlyList<ProjectStructureLeaseSnapshot> acquiredLeases,
+        Func<ProjectStructureLeaseSnapshot, Task> releaseAsync,
+        Exception? operationFailure)
+    {
+        ArgumentNullException.ThrowIfNull(acquiredLeases);
+        ArgumentNullException.ThrowIfNull(releaseAsync);
+
+        var releaseFailures = new List<Exception>();
+        for (var index = acquiredLeases.Count - 1; index >= 0; index--)
+        {
+            try
+            {
+                await releaseAsync(acquiredLeases[index]);
+            }
+            catch (Exception exception)
+            {
+                releaseFailures.Add(exception);
+            }
+        }
+
+        if (releaseFailures.Count > 0)
+        {
+            var failures = operationFailure is null
+                ? releaseFailures
+                : [operationFailure, .. releaseFailures];
+            throw new AggregateException(
+                "One or more project mutation leases could not be released.",
+                failures);
+        }
+
+        if (operationFailure is not null)
+        {
+            ExceptionDispatchInfo.Capture(operationFailure).Throw();
+        }
+    }
+}
+
+internal sealed record ProjectStructureProjectMutationLeaseRequest(
+    Guid ProjectId,
+    string? LeaseToken = null);
+
+internal static class ProjectStructureProjectMutationLeasePlan
+{
+    public static IReadOnlyList<ProjectStructureProjectMutationLeaseRequest> Create(
+        IReadOnlyCollection<ProjectStructureProjectMutationLeaseRequest> requests)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+        if (requests.Count == 0)
+        {
+            throw new ArgumentException("At least one project mutation lease is required.", nameof(requests));
+        }
+
+        if (requests.Any(request => request.ProjectId == Guid.Empty))
+        {
+            throw new ArgumentException("Project mutation leases require non-empty project ids.", nameof(requests));
+        }
+
+        return requests
+            .Select(request => request with { LeaseToken = request.LeaseToken?.Trim() })
+            .GroupBy(request => request.ProjectId)
+            .Select(ResolveSingleRequest)
+            .OrderBy(request => request.ProjectId)
+            .ToList();
+    }
+
+    private static ProjectStructureProjectMutationLeaseRequest ResolveSingleRequest(
+        IGrouping<Guid, ProjectStructureProjectMutationLeaseRequest> requests)
+    {
+        var leaseTokens = requests
+            .Select(request => request.LeaseToken)
+            .Where(leaseToken => !string.IsNullOrWhiteSpace(leaseToken))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (leaseTokens.Count > 1)
+        {
+            throw new ArgumentException(
+                $"Project '{requests.Key:D}' has conflicting mutation lease tokens.",
+                nameof(requests));
+        }
+
+        return new ProjectStructureProjectMutationLeaseRequest(
+            requests.Key,
+            leaseTokens.SingleOrDefault());
     }
 }

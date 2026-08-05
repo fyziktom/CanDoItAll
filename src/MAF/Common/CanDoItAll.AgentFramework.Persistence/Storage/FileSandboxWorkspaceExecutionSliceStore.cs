@@ -25,6 +25,28 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return ResolveExecutionIndexAsync(cancellationToken);
     }
 
+    public async Task<ExecutionStorageIndex> LoadIndexForAgentDeletionAsync(
+        CancellationToken cancellationToken)
+    {
+        var currentIndex = await ResolveExecutionIndexAsync(cancellationToken);
+        var persistedSessionCount = CountJsonFiles(
+            layout.ExecutionSessionsRoot);
+        if (currentIndex.SessionCount == persistedSessionCount)
+        {
+            return currentIndex;
+        }
+
+        var reconciledIndex = currentIndex with
+        {
+            SessionCount = persistedSessionCount
+        };
+        await jsonStore.WriteJsonAtomicallyAsync(
+            layout.ExecutionIndexPath,
+            reconciledIndex,
+            cancellationToken);
+        return reconciledIndex;
+    }
+
     public Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken)
     {
         return LoadOrBuildUsageProjectionAsync(cancellationToken);
@@ -1751,7 +1773,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             Version: string.IsNullOrWhiteSpace(currentIndex.Version) ? "3.0" : currentIndex.Version,
             Revision: currentIndex.Revision + 1L,
             UpdatedAtUtc: updatedAtUtc,
-            SessionCount: currentIndex.SessionCount + (sessionExistedBefore ? 0 : 1),
+            SessionCount: currentIndex.SessionCount +
+                (!sessionExistedBefore && detail.ChatSession is not null ? 1 : 0),
             RunCount: currentIndex.RunCount + 1,
             LogCount: currentIndex.LogCount + detail.ExecutionLog.Count,
             MetricCount: currentIndex.MetricCount + detail.Metrics.Count,

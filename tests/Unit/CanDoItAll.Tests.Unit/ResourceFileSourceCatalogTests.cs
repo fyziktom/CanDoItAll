@@ -116,7 +116,7 @@ public sealed class ResourceFileSourceCatalogTests
         {
             AppDbContextModelRegistry.ConfigureAssemblies(
                 [typeof(Project).Assembly, typeof(ProjectResource).Assembly]);
-            var options = new DbContextOptionsBuilder<AppDbContext>()
+            var options = AppDbContextTestOptionsBuilder.Create()
                 .UseInMemoryDatabase($"resource-sources-{Guid.NewGuid():N}")
                 .Options;
             var factory = new TestDbContextFactory(options);

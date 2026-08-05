@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,6 +115,7 @@ public sealed class PartyRelationshipsEditorTests {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(queryService);
         return context;
     }

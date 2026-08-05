@@ -57,20 +57,16 @@ public sealed class EmailWorkflowSwitchScenarioTests
         Func<CanDoItAllTestEnvironment, TestDatabaseProfile> profileFactory,
         string resultFileName)
     {
-        var proofRoot = Path.Combine(
-            IntegrationTestPaths.RepositoryRoot,
-            ".codex",
-            "bundles",
-            "project-structure-workflow-runs",
-            "proof",
-            "email-workflows");
-        var syntheticRoot = Path.Combine(proofRoot, "synthetic-inputs");
-        var emailCases = await PrepareEmailCasesAsync(syntheticRoot);
-
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync(
             testEnvironmentKey,
             profileFactory,
             ConfigureEmailWorkflowServices);
+        var proofRoot = Path.Combine(
+            host.RootPath,
+            "proof",
+            "email-workflows");
+        var syntheticRoot = Path.Combine(proofRoot, "synthetic-inputs");
+        var emailCases = await PrepareEmailCasesAsync(syntheticRoot);
 
         var component = await PostAndReadAsync<LlmCallComponent>(
             host.Client,
@@ -148,18 +144,24 @@ public sealed class EmailWorkflowSwitchScenarioTests
         WorkflowDefinition definition,
         EmailCase emailCase)
     {
+        var sourceBytes = await File.ReadAllBytesAsync(emailCase.FilePath);
         var parent = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
-            $"/api/project-structure/projects/{project.Id}/nodes",
-            new ProjectStructureNodeCreateInput(
+            $"/api/project-structure/projects/{project.Id}/assets",
+            new ProjectStructureAssetCreateInput(
                 ProjectObjectType.File,
                 emailCase.Title,
                 emailCase.Subject,
                 emailCase.FilePath,
-                $"project:{project.Id}",
+                new ProjectObjectMediaPayload(
+                    Path.GetFileName(emailCase.FilePath),
+                    "message/rfc822",
+                    Convert.ToBase64String(sourceBytes)),
+                ParentNodeKey: $"project:{project.Id}",
                 ObjectSubtype: "eml",
                 LeaseToken: leaseToken));
         var inputSettings = ProjectStructureWorkflowInputSettings.Default();
+        inputSettings.IncludeAssets = false;
         inputSettings.ManualInputJson = JsonSerializer.Serialize(
             new
             {
@@ -199,7 +201,9 @@ public sealed class EmailWorkflowSwitchScenarioTests
             $"/api/project-structure/projects/{project.Id}/nodes/{workflowNode.Node.Id}/workflow/start",
             new ProjectStructureWorkflowNodeStartInput(WorkflowRuntimeBackendKind.InProcess, LeaseToken: leaseToken));
 
-        Assert.Equal(WorkflowRunState.Completed, started.Status.State);
+        Assert.True(
+            started.Status.State == WorkflowRunState.Completed,
+            JsonSerializer.Serialize(started.Status, JsonOptions));
         Assert.Equal(100, started.Status.ProgressPercent);
         Assert.Equal("complete", started.Status.ProgressMode);
 
@@ -492,7 +496,8 @@ public sealed class EmailWorkflowSwitchScenarioTests
             throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}). Body: {errorBody}");
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<T>();
+        var payload = await response.Content.ReadFromJsonAsync<T>(
+            ProjectStructureHttpContractTestJson.SerializerOptions);
         return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
     }
 
@@ -505,7 +510,8 @@ public sealed class EmailWorkflowSwitchScenarioTests
             throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.StatusCode}). Body: {errorBody}");
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<T>();
+        var payload = await response.Content.ReadFromJsonAsync<T>(
+            ProjectStructureHttpContractTestJson.SerializerOptions);
         return payload ?? throw new InvalidOperationException($"No payload was returned for '{path}'.");
     }
 

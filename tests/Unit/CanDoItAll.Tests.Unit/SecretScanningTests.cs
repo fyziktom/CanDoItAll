@@ -8,7 +8,7 @@ public sealed class SecretScanningTests
     [
         new(
             "OpenAI API key",
-            new Regex("s" + "k-" + "[A-Za-z0-9_-]{20,}", RegexOptions.Compiled | RegexOptions.CultureInvariant),
+            new Regex("(?<![A-Za-z0-9_-])s" + "k-" + "[A-Za-z0-9_-]{20,}", RegexOptions.Compiled | RegexOptions.CultureInvariant),
             "s" + "k-proj-" + new string('A', 40)),
         new(
             "GitHub token",
@@ -54,6 +54,36 @@ public sealed class SecretScanningTests
         return data;
     }
 
+    [Fact]
+    public void Secret_scanner_does_not_treat_embedded_css_identifiers_as_provider_keys()
+    {
+        const string cssClassName = ".ps-task-sk-process-http-boundary";
+
+        Assert.DoesNotContain(
+            SecretPatterns,
+            pattern => pattern.Pattern.IsMatch(cssClassName));
+    }
+
+    [Theory]
+    [InlineData("artifacts/gpu-profile/Default/Cache/data_1", true)]
+    [InlineData("artifacts/gpu-profile/Default/Local Storage/state.json", true)]
+    [InlineData("artifacts/gpu-profile-evidence/report.txt", false)]
+    [InlineData("artifacts/acceptance/provider-output.json", false)]
+    [InlineData("src/Modules/Feature.cs", false)]
+    public void Secret_scanner_skips_only_the_generated_gpu_browser_profile_subtree(
+        string relativePath,
+        bool expectedToSkip)
+    {
+        var root = Path.GetFullPath(Path.Combine(
+            Path.GetTempPath(),
+            "candoitall-secret-scan-policy"));
+        var candidate = Path.GetFullPath(Path.Combine(
+            root,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal(expectedToSkip, ShouldSkipPath(root, candidate));
+    }
+
     private static IEnumerable<string> ScanRepositoryFiles()
     {
         var root = FindRepositoryRoot();
@@ -90,7 +120,8 @@ public sealed class SecretScanningTests
     {
         var relativePath = Path.GetRelativePath(root, filePath);
         var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (IsUnderTransientBundlePath(segments))
+        if (IsUnderTransientBundlePath(segments) ||
+            IsUnderGeneratedGpuBrowserProfilePath(segments))
         {
             return true;
         }
@@ -106,8 +137,21 @@ public sealed class SecretScanningTests
 
     private static bool IsUnderTransientBundlePath(IReadOnlyList<string> pathSegments)
     {
-        for (var index = 0; index < pathSegments.Count - 1; index++)
+        for (var index = 0; index < pathSegments.Count; index++)
         {
+            if (string.Equals(
+                    pathSegments[index],
+                    "codex-bundles",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (index == pathSegments.Count - 1)
+            {
+                continue;
+            }
+
             if (string.Equals(pathSegments[index], "codex", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(pathSegments[index + 1], "bundles", StringComparison.OrdinalIgnoreCase))
             {
@@ -116,6 +160,20 @@ public sealed class SecretScanningTests
         }
 
         return false;
+    }
+
+    private static bool IsUnderGeneratedGpuBrowserProfilePath(
+        IReadOnlyList<string> pathSegments)
+    {
+        return pathSegments.Count >= 2 &&
+               string.Equals(
+                   pathSegments[0],
+                   "artifacts",
+                   StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(
+                   pathSegments[1],
+                   "gpu-profile",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsTextFile(string filePath)

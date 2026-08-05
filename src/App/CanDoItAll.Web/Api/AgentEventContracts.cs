@@ -61,4 +61,9 @@ public sealed record AgentCommandCompleted<TResult>(
 public sealed record AgentCommandFailed(
     AgentExecutionOperationId OperationId,
     string Code,
-    string Message);
+    string Message,
+    string? CorrelationId = null,
+    Guid? AgentId = null,
+    Guid? ExecutionRunId = null,
+    Guid? ChatSessionId = null,
+    AgentProviderFailureCategory? ProviderFailureCategory = null);

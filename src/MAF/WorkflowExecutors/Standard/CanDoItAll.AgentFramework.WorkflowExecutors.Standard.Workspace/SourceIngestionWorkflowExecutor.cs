@@ -9,6 +9,7 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
     private readonly WorkflowSourceCandidateCollector candidateCollector;
     private readonly WorkflowSourceFileResolver fileResolver;
     private readonly WorkflowSourceDocumentReader documentReader;
+    private readonly WorkflowSourceFileContentIdentityResolver contentIdentityResolver;
 
     public SourceIngestionWorkflowExecutor(
         IWorkspacePathResolutionService paths,
@@ -16,18 +17,21 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
         : this(
             new WorkflowSourceCandidateCollector(),
             new WorkflowSourceFileResolver(paths),
-            new WorkflowSourceDocumentReader(documentMarkdownConverter))
+            new WorkflowSourceDocumentReader(documentMarkdownConverter),
+            new WorkflowSourceFileContentIdentityResolver())
     {
     }
 
     internal SourceIngestionWorkflowExecutor(
         WorkflowSourceCandidateCollector candidateCollector,
         WorkflowSourceFileResolver fileResolver,
-        WorkflowSourceDocumentReader documentReader)
+        WorkflowSourceDocumentReader documentReader,
+        WorkflowSourceFileContentIdentityResolver contentIdentityResolver)
     {
         this.candidateCollector = candidateCollector ?? throw new ArgumentNullException(nameof(candidateCollector));
         this.fileResolver = fileResolver ?? throw new ArgumentNullException(nameof(fileResolver));
         this.documentReader = documentReader ?? throw new ArgumentNullException(nameof(documentReader));
+        this.contentIdentityResolver = contentIdentityResolver ?? throw new ArgumentNullException(nameof(contentIdentityResolver));
     }
 
     public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.SourceIngestion;
@@ -53,6 +57,7 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
         var loaded = new List<WorkflowSourceIngestionDocument>();
         var errors = new List<WorkflowSourceIngestionError>();
         var visitedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visitedContent = new HashSet<WorkflowSourceFileContentKey>();
         var truncated = false;
 
         foreach (var candidate in candidates)
@@ -78,12 +83,24 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
                         continue;
                     }
 
+                    var contentIdentity = await contentIdentityResolver
+                        .ResolveAsync(file, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (visitedContent.Contains(contentIdentity.Key))
+                    {
+                        continue;
+                    }
+
                     var effectiveCharacterBudget = Math.Min(maxCharactersPerFile, remainingCharacters);
                     var readResult = await documentReader
                         .ReadAsync(file, effectiveCharacterBudget, cancellationToken)
                         .ConfigureAwait(false);
+                    await contentIdentityResolver
+                        .EnsureUnchangedAsync(file, contentIdentity, cancellationToken)
+                        .ConfigureAwait(false);
                     var loadedDocument = CreateDocument(candidate, file, readResult);
                     loaded.Add(loadedDocument);
+                    visitedContent.Add(contentIdentity.Key);
                     remainingCharacters -= loadedDocument.Text.Length;
                     truncated = truncated || loadedDocument.IsTruncated;
                     if (loaded.Count >= maxFiles || remainingCharacters <= 0)

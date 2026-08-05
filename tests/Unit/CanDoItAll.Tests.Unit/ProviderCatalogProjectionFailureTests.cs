@@ -64,7 +64,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         [
             typeof(WorkspaceModuleAssemblyMarker).Assembly
         ]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
                 $"provider-catalog-projection-{Guid.NewGuid():N}")
             .Options;
@@ -277,7 +277,10 @@ public sealed class ProviderCatalogProjectionFailureTests
     [Fact]
     public async Task Provider_save_drops_discovered_capabilities_when_provider_identity_changes()
     {
-        var registry = CreateScenarioRegistry();
+        var registry = CreateRegistry(
+            new ScenarioHarnessProviderAdapter(),
+            new OpenAiProviderAdapter(
+                new UnexpectedHttpClientFactory()));
         var discoveredCapability = AgentThinkingEffortPolicy.CreateDiscoveredCapability(
             "qwen3.5:2b",
             "qwen35",
@@ -299,6 +302,8 @@ public sealed class ProviderCatalogProjectionFailureTests
         var editor = await registry.GetProviderEditorAsync(providerId);
         editor.Kind = AgentFrameworkProviderKind.AzureOpenAi;
         editor.BaseUrl = "https://example.openai.azure.com";
+        editor.ApiKeyEnvironmentVariable =
+            $"secret:{Guid.NewGuid():D}";
         editor.DefaultModel = "reasoning-deployment";
         editor.Transport = ProviderTransportKind.Responses;
 
@@ -343,15 +348,198 @@ public sealed class ProviderCatalogProjectionFailureTests
         editor.Name = "Must not persist";
         editor.ConfigurationJson = "{not-valid-json";
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<ProviderProfileValidationException>(() =>
             registry.SaveProviderAsync(editor));
         var after = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
             await registry.GetProviderAsync(providerId));
 
-        Assert.Contains("not valid JSON", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("valid JSON object", exception.Message, StringComparison.Ordinal);
         Assert.Equal(before.Name, after.Name);
         Assert.Equal(before.ConfigurationJson, after.ConfigurationJson);
         Assert.Equal(before.ModelThinkingEffortCapabilities, after.ModelThinkingEffortCapabilities);
+    }
+
+    [Fact]
+    public async Task Provider_save_rejects_non_http_url_for_real_connector_without_database_mutation()
+    {
+        var registry = CreateRegistry(
+            new OpenAiProviderAdapter(
+                new UnexpectedHttpClientFactory()));
+        var editor = new AgentFrameworkProviderProfileEditorModel
+        {
+            Name = "Invalid OpenAI endpoint",
+            Kind = AgentFrameworkProviderKind.OpenAi,
+            BaseUrl = "ftp://api.example.test/v1",
+            ApiKeyEnvironmentVariable =
+                "secret:e1b1eae4-bf87-48a3-8d0b-abf0da7f034e",
+            DefaultModel = "gpt-test",
+            Transport = ProviderTransportKind.Responses,
+            Purpose = ProviderProfilePurpose.Chat,
+            ConfigurationJson = "{}"
+        };
+
+        var exception = await Assert.ThrowsAsync<
+            ProviderProfileValidationException>(
+            () => registry.SaveProviderAsync(editor));
+        var providers = await registry.ListProvidersAsync();
+
+        Assert.Contains("HTTP or HTTPS", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            providers,
+            provider => string.Equals(
+                provider.Name,
+                editor.Name,
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Provider_save_requires_explicit_secret_binding_for_real_connector()
+    {
+        var registry = CreateRegistry(
+            new OpenAiProviderAdapter(
+                new UnexpectedHttpClientFactory()));
+        var editor = new AgentFrameworkProviderProfileEditorModel
+        {
+            Name = "OpenAI secret binding validation",
+            Kind = AgentFrameworkProviderKind.OpenAi,
+            BaseUrl = "https://api.example.test/v1",
+            ApiKeyEnvironmentVariable = "LEGACY_OPENAI_API_KEY",
+            DefaultModel = "gpt-test",
+            Transport = ProviderTransportKind.Responses,
+            Purpose = ProviderProfilePurpose.Chat,
+            ConfigurationJson = "{}"
+        };
+
+        var exception = await Assert.ThrowsAsync<
+            ProviderProfileValidationException>(
+            () => registry.SaveProviderAsync(editor));
+
+        Assert.Contains(
+            "secret-reference metadata",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            await registry.ListProvidersAsync(),
+            provider => string.Equals(
+                provider.Name,
+                editor.Name,
+                StringComparison.Ordinal));
+
+        var secretRecordId = Guid.NewGuid();
+        editor.ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}";
+        var providerId = await registry.SaveProviderAsync(editor);
+        var provider = Assert.IsType<
+            CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(
+            $"secret:{secretRecordId:D}",
+            provider.ApiKeyEnvironmentVariable);
+
+        var replacementSecretRecordId = Guid.NewGuid();
+        var replacementEditor = await registry.GetProviderEditorAsync(providerId);
+        Assert.DoesNotContain(
+            ProviderProfileMetadataPropertyNames.SecretRecordId,
+            replacementEditor.ConfigurationJson,
+            StringComparison.OrdinalIgnoreCase);
+        replacementEditor.ApiKeyEnvironmentVariable =
+            $"secret:{replacementSecretRecordId:D}";
+        await registry.SaveProviderAsync(replacementEditor);
+        var replacedProvider = Assert.IsType<
+            CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+        Assert.Equal(
+            $"secret:{replacementSecretRecordId:D}",
+            replacedProvider.ApiKeyEnvironmentVariable);
+
+        var conflictingEditor = await registry.GetProviderEditorAsync(providerId);
+        conflictingEditor.ConfigurationJson =
+            $$"""{"secretRecordId":"{{secretRecordId:D}}"}""";
+        var conflictingException = await Assert.ThrowsAsync<
+            ProviderProfileValidationException>(
+            () => registry.SaveProviderAsync(conflictingEditor));
+        Assert.Contains(
+            "secret-reference metadata",
+            conflictingException.Message,
+            StringComparison.Ordinal);
+
+        var clearEditor = await registry.GetProviderEditorAsync(providerId);
+        clearEditor.ApiKeyEnvironmentVariable = string.Empty;
+        var clearException = await Assert.ThrowsAsync<
+            ProviderProfileValidationException>(
+            () => registry.SaveProviderAsync(clearEditor));
+        Assert.Contains(
+            "explicit secret record reference",
+            clearException.Message,
+            StringComparison.Ordinal);
+        var preservedProvider = Assert.IsType<
+            CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+        Assert.Equal(
+            $"secret:{replacementSecretRecordId:D}",
+            preservedProvider.ApiKeyEnvironmentVariable);
+    }
+
+    [Fact]
+    public async Task Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source()
+    {
+        var registry = CreateRegistry(
+            new OpenAiProviderAdapter(
+                new UnexpectedHttpClientFactory()));
+        var secretRecordId = Guid.NewGuid();
+        var editor = new AgentFrameworkProviderProfileEditorModel
+        {
+            Name = "Metadata-bound OpenAI provider",
+            Kind = AgentFrameworkProviderKind.OpenAi,
+            BaseUrl = "https://metadata-api.example.test/v1",
+            ApiKeyEnvironmentVariable = string.Empty,
+            DefaultModel = "gpt-test",
+            Transport = ProviderTransportKind.Responses,
+            Purpose = ProviderProfilePurpose.Chat,
+            ConfigurationJson =
+                $$"""{"secretRecordId":"{{secretRecordId:D}}"}"""
+        };
+
+        var providerId = await registry.SaveProviderAsync(editor);
+        var reloadedEditor = await registry.GetProviderEditorAsync(providerId);
+
+        Assert.Equal(
+            $"secret:{secretRecordId:D}",
+            reloadedEditor.ApiKeyEnvironmentVariable);
+        Assert.DoesNotContain(
+            ProviderProfileMetadataPropertyNames.SecretRecordId,
+            reloadedEditor.ConfigurationJson,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Optional_connector_secret_can_be_explicitly_unbound()
+    {
+        var registry = CreateScenarioRegistry();
+        var secretRecordId = Guid.NewGuid();
+        var providerId = await registry.SaveProviderAsync(
+            new AgentFrameworkProviderProfileEditorModel
+            {
+                Name = "Optional scenario secret",
+                Kind = AgentFrameworkProviderKind.OpenAi,
+                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}",
+                DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+                Transport = ProviderTransportKind.Responses,
+                Purpose = ProviderProfilePurpose.Chat,
+                ConfigurationJson = "{}"
+            });
+        var editor = await registry.GetProviderEditorAsync(providerId);
+        editor.ApiKeyEnvironmentVariable = string.Empty;
+
+        await registry.SaveProviderAsync(editor);
+        var reloadedEditor = await registry.GetProviderEditorAsync(providerId);
+
+        Assert.Equal(string.Empty, reloadedEditor.ApiKeyEnvironmentVariable);
+        Assert.DoesNotContain(
+            ProviderProfileMetadataPropertyNames.SecretRecordId,
+            reloadedEditor.ConfigurationJson,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<ProjectionFailureFixture>
@@ -361,7 +549,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         [
             typeof(WorkspaceModuleAssemblyMarker).Assembly
         ]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
                 $"provider-catalog-stale-projection-{Guid.NewGuid():N}")
             .Options;
@@ -424,16 +612,21 @@ public sealed class ProviderCatalogProjectionFailureTests
     private static WorkspaceBackedAgentProviderProfileRegistry
         CreateScenarioRegistry()
     {
+        return CreateRegistry(new ScenarioHarnessProviderAdapter());
+    }
+
+    private static WorkspaceBackedAgentProviderProfileRegistry CreateRegistry(
+        params IProviderAdapter[] providerAdapters)
+    {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
             typeof(WorkspaceModuleAssemblyMarker).Assembly
         ]);
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
                 $"provider-thinking-capability-{Guid.NewGuid():N}")
             .Options;
-        var providerRegistry = new ProviderRegistry(
-            [new ScenarioHarnessProviderAdapter()]);
+        var providerRegistry = new ProviderRegistry(providerAdapters);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
         return new WorkspaceBackedAgentProviderProfileRegistry(
@@ -447,6 +640,15 @@ public sealed class ProviderCatalogProjectionFailureTests
             [new RecordingCommitObserver()],
             new RecordingLogger<
                 WorkspaceBackedAgentProviderProfileRegistry>());
+    }
+
+    private sealed class UnexpectedHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            throw new InvalidOperationException(
+                $"HTTP client '{name}' was not expected during provider validation.");
+        }
     }
 
     private static void AssertProjectionFailure(

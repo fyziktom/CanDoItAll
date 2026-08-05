@@ -13,7 +13,6 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     ProviderRegistry providerRegistry,
     IProviderProfileService providerProfileService)
 {
-    private const string OpenAiApiKeyEnvironmentVariable = "OPENAI_API_KEY";
     private const string OpenAiChatCompletionsProviderName =
         "OpenAI chat completions";
 
@@ -49,7 +48,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
             provider.Name,
             mappedKind,
             provider.BaseUrl,
-            ResolveApiKeyEnvironmentVariable(provider, mappedKind),
+            ResolveSecretReference(provider),
             provider.DefaultModel,
             mappedTransport,
             provider.IsEnabled,
@@ -297,17 +296,11 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
                    StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ResolveApiKeyEnvironmentVariable(
-        WorkspaceProviderProfile provider,
-        AgentFrameworkProviderKind mappedKind)
+    private static string ResolveSecretReference(
+        WorkspaceProviderProfile provider)
     {
-        if (provider.ApiKeySecretId.HasValue)
-        {
-            return $"secret:{provider.ApiKeySecretId.Value:D}";
-        }
-
-        return mappedKind == AgentFrameworkProviderKind.OpenAi
-            ? OpenAiApiKeyEnvironmentVariable
+        return provider.ApiKeySecretId.HasValue
+            ? $"secret:{provider.ApiKeySecretId.Value:D}"
             : string.Empty;
     }
 

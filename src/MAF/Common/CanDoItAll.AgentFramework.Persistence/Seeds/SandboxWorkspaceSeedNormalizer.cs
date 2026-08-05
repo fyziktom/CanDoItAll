@@ -115,7 +115,7 @@ internal static class SandboxWorkspaceSeedNormalizer
             var mergedProvider = match with
             {
                 ApiKeyEnvironmentVariable = string.IsNullOrWhiteSpace(match.ApiKeyEnvironmentVariable) ? seededProvider.ApiKeyEnvironmentVariable : match.ApiKeyEnvironmentVariable,
-                DefaultModel = isManagedSeedOpenAiProvider || string.IsNullOrWhiteSpace(match.DefaultModel)
+                DefaultModel = ShouldUseSeedProviderDefaultModel(match, seededProvider)
                     ? seededProvider.DefaultModel
                     : match.DefaultModel,
                 SupportsStreaming = match.SupportsStreaming || seededProvider.SupportsStreaming,
@@ -125,9 +125,10 @@ internal static class SandboxWorkspaceSeedNormalizer
                 Purpose = ShouldUseSeedProviderPurpose(match, seededProvider) ? seededProvider.Purpose : match.Purpose,
                 ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededProvider.ConfigurationJson : match.ConfigurationJson,
                 Notes = string.IsNullOrWhiteSpace(match.Notes) ? seededProvider.Notes : match.Notes,
-                SuggestedModels = isManagedSeedOpenAiProvider
-                    ? seededProvider.SuggestedModels.Concat(match.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-                    : match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                SuggestedModels = ResolveMergedProviderSuggestedModels(
+                    match,
+                    seededProvider,
+                    isManagedSeedOpenAiProvider),
                 ModelPrices = isManagedSeedOpenAiProvider
                     ? ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
                         match.Kind,
@@ -156,12 +157,62 @@ internal static class SandboxWorkspaceSeedNormalizer
                ManagedSeedOpenAiProviderNames.Contains(provider.Name);
     }
 
+    private static bool ShouldUseSeedProviderDefaultModel(
+        ProviderProfile existingProvider,
+        ProviderProfile seededProvider)
+    {
+        if (string.IsNullOrWhiteSpace(existingProvider.DefaultModel))
+        {
+            return true;
+        }
+
+        if (seededProvider.Purpose == ProviderProfilePurpose.ImageGeneration)
+        {
+            return HasCanonicalManagedSeedIdentity(existingProvider, seededProvider) &&
+                   string.Equals(
+                       existingProvider.DefaultModel,
+                       OpenAiModelIds.GptImage1Mini,
+                       StringComparison.Ordinal);
+        }
+
+        return IsManagedSeedOpenAiProvider(existingProvider, seededProvider);
+    }
+
     private static bool ShouldUseSeedProviderPurpose(ProviderProfile existingProvider, ProviderProfile seededProvider)
     {
         return seededProvider.Purpose != ProviderProfilePurpose.Chat &&
                existingProvider.Kind == seededProvider.Kind &&
                (existingProvider.Id == seededProvider.Id ||
                 string.Equals(existingProvider.Name, seededProvider.Name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IReadOnlyList<string> ResolveMergedProviderSuggestedModels(
+        ProviderProfile existingProvider,
+        ProviderProfile seededProvider,
+        bool isManagedSeedOpenAiProvider)
+    {
+        var existingSuggestedModels = seededProvider.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                                      HasCanonicalManagedSeedIdentity(existingProvider, seededProvider)
+            ? existingProvider.SuggestedModels.Where(model => !string.Equals(
+                model,
+                OpenAiModelIds.GptImage1Mini,
+                StringComparison.Ordinal))
+            : existingProvider.SuggestedModels;
+        var candidates = isManagedSeedOpenAiProvider
+            ? seededProvider.SuggestedModels.Concat(existingSuggestedModels)
+            : existingSuggestedModels.Concat(seededProvider.SuggestedModels);
+        return candidates
+            .Where(model => !string.IsNullOrWhiteSpace(model))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool HasCanonicalManagedSeedIdentity(
+        ProviderProfile existingProvider,
+        ProviderProfile seededProvider)
+    {
+        return existingProvider.Id == seededProvider.Id &&
+               IsManagedSeedOpenAiProvider(seededProvider);
     }
 
     private static MergeResult<CapabilityCatalogItem> MergeCapabilities(IReadOnlyList<CapabilityCatalogItem> existingCapabilities, IReadOnlyList<CapabilityCatalogItem> seededCapabilities)

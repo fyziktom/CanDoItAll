@@ -2,7 +2,6 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components;
@@ -117,8 +116,26 @@ public sealed class AgentChatModalTests
         var runId = Guid.NewGuid();
         var startedAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
 
+        var run = CreateRun(agentId, sessionId, runId, startedAtUtc) with
+        {
+            FailureProviderProfileId = Guid.NewGuid(),
+            FailureProviderName = "ParticipantProvider",
+            FailureModel = "participant-model",
+            EntryAgentRequestCompatibilityEvidence = new ProviderRequestCompatibilityEvidence(
+                ProviderRequestCompatibilityEvidence.CurrentSchemaVersion,
+                ProviderKind.OpenAi,
+                Guid.NewGuid(),
+                ProviderTransportKind.ChatCompletions,
+                OpenAiModelIds.Gpt56Luna,
+                OpenAiModelIds.Gpt56Luna,
+                ProviderInvocationFeatures.FunctionTools,
+                AgentReasoningEffortLevel.Medium,
+                AgentReasoningEffortLevel.None,
+                ProviderRequestCompatibilityDisposition.Adjusted,
+                ProviderModelParameterAdjustment.ReasoningDisabledForFunctionTools)
+        };
         var cut = context.Render<AgentRuntimeDetailsDialog>(parameters => parameters
-            .Add(component => component.Run, CreateRun(agentId, sessionId, runId, startedAtUtc))
+            .Add(component => component.Run, run)
             .Add(component => component.ExecutionLog, new[]
             {
                 CreateEntry(agentId, sessionId, runId, startedAtUtc.AddSeconds(1), ExecutionState.Preparing, "Preparing", "Opening the runtime session."),
@@ -132,10 +149,32 @@ public sealed class AgentChatModalTests
             .Add(component => component.RunStateTone, "info"));
 
         Assert.Contains("Selected execution", cut.Markup);
-        Assert.Contains("Provider TestProvider / test-model", cut.Markup);
+        Assert.Contains("Entry provider TestProvider / test-model", cut.Markup);
+        Assert.Contains("Failure provider ParticipantProvider / participant-model", cut.Markup);
+        Assert.Contains("Entry-agent request compatibility", cut.Markup);
+        Assert.Contains("Transport ChatCompletions", cut.Markup);
+        Assert.Contains("Compatibility Adjusted", cut.Markup);
+        Assert.Contains("Reasoning requested Medium / effective None", cut.Markup);
+        Assert.Contains($"Model requested {OpenAiModelIds.Gpt56Luna} / effective {OpenAiModelIds.Gpt56Luna}", cut.Markup);
+        Assert.Contains("ReasoningDisabledForFunctionTools", cut.Markup);
         Assert.Contains("Live execution timeline", cut.Markup);
         Assert.Contains("Tool call", cut.Markup);
         Assert.Contains("Metrics", cut.Markup);
+    }
+
+    [Fact]
+    public void Runtime_details_dialog_marks_legacy_runs_without_compatibility_evidence()
+    {
+        using var context = CreateContext();
+        var startedAtUtc = new DateTimeOffset(2026, 4, 28, 10, 0, 0, TimeSpan.Zero);
+        var run = CreateRun(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), startedAtUtc);
+
+        var cut = context.Render<AgentRuntimeDetailsDialog>(parameters => parameters
+            .Add(component => component.Run, run));
+
+        Assert.Contains(
+            "Compatibility evidence was not recorded for this run; execution may have ended before provider dispatch.",
+            cut.Markup);
     }
 
     [Fact]
@@ -162,7 +201,7 @@ public sealed class AgentChatModalTests
     }
 
     [Fact]
-    public async Task Agent_thread_history_dialog_returns_double_clicked_thread()
+    public async Task Agent_thread_history_dialog_returns_clicked_thread()
     {
         using var context = CreateContext();
         var host = context.Render<DialogHost>();
@@ -183,7 +222,9 @@ public sealed class AgentChatModalTests
         host.WaitForElement("[data-testid='agent-thread-history-row']");
         var rows = host.FindAll("[data-testid='agent-thread-history-row']");
 
-        rows[0].TriggerEvent("ondblclick", new MouseEventArgs());
+        Assert.Equal("BUTTON", rows[0].TagName);
+
+        rows[0].Click();
 
         var result = await resultTask.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.Equal(second.Id, Assert.IsType<Guid>(result));
@@ -233,6 +274,7 @@ public sealed class AgentChatModalTests
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         return context;
     }

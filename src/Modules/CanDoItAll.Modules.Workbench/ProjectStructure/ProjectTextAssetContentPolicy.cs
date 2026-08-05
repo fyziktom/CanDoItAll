@@ -6,6 +6,7 @@ namespace CanDoItAll.Modules.Workbench;
 internal static class ProjectTextAssetContentPolicy
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
+    private static ReadOnlySpan<byte> Utf8Bom => [0xEF, 0xBB, 0xBF];
 
     public static byte[] Encode(
         ProjectFileSubtype subtype,
@@ -78,7 +79,8 @@ internal static class ProjectTextAssetContentPolicy
         CancellationToken cancellationToken)
     {
         Validate(ProjectFileSubtype.Mermaid, content, cancellationToken);
-        return ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(Utf8.GetString(content.Span));
+        return ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(
+            Utf8.GetString(TrimUtf8Bom(content).Span));
     }
 
     private static void EnsureSupportedLength(int byteCount)
@@ -95,7 +97,7 @@ internal static class ProjectTextAssetContentPolicy
     {
         try
         {
-            using var _ = JsonDocument.Parse(content);
+            using var _ = JsonDocument.Parse(TrimUtf8Bom(content));
         }
         catch (JsonException exception)
         {
@@ -105,6 +107,11 @@ internal static class ProjectTextAssetContentPolicy
                 exception);
         }
     }
+
+    private static ReadOnlyMemory<byte> TrimUtf8Bom(ReadOnlyMemory<byte> content)
+        => content.Span.StartsWith(Utf8Bom)
+            ? content[Utf8Bom.Length..]
+            : content;
 
     private static ProjectAssetCreationException InvalidContent(string message)
         => new(ProjectAssetCreationErrorCode.InvalidContent, message);

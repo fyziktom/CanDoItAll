@@ -15,13 +15,14 @@ public sealed class AgentProviderProfilesPanelPricingTests
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var workspaceService = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var secretRecordId = Guid.NewGuid();
 
         await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "AAA Priced Provider",
             Kind = ProviderKind.OpenAi,
             BaseUrl = "https://api.openai.com/v1",
-            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
+            ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}",
             DefaultModel = "priced-model",
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.Chat,
@@ -58,9 +59,10 @@ public sealed class AgentProviderProfilesPanelPricingTests
                 heading => heading.TextContent.Contains("AAA Priced Provider", StringComparison.OrdinalIgnoreCase));
         });
 
-        var pricesTab = cut.FindAll("button[role='tab']")
-            .Single(button => button.TextContent.Contains("Prices", StringComparison.OrdinalIgnoreCase));
-        pricesTab.Click();
+        await cut.InvokeAsync(() =>
+            cut.FindAll("button[role='tab']")
+                .Single(button => button.TextContent.Contains("Prices", StringComparison.OrdinalIgnoreCase))
+                .Click());
 
         cut.WaitForElement("[data-testid='provider-pricing-row-0']");
         var modelInput = (IHtmlInputElement)cut.Find("[data-testid='provider-pricing-model-0']");

@@ -19,7 +19,7 @@ public sealed class MafContextMessageTransformationTests
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(
             Path.GetTempPath(),
-            new ServiceCollection().BuildServiceProvider());
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runtime.CreateCapabilityStateCoreAsync(
@@ -77,7 +77,7 @@ public sealed class MafContextMessageTransformationTests
         {
             var runtime = RuntimeCapabilityComposer.CreateDefault(
                 workspaceRoot,
-                new ServiceCollection().BuildServiceProvider());
+                MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
             var state = await runtime.CreateCapabilityStateCoreAsync(
                 CreateAgent(),
                 CreateProviderProfile(),

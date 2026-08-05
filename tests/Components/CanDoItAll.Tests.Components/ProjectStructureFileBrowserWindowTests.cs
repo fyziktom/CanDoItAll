@@ -215,6 +215,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
+            .AddWorkbenchSpreadsheetPreview()
             .Build());
         context.Services.AddSingleton<IProjectFileScopeProvider>(
             new StaticProjectFileScopeProvider(projectScopes));

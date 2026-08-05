@@ -8,7 +8,8 @@ public enum AgentProviderFailureCategory
     ProviderError,
     QuotaOrBilling,
     RateLimit,
-    RequestCompatibility
+    RequestCompatibility,
+    ProviderConfiguration
 }
 
 public sealed record AgentProviderFailureDisplay(
@@ -18,7 +19,10 @@ public sealed record AgentProviderFailureDisplay(
 
 public static class AgentProviderFailureDisplayFormatter
 {
+    private const string DefaultFailureDisplayMessage = "The agent run failed while contacting its configured provider.";
     private const int MaxProviderDetailLength = 480;
+    private const int MaxInspectedExceptions = 32;
+    private const int MaxInspectedMessageLength = 512;
 
     private static readonly string[] QuotaOrBillingMarkers =
     [
@@ -48,13 +52,47 @@ public static class AgentProviderFailureDisplayFormatter
         "status code: 429"
     ];
 
-    public static AgentProviderFailureDisplay Format(ProviderProfile provider, Exception exception)
+    public static bool TryFormat(
+        ProviderProfile provider,
+        Exception exception,
+        out AgentProviderFailureDisplay display)
     {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(exception);
 
+        if (exception is not AgentRuntimeUsageException
+            {
+                FailureOrigin: AgentRuntimeFailureOrigin.Provider or AgentRuntimeFailureOrigin.ProviderConfiguration
+            })
+        {
+            display = default!;
+            return false;
+        }
+
+        display = FormatCore(provider, exception);
+        return true;
+    }
+
+    private static AgentProviderFailureDisplay FormatCore(
+        ProviderProfile provider,
+        Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        if (exception is AgentRuntimeUsageException
+            {
+                FailureOrigin: AgentRuntimeFailureOrigin.ProviderConfiguration
+            })
+        {
+            return new AgentProviderFailureDisplay(
+                AgentProviderFailureCategory.ProviderConfiguration,
+                $"Provider profile '{provider.Name}' is not ready for agent execution. Verify its credential, endpoint, transport, and runtime settings, then retry.",
+                "Provider configuration validation failed.");
+        }
+
         var messages = CollectMessages(exception);
-        var providerDetail = SelectProviderDetail(messages);
+        var providerDetail = SelectProviderDetail(messages, exception);
         var category = ResolveCategory(provider, messages, exception);
 
         return category switch
@@ -76,6 +114,14 @@ public static class AgentProviderFailureDisplayFormatter
                 $"The agent run failed while using provider '{provider.Name}'. Provider detail: {providerDetail}",
                 providerDetail)
         };
+    }
+
+    internal static string NormalizeDisplayMessage(string? displayMessage)
+    {
+        var sanitized = WorkflowExecutorRedaction.RedactText(displayMessage).Trim();
+        return string.IsNullOrWhiteSpace(sanitized)
+            ? DefaultFailureDisplayMessage
+            : sanitized;
     }
 
     private static AgentProviderFailureCategory ResolveCategory(
@@ -156,35 +202,53 @@ public static class AgentProviderFailureDisplayFormatter
         return false;
     }
 
-    private static string SelectProviderDetail(IReadOnlyList<string> messages)
+    private static string SelectProviderDetail(
+        IReadOnlyList<string> messages,
+        Exception exception)
     {
-        var detail =
-            messages.FirstOrDefault(IsQuotaOrBillingMessage) ??
-            messages.FirstOrDefault(IsRateLimitMessage) ??
-            messages.FirstOrDefault(IsReasoningFunctionToolCompatibilityMessage) ??
-            messages.FirstOrDefault(message => !LooksLikeRuntimeWrapper(message)) ??
-            messages.FirstOrDefault() ??
-            "Provider returned no error detail.";
+        if (messages.Any(IsQuotaOrBillingMessage))
+        {
+            return messages.Any(message =>
+                    message.Contains("insufficient_quota", StringComparison.OrdinalIgnoreCase))
+                ? "Provider error code: insufficient_quota."
+                : "Provider reported a quota or billing restriction.";
+        }
 
-        return Truncate(WorkflowExecutorRedaction.RedactText(detail), MaxProviderDetailLength);
-    }
+        if (messages.Any(IsRateLimitMessage))
+        {
+            return messages.Any(message =>
+                    message.Contains("rate_limit_exceeded", StringComparison.OrdinalIgnoreCase))
+                ? "Provider error code: rate_limit_exceeded."
+                : "Provider reported rate limiting.";
+        }
 
-    private static bool LooksLikeRuntimeWrapper(string message)
-    {
-        return message.StartsWith("Provider runtime failed", StringComparison.OrdinalIgnoreCase) ||
-               message.Contains("Usage was captured when available", StringComparison.OrdinalIgnoreCase);
+        if (messages.Any(IsReasoningFunctionToolCompatibilityMessage))
+        {
+            return "HTTP 400 invalid_request_error: reasoning_effort with function tools is unsupported for this transport.";
+        }
+
+        var statusCode = FindHttpStatusCode(exception);
+        return statusCode.HasValue
+            ? $"HTTP {(int)statusCode.Value} {statusCode.Value}."
+            : $"Provider transport failure type: {ResolveInnermostFailureType(exception)}.";
     }
 
     private static IReadOnlyList<string> CollectMessages(Exception exception)
     {
         var messages = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var visited = new HashSet<Exception>(ReferenceEqualityComparer.Instance);
         var stack = new Stack<Exception>();
         stack.Push(exception);
 
-        while (stack.Count > 0)
+        while (stack.Count > 0 && visited.Count < MaxInspectedExceptions)
         {
             var current = stack.Pop();
+            if (!visited.Add(current))
+            {
+                continue;
+            }
+
             AddMessage(current.Message);
 
             if (current is HttpRequestException { StatusCode: { } statusCode })
@@ -222,7 +286,56 @@ public static class AgentProviderFailureDisplayFormatter
     private static string NormalizeMessage(string? message)
         => string.IsNullOrWhiteSpace(message)
             ? string.Empty
-            : message.Trim().ReplaceLineEndings(" ");
+            : Truncate(message.Trim().ReplaceLineEndings(" "), MaxInspectedMessageLength);
+
+    private static HttpStatusCode? FindHttpStatusCode(Exception exception)
+    {
+        var visited = new HashSet<Exception>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<Exception>();
+        stack.Push(exception);
+        while (stack.Count > 0 && visited.Count < MaxInspectedExceptions)
+        {
+            var current = stack.Pop();
+            if (!visited.Add(current))
+            {
+                continue;
+            }
+
+            if (current is HttpRequestException { StatusCode: { } statusCode })
+            {
+                return statusCode;
+            }
+
+            if (current is AggregateException aggregateException)
+            {
+                foreach (var innerException in aggregateException.InnerExceptions)
+                {
+                    stack.Push(innerException);
+                }
+            }
+
+            if (current.InnerException is not null)
+            {
+                stack.Push(current.InnerException);
+            }
+        }
+
+        return null;
+    }
+
+    private static string ResolveInnermostFailureType(Exception exception)
+    {
+        var current = exception;
+        var visited = new HashSet<Exception>(ReferenceEqualityComparer.Instance);
+        for (var inspected = 0;
+             inspected < MaxInspectedExceptions && current.InnerException is not null && visited.Add(current);
+             inspected++)
+        {
+            current = current.InnerException;
+        }
+
+        return current.GetType().Name;
+    }
 
     private static string ResolveProviderAccountLabel(ProviderProfile provider)
         => provider.Kind switch
@@ -233,12 +346,8 @@ public static class AgentProviderFailureDisplayFormatter
         };
 
     private static string Truncate(string value, int maxLength)
-    {
-        if (value.Length <= maxLength)
-        {
-            return value;
-        }
+        => value.Length <= maxLength
+            ? value
+            : value[..maxLength];
 
-        return $"{value[..(maxLength - 3)]}...";
-    }
 }

@@ -2,9 +2,11 @@
 
 ## Context
 
-An OpenAI Chat Completions execution using `gpt-5.6-terra` failed before the
-model could run because the request combined function tools with a non-`none`
-`reasoning_effort`. The provider rejected that combination with HTTP 400.
+OpenAI Chat Completions executions using `gpt-5.6-terra`, `gpt-5.6-luna`, and
+`gpt-5.4-mini` failed before the model could run because the request combined
+function tools with a non-`none` `reasoning_effort`. The provider rejected that
+combination with HTTP 400. Luna and GPT-5.4-mini were reproduced against the
+live configured provider; Terra was the original live provider failure.
 Neither the agent nor its provider profile configured reasoning effort. The
 provider's implicit/default reasoning still formed the rejected combination,
 so the failure was not caused by the HR agent definition or by the Gardener
@@ -42,10 +44,12 @@ contract depends on SDK types, and no new project boundary is required.
 2. Resolution returns both requested and effective reasoning effort plus a
    typed adjustment reason. This keeps the compatibility decision testable and
    makes adjustment observable without parsing log text.
-3. The evidenced `gpt-5.6-terra` model using OpenAI Chat Completions with
-   function tools sends an explicit reasoning effort of `none`. This also
-   covers profiles whose effort is omitted, because the provider default can
-   still form the rejected combination. Other GPT-5.6 models and Azure remain
+3. The evidenced `gpt-5.6-terra`, `gpt-5.6-luna`, and `gpt-5.4-mini` models
+   using OpenAI Chat Completions with function tools send an explicit reasoning
+   effort of `none`. Strict `-yyyy-MM-dd` snapshots inherit the corresponding
+   evidenced base-model rule. This also covers profiles whose effort is
+   omitted, because the provider default can still form the rejected
+   combination. GPT-5.6 base, Sol, adjacent GPT models, and Azure remain
    unchanged until provider evidence establishes the same constraint.
 4. Responses executions and Chat Completions executions without function tools
    retain their configured reasoning effort.
@@ -68,6 +72,10 @@ contract depends on SDK types, and no new project boundary is required.
    retain their existing reasoning behavior. If that contract later gains tool
    definitions, it must supply the same typed invocation features rather than
    duplicate compatibility rules.
+10. The runtime emits an adjustment progress entry after the final entry-agent
+    tool manifest is known and before provider dispatch. Durable run evidence is
+    explicitly entry-agent scoped; a mixed-provider handoff is not misreported
+    as one participant request.
 
 ## Agent thinking-effort configuration
 
@@ -185,6 +193,10 @@ invalid rather than transient.
   function tools, explicit and inherited effort, and Responses preservation.
 - MAF adapter tests prove the effective OpenAI SDK option is `none` for the
   incompatible combination.
+- A fake HTTP endpoint behind the real OpenAI Chat Completions client proves
+  Luna and GPT-5.4-mini retain their function declaration, execute the local
+  function, send `reasoning_effort: none` on both wire requests, and complete
+  the terminal tool turn.
 - Adapter and composition tests prove final merged function tools are retained
   while reasoning becomes `none`, including transport-native `max` options.
 - Failure-formatting tests prove exact classification and redaction behavior.

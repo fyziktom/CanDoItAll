@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class StorageBrowseCacheTests
 {
     [Fact]
-    public async Task SB08_DisabledCache_PerformsZeroCacheInteraction()
+    public async Task Disabled_cache_performs_zero_cache_interaction()
     {
         var inner = new RecordingBrowseDriver();
         var driver = new CachingStorageBrowseDriver(
@@ -31,7 +31,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_MemoryCache_CoalescesAndCachesSameRevisionedKey()
+    public async Task Memory_cache_coalesces_and_caches_same_revisioned_key()
     {
         await using CacheHarness cache = CreateCache();
         var inner = new RecordingBrowseDriver { Block = true };
@@ -54,7 +54,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_KeyIsolatesScopeRuntimeQueryAndRevision()
+    public async Task Key_isolates_scope_runtime_query_and_revision()
     {
         await using CacheHarness cache = CreateCache();
         var inner = new RecordingBrowseDriver();
@@ -90,7 +90,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_BoundsEvictOldestEntryAndExposeMetrics()
+    public async Task Bounds_evict_oldest_entry_and_expose_metrics()
     {
         var settings = CreateSettings(maximumEntries: 2, maximumItems: 2);
         await using CacheHarness cache = CreateCache();
@@ -113,7 +113,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_CancelledAndFailedLoadsAreNotRetained()
+    public async Task Cancelled_and_failed_loads_are_not_retained()
     {
         await using CacheHarness cache = CreateCache();
         var inner = new RecordingBrowseDriver { Block = true };
@@ -139,7 +139,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public void SB08_MutableRootCannotClaimProviderImmutablePolicy()
+    public void Mutable_root_cannot_claim_provider_immutable_policy()
     {
         StorageBrowseCacheSettings settings = CreateSettings();
         settings.ImmutableVersionPolicy = StorageBrowseImmutableVersionPolicy.RequireProviderVerifiedVersion;
@@ -161,7 +161,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_CachedListingNeverAuthorizesAStaleOccurrence()
+    public async Task Cached_listing_never_authorizes_a_stale_occurrence()
     {
         await using CacheHarness cache = CreateCache();
         var inner = new RecordingBrowseDriver();
@@ -197,7 +197,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_TtlExpiryReloadsFromProvider()
+    public async Task Ttl_expiry_reloads_from_provider()
     {
         StorageBrowseCacheSettings settings = CreateSettings();
         settings.TimeToLive = TimeSpan.FromSeconds(1);
@@ -214,7 +214,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_SuccessfulSemanticRevisionSelectsNewListing()
+    public async Task Successful_semantic_revision_selects_new_listing()
     {
         await using CacheHarness cache = CreateCache();
         var inner = new RecordingBrowseDriver { EntryName = "before.txt" };
@@ -235,7 +235,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_OversizedPayloadBypassesRetention()
+    public async Task Oversized_payload_bypasses_retention()
     {
         StorageBrowseCacheSettings settings = CreateSettings();
         settings.MaximumPayloadBytes = 4096;
@@ -255,7 +255,7 @@ public sealed class StorageBrowseCacheTests
     }
 
     [Fact]
-    public async Task SB08_ContinuationRetentionLimitBypassesContinuationPage()
+    public async Task Continuation_retention_limit_bypasses_continuation_page()
     {
         StorageBrowseCacheSettings settings = CreateSettings();
         settings.MaximumContinuations = 0;

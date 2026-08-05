@@ -126,9 +126,10 @@
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">API key environment variable or secret reference</label>
+                                    <label class="cda-field-label">Secret record reference (secret:&lt;id&gt;)</label>
                                     <InputText @bind-Value="providerModel.ApiKeyEnvironmentVariable"
                                                class="cda-input"
+                                               placeholder="secret:00000000-0000-0000-0000-000000000000"
                                                data-testid="providers-api-key-input" />
                                 </div>
 

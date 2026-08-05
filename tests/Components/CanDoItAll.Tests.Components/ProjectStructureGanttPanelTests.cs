@@ -658,7 +658,10 @@ public sealed class ProjectStructureGanttPanelTests
             new ProjectWorkbenchService(
                 factory,
                 clock,
-                null!,
+                new ProjectAssetStorageService(
+                    null!,
+                    new ProjectAssetCreationService(),
+                    null!),
                 null!,
                 null!,
                 null!,
@@ -819,7 +822,13 @@ public sealed class ProjectStructureGanttPanelTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task DeleteAssignmentsForProjectAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task MoveAssignmentsToProjectAsync(
+            ProjectPartyAssignmentMoveOperationId operationId,
             Guid sourceProjectId,
             IReadOnlyCollection<ProjectNodeReference> nodeReferences,
             Guid targetProjectId,

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 
 namespace CanDoItAll.Modules.Workspace;
@@ -9,6 +10,9 @@ public static class WorkspaceModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkspaceModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProjectTransferTargetStateParticipant,
+            WorkspaceProjectTransferTargetStateParticipant>());
         services.AddHttpClient();
         services.AddOptions<ApiAccessOptions>();
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
@@ -37,5 +41,4 @@ public static class WorkspaceModuleServiceCollectionExtensions
 }
 
 public static class WorkspaceModuleAssemblyMarker;
-
 

@@ -72,9 +72,29 @@ public sealed class CapabilitySetupFlowServiceTests
         });
 
         Assert.False(result.IsSuccess);
-        Assert.Contains(result.Diagnostics, diagnostic =>
-            diagnostic.Category == CapabilityDiagnosticCategory.ImplementationMissing &&
-            diagnostic.FieldPath == "$.mcpSetupService");
+        Assert.Equal(
+            new CapabilityIdentity(
+                CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind.McpServer,
+                CapabilityKey.Create("sample-mcp")),
+            result.Identity);
+        Assert.Equal(McpServerKey.Create("sample-mcp"), result.ServerKey);
+        Assert.Empty(result.DiscoveredTools);
+        Assert.Empty(result.AllowedTools);
+        Assert.False(result.CleanupCompleted);
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CapabilityDiagnosticCategory.ImplementationMissing, diagnostic.Category);
+        Assert.Equal(CapabilityValidationSeverity.Error, diagnostic.Severity);
+        Assert.Equal(
+            CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind.McpServer,
+            diagnostic.CapabilityKind);
+        Assert.Equal(CapabilityKey.Create("sample-mcp"), diagnostic.CapabilityKey);
+        Assert.Equal("$.transport", diagnostic.FieldPath);
+        Assert.Equal(ImplementationKey.Create("mcp.sample-mcp"), diagnostic.ImplementationKey);
+        Assert.Equal(CapabilityTransportKind.InternalHosted, diagnostic.Transport);
+        Assert.Null(diagnostic.ExitCode);
+        Assert.Null(diagnostic.HttpStatusCode);
+        Assert.Null(diagnostic.Timeout);
     }
 
     [Fact]

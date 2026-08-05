@@ -25,7 +25,7 @@ public sealed class ProjectStructureTaskEditCompensationService(
             dbContext,
             cancellationToken);
         await using var mutationScope =
-            await ProjectStructureSerializableMutationScope.BeginAsync(
+            await ProjectStructureSerializableMutationScope.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
                 cancellationToken);

@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ public sealed class PartyPickerTests
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
         var queryService = new StubPartyRecordQueryService(
             CreatePartyRecordQueryItem(Guid.NewGuid(), "Current party"),
             CreatePartyRecordQueryItem(Guid.NewGuid(), "Replacement party"));
@@ -31,6 +33,7 @@ public sealed class PartyPickerTests
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
         var currentId = Guid.NewGuid();
         var replacementId = Guid.NewGuid();
         var queryService = new StubPartyRecordQueryService(

@@ -2,11 +2,13 @@ using System.Diagnostics;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using System.Security.Claims;
 
 namespace CanDoItAll.Web;
 
@@ -21,7 +23,8 @@ public static class ProjectStructureAgentApi
     {
         var group = endpoints.MapGroup("/api/project-structure")
             .DisableAntiforgery();
-        group.ApplyApiAuthorization(endpoints);
+        group.WithMetadata(ProjectStructureHttpResponseContract.Instance);
+        group.ApplyApiAuthorization(endpoints, ApiAuthorizationPolicies.WriteProjectStructure);
 
         group.MapGet("/node-catalog", async (
             HttpContext httpContext,
@@ -38,7 +41,8 @@ public static class ProjectStructureAgentApi
                 null,
                 null,
                 (_, cancellationToken) => agentService.GetNodeCatalogAsync(cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureNodeCatalogResponse>();
 
         group.MapGet("/projects", async (
             HttpContext httpContext,
@@ -139,11 +143,10 @@ public static class ProjectStructureAgentApi
         group.MapPost("/projects/{projectId:guid}/structure/read", async (
             Guid projectId,
             HttpContext httpContext,
-            ProjectStructureReadRequest request,
             ProjectStructureAgentService agentService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
-            await ExecuteAsync(
+            await ExecuteJsonRequestAsync<ProjectStructureReadRequest, ProjectStructureReadResponse>(
                 httpContext,
                 analyticsService,
                 "structure.read",
@@ -151,12 +154,15 @@ public static class ProjectStructureAgentApi
                 null,
                 null,
                 null,
-                request,
-                (_, cancellationToken) => agentService.GetStructureAsync(
+                ProjectStructureHttpBodyContracts.StructureRead,
+                (request, _, cancellationToken) => agentService.GetStructureAsync(
                     projectId,
                     ResolveHttpReadRequest(request),
                     cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Accepts<ProjectStructureReadRequest>(ProjectStructureHttpJsonContract.RuntimeDispatchContentType)
+            .WithMetadata(ProjectStructureHttpBodyContracts.StructureRead)
+            .Produces<ProjectStructureReadResponse>();
 
         group.MapPost("/projects/{projectId:guid}/plan/summary", async (
             Guid projectId,
@@ -287,11 +293,10 @@ public static class ProjectStructureAgentApi
         group.MapPost("/projects/{projectId:guid}/nodes", async (
             Guid projectId,
             HttpContext httpContext,
-            ProjectStructureNodeCreateInput request,
             ProjectStructureAgentService agentService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
-            await ExecuteAsync(
+            await ExecuteJsonRequestAsync<ProjectStructureNodeCreateInput, ProjectStructureNodeSummary>(
                 httpContext,
                 analyticsService,
                 "structure.node-create",
@@ -299,8 +304,8 @@ public static class ProjectStructureAgentApi
                 null,
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
-                request,
-                async (agent, cancellationToken) =>
+                ProjectStructureHttpBodyContracts.NodeCreate,
+                async (request, agent, cancellationToken) =>
                 {
                     ProjectStructureCanonicalTaskMutationPolicy.EnsureGenericCreateAllowed(
                         request.ObjectType,
@@ -311,17 +316,19 @@ public static class ProjectStructureAgentApi
                         agent,
                         cancellationToken);
                 },
-                cancellationToken));
+                cancellationToken))
+            .Accepts<ProjectStructureNodeCreateOpenApiRequest>(ProjectStructureHttpJsonContract.RuntimeDispatchContentType)
+            .WithMetadata(ProjectStructureHttpBodyContracts.NodeCreate)
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPut("/projects/{projectId:guid}/nodes/{nodeId}", async (
             Guid projectId,
             string nodeId,
             HttpContext httpContext,
-            ProjectStructureNodeEditInput request,
             ProjectStructureAgentService agentService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
-            await ExecuteAsync(
+            await ExecuteJsonRequestAsync<ProjectStructureNodeEditInput, ProjectStructureNodeSummary>(
                 httpContext,
                 analyticsService,
                 "structure.node-update",
@@ -329,8 +336,8 @@ public static class ProjectStructureAgentApi
                 nodeId,
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
-                request,
-                async (agent, cancellationToken) =>
+                ProjectStructureHttpBodyContracts.NodeEdit,
+                async (request, agent, cancellationToken) =>
                 {
                     await EnsureGenericNodeUpdateAllowedAsync(
                         agentService,
@@ -346,17 +353,19 @@ public static class ProjectStructureAgentApi
                         agent,
                         cancellationToken);
                 },
-                cancellationToken));
+                cancellationToken))
+            .Accepts<ProjectStructureNodeEditOpenApiRequest>(ProjectStructureHttpJsonContract.RuntimeDispatchContentType)
+            .WithMetadata(ProjectStructureHttpBodyContracts.NodeEdit)
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/type", async (
             Guid projectId,
             string nodeId,
             HttpContext httpContext,
-            ProjectStructureNodeTypeInput request,
             ProjectStructureAgentService agentService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
-            await ExecuteAsync(
+            await ExecuteJsonRequestAsync<ProjectStructureNodeTypeInput, ProjectStructureNodeSummary>(
                 httpContext,
                 analyticsService,
                 "structure.node-type",
@@ -364,8 +373,8 @@ public static class ProjectStructureAgentApi
                 nodeId,
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
-                request,
-                async (agent, cancellationToken) =>
+                ProjectStructureHttpBodyContracts.NodeType,
+                async (request, agent, cancellationToken) =>
                 {
                     await EnsureGenericNodeUpdateAllowedAsync(
                         agentService,
@@ -381,7 +390,10 @@ public static class ProjectStructureAgentApi
                         agent,
                         cancellationToken);
                 },
-                cancellationToken));
+                cancellationToken))
+            .Accepts<ProjectStructureNodeTypeInput>(ProjectStructureHttpJsonContract.RuntimeDispatchContentType)
+            .WithMetadata(ProjectStructureHttpBodyContracts.NodeType)
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/metadata", async (
             Guid projectId,
@@ -415,7 +427,8 @@ public static class ProjectStructureAgentApi
                         agent,
                         cancellationToken);
                 },
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/statuses", async (
             Guid projectId,
@@ -649,7 +662,8 @@ public static class ProjectStructureAgentApi
                     new ProjectStructureNodeReparentInput(nodeId, request.ParentNodeKey, request.LeaseToken),
                     agent,
                     cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/reparent", async (
             Guid projectId,
@@ -668,6 +682,31 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.ReparentNodeAsync(projectId, request, agent, cancellationToken),
+                cancellationToken))
+            .Produces<ProjectStructureNodeSummary>();
+
+        group.MapPost("/projects/{projectId:guid}/nodes/copy", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureNodesCopyInput request,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.nodes-copy",
+                projectId,
+                null,
+                ProjectStructureLeaseScopeKind.Project,
+                projectId.ToString(),
+                request,
+                (agent, cancellationToken) => agentService.CopyNodesAsync(
+                    projectId,
+                    request,
+                    agent,
+                    ProjectStructureClipboardCopyTaskPolicy.NonTaskStructureOnly,
+                    cancellationToken),
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/move-to-new-subproject", async (
@@ -788,7 +827,8 @@ public static class ProjectStructureAgentApi
                 null,
                 request,
                 (_, cancellationToken) => agentService.GetWorkflowAddOptionsAsync(projectId, nodeId, request, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureWorkflowAddOptionsResult>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/workflow-definition", async (
             Guid projectId,
@@ -808,7 +848,8 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateWorkflowNodeAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureWorkflowNodeCreateResult>();
 
         group.MapPost("/projects/{projectId:guid}/nodes/{nodeId}/workflow/start", async (
             Guid projectId,
@@ -866,7 +907,52 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.DeleteNodeAsync(projectId, nodeId, request, agent, cancellationToken),
+                (agent, cancellationToken) => agentService.DeleteNodeDetailedAsync(
+                    projectId,
+                    nodeId,
+                    request,
+                    agent,
+                    cancellationToken),
+                cancellationToken));
+
+        group.MapGet("/projects/{projectId:guid}/deletion-completion-notices", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.deletion-completion-notices",
+                projectId,
+                null,
+                null,
+                null,
+                null,
+                (_, cancellationToken) => agentService.ListDeletionCompletionNoticesAsync(
+                    projectId,
+                    cancellationToken),
+                cancellationToken));
+
+        group.MapGet("/projects/{projectId:guid}/deletion-cleanups", async (
+            Guid projectId,
+            HttpContext httpContext,
+            ProjectStructureAgentService agentService,
+            ProjectStructureAnalyticsService analyticsService,
+            CancellationToken cancellationToken) =>
+            await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                "structure.deletion-cleanups",
+                projectId,
+                null,
+                null,
+                null,
+                null,
+                (_, cancellationToken) => agentService.ListPendingDeletionRecoveriesAsync(
+                    projectId,
+                    cancellationToken),
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/nodes/delete", async (
@@ -885,7 +971,11 @@ public static class ProjectStructureAgentApi
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
                 request,
-                (agent, cancellationToken) => agentService.DeleteNodesAsync(projectId, request, agent, cancellationToken),
+                (agent, cancellationToken) => agentService.DeleteNodesDetailedAsync(
+                    projectId,
+                    request,
+                    agent,
+                    cancellationToken),
                 cancellationToken));
 
         group.MapPost("/projects/{projectId:guid}/approvals/request", async (
@@ -905,16 +995,16 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateApprovalRequestAsync(projectId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPost("/projects/{projectId:guid}/checklists/query", async (
             Guid projectId,
             HttpContext httpContext,
-            ProjectStructureChecklistRequest request,
             ProjectStructureAgentService agentService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
-            await ExecuteAsync(
+            await ExecuteJsonRequestAsync<ProjectStructureChecklistRequest, ProjectStructureChecklistResponse>(
                 httpContext,
                 analyticsService,
                 "checklists.query",
@@ -922,9 +1012,12 @@ public static class ProjectStructureAgentApi
                 null,
                 null,
                 null,
-                request,
-                (_, cancellationToken) => agentService.GetChecklistAsync(projectId, request, cancellationToken),
-                cancellationToken));
+                ProjectStructureHttpBodyContracts.ChecklistQuery,
+                (request, _, cancellationToken) => agentService.GetChecklistAsync(projectId, request, cancellationToken),
+                cancellationToken))
+            .Accepts<ProjectStructureChecklistRequest>(ProjectStructureHttpJsonContract.RuntimeDispatchContentType)
+            .WithMetadata(ProjectStructureHttpBodyContracts.ChecklistQuery)
+            .Produces<ProjectStructureChecklistResponse>();
 
         group.MapPost("/projects/{projectId:guid}/dependencies/query", async (
             Guid projectId,
@@ -943,7 +1036,8 @@ public static class ProjectStructureAgentApi
                 null,
                 request,
                 (_, cancellationToken) => agentService.GetDependenciesAsync(projectId, request, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureDependencyResponse>();
 
         group.MapPost("/projects/{projectId:guid}/links", async (
             Guid projectId,
@@ -1046,7 +1140,8 @@ public static class ProjectStructureAgentApi
                 null,
                 null,
                 (_, cancellationToken) => agentService.GetAssetAsync(projectId, nodeId, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureAssetDescriptor>();
 
         group.MapGet("/projects/{projectId:guid}/assets/{nodeId}/content", async (
             Guid projectId,
@@ -1065,16 +1160,16 @@ public static class ProjectStructureAgentApi
                 null,
                 null,
                 (_, cancellationToken) => agentService.GetAssetContentAsync(projectId, nodeId, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureAssetContentDescriptor>();
 
         group.MapPost("/projects/{projectId:guid}/assets", async (
             Guid projectId,
             HttpContext httpContext,
-            ProjectStructureAssetCreateInput request,
             ProjectStructureAgentService agentService,
             ProjectStructureAnalyticsService analyticsService,
             CancellationToken cancellationToken) =>
-            await ExecuteAsync(
+            await ExecuteJsonRequestAsync<ProjectStructureAssetCreateInput, ProjectStructureNodeSummary>(
                 httpContext,
                 analyticsService,
                 "assets.create",
@@ -1082,9 +1177,16 @@ public static class ProjectStructureAgentApi
                 null,
                 ProjectStructureLeaseScopeKind.Project,
                 projectId.ToString(),
-                request,
-                (agent, cancellationToken) => agentService.CreateAssetAsync(projectId, request, agent, cancellationToken),
-                cancellationToken));
+                ProjectStructureHttpBodyContracts.AssetCreate,
+                (request, agent, cancellationToken) => agentService.CreateAssetAsync(
+                    projectId,
+                    request,
+                    agent,
+                    cancellationToken),
+                cancellationToken))
+            .Accepts<ProjectStructureAssetCreateInput>(ProjectStructureHttpJsonContract.RuntimeDispatchContentType)
+            .WithMetadata(ProjectStructureHttpBodyContracts.AssetCreate)
+            .Produces<ProjectStructureNodeSummary>();
 
         group.MapPost("/projects/{projectId:guid}/assets/{nodeId}/revisions", async (
             Guid projectId,
@@ -1104,7 +1206,8 @@ public static class ProjectStructureAgentApi
                 projectId.ToString(),
                 request,
                 (agent, cancellationToken) => agentService.CreateAssetRevisionAsync(projectId, nodeId, request, agent, cancellationToken),
-                cancellationToken));
+                cancellationToken))
+            .Produces<ProjectStructureAssetDescriptor>();
 
         group.MapPost("/imports", async (
             HttpContext httpContext,
@@ -1358,7 +1461,9 @@ public static class ProjectStructureAgentApi
                     ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
                     ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
                 cancellationToken);
-            return Results.Ok(response);
+            return Results.Json(
+                response,
+                ProjectStructureHttpJsonContract.SerializerOptions);
         }
         catch (ProjectStructureAgentException ex)
         {
@@ -1379,15 +1484,18 @@ public static class ProjectStructureAgentApi
                     ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
                     ProjectStructureAnalyticsService.SerializeSummary(ex.Details)),
                 cancellationToken);
-            return Results.Json(new
-            {
-                Error = new
+            return Results.Json(
+                new
                 {
-                    ex.ErrorCode,
-                    ex.Message,
-                    ex.Details
-                }
-            }, statusCode: ex.StatusCode);
+                    Error = new
+                    {
+                        ex.ErrorCode,
+                        ex.Message,
+                        ex.Details
+                    }
+                },
+                ProjectStructureHttpJsonContract.SerializerOptions,
+                statusCode: ex.StatusCode);
         }
         catch (Exception ex) when (SerializableMutationScope.IsConflict(ex))
         {
@@ -1415,14 +1523,17 @@ public static class ProjectStructureAgentApi
                         FailureType = ex.GetType().Name
                     })),
                 cancellationToken);
-            return Results.Json(new
-            {
-                Error = new
+            return Results.Json(
+                new
                 {
-                    ErrorCode = errorCode,
-                    Message = message
-                }
-            }, statusCode: StatusCodes.Status409Conflict);
+                    Error = new
+                    {
+                        ErrorCode = errorCode,
+                        Message = message
+                    }
+                },
+                ProjectStructureHttpJsonContract.SerializerOptions,
+                statusCode: StatusCodes.Status409Conflict);
         }
         catch (Exception ex)
         {
@@ -1443,38 +1554,110 @@ public static class ProjectStructureAgentApi
                     ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
                     ProjectStructureAnalyticsService.SerializeSummary(new { ex.Message })),
                 cancellationToken);
-            return Results.Json(new
-            {
-                Error = new
+            return Results.Json(
+                new
                 {
-                    ErrorCode = "UnhandledError",
-                    Message = "The project-structure API request failed unexpectedly."
-                }
-            }, statusCode: StatusCodes.Status500InternalServerError);
+                    Error = new
+                    {
+                        ErrorCode = "UnhandledError",
+                        Message = "The project-structure API request failed unexpectedly."
+                    }
+                },
+                ProjectStructureHttpJsonContract.SerializerOptions,
+                statusCode: StatusCodes.Status500InternalServerError);
         }
+    }
+
+    private static async Task<IResult> ExecuteJsonRequestAsync<TRequest, TResponse>(
+        HttpContext httpContext,
+        ProjectStructureAnalyticsService analyticsService,
+        string operationName,
+        Guid? projectId,
+        string? nodeId,
+        ProjectStructureLeaseScopeKind? scopeKind,
+        string? scopeKey,
+        ProjectStructureHttpBodyContract bodyContract,
+        Func<TRequest, ProjectStructureAgentContext, CancellationToken, Task<TResponse>> action,
+        CancellationToken cancellationToken,
+        Func<TResponse, Guid?>? projectIdSelector = null)
+    {
+        TRequest request;
+        try
+        {
+            request = await ProjectStructureHttpJsonContract.ReadRequestAsync<TRequest>(
+                httpContext.Request,
+                bodyContract,
+                cancellationToken);
+        }
+        catch (ProjectStructureAgentException exception)
+        {
+            return await ExecuteAsync(
+                httpContext,
+                analyticsService,
+                operationName,
+                projectId,
+                nodeId,
+                scopeKind,
+                scopeKey,
+                null,
+                (_, _) => Task.FromException<TResponse>(exception),
+                cancellationToken,
+                projectIdSelector);
+        }
+
+        return await ExecuteAsync(
+            httpContext,
+            analyticsService,
+            operationName,
+            projectId,
+            nodeId,
+            scopeKind,
+            scopeKey,
+            request,
+            (agent, executionCancellationToken) => action(
+                request,
+                agent,
+                executionCancellationToken),
+            cancellationToken,
+            projectIdSelector);
     }
 
     private static ProjectStructureAgentContext ResolveAgentContext(HttpContext httpContext)
     {
-        var headers = httpContext.Request.Headers;
-        return new ProjectStructureAgentContext(
-            ReadHeader(headers, ProjectStructureAgentHttpHeaders.AgentId, httpContext.TraceIdentifier),
-            ReadHeader(headers, ProjectStructureAgentHttpHeaders.AgentName, "Unnamed agent"),
-            ReadHeader(headers, ProjectStructureAgentHttpHeaders.MachineName, Environment.MachineName),
-            ReadHeader(headers, ProjectStructureAgentHttpHeaders.RepositoryRoot, string.Empty),
-            ReadHeader(headers, ProjectStructureAgentHttpHeaders.BranchName, string.Empty),
-            ReadHeader(headers, ProjectStructureAgentHttpHeaders.SessionId, httpContext.TraceIdentifier));
-    }
-
-    private static string ReadHeader(IHeaderDictionary headers, string name, string fallback)
-    {
-        if (!headers.TryGetValue(name, out var values))
+        if (httpContext.User.Identity?.IsAuthenticated == true)
         {
-            return fallback;
+            var agentId = httpContext.User.FindFirstValue("sub") ??
+                          httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                          throw new ProjectStructureAgentException(
+                              StatusCodes.Status403Forbidden,
+                              "ApiActorIdentityMissing",
+                              "The authenticated API token does not contain a subject.");
+            var sessionId = httpContext.User.FindFirstValue("jti") ??
+                            throw new ProjectStructureAgentException(
+                                StatusCodes.Status403Forbidden,
+                                "ApiSessionIdentityMissing",
+                                "The authenticated API token does not contain a session identifier.");
+            var agentName = httpContext.User.Identity.Name ??
+                            httpContext.User.FindFirstValue(ClaimTypes.Name) ??
+                            httpContext.User.FindFirstValue("name") ??
+                            agentId;
+
+            return new ProjectStructureAgentContext(
+                agentId,
+                agentName,
+                Environment.MachineName,
+                string.Empty,
+                string.Empty,
+                sessionId);
         }
 
-        var value = values.ToString().Trim();
-        return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        return new ProjectStructureAgentContext(
+            "local-api-operator",
+            "Local API operator",
+            Environment.MachineName,
+            string.Empty,
+            string.Empty,
+            $"runtime-{Environment.ProcessId}");
     }
 
     private static IReadOnlyList<string> ExtractWarnings<T>(T response)
@@ -1484,6 +1667,7 @@ public static class ProjectStructureAgentApi
             ProjectStructureReadResponse readResponse => readResponse.Warnings,
             ProjectStructureChecklistResponse checklistResponse => checklistResponse.Warnings,
             ProjectStructureNodesToSubprojectResult nodesToSubprojectResult => nodesToSubprojectResult.Warnings,
+            ProjectStructureDeletionResult deletionResult => deletionResult.Warnings,
             ProjectStructureImportResult importResult => importResult.Warnings,
             ProjectStructureProcessNodeStartResult processNodeStartResult => processNodeStartResult.Warnings,
             ProjectStructureWorkflowNodeStartResult workflowNodeStartResult => workflowNodeStartResult.Warnings,
@@ -1506,4 +1690,3 @@ public static class ProjectStructureAgentApi
         ProjectStructureReadSource RequestedSource,
         ProjectStructureReadSource SupportedSource);
 }
-

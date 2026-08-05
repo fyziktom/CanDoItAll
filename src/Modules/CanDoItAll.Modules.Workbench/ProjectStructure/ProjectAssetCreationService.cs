@@ -2,12 +2,16 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectAssetCreationService
 {
-    private readonly ProjectAssetContentGeneratorResolver generatorResolver;
+    private readonly ProjectAssetContentGeneratorResolver? compatibilityGeneratorResolver;
+
+    public ProjectAssetCreationService()
+    {
+    }
 
     public ProjectAssetCreationService(ProjectAssetContentGeneratorResolver generatorResolver)
     {
         ArgumentNullException.ThrowIfNull(generatorResolver);
-        this.generatorResolver = generatorResolver;
+        compatibilityGeneratorResolver = generatorResolver;
     }
 
     public async ValueTask<ProjectObjectMediaPayload> CreateTextAsync(
@@ -16,10 +20,25 @@ public sealed class ProjectAssetCreationService
         string content,
         CancellationToken cancellationToken = default)
     {
-        IProjectAssetContentGenerator generator = generatorResolver.Resolve(ProjectAssetGenerationKind.Text);
-        ProjectAssetContent generated = await generator.GenerateAsync(
-            new ProjectTextAssetContentGenerationRequest(subtype, fileName, content),
-            cancellationToken);
+        ProjectAssetContent generated;
+        if (compatibilityGeneratorResolver is not null)
+        {
+            IProjectAssetContentGenerator generator = compatibilityGeneratorResolver.Resolve(
+                ProjectAssetGenerationKind.Text);
+            generated = await generator.GenerateAsync(
+                new ProjectTextAssetContentGenerationRequest(subtype, fileName, content),
+                cancellationToken);
+        }
+        else
+        {
+            ProjectTextAssetFormat format = ProjectTextAssetFormatCatalog.Resolve(subtype);
+            string normalizedFileName = ProjectTextAssetFormatCatalog.NormalizeGeneratedFileName(fileName, format);
+            byte[] encodedContent = ProjectTextAssetContentPolicy.Encode(subtype, content, cancellationToken);
+            generated = new ProjectAssetContent(
+                normalizedFileName,
+                format.CanonicalContentType,
+                encodedContent);
+        }
 
         return AdaptContent(generated, ProjectAssetCreationLimits.MaximumEditableTextBytes);
     }
@@ -31,13 +50,8 @@ public sealed class ProjectAssetCreationService
         ReadOnlyMemory<byte> content,
         CancellationToken cancellationToken = default)
     {
-        ProjectTextAssetFormat format = ProjectTextAssetFormatCatalog.Resolve(subtype);
-        string normalizedFileName = ProjectTextAssetFormatCatalog.NormalizeUploadedFileName(fileName, format);
-        string trustedContentType = ProjectTextAssetFormatCatalog.ResolveTrustedUploadContentType(contentType, format);
-        ProjectTextAssetContentPolicy.Validate(subtype, content, cancellationToken);
-
         return AdaptContent(
-            new ProjectAssetContent(normalizedFileName, trustedContentType, content),
+            NormalizeTextUpload(subtype, fileName, contentType, content, cancellationToken),
             ProjectAssetCreationLimits.MaximumEditableTextBytes);
     }
 
@@ -82,6 +96,21 @@ public sealed class ProjectAssetCreationService
             contentType,
             content,
             cancellationToken);
+    }
+
+    internal ProjectAssetContent NormalizeTextUpload(
+        ProjectFileSubtype subtype,
+        string fileName,
+        string contentType,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken = default)
+    {
+        ProjectTextAssetFormat format = ProjectTextAssetFormatCatalog.Resolve(subtype);
+        string normalizedFileName = ProjectTextAssetFormatCatalog.NormalizeUploadedFileName(fileName, format);
+        string trustedContentType = ProjectTextAssetFormatCatalog.ResolveTrustedUploadContentType(contentType, format);
+        ProjectTextAssetContentPolicy.Validate(subtype, content, cancellationToken);
+
+        return new ProjectAssetContent(normalizedFileName, trustedContentType, content);
     }
 
     public ProjectObjectMediaPayload AdaptUpload(

@@ -212,9 +212,34 @@ public sealed class HrAgentToolPolicyTests
             pendingApprovals[0].ToolName,
             pendingApprovals[0].ArgumentsJson);
         Assert.Equal(firstAudit, repeatedAudit);
+
+        using var firstAuditDocument = JsonDocument.Parse(firstAudit);
+        const string expectedCanonicalArgumentsSha256 =
+            "46396d165c033823eecfd2164365f35966a70b6cb95775433123689112418bc5";
+        Assert.Equal(
+            expectedCanonicalArgumentsSha256,
+            firstAuditDocument.RootElement.GetProperty("argumentsSha256").GetString());
+        var protectedRequest = firstAuditDocument.RootElement
+            .GetProperty("arguments")
+            .GetProperty("request");
+        Assert.Equal(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            protectedRequest.GetProperty("agentId").GetGuid());
+        Assert.StartsWith(
+            "<redacted>#",
+            protectedRequest.GetProperty("instructions").GetString(),
+            StringComparison.Ordinal);
+
+        var reprotectedAudit = AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            pendingApprovals[0].ToolName,
+            firstAudit);
+        using var reprotectedAuditDocument = JsonDocument.Parse(reprotectedAudit);
+        Assert.NotEqual(
+            expectedCanonicalArgumentsSha256,
+            reprotectedAuditDocument.RootElement.GetProperty("argumentsSha256").GetString());
         Assert.Equal(
             firstAudit,
-            AgentToolInvocationPolicyMetadata.ProtectApprovalArgumentsForAudit(
+            AgentToolInvocationPolicyMetadata.ProtectPreviouslyProtectedApprovalArgumentsForExport(
                 pendingApprovals[0].ToolName,
                 firstAudit));
     }

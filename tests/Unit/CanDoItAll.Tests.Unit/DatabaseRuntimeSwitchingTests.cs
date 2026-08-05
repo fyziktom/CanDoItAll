@@ -1,6 +1,8 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -166,7 +168,9 @@ public sealed class AppDbContextRuntimeSwitchTests
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("runtime-context-switch");
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,
-            includeDatabaseOverride: false);
+            includeDatabaseOverride: false,
+            dataProtectionProvider: new EphemeralDataProtectionProvider(),
+            secretVault: new InMemorySecretVault());
 
         var runtimeAccessor = provider.GetRequiredService<IDatabaseProfileRuntimeAccessor>();
         var profileService = provider.GetRequiredService<IDatabaseProfileService>();

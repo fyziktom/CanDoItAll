@@ -15,10 +15,14 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProjectWorkbenchServiceArchitectureTests
 {
     [Fact]
-    public void Constructor_uses_extracted_services_for_cross_module_commands()
+    public void Constructors_preserve_the_storage_boundary_and_enable_extracted_composition()
     {
-        var constructor = Assert.Single(typeof(ProjectWorkbenchService).GetConstructors());
-        var parameterTypes = constructor.GetParameters()
+        var constructors = typeof(ProjectWorkbenchService).GetConstructors();
+        var extractedParameterTypes = Assert.Single(
+                constructors,
+                constructor => constructor.GetParameters()
+                    .Any(parameter => parameter.ParameterType == typeof(ProjectAssetStorageService)))
+            .GetParameters()
             .Select(parameter => parameter.ParameterType)
             .ToArray();
 
@@ -26,13 +30,40 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
             [
                 typeof(IDbContextFactory<AppDbContext>),
                 typeof(IClock),
-                typeof(IStoragePlacementService),
+                typeof(ProjectAssetStorageService),
                 typeof(ProjectStructureAssemblyService),
                 typeof(ProjectWorkbenchRelationService),
                 typeof(ProjectWorkbenchLifecycleService),
                 typeof(ProjectWorkbenchCommandService),
                 typeof(ProjectWorkbenchCrossModuleMutationService),
                 typeof(ProjectStructureRuntimeNodeMetadataBoundary)
+            ],
+            extractedParameterTypes);
+
+        var compatibilityParameterTypes = Assert.Single(
+                constructors,
+                constructor => constructor.GetParameters()
+                    .Any(parameter => parameter.ParameterType == typeof(IStoragePlacementService)))
+            .GetParameters()
+            .Select(parameter => parameter.ParameterType)
+            .ToArray();
+
+        Assert.Equal(typeof(IStoragePlacementService), compatibilityParameterTypes[2]);
+    }
+
+    [Fact]
+    public void Asset_storage_service_owns_the_storage_placement_dependency()
+    {
+        var constructor = Assert.Single(typeof(ProjectAssetStorageService).GetConstructors());
+        var parameterTypes = constructor.GetParameters()
+            .Select(parameter => parameter.ParameterType)
+            .ToArray();
+
+        Assert.Equal(
+            [
+                typeof(IStoragePlacementService),
+                typeof(ProjectAssetCreationService),
+                typeof(ProjectManagedStoragePhysicalIdentityPolicy)
             ],
             parameterTypes);
     }
@@ -88,7 +119,13 @@ public sealed class ProjectWorkbenchServiceArchitectureTests
         AssertScoped<ProjectWorkbenchCrossModuleMutationService>(services);
         AssertScoped<ProjectCrossModuleMutationProcessor>(services);
         AssertScoped<ProjectStructureAssemblyService>(services);
+        AssertScoped<ProjectAssetStorageService>(services);
         AssertScoped<ProjectWorkbenchService>(services);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(ProjectWorkbenchService) &&
+                descriptor.ImplementationFactory is not null &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(IProjectStructureProjectionContributor) &&

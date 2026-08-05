@@ -87,7 +87,7 @@ Private/local provider defaults are estimates for comparative planning. They can
 | --- | --- |
 | OpenAI default | Responses with `gpt-5.4-mini` |
 | OpenAI chat completions | Chat Completions with `gpt-5.4-mini` |
-| OpenAI image generation | `gpt-image-1-mini` |
+| OpenAI image generation | `gpt-image-2` |
 | Local ComfyUI Flux | `flux1-dev.safetensors`, `http://127.0.0.1:8188` |
 | Local Ollama | `llama3.1`, `http://127.0.0.1:11434` |
 

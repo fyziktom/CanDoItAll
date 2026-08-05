@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -236,6 +237,58 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ? executionState.ToolExecutionReceipts
                 : InsertToolReceipts(executionState.ToolExecutionReceipts, mutation.ToolReceipts)
         }, cancellationToken);
+    }
+
+    private sealed record TerminalFailurePersistenceResult(
+        bool TerminalRunPersisted,
+        Exception? ExecutionLogFailure);
+
+    private async Task<TerminalFailurePersistenceResult> PersistFailedExecutionRunAsync(
+        ExecutionRunRecord failedRun,
+        ChatSessionRecord? session,
+        AgentRunMetric metric,
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
+        IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
+        Guid agentId,
+        string phase,
+        string logMessage,
+        CancellationToken cancellationToken)
+    {
+        var updatedSession = session is null
+            ? null
+            : ChatSessionRuntimeCompatibilityAdapter.ClearCompatibility(
+                session,
+                failedRun.UpdatedAtUtc,
+                failedRun.Id);
+        await PersistExecutionMutationAsync(
+            new ExecutionStateMutation(
+                Run: failedRun,
+                Session: updatedSession,
+                Metric: metric,
+                UsageObservations: usageObservations,
+                ToolReceipts: toolReceipts),
+            cancellationToken);
+        AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
+        try
+        {
+            await AppendExecutionLogAsync(
+                failedRun.Id,
+                agentId,
+                failedRun.ChatSessionId,
+                ExecutionState.Failed,
+                phase,
+                logMessage,
+                cancellationToken);
+            return new TerminalFailurePersistenceResult(
+                TerminalRunPersisted: true,
+                ExecutionLogFailure: null);
+        }
+        catch (Exception exception)
+        {
+            return new TerminalFailurePersistenceResult(
+                TerminalRunPersisted: true,
+                ExecutionLogFailure: exception);
+        }
     }
 
     private async Task PersistNewExecutionRunAsync(
@@ -739,6 +792,79 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         return catalog.Agents.FirstOrDefault(item => item.Id == agentId)
             ?? throw new InvalidOperationException($"Agent '{agentId:N}' was not found.");
+    }
+
+    private async Task<ProviderProfile> ResolveFailureProviderAsync(
+        ProviderProfile fallbackProvider,
+        Exception exception)
+    {
+        var identity = ResolveProviderFailureIdentity(exception);
+        if (identity is null)
+        {
+            return fallbackProvider;
+        }
+
+        if (identity.ProviderProfileId == fallbackProvider.Id)
+        {
+            return fallbackProvider;
+        }
+
+        try
+        {
+            var resolvedProvider = await providerSource
+                .GetProviderAsync(identity.ProviderProfileId, CancellationToken.None)
+                .ConfigureAwait(false);
+            if (resolvedProvider is not null)
+            {
+                return resolvedProvider;
+            }
+        }
+        catch (Exception resolutionException)
+        {
+            logger.LogWarning(
+                "Failed to resolve the provider profile that produced a runtime failure. ProviderProfileId={ProviderProfileId}, FailureType={FailureType}.",
+                identity.ProviderProfileId,
+                resolutionException.GetType().FullName ?? resolutionException.GetType().Name);
+        }
+
+        return fallbackProvider with
+        {
+            Id = identity.ProviderProfileId,
+            Name = string.IsNullOrWhiteSpace(identity.ProviderName)
+                ? $"provider profile {identity.ProviderProfileId:D}"
+                : identity.ProviderName,
+            Kind = identity.ProviderKind,
+            Transport = identity.Transport,
+            DefaultModel = identity.Model,
+            ModelPrices = []
+        };
+    }
+
+    private static string ResolveFailureProviderModel(
+        string fallbackModel,
+        Exception exception)
+        => ResolveProviderFailureIdentity(exception)?.Model ?? fallbackModel;
+
+    private static AgentRuntimeProviderFailureIdentity? ResolveProviderFailureIdentity(
+        Exception exception)
+    {
+        var current = exception;
+        for (var depth = 0; current is not null && depth < 16; depth++)
+        {
+            if (current is AgentRuntimeUsageException { ProviderFailureIdentity: { } identity })
+            {
+                return identity;
+            }
+
+            if (current is AggregateException)
+            {
+                return null;
+            }
+
+            current = current.InnerException;
+        }
+
+        return null;
     }
 
     private async Task<ProviderProfile> ResolveProviderForAgentAsync(

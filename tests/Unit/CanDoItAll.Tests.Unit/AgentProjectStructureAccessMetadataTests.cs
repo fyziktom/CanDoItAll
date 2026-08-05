@@ -236,4 +236,81 @@ public sealed class AgentProjectStructureAccessMetadataTests
         Assert.False(settings.CanCreateProjects);
         Assert.False(settings.CanCreateSubprojects);
     }
+
+    [Fact]
+    public void RevokeProject_removes_only_the_exact_project_and_preserves_unrelated_metadata()
+    {
+        var projectId = Guid.Parse("3487184d-3b57-4cb8-9b73-c163ac73d487");
+        var retainedProjectId = Guid.Parse("546612cf-bb74-4b8f-9cf5-714992c75f89");
+        var result = AgentProjectStructureAccessMetadata.RevokeProject(
+            $$"""
+            {
+              "unrelated": {
+                "projectText": "{{projectId:D}}"
+              },
+              "projectStructure": {
+                "canRead": true,
+                "canWrite": false,
+                "futureSetting": "preserved",
+                "allowAllProjects": false,
+                "allowedProjectIds": [
+                  "{{projectId:D}}",
+                  "{{retainedProjectId:D}}"
+                ]
+              }
+            }
+            """,
+            projectId);
+
+        var root = JsonNode.Parse(result.ConfigurationJson)!.AsObject();
+        var access = AgentProjectStructureAccessMetadata.Read(result.ConfigurationJson);
+
+        Assert.True(result.Changed);
+        Assert.Equal([retainedProjectId], access.AllowedProjectIds);
+        Assert.Equal(projectId.ToString("D"), root["unrelated"]!["projectText"]!.GetValue<string>());
+        Assert.Equal("preserved", root["projectStructure"]!["futureSetting"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void RevokeProject_keeps_allow_all_access_and_does_not_rewrite_configuration()
+    {
+        var projectId = Guid.Parse("3487184d-3b57-4cb8-9b73-c163ac73d487");
+        var configurationJson = $$"""
+            {
+              "projectStructure": {
+                "canRead": true,
+                "allowAllProjects": true,
+                "allowedProjectIds": ["{{projectId:D}}"]
+              }
+            }
+            """;
+
+        var result = AgentProjectStructureAccessMetadata.RevokeProject(
+            configurationJson,
+            projectId);
+
+        Assert.False(result.Changed);
+        Assert.Same(configurationJson, result.ConfigurationJson);
+    }
+
+    [Theory]
+    [InlineData("not-json")]
+    [InlineData("[]")]
+    [InlineData("{\"projectStructure\":null}")]
+    [InlineData("{\"projectStructure\":{\"canRead\":\"true\"}}")]
+    [InlineData("{\"projectStructure\":{\"allowedProjectIds\":[\"not-a-guid\"]}}")]
+    public void RevokeProject_rejects_malformed_metadata_without_returning_a_replacement(
+        string configurationJson)
+    {
+        var exception = Assert.Throws<AgentProjectStructureAccessMetadataException>(() =>
+            AgentProjectStructureAccessMetadata.RevokeProject(
+                configurationJson,
+                Guid.Parse("3487184d-3b57-4cb8-9b73-c163ac73d487")));
+
+        Assert.StartsWith(
+            "Project-structure access metadata is malformed.",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(configurationJson, exception.Message, StringComparison.Ordinal);
+    }
 }

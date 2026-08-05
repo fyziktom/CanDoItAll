@@ -11,12 +11,14 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
 @using CanDoItAll.SharedKernel
 @inject ProjectsService ProjectsService
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectPackageService ProjectPackageService
+@inject IDatabaseProfileService DatabaseProfileService
 @inject NavigationManager Navigation
 
 <PageTitle>Projects</PageTitle>
@@ -31,6 +33,46 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     </Header>
 
     <ChildContent>
+        @if (!string.IsNullOrWhiteSpace(projectDeletionNotice))
+        {
+            <Alert AlertStyle="@(projectDeletionNoticeIsError ? AlertStyle.Warning : AlertStyle.Info)"
+                   Variant="Variant.Outlined"
+                   data-testid="project-deletion-notice">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="@projectDeletionNotice" />
+                    @foreach (var cleanup in pendingProjectDeletionCleanups)
+                    {
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock Value="@($"Project {cleanup.ProjectId:D} · {cleanup.ParticipantId} · mutation {cleanup.RecoveryId:D} · {cleanup.Status}")" />
+                            <TextBlock Value="@cleanup.RetryGuidance" />
+                            @if (!cleanup.CanRetryNow && cleanup.RetryAvailableAtUtc.HasValue)
+                            {
+                                <TextBlock Value="@($"The active claim can be taken over after {cleanup.RetryAvailableAtUtc.Value:u}; use retry to refresh its state.")" />
+                            }
+                            <Cluster JustifyContent="JustifyContent.End">
+                                <Button Text="Retry cleanup"
+                                        ButtonStyle="ButtonStyle.Warning"
+                                        Disabled="false"
+                                        Click="@(() => RetryProjectDeletionCleanupAsync(cleanup))"
+                                        data-testid="project-deletion-retry" />
+                            </Cluster>
+                        </Stack>
+                    }
+                    @foreach (var notice in projectDeletionCompletionNotices)
+                    {
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock Value="@($"Project {notice.ProjectId:D} · {notice.ParticipantId} · mutation {notice.RecoveryId:D} · {FormatCompletionOperation(notice.Operation)} completed")" />
+                            @foreach (var warning in notice.Warnings)
+                            {
+                                <TextBlock Value="@($"{warning.RetainedObject.Provider} · storage {warning.RetainedObject.StorageId?.ToString("D") ?? "bootstrap"} · {warning.RetainedObject.LocatorKind} · {warning.RetainedObject.Locator}")" />
+                                <TextBlock Value="@($"{warning.RetainedObject.Reason} {warning.Remediation}")" />
+                            }
+                        </Stack>
+                    }
+                </Stack>
+            </Alert>
+        }
+
         <ProjectsBoard ProjectSummaries="projectSummaries"
                        ProjectProjection="projectFileProjection"
                        HierarchyLinks="hierarchyLinks"
@@ -65,6 +107,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        PortfolioViewChanged="HandlePortfolioViewChanged"
                        ProjectPackagePath="@projectPackagePath"
                        ProjectPackagePathChanged="@(value => { projectPackagePath = value; })"
+                       ProjectPackageTargetProfiles="@projectPackageTargetProfiles"
+                       ProjectPackageTargetProfileId="@projectPackageTargetProfileId"
+                       ProjectPackageTargetProfileIdChanged="@(value => { projectPackageTargetProfileId = value; })"
                        ProjectPackageMessage="@projectPackageMessage"
                        IsProjectPackageMessageError="@projectPackageMessageIsError"
                        IsProjectPackageBusy="@projectPackageBusy"
@@ -144,6 +189,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private ProjectEditorModel editor = new();
     private readonly List<StarterObjectDraft> starterObjects = [];
     private string? message;
+    private string? projectDeletionNotice;
+    private bool projectDeletionNoticeIsError;
+    private readonly List<ProjectDeletionPendingCleanup> pendingProjectDeletionCleanups = [];
+    private readonly List<ProjectDeletionCompletionNotice> projectDeletionCompletionNotices = [];
     private int wizardStep;
     private bool showProjectModal;
     private string projectSearch = string.Empty;
@@ -158,6 +207,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private ProjectHierarchyDialogState? hierarchyDialog;
     private ProjectSummary? projectFilesDialogProject;
     private string projectPackagePath = string.Empty;
+    private IReadOnlyList<DatabaseProfileSummary> projectPackageTargetProfiles = [];
+    private Guid? projectPackageTargetProfileId;
     private string? projectPackageMessage;
     private bool projectPackageMessageIsError;
     private bool projectPackageBusy;
@@ -251,13 +302,19 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         {
             var portfolioTask = LoadPortfolioStateAsync();
             var editorTask = LoadRequiredProjectEditorAsync(requestedProjectId);
-            await Task.WhenAll(portfolioTask, editorTask);
+            var packageTargetProfilesTask = LoadProjectPackageTargetProfilesAsync();
+            await Task.WhenAll(
+                portfolioTask,
+                editorTask,
+                packageTargetProfilesTask);
 
             var loadedPortfolio = await portfolioTask;
             var loadedEditor = await editorTask;
+            var loadedPackageTargetProfiles = await packageTargetProfilesTask;
             TryCompleteProjectLoad(loadStamp, () =>
             {
                 ApplyPortfolioState(loadedPortfolio);
+                ApplyProjectPackageTargetProfiles(loadedPackageTargetProfiles);
                 if (requestedProjectId.HasValue)
                 {
                     editor = loadedEditor!;
@@ -352,18 +409,78 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     {
         var projectSummariesTask = ProjectsService.ListAsync();
         var hierarchyLinksTask = ProjectsService.ListHierarchyLinksAsync();
-        await Task.WhenAll(projectSummariesTask, hierarchyLinksTask);
+        var deletionCleanupsTask = ProjectsService.ListPendingDeletionCleanupsAsync();
+        var deletionNoticesTask = ProjectsService.ListDeletionCompletionNoticesAsync();
+        await Task.WhenAll(
+            projectSummariesTask,
+            hierarchyLinksTask,
+            deletionCleanupsTask,
+            deletionNoticesTask);
         return new ProjectsPortfolioState(
             await projectSummariesTask,
-            await hierarchyLinksTask);
+            await hierarchyLinksTask,
+            await deletionCleanupsTask,
+            await deletionNoticesTask);
     }
 
     private void ApplyPortfolioState(ProjectsPortfolioState state)
     {
         projectSummaries = state.ProjectSummaries;
         hierarchyLinks = state.HierarchyLinks;
+        pendingProjectDeletionCleanups.Clear();
+        pendingProjectDeletionCleanups.AddRange(state.PendingDeletionCleanups);
+        projectDeletionCompletionNotices.Clear();
+        projectDeletionCompletionNotices.AddRange(
+            state.DeletionCompletionNotices.Where(notice => notice.Warnings.Count > 0));
+        if (pendingProjectDeletionCleanups.Count > 0)
+        {
+            projectDeletionNotice =
+                $"{pendingProjectDeletionCleanups.Count} deleted project cleanup operation(s) remain pending and can be retried by exact mutation id.";
+            projectDeletionNoticeIsError = true;
+        }
+        else if (projectDeletionCompletionNotices.Count > 0 &&
+                 string.IsNullOrWhiteSpace(projectDeletionNotice))
+        {
+            projectDeletionNotice =
+                $"{projectDeletionCompletionNotices.Count} completed project deletion operation(s) retained managed media and require manual review.";
+            projectDeletionNoticeIsError = true;
+        }
         RebuildProjectFileProjection();
     }
+
+    private async Task<IReadOnlyList<DatabaseProfileSummary>>
+        LoadProjectPackageTargetProfilesAsync()
+    {
+        var profiles = await DatabaseProfileService.ListAsync();
+        return profiles
+            .Where(profile =>
+                !profile.IsActive &&
+                !profile.IsRuntimeLocked &&
+                !profile.IsPendingRestartActivation)
+            .OrderBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(profile => profile.Id)
+            .ToArray();
+    }
+
+    private void ApplyProjectPackageTargetProfiles(
+        IReadOnlyList<DatabaseProfileSummary> profiles)
+    {
+        projectPackageTargetProfiles = profiles;
+        if (projectPackageTargetProfileId.HasValue &&
+            profiles.All(profile => profile.Id != projectPackageTargetProfileId.Value))
+        {
+            projectPackageTargetProfileId = null;
+        }
+    }
+
+    private static string FormatCompletionOperation(
+        ProjectDeletionCompletionOperation operation)
+        => operation switch
+        {
+            ProjectDeletionCompletionOperation.ProjectDeletion => "project deletion",
+            ProjectDeletionCompletionOperation.ProjectNodeCleanup => "prior node cleanup",
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+        };
 
     private async Task HandleAgentChatRefreshRequestedAsync(AgentChatExecutionCompleted notification)
     {
@@ -557,7 +674,15 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             return;
         }
 
+        if (!projectPackageTargetProfileId.HasValue)
+        {
+            projectPackageMessage = "Choose an inactive target database profile.";
+            projectPackageMessageIsError = true;
+            return;
+        }
+
         var packagePath = projectPackagePath;
+        var targetProfileId = projectPackageTargetProfileId.Value;
         var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
             ProjectsPageLoadKind.Import,
             AgentChatFocusedProjectId));
@@ -569,7 +694,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         {
             var result = await ProjectPackageService.ImportAllAsync(new ProjectPackageImportRequest
             {
-                PackagePath = packagePath
+                PackagePath = packagePath,
+                TargetProfileId = targetProfileId
             });
 
             if (result.IsFailure)
@@ -794,14 +920,45 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             projectId));
         try
         {
-            await ProjectsService.DeleteAsync(projectId);
+            var deletion = await ProjectsService.DeleteAsync(projectId);
             var loadedPortfolio = await LoadPortfolioStateAsync();
             if (!TryCompleteProjectLoad(loadStamp, () =>
                 {
                     ApplyPortfolioState(loadedPortfolio);
                     showProjectModal = false;
-                    message = "Project deleted.";
+                    message = deletion.Warnings.Count == 0
+                        ? "Project deleted."
+                        : BuildProjectDeletionWarningMessage(
+                            "Project deleted with retained managed media.",
+                            deletion.Warnings);
                     modalOpenedFromRoute = false;
+                    projectDeletionNotice = deletion.Warnings.Count == 0
+                        ? null
+                        : BuildProjectDeletionWarningMessage(
+                            "Project deletion completed with non-retryable storage warnings.",
+                            deletion.Warnings);
+                    projectDeletionNoticeIsError = deletion.Warnings.Count > 0;
+                }))
+            {
+                return;
+            }
+
+            if (ProjectIdQuery.HasValue)
+            {
+                Navigation.NavigateTo("/projects", replace: true);
+            }
+        }
+        catch (ProjectDeletionPartialCommitException)
+        {
+            var loadedPortfolio = await LoadPortfolioStateAsync();
+            if (!TryCompleteProjectLoad(loadStamp, () =>
+                {
+                    ApplyPortfolioState(loadedPortfolio);
+                    showProjectModal = false;
+                    modalOpenedFromRoute = false;
+                    projectDeletionNotice =
+                        "The project was deleted, but cleanup remains pending. Retry the exact durable operation listed below.";
+                    projectDeletionNoticeIsError = true;
                 }))
             {
                 return;
@@ -822,6 +979,49 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             throw;
         }
     }
+
+    private async Task RetryProjectDeletionCleanupAsync(
+        ProjectDeletionPendingCleanup cleanup)
+    {
+        var projectId = cleanup.ProjectId;
+        var loadStamp = BeginProjectLoad(new ProjectsPageLoadKey(
+            ProjectsPageLoadKind.Delete,
+            projectId));
+        try
+        {
+            var deletion = await ProjectsService.RetryDeletionCleanupAsync(
+                projectId,
+                cleanup.ParticipantId,
+                cleanup.RecoveryId);
+            var loadedPortfolio = await LoadPortfolioStateAsync();
+            TryCompleteProjectLoad(loadStamp, () =>
+            {
+                ApplyPortfolioState(loadedPortfolio);
+                projectDeletionNotice = deletion.Warnings.Count == 0
+                    ? "Project cleanup completed."
+                    : BuildProjectDeletionWarningMessage(
+                        "Project cleanup completed with non-retryable storage warnings.",
+                        deletion.Warnings);
+                projectDeletionNoticeIsError = deletion.Warnings.Count > 0;
+            });
+        }
+        catch (ProjectDeletionPartialCommitException)
+        {
+            if (!FailProjectLoad(loadStamp))
+            {
+                return;
+            }
+
+            projectDeletionNotice =
+                "Project cleanup is still pending. The durable operation remains available for another retry.";
+            projectDeletionNoticeIsError = true;
+        }
+    }
+
+    private static string BuildProjectDeletionWarningMessage(
+        string message,
+        IReadOnlyCollection<ProjectDeletionWarning> warnings)
+        => $"{message} {string.Join(" ", warnings.Select(warning => $"{warning.Message} {warning.Remediation}"))}";
 
     private ProjectFileFilter CreateProjectFileFilter()
         => new(
@@ -1018,7 +1218,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private sealed record ProjectsPortfolioState(
         IReadOnlyList<ProjectSummary> ProjectSummaries,
-        IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks);
+        IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks,
+        IReadOnlyList<ProjectDeletionPendingCleanup> PendingDeletionCleanups,
+        IReadOnlyList<ProjectDeletionCompletionNotice> DeletionCompletionNotices);
 
     private enum ProjectModalMode
     {

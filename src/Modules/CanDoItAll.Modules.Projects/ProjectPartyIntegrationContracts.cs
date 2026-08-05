@@ -152,6 +152,23 @@ public readonly record struct ProjectWorkItemDirectAssignmentRevision
     public long Value { get; }
 }
 
+public readonly record struct ProjectPartyAssignmentMoveOperationId
+{
+    public ProjectPartyAssignmentMoveOperationId(Guid value)
+    {
+        if (value == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A project-party assignment move operation identifier is required.",
+                nameof(value));
+        }
+
+        Value = value;
+    }
+
+    public Guid Value { get; }
+}
+
 public sealed record ProjectWorkItemDirectAssignmentState(
     ProjectPartyType PartyType,
     Guid PartyId,
@@ -398,7 +415,12 @@ public interface IProjectPartyIntegrationBridge
         IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         CancellationToken cancellationToken = default);
 
+    Task DeleteAssignmentsForProjectAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default);
+
     Task MoveAssignmentsToProjectAsync(
+        ProjectPartyAssignmentMoveOperationId operationId,
         Guid sourceProjectId,
         IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         Guid targetProjectId,
@@ -545,7 +567,15 @@ internal sealed class NoopProjectPartyIntegrationBridge : IProjectPartyIntegrati
         return Task.CompletedTask;
     }
 
+    public Task DeleteAssignmentsForProjectAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task MoveAssignmentsToProjectAsync(
+        ProjectPartyAssignmentMoveOperationId operationId,
         Guid sourceProjectId,
         IReadOnlyCollection<ProjectNodeReference> nodeReferences,
         Guid targetProjectId,

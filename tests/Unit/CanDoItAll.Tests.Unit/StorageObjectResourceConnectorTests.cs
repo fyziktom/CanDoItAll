@@ -266,7 +266,7 @@ public sealed class StorageObjectResourceConnectorTests
         {
             AppDbContextModelRegistry.ConfigureAssemblies(
                 [typeof(Project).Assembly, typeof(ProjectResource).Assembly]);
-            var options = new DbContextOptionsBuilder<AppDbContext>()
+            var options = AppDbContextTestOptionsBuilder.Create()
                 .UseInMemoryDatabase($"storage-object-resource-{Guid.NewGuid():N}")
                 .Options;
             var factory = new TestDbContextFactory(options);

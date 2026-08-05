@@ -640,7 +640,7 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
                 AgentId: null,
                 SubworkflowId: null,
                 ExternalRequestKind: null,
-                Instructions: string.Empty,
+                Instructions: "Return JSON.",
                 InputShape: WorkflowValueShape.Text,
                 ResultShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON")));
 
