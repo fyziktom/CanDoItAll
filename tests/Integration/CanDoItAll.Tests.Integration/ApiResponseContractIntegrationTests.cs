@@ -21,14 +21,14 @@ public sealed class ApiResponseContractIntegrationTests
         Contract(
             "/api/agents/{agentId}/execution-runs",
             "post",
-            Success("200", "ExecutionRunResult"),
+            Success("200", "AgentExecutionRunResultApiResponse"),
             "400",
             "401",
             "403"),
         Contract(
             "/api/agents/{agentId}/execution-runs/{executionRunId}",
             "get",
-            Success("200", "ExecutionRunDetail"),
+            Success("200", "AgentExecutionRunDetailApiResponse"),
             "401",
             "403",
             "404"),
@@ -106,7 +106,7 @@ public sealed class ApiResponseContractIntegrationTests
         Contract(
             "/api/agents/execution-runs",
             "post",
-            Success("200", "ExecutionRunResult"),
+            Success("200", "AgentExecutionRunResultApiResponse"),
             "400",
             "401",
             "403"),
@@ -251,7 +251,7 @@ public sealed class ApiResponseContractIntegrationTests
         AssertRequired(schemas, "AgentExecutionRunStartApiRequest", "prompt");
         AssertNullableProperty(schemas, "AgentExecutionRunApiRequest", "structuredOutput");
         AssertNullableProperty(schemas, "AgentExecutionRunStartApiRequest", "structuredOutput");
-        AssertNullableProperty(schemas, "AgentJsonSchemaOutputResult", "data");
+        AssertNullableProperty(schemas, "AgentStructuredOutputApiResponse", "data");
 
         AssertRequired(
             schemas,
@@ -330,14 +330,17 @@ public sealed class ApiResponseContractIntegrationTests
             schemas.GetProperty("AgentExecutionRunApiRequest").GetRawText(),
             schemas.GetProperty("AgentExecutionRunStartApiRequest").GetRawText(),
             schemas.GetProperty("AgentJsonSchemaOutputContract").GetRawText(),
-            schemas.GetProperty("AgentJsonSchemaOutputResult").GetRawText(),
-            schemas.GetProperty("ExecutionRunResult").GetRawText());
+            schemas.GetProperty("AgentExecutionRunResultApiResponse").GetRawText(),
+            schemas.GetProperty("AgentStructuredOutputApiResponse").GetRawText(),
+            schemas.GetProperty("AgentStructuredOutputValidationErrorApiResponse").GetRawText());
         Assert.DoesNotContain("System.Type", portableSurface, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "AgentStructuredOutputContract",
             portableSurface,
             StringComparison.Ordinal);
         Assert.DoesNotContain("outputType", portableSurface, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("rawOutput", portableSurface, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("schemaHash", portableSurface, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

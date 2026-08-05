@@ -452,27 +452,27 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     "Queries project-management guidance that supports planning, reporting, approval, estimation, and mission discussions."),
                 AIFunctionFactory.Create(
                     (ProjectStructureAnalyticsQueryRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureAnalyticsQueryAsync(agent, accessState, request, cancellationToken),
-                    "project_structure_analytics_query",
-                    "Queries project-structure operation analytics so validation and post-implementation review can inspect what agents actually did."),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery,
+                    "Queries agent-safe project-structure operation analytics. Results exclude agent identity, machine and repository details, scope keys, error messages, summaries, warning text, and provider, session, or tool payloads."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string reason, int durationMinutes, CancellationToken cancellationToken = default) => ProjectStructureProjectLeaseAcquireAsync(agent, accessState, projectId, reason, durationMinutes, cancellationToken),
-                    "project_structure_project_lease_acquire",
+                    AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
                     "Acquires or renews a project-scoped lease so concurrent agents do not mutate the same project at the same time."),
                 AIFunctionFactory.Create(
                     (string reason, string? repositoryRoot = null, string? branchName = null, int durationMinutes = 60, CancellationToken cancellationToken = default) => ProjectStructureRepoBranchLeaseAcquireAsync(agent, accessState, reason, repositoryRoot, branchName, durationMinutes, cancellationToken),
-                    "project_structure_repo_branch_lease_acquire",
+                    AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
                     "Acquires or renews a repo-branch lease so separate agents do not collide on the same branch."),
                 AIFunctionFactory.Create(
                     (ProjectStructureScopeInput scope, CancellationToken cancellationToken = default) => ProjectStructureLeaseGetAsync(agent, accessState, scope, cancellationToken),
-                    "project_structure_lease_get",
+                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet,
                     "Gets the current active project, node, or repo-branch lease for the supplied scope."),
                 AIFunctionFactory.Create(
                     (ProjectStructureScopeInput scope, string leaseToken, int durationMinutes = 15, CancellationToken cancellationToken = default) => ProjectStructureLeaseRenewAsync(agent, accessState, scope, leaseToken, durationMinutes, cancellationToken),
-                    "project_structure_lease_renew",
+                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew,
                     "Renews an owned project, node, or repo-branch lease token for continued coordinated mutation work."),
                 AIFunctionFactory.Create(
                     (ProjectStructureScopeInput scope, string leaseToken, CancellationToken cancellationToken = default) => ProjectStructureLeaseReleaseAsync(agent, accessState, scope, leaseToken, cancellationToken),
-                    "project_structure_lease_release",
+                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease,
                     "Releases an existing project, node, or repo-branch lease token.")
             ];
 
@@ -483,6 +483,11 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             else if (accessState.RequiresNonTaskWriteGuard)
             {
                 tools.RemoveAll(tool => ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(tool.Name));
+            }
+
+            if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation)
+            {
+                tools.RemoveAll(tool => IsExplicitLeaseTool(tool.Name));
             }
 
             if (accessState.CanRead && workspaceAccessSettings.CanTransformArtifacts)
@@ -548,6 +553,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
 
             return tools;
         }
+
+        private static bool IsExplicitLeaseTool(string toolName)
+            => toolName is
+                AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire or
+                AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire or
+                AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet or
+                AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew or
+                AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease;
 
         private Task<IReadOnlyList<ProjectSummary>> ProjectStructureProjectsListAsync(
             AgentDefinition agent,
@@ -2101,36 +2114,20 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         agent.Model);
                     var normalizedPrompt = AgentImageAnalysisPromptPolicy.NormalizeSingleImagePrompt(prompt);
 
-                    try
-                    {
-                        var result = await imageAnalysisService.AnalyzeAsync(
-                            new AgentImageAnalysisRequest(
-                                provider,
-                                model,
-                                normalizedPrompt,
-                                [source],
-                                ImageAnalysisModelParameterConfigurationJson),
-                            cancellationToken);
-                        return new ProjectStructureAssetImageAnalysisDescriptor(
-                            content.Asset,
-                            result.Model,
-                            result.Analysis,
-                            result.InputTokens,
-                            result.OutputTokens);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception exception)
-                    {
-                        throw ProjectStructureAgentException.CreateAgentVisible(
-                            502,
-                            "AssetImageAnalysisFailed",
-                            "The image provider could not analyze this asset. Verify that the selected provider has a vision-capable model and retry.",
-                            canRetryWithCorrectedInput: false,
-                            diagnosticDetails: new { exceptionType = exception.GetType().Name });
-                    }
+                    var result = await imageAnalysisService.AnalyzeAsync(
+                        new AgentImageAnalysisRequest(
+                            provider,
+                            model,
+                            normalizedPrompt,
+                            [source],
+                            ImageAnalysisModelParameterConfigurationJson),
+                        cancellationToken);
+                    return new ProjectStructureAssetImageAnalysisDescriptor(
+                        content.Asset,
+                        result.Model,
+                        result.Analysis,
+                        result.InputTokens,
+                        result.OutputTokens);
                 },
                 cancellationToken);
         }
@@ -2318,7 +2315,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 cancellationToken);
         }
 
-        private Task<ProjectStructureAnalyticsResponse> ProjectStructureAnalyticsQueryAsync(
+        private Task<ProjectStructureAgentAnalyticsResponse> ProjectStructureAnalyticsQueryAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
             ProjectStructureAnalyticsQueryRequest? request,
@@ -2346,13 +2343,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         Take = Math.Clamp(query.Take, 1, 200)
                     }, cancellationToken);
 
-                    return response with
-                    {
-                        Entries = response.Entries
+                    return new ProjectStructureAgentAnalyticsResponse(
+                        response.Entries
                             .Where(entry => !entry.ProjectId.HasValue ||
                                 IsProjectAllowed(accessState, entry.ProjectId.Value))
-                            .ToList()
-                    };
+                            .Select(ProjectStructureAgentAnalyticsBoundary.Project)
+                            .ToList());
                 },
                 cancellationToken);
         }

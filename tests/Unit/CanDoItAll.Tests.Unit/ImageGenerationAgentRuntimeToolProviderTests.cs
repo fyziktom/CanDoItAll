@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.AgentFramework;
@@ -187,7 +188,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
     }
 
     [Fact]
-    public async Task Image_generation_tool_exposes_safe_actionable_provider_failure()
+    public async Task Image_generation_tool_leaves_unexpected_provider_failure_opaque()
     {
         using var services = new ServiceCollection().BuildServiceProvider();
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration) with { Name = "Offline image provider" };
@@ -213,7 +214,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
             CreateContext(agent, imageProvider),
             CancellationToken.None);
 
-        var exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
             () => InvokeImageGenerationToolAsync(
                 Assert.Single(tools),
                 new ImageGenerationCreateInput(
@@ -221,12 +222,212 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
                     "generated/provider-failure",
                     OutputFormat: "png")));
 
+        Assert.Same(imageService.Failure, exception);
+        Assert.Contains("private endpoint", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
+    }
+
+    [Theory]
+    [InlineData(ImagePathFailureScenario.SourceOutsideWorkspace, "ImageSourcePathOutsideWorkspace")]
+    [InlineData(ImagePathFailureScenario.SourceMissing, "ImageSourcePathMissing")]
+    [InlineData(ImagePathFailureScenario.SourceDirectory, "ImageSourceFileRequired")]
+    [InlineData(ImagePathFailureScenario.SourceUnsupportedExtension, "ImageSourceFormatUnsupported")]
+    [InlineData(ImagePathFailureScenario.OutputDirectory, "ImageOutputFileRequired")]
+    public async Task Image_generation_tool_exposes_retryable_sanitized_expected_path_failures(
+        ImagePathFailureScenario scenario,
+        string expectedErrorCode)
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var sensitiveMarker = $"private-{Guid.NewGuid():N}";
+        var imageService = new FakeAgentImageGenerationService();
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            new WorkspacePathResolutionService(workspace.Path),
+            imageService,
+            services);
+        var agent = CreateAgent(
+            imageProvider.Id,
+            AgentImageGenerationAccessMetadata.Write(
+                "{}",
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = true,
+                    PreferredProviderProfileId = imageProvider.Id
+                }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(
+            CreateContext(agent, imageProvider),
+            CancellationToken.None));
+        var (outputPath, sourcePaths) = PreparePathFailureScenario(
+            workspace.Path,
+            sensitiveMarker,
+            scenario);
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            InvokeImageGenerationToolAsync(
+                tool,
+                new ImageGenerationCreateInput(
+                    "A generic concept render.",
+                    outputPath,
+                    OutputFormat: "png",
+                    SourceWorkspacePaths: sourcePaths)));
+
         var failure = Assert.IsAssignableFrom<IAgentToolFailure>(exception);
+        Assert.Equal(expectedErrorCode, failure.ErrorCode);
         Assert.True(failure.IsSafeToExpose);
         Assert.True(failure.CanRetryWithCorrectedInput);
-        Assert.Equal("ImageGenerationProviderFailed", failure.ErrorCode);
-        Assert.Contains("Offline image provider", failure.SafeMessage, StringComparison.Ordinal);
-        Assert.DoesNotContain("private endpoint", failure.SafeMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("retry", failure.SafeMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(sensitiveMarker, failure.SafeMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(workspace.Path, failure.SafeMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.True(MafAgentToolFailureMapper.TryMap(exception, out var mappedFailure));
+        Assert.Equal(failure.SafeMessage, mappedFailure.Message);
+        Assert.True(mappedFailure.CanRetryWithCorrectedInput);
+        Assert.Empty(imageService.Requests);
+    }
+
+    [Fact]
+    public async Task Image_generation_tool_succeeds_after_retrying_with_a_corrected_source_path()
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var imageService = new FakeAgentImageGenerationService();
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            new WorkspacePathResolutionService(workspace.Path),
+            imageService,
+            services);
+        var agent = CreateAgent(
+            imageProvider.Id,
+            AgentImageGenerationAccessMetadata.Write(
+                "{}",
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = true,
+                    PreferredProviderProfileId = imageProvider.Id
+                }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(
+            CreateContext(agent, imageProvider),
+            CancellationToken.None));
+        var failedRequest = new ImageGenerationCreateInput(
+            "A generic concept render.",
+            "generated/retry-result",
+            OutputFormat: "png",
+            SourceWorkspacePaths: ["missing-source.png"]);
+
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            InvokeImageGenerationToolAsync(tool, failedRequest));
+
+        var failure = Assert.IsAssignableFrom<IAgentToolFailure>(exception);
+        Assert.True(failure.CanRetryWithCorrectedInput);
+        File.WriteAllBytes(Path.Combine(workspace.Path, "corrected-source.png"), [1, 2, 3]);
+
+        var result = await InvokeImageGenerationToolAsync(
+            tool,
+            failedRequest with { SourceWorkspacePaths = ["corrected-source.png"] });
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.SourceCount);
+        Assert.Single(imageService.Requests);
+        Assert.True(File.Exists(Path.Combine(workspace.Path, "generated", "retry-result.png")));
+    }
+
+    [Theory]
+    [InlineData(UnexpectedPathResolverFailureKind.InvalidOperation)]
+    [InlineData(UnexpectedPathResolverFailureKind.Io)]
+    public async Task Image_generation_tool_leaves_untyped_path_resolver_failures_opaque(
+        UnexpectedPathResolverFailureKind failureKind)
+    {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        var sensitiveDiagnostic = $@"Unexpected path failure at C:\private\{Guid.NewGuid():N}.png";
+        Exception expected = failureKind switch
+        {
+            UnexpectedPathResolverFailureKind.InvalidOperation =>
+                new InvalidOperationException(sensitiveDiagnostic),
+            UnexpectedPathResolverFailureKind.Io =>
+                new IOException(sensitiveDiagnostic),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(failureKind),
+                failureKind,
+                "Unknown unexpected path resolver failure kind.")
+        };
+        var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([imageProvider]),
+            new ThrowingWorkspacePathResolutionService(expected),
+            new FakeAgentImageGenerationService(),
+            services);
+        var agent = CreateAgent(
+            imageProvider.Id,
+            AgentImageGenerationAccessMetadata.Write(
+                "{}",
+                new AgentImageGenerationAccessSettings
+                {
+                    CanGenerateImages = true,
+                    PreferredProviderProfileId = imageProvider.Id
+                }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(
+            CreateContext(agent, imageProvider),
+            CancellationToken.None));
+
+        var exception = await Record.ExceptionAsync(() =>
+            InvokeImageGenerationToolAsync(
+                tool,
+                new ImageGenerationCreateInput(
+                    "A generic concept render.",
+                    "generated/unexpected-failure",
+                    OutputFormat: "png")));
+
+        Assert.Same(expected, exception);
+        Assert.False(exception is IAgentToolFailure);
+        Assert.False(MafAgentToolFailureMapper.TryMap(exception!, out _));
+    }
+
+    private static (string OutputPath, IReadOnlyList<string>? SourcePaths) PreparePathFailureScenario(
+        string workspaceRoot,
+        string sensitiveMarker,
+        ImagePathFailureScenario scenario)
+    {
+        var sourcePath = scenario switch
+        {
+            ImagePathFailureScenario.SourceOutsideWorkspace =>
+                Path.Combine(Path.GetDirectoryName(workspaceRoot)!, $"{sensitiveMarker}.png"),
+            ImagePathFailureScenario.SourceMissing => $"{sensitiveMarker}.png",
+            ImagePathFailureScenario.SourceDirectory => CreateDirectorySource(workspaceRoot, sensitiveMarker),
+            ImagePathFailureScenario.SourceUnsupportedExtension => CreateUnsupportedSource(workspaceRoot, sensitiveMarker),
+            ImagePathFailureScenario.OutputDirectory => null,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(scenario),
+                scenario,
+                "Unknown image path failure scenario.")
+        };
+        var outputPath = scenario == ImagePathFailureScenario.OutputDirectory
+            ? CreateOutputDirectory(workspaceRoot, sensitiveMarker)
+            : "generated/path-failure-result";
+
+        return (outputPath, sourcePath is null ? null : [sourcePath]);
+    }
+
+    private static string CreateDirectorySource(string workspaceRoot, string sensitiveMarker)
+    {
+        var relativePath = $"{sensitiveMarker}.png";
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, relativePath));
+        return relativePath;
+    }
+
+    private static string CreateUnsupportedSource(string workspaceRoot, string sensitiveMarker)
+    {
+        var relativePath = $"{sensitiveMarker}.txt";
+        File.WriteAllText(Path.Combine(workspaceRoot, relativePath), "not an image");
+        return relativePath;
+    }
+
+    private static string CreateOutputDirectory(string workspaceRoot, string sensitiveMarker)
+    {
+        var relativePath = $"{sensitiveMarker}.png";
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, relativePath));
+        return relativePath;
     }
 
     private static AgentRuntimeToolProviderContext CreateContext(
@@ -422,5 +623,52 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
                 request.Format,
                 [new AgentGeneratedImage("image/png", [1, 2, 3], "revised")]));
         }
+    }
+
+    private sealed class ThrowingWorkspacePathResolutionService(Exception exception)
+        : IWorkspacePathResolutionService
+    {
+        public WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing)
+            => throw exception;
+
+        public WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing)
+            => throw exception;
+    }
+
+    private sealed class ImageGenerationTempWorkspace : IDisposable
+    {
+        public ImageGenerationTempWorkspace()
+        {
+            Path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                nameof(ImageGenerationTempWorkspace),
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path);
+        }
+
+        public string Path { get; }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path))
+            {
+                Directory.Delete(Path, recursive: true);
+            }
+        }
+    }
+
+    public enum ImagePathFailureScenario
+    {
+        SourceOutsideWorkspace,
+        SourceMissing,
+        SourceDirectory,
+        SourceUnsupportedExtension,
+        OutputDirectory
+    }
+
+    public enum UnexpectedPathResolverFailureKind
+    {
+        InvalidOperation,
+        Io
     }
 }

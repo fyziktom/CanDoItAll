@@ -27,8 +27,10 @@ internal static class AgentsApi
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken,
                 bool includeTemplates = false) =>
-            Results.Ok(await workspaceService.GetChatPageBootstrapAsync(includeTemplates, cancellationToken)))
-            .WithName("GetAgentBootstrap");
+            Results.Ok(AgentApiResponseMapper.ToChatPageBootstrap(
+                await workspaceService.GetChatPageBootstrapAsync(includeTemplates, cancellationToken))))
+            .WithName("GetAgentBootstrap")
+            .Produces<AgentChatPageBootstrapApiResponse>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}", async (
                 Guid agentId,
@@ -379,16 +381,20 @@ internal static class AgentsApi
                 Guid agentId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListChatSessionsAsync(agentId, cancellationToken)))
-            .WithName("ListAgentChatSessions");
+            Results.Ok(AgentApiResponseMapper.ToChatSessions(
+                await workspaceService.ListChatSessionsAsync(agentId, cancellationToken))))
+            .WithName("ListAgentChatSessions")
+            .Produces<AgentChatSessionApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapPost("/{agentId:guid}/chat-sessions", async (
                 Guid agentId,
                 Guid? chatSessionId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken)))
-            .WithName("CreateAgentChatSession");
+            Results.Ok(AgentApiResponseMapper.ToChatSession(
+                await workspaceService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken))))
+            .WithName("CreateAgentChatSession")
+            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK);
 
         agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", async (
                 Guid agentId,
@@ -396,16 +402,27 @@ internal static class AgentsApi
                 ChatSessionRenameApiRequest request,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.RenameChatSessionAsync(agentId, chatSessionId, request.Title, cancellationToken)))
-            .WithName("RenameAgentChatSession");
+            Results.Ok(AgentApiResponseMapper.ToChatSession(
+                await workspaceService.RenameChatSessionAsync(
+                    agentId,
+                    chatSessionId,
+                    request.Title,
+                    cancellationToken))))
+            .WithName("RenameAgentChatSession")
+            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/chat-workspace", async (
                 Guid agentId,
                 Guid? preferredSessionId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.GetChatAgentWorkspaceAsync(agentId, preferredSessionId, cancellationToken)))
-            .WithName("GetAgentChatWorkspace");
+            Results.Ok(AgentApiResponseMapper.ToChatWorkspace(
+                await workspaceService.GetChatAgentWorkspaceAsync(
+                    agentId,
+                    preferredSessionId,
+                    cancellationToken))))
+            .WithName("GetAgentChatWorkspace")
+            .Produces<AgentChatWorkspaceApiResponse>(StatusCodes.Status200OK);
 
         agents.MapPost("/{agentId:guid}/chat", async (
                 Guid agentId,
@@ -435,7 +452,7 @@ internal static class AgentsApi
                         new AgentChatRunOptions(operationId),
                         cancellationToken,
                         request.AttachmentPaths);
-                    return Results.Ok(result);
+                    return Results.Ok(AgentApiResponseMapper.ToChatRunResult(result));
                 }
                 catch (AgentExecutionActivityAdmissionException exception)
                 {
@@ -455,6 +472,7 @@ internal static class AgentsApi
                 }
             })
             .WithName("SendAgentChatMessage")
+            .Produces<AgentChatRunApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status409Conflict,
@@ -488,7 +506,7 @@ internal static class AgentsApi
                         request.Approved,
                         request.AutoApprovePendingToolCalls,
                         cancellationToken);
-                    return Results.Ok(result);
+                    return Results.Ok(AgentApiResponseMapper.ToExecutionRunResult(result));
                 }
                 catch (AgentExecutionActivityAdmissionException exception)
                 {
@@ -507,6 +525,7 @@ internal static class AgentsApi
                 }
             })
             .WithName("RespondToAgentExecutionApprovals")
+            .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status409Conflict,
@@ -538,7 +557,7 @@ internal static class AgentsApi
                 cancellationToken))
             .WithName("StartAgentExecutionRun")
             .Accepts<AgentExecutionRunApiRequest>("application/json")
-            .Produces<ExecutionRunResult>(StatusCodes.Status200OK)
+            .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status401Unauthorized,
@@ -570,7 +589,7 @@ internal static class AgentsApi
                 cancellationToken))
             .WithName("StartAgentScopedExecutionRun")
             .Accepts<AgentExecutionRunStartApiRequest>("application/json")
-            .Produces<ExecutionRunResult>(StatusCodes.Status200OK)
+            .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status401Unauthorized,
@@ -585,23 +604,33 @@ internal static class AgentsApi
                 [AsParameters] AgentExecutionRunApiQuery query,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListExecutionRunsAsync(query.ToExecutionRunQuery(), cancellationToken)))
-            .WithName("ListAgentExecutionRuns");
+            Results.Ok(AgentApiResponseMapper.ToExecutionRuns(
+                await workspaceService.ListExecutionRunsAsync(
+                    query.ToExecutionRunQuery(),
+                    cancellationToken))))
+            .WithName("ListAgentExecutionRuns")
+            .Produces<AgentExecutionRunApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs", async (
                 Guid agentId,
                 [AsParameters] AgentExecutionRunApiQuery query,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListExecutionRunsAsync(query.ToExecutionRunQuery(agentId), cancellationToken)))
-            .WithName("ListAgentScopedExecutionRuns");
+            Results.Ok(AgentApiResponseMapper.ToExecutionRuns(
+                await workspaceService.ListExecutionRunsAsync(
+                    query.ToExecutionRunQuery(agentId),
+                    cancellationToken))))
+            .WithName("ListAgentScopedExecutionRuns")
+            .Produces<AgentExecutionRunApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/execution-runs/{executionRunId:guid}", async (
                 Guid executionRunId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)))
-            .WithName("GetAgentExecutionRunDetail");
+            Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
+                await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken))))
+            .WithName("GetAgentExecutionRunDetail")
+            .Produces<AgentExecutionRunDetailApiResponse>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}", async (
                 Guid agentId,
@@ -612,10 +641,10 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail,
+                AgentApiResponseMapper.ToExecutionRunDetail,
                 cancellationToken))
             .WithName("GetAgentScopedExecutionRunDetail")
-            .Produces<ExecutionRunDetail>(StatusCodes.Status200OK)
+            .Produces<AgentExecutionRunDetailApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status401Unauthorized,
                 StatusCodes.Status403Forbidden,
@@ -625,8 +654,10 @@ internal static class AgentsApi
                 Guid executionRunId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListExecutionArtifactsAsync(executionRunId, cancellationToken)))
-            .WithName("ListAgentExecutionArtifacts");
+            Results.Ok(AgentApiResponseMapper.ToArtifacts(
+                await workspaceService.ListExecutionArtifactsAsync(executionRunId, cancellationToken))))
+            .WithName("ListAgentExecutionArtifacts")
+            .Produces<AgentExecutionArtifactApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}/artifacts", async (
                 Guid agentId,
@@ -637,16 +668,21 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail.Artifacts,
+                detail => AgentApiResponseMapper.ToArtifacts(detail.Artifacts),
                 cancellationToken))
-            .WithName("ListAgentScopedExecutionArtifacts");
+            .WithName("ListAgentScopedExecutionArtifacts")
+            .Produces<AgentExecutionArtifactApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/execution-runs/{executionRunId:guid}/checkpoints", async (
                 Guid executionRunId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListExecutionWorkflowCheckpointsAsync(executionRunId, cancellationToken)))
-            .WithName("ListAgentExecutionCheckpoints");
+            Results.Ok(AgentApiResponseMapper.ToCheckpoints(
+                await workspaceService.ListExecutionWorkflowCheckpointsAsync(
+                    executionRunId,
+                    cancellationToken))))
+            .WithName("ListAgentExecutionCheckpoints")
+            .Produces<AgentExecutionCheckpointApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}/checkpoints", async (
                 Guid agentId,
@@ -657,16 +693,19 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail.Checkpoints,
+                detail => AgentApiResponseMapper.ToCheckpoints(detail.Checkpoints),
                 cancellationToken))
-            .WithName("ListAgentScopedExecutionCheckpoints");
+            .WithName("ListAgentScopedExecutionCheckpoints")
+            .Produces<AgentExecutionCheckpointApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/execution-runs/{executionRunId:guid}/tool-receipts", async (
                 Guid executionRunId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListToolExecutionReceiptsAsync(executionRunId, cancellationToken)))
-            .WithName("ListAgentExecutionToolReceipts");
+            Results.Ok(AgentApiResponseMapper.ToToolReceipts(
+                await workspaceService.ListToolExecutionReceiptsAsync(executionRunId, cancellationToken))))
+            .WithName("ListAgentExecutionToolReceipts")
+            .Produces<AgentExecutionToolReceiptApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}/tool-receipts", async (
                 Guid agentId,
@@ -677,9 +716,10 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail.ToolReceipts,
+                detail => AgentApiResponseMapper.ToToolReceipts(detail.ToolReceipts),
                 cancellationToken))
-            .WithName("ListAgentScopedExecutionToolReceipts");
+            .WithName("ListAgentScopedExecutionToolReceipts")
+            .Produces<AgentExecutionToolReceiptApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}/log", async (
                 Guid agentId,
@@ -690,9 +730,10 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail.ExecutionLog,
+                detail => AgentApiResponseMapper.ToExecutionLog(detail.ExecutionLog),
                 cancellationToken))
-            .WithName("ListAgentScopedExecutionLog");
+            .WithName("ListAgentScopedExecutionLog")
+            .Produces<AgentExecutionLogApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}/metrics", async (
                 Guid agentId,
@@ -703,9 +744,10 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail.Metrics,
+                detail => AgentApiResponseMapper.ToMetrics(detail.Metrics),
                 cancellationToken))
-            .WithName("ListAgentScopedExecutionMetrics");
+            .WithName("ListAgentScopedExecutionMetrics")
+            .Produces<AgentRunMetricApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-runs/{executionRunId:guid}/approvals", async (
                 Guid agentId,
@@ -716,9 +758,10 @@ internal static class AgentsApi
                 agentId,
                 executionRunId,
                 workspaceService,
-                detail => detail.Approvals,
+                detail => AgentApiResponseMapper.ToExecutionApprovals(detail.Approvals),
                 cancellationToken))
-            .WithName("ListAgentScopedExecutionApprovals");
+            .WithName("ListAgentScopedExecutionApprovals")
+            .Produces<AgentExecutionApprovalApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/execution-runs/{executionRunId:guid}/approvals", async (
                 Guid executionRunId,
@@ -728,32 +771,45 @@ internal static class AgentsApi
                 var detail = await workspaceService.GetExecutionRunDetailAsync(
                     executionRunId,
                     cancellationToken);
-                return Results.Ok(detail.Approvals);
+                return Results.Ok(AgentApiResponseMapper.ToExecutionApprovals(detail.Approvals));
             })
-            .WithName("ListAgentExecutionApprovals");
+            .WithName("ListAgentExecutionApprovals")
+            .Produces<AgentExecutionApprovalApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/execution-log", async (
                 Guid agentId,
                 Guid? chatSessionId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListExecutionLogAsync(agentId, chatSessionId, cancellationToken)))
-            .WithName("ListAgentExecutionLog");
+            Results.Ok(AgentApiResponseMapper.ToExecutionLog(
+                await workspaceService.ListExecutionLogAsync(
+                    agentId,
+                    chatSessionId,
+                    cancellationToken))))
+            .WithName("ListAgentExecutionLog")
+            .Produces<AgentExecutionLogApiResponse[]>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/runtime-snapshot", async (
                 Guid agentId,
                 Guid? chatSessionId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.GetChatRuntimeSnapshotAsync(agentId, chatSessionId, cancellationToken)))
-            .WithName("GetAgentRuntimeSnapshot");
+            Results.Ok(AgentApiResponseMapper.ToChatRuntime(
+                await workspaceService.GetChatRuntimeSnapshotAsync(
+                    agentId,
+                    chatSessionId,
+                    cancellationToken))))
+            .WithName("GetAgentRuntimeSnapshot")
+            .Produces<AgentChatRuntimeApiResponse>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/metrics", async (
                 Guid agentId,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.ListMetricsAsync(agentId, cancellationToken)))
-            .WithName("ListAgentMetrics");
+            Results.Ok(AgentApiResponseMapper.ToMetrics(
+                await workspaceService.ListMetricsAsync(agentId, cancellationToken))))
+            .WithName("ListAgentMetrics")
+            .Produces<AgentRunMetricApiResponse[]>(StatusCodes.Status200OK);
     }
 
     private static async Task<IResult> StartExecutionRunAsync(
@@ -778,7 +834,7 @@ internal static class AgentsApi
         try
         {
             var result = await workspaceService.ExecuteRunAsync(request, cancellationToken);
-            return Results.Ok(result);
+            return Results.Ok(AgentApiResponseMapper.ToExecutionRunResult(result));
         }
         catch (AgentJsonSchemaOutputContractException exception)
         {

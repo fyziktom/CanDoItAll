@@ -17,16 +17,14 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
             return content with
             {
                 Base64DataOmitted = false,
-                ContentSummary = $"Base64Data contains {content.ContentLength:N0} byte(s) from a small non-media asset."
+                ContentSummary = $"Base64Data contains {content.ContentLength:N0} byte(s) from a small textual asset."
             };
         }
 
         var mediaPath = string.IsNullOrWhiteSpace(content.Asset.MediaRelativePath)
             ? "the returned asset media path"
             : content.Asset.MediaRelativePath;
-        var reason = IsBinaryMediaContentType(content.Asset.MediaContentType)
-            ? $"Base64Data is omitted because '{content.Asset.MediaContentType}' is binary media."
-            : $"Base64Data is omitted because the asset is {content.ContentLength:N0} byte(s), exceeding the {MaxInlineAgentAssetContentBytes:N0}-byte runtime inline limit.";
+        var reason = ResolveOmissionReason(content);
         var nextAction = ResolveOmittedContentNextAction(content.Asset, mediaPath, canAnalyzeImages);
 
         return content with
@@ -40,7 +38,23 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
     private static bool ShouldInlineAssetContent(ProjectStructureAssetContentDescriptor content)
     {
         return content.ContentLength <= MaxInlineAgentAssetContentBytes &&
-               !IsBinaryMediaContentType(content.Asset.MediaContentType);
+               ProjectStructureAgentRuntimeAssetTextReader.IsSupported(content.Asset) &&
+               !IsSvgContentType(content.Asset.MediaContentType);
+    }
+
+    private static string ResolveOmissionReason(ProjectStructureAssetContentDescriptor content)
+    {
+        if (IsBinaryMediaContentType(content.Asset.MediaContentType))
+        {
+            return $"Base64Data is omitted because '{content.Asset.MediaContentType}' is binary media.";
+        }
+
+        if (!ProjectStructureAgentRuntimeAssetTextReader.IsSupported(content.Asset))
+        {
+            return $"Base64Data is omitted because '{content.Asset.MediaContentType}' is not a safe textual content type.";
+        }
+
+        return $"Base64Data is omitted because the asset is {content.ContentLength:N0} byte(s), exceeding the {MaxInlineAgentAssetContentBytes:N0}-byte runtime inline limit.";
     }
 
     private static bool IsBinaryMediaContentType(string contentType)

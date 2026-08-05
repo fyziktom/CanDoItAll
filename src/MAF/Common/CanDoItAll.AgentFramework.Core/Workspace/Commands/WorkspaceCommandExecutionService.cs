@@ -166,14 +166,15 @@ public sealed class WorkspaceCommandExecutionService :
                 keepAlive,
                 lifetimeScope);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (
+            WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
         {
             return processRunner.CreateDeniedResult(
                 "workspace_dotnet_run",
                 recipeId,
                 "LocalExecution",
                 approvalRequired: false,
-                exception.Message);
+                GetSafeFailureMessage(exception));
         }
 
         if (!keepAlive ||
@@ -187,19 +188,7 @@ public sealed class WorkspaceCommandExecutionService :
                 approvalRequired: false);
         }
 
-        try
-        {
-            WorkspaceExecutionRunProcessLeaseStore.ValidateAuditIdentity(auditScope!);
-        }
-        catch (Exception exception)
-        {
-            return processRunner.CreateDeniedResult(
-                "workspace_dotnet_run",
-                recipeId,
-                "LocalExecution",
-                approvalRequired: false,
-                exception.Message);
-        }
+        WorkspaceExecutionRunProcessLeaseStore.ValidateAuditIdentity(auditScope!);
 
         string startupReceiptPath;
         var registeredAtUtc = DateTimeOffset.UtcNow;
@@ -216,12 +205,9 @@ public sealed class WorkspaceCommandExecutionService :
         }
         catch (Exception exception)
         {
-            return processRunner.CreateDeniedResult(
-                "workspace_dotnet_run",
-                recipeId,
-                "LocalExecution",
-                approvalRequired: false,
-                $"The kept-alive process was not started because its pending ExecutionRun lease could not be persisted: {exception.Message}");
+            throw new InvalidOperationException(
+                "The kept-alive process was not started because its pending ExecutionRun lease could not be persisted.",
+                exception);
         }
 
         WorkspaceCommandExecutionResult result;
@@ -233,12 +219,9 @@ public sealed class WorkspaceCommandExecutionService :
         }
         catch (Exception exception)
         {
-            return processRunner.CreateDeniedResult(
-                "workspace_dotnet_run",
-                recipeId,
-                "LocalExecution",
-                approvalRequired: false,
-                $"The kept-alive launch terminated before its durable lease could be activated. The pending lease was retained for terminal recovery: {exception.Message}");
+            throw new InvalidOperationException(
+                "The kept-alive launch terminated before its durable lease could be activated. The pending lease was retained for terminal recovery.",
+                exception);
         }
 
         if (!result.Succeeded)
@@ -251,10 +234,9 @@ public sealed class WorkspaceCommandExecutionService :
             }
             catch (Exception exception)
             {
-                return result with
-                {
-                    Message = $"{result.Message} The failed launch's pending ExecutionRun lease could not be removed and remains available for terminal recovery: {exception.Message}"
-                };
+                throw new InvalidOperationException(
+                    "The launch failed and its pending ExecutionRun lease could not be removed. The lease was retained for terminal recovery.",
+                    exception);
             }
 
             return result;
@@ -282,11 +264,9 @@ public sealed class WorkspaceCommandExecutionService :
         }
         catch (Exception exception)
         {
-            return result with
-            {
-                Succeeded = false,
-                Message = $"The kept-alive process started, but its pending ExecutionRun lease could not be activated. The pending lease was retained for terminal recovery: {exception.Message}"
-            };
+            throw new InvalidOperationException(
+                "The kept-alive process started, but its pending ExecutionRun lease could not be activated. The pending lease was retained for terminal recovery.",
+                exception);
         }
     }
 
@@ -338,11 +318,9 @@ public sealed class WorkspaceCommandExecutionService :
         }
         catch (Exception exception)
         {
-            return result with
-            {
-                Succeeded = false,
-                Message = $"The process stopped, but its durable ExecutionRun lease could not be removed: {exception.Message}"
-            };
+            throw new InvalidOperationException(
+                "The process stopped, but its durable ExecutionRun lease could not be removed. The lease was retained for terminal recovery.",
+                exception);
         }
     }
 
@@ -359,14 +337,14 @@ public sealed class WorkspaceCommandExecutionService :
         {
             loaded = processLeaseStore.Load(executionRunId);
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             return new WorkspaceExecutionRunProcessCleanupResult(
                 executionRunId,
                 [],
                 [new WorkspaceExecutionRunProcessCleanupFailure(
                     string.Empty,
-                    $"Could not load durable workspace process leases: {exception.Message}")]);
+                    WorkspaceCommandFailureBoundary.CleanupLoadFailureMessage)]);
         }
 
         var cleanedPaths = new List<string>();
@@ -385,12 +363,12 @@ public sealed class WorkspaceCommandExecutionService :
                 attempt = await cleanupLease.Task
                     .ConfigureAwait(false);
             }
-            catch (Exception exception)
+            catch (Exception)
             {
                 attempt = new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
                     Succeeded: false,
                     lease.StartupReceiptPath,
-                    exception.Message);
+                    WorkspaceCommandFailureBoundary.CleanupAttemptFailureMessage);
             }
 
             if (attempt.Succeeded)
@@ -459,12 +437,12 @@ public sealed class WorkspaceCommandExecutionService :
                 lease.StartupReceiptPath,
                 stopResult.Message);
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             return new WorkspaceExecutionRunProcessLeaseCleanupAttempt(
                 Succeeded: false,
                 lease.StartupReceiptPath,
-                exception.Message);
+                WorkspaceCommandFailureBoundary.CleanupAttemptFailureMessage);
         }
     }
 
@@ -523,19 +501,24 @@ public sealed class WorkspaceCommandExecutionService :
         {
             if (string.IsNullOrWhiteSpace(capabilityName))
             {
-                throw new InvalidOperationException("Local MCP launch requires a capability name.");
+                throw WorkspaceCommandInputException.Create(
+                    "Local MCP launch requires a capability name.",
+                    "Local MCP launch requires a non-empty capability name.");
             }
 
             if (string.IsNullOrWhiteSpace(command))
             {
-                throw new InvalidOperationException($"Local MCP capability '{capabilityName}' is missing a reviewed command descriptor.");
+                throw WorkspaceCommandInputException.Create(
+                    $"Local MCP capability '{capabilityName}' is missing a reviewed command descriptor.",
+                    "Local MCP launch requires a reviewed command descriptor.");
             }
 
             var normalizedCommand = command.Trim();
             if (!LocalMcpCommandPolicy.IsAllowed(normalizedCommand))
             {
-                throw new InvalidOperationException(
-                    $"Local MCP capability '{capabilityName}' uses command '{normalizedCommand}', which is outside the approved interpreter policy. Allowed commands: {LocalMcpCommandPolicy.DescribeAllowedCommands()}.");
+                throw WorkspaceCommandInputException.Create(
+                    $"Local MCP capability '{capabilityName}' uses command '{normalizedCommand}', which is outside the approved interpreter policy.",
+                    $"The local MCP command is outside the approved interpreter policy. Allowed commands: {LocalMcpCommandPolicy.DescribeAllowedCommands()}.");
             }
 
             var boundary = DescribeBoundary();
@@ -573,7 +556,8 @@ public sealed class WorkspaceCommandExecutionService :
                 Receipt: receipt,
                 Message: $"Prepared local MCP launch descriptor for '{capabilityName}'.");
         }
-        catch (Exception exception)
+        catch (Exception exception) when (
+            WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
         {
             return CreateDeniedLaunchDescriptor(
                 capabilityName,
@@ -582,7 +566,7 @@ public sealed class WorkspaceCommandExecutionService :
                 workingDirectory,
                 mergedEnvironmentVariables,
                 approvalRequired,
-                exception.Message);
+                GetSafeFailureMessage(exception));
         }
     }
 
@@ -603,14 +587,48 @@ public sealed class WorkspaceCommandExecutionService :
         string riskClass,
         bool approvalRequired)
     {
+        WorkspaceCommandPlan plan;
         try
         {
-            return await processRunner.ExecuteAsync(createPlan()).ConfigureAwait(false);
+            plan = createPlan();
         }
-        catch (Exception exception)
+        catch (Exception exception) when (
+            WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
         {
-            return processRunner.CreateDeniedResult(toolName, recipeId, riskClass, approvalRequired, exception.Message);
+            return processRunner.CreateDeniedResult(
+                toolName,
+                recipeId,
+                riskClass,
+                approvalRequired,
+                GetSafeFailureMessage(exception));
         }
+
+        try
+        {
+            return await processRunner.ExecuteAsync(plan).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (
+            WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
+        {
+            return processRunner.CreateDeniedResult(
+                toolName,
+                recipeId,
+                riskClass,
+                approvalRequired,
+                GetSafeFailureMessage(exception));
+        }
+    }
+
+    private static string GetSafeFailureMessage(Exception exception)
+    {
+        if (WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out var safeMessage))
+        {
+            return safeMessage;
+        }
+
+        throw new InvalidOperationException(
+            "The workspace command failure was not approved for model-visible projection.",
+            exception);
     }
 
     private string ResolveSingleStartupReceiptPath(

@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit;
@@ -229,13 +230,14 @@ public sealed class WorkspaceArtifactToolServiceTests
     }
 
     [Fact]
-    public async Task ConvertDocumentToMarkdown_output_write_failure_preserves_existing_path_and_has_no_mutation_receipt()
+    public async Task ConvertDocumentToMarkdown_output_write_failure_is_thrown_opaquely_without_returning_native_path_diagnostics()
     {
         var root = CreateWorkspaceRoot();
         try
         {
             var documentPath = Path.Combine(root, "source", "quote.html");
-            var blockingPath = Path.Combine(root, "artifacts", "converted-documents");
+            var sentinel = $"private-native-{Guid.NewGuid():N}";
+            var blockingPath = Path.Combine(root, "artifacts", sentinel);
             Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
             Directory.CreateDirectory(Path.GetDirectoryName(blockingPath)!);
             await File.WriteAllTextAsync(documentPath, "<h1>Quote</h1>");
@@ -249,19 +251,15 @@ public sealed class WorkspaceArtifactToolServiceTests
                 new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
                 converter);
 
-            var result = await service.ConvertDocumentToMarkdown(
-                "source/quote.html",
-                "artifacts/converted-documents/quote.md");
+            var exception = await Record.ExceptionAsync(() =>
+                service.ConvertDocumentToMarkdown(
+                    "source/quote.html",
+                    $"artifacts/{sentinel}/quote.md"));
 
-            Assert.False(result.Succeeded);
-            Assert.Contains("could not be written", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.IsAssignableFrom<IOException>(exception);
+            Assert.Contains(sentinel, exception!.Message, StringComparison.Ordinal);
+            Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
             Assert.Equal("existing workspace content", await File.ReadAllTextAsync(blockingPath));
-            Assert.False(result.Receipt.MutatesWorkspace);
-            Assert.Equal("Failed", result.Receipt.Outcome);
-            Assert.Empty(result.Receipt.ReceiptRelativePath);
-            Assert.Empty(result.Receipt.ArtifactReferences);
-            Assert.Empty(result.MarkdownPreview);
-            Assert.False(result.PreviewTruncated);
             Assert.Equal(1, converter.CallCount);
         }
         finally

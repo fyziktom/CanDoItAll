@@ -31,7 +31,31 @@ public static class AgentApiHeaderNames
 
 public sealed record AgentActivityApiEvent(
     AgentExecutionOperationId OperationId,
-    AgentExecutionActivity Activity);
+    AgentExecutionActivityPhase Phase,
+    DateTimeOffset OccurredAtUtc,
+    Guid? AgentId,
+    string Message,
+    Guid? ChatSessionId,
+    Guid? ExecutionRunId,
+    AgentExecutionActivityTerminalOutcome? TerminalOutcome,
+    string? ErrorCode)
+{
+    internal static AgentActivityApiEvent From(
+        AgentExecutionOperationId operationId,
+        AgentExecutionActivity activity)
+    {
+        return new AgentActivityApiEvent(
+            operationId,
+            activity.Phase,
+            activity.OccurredAtUtc,
+            activity.AgentId,
+            activity.Message,
+            activity.ChatSessionId,
+            activity.ExecutionRunId,
+            activity.TerminalOutcome,
+            activity.ErrorCode);
+    }
+}
 
 public sealed record AgentActivityReplayGap(
     AgentExecutionOperationId OperationId,

@@ -20,37 +20,26 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverter : IWorkspaceD
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var sourcePath = request.SourcePath;
-
-        try
+        var sourcePath = Path.GetFullPath(request.SourcePath);
+        if (!File.Exists(sourcePath))
         {
-            sourcePath = Path.GetFullPath(request.SourcePath);
-            if (!File.Exists(sourcePath))
-            {
-                var message = $"Document source file '{sourcePath}' was not found.";
-                return CreateFailure(sourcePath, message);
-            }
-
-            await using var result = await client.ConvertAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-            var fullMarkdown = result.Markdown ?? string.Empty;
-            var markdown = request.MaxCharacters is { } limit && fullMarkdown.Length > limit
-                ? fullMarkdown[..limit]
-                : fullMarkdown;
-
-            return new WorkspaceDocumentMarkdownConversionResult(
-                Succeeded: true,
-                Message: $"Converted document '{Path.GetFileName(sourcePath)}' to markdown.",
-                SourcePath: sourcePath,
-                Markdown: markdown,
-                TotalMarkdownCharacters: fullMarkdown.Length,
-                IsTruncated: markdown.Length < fullMarkdown.Length,
-                Diagnostics: string.Empty);
+            return CreateFailure(sourcePath, "Document source file was not found.");
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            var message = $"Document conversion failed for '{sourcePath}'. {exception.Message}";
-            return CreateFailure(sourcePath, message);
-        }
+
+        await using var result = await client.ConvertAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var fullMarkdown = result.Markdown ?? string.Empty;
+        var markdown = request.MaxCharacters is { } limit && fullMarkdown.Length > limit
+            ? fullMarkdown[..limit]
+            : fullMarkdown;
+
+        return new WorkspaceDocumentMarkdownConversionResult(
+            Succeeded: true,
+            Message: $"Converted document '{Path.GetFileName(sourcePath)}' to markdown.",
+            SourcePath: sourcePath,
+            Markdown: markdown,
+            TotalMarkdownCharacters: fullMarkdown.Length,
+            IsTruncated: markdown.Length < fullMarkdown.Length,
+            Diagnostics: string.Empty);
     }
 
     private static WorkspaceDocumentMarkdownConversionResult CreateFailure(

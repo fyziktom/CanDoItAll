@@ -66,7 +66,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
                     CompletedAtUtc: completedAtUtc,
                     TimedOut: false,
                     Boundary: Boundary,
-                    FailureMessage: $"Failed to start '{request.ExecutablePath}'.");
+                    FailureMessage: "The configured workspace process could not be started.");
             }
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Clamp(request.TimeoutSeconds, 1, 3600)));
@@ -121,22 +121,6 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
                 TimedOut: timedOut,
                 Boundary: Boundary,
                 FailureMessage: failureMessage);
-        }
-        catch (Exception exception)
-        {
-            completedAtUtc = DateTimeOffset.UtcNow;
-            return new WorkspaceProcessExecutionResult(
-                Started: false,
-                ExitCode: -1,
-                Stdout: string.Empty,
-                Stderr: string.Empty,
-                StdoutTruncated: false,
-                StderrTruncated: false,
-                StartedAtUtc: startedAtUtc,
-                CompletedAtUtc: completedAtUtc,
-                TimedOut: false,
-                Boundary: Boundary,
-                FailureMessage: exception.Message);
         }
         finally
         {

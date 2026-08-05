@@ -103,6 +103,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
         var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+        var specification = CreateValidatedGitInput(
+            () => commandBuilder.Log(count),
+            "Git log count must be greater than zero.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitLog,
@@ -114,7 +117,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: [],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            spec: commandBuilder.Log(count),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -124,6 +127,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
         var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+        var specification = CreateValidatedGitInput(
+            () => commandBuilder.Show(new GitRevision(revision)),
+            "The Git revision is invalid. Provide a non-empty revision without leading dashes, whitespace, or control characters.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitShow,
@@ -135,7 +141,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: [],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            spec: commandBuilder.Show(new GitRevision(revision)),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -144,6 +150,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     public WorkspaceCommandPlan BuildGitAdd(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
     {
         var target = BuildGitPathTarget(paths, workingDirectory);
+        var specification = CreateValidatedGitInput(
+            () => target.CommandBuilder.Add(target.PathSpecs),
+            "Git add requires at least one authorized repository-relative path.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitAdd,
@@ -155,7 +164,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: target.TargetPaths,
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
-            spec: target.CommandBuilder.Add(target.PathSpecs),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 64 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -164,6 +173,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     public WorkspaceCommandPlan BuildGitUnstage(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30)
     {
         var target = BuildGitPathTarget(paths, workingDirectory);
+        var specification = CreateValidatedGitInput(
+            () => target.CommandBuilder.Unstage(target.PathSpecs),
+            "Git unstage requires at least one authorized repository-relative path.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitUnstage,
@@ -175,7 +187,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: target.TargetPaths,
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
-            spec: target.CommandBuilder.Unstage(target.PathSpecs),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 64 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -185,6 +197,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
         var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+        var specification = CreateValidatedGitInput(
+            () => commandBuilder.Commit(message),
+            "Git commit requires a non-empty commit message.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitCommit,
@@ -196,7 +211,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: [],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            spec: commandBuilder.Commit(message),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -206,6 +221,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
         var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+        var specification = CreateValidatedGitInput(
+            () => commandBuilder.CreateBranch(new GitBranchName(branchName)),
+            "The Git branch name is invalid. Provide a non-empty branch name without leading dashes, whitespace, or control characters.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitBranchCreate,
@@ -217,7 +235,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: [],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            spec: commandBuilder.CreateBranch(new GitBranchName(branchName)),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 64 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -227,6 +245,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
         var commandBuilder = new GitRepositoryCommandBuilder(new GitRepositoryPath(workingDirectoryResolution.FullPath));
+        var specification = CreateValidatedGitInput(
+            () => commandBuilder.Switch(new GitBranchName(branchName)),
+            "The Git branch name is invalid. Provide a non-empty branch name without leading dashes, whitespace, or control characters.");
 
         return CreateGitPlan(
             toolName: ToolContractCatalog.WorkspaceGitSwitch,
@@ -238,7 +259,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: [],
             workingDirectory: workingDirectoryRelative,
             workingDirectoryPath: workingDirectoryResolution.FullPath,
-            spec: commandBuilder.Switch(new GitBranchName(branchName)),
+            spec: specification,
             timeoutSeconds: timeoutSeconds,
             stdoutLimitCharacters: 64 * 1024,
             stderrLimitCharacters: 32 * 1024);
@@ -443,13 +464,17 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         if (string.IsNullOrWhiteSpace(startupReceiptPath))
         {
-            throw new InvalidOperationException("workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run.");
+            throw WorkspaceCommandInputException.Create(
+                "workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run.",
+                "Provide the workspace-relative startup.json receipt path returned by workspace_dotnet_run.");
         }
 
         var startupReceipt = ResolveExistingWorkspacePath(startupReceiptPath, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetFileName(startupReceipt.FullPath), "startup.json", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run. Received '{startupReceipt.RelativePath}'.");
+            throw WorkspaceCommandInputException.Create(
+                $"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run. Received '{startupReceipt.RelativePath}'.",
+                "The supplied path is not a startup.json receipt. Use the receipt returned by workspace_dotnet_run.");
         }
 
         var boundedTimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 120);
@@ -495,14 +520,18 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         if (string.IsNullOrWhiteSpace(template))
         {
-            throw new InvalidOperationException("Provide a template name.");
+            throw WorkspaceCommandInputException.Create(
+                "Provide a template name.",
+                "Provide an approved .NET template name.");
         }
 
         var templateSpec = ParseDotnetTemplateSpec(template);
         var normalizedTemplate = templateSpec.Template;
         if (!WorkspaceDotnetNewTemplateCatalog.IsApprovedTemplate(normalizedTemplate))
         {
-            throw new InvalidOperationException($"Template '{template}' is not approved. Allowed templates: {string.Join(", ", WorkspaceDotnetNewTemplateCatalog.ApprovedTemplates.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
+            throw WorkspaceCommandInputException.Create(
+                $"Template '{template}' is not approved.",
+                $"The requested .NET template is not approved. Allowed templates: {string.Join(", ", WorkspaceDotnetNewTemplateCatalog.ApprovedTemplates.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
         }
 
         var unapprovedTemplateOption = templateSpec.Options.FirstOrDefault(
@@ -510,14 +539,16 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (unapprovedTemplateOption is not null)
         {
             var supportedOptions = WorkspaceDotnetNewTemplateCatalog.GetApprovedTemplateOptions(normalizedTemplate);
-            throw new InvalidOperationException(
-                $"Template option '{unapprovedTemplateOption}' is not approved for template '{normalizedTemplate}' in workspace_dotnet_new. Allowed template options: {FormatTemplateOptions(supportedOptions)}.");
+            throw WorkspaceCommandInputException.Create(
+                $"Template option '{unapprovedTemplateOption}' is not approved for template '{normalizedTemplate}' in workspace_dotnet_new.",
+                $"The requested template option is not approved. Allowed template options: {FormatTemplateOptions(supportedOptions)}.");
         }
 
         if (!WorkspaceDotnetNewTemplateCatalog.TryNormalizeTargetFramework(targetFramework, out var normalizedTargetFramework))
         {
-            throw new InvalidOperationException(
-                "workspace_dotnet_new targetFramework must be a supported target-framework value such as 'net8.0'.");
+            throw WorkspaceCommandInputException.Create(
+                "workspace_dotnet_new targetFramework must be a supported target-framework value.",
+                "workspace_dotnet_new targetFramework must be a supported value such as 'net8.0'.");
         }
 
         if (string.IsNullOrWhiteSpace(name)
@@ -525,15 +556,18 @@ internal sealed class WorkspaceCommandPlanBuilder
             || name.Contains(Path.DirectorySeparatorChar)
             || name.Contains(Path.AltDirectorySeparatorChar))
         {
-            throw new InvalidOperationException("Provide a project name without path separators or invalid file-name characters.");
+            throw WorkspaceCommandInputException.Create(
+                "Provide a project name without path separators or invalid file-name characters.",
+                "Provide a project name without path separators or invalid file-name characters.");
         }
 
         var trimmedName = name.Trim();
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(parentDirectory, createIfMissing: true, out var workingDirectoryResolution);
         if (AllowedProjectExtensions.Contains(Path.GetExtension(workingDirectoryRelative)))
         {
-            throw new InvalidOperationException(
-                $"workspace_dotnet_new parentDirectory '{workingDirectoryRelative}' ends with a project-file extension. Pass the containing directory as parentDirectory and the project name separately.");
+            throw WorkspaceCommandInputException.Create(
+                $"workspace_dotnet_new parentDirectory '{workingDirectoryRelative}' ends with a project-file extension.",
+                "workspace_dotnet_new parentDirectory must identify a directory. Pass the containing directory and project name separately.");
         }
 
         var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
@@ -542,8 +576,9 @@ internal sealed class WorkspaceCommandPlanBuilder
                 workingDirectoryRelative,
                 includeSolutionFiles: !isSolutionTemplate))
         {
-            throw new InvalidOperationException(
-                $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'. Inspect and repair that project in place, or create a sibling project from its parent directory.");
+            throw WorkspaceCommandInputException.Create(
+                $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'.",
+                "workspace_dotnet_new cannot scaffold inside an existing .NET project directory. Repair that project in place or choose its parent directory for a sibling project.");
         }
 
         var targetRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(workingDirectoryRelative == "." ? string.Empty : workingDirectoryRelative, trimmedName));
@@ -554,16 +589,18 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (targetDirectoryExists &&
             InspectProjectTree(targetFullPath, targetRelativePath))
         {
-            throw new InvalidOperationException(
-                $"workspace_dotnet_new is not allowed for existing project target '{targetRelativePath}' because it already contains a .NET project or solution file. Inspect and repair the existing scaffold in place instead of re-scaffolding.");
+            throw WorkspaceCommandInputException.Create(
+                $"workspace_dotnet_new target '{targetRelativePath}' already contains a .NET project or solution file.",
+                "The requested target already contains a .NET project or solution. Inspect and repair the existing scaffold instead of re-scaffolding it.");
         }
 
         if (force &&
             targetDirectoryExists &&
             DirectoryHasEntries(targetFullPath, targetRelativePath))
         {
-            throw new InvalidOperationException(
-                $"workspace_dotnet_new --force is not allowed over existing non-empty target '{targetRelativePath}'. Inspect and repair the existing scaffold, or explicitly delete the target directory first when replacement is intentional.");
+            throw WorkspaceCommandInputException.Create(
+                $"workspace_dotnet_new --force is not allowed over existing non-empty target '{targetRelativePath}'.",
+                "workspace_dotnet_new --force cannot replace a non-empty target. Repair it in place or explicitly remove the intended target before retrying.");
         }
 
         var arguments = new List<string>
@@ -628,7 +665,9 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         if (tokens.Length == 0)
         {
-            throw new InvalidOperationException("Provide a template name.");
+            throw WorkspaceCommandInputException.Create(
+                "Provide a template name.",
+                "Provide an approved .NET template name.");
         }
 
         var optionWithoutPrefix = tokens
@@ -637,8 +676,9 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         if (optionWithoutPrefix is not null)
         {
-            throw new InvalidOperationException(
-                $"Template argument '{optionWithoutPrefix}' is not approved for workspace_dotnet_new. Pass only approved option flags after the template name.");
+            throw WorkspaceCommandInputException.Create(
+                $"Template argument '{optionWithoutPrefix}' is not approved for workspace_dotnet_new.",
+                "A positional template argument is not approved. Pass only approved option flags after the template name.");
         }
 
         return new DotnetNewTemplateSpec(tokens[0], tokens.Skip(1).ToArray());
@@ -774,7 +814,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".py", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"Python runner only accepts .py files. '{scriptResolution.RelativePath}' does not use a .py extension.");
+            throw WorkspaceCommandInputException.Create(
+                $"Python runner path '{scriptResolution.RelativePath}' does not use a .py extension.",
+                "Python runner only accepts an existing .py file. Correct the script path and retry.");
         }
 
         var workingDirectoryRelative = ResolveScriptWorkingDirectory(workingDirectory, scriptResolution.FullPath, allowedExternalRoots: null, out var workingDirectoryPath);
@@ -803,7 +845,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".ps1", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"PowerShell runner only accepts .ps1 files. '{scriptResolution.RelativePath}' does not use a .ps1 extension.");
+            throw WorkspaceCommandInputException.Create(
+                $"PowerShell runner path '{scriptResolution.RelativePath}' does not use a .ps1 extension.",
+                "PowerShell runner only accepts an existing .ps1 file. Correct the script path and retry.");
         }
 
         ValidatePowerShellRunScriptIsBounded(scriptResolution);
@@ -851,7 +895,9 @@ internal sealed class WorkspaceCommandPlanBuilder
                 out var manifest,
                 out var failureMessage))
         {
-            throw new InvalidOperationException(failureMessage);
+            throw WorkspaceCommandInputException.Create(
+                failureMessage,
+                "The script side-effect manifest is invalid. Provide a supported structured side-effect declaration and retry.");
         }
 
         return manifest.Mode switch
@@ -874,8 +920,9 @@ internal sealed class WorkspaceCommandPlanBuilder
             return;
         }
 
-        throw new InvalidOperationException(
-            $"PowerShell runner scripts must not run a foreground long-running browser host. '{scriptResolution.RelativePath}' appears to start a static HTTP server inline. Start the server as a background child process, record its URL and process id, and let the helper script exit before browser tools run.");
+        throw WorkspaceCommandInputException.Create(
+            $"PowerShell runner script '{scriptResolution.RelativePath}' appears to start a foreground long-running browser host.",
+            "PowerShell runner scripts must not run a foreground long-running browser host. Start it as a background child process, record its URL and process id, and let the helper script exit.");
     }
 
     private static bool LooksLikeForegroundBrowserHost(string scriptText)
@@ -912,7 +959,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         var extension = Path.GetExtension(sourceResolution.FullPath);
         if (!AllowedSpreadsheetExtensions.Contains(extension))
         {
-            throw new InvalidOperationException($"Spreadsheet inspector supports .xls, .xlsx, .csv, and .tsv files. '{sourceResolution.RelativePath}' uses '{extension}'.");
+            throw WorkspaceCommandInputException.Create(
+                $"Spreadsheet inspector path '{sourceResolution.RelativePath}' uses unsupported extension '{extension}'.",
+                "Spreadsheet inspector supports existing .xls, .xlsx, .csv, and .tsv files. Correct the path and retry.");
         }
 
         return CreatePlan(
@@ -1008,7 +1057,9 @@ internal sealed class WorkspaceCommandPlanBuilder
                 timeoutSeconds: 300,
                 stdoutLimitCharacters: 128 * 1024,
                 stderrLimitCharacters: 64 * 1024),
-            _ => throw new InvalidOperationException($"Skill script '{resolution.DisplayPath}' uses unsupported extension '{extension}'.")
+            _ => throw WorkspaceCommandInputException.Create(
+                $"Skill script '{resolution.DisplayPath}' uses unsupported extension '{extension}'.",
+                "Skill scripts must use a supported .py, .ps1, .sh, or .js extension.")
         };
     }
 
@@ -1090,6 +1141,23 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters);
     }
 
+    private static GitCommandSpec CreateValidatedGitInput(
+        Func<GitCommandSpec> createSpecification,
+        string safeMessage)
+    {
+        try
+        {
+            return createSpecification();
+        }
+        catch (ArgumentException exception)
+        {
+            throw WorkspaceCommandInputException.Create(
+                exception.Message,
+                safeMessage,
+                exception);
+        }
+    }
+
     private GitPathTarget BuildGitPathTarget(string[]? paths, string? workingDirectory)
     {
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(workingDirectory, createIfMissing: false, out var workingDirectoryResolution);
@@ -1119,7 +1187,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         var authorization = GitPathAuthorizer.Authorize(repositoryPath, resolution.FullPath);
         if (!authorization.IsAuthorized || authorization.Path is null)
         {
-            throw new InvalidOperationException(authorization.ErrorMessage ?? "Git path is not authorized.");
+            throw WorkspaceCommandInputException.Create(
+                authorization.ErrorMessage ?? "Git path is not authorized.",
+                "The Git path is not an authorized repository-relative path. Choose a path inside the current repository.");
         }
 
         return authorization.Path;
@@ -1158,7 +1228,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            throw new InvalidOperationException("workspace_dotnet_run requires a project file target.");
+            throw WorkspaceCommandInputException.Create(
+                "workspace_dotnet_run requires a project file target.",
+                "workspace_dotnet_run requires an existing .csproj, .fsproj, or .vbproj target.");
         }
 
         var projectResolution = ResolveDotnetTargetPath(
@@ -1253,12 +1325,16 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            throw new InvalidOperationException("workspace_dotnet_run url must be an absolute http:// or https:// loopback URL.");
+            throw WorkspaceCommandInputException.Create(
+                "workspace_dotnet_run url must be an absolute http:// or https:// loopback URL.",
+                "workspace_dotnet_run url must be an absolute http:// or https:// loopback URL.");
         }
 
         if (!IsLoopbackHost(uri.Host))
         {
-            throw new InvalidOperationException("workspace_dotnet_run only accepts loopback URLs such as http://127.0.0.1:<port> or http://localhost:<port>.");
+            throw WorkspaceCommandInputException.Create(
+                "workspace_dotnet_run only accepts loopback URLs.",
+                "workspace_dotnet_run only accepts loopback URLs such as http://127.0.0.1:<port> or http://localhost:<port>.");
         }
 
         return new DotnetRunUrls(
@@ -1757,7 +1833,9 @@ internal sealed class WorkspaceCommandPlanBuilder
     {
         if (string.IsNullOrWhiteSpace(outputPath))
         {
-            throw new InvalidOperationException("Provide a workspace-relative output path.");
+            throw WorkspaceCommandInputException.Create(
+                "Provide a workspace-relative output path.",
+                "Provide a non-empty workspace-relative output path.");
         }
 
         var resolution = ResolveWorkspacePath(outputPath);
@@ -1791,7 +1869,9 @@ internal sealed class WorkspaceCommandPlanBuilder
             return resolution;
         }
 
-        throw new InvalidOperationException($"Path '{resolution.RelativePath}' does not exist.");
+        throw WorkspaceCommandInputException.Create(
+            $"Path '{resolution.RelativePath}' does not exist.",
+            "The requested command input path does not exist. Correct the path and retry.");
     }
 
     private WorkspacePathResolution ResolveDotnetTargetPath(
@@ -1806,7 +1886,9 @@ internal sealed class WorkspaceCommandPlanBuilder
             var extension = Path.GetExtension(resolution.FullPath);
             if (!allowedExtensions.Contains(extension))
             {
-                throw new InvalidOperationException($"{invalidTargetMessage} '{resolution.RelativePath}' uses '{extension}'.");
+                throw WorkspaceCommandInputException.Create(
+                    $"{invalidTargetMessage} '{resolution.RelativePath}' uses '{extension}'.",
+                    $"{invalidTargetMessage} Correct the target path and retry.");
             }
 
             return resolution;
@@ -1836,7 +1918,9 @@ internal sealed class WorkspaceCommandPlanBuilder
 
             if (solutionCandidates.Count > 1)
             {
-                throw new InvalidOperationException($"Directory '{resolution.RelativePath}' contains multiple solution files. Pass an explicit solution or project file to {recipeName}.");
+                throw WorkspaceCommandInputException.Create(
+                    $"Directory '{resolution.RelativePath}' contains multiple solution files.",
+                    $"The target directory contains multiple solution files. Pass one explicit solution or project file to {recipeName}.");
             }
         }
 
@@ -1847,17 +1931,23 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         if (candidates.Count == 0)
         {
-            throw new InvalidOperationException($"Directory '{resolution.RelativePath}' does not contain a supported .NET solution or project file for {recipeName}.");
+            throw WorkspaceCommandInputException.Create(
+                $"Directory '{resolution.RelativePath}' does not contain a supported .NET solution or project file for {recipeName}.",
+                $"The target directory does not contain a supported .NET solution or project file for {recipeName}. Correct the target path and retry.");
         }
 
-        throw new InvalidOperationException($"Directory '{resolution.RelativePath}' contains multiple .NET project files. Pass an explicit project file to {recipeName}.");
+        throw WorkspaceCommandInputException.Create(
+            $"Directory '{resolution.RelativePath}' contains multiple .NET project files.",
+            $"The target directory contains multiple .NET project files. Pass one explicit project file to {recipeName}.");
     }
 
     private WorkspacePathResolution ResolveWorkspacePath(string path)
     {
         if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var resolution, out var validationMessage))
         {
-            throw new InvalidOperationException(validationMessage);
+            throw WorkspaceCommandInputException.Create(
+                validationMessage,
+                "The command path is invalid or outside the allowed workspace scope. Correct the path and retry.");
         }
 
         return resolution;
@@ -1895,7 +1985,8 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         if (WorkspaceScriptArgumentPathParser.ContainsParentTraversal(candidate.Path))
         {
-            throw new InvalidOperationException(
+            throw WorkspaceCommandInputException.Create(
+                "Script argument paths cannot contain parent traversal segments ('..').",
                 "Script argument paths cannot contain parent traversal segments ('..'). Use a canonical workspace or external-target path.");
         }
 
@@ -1905,7 +1996,9 @@ internal sealed class WorkspaceCommandPlanBuilder
                 out var resolution,
                 out var validationMessage))
         {
-            throw new InvalidOperationException($"Script argument path is not allowed. {validationMessage}");
+            throw WorkspaceCommandInputException.Create(
+                $"Script argument path is not allowed. {validationMessage}",
+                "The script argument path is outside the allowed workspace scope. Use a canonical workspace or authorized external-target path.");
         }
 
         return candidate.ReplacePath(resolution.FullPath);

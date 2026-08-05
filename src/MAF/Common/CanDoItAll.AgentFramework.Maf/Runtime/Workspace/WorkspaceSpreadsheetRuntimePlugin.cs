@@ -14,14 +14,14 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
 
     private readonly ISpreadsheetDocumentService spreadsheets = spreadsheets ?? throw new ArgumentNullException(nameof(spreadsheets));
     private readonly WorkspacePathResolutionService paths = new(workspaceRoot, workspaceScope);
-    private readonly WorkspaceSpreadsheetRuntimePathAccess pathAccess = new(workspaceRoot, workspaceScope, accessSettings);
+    private readonly WorkspaceRuntimeFileAccessGuard pathAccess = new(workspaceRoot, workspaceScope, accessSettings);
     private readonly WorkspaceSpreadsheetReceiptWriter receiptWriter = new(workspaceRoot, workspaceScope);
 
     public WorkspaceSpreadsheetSummaryToolResult InspectWorkbook(string workbookPath)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var workbook = ResolveReadableWorkbook(workbookPath);
-        var summary = spreadsheets.InspectWorkbook(workbook.FullPath);
+        var summary = ExecuteRead(() => spreadsheets.InspectWorkbook(workbook.FullPath));
         var receipt = receiptWriter.Persist(
             "workspace_spreadsheet_summary",
             mutatesWorkspace: false,
@@ -45,11 +45,12 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var workbook = ResolveReadableWorkbook(workbookPath);
-        var result = spreadsheets.PreviewWorkbook(new SpreadsheetWorkbookPreviewRequest(
-            workbook.FullPath,
-            maxWorksheets,
-            maxRows,
-            maxColumns));
+        var result = ExecuteRead(() => spreadsheets.PreviewWorkbook(
+            new SpreadsheetWorkbookPreviewRequest(
+                workbook.FullPath,
+                maxWorksheets,
+                maxRows,
+                maxColumns)));
         var receipt = receiptWriter.Persist(
             SpreadsheetPreviewOperation,
             mutatesWorkspace: false,
@@ -73,10 +74,10 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
         var workbook = ResolveReadableWorkbook(workbookPath);
         var requestedWorksheetName = Require(worksheetName, nameof(worksheetName));
         var requestedCellAddress = Require(cellAddress, nameof(cellAddress));
-        var result = spreadsheets.ReadCell(
+        var result = ExecuteRead(() => spreadsheets.ReadCell(
             workbook.FullPath,
             requestedWorksheetName,
-            requestedCellAddress);
+            requestedCellAddress));
         var receipt = receiptWriter.Persist(
             "workspace_read_spreadsheet_cell",
             mutatesWorkspace: false,
@@ -103,12 +104,12 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
         var workbook = ResolveReadableWorkbook(workbookPath);
         var requestedWorksheetName = Require(worksheetName, nameof(worksheetName));
         var requestedRangeAddress = Require(rangeAddress, nameof(rangeAddress));
-        var result = spreadsheets.ReadRange(
+        var result = ExecuteRead(() => spreadsheets.ReadRange(
             workbook.FullPath,
             requestedWorksheetName,
             requestedRangeAddress,
             maxRows,
-            maxColumns);
+            maxColumns));
         var receipt = receiptWriter.Persist(
             "workspace_read_spreadsheet_range",
             mutatesWorkspace: false,
@@ -140,21 +141,48 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
         var requestedWorkbookPath = Require(workbookPath, nameof(workbookPath));
         var requestedWorksheetName = Require(worksheetName, nameof(worksheetName));
         var normalizedWorkbookPath = NormalizeWorkbookInputPath(requestedWorkbookPath, createWorkbookIfMissing);
-        var workbook = paths.ResolveFilePath(normalizedWorkbookPath, allowMissing: createWorkbookIfMissing);
+        var workbook = ResolveWorkbookPath(
+            normalizedWorkbookPath,
+            allowMissing: true,
+            nameof(workbookPath));
         var requestedOutputPath = string.IsNullOrWhiteSpace(outputWorkbookPath)
             ? requestedWorkbookPath
             : outputWorkbookPath.Trim();
         var normalizedOutputPath = pathAccess.PrepareFileWritePath(requestedOutputPath) ?? requestedOutputPath;
-        var output = paths.ResolveFilePath(normalizedOutputPath, allowMissing: true);
+        var output = ResolveWorkbookPath(
+            normalizedOutputPath,
+            allowMissing: true,
+            nameof(outputWorkbookPath));
 
-        var result = spreadsheets.Write(new SpreadsheetWriteRequest(
-            workbook.FullPath,
-            output.FullPath,
-            requestedWorksheetName,
-            cellWrites ?? [],
-            rangeWrites ?? [],
-            createWorkbookIfMissing,
-            overwrite));
+        SpreadsheetWriteResult result;
+        try
+        {
+            result = spreadsheets.Write(new SpreadsheetWriteRequest(
+                workbook.FullPath,
+                output.FullPath,
+                requestedWorksheetName,
+                cellWrites ?? [],
+                rangeWrites ?? [],
+                createWorkbookIfMissing,
+                overwrite));
+        }
+        catch (SpreadsheetRangeCapacityExceededException exception)
+        {
+            throw CreateRangeCapacityFailure(exception);
+        }
+        catch (SpreadsheetWriteInputException exception)
+        {
+            throw CreateWriteInputFailure(exception);
+        }
+        catch (SpreadsheetReadInputException exception)
+        {
+            throw CreateReadInputFailure(exception);
+        }
+        catch (SpreadsheetWriteConflictException)
+        {
+            throw AgentToolConflictException.Create(
+                "The output workbook already exists and overwrite is false. Choose another outputWorkbookPath or set overwrite to true, then retry.");
+        }
         var receipt = receiptWriter.Persist(
             "workspace_write_spreadsheet",
             mutatesWorkspace: true,
@@ -202,7 +230,10 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     private WorkspaceResolvedPath ResolveReadableWorkbook(string workbookPath)
     {
         var normalizedPath = pathAccess.PrepareFileReadPath(Require(workbookPath, nameof(workbookPath))) ?? workbookPath;
-        return paths.ResolveFilePath(normalizedPath, allowMissing: false);
+        return ResolveWorkbookPath(
+            normalizedPath,
+            allowMissing: true,
+            nameof(workbookPath));
     }
 
     private string NormalizeWorkbookInputPath(string workbookPath, bool createWorkbookIfMissing)
@@ -212,22 +243,173 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
 
     private bool WorkbookExists(string workbookPath)
     {
+        var readPath = pathAccess.PrepareFileReadPath(workbookPath) ?? workbookPath;
+        var resolved = ResolveWorkbookPath(
+            readPath,
+            allowMissing: true,
+            nameof(workbookPath));
+        return File.Exists(resolved.FullPath);
+    }
+
+    private WorkspaceResolvedPath ResolveWorkbookPath(
+        string path,
+        bool allowMissing,
+        string argumentName)
+    {
         try
         {
-            var readPath = pathAccess.PrepareFileReadPath(workbookPath) ?? workbookPath;
-            var resolved = paths.ResolveFilePath(readPath, allowMissing: true);
-            return File.Exists(resolved.FullPath);
+            return paths.ResolveFilePath(path, allowMissing);
         }
-        catch (InvalidOperationException)
+        catch (WorkspacePathResolutionException exception)
         {
-            return false;
+            throw CreatePathInputFailure(argumentName, exception);
         }
     }
 
     private static string Require(string value, string name)
         => string.IsNullOrWhiteSpace(value)
-            ? throw new InvalidOperationException($"Spreadsheet tool argument '{name}' is required.")
+            ? throw AgentToolInputValidationException.Create(
+                $"Spreadsheet tool argument '{name}' is required. Supply it and retry.")
             : value.Trim();
+
+    private static AgentToolInputValidationException CreateRangeCapacityFailure(
+        SpreadsheetRangeCapacityExceededException exception)
+    {
+        var correction = exception.Dimension switch
+        {
+            SpreadsheetRangeCapacityDimension.Rows =>
+                $"Use a range with at least {exception.SuppliedCount} rows or supply at most {exception.Capacity} rows, then retry.",
+            SpreadsheetRangeCapacityDimension.Columns =>
+                $"Expand the range to at least {exception.SuppliedCount} columns or reduce values row {exception.ValuesRowNumber} to at most {exception.Capacity} values, then retry.",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.Dimension,
+                "Unknown spreadsheet range dimension.")
+        };
+        return AgentToolInputValidationException.Create($"{exception.Message} {correction}");
+    }
+
+    private static AgentToolInputValidationException CreateWriteInputFailure(
+        SpreadsheetWriteInputException exception)
+    {
+        var safeMessage = exception.Kind switch
+        {
+            SpreadsheetWriteInputFailureKind.UnsupportedInputWorkbookFormat =>
+                "workbookPath must end with .xlsx. Choose an .xlsx input path and retry.",
+            SpreadsheetWriteInputFailureKind.UnsupportedOutputWorkbookFormat =>
+                "outputWorkbookPath must end with .xlsx. Choose an .xlsx output path and retry.",
+            SpreadsheetWriteInputFailureKind.InvalidWorksheetName =>
+                "worksheetName is invalid. Use 1-31 characters, omit : \\ / ? * [ ], and do not begin or end with an apostrophe, then retry.",
+            SpreadsheetWriteInputFailureKind.MissingCellWrites =>
+                "cellWrites is missing. Supply an array or an empty array, then retry.",
+            SpreadsheetWriteInputFailureKind.MissingCellWrite =>
+                $"cellWrites item {exception.WriteNumber} is null. Supply a cell write object or remove that item, then retry.",
+            SpreadsheetWriteInputFailureKind.InvalidCellAddress =>
+                $"cellWrites item {exception.WriteNumber} has an invalid cellAddress. Use one A1 cell address such as B3, then retry.",
+            SpreadsheetWriteInputFailureKind.MissingRangeWrites =>
+                "rangeWrites is missing. Supply an array or an empty array, then retry.",
+            SpreadsheetWriteInputFailureKind.MissingRangeWrite =>
+                $"rangeWrites item {exception.WriteNumber} is null. Supply a range write object or remove that item, then retry.",
+            SpreadsheetWriteInputFailureKind.InvalidRangeAddress =>
+                $"rangeWrites item {exception.WriteNumber} has an invalid rangeAddress. Use one A1 range such as A1:B12, then retry.",
+            SpreadsheetWriteInputFailureKind.MissingRangeValues =>
+                $"rangeWrites item {exception.WriteNumber} has no values array. Supply an array of rows or an empty array, then retry.",
+            SpreadsheetWriteInputFailureKind.MissingRangeRow =>
+                $"rangeWrites item {exception.WriteNumber} values row {exception.ValuesRowNumber} is null. Supply an array for that row or remove it, then retry.",
+            SpreadsheetWriteInputFailureKind.InputWorkbookMissing =>
+                "The input workbook does not exist and createWorkbookIfMissing is false. Choose an existing workbook or set createWorkbookIfMissing to true, then retry.",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.Kind,
+                "Unknown spreadsheet write input failure kind.")
+        };
+        return AgentToolInputValidationException.Create(safeMessage);
+    }
+
+    private static T ExecuteRead<T>(Func<T> read)
+    {
+        try
+        {
+            return read();
+        }
+        catch (SpreadsheetReadInputException exception)
+        {
+            throw CreateReadInputFailure(exception);
+        }
+    }
+
+    private static AgentToolInputValidationException CreateReadInputFailure(
+        SpreadsheetReadInputException exception)
+    {
+        var safeMessage = exception.Kind switch
+        {
+            SpreadsheetReadInputFailureKind.WorkbookMissing =>
+                "workbookPath does not identify an existing .xlsx workbook. Choose an existing workbook and retry.",
+            SpreadsheetReadInputFailureKind.UnsupportedWorkbookFormat =>
+                "workbookPath must identify an .xlsx workbook. Choose a supported workbook and retry.",
+            SpreadsheetReadInputFailureKind.InvalidWorkbook =>
+                "The selected workbook is invalid or corrupt. Choose a valid .xlsx workbook and retry.",
+            SpreadsheetReadInputFailureKind.WorksheetNotFound =>
+                "worksheetName was not found in the workbook. Use a name returned by workspace_spreadsheet_summary and retry.",
+            SpreadsheetReadInputFailureKind.InvalidCellAddress =>
+                "cellAddress is invalid. Use one A1 cell address such as B3 and retry.",
+            SpreadsheetReadInputFailureKind.InvalidRangeAddress =>
+                "rangeAddress is invalid. Use one A1 range such as A1:B12 and retry.",
+            SpreadsheetReadInputFailureKind.PreviewLimitOutOfRange or
+            SpreadsheetReadInputFailureKind.ReadLimitOutOfRange =>
+                CreateReadLimitFailureMessage(exception),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.Kind,
+                "Unknown spreadsheet read input failure kind.")
+        };
+        return AgentToolInputValidationException.Create(safeMessage);
+    }
+
+    private static AgentToolInputValidationException CreatePathInputFailure(
+        string argumentName,
+        WorkspacePathResolutionException exception)
+    {
+        var safeMessage = exception.Kind switch
+        {
+            WorkspacePathResolutionFailureKind.FileRequired =>
+                $"{argumentName} identifies a directory, but a workbook file path is required. Choose a file path and retry.",
+            WorkspacePathResolutionFailureKind.PathMissing =>
+                $"{argumentName} does not identify an existing workbook file. Choose an existing file and retry.",
+            WorkspacePathResolutionFailureKind.InvalidPath or
+            WorkspacePathResolutionFailureKind.OutsideWorkspace or
+            WorkspacePathResolutionFailureKind.ManagedPathAliasMismatch or
+            WorkspacePathResolutionFailureKind.ReparsePointTraversal or
+            WorkspacePathResolutionFailureKind.ForeignManagedScope =>
+                $"{argumentName} is not a valid accessible workspace file path. Choose an allowed workspace path and retry.",
+            WorkspacePathResolutionFailureKind.DirectoryRequired =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(exception),
+                    exception.Kind,
+                    "A directory-required failure is invalid for workbook file resolution."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.Kind,
+                "Unknown workspace path resolution failure kind.")
+        };
+        return AgentToolInputValidationException.Create(safeMessage);
+    }
+
+    private static string CreateReadLimitFailureMessage(
+        SpreadsheetReadInputException exception)
+    {
+        var argumentName = exception.LimitKind switch
+        {
+            SpreadsheetReadLimitKind.MaxWorksheets => "maxWorksheets",
+            SpreadsheetReadLimitKind.MaxRows => "maxRows",
+            SpreadsheetReadLimitKind.MaxColumns => "maxColumns",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.LimitKind,
+                "Unknown spreadsheet read limit kind.")
+        };
+        return $"{argumentName} must be between {exception.Minimum} and {exception.Maximum}. Supply a value in that range and retry.";
+    }
 }
 
 internal sealed record WorkspaceSpreadsheetSummaryToolResult(
@@ -338,154 +520,4 @@ internal sealed class WorkspaceSpreadsheetReceiptWriter(
             "tool-receipts",
             DateTime.UtcNow.ToString("yyyyMMdd"),
             $"{DateTime.UtcNow:HHmmssfff}-{operation}-{Guid.NewGuid():N}.json");
-}
-
-internal sealed class WorkspaceSpreadsheetRuntimePathAccess(
-    string workspaceRoot,
-    WorkspaceScopeDescriptor workspaceScope,
-    AgentWorkspaceToolAccessSettings accessSettings)
-{
-    private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-    private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
-    private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
-    private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
-
-    public string? PrepareFileReadPath(string? path)
-    {
-        EnsureFileReadAllowed(path);
-        return NormalizeRecoverableCurrentRunArtifactPath(NormalizeAllowedExternalPathForWorkspaceTools(path));
-    }
-
-    public string? PrepareFileWritePath(string? path)
-    {
-        EnsureFileWriteAllowed(path);
-        return NormalizeAllowedExternalPathForWorkspaceTools(path);
-    }
-
-    private void EnsureFileReadAllowed(string? path)
-    {
-        if (!accessSettings.CanReadFiles && !accessSettings.CanWriteFiles)
-        {
-            throw new InvalidOperationException("This agent is not allowed to read workspace files.");
-        }
-
-        EnsureExternalAliasAllowed(path, requireWrite: false);
-    }
-
-    private void EnsureFileWriteAllowed(string? path)
-    {
-        if (!accessSettings.CanWriteFiles)
-        {
-            throw new InvalidOperationException("This agent is not allowed to write workspace files.");
-        }
-
-        EnsureExternalAliasAllowed(path, requireWrite: true);
-    }
-
-    private void EnsureExternalAliasAllowed(string? path, bool requireWrite)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-        if (string.IsNullOrWhiteSpace(normalizedAlias))
-        {
-            return;
-        }
-
-        if (IsManagedWorkspaceAbsolutePath(path))
-        {
-            return;
-        }
-
-        var externalAccess = ResolveExternalTargetAccess();
-        if (requireWrite && externalAccess.CanWrite(normalizedAlias))
-        {
-            return;
-        }
-
-        if (!requireWrite && externalAccess.CanRead(normalizedAlias))
-        {
-            return;
-        }
-
-        if (requireWrite && externalAccess.CanRead(normalizedAlias))
-        {
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is read-only for this run.");
-        }
-
-        throw new InvalidOperationException(
-            $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
-    }
-
-    private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) ||
-            IsManagedWorkspaceAbsolutePath(path))
-        {
-            return path;
-        }
-
-        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-        return string.IsNullOrWhiteSpace(normalizedAlias)
-            ? path
-            : normalizedAlias;
-    }
-
-    private string? NormalizeRecoverableCurrentRunArtifactPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return path;
-        }
-
-        var auditScope = WorkspaceExecutionAuditContext.Current;
-        var currentRunId = auditScope?.ProcessRunId;
-        var currentWorkspaceScope = auditScope?.ContextWorkspaceScope ?? workspaceScope;
-        return WorkspaceProcessRunArtifactPath.TryBuildRecoverableCurrentRunPath(
-            path,
-            currentRunId,
-            currentWorkspaceScope,
-            out var currentRunPath)
-            ? currentRunPath
-            : path;
-    }
-
-    private EffectiveExternalTargetAccessScope ResolveExternalTargetAccess()
-    {
-        var auditScope = WorkspaceExecutionAuditContext.Current;
-        return EffectiveExternalTargetAccessResolver.Resolve(
-            accessSettings,
-            auditScope?.AllowedExternalTargetAliases,
-            auditScope?.ReadOnlyExternalTargetAliases);
-    }
-
-    private bool IsManagedWorkspaceAbsolutePath(string path)
-    {
-        try
-        {
-            if (!Path.IsPathRooted(path))
-            {
-                return false;
-            }
-
-            var fullPath = Path.GetFullPath(path);
-            return string.Equals(fullPath, workspaceRoot, StringComparison.OrdinalIgnoreCase) ||
-                   fullPath.StartsWith(workspaceRootWithSeparator, StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    }
-
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
 }

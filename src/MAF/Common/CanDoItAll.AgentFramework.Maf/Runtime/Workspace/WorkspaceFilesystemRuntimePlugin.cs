@@ -27,9 +27,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
 
     private readonly IWorkspaceFileService fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-    private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
-    private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
-    private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+    private readonly WorkspaceRuntimeFileAccessGuard fileAccess = new(workspaceRoot, workspaceScope, accessSettings);
 
     public WorkspaceFileListResult ListWorkspaceDirectory(string? relativePath = null, int maxResults = 100)
     {
@@ -212,6 +210,10 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
         {
             throw WorkspaceToolAccessDeniedException.InaccessiblePath(requestedPath);
         }
+        catch (WorkspacePathResolutionException exception)
+        {
+            throw CreatePathInputFailure(exception);
+        }
     }
 
     private static TResult ExecuteWithSafeAccessDenial<TResult>(
@@ -229,76 +231,22 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
                 firstRequestedPath,
                 secondRequestedPath);
         }
+        catch (WorkspacePathResolutionException exception)
+        {
+            throw CreatePathInputFailure(exception);
+        }
     }
+
+    private static AgentToolInputValidationException CreatePathInputFailure(
+        WorkspacePathResolutionException exception)
+        => AgentToolInputValidationException.Create(
+            $"{exception.SafeMessage} Supply a corrected workspace path and retry.");
 
     private string? PrepareFileReadPath(string? path)
-    {
-        EnsureFileReadAllowed(path);
-        return NormalizeRecoverableCurrentRunArtifactPath(NormalizeAllowedExternalPathForWorkspaceTools(path));
-    }
+        => fileAccess.PrepareFileReadPath(path);
 
     private string? PrepareFileWritePath(string? path)
-    {
-        EnsureFileWriteAllowed(path);
-        return NormalizeAllowedExternalPathForWorkspaceTools(path);
-    }
-
-    private void EnsureFileReadAllowed(string? path)
-    {
-        if (!accessSettings.CanReadFiles && !accessSettings.CanWriteFiles)
-        {
-            throw WorkspaceToolAccessDeniedException.FileReadDisabled();
-        }
-
-        EnsureExternalAliasAllowed(path, requireWrite: false);
-    }
-
-    private void EnsureFileWriteAllowed(string? path)
-    {
-        if (!accessSettings.CanWriteFiles)
-        {
-            throw WorkspaceToolAccessDeniedException.FileWriteDisabled();
-        }
-
-        EnsureExternalAliasAllowed(path, requireWrite: true);
-    }
-
-    private void EnsureExternalAliasAllowed(string? path, bool requireWrite)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-        if (string.IsNullOrWhiteSpace(normalizedAlias))
-        {
-            return;
-        }
-
-        if (IsManagedWorkspaceAbsolutePath(path))
-        {
-            return;
-        }
-
-        var externalAccess = ResolveExternalTargetAccess();
-        if (requireWrite && externalAccess.CanWrite(normalizedAlias))
-        {
-            return;
-        }
-
-        if (!requireWrite && externalAccess.CanRead(normalizedAlias))
-        {
-            return;
-        }
-
-        if (requireWrite && externalAccess.CanRead(normalizedAlias))
-        {
-            throw WorkspaceToolAccessDeniedException.ExternalTargetReadOnly(normalizedAlias);
-        }
-
-        throw WorkspaceToolAccessDeniedException.ExternalTargetNotAuthorized(normalizedAlias);
-    }
+        => fileAccess.PrepareFileWritePath(path);
 
     private void EnsureDeleteAllowed(string path, bool recursive)
     {
@@ -308,7 +256,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             return;
         }
 
-        var externalAccess = ResolveExternalTargetAccess();
+        var externalAccess = fileAccess.ResolveExternalTargetAccess();
         if (recursive && externalAccess.HasEffectiveReadOnlyDescendant(normalizedAlias))
         {
             throw WorkspaceToolAccessDeniedException.RecursiveDeleteReadOnlyAncestor(normalizedAlias);
@@ -342,7 +290,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
     {
         var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
         if (string.IsNullOrWhiteSpace(normalizedAlias) ||
-            !ResolveExternalTargetAccess().HasEffectiveReadOnlyDescendant(normalizedAlias))
+            !fileAccess.ResolveExternalTargetAccess().HasEffectiveReadOnlyDescendant(normalizedAlias))
         {
             return;
         }
@@ -350,51 +298,9 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
         throw WorkspaceToolAccessDeniedException.ReadOnlyAncestorMutation(operation, normalizedAlias);
     }
 
-    private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) ||
-            IsManagedWorkspaceAbsolutePath(path))
-        {
-            return path;
-        }
-
-        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-        return string.IsNullOrWhiteSpace(normalizedAlias)
-            ? path
-            : normalizedAlias;
-    }
-
-    private string? NormalizeRecoverableCurrentRunArtifactPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return path;
-        }
-
-        var auditScope = WorkspaceExecutionAuditContext.Current;
-        var currentRunId = auditScope?.ProcessRunId;
-        var currentWorkspaceScope = auditScope?.ContextWorkspaceScope ?? workspaceScope;
-        return WorkspaceProcessRunArtifactPath.TryBuildRecoverableCurrentRunPath(
-            path,
-            currentRunId,
-            currentWorkspaceScope,
-            out var currentRunPath)
-            ? currentRunPath
-            : path;
-    }
-
-    private EffectiveExternalTargetAccessScope ResolveExternalTargetAccess()
-    {
-        var auditScope = WorkspaceExecutionAuditContext.Current;
-        return EffectiveExternalTargetAccessResolver.Resolve(
-            accessSettings,
-            auditScope?.AllowedExternalTargetAliases,
-            auditScope?.ReadOnlyExternalTargetAliases);
-    }
-
     private string ResolveFileWriteAuthorityRoot(string path)
     {
-        if (IsManagedWorkspaceAbsolutePath(path))
+        if (fileAccess.IsManagedWorkspaceAbsolutePath(path))
         {
             return workspaceRoot;
         }
@@ -405,7 +311,7 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             return workspaceRoot;
         }
 
-        return ResolveExternalTargetAccess().WritableAliases
+        return fileAccess.ResolveExternalTargetAccess().WritableAliases
                    .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
                    .Where(alias =>
                        !string.IsNullOrWhiteSpace(alias) &&
@@ -443,29 +349,4 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
             : trimmedAlias + "/";
     }
 
-    private bool IsManagedWorkspaceAbsolutePath(string path)
-    {
-        try
-        {
-            if (!Path.IsPathRooted(path))
-            {
-                return false;
-            }
-
-            var fullPath = Path.GetFullPath(path);
-            return string.Equals(fullPath, workspaceRoot, StringComparison.OrdinalIgnoreCase) ||
-                   fullPath.StartsWith(workspaceRootWithSeparator, StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    }
-
-    private static string EnsureTrailingSeparator(string path)
-    {
-        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-    }
 }

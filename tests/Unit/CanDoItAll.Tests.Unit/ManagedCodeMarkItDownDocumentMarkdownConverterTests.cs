@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.Tools.Documents;
 
 namespace CanDoItAll.Tests.Unit;
@@ -83,6 +84,8 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverterTests
             Assert.False(result.Succeeded);
             Assert.Equal(Path.GetFullPath(sourcePath), result.SourcePath);
             Assert.Contains("was not found", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(sourcePath, result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(root, result.Diagnostics, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(result.Markdown);
             Assert.Equal(0, result.TotalMarkdownCharacters);
             Assert.False(result.IsTruncated);
@@ -92,6 +95,19 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverterTests
         {
             DeleteDirectory(root);
         }
+    }
+
+    [Fact]
+    public async Task ConvertToMarkdownAsync_does_not_turn_unexpected_path_failure_into_model_visible_result()
+    {
+        const string sourcePath = "C:\\private\\document-converter-sentinel\0.pdf";
+        var converter = new ManagedCodeMarkItDownDocumentMarkdownConverter();
+
+        var exception = await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+            converter.ConvertToMarkdownAsync(
+                new WorkspaceDocumentMarkdownConversionRequest(sourcePath)));
+
+        Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
     }
 
     [Fact]

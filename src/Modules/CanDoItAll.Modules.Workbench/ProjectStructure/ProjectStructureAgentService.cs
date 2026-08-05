@@ -1565,7 +1565,8 @@ public sealed class ProjectStructureAgentService(
     {
         if (request.ObjectType is not (ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset))
         {
-            throw new ProjectStructureAgentException(400, "AssetTypeRequired", "Asset nodes must be File, ImageAsset, or VideoAsset.");
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.AssetTypeRequired);
         }
 
         ProjectStructureManagedAssetCreationPolicy.EnsureExplicitParent(request.ParentNodeKey);
@@ -1722,7 +1723,8 @@ public sealed class ProjectStructureAgentService(
         var node = surface.Nodes.FirstOrDefault(item => string.Equals(item.Id, nodeId, StringComparison.Ordinal));
         if (node is null)
         {
-            throw new ProjectStructureAgentException(404, "NodeNotFound", $"Node '{nodeId}' was not found.");
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.NodeNotFound);
         }
 
         string? revisionParentNodeId = ResolveRevisionParentNodeId(surface, node);
@@ -1766,7 +1768,8 @@ public sealed class ProjectStructureAgentService(
             (string.IsNullOrWhiteSpace(node.MediaRelativePath) &&
              string.IsNullOrWhiteSpace(node.StorageObjectReferenceJson)))
         {
-            throw new ProjectStructureAgentException(400, "AssetRequired", $"Node '{node.Id}' is not a managed asset node.");
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.AssetRequired);
         }
 
         return new ProjectStructureAssetDescriptor(
@@ -1794,29 +1797,30 @@ public sealed class ProjectStructureAgentService(
 
         if (string.IsNullOrWhiteSpace(media.FileName))
         {
-            throw new ProjectStructureAgentException(400, "FileNameRequired", "Uploaded media requires a file name.");
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.FileNameRequired);
         }
 
         if (string.IsNullOrWhiteSpace(media.Base64Data))
         {
-            throw new ProjectStructureAgentException(400, "MediaPayloadRequired", "Uploaded media requires base64 content.");
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.MediaPayloadRequired);
         }
 
         if (media.Base64Data.Length > ProjectStructureAssetUploadLimits.MaximumBase64Characters)
         {
-            throw new ProjectStructureAgentException(
-                413,
-                "MediaPayloadTooLarge",
-                $"Uploaded media is limited to {ProjectStructureAssetUploadLimits.MaximumFileBytes / (1024 * 1024)} MiB.");
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.MediaPayloadTooLarge);
         }
 
         try
         {
             _ = Convert.FromBase64String(media.Base64Data.Trim());
         }
-        catch (FormatException ex)
+        catch (FormatException)
         {
-            throw new ProjectStructureAgentException(400, "InvalidBase64Payload", "Uploaded media content was not valid base64.", ex.Message);
+            throw ProjectStructureAssetAgentFailureBoundary.Create(
+                ProjectStructureAssetAgentFailureKind.InvalidBase64Payload);
         }
     }
 
@@ -1849,10 +1853,8 @@ public sealed class ProjectStructureAgentService(
                 cancellationToken);
         }
 
-        throw new ProjectStructureAgentException(
-            400,
-            "MediaSourceRequired",
-            "Asset creation requires a media payload, a source workspace path, or an external source URL.");
+        throw ProjectStructureAssetAgentFailureBoundary.Create(
+            ProjectStructureAssetAgentFailureKind.MediaSourceRequired);
     }
 
     private async Task<ProjectObjectMediaPayload> ResolveWorkspaceSourceMediaAsync(

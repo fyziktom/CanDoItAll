@@ -1070,7 +1070,13 @@ public class ProjectStructureAgentException : Exception, IAgentToolFailure
 public sealed class ProjectStructureLeaseConflictException : ProjectStructureAgentException
 {
     public ProjectStructureLeaseConflictException(ProjectStructureLeaseConflict conflict)
-        : base(409, "LeaseConflict", $"Scope '{conflict.ScopeKey}' is currently leased by '{conflict.AgentName}' on '{conflict.MachineName}'.", conflict)
+        : base(
+            409,
+            "LeaseConflict",
+            "Another active operation currently holds the project-structure mutation lease. Wait for that operation to finish or for its lease to expire, then retry.",
+            details: null,
+            isSafeToExpose: true,
+            canRetryWithCorrectedInput: false)
     {
         Conflict = conflict;
     }

@@ -118,28 +118,16 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var outputFormat = NormalizeOption(request.OutputFormat, providerConfiguration.DefaultOutputFormat, "png", ValidImageOutputFormats, "image output format");
             var outputPath = owner.ResolveImageGenerationOutputPath(request.OutputWorkspacePath, outputFormat);
             var sourceImages = await ResolveSourceImagesAsync(agent, request, cancellationToken);
-            AgentImageGenerationResult generated;
-            try
-            {
-                generated = await owner.imageGenerationService.GenerateAsync(
-                    new AgentImageGenerationRequest(
-                        provider,
-                        model,
-                        request.Prompt.Trim(),
-                        size,
-                        quality,
-                        ParseOutputFormat(outputFormat),
-                        sourceImages),
-                    cancellationToken);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                throw new ImageGenerationToolException(
-                    "ImageGenerationProviderFailed",
-                    $"Image-generation provider '{provider.Name}' could not complete the request. Verify that the provider is reachable or select a different enabled image provider, then retry.",
-                    canRetryWithCorrectedInput: true,
-                    exception);
-            }
+            var generated = await owner.imageGenerationService.GenerateAsync(
+                new AgentImageGenerationRequest(
+                    provider,
+                    model,
+                    request.Prompt.Trim(),
+                    size,
+                    quality,
+                    ParseOutputFormat(outputFormat),
+                    sourceImages),
+                cancellationToken);
             var generatedImage = generated.Images.FirstOrDefault()
                 ?? throw new InvalidOperationException("Image generation completed without image data.");
             var imageBytes = generatedImage.Bytes;
@@ -537,20 +525,26 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         {
             resolution = workspacePaths.ResolveFilePath(path, allowMissing: false);
         }
-        catch (InvalidOperationException exception)
+        catch (WorkspacePathResolutionException exception)
         {
-            throw new InvalidOperationException($"Source image '{path}' could not be resolved inside the active workspace scope. {exception.Message}", exception);
+            throw CreateSourceImagePathFailure(exception);
         }
 
         if (!resolution.IsWorkspacePath)
         {
-            throw new InvalidOperationException($"Source image '{path}' must resolve inside the active workspace scope.");
+            throw new ImageGenerationToolException(
+                "ImageSourcePathOutsideWorkspace",
+                "Source images must be inside the active workspace scope. Choose an existing workspace image and retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         var extension = Path.GetExtension(resolution.FullPath).ToLowerInvariant();
         if (extension is not ".png" and not ".jpg" and not ".jpeg" and not ".webp")
         {
-            throw new InvalidOperationException($"Source image '{path}' must be a PNG, JPEG, or WEBP file.");
+            throw new ImageGenerationToolException(
+                "ImageSourceFormatUnsupported",
+                "Source images must be PNG, JPEG, or WEBP files. Choose a supported workspace image and retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         return new WorkspaceImagePathResolution(
@@ -574,24 +568,96 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
         {
             resolution = workspacePaths.ResolveFilePath(normalizedPath, allowMissing: true);
         }
-        catch (InvalidOperationException exception)
+        catch (WorkspacePathResolutionException exception)
         {
-            throw new InvalidOperationException($"Output path '{normalizedPath}' could not be resolved inside the active workspace scope. {exception.Message}", exception);
+            throw CreateImageOutputPathFailure(exception);
         }
 
         if (!resolution.IsWorkspacePath)
         {
-            throw new InvalidOperationException($"Output path '{normalizedPath}' must resolve inside the active workspace scope.");
+            throw new ImageGenerationToolException(
+                "ImageOutputPathOutsideWorkspace",
+                "The image output path must be inside the active workspace scope. Choose a workspace file path and retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         if (Directory.Exists(resolution.FullPath))
         {
-            throw new InvalidOperationException($"Output path '{normalizedPath}' resolves to a directory.");
+            throw new ImageGenerationToolException(
+                "ImageOutputFileRequired",
+                "The image output path identifies a directory, but a file path is required. Choose a workspace file path and retry.",
+                canRetryWithCorrectedInput: true);
         }
 
         return new ImageGenerationOutputPath(
             resolution.FullPath,
             NormalizeWorkspaceRelativePath(resolution.RelativePath));
+    }
+
+    private static ImageGenerationToolException CreateSourceImagePathFailure(
+        WorkspacePathResolutionException exception)
+    {
+        var (errorCode, safeMessage) = exception.Kind switch
+        {
+            WorkspacePathResolutionFailureKind.PathMissing => (
+                "ImageSourcePathMissing",
+                "The source image path does not identify an existing file. Choose an existing PNG, JPEG, or WEBP workspace image and retry."),
+            WorkspacePathResolutionFailureKind.FileRequired => (
+                "ImageSourceFileRequired",
+                "The source image path identifies a directory, but an image file is required. Choose an existing PNG, JPEG, or WEBP workspace image and retry."),
+            WorkspacePathResolutionFailureKind.OutsideWorkspace or
+            WorkspacePathResolutionFailureKind.ForeignManagedScope => (
+                "ImageSourcePathOutsideWorkspace",
+                "Source images must be inside the active workspace scope. Choose an existing workspace image and retry."),
+            WorkspacePathResolutionFailureKind.InvalidPath or
+            WorkspacePathResolutionFailureKind.DirectoryRequired or
+            WorkspacePathResolutionFailureKind.ManagedPathAliasMismatch or
+            WorkspacePathResolutionFailureKind.ReparsePointTraversal => (
+                "ImageSourcePathInvalid",
+                "The source image path is not a valid accessible workspace file path. Choose an existing PNG, JPEG, or WEBP workspace image and retry."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.Kind,
+                "Unknown workspace path resolution failure kind.")
+        };
+
+        return new ImageGenerationToolException(
+            errorCode,
+            safeMessage,
+            canRetryWithCorrectedInput: true,
+            exception);
+    }
+
+    private static ImageGenerationToolException CreateImageOutputPathFailure(
+        WorkspacePathResolutionException exception)
+    {
+        var (errorCode, safeMessage) = exception.Kind switch
+        {
+            WorkspacePathResolutionFailureKind.FileRequired => (
+                "ImageOutputFileRequired",
+                "The image output path identifies a directory, but a file path is required. Choose a workspace file path and retry."),
+            WorkspacePathResolutionFailureKind.OutsideWorkspace or
+            WorkspacePathResolutionFailureKind.ForeignManagedScope => (
+                "ImageOutputPathOutsideWorkspace",
+                "The image output path must be inside the active workspace scope. Choose a workspace file path and retry."),
+            WorkspacePathResolutionFailureKind.InvalidPath or
+            WorkspacePathResolutionFailureKind.DirectoryRequired or
+            WorkspacePathResolutionFailureKind.PathMissing or
+            WorkspacePathResolutionFailureKind.ManagedPathAliasMismatch or
+            WorkspacePathResolutionFailureKind.ReparsePointTraversal => (
+                "ImageOutputPathInvalid",
+                "The image output path is not a valid accessible workspace file path. Choose a workspace file path and retry."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(exception),
+                exception.Kind,
+                "Unknown workspace path resolution failure kind.")
+        };
+
+        return new ImageGenerationToolException(
+            errorCode,
+            safeMessage,
+            canRetryWithCorrectedInput: true,
+            exception);
     }
 
     private static string NormalizeWorkspaceRelativePath(string path)

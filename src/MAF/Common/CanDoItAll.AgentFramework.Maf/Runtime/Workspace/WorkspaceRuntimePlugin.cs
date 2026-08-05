@@ -17,10 +17,8 @@ internal sealed class WorkspaceRuntimePlugin(
 {
         private readonly IWorkspaceCommandExecutionService commandExecutionService = commandExecutionService;
         private readonly IWorkspaceArtifactToolService artifactToolService = artifactToolService;
-        private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-        private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
-        private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
         private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
+        private readonly WorkspaceRuntimeFileAccessGuard fileAccess = new(workspaceRoot, workspaceScope, accessSettings);
         private readonly ProviderProfile provider = provider;
         private readonly string runtimeModel = runtimeModel;
         private readonly IAgentImageAnalysisService imageAnalysisService = imageAnalysisService;
@@ -196,40 +194,26 @@ internal sealed class WorkspaceRuntimePlugin(
 
             var selectedModel = ResolveImageAnalysisModel();
             var analysisPrompt = NormalizeImageAnalysisPrompt(prompt);
-            try
-            {
-                var result = await imageAnalysisService.AnalyzeAsync(
-                        new AgentImageAnalysisRequest(
-                            provider,
-                            selectedModel,
-                            analysisPrompt,
-                            [new AgentImageAnalysisSource(
-                                ResolveImageAttachmentName(image.Path),
-                                image.ContentType,
-                                image.Bytes)],
-                            ImageAnalysisModelParameterConfigurationJson))
-                    .ConfigureAwait(false);
+            var result = await imageAnalysisService.AnalyzeAsync(
+                    new AgentImageAnalysisRequest(
+                        provider,
+                        selectedModel,
+                        analysisPrompt,
+                        [new AgentImageAnalysisSource(
+                            ResolveImageAttachmentName(image.Path),
+                            image.ContentType,
+                            image.Bytes)],
+                        ImageAnalysisModelParameterConfigurationJson))
+                .ConfigureAwait(false);
 
-                return CreateImageAnalysisResult(
-                    succeeded: true,
-                    image,
-                    analysisPrompt,
-                    result.Analysis,
-                    result.InputTokens,
-                    result.OutputTokens,
-                    diagnostics: string.Empty);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                return CreateImageAnalysisResult(
-                    succeeded: false,
-                    image,
-                    analysisPrompt,
-                    analysis: string.Empty,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    diagnostics: exception.Message);
-            }
+            return CreateImageAnalysisResult(
+                succeeded: true,
+                image,
+                analysisPrompt,
+                result.Analysis,
+                result.InputTokens,
+                result.OutputTokens,
+                diagnostics: string.Empty);
         }
 
         public async Task<WorkspaceImagesAnalysisResult> AnalyzeImageFiles(string[] paths, string prompt)
@@ -287,61 +271,41 @@ internal sealed class WorkspaceRuntimePlugin(
             var selectedModel = ResolveImageAnalysisModel();
             var deterministicEvidence = WorkspaceImageSetEvidenceBuilder.Build(images);
             var analysisPrompt = NormalizeImageSetAnalysisPrompt(prompt, images.Count, deterministicEvidence);
-            try
-            {
-                var sources = images
-                    .Select((image, index) => new AgentImageAnalysisSource(
-                        $"{index + 1:D2}-{ResolveImageAttachmentName(image.Path)}",
-                        image.ContentType,
-                        image.Bytes))
-                    .ToList();
-                var result = await imageAnalysisService.AnalyzeAsync(
-                        new AgentImageAnalysisRequest(
-                            provider,
-                            selectedModel,
-                            analysisPrompt,
-                            sources,
-                            ImageAnalysisModelParameterConfigurationJson))
-                    .ConfigureAwait(false);
+            var sources = images
+                .Select((image, index) => new AgentImageAnalysisSource(
+                    $"{index + 1:D2}-{ResolveImageAttachmentName(image.Path)}",
+                    image.ContentType,
+                    image.Bytes))
+                .ToList();
+            var result = await imageAnalysisService.AnalyzeAsync(
+                    new AgentImageAnalysisRequest(
+                        provider,
+                        selectedModel,
+                        analysisPrompt,
+                        sources,
+                        ImageAnalysisModelParameterConfigurationJson))
+                .ConfigureAwait(false);
 
-                return CreateImagesAnalysisResult(
-                    succeeded: true,
-                    images,
-                    analysisPrompt,
-                    result.Analysis,
-                    result.InputTokens,
-                    result.OutputTokens,
-                    diagnostics: string.Empty);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                return CreateImagesAnalysisResult(
-                    succeeded: false,
-                    images,
-                    analysisPrompt,
-                    analysis: string.Empty,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    diagnostics: exception.Message);
-            }
+            return CreateImagesAnalysisResult(
+                succeeded: true,
+                images,
+                analysisPrompt,
+                result.Analysis,
+                result.InputTokens,
+                result.OutputTokens,
+                diagnostics: string.Empty);
         }
 
         private string? PrepareFileReadPath(string? path)
-        {
-            EnsureFileReadAllowed(path);
-            return NormalizeRecoverableCurrentRunArtifactPath(NormalizeAllowedExternalPathForWorkspaceTools(path));
-        }
+            => fileAccess.PrepareFileReadPath(path);
 
         private string? PrepareFileWritePath(string? path)
-        {
-            EnsureFileWriteAllowed(path);
-            return NormalizeAllowedExternalPathForWorkspaceTools(path);
-        }
+            => fileAccess.PrepareFileWritePath(path);
 
         private string? PrepareGitMutationWorkingDirectory(string? workingDirectory)
         {
             EnsureGitMutationAllowed(workingDirectory);
-            return NormalizeAllowedExternalPathForWorkspaceTools(workingDirectory);
+            return fileAccess.NormalizeAllowedExternalPath(workingDirectory);
         }
 
         private string[] PrepareGitMutationPaths(string[]? paths)
@@ -356,19 +320,19 @@ internal sealed class WorkspaceRuntimePlugin(
         private string? PrepareValidationCommandPath(string? path)
         {
             EnsureValidationCommandAllowed(path);
-            return NormalizeAllowedExternalPathForWorkspaceTools(path);
+            return fileAccess.NormalizeAllowedExternalPath(path);
         }
 
         private string? PrepareScaffoldPath(string? path)
         {
             EnsureScaffoldAllowed(path);
-            return NormalizeAllowedExternalPathForWorkspaceTools(path);
+            return fileAccess.NormalizeAllowedExternalPath(path);
         }
 
         private string? PrepareLocalScriptReadPath(string? path)
         {
             EnsureLocalScriptAllowed(path);
-            return NormalizeAllowedExternalPathForWorkspaceTools(path);
+            return fileAccess.NormalizeAllowedExternalPath(path);
         }
 
         private string[]? PrepareLocalScriptArguments(string[]? arguments)
@@ -399,15 +363,15 @@ internal sealed class WorkspaceRuntimePlugin(
                     "Script argument uses an invalid external-target path. Use a canonical alias without traversal segments.");
             }
 
-            EnsureExternalAliasAllowed(candidate.Path, requireWrite: false);
-            var normalizedPath = NormalizeAllowedExternalPathForWorkspaceTools(candidate.Path) ?? candidate.Path;
+            fileAccess.EnsureExternalAliasAllowed(candidate.Path, requireWrite: false);
+            var normalizedPath = fileAccess.NormalizeAllowedExternalPath(candidate.Path) ?? candidate.Path;
             return candidate.ReplacePath(normalizedPath);
         }
 
         private string? PrepareArtifactTransformationReadPath(string? path)
         {
             EnsureArtifactTransformationAllowed(path);
-            return NormalizeAllowedExternalPathForWorkspaceTools(path);
+            return fileAccess.NormalizeAllowedExternalPath(path);
         }
 
         private string? PrepareArtifactTransformationWritePath(string? path)
@@ -421,26 +385,6 @@ internal sealed class WorkspaceRuntimePlugin(
             return PrepareFileWritePath(path);
         }
 
-        private void EnsureFileReadAllowed(string? path)
-        {
-            if (!accessSettings.CanReadFiles && !accessSettings.CanWriteFiles)
-            {
-                throw new InvalidOperationException("This agent is not allowed to read workspace files.");
-            }
-
-            EnsureExternalAliasAllowed(path, requireWrite: false);
-        }
-
-        private void EnsureFileWriteAllowed(string? path)
-        {
-            if (!accessSettings.CanWriteFiles)
-            {
-                throw new InvalidOperationException("This agent is not allowed to write workspace files.");
-            }
-
-            EnsureExternalAliasAllowed(path, requireWrite: true);
-        }
-
         private void EnsureGitMutationAllowed(string? path)
         {
             if (!accessSettings.CanManageWorkspacePaths)
@@ -448,7 +392,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 throw new InvalidOperationException($"This agent is not allowed to mutate git state. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant workspace path management.");
             }
 
-            EnsureFileWriteAllowed(path);
+            fileAccess.EnsureFileWriteAllowed(path);
         }
 
         private void EnsureValidationCommandAllowed(string? path)
@@ -458,7 +402,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 throw new InvalidOperationException($"This agent is not allowed to run workspace validation commands. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant validation commands; repair the agent or governed process workspace-tool profile instead of retrying the command.");
             }
 
-            EnsureFileReadAllowed(path);
+            fileAccess.EnsureFileReadAllowed(path);
         }
 
         private void EnsureScaffoldAllowed(string? path)
@@ -468,7 +412,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 throw new InvalidOperationException($"This agent is not allowed to scaffold workspace projects. Effective workspace tool profile '{FormatEffectiveWorkspaceProfile()}' does not grant project scaffolding; implementation process steps must use a software-development workspace-tool profile.");
             }
 
-            EnsureFileWriteAllowed(path);
+            fileAccess.EnsureFileWriteAllowed(path);
         }
 
         private void EnsureLocalScriptAllowed(string? path)
@@ -478,7 +422,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 throw new InvalidOperationException("This agent is not allowed to run local workspace scripts.");
             }
 
-            EnsureFileReadAllowed(path);
+            fileAccess.EnsureFileReadAllowed(path);
         }
 
         private void EnsureArtifactTransformationAllowed(string? path)
@@ -488,7 +432,7 @@ internal sealed class WorkspaceRuntimePlugin(
                 throw new InvalidOperationException("This agent is not allowed to transform workspace artifacts.");
             }
 
-            EnsureFileReadAllowed(path);
+            fileAccess.EnsureFileReadAllowed(path);
         }
 
         private WorkspaceImageAnalysisResult CreateImageAnalysisResult(
@@ -585,87 +529,6 @@ internal sealed class WorkspaceRuntimePlugin(
             return string.IsNullOrWhiteSpace(fileName) ? "image" : fileName;
         }
 
-        private void EnsureExternalAliasAllowed(string? path, bool requireWrite)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return;
-            }
-
-            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-            if (string.IsNullOrWhiteSpace(normalizedAlias))
-            {
-                return;
-            }
-
-            if (IsManagedWorkspaceAbsolutePath(path))
-            {
-                return;
-            }
-
-            var externalAccess = ResolveExternalTargetAccess();
-            if (requireWrite && externalAccess.CanWrite(normalizedAlias))
-            {
-                return;
-            }
-
-            if (!requireWrite && externalAccess.CanRead(normalizedAlias))
-            {
-                return;
-            }
-
-            if (requireWrite && externalAccess.CanRead(normalizedAlias))
-            {
-                throw new InvalidOperationException(
-                    $"External workspace path '{normalizedAlias}' is read-only for this run.");
-            }
-
-            throw new InvalidOperationException(
-                $"External workspace path '{normalizedAlias}' is not in this agent's allowed external workspace roots.");
-        }
-
-        private string? NormalizeAllowedExternalPathForWorkspaceTools(string? path)
-        {
-            if (string.IsNullOrWhiteSpace(path) ||
-                IsManagedWorkspaceAbsolutePath(path))
-            {
-                return path;
-            }
-
-            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-            return string.IsNullOrWhiteSpace(normalizedAlias)
-                ? path
-                : normalizedAlias;
-        }
-
-        private string? NormalizeRecoverableCurrentRunArtifactPath(string? path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return path;
-            }
-
-            var auditScope = WorkspaceExecutionAuditContext.Current;
-            var currentRunId = auditScope?.ProcessRunId;
-            var currentWorkspaceScope = auditScope?.ContextWorkspaceScope ?? workspaceScope;
-            return WorkspaceProcessRunArtifactPath.TryBuildRecoverableCurrentRunPath(
-                path,
-                currentRunId,
-                currentWorkspaceScope,
-                out var currentRunPath)
-                ? currentRunPath
-                : path;
-        }
-
-        private EffectiveExternalTargetAccessScope ResolveExternalTargetAccess()
-        {
-            var auditScope = WorkspaceExecutionAuditContext.Current;
-            return EffectiveExternalTargetAccessResolver.Resolve(
-                accessSettings,
-                auditScope?.AllowedExternalTargetAliases,
-                auditScope?.ReadOnlyExternalTargetAliases);
-        }
-
         private static string? NormalizeScriptSideEffectManifest(object? sideEffectManifest)
         {
             return sideEffectManifest switch
@@ -685,32 +548,6 @@ internal sealed class WorkspaceRuntimePlugin(
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             options.Converters.Add(new JsonStringEnumConverter());
             return options;
-        }
-
-        private bool IsManagedWorkspaceAbsolutePath(string path)
-        {
-            try
-            {
-                if (!Path.IsPathRooted(path))
-                {
-                    return false;
-                }
-
-                var fullPath = Path.GetFullPath(path);
-                return string.Equals(fullPath, workspaceRoot, StringComparison.OrdinalIgnoreCase) ||
-                       fullPath.StartsWith(workspaceRootWithSeparator, StringComparison.OrdinalIgnoreCase);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-        private static string EnsureTrailingSeparator(string path)
-        {
-            return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-                ? path
-                : path + Path.DirectorySeparatorChar;
         }
 
         private string FormatEffectiveWorkspaceProfile()
