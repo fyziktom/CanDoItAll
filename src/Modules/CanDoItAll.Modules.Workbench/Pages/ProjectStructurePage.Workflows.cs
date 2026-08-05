@@ -169,6 +169,7 @@ public partial class ProjectStructurePage
         }
 
         pendingDeletePrompt = prompt;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task DeleteNodesAsync(IReadOnlyCollection<string> nodeIds)
@@ -930,13 +931,15 @@ public partial class ProjectStructurePage
 
     private ProjectStructureDeletePrompt BuildDeletePrompt(ProjectStructureNode node)
     {
-        var descendantCount = CountDescendants(node.Id);
+        var affectedNodeIds = CollectDeleteSubtreeNodeIds([node.Id]);
+        var descendantCount = Math.Max(0, affectedNodeIds.Count - 1);
+        var managedAttachmentCount = CountManagedAttachments(affectedNodeIds);
         var linkedNodeCount = CountLinkedNodes(node.Id);
         var dependencyLinkCount = CountDependencyLinks(node.Id);
         var requiresConfirmation = node.ObjectType != ProjectObjectType.Note ||
                                    descendantCount > 0 ||
                                    linkedNodeCount > 1 ||
-                                   ProjectStructureNodeHelpers.HasManagedAttachment(node) ||
+                                   managedAttachmentCount > 0 ||
                                    node.ArtifactId.HasValue;
         var impactParts = new List<string>();
         if (descendantCount > 0)
@@ -955,6 +958,8 @@ public partial class ProjectStructurePage
                     ? $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")} touching {linkedNodeCount} connected node{(linkedNodeCount == 1 ? string.Empty : "s")}."
                     : $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")}.");
         }
+
+        AppendManagedAttachmentDeletionImpact(impactParts, managedAttachmentCount);
 
         var impactCopy = string.Join(" ", impactParts);
 
@@ -979,6 +984,7 @@ public partial class ProjectStructurePage
             .ToList();
         var affectedNodeIds = CollectDeleteSubtreeNodeIds(nodeIds);
         var descendantCount = Math.Max(0, affectedNodeIds.Count - nodeIds.Count);
+        var managedAttachmentCount = CountManagedAttachments(affectedNodeIds);
         var dependencyLinkCount = CountDependencyLinks(affectedNodeIds);
         var linkedNodeCount = CountLinkedNodes(affectedNodeIds);
         var impactParts = new List<string>
@@ -995,6 +1001,8 @@ public partial class ProjectStructurePage
                     ? $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")} touching {linkedNodeCount} connected node{(linkedNodeCount == 1 ? string.Empty : "s")} outside the selection."
                     : $"It also removes {dependencyLinkCount} visible dependency link{(dependencyLinkCount == 1 ? string.Empty : "s")} inside the selected branches.");
         }
+
+        AppendManagedAttachmentDeletionImpact(impactParts, managedAttachmentCount);
 
         return new ProjectStructureDeletePrompt(
             nodeIds[0],
@@ -1038,6 +1046,33 @@ public partial class ProjectStructurePage
         }
 
         return count;
+    }
+
+    private int CountManagedAttachments(IReadOnlySet<string> nodeIds)
+    {
+        if (surface is null || nodeIds.Count == 0)
+        {
+            return 0;
+        }
+
+        return surface.Nodes.Count(node =>
+            nodeIds.Contains(node.Id) &&
+            !node.IsSystemManaged &&
+            ProjectStructureNodeHelpers.HasManagedAttachment(node));
+    }
+
+    private static void AppendManagedAttachmentDeletionImpact(
+        ICollection<string> impactParts,
+        int managedAttachmentCount)
+    {
+        if (managedAttachmentCount == 0)
+        {
+            return;
+        }
+
+        impactParts.Add(managedAttachmentCount == 1
+            ? "The associated managed file attachment will also be removed. Its stored file will be deleted when managed storage owns it and no other node references it; retained content will be reported."
+            : $"{managedAttachmentCount} associated managed file attachments will also be removed. Stored files owned by managed storage and not referenced by other nodes will be deleted; retained content will be reported.");
     }
 
     private int CountLinkedNodes(string nodeId)

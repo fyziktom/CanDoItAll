@@ -1264,6 +1264,176 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Canvas_context_delete_of_managed_asset_warns_about_file_and_deletes_it_after_confirmation()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var assetCreationService = harness.Context.Services.GetRequiredService<ProjectAssetCreationService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Managed asset delete project");
+        var media = await assetCreationService.CreateTextAsync(
+            ProjectFileSubtype.Markdown,
+            "delete-me.md",
+            "# Delete me");
+        var asset = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Delete me",
+                string.Empty,
+                "Managed Markdown asset.",
+                $"project:{projectId}",
+                420,
+                240,
+                ObjectSubtype: "markdown",
+                Media: media));
+        var physicalPath = Path.Combine(
+            harness.ActiveProfile.WorkspaceRootPath,
+            asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(physicalPath));
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, asset.Id);
+
+        var cut = harness.Context.Render<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            var canvasAsset = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
+            Assert.Single(canvasAsset.ContextActions, action => action.ActionId == "delete");
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction(asset.Id, "delete", 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Delete node", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(
+                "Its stored file will be deleted when managed storage owns it and no other node references it",
+                cut.Markup,
+                StringComparison.Ordinal);
+        });
+        var surfaceBeforeConfirmation = await workbenchService.GetStructureAsync(projectId);
+        Assert.Contains(surfaceBeforeConfirmation.Nodes, node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
+        Assert.True(File.Exists(physicalPath));
+
+        FindButtonByLabel(cut, "Delete", "[role='dialog'] button").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("The selected branch was deleted.", cut.Markup, StringComparison.Ordinal));
+        var surfaceAfterConfirmation = await workbenchService.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surfaceAfterConfirmation.Nodes, node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
+        Assert.False(File.Exists(physicalPath));
+    }
+
+    [Fact]
+    public async Task Canvas_context_delete_of_parent_warns_about_descendant_file_and_deletes_entire_branch_after_confirmation()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var assetCreationService = harness.Context.Services.GetRequiredService<ProjectAssetCreationService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Asset branch delete project");
+        var parent = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Asset-bearing parent",
+                string.Empty,
+                "Parent containing a managed asset.",
+                $"project:{projectId}",
+                420,
+                240));
+        var media = await assetCreationService.CreateTextAsync(
+            ProjectFileSubtype.Markdown,
+            "delete-with-parent.md",
+            "# Delete with parent");
+        var asset = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Child asset",
+                string.Empty,
+                "Managed child asset.",
+                parent.Id,
+                680,
+                240,
+                ObjectSubtype: "markdown",
+                Media: media));
+        var secondMedia = await assetCreationService.CreateTextAsync(
+            ProjectFileSubtype.Markdown,
+            "delete-second-with-parent.md",
+            "# Delete second with parent");
+        var secondAsset = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.File,
+                "Second child asset",
+                string.Empty,
+                "Second managed child asset.",
+                parent.Id,
+                680,
+                420,
+                ObjectSubtype: "markdown",
+                Media: secondMedia));
+        var physicalPath = Path.Combine(
+            harness.ActiveProfile.WorkspaceRootPath,
+            asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        var secondPhysicalPath = Path.Combine(
+            harness.ActiveProfile.WorkspaceRootPath,
+            secondAsset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(physicalPath));
+        Assert.True(File.Exists(secondPhysicalPath));
+        await SaveSelectedNodeStateAsync(workbenchService, projectId, parent.Id);
+
+        var cut = harness.Context.Render<ProjectStructurePage>(
+            parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvasWorkbench = WaitForCanvasWorkbench(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            var canvasParent = Assert.Single(
+                canvasWorkbench.Instance.Surface.Nodes,
+                node => string.Equals(node.Id, parent.Id, StringComparison.Ordinal));
+            Assert.Single(canvasParent.ContextActions, action => action.ActionId == "delete");
+        });
+
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction(parent.Id, "delete", 0, 0));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("This will delete 3 nodes including child items.", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(
+                "2 associated managed file attachments will also be removed.",
+                cut.Markup,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Stored files owned by managed storage and not referenced by other nodes will be deleted",
+                cut.Markup,
+                StringComparison.Ordinal);
+        });
+        var surfaceBeforeConfirmation = await workbenchService.GetStructureAsync(projectId);
+        Assert.Contains(surfaceBeforeConfirmation.Nodes, node => string.Equals(node.Id, parent.Id, StringComparison.Ordinal));
+        Assert.Contains(surfaceBeforeConfirmation.Nodes, node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
+        Assert.Contains(surfaceBeforeConfirmation.Nodes, node => string.Equals(node.Id, secondAsset.Id, StringComparison.Ordinal));
+        Assert.True(File.Exists(physicalPath));
+        Assert.True(File.Exists(secondPhysicalPath));
+
+        FindButtonByLabel(cut, "Delete", "[role='dialog'] button").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("The selected branch was deleted.", cut.Markup, StringComparison.Ordinal));
+        var surfaceAfterConfirmation = await workbenchService.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surfaceAfterConfirmation.Nodes, node => string.Equals(node.Id, parent.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surfaceAfterConfirmation.Nodes, node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
+        Assert.DoesNotContain(surfaceAfterConfirmation.Nodes, node => string.Equals(node.Id, secondAsset.Id, StringComparison.Ordinal));
+        Assert.False(File.Exists(physicalPath));
+        Assert.False(File.Exists(secondPhysicalPath));
+    }
+
+    [Fact]
     public async Task Canvas_context_delete_targets_selected_nodes_when_clicked_node_is_selected()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
