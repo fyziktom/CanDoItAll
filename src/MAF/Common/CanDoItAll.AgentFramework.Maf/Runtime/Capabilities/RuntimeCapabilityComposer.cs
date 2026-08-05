@@ -240,7 +240,12 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 () => AttachSkillsAsync(composition, effectiveCapabilities, progressCallback, suppressApprovalRequirements));
             await TrackAsync(
                 "capability.configured-workspace-tools",
-                () => AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements));
+                () => AttachConfiguredWorkspaceToolsAsync(
+                    composition,
+                    agent,
+                    effectiveCapabilities,
+                    progressCallback,
+                    suppressApprovalRequirements));
             await TrackAsync(
                 "capability.runtime-tool-providers",
                 () => registeredToolProviderAttacher.AttachAsync(
@@ -683,6 +688,19 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     {
         foreach (var capability in capabilities)
         {
+            if (composition.ToolBuilder.IsWorkspaceToolCapability(capability))
+            {
+                var participated = agent.Permissions.CanUseTools &&
+                                   composition.ToolBuilder.CanWorkspaceToolCapabilityParticipate(
+                                       capability,
+                                       capabilities);
+                RecordWorkspaceCatalogCapabilitySource(
+                    composition.State,
+                    capability,
+                    participated);
+                continue;
+            }
+
             await AttachCapabilityAsync(
                 composition,
                 capability,
@@ -694,33 +712,10 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         }
     }
 
-    private static bool IsWorkspaceCatalogToolCapability(CapabilityCatalogItem capability)
-    {
-        if (capability.Kind != CapabilityKind.Tool)
-        {
-            return false;
-        }
-
-        var configuration = DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson);
-        return IsWorkspaceToolKey(configuration?.Tool) || IsWorkspaceToolKey(capability.Key);
-    }
-
-    private static bool IsWorkspaceToolKey(string? toolKey)
-    {
-        if (string.IsNullOrWhiteSpace(toolKey))
-        {
-            return false;
-        }
-
-        var normalized = toolKey.Replace('-', '_');
-        return string.Equals(normalized, "workspace_plugin", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) ||
-               ToolContractCatalog.WorkspaceToolNames.Contains(normalized, StringComparer.OrdinalIgnoreCase);
-    }
-
     private async Task AttachConfiguredWorkspaceToolsAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
+        IReadOnlyList<CapabilityCatalogItem> effectiveCapabilities,
         Func<ExecutionState, string, string, Task> progressCallback,
         bool suppressApprovalRequirements)
     {
@@ -729,13 +724,15 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             return;
         }
 
-        var tools = composition.ToolBuilder.CreateConfiguredWorkspaceTools(agent, suppressApprovalRequirements);
+        var tools = composition.ToolBuilder.CreateWorkspaceTools(
+            effectiveCapabilities,
+            suppressApprovalRequirements);
         if (tools.Count == 0)
         {
             composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
                 AgentRuntimeContextSourceCategories.WorkspaceTools,
                 "configured-workspace-tools",
-                "agent settings or process context profile selected no configured workspace tools"));
+                "agent settings, catalog capabilities, or process context profile selected no workspace tools"));
             return;
         }
 
@@ -743,7 +740,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         composition.State.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
             AgentRuntimeContextSourceCategories.WorkspaceTools,
             "configured-workspace-tools",
-            "workspace tools allowed by agent settings and context profile",
+            "workspace tools composed once from agent settings, catalog capabilities, and context policy",
             tools.Count,
             MafContextManifestBuilder.EstimateToolSchemaChars(tools)));
         composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
@@ -754,7 +751,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         await progressCallback(
             ExecutionState.Preparing,
             "Workspace tools",
-            "Attached configured workspace file and storage tools from the current agent settings." + profileSuffix);
+            "Attached workspace and storage tools from the unified agent-settings, catalog, and context-policy composition." + profileSuffix);
     }
 
     private async Task AttachA2ARemoteAgentToolsAsync(
@@ -899,6 +896,28 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             $"catalog capability '{capability.Name}' attached runtime context or tools",
             itemCount,
             estimatedChars));
+    }
+
+    private static void RecordWorkspaceCatalogCapabilitySource(
+        RuntimeCapabilityState state,
+        CapabilityCatalogItem capability,
+        bool participated)
+    {
+        if (!participated)
+        {
+            state.ContextSources.Add(AgentRuntimeContextManifestSource.Excluded(
+                AgentRuntimeContextSourceCategories.CatalogCapability,
+                capability.Key,
+                $"catalog workspace declaration '{capability.Name}' was disabled or could not participate in the effective workspace tool composition"));
+            return;
+        }
+
+        state.ContextSources.Add(AgentRuntimeContextManifestSource.Included(
+            AgentRuntimeContextSourceCategories.CatalogCapability,
+            capability.Key,
+            $"catalog workspace declaration '{capability.Name}' participated in the unified workspace tool composition",
+            itemCount: 1,
+            estimatedChars: capability.Description.Length));
     }
 
     private static async Task<bool> TrySkipUnsupportedProviderNativeCapabilityAsync(

@@ -1022,6 +1022,372 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public async Task MafAgentRuntimeWorkspaceTools_file_access_attaches_asset_inspection_without_transform_tools()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            Profile = AgentWorkspaceToolProfileKind.Custom,
+            CanReadFiles = true,
+            CanWriteFiles = true,
+            CanTransformArtifacts = false
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var toolNames = ReadTools(state).Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(ToolContractCatalog.WorkspaceInspectSpreadsheet, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceSpreadsheetSummary, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceReadSpreadsheetCell, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceReadSpreadsheetRange, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceSpreadsheetFunctionCatalog, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceWriteSpreadsheet, toolNames);
+        Assert.Contains(ToolContractCatalog.WorkspaceInspectImage, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspaceConvertDocument, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspaceAnalyzeImage, toolNames);
+        Assert.DoesNotContain(ToolContractCatalog.WorkspaceAnalyzeImages, toolNames);
+    }
+
+    [Theory]
+    [InlineData(AgentWorkspaceToolPermissionKind.ReadFiles)]
+    [InlineData(AgentWorkspaceToolPermissionKind.WriteFiles)]
+    [InlineData(AgentWorkspaceToolPermissionKind.RunValidationCommands)]
+    [InlineData(AgentWorkspaceToolPermissionKind.ManagePaths)]
+    [InlineData(AgentWorkspaceToolPermissionKind.RunLocalScripts)]
+    [InlineData(AgentWorkspaceToolPermissionKind.ScaffoldProjects)]
+    [InlineData(AgentWorkspaceToolPermissionKind.TransformArtifacts)]
+    public async Task MafAgentRuntimeWorkspaceTools_composition_matches_permission_metadata_and_access_plan(
+        AgentWorkspaceToolPermissionKind enabledPermission)
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = CreateCustomWorkspaceToolAccess(enabledPermission);
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, agent, CreateProviderProfile(), []);
+
+        var attachedTools = ReadTools(state);
+        var attachedToolNames = attachedTools
+            .Select(tool => tool.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allowedToolNames = ReadEffectiveCapabilities(state).AllowedCapabilities
+            .Select(capability => capability.RuntimeToolName?.Value)
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string[] representativeToolNames =
+        [
+            ToolContractCatalog.WorkspaceReadFile,
+            ToolContractCatalog.WorkspaceReadSpreadsheetRange,
+            ToolContractCatalog.WorkspaceWriteFile,
+            ToolContractCatalog.WorkspaceWriteSpreadsheet,
+            ToolContractCatalog.WorkspaceDotNetBuild,
+            ToolContractCatalog.WorkspaceCopyPath,
+            ToolContractCatalog.WorkspacePowerShellRunScript,
+            ToolContractCatalog.WorkspaceDotNetNew,
+            ToolContractCatalog.WorkspaceConvertDocument
+        ];
+
+        foreach (var toolName in representativeToolNames)
+        {
+            var expected = AgentWorkspaceToolAccessMetadata.IsWorkspaceToolAllowed(access, toolName);
+            Assert.Equal(expected, allowedToolNames.Contains(toolName));
+            Assert.Equal(expected, attachedToolNames.Contains(toolName));
+        }
+
+        (string ToolName, bool RequiresApproval)[] approvalExpectations =
+        [
+            (ToolContractCatalog.WorkspaceReadFile, false),
+            (ToolContractCatalog.WorkspaceWriteFile, true),
+            (ToolContractCatalog.WorkspaceDotNetBuild, false),
+            (ToolContractCatalog.WorkspaceCopyPath, true),
+            (ToolContractCatalog.WorkspacePowerShellRunScript, true),
+            (ToolContractCatalog.WorkspaceDotNetNew, true),
+            (ToolContractCatalog.WorkspaceConvertDocument, false)
+        ];
+        foreach (var expectation in approvalExpectations)
+        {
+            if (!attachedToolNames.Contains(expectation.ToolName))
+            {
+                continue;
+            }
+
+            var tool = Assert.Single(attachedTools, candidate =>
+                string.Equals(candidate.Name, expectation.ToolName, StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(expectation.RequiresApproval, tool is ApprovalRequiredAIFunction);
+        }
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeWorkspacePlugin_owns_file_tools_without_shadowing_legacy_presentation_or_configured_storage()
+    {
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IStorageCatalogService>(new EmptyStorageCatalogService());
+        services.AddSingleton<IStorageDriverRegistry>(new StorageDriverRegistry([new EmptyStorageDriver()]));
+        services.AddSingleton<IStorageBrowseDriverRegistry>(new StorageBrowseDriverRegistry([new EmptyStorageBrowseDriver()]));
+        var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
+        var access = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        access.CanReadStorage = true;
+        access.CanWriteStorage = true;
+        access.AllowAllStorageCatalogs = true;
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+        var provider = CreateProviderProfile();
+
+        var configuredState = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            [],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+        var pluginState = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            [CreateToolCapability("legacy-workspace-plugin", "workspace-plugin")],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+
+        var configuredFileToolNames = ReadTools(configuredState)
+            .Select(tool => tool.Name)
+            .Where(toolName => ToolContractCatalog.WorkspaceToolNames.Contains(toolName, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var pluginTools = ReadTools(pluginState);
+        var pluginFileToolNames = pluginTools
+            .Select(tool => tool.Name)
+            .Where(toolName => ToolContractCatalog.WorkspaceToolNames.Contains(toolName, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Assert.Equal(configuredFileToolNames, pluginFileToolNames);
+        Assert.Equal(
+            pluginTools.Count,
+            pluginTools.Select(tool => tool.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        var readFile = Assert.Single(pluginTools, tool => tool.Name == ToolContractCatalog.WorkspaceReadFile);
+        Assert.Contains("grounded external-target alias", readFile.Description, StringComparison.Ordinal);
+        Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(
+            pluginTools,
+            tool => tool.Name == ToolContractCatalog.WorkspaceDotNetRestore));
+        Assert.IsNotType<ApprovalRequiredAIFunction>(Assert.Single(
+            pluginTools,
+            tool => tool.Name == ToolContractCatalog.WorkspaceDotNetBuild));
+        Assert.Contains(pluginTools, tool => tool.Name == ToolContractCatalog.StorageCatalogList);
+        Assert.Contains(pluginTools, tool => tool.Name == ToolContractCatalog.StorageBrowse);
+        Assert.Contains(pluginTools, tool => tool.Name == ToolContractCatalog.StorageReadTextFile);
+        Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(
+            pluginTools,
+            tool => tool.Name == ToolContractCatalog.StorageWriteTextFile));
+        Assert.Contains(ReadContextSources(pluginState), source =>
+            source.SourceId == "configured-workspace-tools" &&
+            source.Decision == AgentRuntimeContextSourceDecision.Included &&
+            source.Reason.Contains("composed once", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeWorkspacePlugin_and_individual_tools_compose_independently_of_catalog_order()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment);
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+        var provider = CreateProviderProfile();
+        var plugin = CreateToolCapability("legacy-workspace-plugin", "workspace-plugin");
+        var explicitRead = CreateToolCapability("explicit-workspace-read", "workspace-read-file") with
+        {
+            Description = "Explicit catalog read description.",
+            ConfigurationJson = """
+                {"tool":"workspace-read-file","approvalRequired":true}
+                """
+        };
+        var explicitRestore = CreateToolCapability("explicit-workspace-restore", "workspace_dotnet_restore") with
+        {
+            Description = "Explicit catalog restore description.",
+            ConfigurationJson = """
+                {"tool":"workspace_dotnet_restore","approvalRequired":false}
+                """
+        };
+
+        var forwardState = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            [plugin, explicitRead, explicitRestore],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+        var reverseState = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            provider,
+            [explicitRestore, explicitRead, plugin],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+
+        var forwardTools = ReadTools(forwardState);
+        var reverseTools = ReadTools(reverseState);
+        var forwardProjection = forwardTools
+            .Where(tool => ToolContractCatalog.WorkspaceToolNames.Contains(tool.Name, StringComparer.OrdinalIgnoreCase))
+            .Select(tool => (tool.Name, tool.Description, RequiresApproval: tool is ApprovalRequiredAIFunction))
+            .ToList();
+        var reverseProjection = reverseTools
+            .Where(tool => ToolContractCatalog.WorkspaceToolNames.Contains(tool.Name, StringComparer.OrdinalIgnoreCase))
+            .Select(tool => (tool.Name, tool.Description, RequiresApproval: tool is ApprovalRequiredAIFunction))
+            .ToList();
+
+        Assert.Equal(forwardProjection, reverseProjection);
+        Assert.Equal(
+            forwardProjection.Count,
+            forwardProjection.Select(tool => tool.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        var readFile = Assert.Single(forwardTools, tool => tool.Name == ToolContractCatalog.WorkspaceReadFile);
+        Assert.Equal("Explicit catalog read description.", readFile.Description);
+        Assert.IsType<ApprovalRequiredAIFunction>(readFile);
+        var restore = Assert.Single(forwardTools, tool => tool.Name == ToolContractCatalog.WorkspaceDotNetRestore);
+        Assert.Equal("Explicit catalog restore description.", restore.Description);
+        Assert.IsType<ApprovalRequiredAIFunction>(restore);
+        Assert.True(ReadHasApprovalTools(forwardState));
+        Assert.True(ReadHasApprovalTools(reverseState));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeWorkspacePlugin_can_raise_approval_for_all_owned_workspace_tools()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadFiles = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+        var plugin = CreateToolCapability("approval-workspace-plugin", "workspace-plugin") with
+        {
+            ConfigurationJson = """
+                {"tool":"workspace-plugin","approvalRequired":true}
+                """
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [plugin],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+
+        Assert.All(
+            ReadTools(state).Where(tool => ToolContractCatalog.WorkspaceToolNames.Contains(tool.Name, StringComparer.OrdinalIgnoreCase)),
+            tool => Assert.IsType<ApprovalRequiredAIFunction>(tool));
+        Assert.True(ReadHasApprovalTools(state));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeIndividual_workspace_tool_can_raise_approval_requirement()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadFiles = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+        var capability = CreateToolCapability("explicit-workspace-read", "workspace_read_file") with
+        {
+            Description = "Approval-gated explicit read.",
+            ConfigurationJson = """
+                {"tool":"workspace_read_file","approvalRequired":true}
+                """
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [capability],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+
+        var readFile = Assert.Single(
+            ReadTools(state),
+            tool => tool.Name == ToolContractCatalog.WorkspaceReadFile);
+        Assert.Equal("Approval-gated explicit read.", readFile.Description);
+        Assert.IsType<ApprovalRequiredAIFunction>(readFile);
+        Assert.True(ReadHasApprovalTools(state));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeIndividual_workspace_tool_cannot_disable_base_mutation_approval()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadFiles = true,
+            CanWriteFiles = true
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+        var capability = CreateToolCapability("explicit-workspace-write", "workspace_write_file") with
+        {
+            Description = "Explicit write that cannot lower policy.",
+            ConfigurationJson = """
+                {"tool":"workspace_write_file","approvalRequired":false}
+                """
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [capability],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+
+        var writeFile = Assert.Single(
+            ReadTools(state),
+            tool => tool.Name == ToolContractCatalog.WorkspaceWriteFile);
+        Assert.Equal("Explicit write that cannot lower policy.", writeFile.Description);
+        Assert.IsType<ApprovalRequiredAIFunction>(writeFile);
+        Assert.True(ReadHasApprovalTools(state));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeIndividual_workspace_tool_cannot_bypass_workspace_access_plan()
+    {
+        var runtime = RuntimeCapabilityComposer.CreateDefault(
+            Path.GetTempPath(),
+            MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        var access = new AgentWorkspaceToolAccessSettings
+        {
+            CanReadFiles = true,
+            CanWriteFiles = false
+        };
+        var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
+        var capability = CreateToolCapability("explicit-workspace-write", "workspace_write_file") with
+        {
+            ConfigurationJson = """
+                {"tool":"workspace_write_file","approvalRequired":true}
+                """
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [capability],
+            AgentRuntimeContextIntent.Empty,
+            suppressApprovalRequirements: false);
+
+        Assert.DoesNotContain(
+            ReadTools(state),
+            tool => tool.Name == ToolContractCatalog.WorkspaceWriteFile);
+        Assert.Contains(ReadContextSources(state), source =>
+            source.Category == AgentRuntimeContextSourceCategories.CatalogCapability &&
+            source.SourceId == capability.Key &&
+            source.Decision == AgentRuntimeContextSourceDecision.Excluded);
+    }
+
+    [Fact]
     public async Task MafAgentRuntimeWorkspaceTools_authorized_external_target_attaches_discovery_context_with_discovery_tool()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
@@ -1720,6 +2086,20 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
 
     private static string CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessSettings accessSettings)
         => AgentWorkspaceToolAccessMetadata.Write("{}", accessSettings);
+
+    private static AgentWorkspaceToolAccessSettings CreateCustomWorkspaceToolAccess(
+        AgentWorkspaceToolPermissionKind enabledPermission)
+        => new()
+        {
+            Profile = AgentWorkspaceToolProfileKind.Custom,
+            CanReadFiles = enabledPermission == AgentWorkspaceToolPermissionKind.ReadFiles,
+            CanWriteFiles = enabledPermission == AgentWorkspaceToolPermissionKind.WriteFiles,
+            CanRunValidationCommands = enabledPermission == AgentWorkspaceToolPermissionKind.RunValidationCommands,
+            CanRunLocalScripts = enabledPermission == AgentWorkspaceToolPermissionKind.RunLocalScripts,
+            CanScaffoldProjects = enabledPermission == AgentWorkspaceToolPermissionKind.ScaffoldProjects,
+            CanManageWorkspacePaths = enabledPermission == AgentWorkspaceToolPermissionKind.ManagePaths,
+            CanTransformArtifacts = enabledPermission == AgentWorkspaceToolPermissionKind.TransformArtifacts
+        };
 
     private static AgentRuntimeContextIntent CreateProcessContextIntent(params string[] allowedOperations)
         => new(

@@ -126,6 +126,57 @@ public sealed class WorkspaceImageOperationServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(WorkspaceImageReadOperation.Inspect)]
+    [InlineData(WorkspaceImageReadOperation.Read)]
+    public async Task Unexpected_image_io_is_thrown_opaquely_instead_of_returning_native_path_diagnostics(
+        WorkspaceImageReadOperation operation)
+    {
+        var workspaceRoot = CreateWorkspaceRoot();
+        try
+        {
+            var sentinel = $"private-native-{Guid.NewGuid():N}";
+            var relativePath = $"images/{sentinel}.png";
+            var fullPath = Path.Combine(
+                workspaceRoot,
+                relativePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            await File.WriteAllBytesAsync(fullPath, PngBytes());
+            var expected = new IOException($"Unexpected I/O failure at '{fullPath}'.");
+            string? observedReadPath = null;
+            var service = new WorkspaceImageOperationService(
+                workspaceRoot,
+                workspaceScope: null,
+                readAllBytes: path =>
+                {
+                    observedReadPath = path;
+                    throw expected;
+                });
+
+            var exception = await Record.ExceptionAsync(InvokeAsync);
+
+            Assert.Same(expected, exception);
+            Assert.Equal(fullPath, observedReadPath);
+            Assert.Contains(sentinel, exception!.Message, StringComparison.Ordinal);
+            Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
+
+            async Task InvokeAsync()
+            {
+                if (operation == WorkspaceImageReadOperation.Inspect)
+                {
+                    _ = await service.InspectImageFile(relativePath);
+                    return;
+                }
+
+                _ = await service.ReadImageFile(relativePath);
+            }
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
     [Fact]
     public async Task ArtifactService_ImageMethodsDelegateToInjectedOperationService()
     {
@@ -377,5 +428,11 @@ public sealed class WorkspaceImageOperationServiceTests
             WorkspaceDocumentMarkdownConversionRequest request,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Document conversion was not expected in this test.");
+    }
+
+    public enum WorkspaceImageReadOperation
+    {
+        Inspect,
+        Read
     }
 }

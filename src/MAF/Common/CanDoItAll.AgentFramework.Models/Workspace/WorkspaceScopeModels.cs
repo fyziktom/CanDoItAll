@@ -11,6 +11,19 @@ public enum WorkspaceScopeKind
 
 public sealed record WorkspaceScopeDescriptor
 {
+    public const string DataManagedRootName = "data";
+    public const string ArtifactManagedRootName = "artifacts";
+    public const string IntegrationMapManagedRootName = "integration-map";
+    public const string OutputManagedRootName = "output";
+
+    public static IReadOnlyList<string> ManagedRootNames { get; } =
+    [
+        DataManagedRootName,
+        ArtifactManagedRootName,
+        IntegrationMapManagedRootName,
+        OutputManagedRootName
+    ];
+
     public static WorkspaceScopeDescriptor Sandbox { get; } = new(WorkspaceScopeKind.Sandbox);
 
     public WorkspaceScopeDescriptor(WorkspaceScopeKind kind, string? key = null)
@@ -33,13 +46,21 @@ public sealed record WorkspaceScopeDescriptor
         ? string.Empty
         : CombineRelative("scopes", KindSegment, KeySegment);
 
-    public string DataRootRelativePath => CombineManagedRoot("data");
+    public string DataRootRelativePath => CombineManagedRoot(DataManagedRootName);
 
-    public string ArtifactRootRelativePath => CombineManagedRoot("artifacts");
+    public string ArtifactRootRelativePath => CombineManagedRoot(ArtifactManagedRootName);
 
-    public string IntegrationMapRootRelativePath => CombineManagedRoot("integration-map");
+    public string IntegrationMapRootRelativePath => CombineManagedRoot(IntegrationMapManagedRootName);
 
-    public string OutputRootRelativePath => CombineManagedRoot("output");
+    public string OutputRootRelativePath => CombineManagedRoot(OutputManagedRootName);
+
+    public IReadOnlyList<string> ManagedRootRelativePaths =>
+    [
+        DataRootRelativePath,
+        ArtifactRootRelativePath,
+        IntegrationMapRootRelativePath,
+        OutputRootRelativePath
+    ];
 
     public string ResolveDataRoot(string workspaceRoot)
         => ResolveWorkspacePath(workspaceRoot, DataRootRelativePath);

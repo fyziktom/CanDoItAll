@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit;
@@ -101,10 +102,64 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var add = await service.GitAdd([".git/config"]);
 
             Assert.False(show.Succeeded);
-            Assert.Contains("Git revision cannot start with '-'", show.Message, StringComparison.Ordinal);
+            Assert.Contains("Git revision is invalid", show.Message, StringComparison.Ordinal);
             Assert.False(add.Succeeded);
-            Assert.Contains("Git path is not an allowed repository-relative path", add.Message, StringComparison.Ordinal);
+            Assert.Contains("authorized repository-relative path", add.Message, StringComparison.Ordinal);
             Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Command_input_path_failure_returns_actionable_message_without_physical_path()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var privatePath = Path.Combine(
+            Path.GetPathRoot(workspaceRoot)!,
+            "private",
+            "command-provider-secret.py");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.PythonRunFile(privatePath);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("allowed workspace scope", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(privatePath, result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(processHost.LastRequest);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Unexpected_process_host_failure_preserves_exception_and_is_not_model_mappable()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var sentinel = new IOException(
+            @"Provider I/O failed while reading C:\private\command-provider-secret.txt");
+        var processHost = new FakeWorkspaceProcessHost(onExecute: _ => throw sentinel);
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<IOException>(() => service.GitStatus());
+
+            Assert.Same(sentinel, exception);
+            Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
         }
         finally
         {
@@ -377,7 +432,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 arguments: [Path.Combine(externalRoot, "secret.txt")]);
 
             Assert.False(result.Succeeded);
-            Assert.Contains("not allowed", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("outside the allowed workspace scope", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Null(processHost.LastRequest);
         }
         finally
@@ -484,7 +539,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 arguments: [$"-i{Path.Combine(externalRoot, "secret.txt")}"]);
 
             Assert.False(result.Succeeded);
-            Assert.Contains("not allowed", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("outside the allowed workspace scope", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Null(processHost.LastRequest);
         }
         finally
@@ -1423,17 +1478,19 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
         try
         {
-            WorkspaceCommandExecutionResult result;
+            InvalidOperationException exception;
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
-                result = await service.DotnetRun(
-                    "apps/SampleWeb/SampleWeb.csproj",
-                    url: "http://127.0.0.1:5132/",
-                    keepAlive: true);
+                exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    service.DotnetRun(
+                        "apps/SampleWeb/SampleWeb.csproj",
+                        url: "http://127.0.0.1:5132/",
+                        keepAlive: true));
             }
 
-            Assert.False(result.Succeeded);
-            Assert.Contains("pending ExecutionRun lease could not be persisted", result.Message, StringComparison.Ordinal);
+            Assert.Contains("pending ExecutionRun lease could not be persisted", exception.Message, StringComparison.Ordinal);
+            Assert.NotNull(exception.InnerException);
+            Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
             Assert.Empty(processHost.Requests);
         }
         finally
@@ -1461,18 +1518,20 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
         try
         {
-            WorkspaceCommandExecutionResult launchResult;
+            InvalidOperationException exception;
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
-                launchResult = await launchService.DotnetRun(
-                    "apps/SampleWeb/SampleWeb.csproj",
-                    url: "http://127.0.0.1:5132/",
-                    startupTimeoutSeconds: 1,
-                    keepAlive: true);
+                exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    launchService.DotnetRun(
+                        "apps/SampleWeb/SampleWeb.csproj",
+                        url: "http://127.0.0.1:5132/",
+                        startupTimeoutSeconds: 1,
+                        keepAlive: true));
             }
 
-            Assert.False(launchResult.Succeeded);
-            Assert.Contains("pending lease was retained", launchResult.Message, StringComparison.Ordinal);
+            Assert.Contains("pending lease was retained", exception.Message, StringComparison.Ordinal);
+            Assert.Equal("synthetic host termination", exception.InnerException?.Message);
+            Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
             var pendingLease = Assert.Single(store.Load(run.Id).Leases);
             Assert.Equal(
                 WorkspaceExecutionRunProcessLeasePhase.Pending,
@@ -1578,7 +1637,10 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal([secondPath], result.CleanedStartupReceiptPaths);
             var failure = Assert.Single(result.Failures);
             Assert.Equal(firstPath, failure.StartupReceiptPath, ignoreCase: true);
-            Assert.Contains("synthetic stop failure", failure.Message, StringComparison.Ordinal);
+            Assert.Equal(
+                WorkspaceCommandFailureBoundary.CleanupAttemptFailureMessage,
+                failure.Message);
+            Assert.DoesNotContain("synthetic stop failure", failure.Message, StringComparison.Ordinal);
             Assert.Equal(2, processHost.Requests.Count);
             var retained = store.Load(run.Id);
             Assert.Equal(firstPath, Assert.Single(retained.Leases).StartupReceiptPath, ignoreCase: true);
@@ -2254,7 +2316,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var result = await service.DotnetNew("console --pwa", "ConsoleApp", "apps");
 
             Assert.False(result.Succeeded);
-            Assert.Contains("not approved for template 'console'", result.Message, StringComparison.Ordinal);
+            Assert.Contains("requested template option is not approved", result.Message, StringComparison.Ordinal);
             Assert.Null(processHost.LastRequest);
         }
         finally
@@ -2308,7 +2370,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 targetFramework: "invalid");
 
             Assert.False(result.Succeeded);
-            Assert.Contains("targetFramework must be a supported target-framework value", result.Message, StringComparison.Ordinal);
+            Assert.Contains("targetFramework must be a supported value", result.Message, StringComparison.Ordinal);
             Assert.Null(processHost.LastRequest);
         }
         finally
@@ -2330,7 +2392,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var result = await service.DotnetNew("blazorwasm --framework net8.0", "FrameworkScopedApp", "apps");
 
             Assert.False(result.Succeeded);
-            Assert.Contains("Template argument 'net8.0' is not approved", result.Message, StringComparison.Ordinal);
+            Assert.Contains("positional template argument is not approved", result.Message, StringComparison.Ordinal);
             Assert.Null(processHost.LastRequest);
         }
         finally
@@ -2352,7 +2414,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var result = await service.DotnetNew("blazorwasm --install-source", "TetrisGame", "apps");
 
             Assert.False(result.Succeeded);
-            Assert.Contains("Template option '--install-source' is not approved", result.Message, StringComparison.Ordinal);
+            Assert.Contains("requested template option is not approved", result.Message, StringComparison.Ordinal);
             Assert.Null(processHost.LastRequest);
         }
         finally

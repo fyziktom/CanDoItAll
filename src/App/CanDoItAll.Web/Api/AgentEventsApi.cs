@@ -198,6 +198,7 @@ internal static class AgentEventsApi
                 cancellationToken,
                 request.AttachmentPaths),
             static result => result.ExecutionRunId,
+            AgentApiResponseMapper.ToChatRunResult,
             workspaceService,
             activityReader,
             apiOptions.Value.ServerSentEvents.HeartbeatInterval,
@@ -242,6 +243,7 @@ internal static class AgentEventsApi
                 executionRequest,
                 cancellationToken),
             static result => result.ExecutionRunId,
+            AgentApiResponseMapper.ToExecutionRunResult,
             workspaceService,
             activityReader,
             apiOptions.Value.ServerSentEvents.HeartbeatInterval,
@@ -287,6 +289,7 @@ internal static class AgentEventsApi
                 executionRequest,
                 cancellationToken),
             static result => result.ExecutionRunId,
+            AgentApiResponseMapper.ToExecutionRunResult,
             workspaceService,
             activityReader,
             apiOptions.Value.ServerSentEvents.HeartbeatInterval,
@@ -324,13 +327,14 @@ internal static class AgentEventsApi
                 request.AutoApprovePendingToolCalls,
                 cancellationToken),
             static result => result.ExecutionRunId,
+            AgentApiResponseMapper.ToExecutionRunResult,
             workspaceService,
             activityReader,
             apiOptions.Value.ServerSentEvents.HeartbeatInterval,
             loggerFactory.CreateLogger("CanDoItAll.Web.Api.AgentApprovalStream"));
     }
 
-    private static async Task<IResult> StreamCommandAsync<TResult>(
+    private static async Task<IResult> StreamCommandAsync<TResult, TApiResult>(
         HttpContext context,
         AgentExecutionOperationId operationId,
         Guid? agentId,
@@ -338,6 +342,7 @@ internal static class AgentEventsApi
         Guid? chatSessionId,
         Func<CancellationToken, Task<TResult>> startCommand,
         Func<TResult, Guid> executionRunId,
+        Func<TResult, TApiResult> projectResult,
         IAgentFrameworkWorkspaceService workspaceService,
         ICurrentProfileAgentExecutionActivityReader activityReader,
         TimeSpan heartbeatInterval,
@@ -510,9 +515,9 @@ internal static class AgentEventsApi
             await ServerSentEventResponseWriter.WriteEventAsync(
                 context.Response,
                 AgentServerEventNames.CommandCompleted,
-                new AgentCommandCompleted<TResult>(
+                new AgentCommandCompleted<TApiResult>(
                     operationId,
-                    result),
+                    projectResult(result)),
                 context.RequestAborted);
             return Results.Empty;
         }

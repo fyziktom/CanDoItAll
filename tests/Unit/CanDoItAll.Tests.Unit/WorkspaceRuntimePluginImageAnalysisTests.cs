@@ -83,27 +83,40 @@ public sealed class WorkspaceRuntimePluginImageAnalysisTests
             request => Assert.Equal(("images/after.png", "workspace_analyze_images"), request));
     }
 
-    [Fact]
-    public async Task AnalyzeImageFile_maps_service_failure_to_existing_failed_workspace_result()
+    [Theory]
+    [InlineData(WorkspaceImageAnalysisOperation.Single)]
+    [InlineData(WorkspaceImageAnalysisOperation.Multiple)]
+    public async Task Analyze_images_leaves_unexpected_provider_failure_opaque(
+        WorkspaceImageAnalysisOperation operation)
     {
         var image = CreateImage("images/frame.png", CreatePng(240, 20, 30), "workspace_analyze_image");
         var artifactService = new FakeWorkspaceArtifactToolService(image);
+        var sentinel = $@"provider-private-detail C:\private\{Guid.NewGuid():N}";
+        var expected = new InvalidOperationException(sentinel);
         var analysisService = new FakeAgentImageAnalysisService
         {
             Handler = (_, _) => Task.FromException<AgentImageAnalysisResult>(
-                new InvalidOperationException("provider image analysis failed"))
+                expected)
         };
         var plugin = CreatePlugin(artifactService, analysisService, CreateProvider());
 
-        var result = await plugin.AnalyzeImageFile("images/frame.png", "Analyze.");
+        var exception = await Record.ExceptionAsync(InvokeAsync);
 
-        Assert.False(result.Succeeded);
-        Assert.Equal("provider image analysis failed", result.Message);
-        Assert.Equal("provider image analysis failed", result.Diagnostics);
-        Assert.Empty(result.Analysis);
-        Assert.Equal(0, result.InputTokens);
-        Assert.Equal(0, result.OutputTokens);
-        Assert.Same(image.Receipt, result.Receipt);
+        Assert.Same(expected, exception);
+        Assert.Contains(sentinel, exception!.Message, StringComparison.Ordinal);
+        Assert.False(MafAgentToolFailureMapper.TryMap(exception, out _));
+        Assert.Single(analysisService.Requests);
+
+        async Task InvokeAsync()
+        {
+            if (operation == WorkspaceImageAnalysisOperation.Single)
+            {
+                _ = await plugin.AnalyzeImageFile("images/frame.png", "Analyze.");
+                return;
+            }
+
+            _ = await plugin.AnalyzeImageFiles(["images/frame.png"], "Analyze.");
+        }
     }
 
     [Fact]
@@ -343,5 +356,11 @@ public sealed class WorkspaceRuntimePluginImageAnalysisTests
                 ? Task.FromResult(Result)
                 : Handler(request, cancellationToken);
         }
+    }
+
+    public enum WorkspaceImageAnalysisOperation
+    {
+        Single,
+        Multiple
     }
 }

@@ -68,10 +68,10 @@ internal sealed class WorkspacePathPolicy
         {
             fullPath = ResolveWorkspaceFullPath(path);
         }
-        catch (InvalidOperationException exception)
+        catch (WorkspacePathResolutionException exception)
         {
             resolution = default;
-            validationMessage = exception.Message;
+            validationMessage = exception.SafeMessage;
             return false;
         }
 
@@ -103,10 +103,20 @@ internal sealed class WorkspacePathPolicy
 
         if (externalAliasResolution == ExternalTargetAliasResolution.Invalid)
         {
-            throw new InvalidOperationException(externalValidationMessage);
+            throw WorkspacePathResolutionException.InvalidPath(externalValidationMessage);
         }
 
-        var fullPath = ResolveWorkspaceFullPath(path);
+        string fullPath;
+        try
+        {
+            fullPath = ResolveWorkspaceFullPath(path);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw WorkspacePathResolutionException.InvalidPath(
+                "The requested path could not be normalized.",
+                exception);
+        }
         if (IsWithinWorkspace(fullPath))
         {
             EnsureNoReparseTraversal(fullPath);
@@ -125,7 +135,8 @@ internal sealed class WorkspacePathPolicy
                 IsWorkspacePath: false);
         }
 
-        throw new InvalidOperationException($"Path '{path}' resolves outside the workspace root and is not covered by an explicit external-root allowlist.");
+        throw WorkspacePathResolutionException.OutsideWorkspace(
+            $"Path '{path}' resolves outside the workspace root and is not covered by an explicit external-root allowlist.");
     }
 
     public WorkspacePathResolution ResolveExistingPath(string path, bool allowFiles, bool allowDirectories, IReadOnlyList<string>? allowedExternalRoots = null)
@@ -137,7 +148,8 @@ internal sealed class WorkspacePathPolicy
         {
             if (!allowFiles)
             {
-                throw new InvalidOperationException($"Path '{displayPath}' resolves to a file, but a directory was required.");
+                throw WorkspacePathResolutionException.DirectoryRequired(
+                    $"Path '{displayPath}' resolves to a file, but a directory was required.");
             }
 
             return resolution;
@@ -147,7 +159,8 @@ internal sealed class WorkspacePathPolicy
         {
             if (!allowDirectories)
             {
-                throw new InvalidOperationException($"Path '{displayPath}' resolves to a directory, but a file was required.");
+                throw WorkspacePathResolutionException.FileRequired(
+                    $"Path '{displayPath}' resolves to a directory, but a file was required.");
             }
 
             return resolution;
@@ -155,10 +168,11 @@ internal sealed class WorkspacePathPolicy
 
         if (TryCreateManagedPathAliasCorrectionMessage(displayPath, out var aliasCorrectionMessage))
         {
-            throw new InvalidOperationException(aliasCorrectionMessage);
+            throw WorkspacePathResolutionException.ManagedPathAliasMismatch(aliasCorrectionMessage);
         }
 
-        throw new InvalidOperationException($"Path '{displayPath}' does not exist.");
+        throw WorkspacePathResolutionException.PathMissing(
+            $"Path '{displayPath}' does not exist.");
     }
 
     public string ResolveWorkingDirectory(
@@ -174,14 +188,16 @@ internal sealed class WorkspacePathPolicy
 
         if (File.Exists(resolution.FullPath))
         {
-            throw new InvalidOperationException($"Working directory '{resolution.DisplayPath}' resolves to a file.");
+            throw WorkspacePathResolutionException.DirectoryRequired(
+                $"Working directory '{resolution.DisplayPath}' resolves to a file.");
         }
 
         if (!Directory.Exists(resolution.FullPath))
         {
             if (!createIfMissing)
             {
-                throw new InvalidOperationException($"Working directory '{resolution.DisplayPath}' does not exist.");
+                throw WorkspacePathResolutionException.PathMissing(
+                    $"Working directory '{resolution.DisplayPath}' does not exist.");
             }
 
             Directory.CreateDirectory(resolution.FullPath);
@@ -310,7 +326,7 @@ internal sealed class WorkspacePathPolicy
 
         if (externalAliasResolution == ExternalTargetAliasResolution.Invalid)
         {
-            throw new InvalidOperationException(externalValidationMessage);
+            throw WorkspacePathResolutionException.InvalidPath(externalValidationMessage);
         }
 
         var expandedPath = ExpandPortablePath(path);
@@ -386,8 +402,8 @@ internal sealed class WorkspacePathPolicy
         catch (Exception exception) when (
             exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or UnauthorizedAccessException)
         {
-            validationMessage = exception is InvalidOperationException
-                ? exception.Message
+            validationMessage = exception is WorkspacePathResolutionException pathFailure
+                ? pathFailure.SafeMessage
                 : "The requested path could not be validated against filesystem reparse-point traversal.";
             return false;
         }
@@ -399,7 +415,8 @@ internal sealed class WorkspacePathPolicy
         var rootPath = Path.GetPathRoot(normalizedFullPath);
         if (string.IsNullOrWhiteSpace(rootPath))
         {
-            throw new InvalidOperationException("The requested path does not have a filesystem root.");
+            throw WorkspacePathResolutionException.InvalidPath(
+                "The requested path does not have a filesystem root.");
         }
 
         var relativePath = Path.GetRelativePath(rootPath, normalizedFullPath);
@@ -426,7 +443,7 @@ internal sealed class WorkspacePathPolicy
 
             if (attributes.HasFlag(FileAttributes.ReparsePoint))
             {
-                throw new InvalidOperationException(
+                throw WorkspacePathResolutionException.ReparsePointTraversal(
                     "Filesystem reparse-point traversal is not allowed for workspace paths.");
             }
         }
@@ -575,7 +592,7 @@ internal sealed class WorkspacePathPolicy
         var foreignScopedPrefix = $"{rootName}/scopes/";
         if (relativePath.StartsWith(foreignScopedPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException(
+            throw WorkspacePathResolutionException.ForeignManagedScope(
                 $"Path '{relativePath}' targets a different managed {rootName} scope. Use the current scope '{workspaceScope.DisplayName}'.");
         }
 

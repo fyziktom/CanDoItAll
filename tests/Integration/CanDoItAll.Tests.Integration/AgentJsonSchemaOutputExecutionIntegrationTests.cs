@@ -150,9 +150,13 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
             var apiStructuredOutput = apiPayload.RootElement.GetProperty("structuredOutput");
             Assert.Equal("Valid", apiStructuredOutput.GetProperty("validationStatus").GetString());
             Assert.Equal("blocked", apiStructuredOutput.GetProperty("data").GetProperty("status").GetString());
-            Assert.Equal(
+            Assert.False(apiStructuredOutput.TryGetProperty("schema", out _));
+            Assert.False(apiStructuredOutput.TryGetProperty("schemaHash", out _));
+            Assert.False(apiStructuredOutput.TryGetProperty("rawOutput", out _));
+            Assert.DoesNotContain(
                 runtime.ExecutionOptions[2]!.ResponseFormatJsonSchema,
-                apiStructuredOutput.GetProperty("schema").GetString());
+                apiBody,
+                StringComparison.Ordinal);
         }
 
         Assert.Equal(3, runtime.ExecutionOptions.Count);

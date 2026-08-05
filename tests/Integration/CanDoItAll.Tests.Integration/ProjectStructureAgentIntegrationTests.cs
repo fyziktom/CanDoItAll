@@ -10,6 +10,7 @@ using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
@@ -804,6 +805,19 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("desktop.png", imageSource.Name);
         Assert.Equal("image/png", imageSource.ContentType);
         Assert.Equal(screenshotBytes, imageSource.Bytes);
+        var providerFailure = new InvalidOperationException(
+            "Unexpected provider detail at C:\\private\\vision-endpoint.");
+        imageAnalysisService.Failure = providerFailure;
+        var propagatedProviderFailure = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await analyzeImage.InvokeAsync(new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["nodeId"] = screenshotNodeId,
+                ["prompt"] = "Describe the visible screenshot."
+            }));
+        Assert.Same(providerFailure, propagatedProviderFailure);
+        Assert.IsNotAssignableFrom<IAgentToolFailure>(propagatedProviderFailure);
+        Assert.False(MafAgentToolFailureMapper.TryMap(propagatedProviderFailure, out _));
         await using ProjectStructureKnownFileInteraction interaction =
             await fileInteractionCoordinator.OpenAsync(projectId, screenshotNodeId);
         await using FileContentLease content = await interaction.Session.ContentSource.OpenReadAsync(
@@ -5371,12 +5385,19 @@ public sealed class ProjectStructureAgentIntegrationTests
     {
         public List<AgentImageAnalysisRequest> Requests { get; } = [];
 
+        public Exception? Failure { get; set; }
+
         public Task<AgentImageAnalysisResult> AnalyzeAsync(
             AgentImageAnalysisRequest request,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Requests.Add(request);
+            if (Failure is not null)
+            {
+                throw Failure;
+            }
+
             return Task.FromResult(new AgentImageAnalysisResult(
                 "vision-model",
                 "Visible calculator screenshot",
