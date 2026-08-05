@@ -25,7 +25,7 @@ internal static class AgentActivityServerSentEventWriter
                             context.Response,
                             item.Sequence.Value,
                             ResolveEventName(item.Event),
-                            new AgentActivityApiEvent(operationId, item.Event),
+                            AgentActivityApiEvent.From(operationId, item.Event),
                             context.RequestAborted);
                     }
 

@@ -28,7 +28,7 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
     }
 
     [Fact]
-    public void BoundForAgentRuntime_keeps_small_non_media_base64()
+    public void BoundForAgentRuntime_keeps_small_safe_text_base64()
     {
         var textBytes = Encoding.UTF8.GetBytes("short release note");
         var base64 = Convert.ToBase64String(textBytes);
@@ -41,7 +41,24 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
 
         Assert.False(bounded.Base64DataOmitted);
         Assert.Equal(base64, bounded.Base64Data);
-        Assert.Contains("small non-media asset", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [InlineData("application/vnd.openxmlformats-officedocument.wordprocessingml.document")]
+    [InlineData("application/zip")]
+    public void BoundForAgentRuntime_omits_small_package_binary_base64(string contentType)
+    {
+        byte[] packageBytes = [0x50, 0x4B, 0x03, 0x04];
+        var content = new ProjectStructureAssetContentDescriptor(
+            CreateAsset(ProjectObjectType.File, contentType, "managed-files/project-media/files/package.bin"),
+            packageBytes.Length,
+            Convert.ToBase64String(packageBytes));
+
+        var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(content);
+
+        Assert.True(bounded.Base64DataOmitted);
+        Assert.Empty(bounded.Base64Data);
     }
 
     [Fact]

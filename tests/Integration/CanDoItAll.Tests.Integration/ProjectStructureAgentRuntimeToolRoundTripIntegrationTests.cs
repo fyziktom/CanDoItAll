@@ -16,6 +16,203 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = CreateFunctionResultJsonOptions();
 
+    private static readonly string[] ExplicitLeaseToolNames =
+    [
+        AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire,
+        AgentToolInvocationPolicyMetadata.ProjectStructureRepoBranchLeaseAcquire,
+        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet,
+        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew,
+        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease
+    ];
+
+    [Fact]
+    public async Task Interactive_tools_use_automatic_mutation_leases_without_exposing_explicit_lease_tokens()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var leaseService = scope.ServiceProvider.GetRequiredService<ProjectStructureLeaseService>();
+        var projectId = await CreateProjectAsync(projects);
+
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+
+        Assert.DoesNotContain(
+            tools,
+            tool => ExplicitLeaseToolNames.Contains(tool.Name, StringComparer.Ordinal));
+        var asset = await InvokeAsync<ProjectStructureNodeSummary>(
+            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureAgentAssetCreateInput(
+                    ProjectObjectType.File,
+                    "Interactive automatic lease proof",
+                    "Agent-created text asset",
+                    "Created without exposing or supplying an explicit lease token.",
+                    new ProjectObjectMediaPayload(
+                        "interactive-automatic-lease.txt",
+                        "text/plain",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes("automatic mutation lease"))),
+                    ParentNodeKey: $"project:{projectId:D}",
+                    ObjectSubtype: "txt")
+            });
+
+        Assert.Equal($"project:{projectId:D}", asset.ParentId);
+        Assert.Null(await leaseService.GetActiveLeaseAsync(
+            ProjectStructureLeaseScopeKind.Project,
+            projectId.ToString("D")));
+    }
+
+    [Fact]
+    public async Task Auto_approved_noninteractive_tools_do_not_expose_explicit_lease_tokens()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var projectId = await CreateProjectAsync(projects);
+
+        var tools = await CreateToolsAsync(
+            scope.ServiceProvider,
+            projectId,
+            AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive);
+
+        Assert.DoesNotContain(
+            tools,
+            tool => ExplicitLeaseToolNames.Contains(tool.Name, StringComparer.Ordinal));
+        Assert.Contains(
+            tools,
+            tool => string.Equals(
+                tool.Name,
+                AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Analytics_query_tool_exposes_only_the_agent_safe_allowlist()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var analyticsService = scope.ServiceProvider.GetRequiredService<ProjectStructureAnalyticsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var sentinel = CreateAnalyticsSentinel(projectId);
+        await analyticsService.RecordAsync(sentinel.Request);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var tool = FindTool(
+            tools,
+            AgentToolInvocationPolicyMetadata.ProjectStructureAnalyticsQuery);
+        var function = Assert.IsAssignableFrom<AIFunction>(tool);
+
+        var rawResult = await function.InvokeAsync(
+            new AIFunctionArguments
+            {
+                ["request"] = new ProjectStructureAnalyticsQueryRequest(
+                    ProjectId: projectId,
+                    OperationName: sentinel.Request.OperationName,
+                    Take: 1)
+            });
+        var response = rawResult switch
+        {
+            ProjectStructureAgentAnalyticsResponse typed => typed,
+            JsonElement json => JsonSerializer.Deserialize<ProjectStructureAgentAnalyticsResponse>(
+                json.GetRawText(),
+                FunctionResultJsonOptions)!,
+            _ => throw new InvalidOperationException(
+                $"Tool '{tool.Name}' returned unexpected result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
+        };
+        var entry = Assert.Single(response.Entries);
+        var serialized = rawResult switch
+        {
+            JsonElement json => json.GetRawText(),
+            null => "null",
+            _ => JsonSerializer.Serialize(
+                rawResult,
+                rawResult.GetType(),
+                FunctionResultJsonOptions)
+        };
+        using var document = JsonDocument.Parse(serialized);
+        var responseProperties = document.RootElement
+            .EnumerateObject()
+            .Select(property => property.Name)
+            .ToArray();
+        var serializedEntry = Assert.Single(
+            document.RootElement
+                .GetProperty("entries")
+                .EnumerateArray()
+                .ToArray());
+        var propertyNames = serializedEntry
+            .EnumerateObject()
+            .Select(property => property.Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        string[] expectedPropertyNames =
+        [
+            "durationMs",
+            "errorCode",
+            "nodeKey",
+            "occurredAtUtc",
+            "operationName",
+            "projectId",
+            "scopeKind",
+            "succeeded",
+            "warningCount"
+        ];
+
+        Assert.Equal(sentinel.Request.OperationName, entry.OperationName);
+        Assert.Equal(projectId, entry.ProjectId);
+        Assert.Equal(sentinel.Request.NodeKey, entry.NodeKey);
+        Assert.Equal(ProjectStructureLeaseScopeKind.Project, entry.ScopeKind);
+        Assert.False(entry.Succeeded);
+        Assert.Equal(sentinel.Request.DurationMs, entry.DurationMs);
+        Assert.Equal(sentinel.Request.Warnings.Count, entry.WarningCount);
+        Assert.Equal(
+            ProjectStructureAgentAnalyticsBoundary.OperationFailedErrorCode,
+            entry.ErrorCode);
+        Assert.NotEqual(default, entry.OccurredAtUtc);
+        Assert.Equal(["entries"], responseProperties);
+        Assert.Equal(expectedPropertyNames.Order(StringComparer.Ordinal), propertyNames);
+        Assert.All(
+            sentinel.ExcludedValues,
+            excludedValue => Assert.DoesNotContain(
+                excludedValue,
+                serialized,
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Analytics_service_query_retains_protected_operator_diagnostics()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var analyticsService = scope.ServiceProvider.GetRequiredService<ProjectStructureAnalyticsService>();
+        var projectId = await CreateProjectAsync(projects);
+        var sentinel = CreateAnalyticsSentinel(projectId);
+        await analyticsService.RecordAsync(sentinel.Request);
+
+        var response = await analyticsService.QueryAsync(
+            new ProjectStructureAnalyticsQueryRequest(
+                ProjectId: projectId,
+                OperationName: sentinel.Request.OperationName,
+                Take: 1));
+
+        var entry = Assert.Single(response.Entries);
+        Assert.Equal(sentinel.Request.ScopeKey, entry.ScopeKey);
+        Assert.Equal(sentinel.Request.Agent.AgentId, entry.AgentId);
+        Assert.Equal(sentinel.Request.Agent.AgentName, entry.AgentName);
+        Assert.Equal(sentinel.Request.Agent.MachineName, entry.MachineName);
+        Assert.Equal(sentinel.Request.Agent.RepositoryRoot, entry.RepositoryRoot);
+        Assert.Equal(sentinel.Request.Agent.BranchName, entry.BranchName);
+        Assert.Equal(sentinel.Request.ErrorCode, entry.ErrorCode);
+        Assert.Equal(sentinel.Request.ErrorMessage, entry.ErrorMessage);
+        Assert.Equal(sentinel.Request.RequestSummaryJson, entry.RequestSummaryJson);
+        Assert.Equal(sentinel.Request.ResponseSummaryJson, entry.ResponseSummaryJson);
+        Assert.Contains(
+            sentinel.Request.Warnings[0],
+            entry.WarningsJson,
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Asset_create_contract_requires_an_explicit_parent_node_key()
     {
@@ -224,7 +421,10 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 ObjectSubtype: "implementation"));
         var agent = CreateAgent(projectId);
         var tools = await provider.CreateToolsAsync(
-            CreateContext(agent, projectId),
+            CreateContext(
+                agent,
+                projectId,
+                AgentRuntimeToolProviderPurpose.GovernedProcessAutomation),
             CancellationToken.None);
 
         Assert.Contains(tools, tool => tool.Name == "project_structure_read");
@@ -234,6 +434,11 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.Contains(tools, tool => tool.Name == "project_structure_asset_get");
         Assert.Contains(tools, tool => tool.Name == "project_structure_asset_content_get");
         Assert.Contains(tools, tool => tool.Name == "project_structure_asset_text_get");
+        Assert.All(
+            ExplicitLeaseToolNames,
+            toolName => Assert.Contains(
+                tools,
+                tool => string.Equals(tool.Name, toolName, StringComparison.Ordinal)));
         Assert.DoesNotContain(tools, tool => tool.Name == "project_task_create");
         Assert.DoesNotContain(tools, tool => tool.Name == "project_task_update");
         Assert.DoesNotContain(tools, tool => tool.Name.StartsWith("workspace_", StringComparison.Ordinal));
@@ -288,13 +493,45 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         try
         {
             lease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
-                FindTool(tools, "project_structure_project_lease_acquire"),
+                FindTool(
+                    tools,
+                    AgentToolInvocationPolicyMetadata.ProjectStructureProjectLeaseAcquire),
                 new AIFunctionArguments
                 {
                     ["projectId"] = projectId,
                     ["reason"] = "Validate selected project-structure agent operations",
                     ["durationMinutes"] = 5
                 });
+            var projectLeaseScope = new ProjectStructureScopeInput(
+                ProjectStructureLeaseScopeKind.Project,
+                ProjectId: projectId);
+            var activeLease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
+                FindTool(
+                    tools,
+                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseGet),
+                new AIFunctionArguments
+                {
+                    ["scope"] = projectLeaseScope
+                });
+
+            Assert.Equal(lease.LeaseToken, activeLease.LeaseToken);
+            Assert.True(activeLease.IsActive);
+
+            var renewedLease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
+                FindTool(
+                    tools,
+                    AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRenew),
+                new AIFunctionArguments
+                {
+                    ["scope"] = projectLeaseScope,
+                    ["leaseToken"] = lease.LeaseToken,
+                    ["durationMinutes"] = 5
+                });
+
+            Assert.Equal(lease.LeaseToken, renewedLease.LeaseToken);
+            Assert.True(renewedLease.IsActive);
+            Assert.True(renewedLease.ExpiresAtUtc >= lease.ExpiresAtUtc);
+            lease = renewedLease;
 
             var invalidMetadataException = await Assert.ThrowsAsync<ProjectStructureAgentException>(
                 async () => await Assert.IsAssignableFrom<AIFunction>(
@@ -474,7 +711,9 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             if (lease is not null)
             {
                 releasedLease = await InvokeAsync<ProjectStructureLeaseSnapshot>(
-                    FindTool(tools, "project_structure_lease_release"),
+                    FindTool(
+                        tools,
+                        AgentToolInvocationPolicyMetadata.ProjectStructureLeaseRelease),
                     new AIFunctionArguments
                     {
                         ["scope"] = new ProjectStructureScopeInput(
@@ -518,6 +757,63 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         return result.Value;
     }
 
+    private static AnalyticsSentinel CreateAnalyticsSentinel(Guid projectId)
+    {
+        var suffix = Guid.NewGuid().ToString("N");
+        var providerPayload = $"excluded-provider-{suffix}";
+        var sessionPayload = $"excluded-session-{suffix}";
+        var toolPayload = $"excluded-tool-{suffix}";
+        var warning = $"excluded-warning-{suffix}";
+        var request = new ProjectStructureAnalyticsWriteRequest(
+            $"sentinel.analytics.{suffix}",
+            projectId,
+            $"safe-node-{suffix}",
+            ProjectStructureLeaseScopeKind.Project,
+            $"excluded-scope-{suffix}",
+            new ProjectStructureAgentContext(
+                $"excluded-agent-id-{suffix}",
+                $"excluded-agent-name-{suffix}",
+                $"excluded-machine-{suffix}",
+                $"C:/excluded-repository-{suffix}",
+                $"excluded-branch-{suffix}",
+                sessionPayload),
+            Succeeded: false,
+            DurationMs: 42,
+            Warnings: [warning],
+            ErrorCode: $"excluded-unreviewed-error-code-{suffix}",
+            ErrorMessage: $"excluded-error-message-{suffix}",
+            RequestSummaryJson: JsonSerializer.Serialize(new
+            {
+                ProviderPayload = providerPayload,
+                SessionPayload = sessionPayload,
+                ToolPayload = toolPayload
+            }),
+            ResponseSummaryJson: JsonSerializer.Serialize(new
+            {
+                ProviderPayload = providerPayload,
+                SessionPayload = sessionPayload,
+                ToolPayload = toolPayload
+            }));
+
+        return new AnalyticsSentinel(
+            request,
+            [
+                request.ScopeKey!,
+                request.Agent.AgentId,
+                request.Agent.AgentName,
+                request.Agent.MachineName,
+                request.Agent.RepositoryRoot,
+                request.Agent.BranchName,
+                request.Agent.SessionId,
+                request.ErrorCode!,
+                request.ErrorMessage!,
+                providerPayload,
+                sessionPayload,
+                toolPayload,
+                warning
+            ]);
+    }
+
     private static AgentDefinition CreateAgent(Guid projectId)
     {
         var now = DateTimeOffset.UtcNow;
@@ -557,7 +853,10 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             now);
     }
 
-    private static AgentRuntimeToolProviderContext CreateContext(AgentDefinition agent, Guid projectId)
+    private static AgentRuntimeToolProviderContext CreateContext(
+        AgentDefinition agent,
+        Guid projectId,
+        AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat)
     {
         var provider = new ProviderProfile(
             agent.ProviderProfileId!.Value,
@@ -588,7 +887,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             provider,
             [],
             SuppressApprovalRequirements: false,
-            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            purpose,
             RuntimeSessionKey: $"project-structure-integration:{projectId:D}",
             intent,
             Tags: new Dictionary<string, string>());
@@ -596,7 +895,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
 
     private static async Task<IReadOnlyList<AITool>> CreateToolsAsync(
         IServiceProvider services,
-        Guid projectId)
+        Guid projectId,
+        AgentRuntimeToolProviderPurpose purpose = AgentRuntimeToolProviderPurpose.InteractiveChat)
     {
         var provider = services
             .GetServices<IAgentRuntimeToolProvider>()
@@ -604,7 +904,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             .Single();
 
         return await provider.CreateToolsAsync(
-            CreateContext(CreateAgent(projectId), projectId),
+            CreateContext(CreateAgent(projectId), projectId, purpose),
             CancellationToken.None);
     }
 
@@ -634,4 +934,8 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 $"Tool '{tool.Name}' returned unexpected result type '{rawResult?.GetType().FullName ?? "<null>"}'.")
         };
     }
+
+    private sealed record AnalyticsSentinel(
+        ProjectStructureAnalyticsWriteRequest Request,
+        IReadOnlyList<string> ExcludedValues);
 }

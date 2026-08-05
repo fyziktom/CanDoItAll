@@ -12,6 +12,8 @@ The architecture documentation is intentionally small:
   defines request-feature-aware compatibility before provider dispatch.
 - [Project Structure transfer outcome boundary](project-structure-transfer-outcome-boundary.md)
   separates shared transfer recovery from agent transport failures.
+- [Agent tool failure recovery boundary](agent-tool-failure-recovery-boundary.md)
+  defines safe, retryable tool failures without exposing arbitrary exceptions.
 
 Detailed operational contracts live beside their subject in the parent documentation
 directory. Project READMEs describe the local project boundary and validation command.

@@ -22,7 +22,7 @@ internal sealed class ToolCapabilityBuilder(
 {
     private static readonly ProviderProfileService ProviderFeatureService = new();
     private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
-    private readonly ConfiguredWorkspaceToolSet configuredWorkspaceToolSet = new(
+    private readonly WorkspaceToolSet workspaceToolSet = new(
         workspaceToolAccess,
         filesystemPlugin,
         workspacePlugin,
@@ -42,6 +42,14 @@ internal sealed class ToolCapabilityBuilder(
             AgentDefinition? agent,
             bool suppressApprovalRequirements = false)
         {
+            if (workspaceToolSet.TryCreateCatalogCapabilityTools(
+                    capability,
+                    suppressApprovalRequirements,
+                    out var workspaceTools))
+            {
+                return workspaceTools;
+            }
+
             var configuration = MafRuntimeJson.DeserializeConfiguration<BuiltInToolConfiguration>(capability.ConfigurationJson) ?? new BuiltInToolConfiguration();
             var toolKey = configuration.Tool ?? capability.Key;
             if (!IsBuiltInToolEnabled(toolKey, configuration))
@@ -49,55 +57,11 @@ internal sealed class ToolCapabilityBuilder(
                 return [];
             }
 
-            var tools = toolKey switch
+            IReadOnlyList<AITool> tools = toolKey switch
             {
-                "workspace-plugin" => configuredWorkspaceToolSet.CreateWorkspacePluginTools(suppressApprovalRequirements),
                 "provider-native-code-interpreter" or ProviderNativeToolKeys.CodeInterpreter => [CreateHostedCodeInterpreterTool(capability, provider, configuration)],
                 "provider-native-file-search" or ProviderNativeToolKeys.FileSearch => [CreateHostedFileSearchTool(capability, provider, configuration)],
                 "provider-native-web-search" or ProviderNativeToolKeys.WebSearch => [CreateHostedWebSearchTool(capability, provider, configuration)],
-                "workspace-execution-boundary" or "workspace_execution_boundary" => [AIFunctionFactory.Create(workspacePlugin.GetWorkspaceExecutionBoundary, "workspace_execution_boundary", capability.Description)],
-                "workspace-list-directory" or "workspace_list_directory" => [AIFunctionFactory.Create(filesystemPlugin.ListWorkspaceDirectory, "workspace_list_directory", capability.Description)],
-                "workspace-search" or "workspace_search" => [AIFunctionFactory.Create(filesystemPlugin.SearchWorkspace, "workspace_search", capability.Description)],
-                "workspace-read-file" or "workspace_read_file" => [AIFunctionFactory.Create(filesystemPlugin.ReadWorkspaceTextFile, "workspace_read_file", capability.Description)],
-                "workspace-list-files" or "workspace_list_files" => [AIFunctionFactory.Create(filesystemPlugin.ListWorkspaceFiles, "workspace_list_files", capability.Description)],
-                "workspace-stat-path" or "workspace_stat_path" => [AIFunctionFactory.Create(filesystemPlugin.StatWorkspacePath, "workspace_stat_path", capability.Description)],
-                "workspace-hash-path" or "workspace_hash_path" => [AIFunctionFactory.Create(filesystemPlugin.HashWorkspacePath, "workspace_hash_path", capability.Description)],
-                "workspace-create-directory" or "workspace_create_directory" => [AIFunctionFactory.Create(filesystemPlugin.CreateWorkspaceDirectory, "workspace_create_directory", capability.Description)],
-                "workspace-write-file" or "workspace_write_file" => [AIFunctionFactory.Create(filesystemPlugin.WriteWorkspaceTextFile, "workspace_write_file", capability.Description)],
-                "workspace-append-file" or "workspace_append_file" => [AIFunctionFactory.Create(filesystemPlugin.AppendWorkspaceTextFile, "workspace_append_file", capability.Description)],
-                "workspace-copy-path" or "workspace_copy_path" => [AIFunctionFactory.Create(filesystemPlugin.CopyWorkspacePath, "workspace_copy_path", capability.Description)],
-                "workspace-move-path" or "workspace_move_path" => [AIFunctionFactory.Create(filesystemPlugin.MoveWorkspacePath, "workspace_move_path", capability.Description)],
-                "workspace-delete-path" or "workspace_delete_path" => [AIFunctionFactory.Create(filesystemPlugin.DeleteWorkspacePath, "workspace_delete_path", capability.Description)],
-                "workspace-zip-path" or "workspace_zip_path" => [AIFunctionFactory.Create(filesystemPlugin.ZipWorkspacePath, "workspace_zip_path", capability.Description)],
-                "workspace-unzip-archive" or "workspace_unzip_archive" => [AIFunctionFactory.Create(filesystemPlugin.UnzipWorkspaceArchive, "workspace_unzip_archive", capability.Description)],
-                "workspace-diff-text" or "workspace_diff_text" => [AIFunctionFactory.Create(filesystemPlugin.DiffWorkspaceTextFiles, "workspace_diff_text", capability.Description)],
-                "workspace-git-status" or "workspace_git_status" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceStatus, "workspace_git_status", capability.Description)],
-                "workspace-git-diff" or "workspace_git_diff" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceDiff, "workspace_git_diff", capability.Description)],
-                "workspace-git-log" or "workspace_git_log" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceLog, "workspace_git_log", capability.Description)],
-                "workspace-git-show" or "workspace_git_show" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceShow, "workspace_git_show", capability.Description)],
-                "workspace-git-add" or "workspace_git_add" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceAdd, "workspace_git_add", capability.Description)],
-                "workspace-git-unstage" or "workspace_git_unstage" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceUnstage, "workspace_git_unstage", capability.Description)],
-                "workspace-git-commit" or "workspace_git_commit" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceCommit, "workspace_git_commit", capability.Description)],
-                "workspace-git-branch-create" or "workspace_git_branch_create" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceBranchCreate, "workspace_git_branch_create", capability.Description)],
-                "workspace-git-switch" or "workspace_git_switch" => [AIFunctionFactory.Create(workspacePlugin.GitWorkspaceSwitch, "workspace_git_switch", capability.Description)],
-                "workspace-dotnet-restore" or "workspace_dotnet_restore" => [AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRestore, "workspace_dotnet_restore", capability.Description)],
-                "workspace-dotnet-build" or "workspace_dotnet_build" => [AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceBuild, "workspace_dotnet_build", capability.Description)],
-                "workspace-dotnet-test" or "workspace_dotnet_test" => [AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceTest, "workspace_dotnet_test", capability.Description)],
-                "workspace-dotnet-run" or "workspace_dotnet_run" => [AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceRun, "workspace_dotnet_run", capability.Description)],
-                "workspace-dotnet-stop" or "workspace_dotnet_stop" => [AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceStop, "workspace_dotnet_stop", capability.Description)],
-                "workspace-dotnet-new" or "workspace_dotnet_new" => [AIFunctionFactory.Create(workspacePlugin.DotnetWorkspaceNew, "workspace_dotnet_new", capability.Description)],
-                "workspace-python-run-file" or "workspace_python_run_file" => [AIFunctionFactory.Create(workspacePlugin.RunWorkspacePythonFile, "workspace_python_run_file", capability.Description)],
-                "workspace-pwsh-run-script" or "workspace_pwsh_run_script" => [AIFunctionFactory.Create(workspacePlugin.RunWorkspacePowerShellScript, "workspace_pwsh_run_script", capability.Description)],
-                "workspace-convert-document" or "workspace_convert_document" => [AIFunctionFactory.Create(workspacePlugin.ConvertDocumentToMarkdown, "workspace_convert_document", capability.Description)],
-                "workspace-inspect-spreadsheet" or "workspace_inspect_spreadsheet" => [AIFunctionFactory.Create(workspacePlugin.InspectSpreadsheetFile, "workspace_inspect_spreadsheet", capability.Description)],
-                "workspace-spreadsheet-summary" or "workspace_spreadsheet_summary" => [AIFunctionFactory.Create(spreadsheetPlugin.InspectWorkbook, "workspace_spreadsheet_summary", capability.Description)],
-                "workspace-read-spreadsheet-cell" or "workspace_read_spreadsheet_cell" => [AIFunctionFactory.Create(spreadsheetPlugin.ReadSpreadsheetCell, "workspace_read_spreadsheet_cell", capability.Description)],
-                "workspace-read-spreadsheet-range" or "workspace_read_spreadsheet_range" => [AIFunctionFactory.Create(spreadsheetPlugin.ReadSpreadsheetRange, "workspace_read_spreadsheet_range", capability.Description)],
-                "workspace-write-spreadsheet" or "workspace_write_spreadsheet" => [AIFunctionFactory.Create(spreadsheetPlugin.WriteSpreadsheetWorkbook, "workspace_write_spreadsheet", capability.Description)],
-                "workspace-spreadsheet-function-catalog" or "workspace_spreadsheet_function_catalog" => [AIFunctionFactory.Create(spreadsheetPlugin.ListSpreadsheetFunctions, "workspace_spreadsheet_function_catalog", capability.Description)],
-                "workspace-inspect-image" or "workspace_inspect_image" => [AIFunctionFactory.Create(workspacePlugin.InspectImageFile, "workspace_inspect_image", capability.Description)],
-                "workspace-analyze-image" or "workspace_analyze_image" => [AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFile, "workspace_analyze_image", capability.Description)],
-                "workspace-analyze-images" or "workspace_analyze_images" => [AIFunctionFactory.Create(workspacePlugin.AnalyzeImageFiles, "workspace_analyze_images", capability.Description)],
                 "provider-health" or "provider_health" => [AIFunctionFactory.Create(() => DescribeProviderHealth(provider), ToolContractCatalog.ProviderHealth, capability.Description)],
                 "agent-package-export" or "agent_package_export" => [AIFunctionFactory.Create(ListExportPackages, ToolContractCatalog.AgentPackageExport, capability.Description)],
                 _ => []
@@ -110,6 +74,14 @@ internal sealed class ToolCapabilityBuilder(
             CapabilityCatalogItem capability,
             bool suppressApprovalRequirements = false)
         {
+            if (workspaceToolSet.TryCapabilityHasApprovalTools(
+                    capability,
+                    suppressApprovalRequirements,
+                    out var workspaceCapabilityHasApprovalTools))
+            {
+                return workspaceCapabilityHasApprovalTools;
+            }
+
             if (suppressApprovalRequirements)
             {
                 return false;
@@ -122,14 +94,25 @@ internal sealed class ToolCapabilityBuilder(
                 return false;
             }
 
-            return SupportsFrameworkApprovalWrapper(toolKey) && configuration.ApprovalRequired == true
-                || string.Equals(toolKey, "workspace-plugin", StringComparison.OrdinalIgnoreCase);
+            return SupportsFrameworkApprovalWrapper(toolKey) && configuration.ApprovalRequired == true;
         }
 
-        public IReadOnlyList<AITool> CreateConfiguredWorkspaceTools(
-            AgentDefinition agent,
+        public IReadOnlyList<AITool> CreateWorkspaceTools(
+            IReadOnlyList<CapabilityCatalogItem> catalogCapabilities,
             bool suppressApprovalRequirements = false)
-            => configuredWorkspaceToolSet.CreateTools(agent, suppressApprovalRequirements);
+            => workspaceToolSet.CreateTools(
+                catalogCapabilities,
+                suppressApprovalRequirements);
+
+        public bool IsWorkspaceToolCapability(CapabilityCatalogItem capability)
+            => workspaceToolSet.IsWorkspaceToolCapability(capability);
+
+        public bool CanWorkspaceToolCapabilityParticipate(
+            CapabilityCatalogItem capability,
+            IReadOnlyList<CapabilityCatalogItem> catalogCapabilities)
+            => workspaceToolSet.CanWorkspaceToolCapabilityParticipate(
+                capability,
+                catalogCapabilities);
 
         public IReadOnlyList<AITool> CreatePluginTools(
             CapabilityCatalogItem capability,
@@ -176,28 +159,13 @@ internal sealed class ToolCapabilityBuilder(
             IReadOnlyList<string> scriptArguments,
             CancellationToken cancellationToken)
         {
-            if (!File.Exists(script.FullPath))
-            {
-                return $"Error: Script file not found: {script.FullPath}";
-            }
-
             var policy = ResolveSkillExecutionPolicy(script.FullPath);
-
-            try
-            {
-                return await workspaceCommandExecutionService.RunSkillScript(
-                    Path.GetFileName(skill.Path),
-                    script.FullPath,
-                    scriptArguments.ToArray(),
-                    Path.GetDirectoryName(script.FullPath),
-                    policy.ApprovalRequired,
-                    policy.TrustLevel,
-                    [policy.RootPath]).ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                return $"Error: Failed to execute script '{script.Name}': {exception.Message}";
-            }
+            return await SkillScriptExecutionBoundary.ExecuteAsync(
+                skill,
+                script,
+                scriptArguments,
+                policy,
+                workspaceCommandExecutionService).ConfigureAwait(false);
         }
 
         private static IReadOnlyList<string> ResolveSkillScriptArguments(AIFunctionArguments arguments)

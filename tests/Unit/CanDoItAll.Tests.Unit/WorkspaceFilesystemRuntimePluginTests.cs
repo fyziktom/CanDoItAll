@@ -171,6 +171,77 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
         });
     }
 
+    [Theory]
+    [InlineData(FilesystemPathFailureOperation.SinglePath, "directory")]
+    [InlineData(FilesystemPathFailureOperation.MultiPath, "directory")]
+    [InlineData(FilesystemPathFailureOperation.ManagedAliasMismatch, "managed workspace path")]
+    public void Filesystem_operations_map_typed_path_failures_to_safe_retryable_input(
+        FilesystemPathFailureOperation operation,
+        string expectedMessageFragment)
+    {
+        var sensitiveDiagnostic = $"Path failure at '{workspaceRoot}'.";
+        var failure = operation switch
+        {
+            FilesystemPathFailureOperation.SinglePath or
+            FilesystemPathFailureOperation.MultiPath =>
+                WorkspacePathResolutionException.FileRequired(sensitiveDiagnostic),
+            FilesystemPathFailureOperation.ManagedAliasMismatch =>
+                WorkspacePathResolutionException.ManagedPathAliasMismatch(sensitiveDiagnostic),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(operation),
+                operation,
+                "Unknown filesystem path failure operation.")
+        };
+        var plugin = CreatePlugin(
+            AgentWorkspaceToolAccessProfiles.CreateSettings(
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
+            new RecordingReadWorkspaceFileService(failure));
+
+        var exception = Assert.Throws<AgentToolInputValidationException>(() =>
+            InvokePathFailure(plugin, operation));
+        var mapped = MafAgentToolFailureMapper.TryMap(exception, out var result);
+
+        Assert.True(mapped);
+        Assert.Equal(AgentToolInputValidationException.FailureCode, result.ErrorCode);
+        Assert.Contains(expectedMessageFragment, result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("corrected workspace path", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.CanRetryWithCorrectedInput);
+        Assert.DoesNotContain(workspaceRoot, result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(UnexpectedFilesystemFailureKind.InvalidOperation)]
+    [InlineData(UnexpectedFilesystemFailureKind.Io)]
+    public void Filesystem_execution_helpers_leave_untyped_failures_opaque(
+        UnexpectedFilesystemFailureKind failureKind)
+    {
+        Exception expected = failureKind switch
+        {
+            UnexpectedFilesystemFailureKind.InvalidOperation =>
+                new InvalidOperationException($"Unexpected operation failure at '{workspaceRoot}'."),
+            UnexpectedFilesystemFailureKind.Io =>
+                new IOException($"Unexpected I/O failure at '{workspaceRoot}'."),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(failureKind),
+                failureKind,
+                "Unknown unexpected filesystem failure kind.")
+        };
+        var plugin = CreatePlugin(
+            AgentWorkspaceToolAccessProfiles.CreateSettings(
+                AgentWorkspaceToolProfileKind.SoftwareDevelopment),
+            new RecordingReadWorkspaceFileService(expected));
+
+        var singlePathException = Record.Exception(() =>
+            plugin.ReadWorkspaceTextFile("source.txt"));
+        var multiPathException = Record.Exception(() =>
+            plugin.CopyWorkspacePath("source.txt", "destination.txt"));
+
+        Assert.Same(expected, singlePathException);
+        Assert.Same(expected, multiPathException);
+        Assert.False(MafAgentToolFailureMapper.TryMap(singlePathException!, out _));
+        Assert.False(MafAgentToolFailureMapper.TryMap(multiPathException!, out _));
+    }
+
     [Fact]
     public void Write_passes_most_specific_writable_external_authority_to_file_service()
     {
@@ -362,6 +433,29 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
             access);
     }
 
+    private static void InvokePathFailure(
+        WorkspaceFilesystemRuntimePlugin plugin,
+        FilesystemPathFailureOperation operation)
+    {
+        switch (operation)
+        {
+            case FilesystemPathFailureOperation.SinglePath:
+                plugin.ReadWorkspaceTextFile("source.txt");
+                return;
+            case FilesystemPathFailureOperation.MultiPath:
+                plugin.CopyWorkspacePath("source.txt", "destination.txt");
+                return;
+            case FilesystemPathFailureOperation.ManagedAliasMismatch:
+                plugin.ReadWorkspaceTextFile("managed-files/missing.txt");
+                return;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(operation),
+                    operation,
+                    "Unknown filesystem path failure operation.");
+        }
+    }
+
     private sealed class UnauthorizedWorkspaceFileService : IWorkspaceFileService
     {
         public const string SensitiveFailureMessage = @"Access denied to C:\operator-private\secret";
@@ -443,7 +537,8 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
     }
 
-    private sealed class RecordingReadWorkspaceFileService : IWorkspaceFileService
+    private sealed class RecordingReadWorkspaceFileService(Exception? exception = null)
+        : IWorkspaceFileService
     {
         public string LastListRoot { get; private set; } = string.Empty;
 
@@ -486,6 +581,11 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
             string path,
             int maxCharacters = 12000)
         {
+            if (exception is not null)
+            {
+                throw exception;
+            }
+
             LastReadPath = path;
             const string content = "<Project Sdk=\"Microsoft.NET.Sdk\" />";
             return new WorkspaceTextFileReadResult(
@@ -561,7 +661,9 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
             => throw new NotSupportedException();
 
         public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite, string destinationAuthorityRootPath)
-            => throw new NotSupportedException();
+            => exception is not null
+                ? throw exception
+                : throw new NotSupportedException();
 
         public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
             => throw new NotSupportedException();
@@ -720,5 +822,18 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
     {
         public override DateTimeOffset GetUtcNow()
             => utcNow;
+    }
+
+    public enum FilesystemPathFailureOperation
+    {
+        SinglePath,
+        MultiPath,
+        ManagedAliasMismatch
+    }
+
+    public enum UnexpectedFilesystemFailureKind
+    {
+        InvalidOperation,
+        Io
     }
 }

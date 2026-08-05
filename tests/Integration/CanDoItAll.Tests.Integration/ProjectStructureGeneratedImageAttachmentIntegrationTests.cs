@@ -8,6 +8,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -144,8 +145,13 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         }
     }
 
-    [Fact]
-    public async Task Asset_tool_accepts_an_existing_source_from_the_exact_target_project_scope()
+    [Theory]
+    [InlineData(ProjectManagedRoot.Artifacts)]
+    [InlineData(ProjectManagedRoot.Output)]
+    [InlineData(ProjectManagedRoot.Data)]
+    [InlineData(ProjectManagedRoot.IntegrationMap)]
+    public async Task Asset_tool_accepts_an_existing_source_from_the_exact_target_project_scope(
+        ProjectManagedRoot managedRoot)
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -153,6 +159,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projects = services.GetRequiredService<ProjectsService>();
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var agentService = services.GetRequiredService<ProjectStructureAgentService>();
+        var spreadsheets = services.GetRequiredService<ISpreadsheetDocumentService>();
         var projectId = await CreateProjectAsync(projects);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
@@ -168,17 +175,33 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projectPaths = new WorkspacePathResolutionService(
             services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
             projectScope);
+        var (rootName, scopedRoot) = ResolveManagedRoot(projectScope, managedRoot);
         var source = projectPaths.ResolveFilePath(
-            $"artifacts/agent-project-structure-hardening/{Guid.NewGuid():N}/project-finance.xlsx",
+            $"{rootName}/agent-project-structure-hardening/{Guid.NewGuid():N}/project-finance.xlsx",
             allowMissing: true);
-        byte[] workbookBytes = [0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00];
 
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(source.FullPath)!);
-            await File.WriteAllBytesAsync(source.FullPath, workbookBytes);
+            spreadsheets.Write(new SpreadsheetWriteRequest(
+                source.FullPath,
+                source.FullPath,
+                "Summary",
+                [],
+                [
+                    new SpreadsheetRangeWrite(
+                        "A1:B3",
+                        [
+                            ["Metric", "Estimate"],
+                            ["Quantity", "24"],
+                            ["Total", "=B2*3"]
+                        ])
+                ],
+                CreateWorkbookIfMissing: true,
+                Overwrite: true));
+            var workbookBytes = await File.ReadAllBytesAsync(source.FullPath);
 
-            Assert.StartsWith(projectScope.ArtifactRootRelativePath + "/", source.RelativePath, StringComparison.Ordinal);
+            Assert.StartsWith(scopedRoot + "/", source.RelativePath, StringComparison.Ordinal);
 
             var assetNode = await InvokeAsync<ProjectStructureNodeSummary>(
                 FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
@@ -204,7 +227,20 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
                     ["projectId"] = projectId,
                     ["nodeId"] = assetNode.Id
                 });
+            var runtimeContent = await InvokeAsync<ProjectStructureAssetContentDescriptor>(
+                FindTool(projectTools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetContentGet),
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["nodeId"] = assetNode.Id
+                });
             var content = await agentService.GetAssetContentAsync(projectId, assetNode.Id);
+            var preview = spreadsheets.PreviewWorkbook(new SpreadsheetWorkbookContentPreviewRequest(
+                asset.MediaOriginalFileName,
+                Convert.FromBase64String(content.Base64Data),
+                MaxWorksheets: 1,
+                MaxRows: 3,
+                MaxColumns: 2));
             var canonical = await workbench.GetStructureAsync(projectId);
             var canonicalAsset = Assert.Single(canonical.Nodes, node => node.Id == assetNode.Id);
 
@@ -213,7 +249,14 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             Assert.Equal(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 asset.MediaContentType);
+            Assert.True(runtimeContent.Base64DataOmitted);
+            Assert.Empty(runtimeContent.Base64Data);
+            Assert.Contains("workspace_spreadsheet_summary", runtimeContent.ContentSummary, StringComparison.Ordinal);
             Assert.Equal(workbookBytes, Convert.FromBase64String(content.Base64Data));
+            var previewWorksheet = Assert.Single(preview.Worksheets);
+            Assert.Equal("Summary", previewWorksheet.Name);
+            Assert.Equal("Metric", previewWorksheet.Values[0][0]);
+            Assert.Equal("=B2*3", previewWorksheet.Values[2][1]);
         }
         finally
         {
@@ -221,8 +264,13 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         }
     }
 
-    [Fact]
-    public async Task Asset_tool_rejects_a_source_from_a_different_project_scope()
+    [Theory]
+    [InlineData(ProjectManagedRoot.Artifacts)]
+    [InlineData(ProjectManagedRoot.Output)]
+    [InlineData(ProjectManagedRoot.Data)]
+    [InlineData(ProjectManagedRoot.IntegrationMap)]
+    public async Task Asset_tool_rejects_a_source_from_a_different_project_scope(
+        ProjectManagedRoot managedRoot)
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -241,11 +289,13 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projectTools = await projectToolProvider.CreateToolsAsync(
             CreateContext(agent, chatProvider, projectId),
             CancellationToken.None);
+        var foreignScope = WorkspaceScopeDescriptor.Project(foreignProjectId.ToString("D"));
         var foreignPaths = new WorkspacePathResolutionService(
             services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
-            WorkspaceScopeDescriptor.Project(foreignProjectId.ToString("D")));
+            foreignScope);
+        var (rootName, _) = ResolveManagedRoot(foreignScope, managedRoot);
         var source = foreignPaths.ResolveFilePath(
-            $"artifacts/agent-project-structure-hardening/{Guid.NewGuid():N}/foreign-project.xlsx",
+            $"{rootName}/agent-project-structure-hardening/{Guid.NewGuid():N}/foreign-project.xlsx",
             allowMissing: true);
 
         try
@@ -629,6 +679,20 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         return options;
     }
 
+    private static (string RootName, string ScopedRoot) ResolveManagedRoot(
+        WorkspaceScopeDescriptor scope,
+        ProjectManagedRoot managedRoot)
+    {
+        return managedRoot switch
+        {
+            ProjectManagedRoot.Artifacts => (WorkspaceScopeDescriptor.ArtifactManagedRootName, scope.ArtifactRootRelativePath),
+            ProjectManagedRoot.Output => (WorkspaceScopeDescriptor.OutputManagedRootName, scope.OutputRootRelativePath),
+            ProjectManagedRoot.Data => (WorkspaceScopeDescriptor.DataManagedRootName, scope.DataRootRelativePath),
+            ProjectManagedRoot.IntegrationMap => (WorkspaceScopeDescriptor.IntegrationMapManagedRootName, scope.IntegrationMapRootRelativePath),
+            _ => throw new ArgumentOutOfRangeException(nameof(managedRoot), managedRoot, null)
+        };
+    }
+
     private static void DeleteGeneratedFileAndEmptyParent(string? fullPath)
     {
         if (string.IsNullOrWhiteSpace(fullPath) || !File.Exists(fullPath))
@@ -659,6 +723,14 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(providers.FirstOrDefault(provider => provider.Id == providerId));
         }
+    }
+
+    public enum ProjectManagedRoot
+    {
+        Artifacts,
+        Output,
+        Data,
+        IntegrationMap
     }
 
     private sealed class RecordingImageGenerationService : IAgentImageGenerationService

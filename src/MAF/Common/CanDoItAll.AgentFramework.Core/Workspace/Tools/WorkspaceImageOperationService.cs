@@ -26,12 +26,29 @@ public sealed record WorkspaceImageContentResult(
     byte[] Bytes,
     string Diagnostics);
 
-public sealed class WorkspaceImageOperationService(
-    string workspaceRoot,
-    WorkspaceScopeDescriptor? workspaceScope = null) : IWorkspaceImageOperationService
+public sealed class WorkspaceImageOperationService : IWorkspaceImageOperationService
 {
-    private readonly WorkspacePathPolicy pathPolicy = new(workspaceRoot, workspaceScope);
-    private readonly WorkspaceFileReceiptWriter receiptWriter = new(workspaceRoot, workspaceScope);
+    private readonly WorkspacePathPolicy pathPolicy;
+    private readonly WorkspaceFileReceiptWriter receiptWriter;
+    private readonly Func<string, byte[]> readAllBytes;
+
+    public WorkspaceImageOperationService(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope = null)
+        : this(workspaceRoot, workspaceScope, File.ReadAllBytes)
+    {
+    }
+
+    internal WorkspaceImageOperationService(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope,
+        Func<string, byte[]> readAllBytes)
+    {
+        ArgumentNullException.ThrowIfNull(readAllBytes);
+        pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
+        receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot, workspaceScope);
+        this.readAllBytes = readAllBytes;
+    }
 
     public Task<WorkspaceImageInspectionResult> InspectImageFile(string path)
     {
@@ -71,27 +88,7 @@ public sealed class WorkspaceImageOperationService(
                 targetPaths: [resolution.RelativePath]));
         }
 
-        byte[] bytes;
-        try
-        {
-            bytes = File.ReadAllBytes(resolution.FullPath);
-        }
-        catch (IOException exception)
-        {
-            return Task.FromResult(CreateImageInspectionResult(
-                succeeded: false,
-                outcome: "Failed",
-                message: exception.Message,
-                resolution.RelativePath,
-                format: string.Empty,
-                contentType: string.Empty,
-                sizeBytes: 0,
-                width: null,
-                height: null,
-                diagnostics: exception.Message,
-                startedAtUtc,
-                targetPaths: [resolution.RelativePath]));
-        }
+        var bytes = readAllBytes(resolution.FullPath);
 
         if (!TryReadImageMetadata(bytes, out var metadata, out var diagnostics))
         {
@@ -195,29 +192,7 @@ public sealed class WorkspaceImageOperationService(
                 targetPaths: [resolution.RelativePath]));
         }
 
-        byte[] bytes;
-        try
-        {
-            bytes = File.ReadAllBytes(resolution.FullPath);
-        }
-        catch (IOException exception)
-        {
-            return Task.FromResult(CreateImageContentResult(
-                normalizedOperationName,
-                succeeded: false,
-                outcome: "Failed",
-                message: exception.Message,
-                resolution.RelativePath,
-                format: string.Empty,
-                contentType: string.Empty,
-                sizeBytes: 0,
-                width: null,
-                height: null,
-                bytes: [],
-                diagnostics: exception.Message,
-                startedAtUtc,
-                targetPaths: [resolution.RelativePath]));
-        }
+        var bytes = readAllBytes(resolution.FullPath);
 
         if (!TryReadImageMetadata(bytes, out var metadata, out var diagnostics))
         {

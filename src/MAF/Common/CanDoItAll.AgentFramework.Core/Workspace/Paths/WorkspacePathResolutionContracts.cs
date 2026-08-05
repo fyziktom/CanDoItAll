@@ -27,12 +27,14 @@ public sealed class WorkspacePathResolutionService(string workspaceRoot, Workspa
 
         if (!allowMissing && !File.Exists(resolution.FullPath))
         {
-            throw new InvalidOperationException($"Path '{resolution.DisplayPath}' does not resolve to an existing file.");
+            throw WorkspacePathResolutionException.PathMissing(
+                $"Path '{resolution.DisplayPath}' does not resolve to an existing file.");
         }
 
         if (Directory.Exists(resolution.FullPath))
         {
-            throw new InvalidOperationException($"Path '{resolution.DisplayPath}' resolves to a directory, but a file was required.");
+            throw WorkspacePathResolutionException.FileRequired(
+                $"Path '{resolution.DisplayPath}' resolves to a directory, but a file was required.");
         }
 
         return new WorkspaceResolvedPath(
@@ -49,12 +51,14 @@ public sealed class WorkspacePathResolutionService(string workspaceRoot, Workspa
 
         if (!allowMissing && !Directory.Exists(resolution.FullPath))
         {
-            throw new InvalidOperationException($"Path '{resolution.DisplayPath}' does not resolve to an existing directory.");
+            throw WorkspacePathResolutionException.PathMissing(
+                $"Path '{resolution.DisplayPath}' does not resolve to an existing directory.");
         }
 
         if (File.Exists(resolution.FullPath))
         {
-            throw new InvalidOperationException($"Path '{resolution.DisplayPath}' resolves to a file, but a directory was required.");
+            throw WorkspacePathResolutionException.DirectoryRequired(
+                $"Path '{resolution.DisplayPath}' resolves to a file, but a directory was required.");
         }
 
         return new WorkspaceResolvedPath(

@@ -147,26 +147,10 @@ public sealed class WorkspaceArtifactToolService(
                 targetPaths: [sourceResolution.RelativePath, outputResolution.RelativePath]);
         }
 
-        try
-        {
-            await WriteMarkdownAtomicallyAsync(
-                outputResolution.FullPath,
-                conversion.Markdown,
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (IsExpectedOutputWriteFailure(exception))
-        {
-            var writeFailureMessage = $"Document conversion succeeded, but markdown output '{outputResolution.RelativePath}' could not be written. {exception.Message}";
-            return CreateDocumentConversionResult(
-                succeeded: false,
-                outcome: "Failed",
-                writeFailureMessage,
-                sourceResolution.RelativePath,
-                outputResolution.RelativePath,
-                diagnostics: writeFailureMessage,
-                startedAtUtc,
-                targetPaths: [sourceResolution.RelativePath, outputResolution.RelativePath]);
-        }
+        await WriteMarkdownAtomicallyAsync(
+            outputResolution.FullPath,
+            conversion.Markdown,
+            cancellationToken).ConfigureAwait(false);
 
         var preview = Truncate(conversion.Markdown, previewCharacters, alreadyTruncated: false);
         var receipt = CreateDocumentConversionReceipt(
@@ -260,13 +244,6 @@ public sealed class WorkspaceArtifactToolService(
             }
         }
     }
-
-    private static bool IsExpectedOutputWriteFailure(Exception exception)
-        => exception is IOException or
-            UnauthorizedAccessException or
-            NotSupportedException or
-            System.Security.SecurityException or
-            ArgumentException;
 
     private static (string Content, bool Truncated) Truncate(string content, int maxCharacters, bool alreadyTruncated)
     {

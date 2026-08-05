@@ -67,11 +67,11 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
                 .GetExecutionRunAsync(executionRunId, CancellationToken.None)
                 .ConfigureAwait(false);
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             return Failure(
                 executionRunId,
-                $"Could not authorize workspace process cleanup against the persisted execution run: {exception.Message}");
+                "Workspace process cleanup could not verify the persisted execution run. No lease cleanup was attempted.");
         }
 
         if (persistedRun is null)
@@ -95,11 +95,11 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
                 .CleanupAsync(executionRunId)
                 .ConfigureAwait(false);
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             return Failure(
                 executionRunId,
-                $"Authorized workspace process cleanup failed unexpectedly: {exception.Message}");
+                "Authorized workspace process cleanup failed unexpectedly. Durable leases were retained for a later cleanup attempt.");
         }
     }
 
@@ -259,7 +259,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
                     [],
                     [new WorkspaceExecutionRunProcessCleanupFailure(
                         string.Empty,
-                        $"Durable workspace process lease location '{leaseDirectory}' is not a directory.")]);
+                        "The durable workspace process lease location is invalid. No lease cleanup was attempted.")]);
             }
         }
         catch (DirectoryNotFoundException)
@@ -270,13 +270,13 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
         {
             return new WorkspaceExecutionRunProcessLeaseLoadResult([], []);
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             return new WorkspaceExecutionRunProcessLeaseLoadResult(
                 [],
                 [new WorkspaceExecutionRunProcessCleanupFailure(
                     string.Empty,
-                    $"Could not access durable workspace process leases: {exception.Message}")]);
+                    "Durable workspace process leases could not be accessed. They were retained for a later cleanup attempt.")]);
         }
 
         var leases = new List<WorkspaceExecutionRunProcessLease>();
@@ -288,13 +288,13 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }
-        catch (Exception exception)
+        catch (Exception)
         {
             return new WorkspaceExecutionRunProcessLeaseLoadResult(
                 [],
                 [new WorkspaceExecutionRunProcessCleanupFailure(
                     string.Empty,
-                    $"Could not enumerate durable workspace process leases: {exception.Message}")]);
+                    "Durable workspace process leases could not be enumerated. They were retained for a later cleanup attempt.")]);
         }
 
         foreach (var leaseFile in leaseFiles)
@@ -325,14 +325,14 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
                     leases.RemoveAt(leases.Count - 1);
                     failures.Add(new WorkspaceExecutionRunProcessCleanupFailure(
                         normalizedLease.StartupReceiptPath,
-                        $"Durable workspace process lease filename does not match its normalized startup receipt identity. Expected '{expectedFileName}'."));
+                        "Durable workspace process lease filename does not match its normalized startup receipt identity."));
                 }
             }
-            catch (Exception exception)
+            catch (Exception)
             {
                 failures.Add(new WorkspaceExecutionRunProcessCleanupFailure(
                     Path.GetFileName(leaseFile),
-                    $"Could not read durable workspace process lease: {exception.Message}"));
+                    "The durable workspace process lease could not be read. It was retained for operator inspection and a later cleanup attempt."));
             }
         }
 

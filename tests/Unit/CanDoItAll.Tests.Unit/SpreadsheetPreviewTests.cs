@@ -251,10 +251,12 @@ public sealed class SpreadsheetPreviewTests
         string expectedParameterName)
     {
         var service = new ClosedXmlSpreadsheetDocumentService();
-        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => service.PreviewWorkbook(
+        var exception = Assert.Throws<SpreadsheetReadInputException>(() => service.PreviewWorkbook(
             new SpreadsheetWorkbookPreviewRequest("unused.xlsx", maxWorksheets, maxRows, maxColumns)));
 
-        Assert.Equal(expectedParameterName, exception.ParamName);
+        Assert.Equal(SpreadsheetReadInputFailureKind.PreviewLimitOutOfRange, exception.Kind);
+        Assert.Equal(expectedParameterName, exception.LimitKind?.ToString());
+        Assert.Equal(1, exception.Minimum);
     }
 
     [Fact]
@@ -264,10 +266,11 @@ public sealed class SpreadsheetPreviewTests
         var missingPath = Path.Combine(temp.Path, "missing.xlsx");
         var service = new ClosedXmlSpreadsheetDocumentService();
 
-        var exception = Assert.Throws<FileNotFoundException>(() => service.PreviewWorkbook(
+        var exception = Assert.Throws<SpreadsheetReadInputException>(() => service.PreviewWorkbook(
             new SpreadsheetWorkbookPreviewRequest(missingPath)));
 
-        Assert.Equal(missingPath, exception.FileName);
+        Assert.Equal(SpreadsheetReadInputFailureKind.WorkbookMissing, exception.Kind);
+        Assert.DoesNotContain(missingPath, exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -278,10 +281,11 @@ public sealed class SpreadsheetPreviewTests
         File.WriteAllText(malformedPath, "not an xlsx workbook");
         var service = new ClosedXmlSpreadsheetDocumentService();
 
-        var exception = Assert.Throws<InvalidDataException>(() => service.PreviewWorkbook(
+        var exception = Assert.Throws<SpreadsheetReadInputException>(() => service.PreviewWorkbook(
             new SpreadsheetWorkbookPreviewRequest(malformedPath)));
 
-        Assert.Contains("could not be opened", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(SpreadsheetReadInputFailureKind.InvalidWorkbook, exception.Kind);
+        Assert.Contains("invalid or corrupt", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(exception.InnerException);
     }
 
@@ -335,7 +339,8 @@ public sealed class SpreadsheetPreviewTests
         var documents = new RecordingSpreadsheetDocumentService();
         var plugin = CreatePlugin(temp.Path, documents, canReadFiles: false);
 
-        var exception = Assert.Throws<InvalidOperationException>(() => plugin.PreviewWorkbook("denied.xlsx"));
+        var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(() =>
+            plugin.PreviewWorkbook("denied.xlsx"));
 
         Assert.Contains("not allowed to read workspace files", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, documents.PreviewCallCount);
@@ -351,7 +356,10 @@ public sealed class SpreadsheetPreviewTests
         var documents = new RecordingSpreadsheetDocumentService();
         var plugin = CreatePlugin(workspaceRoot, documents, canReadFiles: true);
 
-        Assert.Throws<InvalidOperationException>(() => plugin.PreviewWorkbook("../outside.xlsx"));
+        var exception = Assert.Throws<AgentToolInputValidationException>(() =>
+            plugin.PreviewWorkbook("../outside.xlsx"));
+
+        Assert.Contains("accessible workspace file path", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, documents.PreviewCallCount);
     }
 

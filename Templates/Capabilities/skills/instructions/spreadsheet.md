@@ -16,6 +16,8 @@ Workbook workflow:
 - Use `workspace_spreadsheet_summary` for `.xlsx` workbook sheet names, positions, used ranges, and dimensions before editing.
 - Use `workspace_read_spreadsheet_range` for tables and `workspace_read_spreadsheet_cell` for exact key cells.
 - Use `workspace_write_spreadsheet` to create or update `.xlsx` workbooks. Put values in `cellWrites` for individual cells and `rangeWrites` for rectangular tables.
+- For every `rangeWrites` item, the outer `values` count must fit within the rows of `rangeAddress`, and every inner row must fit within its columns. Use empty rows with the same column count as the table, or omit unused trailing cells.
+- If a spreadsheet tool returns a retryable input failure, correct the reported address, row, or column mismatch and retry. A retryable result means the tool is available; do not report spreadsheet creation as unsupported.
 - Use one logical worksheet per concern: source data, assumptions, calculations, and summary. Keep sheet names short and stable, for example `Quotation`, `Assumptions`, `Margin`, and `Summary`.
 - After writing, inspect the workbook and read back representative cells or ranges. Do not report success until the workbook exists and the expected sheets, headers, and formulas are visible.
 

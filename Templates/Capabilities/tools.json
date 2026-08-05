@@ -616,7 +616,7 @@
       "kind": "tool",
       "key": "workspace-write-spreadsheet",
       "displayName": "Workspace Write Spreadsheet",
-      "description": "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Values beginning with = are stored as Excel-compatible formulas.",
+      "description": "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Each rangeWrites values row must fit within the columns of its rangeAddress, and the number of values rows must fit within that range. Values beginning with = are stored as Excel-compatible formulas.",
       "stableId": "tool:workspace-write-spreadsheet:v1",
       "stableGuidKey": "capabilities/workspace-write-spreadsheet",
       "endpointOrPath": "sandbox://workspace-write-spreadsheet",

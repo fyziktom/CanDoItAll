@@ -19,6 +19,60 @@ public sealed record AgentToolFailureResult(
     string Message,
     bool CanRetryWithCorrectedInput);
 
+public sealed class AgentToolInputValidationException : InvalidOperationException, IAgentToolFailure
+{
+    public const string FailureCode = "InvalidToolInput";
+
+    private AgentToolInputValidationException(string safeMessage)
+        : base(NormalizeSafeMessage(safeMessage))
+    {
+    }
+
+    public string ErrorCode => FailureCode;
+
+    public string SafeMessage => Message;
+
+    public bool IsSafeToExpose => true;
+
+    public bool CanRetryWithCorrectedInput => true;
+
+    public static AgentToolInputValidationException Create(string safeMessage)
+        => new(safeMessage);
+
+    private static string NormalizeSafeMessage(string safeMessage)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(safeMessage);
+        return safeMessage.Trim();
+    }
+}
+
+public sealed class AgentToolConflictException : InvalidOperationException, IAgentToolFailure
+{
+    public const string FailureCode = "ToolConflict";
+
+    private AgentToolConflictException(string safeMessage)
+        : base(NormalizeSafeMessage(safeMessage))
+    {
+    }
+
+    public string ErrorCode => FailureCode;
+
+    public string SafeMessage => Message;
+
+    public bool IsSafeToExpose => true;
+
+    public bool CanRetryWithCorrectedInput => true;
+
+    public static AgentToolConflictException Create(string safeMessage)
+        => new(safeMessage);
+
+    private static string NormalizeSafeMessage(string safeMessage)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(safeMessage);
+        return safeMessage.Trim();
+    }
+}
+
 public enum WorkspaceReadOnlyAncestorMutationOperation
 {
     CopyOrReplace,

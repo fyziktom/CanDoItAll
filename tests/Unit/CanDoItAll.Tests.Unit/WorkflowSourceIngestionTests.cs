@@ -159,7 +159,7 @@ public sealed class WorkflowSourceIngestionTests
             new HashSet<string>([".md"], StringComparer.OrdinalIgnoreCase),
             take: 1).ToArray());
         Assert.Contains("not allowed", extensionException.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Throws<InvalidOperationException>(() => resolver.ResolveCandidateFiles(
+        Assert.Throws<WorkspacePathResolutionException>(() => resolver.ResolveCandidateFiles(
             absoluteCandidate,
             settings,
             new HashSet<string>([".txt"], StringComparer.OrdinalIgnoreCase),
