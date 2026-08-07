@@ -126,7 +126,221 @@ internal static class ProviderDriverProtocol
             model,
             ReadOpenAiResponseText(root),
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "input_tokens") : 0,
-            usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "output_tokens") : 0);
+            usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "output_tokens") : 0)
+        {
+            CachedInputTokens = ReadCachedTokens(usage, "input_tokens_details")
+        };
+    }
+
+    /// <summary>
+    /// Sets the shared top-level "temperature" wire field for both the OpenAI/Azure Chat Completions and
+    /// Responses transports when a caller-provided value is present. Absent when <paramref name="temperature"/>
+    /// is null, preserving existing behavior exactly.
+    /// </summary>
+    public static void AddTemperature(
+        IDictionary<string, object?> payload,
+        double? temperature)
+    {
+        if (temperature is { } value)
+        {
+            payload["temperature"] = value;
+        }
+    }
+
+    /// <summary>
+    /// Sets the OpenAI/Azure Chat Completions "response_format" wire field when the request asks for JSON.
+    /// Absent entirely when <see cref="ProviderChatCompletionRequest.ResponseFormat"/> is null or does not
+    /// require JSON, preserving existing behavior exactly.
+    /// </summary>
+    public static void AddOpenAiChatCompletionResponseFormat(
+        IDictionary<string, object?> payload,
+        ProviderChatCompletionRequest request)
+    {
+        if (request.ResponseFormat is not { RequireJson: true } responseFormat)
+        {
+            return;
+        }
+
+        payload["response_format"] = string.IsNullOrWhiteSpace(responseFormat.SchemaJson)
+            ? new { type = "json_object" }
+            : BuildChatCompletionJsonSchemaFormat(responseFormat);
+    }
+
+    /// <summary>
+    /// Sets the OpenAI/Azure Responses "text.format" wire field when the request asks for JSON. Absent
+    /// entirely when <see cref="ProviderChatCompletionRequest.ResponseFormat"/> is null or does not require
+    /// JSON, preserving existing behavior exactly.
+    /// </summary>
+    public static void AddOpenAiResponsesResponseFormat(
+        IDictionary<string, object?> payload,
+        ProviderChatCompletionRequest request)
+    {
+        if (request.ResponseFormat is not { RequireJson: true } responseFormat)
+        {
+            return;
+        }
+
+        payload["text"] = new
+        {
+            format = string.IsNullOrWhiteSpace(responseFormat.SchemaJson)
+                ? new { type = "json_object" }
+                : BuildResponsesJsonSchemaFormat(responseFormat)
+        };
+    }
+
+    private static object BuildChatCompletionJsonSchemaFormat(ProviderChatResponseFormat responseFormat)
+    {
+        using var document = JsonDocument.Parse(responseFormat.SchemaJson);
+        var schema = document.RootElement.Clone();
+        var strict = IsOpenAiStrictCompatibleSchema(schema);
+        var name = ResolveJsonSchemaName(responseFormat.SchemaName);
+        return string.IsNullOrWhiteSpace(responseFormat.SchemaDescription)
+            ? new
+            {
+                type = "json_schema",
+                json_schema = new
+                {
+                    name,
+                    schema,
+                    strict
+                }
+            }
+            : new
+            {
+                type = "json_schema",
+                json_schema = new
+                {
+                    name,
+                    description = responseFormat.SchemaDescription.Trim(),
+                    schema,
+                    strict
+                }
+            };
+    }
+
+    private static object BuildResponsesJsonSchemaFormat(ProviderChatResponseFormat responseFormat)
+    {
+        using var document = JsonDocument.Parse(responseFormat.SchemaJson);
+        var schema = document.RootElement.Clone();
+        var strict = IsOpenAiStrictCompatibleSchema(schema);
+        var name = ResolveJsonSchemaName(responseFormat.SchemaName);
+        return string.IsNullOrWhiteSpace(responseFormat.SchemaDescription)
+            ? new
+            {
+                type = "json_schema",
+                name,
+                schema,
+                strict
+            }
+            : new
+            {
+                type = "json_schema",
+                name,
+                description = responseFormat.SchemaDescription.Trim(),
+                schema,
+                strict
+            };
+    }
+
+    /// <summary>
+    /// True only when every object node in the schema declares <c>"additionalProperties": false</c> and
+    /// lists every property key in <c>"required"</c>. OpenAI rejects strict <c>json_schema</c> payloads
+    /// that violate either rule with HTTP 400, so a non-compliant schema (for example a workflow component
+    /// schema that deliberately allows extra properties) is transmitted verbatim with <c>strict = false</c>;
+    /// JSON output stays enforced by the response format and the caller's own schema validation remains the
+    /// enforcement authority.
+    /// </summary>
+    internal static bool IsOpenAiStrictCompatibleSchema(JsonElement schema)
+        => schema.ValueKind == JsonValueKind.Object && IsStrictCompatibleNode(schema);
+
+    private static bool IsStrictCompatibleNode(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in node.EnumerateArray())
+            {
+                if (!IsStrictCompatibleNode(item))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (node.ValueKind != JsonValueKind.Object)
+        {
+            return true;
+        }
+
+        var declaresObjectType =
+            node.TryGetProperty("type", out var type) &&
+            ((type.ValueKind == JsonValueKind.String && type.GetString() == "object") ||
+             (type.ValueKind == JsonValueKind.Array &&
+              type.EnumerateArray().Any(entry => entry.ValueKind == JsonValueKind.String && entry.GetString() == "object")));
+        var hasProperties = node.TryGetProperty("properties", out var properties) &&
+                            properties.ValueKind == JsonValueKind.Object;
+        if (declaresObjectType || hasProperties)
+        {
+            if (!node.TryGetProperty("additionalProperties", out var additionalProperties) ||
+                additionalProperties.ValueKind != JsonValueKind.False)
+            {
+                return false;
+            }
+
+            var requiredNames = new HashSet<string>(StringComparer.Ordinal);
+            if (node.TryGetProperty("required", out var required) && required.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var entry in required.EnumerateArray())
+                {
+                    if (entry.ValueKind == JsonValueKind.String)
+                    {
+                        requiredNames.Add(entry.GetString()!);
+                    }
+                }
+            }
+
+            if (hasProperties)
+            {
+                foreach (var property in properties.EnumerateObject())
+                {
+                    if (!requiredNames.Contains(property.Name))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        foreach (var property in node.EnumerateObject())
+        {
+            if (!IsStrictCompatibleNode(property.Value))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string ResolveJsonSchemaName(string schemaName)
+        => string.IsNullOrWhiteSpace(schemaName) ? "response" : schemaName.Trim();
+
+    /// <summary>
+    /// Reads the OpenAI/Azure Chat Completions cached-token usage detail
+    /// (<c>usage.prompt_tokens_details.cached_tokens</c>). Zero when absent - this is a purely additive read
+    /// that never affects any other usage field.
+    /// </summary>
+    public static int ReadChatCompletionsCachedTokens(JsonElement usage)
+        => ReadCachedTokens(usage, "prompt_tokens_details");
+
+    private static int ReadCachedTokens(JsonElement usage, string detailsPropertyName)
+    {
+        return usage.ValueKind == JsonValueKind.Object &&
+               usage.TryGetProperty(detailsPropertyName, out var details) &&
+               details.ValueKind == JsonValueKind.Object
+            ? ProviderDriverJson.ReadInt(details, "cached_tokens")
+            : 0;
     }
 
     public static object[] BuildOllamaChatMessages(ProviderChatCompletionRequest request)

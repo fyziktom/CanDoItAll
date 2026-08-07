@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -8,7 +9,14 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal interface IMafApprovalContinuationDriver
 {
-    IEnumerable<ChatMessage> CreateApprovalInputMessages(ChatSessionRecord session, bool approved);
+    /// <summary>
+    /// Replays one MAF tool-approval-response message per pending approval, using the
+    /// per-proposal decision matched by <see cref="ToolApprovalRequestContent.RequestId"/> —
+    /// decisions pass through unmangled; there is no "agree or throw" collapse to a single bool.
+    /// </summary>
+    IEnumerable<ChatMessage> CreateApprovalInputMessages(
+        ChatSessionRecord session,
+        IReadOnlyList<AgentRuntimeApprovalDecision> decisions);
 
     void StorePendingApprovals(Guid sessionId, IReadOnlyList<ToolApprovalRequestContent> approvalRequests);
 
@@ -24,12 +32,36 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
 
-    public IEnumerable<ChatMessage> CreateApprovalInputMessages(ChatSessionRecord session, bool approved)
+    public IEnumerable<ChatMessage> CreateApprovalInputMessages(
+        ChatSessionRecord session,
+        IReadOnlyList<AgentRuntimeApprovalDecision> decisions)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
+
         var approvals = GetCachedOrRehydratedApprovals(session);
+        var decisionByRequestId = decisions.ToDictionary(
+            decision => decision.ProposalId,
+            decision => decision.Approved,
+            StringComparer.Ordinal);
+
         return approvals
-            .Select(item => new ChatMessage(ChatRole.User, [item.CreateResponse(approved)]))
+            .Select(item => new ChatMessage(
+                ChatRole.User,
+                [item.CreateResponse(ResolveDecision(item, decisionByRequestId))]))
             .ToList();
+    }
+
+    private static bool ResolveDecision(
+        ToolApprovalRequestContent request,
+        IReadOnlyDictionary<string, bool> decisionByRequestId)
+    {
+        if (decisionByRequestId.TryGetValue(request.RequestId, out var approved))
+        {
+            return approved;
+        }
+
+        throw new InvalidOperationException(
+            $"No approval decision was supplied for pending tool approval '{request.RequestId}'.");
     }
 
     public void StorePendingApprovals(Guid sessionId, IReadOnlyList<ToolApprovalRequestContent> approvalRequests)

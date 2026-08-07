@@ -1,0 +1,185 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
+
+namespace CanDoItAll.AgentFramework.Llm.ProviderRuntime;
+
+/// <summary>
+/// Provider-backed <see cref="ILlmInvocationPort"/> built directly above the existing provider runtime
+/// pool/driver boundary (descriptor upsert -&gt; pool handle -&gt; dispatch -&gt; chat-completion driver), mirroring
+/// the established dispatch mechanics used by the full agent runtime's own provider test-chat gateway. This
+/// adapter never constructs an agent, session, capability graph, or workspace/authority context - it only
+/// ever sees provider/model selection, ordered messages, attachments, response format, and model settings.
+/// </summary>
+public sealed class ProviderBackedLlmInvocationAdapter(
+    IProviderRuntimeDescriptorStore descriptorStore,
+    IProviderRuntimePool runtimePool) : ILlmInvocationPort
+{
+    public async Task<LlmInvocationResult> InvokeAsync(
+        LlmInvocationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var provider = request.Provider;
+        var model = ResolveModel(provider, request.Model);
+        var handle = await GetRuntimeHandleAsync(provider, cancellationToken).ConfigureAwait(false);
+        var query = new ProviderDispatchQuery(
+            provider,
+            AgentProviderCapabilityKind.ChatCompletion,
+            AgentProviderOperationKind.CompleteChat,
+            model);
+        var payload = new ProviderChatCompletionRequest(
+            provider,
+            model,
+            BuildSystemPrompt(request.Messages),
+            BuildPriorTurns(request.Messages),
+            BuildFinalUserPrompt(request.Messages),
+            BuildAttachments(request.Attachments),
+            request.Settings?.ModelParameterConfigurationJson ?? string.Empty,
+            request.Settings?.Temperature,
+            BuildResponseFormat(request.ResponseFormat));
+        var result = await handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<ProviderChatCompletionRequest>(query, payload),
+            async (context, token) =>
+            {
+                EnsureProviderKindMatches(context.Descriptor, context.Query.Provider);
+                var driver = handle.ProviderFactory.Resolve<IProviderChatCompletionDriver>(context.Query.Provider.Kind);
+                return await driver.CompleteChatAsync(context.Payload, token).ConfigureAwait(false);
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.IsNullOrWhiteSpace(result.ResponseText))
+        {
+            throw new InvalidOperationException("The provider returned an empty response to the lightweight LLM invocation.");
+        }
+
+        return new LlmInvocationResult(
+            result.Model,
+            result.ResponseText,
+            new LlmUsage(result.InputTokens, result.OutputTokens, result.CachedInputTokens));
+    }
+
+    private async ValueTask<IProviderRuntimeHandle> GetRuntimeHandleAsync(
+        ProviderProfile provider,
+        CancellationToken cancellationToken)
+    {
+        descriptorStore.Upsert(provider, secretReferenceIdentity: provider.ApiKeyEnvironmentVariable);
+        return await runtimePool.GetRequiredAsync(provider.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void EnsureProviderKindMatches(
+        ProviderRuntimeDescriptor descriptor,
+        ProviderProfile provider)
+    {
+        if (descriptor.ProviderKind != provider.Kind)
+        {
+            throw new InvalidOperationException("Provider runtime descriptor kind does not match the request provider kind.");
+        }
+    }
+
+    private static string ResolveModel(
+        ProviderProfile provider,
+        string requestedModel)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedModel))
+        {
+            return requestedModel.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(provider.DefaultModel))
+        {
+            return provider.DefaultModel.Trim();
+        }
+
+        return provider.SuggestedModels.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate))?.Trim()
+            ?? string.Empty;
+    }
+
+    /// <summary>
+    /// The first System message text; when several System messages are present, they are concatenated with a
+    /// blank line so no instruction content is dropped.
+    /// </summary>
+    private static string BuildSystemPrompt(IReadOnlyList<LlmMessage> messages)
+    {
+        var systemTexts = messages
+            .Where(message => message.Role == LlmMessageRole.System && !string.IsNullOrWhiteSpace(message.Text))
+            .Select(message => message.Text.Trim())
+            .ToArray();
+        return string.Join("\n\n", systemTexts);
+    }
+
+    /// <summary>
+    /// Every User/Assistant message in order, excluding the last User message (which becomes the driver
+    /// request's dedicated <see cref="ProviderChatCompletionRequest.Prompt"/>). Timestamps are synthesized as a
+    /// strictly increasing sequence so the driver's own CreatedAtUtc ordering never reorders the conversation.
+    /// </summary>
+    private static IReadOnlyList<ProviderTestChatMessage> BuildPriorTurns(IReadOnlyList<LlmMessage> messages)
+    {
+        var lastUserIndex = FindLastUserMessageIndex(messages);
+        var priorTurns = new List<ProviderTestChatMessage>();
+        var sequence = 0L;
+        for (var index = 0; index < messages.Count; index++)
+        {
+            if (index == lastUserIndex)
+            {
+                continue;
+            }
+
+            var message = messages[index];
+            if (message.Role is not (LlmMessageRole.User or LlmMessageRole.Assistant) ||
+                string.IsNullOrWhiteSpace(message.Text))
+            {
+                continue;
+            }
+
+            priorTurns.Add(new ProviderTestChatMessage(
+                MapRole(message.Role),
+                message.Text.Trim(),
+                DateTimeOffset.UnixEpoch.AddTicks(sequence++)));
+        }
+
+        return priorTurns;
+    }
+
+    private static string BuildFinalUserPrompt(IReadOnlyList<LlmMessage> messages)
+    {
+        var lastUserIndex = FindLastUserMessageIndex(messages);
+        return lastUserIndex >= 0 ? messages[lastUserIndex].Text.Trim() : string.Empty;
+    }
+
+    private static int FindLastUserMessageIndex(IReadOnlyList<LlmMessage> messages)
+    {
+        for (var index = messages.Count - 1; index >= 0; index--)
+        {
+            if (messages[index].Role == LlmMessageRole.User)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static ChatMessageRole MapRole(LlmMessageRole role)
+        => role switch
+        {
+            LlmMessageRole.Assistant => ChatMessageRole.Assistant,
+            _ => ChatMessageRole.User
+        };
+
+    private static IReadOnlyList<ProviderChatAttachment>? BuildAttachments(IReadOnlyList<LlmAttachment>? attachments)
+        => attachments?.Select(attachment => new ProviderChatAttachment(
+            attachment.Name,
+            attachment.ContentType,
+            attachment.Bytes)).ToArray();
+
+    private static ProviderChatResponseFormat? BuildResponseFormat(LlmResponseFormat? responseFormat)
+        => responseFormat is null
+            ? null
+            : new ProviderChatResponseFormat(
+                responseFormat.RequireJson,
+                responseFormat.SchemaJson,
+                responseFormat.SchemaName,
+                responseFormat.SchemaDescription);
+}

@@ -9,6 +9,7 @@ using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AgentFramework.Tools;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
@@ -113,12 +114,25 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 scope,
                 serviceProvider.GetRequiredService<IWorkspaceImageOperationService>());
         });
+        services.TryAddScoped<IWorkspaceRuntimeServicesFactory>(serviceProvider => new WorkspaceRuntimeServicesFactory(
+            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
+            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter()));
         services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new MafAgentRuntime(workspaceRoot, serviceProvider, scope);
         });
-        services.TryAddScoped<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<MafAgentRuntime>());
+        // SB18: the four narrow runtime ports resolve directly to the native MAF adapters exposed
+        // by the same MafAgentRuntime composition (one adapter set per runtime scope). No broad
+        // runtime interface or compatibility facade is constructed by production registrations.
+        services.TryAddScoped<IAgentExecutionRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().ExecutionPort);
+        services.TryAddScoped<IAgentContinuationRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().ContinuationPort);
+        services.TryAddScoped<IProviderDiagnosticsRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().DiagnosticsPort);
+        services.TryAddScoped<IProviderModelAdministrationRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().ModelAdministrationPort);
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
@@ -188,6 +202,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<AgentChatExecutionNotificationHub>();
         services.AddScoped<IAgentChatExecutionNotificationHub>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatExecutionNotificationHub>());
+        services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
+        services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
+        services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
         services.AddScoped<IAgentChatExecutionOrchestrator, AgentChatExecutionOrchestrator>();
         services.AddScoped<ActiveAgentChatRegistry>();
         services.AddScoped<IActiveAgentChatRegistry>(serviceProvider =>

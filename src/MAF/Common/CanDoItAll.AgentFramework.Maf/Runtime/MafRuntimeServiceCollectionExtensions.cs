@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using CanDoItAll.AgentFramework.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -10,8 +12,11 @@ public static class MafRuntimeServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddSingleton<IMafRuntimeDependencyResolver, MafRuntimeDependencyResolver>();
-        services.TryAddSingleton<IMafProviderCredentialService, MafProviderCredentialService>();
+        // Resolving the collaborators at registration time keeps the singleton credential service free of a
+        // captured root IServiceProvider; IConfiguration and the credential resolver are root singletons themselves.
+        services.TryAddSingleton<IMafProviderCredentialService>(serviceProvider => new MafProviderCredentialService(
+            serviceProvider.GetService<IAgentProviderCredentialResolver>(),
+            serviceProvider.GetService<IConfiguration>()));
         services.TryAddSingleton<IRuntimeToolProviderAccessFilter, RuntimeToolProviderAccessFilter>();
         services.TryAddSingleton<IRuntimeToolProviderComposer, RuntimeToolProviderComposer>();
         services.TryAddSingleton<IMafRuntimeCompositionMetrics, NoOpMafRuntimeCompositionMetrics>();

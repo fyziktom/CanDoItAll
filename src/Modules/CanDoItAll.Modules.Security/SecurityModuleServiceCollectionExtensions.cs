@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.Configuration;
 
 namespace CanDoItAll.Modules.Security;

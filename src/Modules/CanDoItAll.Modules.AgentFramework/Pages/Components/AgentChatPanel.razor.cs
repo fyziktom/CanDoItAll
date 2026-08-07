@@ -499,10 +499,14 @@ public partial class AgentChatPanel : IAsyncDisposable
         try
         {
             var operation = ChatExecutionOrchestrator.StartSendMessage(
-                executionAgentId,
-                executionSessionId,
-                prompt,
-                attachmentPaths);
+                new AgentChatSendRequest(
+                    executionAgentId,
+                    executionSessionId,
+                    prompt)
+                {
+                    AttachmentPaths = attachmentPaths,
+                    ConversationHandleId = executionHandleId
+                });
             activeActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);
             var result = await operation.Completion;
@@ -666,10 +670,19 @@ public partial class AgentChatPanel : IAsyncDisposable
         var continuationWorkspaceGeneration = executionWorkspaceGeneration;
         try
         {
+            var pendingApprovals = workspace?.SelectedRun?.PendingApprovals ?? [];
+            if (pendingApprovals.Count == 0)
+            {
+                return;
+            }
+
+            var decisions = pendingApprovals
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, approved))
+                .ToArray();
             var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
                 executionAgentId,
                 executionSessionId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls);
             activeActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);

@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/src/Foundation/">
     <Project Path="src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj" />
+    <Project Path="src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj" />
@@ -35,10 +36,13 @@
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj" />
+    <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/CanDoItAll.AgentFramework.Llm.Abstractions.csproj" />
+    <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Llm.ProviderRuntime/CanDoItAll.AgentFramework.Llm.ProviderRuntime.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.ProviderPipelines/CanDoItAll.AgentFramework.ProviderPipelines.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj" />
+    <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Capabilities/">

@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
@@ -68,7 +69,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             await context.Service.ContinueExecutionRunAsync(
                 initialResult.ExecutionRunId,
                 AgentExecutionOperationId.New(),
-                approved: true);
+                decisions: [new PendingToolApprovalDecision("approval-initial", Approved: true)]);
         var persistedRun = Assert.IsType<ExecutionRunRecord>(
             await context.Store.GetExecutionRunAsync(
                 continuationResult.ExecutionRunId));
@@ -147,7 +148,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
     }
 
     private static async Task<TestContext> CreateContextAsync(
-        IAgentRuntime runtime,
+        IFakeAgentRuntime runtime,
         IWorkspaceExecutionRunProcessLeaseCleaner cleaner)
     {
         var workspace = new TemporaryWorkspace();
@@ -171,10 +172,16 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
                 Memory: []));
         var preparationCache = new AgentExecutionPreparationCache(
             AgentExecutionPreparationCachePolicy.Default);
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the fake runtime for all four ports.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime);
         var service = new AgentFrameworkWorkspaceService(
             store,
             CreateUnexpectedDependency<IAgentPackageService>(),
-            runtime,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             CreateUnexpectedDependency<ICapabilityProofService>(),
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             CreateActivityCoordinator(),
@@ -305,7 +312,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
         }
     }
 
-    private sealed class StubAgentRuntime : IAgentRuntime
+    private sealed class StubAgentRuntime : IFakeAgentRuntime
     {
         private readonly Func<AgentRuntimeResponse> run;
         private readonly Func<AgentRuntimeResponse>? continuation;

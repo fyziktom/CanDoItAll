@@ -188,7 +188,9 @@ public sealed class HrAgentToolPolicyTests
         var decision = ExecutionRunStateTransitions.ApplyApprovalDecision(
             [],
             run,
-            approved: true,
+            pendingApprovals
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                .ToArray(),
             DateTimeOffset.Parse("2026-07-14T16:00:00Z"),
             "chat-session",
             "session-42");

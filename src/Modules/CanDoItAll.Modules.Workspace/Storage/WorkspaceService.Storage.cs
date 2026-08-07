@@ -1,5 +1,5 @@
 using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workspace;

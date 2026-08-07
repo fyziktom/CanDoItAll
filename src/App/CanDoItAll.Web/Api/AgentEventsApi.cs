@@ -296,7 +296,7 @@ internal static class AgentEventsApi
             loggerFactory.CreateLogger("CanDoItAll.Web.Api.AgentExecutionStream"));
     }
 
-    private static Task<IResult> StreamApprovalContinuationAsync(
+    private static async Task<IResult> StreamApprovalContinuationAsync(
         Guid executionRunId,
         PendingApprovalApiRequest request,
         HttpContext context,
@@ -310,11 +310,23 @@ internal static class AgentEventsApi
             executionRunId);
         if (validation is not null)
         {
-            return Task.FromResult(validation);
+            return validation;
         }
 
         var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
-        return StreamCommandAsync(
+
+        // Resolved here (before StreamCommandAsync starts the command) rather than inside the
+        // startCommand lambda so ContinueExecutionRunAsync's own synchronous admission-rejection
+        // throw keeps reaching StreamCommandAsync's existing catch clauses unchanged — wrapping
+        // the whole thing in an async lambda would defer every exception (including admission
+        // rejection) into the completion Task instead.
+        var decisions = await AgentApprovalDecisionRequestMapper.ResolveDecisionsAsync(
+            workspaceService,
+            executionRunId,
+            request,
+            context.RequestAborted);
+
+        return await StreamCommandAsync(
             context,
             operationId,
             null,
@@ -323,7 +335,7 @@ internal static class AgentEventsApi
             cancellationToken => workspaceService.ContinueExecutionRunAsync(
                 executionRunId,
                 operationId,
-                request.Approved,
+                decisions,
                 request.AutoApprovePendingToolCalls,
                 cancellationToken),
             static result => result.ExecutionRunId,

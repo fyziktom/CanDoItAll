@@ -668,7 +668,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                     CreateSkillCapability("skills/sample"),
                     CreateToolCapability("workspace-read-file", "workspace_read_file")
                 ],
-                AgentRuntimeContextIntent.Empty);
+                AgentRuntimeContextIntent.Empty,
+                workspaceRoot: workspaceRoot);
 
             var effectiveCapabilities = ReadEffectiveCapabilities(state);
             Assert.Contains(effectiveCapabilities.AllowedCapabilities, capability =>
@@ -833,7 +834,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 CreateProviderProfile(),
                 [CreateLocalMcpCapability()],
                 CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
-                progressMessages);
+                progressMessages,
+                workspaceRoot: workspaceRoot);
 
             var tool = Assert.IsAssignableFrom<AIFunction>(Assert.Single(ReadTools(state), tool => tool.Name == "browser_snapshot"));
             var result = await tool.InvokeAsync(
@@ -1739,7 +1741,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 CreateToolEnabledAgent(),
                 CreateProviderProfile(),
                 [CreateSkillCapability("skills/sample")],
-                CreateProcessContextIntent(ProcessOperationContractNames.ReadProcessContext));
+                CreateProcessContextIntent(ProcessOperationContractNames.ReadProcessContext),
+                workspaceRoot: workspaceRoot);
 
             Assert.DoesNotContain(ReadFrameworkToolNames(state), toolName =>
                 string.Equals(toolName, AgentToolInvocationPolicyMetadata.LoadSkill, StringComparison.OrdinalIgnoreCase));
@@ -1769,7 +1772,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 CreateProviderProfile(),
                 [CreateSkillCapability("skills/sample")],
                 AgentRuntimeContextIntent.Empty,
-                suppressApprovalRequirements: false);
+                suppressApprovalRequirements: false,
+                workspaceRoot: workspaceRoot);
 
             var options = ReadAgentSkillsProviderOptions(state);
             Assert.True(options.DisableLoadSkillApproval);
@@ -1799,7 +1803,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 CreateProviderProfile(),
                 [CreateSkillCapability("skills/sample", "{\"scriptExecution\":{\"approvalRequired\":true}}")],
                 AgentRuntimeContextIntent.Empty,
-                suppressApprovalRequirements: false);
+                suppressApprovalRequirements: false,
+                workspaceRoot: workspaceRoot);
 
             var options = ReadAgentSkillsProviderOptions(state);
             Assert.True(options.DisableLoadSkillApproval);
@@ -1964,6 +1969,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             provider,
             Array.Empty<CapabilityCatalogItem>(),
             Array.Empty<AgentMemoryRecord>(),
+            WorkspaceRuntimeServicesTestFactory.Create(Path.GetTempPath()),
             (_, _, message) =>
             {
                 progressMessages.Add(message);
@@ -1983,7 +1989,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         bool suppressApprovalRequirements = true,
         string runtimeSessionKey = "",
         IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
-        WorkspaceScopeDescriptor? contextWorkspaceScope = null)
+        WorkspaceScopeDescriptor? contextWorkspaceScope = null,
+        string? workspaceRoot = null)
     {
         return await composer.CreateCapabilityStateCoreAsync(
             agent,
@@ -2000,6 +2007,9 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             suppressApprovalRequirements,
             contextWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox,
             contextIntent,
+            WorkspaceRuntimeServicesTestFactory.Create(
+                workspaceRoot ?? Path.GetTempPath(),
+                contextWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox),
             runtimeSessionKey,
             contextAttachments);
     }

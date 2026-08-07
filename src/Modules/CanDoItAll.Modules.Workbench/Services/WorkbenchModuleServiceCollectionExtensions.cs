@@ -57,6 +57,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectWorkbenchLifecycleService>();
         services.AddScoped<ProjectWorkbenchRelationService>();
         services.AddScoped<ProjectStructureAssemblyService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IAgentContextContributor,
+            AgentContext.ProjectStructureRuntimeGuidanceContributor>());
         services.AddScoped<ProjectStructureGanttMutationService>();
         services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
         services.AddScoped<ProjectStructureProjectionMaintenanceService>();

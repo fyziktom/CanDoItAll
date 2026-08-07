@@ -21,6 +21,12 @@ public sealed record ProviderChatAttachment(
     string ContentType,
     byte[] Bytes);
 
+public sealed record ProviderChatResponseFormat(
+    bool RequireJson,
+    string SchemaJson = "",
+    string SchemaName = "",
+    string SchemaDescription = "");
+
 public sealed record ProviderChatCompletionRequest(
     ProviderProfile Provider,
     string Model,
@@ -28,13 +34,18 @@ public sealed record ProviderChatCompletionRequest(
     IReadOnlyList<ProviderTestChatMessage> Messages,
     string Prompt,
     IReadOnlyList<ProviderChatAttachment>? Attachments = null,
-    string ModelParameterConfigurationJson = "");
+    string ModelParameterConfigurationJson = "",
+    double? Temperature = null,
+    ProviderChatResponseFormat? ResponseFormat = null);
 
 public sealed record ProviderChatCompletionResult(
     string Model,
     string ResponseText,
     int InputTokens,
-    int OutputTokens);
+    int OutputTokens)
+{
+    public int CachedInputTokens { get; init; }
+}
 
 public sealed record ProviderImageSource(
     string Name,

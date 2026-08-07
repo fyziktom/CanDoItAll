@@ -19,6 +19,32 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+IGNORED_DIRECTORIES = {
+    ".artifacts",
+    "artifacts",
+    ".git",
+    "node_modules",
+    "bin",
+    "obj",
+    "output",
+    ".playwright-cli",
+    ".playwright-mcp",
+    ".mcp-state",
+}
+
+
+def iter_files(root: Path, suffix: str):
+    import os
+
+    if not root.exists():
+        return
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in IGNORED_DIRECTORIES]
+        for name in filenames:
+            if name.endswith(suffix):
+                yield Path(dirpath) / name
+
+
 def main() -> int:
     root = parse_args().repo_root.resolve()
     errors: list[str] = []
@@ -45,7 +71,7 @@ def main() -> int:
         "artifacts/process-runs",
         '"process-step"',
     ]
-    for path in maf_root.rglob("*.cs"):
+    for path in iter_files(maf_root, ".cs"):
         text = read(path)
         for token in forbidden_maf_tokens:
             if token in text:
@@ -63,7 +89,7 @@ def main() -> int:
     for scan_root in runtime_scan_roots:
         if not scan_root.exists():
             continue
-        for path in scan_root.rglob("*.cs"):
+        for path in iter_files(scan_root, ".cs"):
             if path.name in approved_composition_fragments:
                 continue
             text = read(path)
@@ -103,7 +129,7 @@ def main() -> int:
     ]
     source_root = root / "src"
     if source_root.exists():
-        for project in source_root.rglob("*.csproj"):
+        for project in iter_files(source_root, ".csproj"):
             project_name = project.stem.casefold()
             if "llm" in project_name and "abstraction" in project_name:
                 llm_abstraction_roots.append(project.parent)
@@ -123,7 +149,7 @@ def main() -> int:
     ]
     existing_llm_roots = sorted({path.resolve() for path in llm_abstraction_roots if path.exists()})
     for llm_root in existing_llm_roots:
-        for path in llm_root.rglob("*.cs"):
+        for path in iter_files(llm_root, ".cs"):
             text = read(path)
             for token in forbidden_llm_abstraction_tokens:
                 if token in text:
@@ -135,7 +161,7 @@ def main() -> int:
     if source_root.exists():
         lightweight_paths = [
             path
-            for path in source_root.rglob("*.cs")
+            for path in iter_files(source_root, ".cs")
             if any(
                 fragment in path.as_posix().casefold()
                 for fragment in ("/llm/", ".llm.", "lightweightllm")
@@ -158,7 +184,7 @@ def main() -> int:
     broad_runtime_callers: list[str] = []
     source_root = root / "src"
     if source_root.exists():
-        for path in source_root.rglob("*.cs"):
+        for path in iter_files(source_root, ".cs"):
             if "AgentFramework.Runtime.Abstractions" in path.as_posix():
                 continue
             text = read(path)

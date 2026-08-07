@@ -17,17 +17,6 @@ public enum ToolInvocationDecisionKind
     SkipExecution
 }
 
-public enum ToolInvocationClassification
-{
-    Unknown,
-    Read,
-    Mutation,
-    Validation,
-    HostedProviderNative,
-    LocalMcp,
-    HostedMcp
-}
-
 public sealed class AgentToolPolicyBlockedException : Exception
 {
     public AgentToolPolicyBlockedException(
@@ -46,26 +35,6 @@ public sealed class AgentToolPolicyBlockedException : Exception
     public ToolInvocationDecisionKind DecisionKind { get; }
 
     public string Reason { get; }
-}
-
-public sealed record AgentToolInvocationTrace(
-    string ToolName,
-    ToolInvocationClassification Classification,
-    int Sequence,
-    DateTimeOffset StartedAtUtc,
-    DateTimeOffset? CompletedAtUtc,
-    bool Succeeded,
-    string FailureMessage)
-{
-    public string RuntimeToolProviderKey { get; init; } = string.Empty;
-
-    public string RuntimeToolProviderName { get; init; } = string.Empty;
-
-    public string Signature { get; init; } = string.Empty;
-
-    public string TargetPath { get; init; } = string.Empty;
-
-    public Guid? DirectReceiptExecutionRunId { get; init; }
 }
 
 public sealed record AgentToolPolicyMetadata(

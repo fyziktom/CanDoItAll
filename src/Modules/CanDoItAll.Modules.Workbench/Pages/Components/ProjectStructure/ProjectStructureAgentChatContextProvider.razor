@@ -1,6 +1,7 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Modules.Workbench.AgentContext
 @using CanDoItAll.Modules.Workbench.ProjectStructure
 @using CanDoItAll.SharedKernel
 @using Microsoft.Extensions.Logging
@@ -35,6 +36,14 @@
     [Parameter]
     public ProjectStructureAgentChatView ActiveView { get; set; } = ProjectStructureAgentChatView.Canvas;
 
+    /// <summary>
+    /// Bounded visible Gantt projection facts supplied by the Gantt panel.
+    /// Published only while the Gantt view is active; a null value while Gantt
+    /// is active publishes explicit loading/partial facts.
+    /// </summary>
+    [Parameter]
+    public ProjectStructureGanttObservation? GanttObservation { get; set; }
+
     [Parameter]
     public AgentChatNavigationIdentity? ContextNavigationIdentity { get; set; }
 
@@ -51,6 +60,7 @@
     private AgentChatContextSource? activeSource;
     private ProjectStructureInvocationSnapshotCapture? activeSnapshotCapture;
     private AgentChatContextAttachmentDraft? activeExternalTargetAccessAttachment;
+    private AgentChatContextAttachmentDraft? activeGanttObservationAttachment;
     private ITimer? snapshotRenewalTimer;
     private DateTimeOffset? scheduledSnapshotDeadlineUtc;
     private Guid activeProjectId;
@@ -291,6 +301,19 @@
 
         activeSnapshotCapture = snapshotCapture;
         activeExternalTargetAccessAttachment = externalTargetAccessAttachment;
+        AgentChatContextContributorPublication? ganttContributor = null;
+        activeGanttObservationAttachment = null;
+        if (ActiveView == ProjectStructureAgentChatView.Gantt)
+        {
+            var ganttCapturedAtUtc = TimeProvider.GetUtcNow();
+            ganttContributor = ProjectStructureGanttObservationContributor.BuildPublication(
+                GanttObservation,
+                new DatabaseProfileGeneration(DatabaseRuntimeState.GetSnapshot().Generation),
+                ganttCapturedAtUtc,
+                ganttCapturedAtUtc.Add(ProjectStructureInvocationSnapshotMapper.FreshnessLifetime));
+            activeGanttObservationAttachment = ganttContributor.AttachmentDrafts.FirstOrDefault();
+        }
+
         var selectionFragment = snapshotCapture is null
             ? ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(selectedEntities)
             : ProjectStructureAgentChatContextBuilder.BuildSelectionFragment(
@@ -313,6 +336,17 @@
                 selectionFragment,
                 selectionAttachmentDrafts);
 
+        var contributors = new List<AgentChatContextContributorPublication>
+        {
+            new(ProjectStructureAgentChatContextBuilder.BuildBaseFragment(ProjectId)),
+            new(ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView))
+        };
+        if (ganttContributor is not null)
+        {
+            contributors.Add(ganttContributor);
+        }
+
+        contributors.Add(selectionContributor);
         return new AgentChatContextPublication(
             ProjectStructureAgentChatContextBuilder.BuildScope(
                 scopeId,
@@ -322,13 +356,7 @@
                 EffectiveAccessState,
                 ActiveView,
                 selectedEntities),
-            [
-                new AgentChatContextContributorPublication(
-                    ProjectStructureAgentChatContextBuilder.BuildBaseFragment(ProjectId)),
-                new AgentChatContextContributorPublication(
-                    ProjectStructureAgentChatContextBuilder.BuildViewFragment(ActiveView)),
-                selectionContributor
-            ]);
+            contributors);
     }
 
     private static string BuildPublicationKey(
@@ -397,7 +425,8 @@
     {
         var deadlineUtc = ResolveEarliestDeadline(
             activeSnapshotCapture?.AttachmentDraft.FreshUntilUtc,
-            activeExternalTargetAccessAttachment?.FreshUntilUtc);
+            activeExternalTargetAccessAttachment?.FreshUntilUtc,
+            activeGanttObservationAttachment?.FreshUntilUtc);
         if (snapshotRenewalTimer is not null &&
             scheduledSnapshotDeadlineUtc == deadlineUtc)
         {

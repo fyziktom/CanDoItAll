@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.Configuration;
 
 namespace CanDoItAll.Tests.Unit;

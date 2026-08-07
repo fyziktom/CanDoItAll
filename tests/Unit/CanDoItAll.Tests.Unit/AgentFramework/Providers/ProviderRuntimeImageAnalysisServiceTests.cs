@@ -191,18 +191,18 @@ public sealed class ProviderRuntimeImageAnalysisServiceTests
     }
 
     [Fact]
-    public void MafRuntimeDependencyResolver_prefers_registered_image_analysis_service()
+    public void MafAgentRuntimeDependencies_prefer_registered_image_analysis_service()
     {
         var gateway = new FakeMafProviderRuntimeGateway();
         var streamingGate = new FakeMafProviderStreamingDispatchGate();
         var imageAnalysisService = new FakeAgentImageAnalysisService();
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IMafProviderRuntimeGateway>(gateway);
         services.AddSingleton<IMafProviderStreamingDispatchGate>(streamingGate);
         services.AddSingleton<IAgentImageAnalysisService>(imageAnalysisService);
         using var provider = services.BuildServiceProvider();
 
-        var dependencies = new MafRuntimeDependencyResolver().ResolveProviderDependencies(provider);
+        var dependencies = MafAgentRuntimeDependencies.FromServices(provider);
 
         Assert.Same(gateway, dependencies.ProviderRuntimeGateway);
         Assert.Same(streamingGate, dependencies.ProviderStreamingDispatchGate);
@@ -210,17 +210,17 @@ public sealed class ProviderRuntimeImageAnalysisServiceTests
     }
 
     [Fact]
-    public void MafRuntimeDependencyResolver_uses_explicit_gateway_adapter_for_standalone_runtime()
+    public void MafAgentRuntimeDependencies_use_explicit_gateway_adapter_for_standalone_runtime()
     {
         var gateway = new FakeMafProviderRuntimeGateway();
         var imageAnalysisService = new ProviderRuntimeImageAnalysisService(gateway);
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IMafProviderRuntimeGateway>(gateway);
         services.AddSingleton<IMafProviderStreamingDispatchGate>(new FakeMafProviderStreamingDispatchGate());
         services.AddSingleton<IAgentImageAnalysisService>(imageAnalysisService);
         using var provider = services.BuildServiceProvider();
 
-        var dependencies = new MafRuntimeDependencyResolver().ResolveProviderDependencies(provider);
+        var dependencies = MafAgentRuntimeDependencies.FromServices(provider);
 
         Assert.Same(imageAnalysisService, dependencies.ImageAnalysisService);
     }

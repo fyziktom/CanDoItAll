@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;

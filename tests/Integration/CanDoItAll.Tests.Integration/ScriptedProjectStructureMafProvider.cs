@@ -18,11 +18,10 @@ internal sealed class ScriptedProjectStructureMafProviderAgentFactory(
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
-        bool allowBackgroundResponses,
-        IServiceProvider services)
+        bool allowBackgroundResponses)
     {
         chatClient.RecordFactoryInvocation(provider, model);
-        return chatClient.AsAIAgent(options: options, services: services);
+        return chatClient.AsAIAgent(options: options);
     }
 }
 
@@ -34,11 +33,10 @@ internal sealed class ScriptedReadOnlyProjectStructureMafProviderAgentFactory(
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
-        bool allowBackgroundResponses,
-        IServiceProvider services)
+        bool allowBackgroundResponses)
     {
         chatClient.RecordFactoryInvocation(provider, model);
-        return chatClient.AsAIAgent(options: options, services: services);
+        return chatClient.AsAIAgent(options: options);
     }
 }
 

@@ -2152,6 +2152,8 @@ public sealed class ProcessWorkspaceShellTests
 
         public bool? LastApprovalDecision { get; private set; }
 
+        public IReadOnlyList<PendingToolApprovalDecision>? LastApprovalDecisions { get; private set; }
+
         public bool? LastAutoApprovePendingToolCalls { get; private set; }
 
         public AgentExecutionActivityStreamId? LastStreamId { get; private set; }
@@ -2188,6 +2190,22 @@ public sealed class ProcessWorkspaceShellTests
                 agentId,
                 chatSessionId,
                 approved,
+                autoApprovePendingToolCalls,
+                cancellationToken);
+            return CreateHandle(completion);
+        }
+
+        public AgentChatOperationHandle StartApprovalContinuation(
+            Guid agentId,
+            Guid chatSessionId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default)
+        {
+            var completion = RespondToPendingApprovalsAsync(
+                agentId,
+                chatSessionId,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken);
             return CreateHandle(completion);
@@ -2259,6 +2277,22 @@ public sealed class ProcessWorkspaceShellTests
                 ToolCalls: 0);
             return Task.FromResult(
                 new AgentChatRunResult(chatSessionId, assistantMessage, metric));
+        }
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default)
+        {
+            LastApprovalDecisions = decisions;
+            return RespondToPendingApprovalsAsync(
+                agentId,
+                chatSessionId,
+                decisions.Count > 0 && decisions.All(decision => decision.Approved),
+                autoApprovePendingToolCalls,
+                cancellationToken);
         }
 
         private AgentChatOperationHandle CreateHandle(
@@ -2522,6 +2556,13 @@ public sealed class ProcessWorkspaceShellTests
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
 
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(
+            Guid executionRunId,
+            AgentExecutionOperationId activityOperationId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
         public Task<AgentChatRunResult> SendMessageAsync(
             Guid agentId,
             Guid? chatSessionId,
@@ -2574,6 +2615,14 @@ public sealed class ProcessWorkspaceShellTests
             Guid chatSessionId,
             AgentExecutionOperationId activityOperationId,
             bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            AgentExecutionOperationId activityOperationId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
 

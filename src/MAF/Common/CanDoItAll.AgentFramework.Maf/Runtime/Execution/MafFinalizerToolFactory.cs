@@ -6,11 +6,6 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafFinalizerToolFactory
 {
-    private const string ProcessStepOutcomeArgumentDescription =
-        "Final governed process-step outcome. Include status, reason, branchOutcomeKey, branchOutcomeTitle, evidenceRefs, nextActions, and humanReadableSummaryMarkdown. " +
-        "branchOutcomeTitle requires a non-empty stable branchOutcomeKey declared by the current process brief. When no branch is selected, both branch fields must be empty strings. " +
-        "Completed outcomes require at least one concrete current-run evidence reference.";
-
     public static FinalizerCapture? CreateCapture(
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode)
@@ -32,68 +27,31 @@ internal static class MafFinalizerToolFactory
         return capture;
     }
 
-    private static AITool? CreateTool(FinalizerCapture capture, AgentFinalizerPolicy policy)
+    /// <summary>
+    /// Single generic path for every finalizer contract: the submit delegate and JSON-schema shape are entirely
+    /// driven by <see cref="AgentFinalizerPolicy"/> metadata (<see cref="AgentFinalizerPolicy.ToolDescription"/>,
+    /// <see cref="AgentFinalizerPolicy.ResultParameterDescription"/>), never by a per-type switch. This keeps the
+    /// generic finalizer mechanism free of any specific structured-output contract's identity.
+    /// </summary>
+    private static AIFunction CreateTool(FinalizerCapture capture, AgentFinalizerPolicy policy)
     {
-        return policy.OutputType switch
+        var options = new AIFunctionFactoryOptions
         {
-            Type type when type == typeof(ProcessStepOutcomeResult) => CreateProcessStepOutcomeTool(capture, policy),
-            Type type when type == typeof(CodeReviewResult) => AIFunctionFactory.Create(
-                capture.SubmitCodeReviewResult,
-                policy.ToolName,
-                "Submits the final code-review result exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            Type type when type == typeof(ArchitectureReviewResult) => AIFunctionFactory.Create(
-                capture.SubmitArchitectureReviewResult,
-                policy.ToolName,
-                "Submits the final architecture-review result exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            Type type when type == typeof(ImplementationPlanResult) => AIFunctionFactory.Create(
-                capture.SubmitImplementationPlan,
-                policy.ToolName,
-                "Submits the final implementation plan exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            Type type when type == typeof(TestPlanResult) => AIFunctionFactory.Create(
-                capture.SubmitTestPlan,
-                policy.ToolName,
-                "Submits the final test plan exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            Type type when type == typeof(ToolExecutionDecisionResult) => AIFunctionFactory.Create(
-                capture.SubmitToolExecutionDecision,
-                policy.ToolName,
-                "Submits the final tool-execution decision exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            Type type when type == typeof(ProcessStatePatch) => AIFunctionFactory.Create(
-                capture.SubmitProcessStatePatch,
-                policy.ToolName,
-                "Submits the final process-state patch exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            Type type when type == typeof(HumanEscalationRequest) => AIFunctionFactory.Create(
-                capture.SubmitHumanEscalationRequest,
-                policy.ToolName,
-                "Submits the final human-escalation request exactly once as typed machine-readable arguments.",
-                AgentOutputJson.SerializerOptions),
-            _ => null
+            Name = policy.ToolName,
+            Description = policy.ToolDescription,
+            SerializerOptions = AgentOutputJson.SerializerOptions
         };
-    }
-
-    private static AIFunction CreateProcessStepOutcomeTool(
-        FinalizerCapture capture,
-        AgentFinalizerPolicy policy)
-    {
-        return AIFunctionFactory.Create(
-            capture.SubmitProcessStepOutcome,
-            new AIFunctionFactoryOptions
+        if (policy.ResultParameterDescription is { } resultParameterDescription)
+        {
+            options.JsonSchemaCreateOptions = new AIJsonSchemaCreateOptions
             {
-                Name = policy.ToolName,
-                Description = "Submits the final process-step outcome exactly once as typed machine-readable arguments.",
-                SerializerOptions = AgentOutputJson.SerializerOptions,
-                JsonSchemaCreateOptions = new AIJsonSchemaCreateOptions
-                {
-                    ParameterDescriptionProvider = static parameter =>
-                        string.Equals(parameter.Name, "result", StringComparison.Ordinal)
-                            ? ProcessStepOutcomeArgumentDescription
-                            : null
-                }
-            });
+                ParameterDescriptionProvider = parameter =>
+                    string.Equals(parameter.Name, "result", StringComparison.Ordinal)
+                        ? resultParameterDescription
+                        : null
+            };
+        }
+
+        return AIFunctionFactory.Create(capture.CreateSubmitDelegate(), options);
     }
 }

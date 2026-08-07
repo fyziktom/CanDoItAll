@@ -1,4 +1,6 @@
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -23,7 +25,10 @@ public sealed partial class AgentFrameworkWorkspaceService :
     public AgentFrameworkWorkspaceService(
         ISandboxWorkspaceStore store,
         IAgentPackageService packageService,
-        IAgentRuntime runtime,
+        IAgentExecutionRuntime executionRuntime,
+        IAgentContinuationRuntime continuationRuntime,
+        IProviderDiagnosticsRuntime providerDiagnosticsRuntime,
+        IProviderModelAdministrationRuntime providerModelAdministrationRuntime,
         ICapabilityProofService capabilityProofService,
         ILogger<AgentFrameworkWorkspaceService> logger,
         IAgentExecutionActivityCoordinator activityCoordinator,
@@ -42,11 +47,16 @@ public sealed partial class AgentFrameworkWorkspaceService :
         IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
         IAgentOutputRepairService? outputRepairService = null,
         IWorkspacePathResolutionService? workspacePathResolutionService = null,
-        IProviderRuntimeProfileSource? providerRuntimeProfileSource = null)
+        IProviderRuntimeProfileSource? providerRuntimeProfileSource = null,
+        IEnumerable<IAgentExecutionProviderSelectionPolicy>? providerSelectionPolicies = null,
+        IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
-        ArgumentNullException.ThrowIfNull(runtime);
+        ArgumentNullException.ThrowIfNull(executionRuntime);
+        ArgumentNullException.ThrowIfNull(continuationRuntime);
+        ArgumentNullException.ThrowIfNull(providerDiagnosticsRuntime);
+        ArgumentNullException.ThrowIfNull(providerModelAdministrationRuntime);
         ArgumentNullException.ThrowIfNull(capabilityProofService);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(activityCoordinator);
@@ -72,7 +82,10 @@ public sealed partial class AgentFrameworkWorkspaceService :
             ?? throw new InvalidOperationException(
                 "The configured runtime provider source must expose atomic provider snapshot leases.");
         var resolvedProviderCredentialResolver = providerCredentialResolver ?? new EnvironmentVariableAgentProviderCredentialResolver();
-        var resolvedProviderDiagnosticsService = providerDiagnosticsService ?? new ProviderDiagnosticsService(runtime);
+        // SB10: the workspace service consumes the four narrow runtime ports directly. SB18
+        // deleted the broad legacy runtime interface and its compatibility facade entirely.
+        var resolvedProviderDiagnosticsService = providerDiagnosticsService
+            ?? new ProviderDiagnosticsService(providerDiagnosticsRuntime, providerModelAdministrationRuntime);
         var resolvedExecutionGovernanceBridge = executionGovernanceBridge ?? new NullAgentExecutionGovernanceBridge();
         var resolvedExecutionEventSink = executionEventSink ?? new NullAgentExecutionEventSink();
         var resolvedExecutionCheckpointBridge = executionCheckpointBridge ?? new NullAgentExecutionCheckpointBridge();
@@ -104,7 +117,8 @@ public sealed partial class AgentFrameworkWorkspaceService :
         executionService = new AgentFrameworkWorkspaceExecutionService(
             store,
             store,
-            runtime,
+            executionRuntime,
+            continuationRuntime,
             resolvedExecutionGovernanceBridge,
             resolvedExecutionEventSink,
             resolvedExecutionCheckpointBridge,
@@ -116,7 +130,9 @@ public sealed partial class AgentFrameworkWorkspaceService :
             workspaceProcessLeaseCleaner,
             executionCancellationRegistry,
             outputRepairService,
-            workspacePathResolutionService);
+            workspacePathResolutionService,
+            providerSelectionPolicies,
+            runCriticalityPolicies);
 
         executionService.ExecutionUpdated += HandleExecutionUpdated;
     }

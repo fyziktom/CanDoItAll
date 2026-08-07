@@ -660,6 +660,30 @@ public sealed record AgentRuntimeExecutionOptions(
 
     [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
+
+    /// <summary>
+    /// Stable hash (SHA-256 hex, ordered) of the composed runtime tool names for this run.
+    /// Empty until the adapter fills it in after capability composition (the tool list is
+    /// not definitively known before that point); a runtime-state envelope writer must
+    /// never treat an empty value as "matches" against a differently-empty current value —
+    /// see <c>IRuntimeStateCompatibilityPolicy</c>.
+    /// </summary>
+    public string ToolsetFingerprint { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The current turn's context-policy fingerprint, reusing
+    /// <c>AgentTurnContextReference.ModelContextDigest</c> (SB02) — never a second digest.
+    /// Empty when the run has no turn-context reference (for example a governed process
+    /// step) rather than a fabricated value.
+    /// </summary>
+    public string ContextPolicyFingerprint { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The agent's chat-history mode (source: <c>agent.ChatHistoryMode</c>), threaded here so
+    /// every session-persistence call site can stamp a runtime-state envelope without needing
+    /// its own <c>AgentDefinition</c> parameter.
+    /// </summary>
+    public AgentChatHistoryMode? HistoryMode { get; init; }
 }
 
 public sealed record AgentRuntimeTransientContext

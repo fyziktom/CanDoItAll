@@ -147,6 +147,8 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             ["stream"] = false
         };
         ProviderDriverProtocol.AddOpenAiChatCompletionModelParameters(payload, request);
+        ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
+        ProviderDriverProtocol.AddOpenAiChatCompletionResponseFormat(payload, request);
         httpRequest.Content = JsonContent.Create(
             payload,
             options: ProviderDriverJson.Options);
@@ -163,7 +165,10 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             request.Model,
             ProviderDriverJson.ReadString(choice, "content"),
             usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "prompt_tokens") : 0,
-            usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "completion_tokens") : 0);
+            usage.ValueKind == JsonValueKind.Object ? ProviderDriverJson.ReadInt(usage, "completion_tokens") : 0)
+        {
+            CachedInputTokens = ProviderDriverProtocol.ReadChatCompletionsCachedTokens(usage)
+        };
     }
 
     private async Task<ProviderChatCompletionResult> CompleteResponseAsync(
@@ -181,6 +186,8 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             ["store"] = false
         };
         ProviderDriverProtocol.AddOpenAiResponsesModelParameters(payload, request);
+        ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
+        ProviderDriverProtocol.AddOpenAiResponsesResponseFormat(payload, request);
         httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
 
         using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);

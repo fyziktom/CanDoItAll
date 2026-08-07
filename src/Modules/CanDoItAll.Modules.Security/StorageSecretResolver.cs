@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Security.Abstractions;
 
 namespace CanDoItAll.Modules.Security;
 

@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -18,20 +17,20 @@ internal sealed class MafRuntimeAgentFactory
     private static readonly JsonSerializerOptions LoggingJsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly string workspaceRoot;
-    private readonly IServiceProvider services;
     private readonly WorkspaceScopeDescriptor workspaceScope;
     private readonly IMafProviderCredentialService providerCredentialService;
     private readonly IMafProviderAgentFactory providerAgentFactory;
     private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
+    private readonly ILoggerFactory loggerFactory;
     private readonly MafScriptPolicyInspectionService scriptPolicyInspectionService;
 
     public MafRuntimeAgentFactory(
         string workspaceRoot,
-        IServiceProvider services,
         WorkspaceScopeDescriptor workspaceScope,
         IMafProviderCredentialService providerCredentialService,
         IMafProviderAgentFactory providerAgentFactory,
-        IRuntimeCapabilityComposer runtimeCapabilityComposer)
+        IRuntimeCapabilityComposer runtimeCapabilityComposer,
+        ILoggerFactory? loggerFactory = null)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
@@ -39,8 +38,8 @@ internal sealed class MafRuntimeAgentFactory
         }
 
         this.workspaceRoot = workspaceRoot;
-        this.services = services ?? throw new ArgumentNullException(nameof(services));
         this.workspaceScope = workspaceScope;
+        this.loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
         this.providerAgentFactory = providerAgentFactory ?? throw new ArgumentNullException(nameof(providerAgentFactory));
         this.runtimeCapabilityComposer = runtimeCapabilityComposer ?? throw new ArgumentNullException(nameof(runtimeCapabilityComposer));
@@ -52,6 +51,7 @@ internal sealed class MafRuntimeAgentFactory
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyList<AgentMemoryRecord> memory,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         CancellationToken cancellationToken = default,
         bool suppressApprovalRequirements = false,
         bool forceOmitTemperature = false,
@@ -62,6 +62,7 @@ internal sealed class MafRuntimeAgentFactory
             provider,
             capabilities,
             memory,
+            workspaceRuntimeServices,
             static (_, _, _) => Task.CompletedTask,
             cancellationToken,
             suppressApprovalRequirements,
@@ -76,6 +77,7 @@ internal sealed class MafRuntimeAgentFactory
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyList<AgentMemoryRecord> memory,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false,
@@ -83,12 +85,14 @@ internal sealed class MafRuntimeAgentFactory
         AgentRuntimeExecutionOptions? executionOptions = null,
         string runtimeSessionKey = "")
     {
+        ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var runtimeOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
         if (runtimeOptions.Handoff is not null)
         {
             return await CreateHandoffRuntimeBuildAsync(
                 agent,
                 provider,
+                workspaceRuntimeServices,
                 progressCallback,
                 cancellationToken,
                 suppressApprovalRequirements,
@@ -138,8 +142,10 @@ internal sealed class MafRuntimeAgentFactory
             suppressApprovalRequirements,
             contextWorkspaceScope,
             runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty,
+            workspaceRuntimeServices,
             runtimeSessionKey,
             runtimeOptions.TransientContext?.Attachments);
+        capabilityState.AsyncDisposables.Add(workspaceRuntimeServices);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,
@@ -210,8 +216,7 @@ internal sealed class MafRuntimeAgentFactory
                 model,
                 options,
                 frameworkManagedHistory,
-                agent.EnableBackgroundResponses && MafRuntimeSessionBuilder.SupportsBackgroundResponses(effectiveProvider),
-                services),
+                agent.EnableBackgroundResponses && MafRuntimeSessionBuilder.SupportsBackgroundResponses(effectiveProvider)),
             effectiveProvider,
             agent,
             capabilityState,
@@ -276,6 +281,7 @@ internal sealed class MafRuntimeAgentFactory
     private async Task<RuntimeBuildResult> CreateHandoffRuntimeBuildAsync(
         AgentDefinition agent,
         ProviderProfile provider,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements,
@@ -322,6 +328,7 @@ internal sealed class MafRuntimeAgentFactory
                     participant.Provider,
                     participant.Capabilities,
                     participant.Memory,
+                    workspaceRuntimeServices,
                     progressCallback,
                     cancellationToken,
                     suppressApprovalRequirements,
@@ -421,10 +428,10 @@ internal sealed class MafRuntimeAgentFactory
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var runtimeToolOwnershipByToolName = CreateRuntimeToolOwnershipByToolName(capabilityState);
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
-        var logger = services.GetService<ILogger<MafAgentRuntime>>();
+        var logger = loggerFactory.CreateLogger<MafAgentRuntime>();
         var configuredWorkspaceAccess = AgentWorkspaceToolAccessMetadata.Read(agentDefinition.ConfigurationJson);
         builder.UseLogging(
-            services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance,
+            loggerFactory,
             logging => logging.JsonSerializerOptions = LoggingJsonSerializerOptions);
         builder.Use(async (innerAgent, context, next, cancellationToken) =>
         {
@@ -632,7 +639,7 @@ internal sealed class MafRuntimeAgentFactory
         builder.UseOpenTelemetry(
             $"{AgentFrameworkTelemetry.SourceName}.Maf.{provider.Kind}",
             telemetry => telemetry.EnableSensitiveData = false);
-        return builder.Build(services);
+        return builder.Build();
     }
 
     private static IReadOnlyDictionary<string, AgentRuntimeToolOwnership> CreateRuntimeToolOwnershipByToolName(

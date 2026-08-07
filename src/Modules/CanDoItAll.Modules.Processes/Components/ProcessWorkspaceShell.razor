@@ -2614,13 +2614,22 @@
             return;
         }
 
+        var pendingApprovals = managerChatWorkspace?.SelectedRun?.PendingApprovals ?? [];
+        if (pendingApprovals.Count == 0)
+        {
+            return;
+        }
+
+        var decisions = pendingApprovals
+            .Select(item => new PendingToolApprovalDecision(item.ApprovalId, approved))
+            .ToArray();
         managerChatIsBusy = true;
         try
         {
             var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
                 managerChatAgentId.Value,
                 managerChatSessionId.Value,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls);
             managerChatActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);

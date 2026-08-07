@@ -16,6 +16,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     private readonly IFloatingAgentChatSettingsService settingsService;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<FloatingAgentChatCoordinator> logger;
+    private readonly IAgentConversationContextService? conversationContextService;
     private readonly Dictionary<AgentChatHandleId, Guid> activeExecutionRunIds = [];
     private readonly HashSet<AgentChatHandleId> activeOperations = [];
     private bool isCatalogVisible;
@@ -32,7 +33,8 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         IAgentChatPreparationPool preparationPool,
         IFloatingAgentChatSettingsService settingsService,
         TimeProvider timeProvider,
-        ILogger<FloatingAgentChatCoordinator> logger)
+        ILogger<FloatingAgentChatCoordinator> logger,
+        IAgentConversationContextService? conversationContextService = null)
     {
         this.workspaceService = workspaceService;
         this.activeChatRegistry = activeChatRegistry;
@@ -40,6 +42,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         this.settingsService = settingsService;
         this.timeProvider = timeProvider;
         this.logger = logger;
+        this.conversationContextService = conversationContextService;
         activeChatRegistry.Changed += HandleActiveChatsChanged;
         workspaceService.ExecutionUpdated += HandleExecutionUpdated;
     }
@@ -160,6 +163,8 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
             activeExecutionRunIds.Remove(handleId);
             activeOperations.Remove(handleId);
         }
+
+        conversationContextService?.Remove(AgentConversationKey.ForHandle(handleId));
     }
 
     public ActiveAgentChat SetRunState(
@@ -241,7 +246,9 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     public ActiveAgentChat AttachSession(AgentChatHandleId handleId, Guid chatSessionId)
     {
         ThrowIfDisposed();
-        return activeChatRegistry.AttachSession(handleId, chatSessionId);
+        var chat = activeChatRegistry.AttachSession(handleId, chatSessionId);
+        conversationContextService?.TransferToSession(handleId, chatSessionId);
+        return chat;
     }
 
     public int PruneExpired()
@@ -332,7 +339,14 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 agentId,
                 chatSessionId,
                 cancellationToken);
-            return activeChatRegistry.Open(identity, chatSessionId, settings);
+            var openedChat = activeChatRegistry.Open(identity, chatSessionId, settings);
+            if (chatSessionId is { } existingSessionId)
+            {
+                conversationContextService?.GetOrCreateBinding(
+                    AgentConversationKey.ForSession(existingSessionId));
+            }
+
+            return openedChat;
         }
 
         var previouslyVisibleChat = activeChatRegistry.Snapshot()
@@ -341,18 +355,24 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
             identity,
             chatSessionId: null,
             settings);
+        conversationContextService?.GetOrCreateBinding(
+            AgentConversationKey.ForHandle(reservedChat.HandleId));
         try
         {
             var session = await workspaceService.GetOrCreateChatSessionAsync(
                 agentId,
                 cancellationToken: cancellationToken);
-            return activeChatRegistry.AttachSession(reservedChat.HandleId, session.Id);
+            var attachedChat = activeChatRegistry.AttachSession(reservedChat.HandleId, session.Id);
+            conversationContextService?.TransferToSession(reservedChat.HandleId, session.Id);
+            return attachedChat;
         }
         catch
         {
             activeChatRegistry.Stop(
                 reservedChat.HandleId,
                 previouslyVisibleChat?.HandleId);
+            conversationContextService?.Remove(
+                AgentConversationKey.ForHandle(reservedChat.HandleId));
 
             throw;
         }

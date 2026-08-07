@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -83,7 +83,6 @@ public sealed class MafWorkflowAdapterIsolationTests
             "MafWorkflowCompiler.cs",
             "MafWorkflowEventNormalizer.cs",
             "MafWorkflowLlmComponentInvoker.cs",
-            "MafHandoffWorkflowFactory.cs",
             "MafConfiguredFileArtifactResolver.cs",
             "WorkflowBackendExternalRequestCapture.cs",
             "WorkflowBackendProgressEventObserver.cs",
@@ -94,6 +93,24 @@ public sealed class MafWorkflowAdapterIsolationTests
         {
             Assert.True(File.Exists(Path.Combine(adapterRoot, fileName)), $"Missing adapter file: {fileName}");
         }
+
+        var handoffFactoryPath = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Handoffs",
+            "MafHandoffWorkflowFactory.cs");
+        Assert.True(
+            File.Exists(handoffFactoryPath),
+            "MafHandoffWorkflowFactory.cs moved out of the workflow adapter into the MAF runtime and must live at Runtime/Handoffs.");
+
+        var mafProjectText = File.ReadAllText(Path.Combine(
+            root,
+            @"src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj"));
+        Assert.DoesNotContain("Workflows.MafAdapter", mafProjectText, StringComparison.Ordinal);
 
         var mafWorkflowDirectory = Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Maf", "Runtime", "Workflows");
         var remainingMafWorkflowFiles = Directory.Exists(mafWorkflowDirectory)

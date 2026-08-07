@@ -18,7 +18,7 @@ public interface IAgentFrameworkWorkspaceActivityExecutionService
     Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation,
         Guid executionRunId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 
@@ -35,7 +35,7 @@ public interface IAgentFrameworkWorkspaceActivityExecutionService
         IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 }

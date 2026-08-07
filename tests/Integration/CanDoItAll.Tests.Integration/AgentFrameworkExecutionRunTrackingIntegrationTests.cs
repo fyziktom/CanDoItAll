@@ -232,9 +232,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -299,9 +300,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -347,9 +349,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -400,9 +403,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -465,9 +469,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -710,9 +715,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -774,9 +780,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -837,9 +844,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<FakeProgressAgentRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -891,9 +899,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<StructuredOutputApprovalRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -935,7 +944,9 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             agent.Id,
             session.Id,
             AgentExecutionOperationId.New(),
-            approved: true,
+            decisions: pendingDetail.Run.PendingApprovals
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                .ToArray(),
             autoApprovePendingToolCalls: true);
         var completedDetail = await executionRunStore.GetExecutionRunDetailAsync(completedResult.ExecutionRunId);
 
@@ -962,9 +973,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton<StructuredOutputApprovalRuntime>();
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -996,7 +1008,9 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         var continuationResult = await workspaceService.ContinueExecutionRunAsync(
             initialResult.ExecutionRunId,
             AgentExecutionOperationId.New(),
-            approved: true,
+            decisions: pendingDetail.Run.PendingApprovals
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                .ToArray(),
             autoApprovePendingToolCalls: false);
 
         var completedDetail = await executionRunStore.GetExecutionRunDetailAsync(continuationResult.ExecutionRunId);
@@ -1029,12 +1043,13 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     ContinuationResponseText = "This continuation is prose, not machine JSON."
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -1056,11 +1071,16 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                 AutoApprovePendingToolCalls: false,
                 StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
 
+        var pendingDetail = await executionRunStore.GetExecutionRunDetailAsync(
+            initialResult.ExecutionRunId);
+        Assert.NotNull(pendingDetail);
         var exception = await Assert.ThrowsAsync<AgentChatRunFailedException>(() =>
             workspaceService.ContinueExecutionRunAsync(
                 initialResult.ExecutionRunId,
                 AgentExecutionOperationId.New(),
-                approved: true,
+                decisions: pendingDetail.Run.PendingApprovals
+                    .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                    .ToArray(),
                 autoApprovePendingToolCalls: false));
         var failedDetail = await executionRunStore.GetExecutionRunDetailAsync(
             initialResult.ExecutionRunId);
@@ -1084,7 +1104,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialCachedInputTokens = 3,
@@ -1104,7 +1125,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                             sequence: 1)
                     ]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1194,7 +1215,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialRequestCompatibilityEvidence = expectedEvidence,
@@ -1209,7 +1231,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                     ContinuationException = new InvalidOperationException(
                         "Fake provider failed during the later continuation.")
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -1257,14 +1279,15 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialPendingApprovals = [],
                     InitialResponseText = "Completed successfully.",
                     InitialContextAssemblyManifest = contextManifest
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1305,13 +1328,14 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialPendingApprovals = [],
                     InitialResponseText = "Completed successfully."
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1380,7 +1404,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     ThrowUsageExceptionOnRun = true,
@@ -1397,7 +1422,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                             sequence: 1)
                     ]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1447,13 +1472,14 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = "not machine json",
                     InitialPendingApprovals = []
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 services.RemoveAll<IAgentOutputRepairService>();
                 services.AddSingleton<IAgentOutputRepairService>(new UsageReportingRepairService());
                 UseDirectWorkspaceService(services);
@@ -1498,13 +1524,14 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = "This is prose, not machine JSON.",
                     InitialPendingApprovals = []
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1558,14 +1585,15 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = SerializeOutcome(outcome),
                     InitialPendingApprovals = [],
                     InitialFinalizerInvocations = [CreateFinalizerInvocation(outcome)]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1607,7 +1635,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = SerializeOutcome(outcome),
@@ -1625,7 +1654,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                             ProviderUsageObservationStatus.MissingAfterProviderActivity)
                     ]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1672,14 +1701,15 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = "Display-only assistant text.",
                     InitialPendingApprovals = [],
                     InitialFinalizerInvocations = [CreateFinalizerInvocation(outcome)]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1724,7 +1754,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = "Display-only assistant text.",
@@ -1742,7 +1773,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
                             sequence: 2)
                     ]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1796,14 +1827,15 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = "Display-only assistant text.",
                     InitialPendingApprovals = [],
                     InitialFinalizerInvocations = [CreateFinalizerInvocation(outcome)]
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1844,13 +1876,14 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = $"The result follows:{Environment.NewLine}{SerializeOutcome(outcome)}",
                     InitialPendingApprovals = []
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -1892,13 +1925,14 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             TestSchemaBootstrapModules.Full,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(new StructuredOutputApprovalRuntime
                 {
                     InitialResponseText = SerializeOutcome(CreateCompletedOutcome("Structured output alone is not enough in required mode.")),
                     InitialPendingApprovals = []
                 });
-                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
                 UseDirectWorkspaceService(services);
             });
 
@@ -2164,9 +2198,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         services.AddScoped<IAgentExecutionEventSink>(
             serviceProvider => serviceProvider.GetRequiredService<RecordingAgentExecutionEventSink>());
 
-        services.RemoveAll<IAgentRuntime>();
+        services.RemoveAll<IFakeAgentRuntime>();
+        services.RouteRuntimePortsThroughAgentRuntime();
         services.AddSingleton<StartupBarrierAgentRuntime>();
-        services.AddSingleton<IAgentRuntime>(
+        services.AddSingleton<IFakeAgentRuntime>(
             serviceProvider => serviceProvider.GetRequiredService<StartupBarrierAgentRuntime>());
     }
 
@@ -2202,9 +2237,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         services.AddSingleton<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
             serviceProvider.GetRequiredService<RecordingTerminalProcessLeaseCleaner>());
 
-        services.RemoveAll<IAgentRuntime>();
+        services.RemoveAll<IFakeAgentRuntime>();
+        services.RouteRuntimePortsThroughAgentRuntime();
         services.AddSingleton<FakeProgressAgentRuntime>();
-        services.AddSingleton<IAgentRuntime>(serviceProvider =>
+        services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<FakeProgressAgentRuntime>());
     }
 
@@ -2286,8 +2322,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         services.AddScoped<IAgentPackageService>(serviceProvider => new ZipAgentPackageService(
             serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
             ResolveWorkspaceScope(serviceProvider)));
-        services.AddScoped<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
-            serviceProvider.GetRequiredService<IAgentRuntime>()));
+        services.AddScoped<IProviderDiagnosticsService>(serviceProvider =>
+        {
+            var portFacade = new FakeAgentRuntimePortAdapter(
+                serviceProvider.GetRequiredService<IFakeAgentRuntime>());
+            return new ProviderDiagnosticsService(portFacade, portFacade);
+        });
         services.AddScoped<IAgentExecutionCheckpointBridge>(serviceProvider => new WorkflowBackedAgentExecutionCheckpointBridge(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),
             serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
@@ -2844,7 +2884,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
     }
 
     private sealed class StartupBarrierAgentRuntime(
-        StartupMilestoneRecorder milestones) : IAgentRuntime
+        StartupMilestoneRecorder milestones) : IFakeAgentRuntime
     {
         public TaskCompletionSource<Guid> Entered { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -2924,7 +2964,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         }
     }
 
-    private sealed class FakeProgressAgentRuntime : IAgentRuntime
+    private sealed class FakeProgressAgentRuntime : IFakeAgentRuntime
     {
         public TaskCompletionSource<Guid> ExecutionRunIdObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -3019,7 +3059,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         }
     }
 
-    private sealed class StructuredOutputApprovalRuntime : IAgentRuntime
+    private sealed class StructuredOutputApprovalRuntime : IFakeAgentRuntime
     {
         public List<AgentStructuredOutputContract?> RunStructuredOutputs { get; } = [];
 

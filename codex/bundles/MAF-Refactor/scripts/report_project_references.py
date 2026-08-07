@@ -17,9 +17,33 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+IGNORED_DIRECTORIES = {
+    ".artifacts",
+    "artifacts",
+    ".git",
+    "node_modules",
+    "bin",
+    "obj",
+    "output",
+    ".playwright-cli",
+    ".playwright-mcp",
+    ".mcp-state",
+}
+
+
+def iter_csproj_files(root: Path):
+    import os
+
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in IGNORED_DIRECTORIES]
+        for name in filenames:
+            if name.endswith(".csproj"):
+                yield Path(dirpath) / name
+
+
 def load_graph(root: Path) -> tuple[dict[str, Path], dict[str, list[str]]]:
     projects: dict[str, Path] = {}
-    for path in root.rglob("*.csproj"):
+    for path in iter_csproj_files(root):
         relative = path.relative_to(root).as_posix()
         projects[relative.casefold()] = path
 

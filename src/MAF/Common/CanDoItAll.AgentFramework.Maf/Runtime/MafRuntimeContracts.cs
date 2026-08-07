@@ -53,16 +53,6 @@ internal sealed record RuntimeToolProviderRegistration(
     IAgentRuntimeToolProvider Provider,
     AgentRuntimeToolProviderDescriptor Descriptor);
 
-internal sealed record MafRuntimeProviderDependencies(
-    IMafProviderRuntimeGateway ProviderRuntimeGateway,
-    IMafProviderStreamingDispatchGate ProviderStreamingDispatchGate,
-    IAgentImageAnalysisService ImageAnalysisService);
-
-internal sealed record MafWorkspaceRuntimeServices(
-    IWorkspaceFileService FileService,
-    IWorkspaceCommandExecutionService CommandExecutionService,
-    IWorkspaceArtifactToolService ArtifactToolService);
-
 internal sealed record RuntimeToolProviderAttachmentRequest(
     RuntimeCapabilityState State,
     RuntimeCapabilityAccessPlan AccessPlan,

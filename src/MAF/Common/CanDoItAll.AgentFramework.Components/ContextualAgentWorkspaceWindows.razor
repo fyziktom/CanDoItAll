@@ -970,6 +970,15 @@
         var executionLoadGeneration = Volatile.Read(ref workspaceLoadGeneration);
         var executionCompleted = false;
         var continuationLoadGeneration = executionLoadGeneration;
+        var pendingApprovals = workspace?.SelectedRun?.PendingApprovals ?? [];
+        if (pendingApprovals.Count == 0)
+        {
+            return;
+        }
+
+        var decisions = pendingApprovals
+            .Select(item => new PendingToolApprovalDecision(item.ApprovalId, approved))
+            .ToArray();
         isChatBusy = true;
         try
         {
@@ -977,7 +986,7 @@
                 executionAgentId,
                 executionSessionId,
                 AgentExecutionOperationId.New(),
-                approved,
+                decisions,
                 autoApprovePendingToolCalls);
             executionCompleted = true;
             if (!IsWorkspaceSelectionCurrent(

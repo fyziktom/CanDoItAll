@@ -193,7 +193,7 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
         var approval = context.Orchestrator.StartApprovalContinuation(
             context.AgentId,
             context.Workspace.SessionId,
-            approved: true);
+            decisions: [new PendingToolApprovalDecision("approval-1", Approved: true)]);
         await approval.Completion;
 
         Assert.NotEqual(send.StreamId.OperationId, approval.StreamId.OperationId);
@@ -273,17 +273,22 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
         var contextRegistry = new ControllableAgentChatContextRegistry(
             blockContextCapture,
             snapshot);
+        var generationSource = new FixedAgentExecutionProfileGenerationSource(
+            new DatabaseProfileGeneration(0));
+        var turnContextCaptureService = new AgentTurnContextCaptureService(
+            contextRegistry,
+            new SandboxAgentExecutionAuthorityResolver(),
+            generationSource,
+            timeProvider);
         var orchestrator = new AgentChatExecutionOrchestrator(
             workspace,
-            contextRegistry,
+            turnContextCaptureService,
             new AgentChatExecutionNotificationHub(
                 NullLogger<AgentChatExecutionNotificationHub>.Instance),
             coordinator,
             new TestWorkspaceFactory(workspaceScope),
             new TestDatabaseProfileRuntimeAccessor(profileId),
-            new FixedAgentExecutionProfileGenerationSource(
-                new DatabaseProfileGeneration(0)),
-            timeProvider);
+            generationSource);
         return new TestContext(
             orchestrator,
             coordinator,
@@ -446,6 +451,16 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
             throw new NotSupportedException();
         }
 
+        public Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
+            IAgentExecutionActivityOperationLease operation,
+            Guid executionRunId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<AgentChatRunResult> SendMessageWithinOperationAsync(
             IAgentExecutionActivityOperationLease operation,
             Guid agentId,
@@ -491,6 +506,26 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
             return Task.FromResult(ApprovalResult);
         }
 
+        public Task<AgentChatRunResult> RespondToPendingApprovalsWithinOperationAsync(
+            IAgentExecutionActivityOperationLease operation,
+            Guid agentId,
+            Guid chatSessionId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ApprovalCalls.Add(new ApprovalCall(operation));
+            operation.Report(
+                AgentExecutionActivityPhase.ResolvingSession,
+                "Loading the test execution run.");
+            operation.Report(
+                AgentExecutionActivityPhase.ResolvingPreparation,
+                "Resolving test continuation preparation.");
+            BindAndComplete(operation);
+            return Task.FromResult(ApprovalResult);
+        }
+
         private void BindAndComplete(
             IAgentExecutionActivityOperationLease operation)
         {
@@ -515,6 +550,27 @@ public sealed class AgentChatExecutionActivityOrchestratorTests
 
     private sealed record ApprovalCall(
         IAgentExecutionActivityOperationLease Operation);
+
+    private sealed class SandboxAgentExecutionAuthorityResolver
+        : IAgentExecutionAuthorityResolver
+    {
+        public ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(
+            AgentExecutionAuthorityResolutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new AgentExecutionAuthorityRecord(
+                AgentExecutionAuthorityId.Create(),
+                request.AgentId,
+                Guid.NewGuid(),
+                request.ExpectedDatabaseProfileGeneration,
+                request.ObservedWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox,
+                readAllowed: true,
+                mutationAllowed: false,
+                "test",
+                "test-fingerprint",
+                DateTimeOffset.UtcNow));
+        }
+    }
 
     private sealed class TestWorkspaceFactory(
         WorkspaceScopeDescriptor organizationScope)

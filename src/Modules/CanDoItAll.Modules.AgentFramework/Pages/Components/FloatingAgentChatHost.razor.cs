@@ -17,6 +17,9 @@ public partial class FloatingAgentChatHost
     public IAgentChatContextRegistry ContextRegistry { get; set; } = default!;
 
     [Inject]
+    public IAgentConversationContextService ConversationContextService { get; set; } = default!;
+
+    [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
@@ -77,6 +80,7 @@ public partial class FloatingAgentChatHost
         hasAttached = true;
         Coordinator.Changed += HandleCoordinatorChanged;
         ContextRegistry.Changed += HandleContextChanged;
+        ConversationContextService.Changed += HandleConversationBindingsChanged;
         ReferenceDataCacheInvalidator.Invalidated += HandleReferenceDataInvalidated;
         RefreshContextAndVisibleAgents();
         SynchronizeState();
@@ -556,6 +560,79 @@ public partial class FloatingAgentChatHost
             _ => "success"
         };
 
+    private void HandleConversationBindingsChanged(object? sender, EventArgs eventArgs)
+    {
+        if (isDisposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private AgentConversationContextBinding? ResolveConversationBinding(ActiveAgentChat chat)
+    {
+        var key = chat.ChatSessionId is { } sessionId
+            ? AgentConversationKey.ForSession(sessionId)
+            : AgentConversationKey.ForHandle(chat.HandleId);
+        return ConversationContextService.TryGetBinding(key);
+    }
+
+    private string ResolveAffinityStatus(AgentConversationContextBinding? binding)
+    {
+        if (binding is { Mode: AgentConversationContextMode.Detached })
+        {
+            return "Detached from application context";
+        }
+
+        if (binding is { IsFollowing: true })
+        {
+            var view = string.IsNullOrWhiteSpace(binding.LastView)
+                ? string.Empty
+                : $" / {binding.LastView}";
+            return $"Following: {binding.DisplayName}{view}";
+        }
+
+        return "Following: current surface";
+    }
+
+    private bool HasPendingContextChange(AgentConversationContextBinding? binding)
+    {
+        if (binding is null ||
+            binding.Mode == AgentConversationContextMode.Detached ||
+            !binding.IsFollowing ||
+            CurrentContext is not { } context)
+        {
+            return false;
+        }
+
+        var currentView = context.Scope.SurfacePosition?.View ?? string.Empty;
+        return binding.SourceKind != context.Scope.Source.Kind ||
+               binding.SourceId != context.Scope.Source.Id ||
+               !string.Equals(binding.LastView, currentView, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolvePendingContextText()
+        => CurrentContext is { } context
+            ? $"Next turn: {context.Scope.DisplayName}{(string.IsNullOrWhiteSpace(context.Scope.SurfacePosition?.View) ? string.Empty : $" / {context.Scope.SurfacePosition!.View}")}"
+            : "Next turn: no module context";
+
+    private void ToggleConversationContextMode(ActiveAgentChat chat)
+    {
+        var key = chat.ChatSessionId is { } sessionId
+            ? AgentConversationKey.ForSession(sessionId)
+            : AgentConversationKey.ForHandle(chat.HandleId);
+        var binding = ConversationContextService.GetOrCreateBinding(key);
+        if (binding.Mode == AgentConversationContextMode.Detached)
+        {
+            ConversationContextService.FollowCurrentSurface(key);
+        }
+        else
+        {
+            ConversationContextService.Detach(key);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (isDisposed)
@@ -568,6 +645,7 @@ public partial class FloatingAgentChatHost
         {
             Coordinator.Changed -= HandleCoordinatorChanged;
             ContextRegistry.Changed -= HandleContextChanged;
+            ConversationContextService.Changed -= HandleConversationBindingsChanged;
             ReferenceDataCacheInvalidator.Invalidated -= HandleReferenceDataInvalidated;
         }
 

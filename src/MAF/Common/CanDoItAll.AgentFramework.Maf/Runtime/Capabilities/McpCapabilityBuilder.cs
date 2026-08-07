@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using System.Diagnostics;
@@ -20,10 +20,11 @@ using RuntimeToolName = CanDoItAll.AgentFramework.Capabilities.Abstractions.Runt
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class McpCapabilityBuilder(
-    IServiceProvider services,
+    IMcpClientFactory mcpClientFactory,
+    ISecretRuntimeResolver? secretRuntimeResolver,
     string workspaceRoot,
     WorkspaceScopeDescriptor workspaceScope,
-    IMafRuntimeDependencyResolver dependencyResolver,
+    WorkspaceRuntimeServices workspaceRuntimeServices,
     IMafProviderCredentialService providerCredentialService,
     Func<CapabilityCatalogItem, RuntimeToolName?, IReadOnlySet<CapabilityOperationClassification>> resolveCatalogOperationClassifications,
     Func<CapabilityCatalogItem, McpCapabilityConfiguration, McpServerKey> resolveMcpServerKey,
@@ -547,9 +548,7 @@ internal sealed class McpCapabilityBuilder(
                     configuration.WorkingDirectory,
                     allowExternal: (configuration.AllowedWorkingDirectories?.Count ?? 0) > 0,
                     allowedExternalRoots: configuration.AllowedWorkingDirectories);
-            var commandExecutionService = dependencyResolver
-                .ResolveWorkspaceServices(services, workspaceRoot, workspaceScope)
-                .CommandExecutionService;
+            var commandExecutionService = workspaceRuntimeServices.CommandExecutionService;
             var environmentVariables = (await ResolveSecretBindingsAsync(
                     configuration.EnvironmentVariableBindings,
                     agent,
@@ -593,9 +592,7 @@ internal sealed class McpCapabilityBuilder(
                 tags: resolveCatalogTags(capability, null, classifications),
                 operationClassifications: classifications,
                 messageFraming: resolveMcpMessageFraming(configuration.MessageFraming, capability));
-            var clientFactory = services.GetService(typeof(IMcpClientFactory)) as IMcpClientFactory
-                ?? new LocalStdioMcpClientFactory();
-            var client = await clientFactory.CreateAsync(
+            var client = await mcpClientFactory.CreateAsync(
                     descriptor,
                     $"agent-{agent.Id:D}-{capability.Key}",
                     cancellationToken)
@@ -783,7 +780,7 @@ internal sealed class McpCapabilityBuilder(
             string bindingName,
             CancellationToken cancellationToken)
         {
-            var resolver = services.GetService(typeof(ISecretRuntimeResolver)) as ISecretRuntimeResolver;
+            var resolver = secretRuntimeResolver;
             if (resolver is null)
             {
                 throw new InvalidOperationException(

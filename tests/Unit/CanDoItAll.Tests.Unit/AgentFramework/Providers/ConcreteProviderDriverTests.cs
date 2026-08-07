@@ -1088,6 +1088,256 @@ public sealed class ConcreteProviderDriverTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task OpenAiProviderDriver_ChatCompletionsSendsTemperatureAndJsonSchemaResponseFormat()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"lightweight response"}}],"usage":{"prompt_tokens":10,"completion_tokens":4,"prompt_tokens_details":{"cached_tokens":3}}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(ProviderKind.OpenAi, "https://api.openai.test/v1", "gpt-test");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "gpt-test",
+            "system",
+            [],
+            "prompt",
+            Temperature: 0.3,
+            ResponseFormat: new ProviderChatResponseFormat(
+                true,
+                """{"type":"object","additionalProperties":false,"required":["ok"],"properties":{"ok":{"type":"boolean"}}}""",
+                "workflow_result",
+                "A workflow result.")));
+
+        Assert.Equal(10, result.InputTokens);
+        Assert.Equal(4, result.OutputTokens);
+        Assert.Equal(3, result.CachedInputTokens);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
+        var responseFormat = root.GetProperty("response_format");
+        Assert.Equal("json_schema", responseFormat.GetProperty("type").GetString());
+        var jsonSchema = responseFormat.GetProperty("json_schema");
+        Assert.Equal("workflow_result", jsonSchema.GetProperty("name").GetString());
+        Assert.Equal("A workflow result.", jsonSchema.GetProperty("description").GetString());
+        Assert.True(jsonSchema.GetProperty("strict").GetBoolean());
+        Assert.Equal("object", jsonSchema.GetProperty("schema").GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ChatCompletionsSendsStrictFalseForOpenWorldSchema()
+    {
+        // Regression (SB17 e2e): workflow component schemas deliberately declare
+        // "additionalProperties": true and omit root "required". OpenAI rejects such
+        // schemas with HTTP 400 when strict = true, so they must ship with strict = false
+        // and the schema body verbatim; the caller's own JSON validation stays authoritative.
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"{}"}}]}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(ProviderKind.OpenAi, "https://api.openai.test/v1", "gpt-test");
+
+        await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "gpt-test",
+            "system",
+            [],
+            "prompt",
+            ResponseFormat: new ProviderChatResponseFormat(
+                true,
+                """{"type":"object","additionalProperties":true,"properties":{"route":{"type":"string"},"tasks":{"type":"array","items":{"type":"object","additionalProperties":true,"properties":{"title":{"type":"string"}},"required":["title"]}}}}""",
+                "workflow_llm_component_result")));
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var jsonSchema = body.RootElement.GetProperty("response_format").GetProperty("json_schema");
+        Assert.False(jsonSchema.GetProperty("strict").GetBoolean());
+        var schema = jsonSchema.GetProperty("schema");
+        Assert.True(schema.GetProperty("additionalProperties").GetBoolean());
+        Assert.Equal("string", schema.GetProperty("properties").GetProperty("route").GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ResponsesSendsStrictFalseWhenNestedObjectIsOpenWorld()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"{}"}]}],"usage":{"input_tokens":1,"output_tokens":1}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            transport: ProviderTransportKind.Responses);
+
+        await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            OpenAiModelIds.Gpt56Sol,
+            "system",
+            [],
+            "prompt",
+            ResponseFormat: new ProviderChatResponseFormat(
+                true,
+                """{"type":"object","additionalProperties":false,"required":["nested"],"properties":{"nested":{"type":"object","properties":{"open":{"type":"string"}}}}}""",
+                "nested_result")));
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var format = body.RootElement.GetProperty("text").GetProperty("format");
+        Assert.Equal("json_schema", format.GetProperty("type").GetString());
+        Assert.False(format.GetProperty("strict").GetBoolean());
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ChatCompletionsRequestsGenericJsonObjectWhenSchemaIsMissing()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"lightweight response"}}]}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(ProviderKind.OpenAi, "https://api.openai.test/v1", "gpt-test");
+
+        await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "gpt-test",
+            "system",
+            [],
+            "prompt",
+            ResponseFormat: new ProviderChatResponseFormat(true)));
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var responseFormat = body.RootElement.GetProperty("response_format");
+        Assert.Equal("json_object", responseFormat.GetProperty("type").GetString());
+        Assert.False(body.RootElement.TryGetProperty("temperature", out _));
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ChatCompletionsOmitsTemperatureAndResponseFormatWhenAbsent()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"plain"}}]}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(ProviderKind.OpenAi, "https://api.openai.test/v1", "gpt-test");
+
+        var result = await driver.CompleteChatAsync(CreateChatRequest(provider, "gpt-test"));
+
+        Assert.Equal(0, result.CachedInputTokens);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.False(body.RootElement.TryGetProperty("temperature", out _));
+        Assert.False(body.RootElement.TryGetProperty("response_format", out _));
+    }
+
+    [Fact]
+    public async Task OpenAiProviderDriver_ResponsesSendsTemperatureAndJsonSchemaTextFormat()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse(
+                """
+                {
+                  "status": "completed",
+                  "output_text": "lightweight response",
+                  "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 6,
+                    "input_tokens_details": { "cached_tokens": 9 }
+                  }
+                }
+                """));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(httpClient, new FixedCredentialResolver("openai-key"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://api.openai.test/v1",
+            OpenAiModelIds.Gpt56Sol,
+            transport: ProviderTransportKind.Responses);
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            OpenAiModelIds.Gpt56Sol,
+            "system",
+            [],
+            "prompt",
+            Temperature: 0.7,
+            ResponseFormat: new ProviderChatResponseFormat(true, """{"type":"object","additionalProperties":false}""", "workflow_result")));
+
+        Assert.Equal(20, result.InputTokens);
+        Assert.Equal(6, result.OutputTokens);
+        Assert.Equal(9, result.CachedInputTokens);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal(0.7, root.GetProperty("temperature").GetDouble());
+        var format = root.GetProperty("text").GetProperty("format");
+        Assert.Equal("json_schema", format.GetProperty("type").GetString());
+        Assert.Equal("workflow_result", format.GetProperty("name").GetString());
+        Assert.True(format.GetProperty("strict").GetBoolean());
+        Assert.False(format.TryGetProperty("description", out _));
+    }
+
+    [Fact]
+    public async Task AzureOpenAiProviderDriver_ChatCompletionsSendsTemperatureAndResponseFormat()
+    {
+        const string deployment = "azure-lightweight-deployment";
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"choices":[{"message":{"content":"lightweight response"}}],"usage":{"prompt_tokens":8,"completion_tokens":2,"prompt_tokens_details":{"cached_tokens":1}}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new AzureOpenAiProviderDriver(httpClient, new FixedCredentialResolver("azure-key"));
+        var provider = CreateProvider(ProviderKind.AzureOpenAi, "https://azure-openai.test", deployment);
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            deployment,
+            "system",
+            [],
+            "prompt",
+            Temperature: 0.1,
+            ResponseFormat: new ProviderChatResponseFormat(true, """{"type":"object","additionalProperties":false}""", "azure_result")));
+
+        Assert.Equal(1, result.CachedInputTokens);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal(0.1, root.GetProperty("temperature").GetDouble());
+        var responseFormat = root.GetProperty("response_format");
+        Assert.Equal("json_schema", responseFormat.GetProperty("type").GetString());
+        Assert.Equal("azure_result", responseFormat.GetProperty("json_schema").GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_SendsTemperatureOptionAndJsonFormatButNeverParsesCachedTokens()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            request.RequestUri!.AbsolutePath switch
+            {
+                "/api/chat" => JsonResponse("""{"message":{"content":"lightweight response"},"prompt_eval_count":5,"eval_count":2}"""),
+                _ => JsonResponse("{}", HttpStatusCode.NotFound)
+            });
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "llama3.1");
+
+        var result = await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "llama3.1",
+            "system",
+            [],
+            "prompt",
+            Temperature: 0.5,
+            ResponseFormat: new ProviderChatResponseFormat(true, """{"type":"object"}""", "ollama_result")));
+
+        Assert.Equal(0, result.CachedInputTokens);
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        var root = body.RootElement;
+        Assert.Equal("json", root.GetProperty("format").GetString());
+        Assert.Equal(0.5, root.GetProperty("options").GetProperty("temperature").GetDouble());
+    }
+
     private static ProviderChatCompletionRequest CreateChatRequest(
         ProviderProfile provider,
         string model)

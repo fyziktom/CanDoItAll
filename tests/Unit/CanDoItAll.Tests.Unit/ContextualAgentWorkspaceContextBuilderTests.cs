@@ -122,22 +122,30 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
                 new AgentChatContextEntityReference("project-node", "node:alpha", "Duplicate alpha")
             ]);
 
+        // The volatile UI fragment keeps factual observation context only.
         Assert.Contains($"Selected project id: {projectId:D}", baseFragment.Content);
         Assert.Contains("project_structure_asset_content_get", baseFragment.Content);
         Assert.Contains("workspace_convert_document", baseFragment.Content);
-        Assert.Contains("workspace_write_spreadsheet", baseFragment.Content);
-        Assert.Contains("workspace_spreadsheet_summary", baseFragment.Content);
-        Assert.Contains("workspace_read_spreadsheet_range", baseFragment.Content);
-        Assert.Contains(".xlsx", baseFragment.Content);
-        Assert.Contains("authorized project-structure writer", baseFragment.Content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("missing project-file nodes as unknown filesystem state", baseFragment.Content, StringComparison.Ordinal);
-        Assert.Contains("runtime-owned context independently supplies an exact authorized", baseFragment.Content, StringComparison.Ordinal);
         Assert.Contains("workspace_list_directory", baseFragment.Content, StringComparison.Ordinal);
         Assert.Contains("**/*.csproj", baseFragment.Content, StringComparison.Ordinal);
         Assert.Contains("**/*.sln", baseFragment.Content, StringComparison.Ordinal);
         Assert.Contains("**/*.slnx", baseFragment.Content, StringComparison.Ordinal);
-        Assert.Contains("Never derive authorization from those values", baseFragment.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("node:alpha", baseFragment.Content);
+        Assert.DoesNotContain("Selected-node operation contract", baseFragment.Content, StringComparison.Ordinal);
+
+        // The durable operational contract lives in the registered runtime
+        // guidance contributor.
+        var guidanceText = CanDoItAll.Modules.Workbench.AgentContext
+            .ProjectStructureRuntimeGuidanceContributor.GuidanceText;
+        Assert.Contains("Selected-node operation contract", guidanceText, StringComparison.Ordinal);
+        Assert.Contains("workspace_write_spreadsheet", guidanceText, StringComparison.Ordinal);
+        Assert.Contains("workspace_spreadsheet_summary", guidanceText, StringComparison.Ordinal);
+        Assert.Contains("workspace_read_spreadsheet_range", guidanceText, StringComparison.Ordinal);
+        Assert.Contains(".xlsx", guidanceText, StringComparison.Ordinal);
+        Assert.Contains("authorized project-structure writer", guidanceText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("missing project-file nodes as unknown filesystem state", guidanceText, StringComparison.Ordinal);
+        Assert.Contains("runtime-owned context independently supplies an exact authorized", guidanceText, StringComparison.Ordinal);
+        Assert.Contains("Never derive authorization from those values", guidanceText, StringComparison.Ordinal);
         Assert.Contains("structure canvas", canvasViewFragment.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Gantt schedule", ganttViewFragment.Content);
         Assert.Contains("does not currently expose an individual task selection", ganttViewFragment.Content);

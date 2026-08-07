@@ -1,23 +1,79 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Maf;
+namespace CanDoItAll.Modules.Processes;
 
-internal enum ProcessArtifactRecoveryCause
-{
-    ProviderStreamingTimeout,
-    MissingRequiredFinalizer
-}
-
-internal static class ProcessArtifactRecoveryService
+/// <summary>
+/// Governed process-step outcome recovery, moved verbatim from the deleted MAF <c>ProcessArtifactRecoveryService</c>
+/// (SB13): current run/step identity, exact primary managed artifact path, successful current-execution overwrite
+/// verification, canonical Status parsing, concrete blocker evidence, and outcome synthesis. MAF now only offers
+/// typed, runtime-neutral evidence through <see cref="IAgentExecutionOutcomeRecoveryPolicy"/>; this policy is the
+/// sole owner of what counts as a governed process step and how its recovered outcome is built. It never mutates
+/// the run store directly &#8212; the caller validates and persists the recovered machine output through the same
+/// required-finalizer response assembly used for ordinary completion.
+/// </summary>
+public sealed class ProcessAgentExecutionOutcomeRecoveryPolicy : IAgentExecutionOutcomeRecoveryPolicy
 {
     private const int MaxRecoveredProcessArtifactSummaryCharacters = 1_200;
-    internal static bool TryCreateProcessStepOutcomeFromPrimaryArtifact(
+
+    public AgentExecutionOutcomeRecoveryDecision Evaluate(AgentExecutionOutcomeRecoveryEvidence evidence)
+    {
+        ArgumentNullException.ThrowIfNull(evidence);
+
+        if (evidence.OutputType != typeof(ProcessStepOutcomeResult))
+        {
+            return AgentExecutionOutcomeRecoveryDecision.NotApplicable(
+                "The finalizer output type is not the governed process-step outcome contract.");
+        }
+
+        var contextIntent = evidence.ContextIntent;
+        if (!contextIntent.IsGovernedProcessStep ||
+            !string.Equals(contextIntent.SourceKind, "process-step", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(contextIntent.ProcessRunId) ||
+            string.IsNullOrWhiteSpace(contextIntent.SourceId))
+        {
+            return AgentExecutionOutcomeRecoveryDecision.NotApplicable(
+                "The runtime context is not a governed process step.");
+        }
+
+        if (!TryBuildCurrentStepPrimaryManagedArtifactPath(contextIntent, out var primaryArtifactRef, out var pathFailureMessage))
+        {
+            return AgentExecutionOutcomeRecoveryDecision.Rejected(pathFailureMessage);
+        }
+
+        if (!evidence.ArtifactReader.TryReadCompleteTextFile(primaryArtifactRef, out var artifactMarkdown))
+        {
+            return AgentExecutionOutcomeRecoveryDecision.Rejected(
+                $"The primary managed artifact '{primaryArtifactRef}' could not be read completely.");
+        }
+
+        if (!TryCreateProcessStepOutcomeFromPrimaryArtifact(
+                contextIntent,
+                primaryArtifactRef,
+                artifactMarkdown,
+                evidence.Cause,
+                evidence.CurrentExecutionToolTraces,
+                out var outcome,
+                out var outcomeFailureMessage))
+        {
+            return AgentExecutionOutcomeRecoveryDecision.Rejected(outcomeFailureMessage);
+        }
+
+        return AgentExecutionOutcomeRecoveryDecision.Recovered(
+            JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions),
+            DescribeRecoveryCause(evidence.Cause),
+            outcome.Status.ToString(),
+            primaryArtifactRef,
+            $"Recovered governed process step outcome '{outcome.Status}' from primary managed artifact '{primaryArtifactRef}'.");
+    }
+
+    private static bool TryCreateProcessStepOutcomeFromPrimaryArtifact(
         AgentRuntimeContextIntent contextIntent,
         string primaryArtifactRef,
         string artifactMarkdown,
-        ProcessArtifactRecoveryCause recoveryCause,
+        AgentExecutionOutcomeFailureCause recoveryCause,
         IReadOnlyList<AgentToolInvocationTrace> currentExecutionToolTraces,
         out ProcessStepOutcomeResult outcome,
         out string failureMessage)
@@ -91,17 +147,17 @@ internal static class ProcessArtifactRecoveryService
         return true;
     }
 
-    internal static string DescribeRecoveryCause(ProcessArtifactRecoveryCause recoveryCause)
+    private static string DescribeRecoveryCause(AgentExecutionOutcomeFailureCause recoveryCause)
         => recoveryCause switch
         {
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout =>
+            AgentExecutionOutcomeFailureCause.ProviderStreamingTimeout =>
                 "Provider streaming timed out after the current process step primary artifact was written.",
-            ProcessArtifactRecoveryCause.MissingRequiredFinalizer =>
+            AgentExecutionOutcomeFailureCause.MissingRequiredFinalizer =>
                 "The provider completed without the required finalizer after the current process step primary artifact was written.",
             _ => throw new ArgumentOutOfRangeException(nameof(recoveryCause), recoveryCause, "Unsupported process artifact recovery cause.")
         };
 
-    internal static bool TryBuildCurrentStepPrimaryManagedArtifactPath(
+    private static bool TryBuildCurrentStepPrimaryManagedArtifactPath(
         AgentRuntimeContextIntent contextIntent,
         out string primaryArtifactRef,
         out string failureMessage)
@@ -209,7 +265,7 @@ internal static class ProcessArtifactRecoveryService
     private static string BuildRecoveredProcessArtifactSummary(
         string primaryArtifactRef,
         string artifactMarkdown,
-        ProcessArtifactRecoveryCause recoveryCause)
+        AgentExecutionOutcomeFailureCause recoveryCause)
     {
         var recoveryClause = ResolveRecoveryClause(recoveryCause);
         var recoveryLabel = ResolveRecoveryLabel(recoveryCause);
@@ -226,19 +282,19 @@ internal static class ProcessArtifactRecoveryService
             : $"Recovered outcome from primary process artifact `{primaryArtifactRef}` {recoveryClause}.{Environment.NewLine}{Environment.NewLine}{trimmed}";
     }
 
-    private static string ResolveRecoveryClause(ProcessArtifactRecoveryCause recoveryCause)
+    private static string ResolveRecoveryClause(AgentExecutionOutcomeFailureCause recoveryCause)
         => recoveryCause switch
         {
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout => "after provider streaming timed out",
-            ProcessArtifactRecoveryCause.MissingRequiredFinalizer => "after provider completion omitted the required finalizer",
+            AgentExecutionOutcomeFailureCause.ProviderStreamingTimeout => "after provider streaming timed out",
+            AgentExecutionOutcomeFailureCause.MissingRequiredFinalizer => "after provider completion omitted the required finalizer",
             _ => throw new ArgumentOutOfRangeException(nameof(recoveryCause), recoveryCause, "Unsupported process artifact recovery cause.")
         };
 
-    private static string ResolveRecoveryLabel(ProcessArtifactRecoveryCause recoveryCause)
+    private static string ResolveRecoveryLabel(AgentExecutionOutcomeFailureCause recoveryCause)
         => recoveryCause switch
         {
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout => "provider-streaming-timeout recovery",
-            ProcessArtifactRecoveryCause.MissingRequiredFinalizer => "missing-required-finalizer recovery",
+            AgentExecutionOutcomeFailureCause.ProviderStreamingTimeout => "provider-streaming-timeout recovery",
+            AgentExecutionOutcomeFailureCause.MissingRequiredFinalizer => "missing-required-finalizer recovery",
             _ => throw new ArgumentOutOfRangeException(nameof(recoveryCause), recoveryCause, "Unsupported process artifact recovery cause.")
         };
 }

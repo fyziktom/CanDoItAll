@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -6,6 +7,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -116,31 +118,51 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
         var processHost = new LocalWorkspaceProcessHost();
-        var fileService = new WorkspaceFileService(workspaceRoot, scope);
-        var commandExecutionService = new WorkspaceCommandExecutionService(
+        var workspaceRuntimeServicesFactory = new WorkspaceRuntimeServicesFactory(
+            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
+            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>()
+                ?? new ManagedCodeMarkItDownDocumentMarkdownConverter());
+        var workspaceBundle = workspaceRuntimeServicesFactory.Create(
+            new WorkspaceExecutionScope(workspaceRoot, scope));
+        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory);
+        // SB18: the deterministic interception cores no longer implement any runtime interface or
+        // hold an inner fallback; the workspace service consumes the narrow runtime ports directly:
+        // native MAF adapters at the bottom, scenario harness decorators above them, process mock
+        // decorators outermost.
+        var scenarioHarness = new ScenarioHarnessAgentRuntime(
             workspaceRoot,
-            processHost,
             scope,
-            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
-        var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope);
-        var scenarioRuntime = new ScenarioHarnessAgentRuntime(
-            mafRuntime,
-            workspaceRoot,
-            scope,
-            fileService,
-            commandExecutionService);
-        var runtime = new ProcessMockAgentRuntime(
-            scenarioRuntime,
-            fileService,
+            workspaceBundle.FileService,
+            workspaceBundle.CommandExecutionService);
+        var processMock = new ProcessMockAgentRuntime(
+            workspaceBundle.FileService,
             workspaceRoot,
             processMockAgentOptions);
+        var scenarioExecution = new ScenarioHarnessExecutionDecorator(
+            mafRuntime.ExecutionPort,
+            mafRuntime.ContinuationPort,
+            scenarioHarness);
+        var scenarioDiagnostics = new ScenarioHarnessDiagnosticsDecorator(
+            mafRuntime.DiagnosticsPort,
+            mafRuntime.ModelAdministrationPort);
+        var executionPorts = new ProcessMockExecutionDecorator(
+            scenarioExecution,
+            scenarioExecution,
+            processMock);
+        var diagnosticsPorts = new ProcessMockDiagnosticsDecorator(
+            scenarioDiagnostics,
+            scenarioDiagnostics,
+            processMock);
         var checkpointBridge = new WorkflowBackedAgentExecutionCheckpointBridge(store, workspaceRoot, scope);
         var governanceBridge = new DurableAgentExecutionGovernanceBridge(checkpointBridge);
-        var providerDiagnosticsService = new ProviderDiagnosticsService(runtime);
+        var providerDiagnosticsService = new ProviderDiagnosticsService(diagnosticsPorts, diagnosticsPorts);
         var workspaceService = new AgentFrameworkWorkspaceService(
             store,
             new ZipAgentPackageService(workspaceRoot, scope),
-            runtime,
+            executionPorts,
+            executionPorts,
+            diagnosticsPorts,
+            diagnosticsPorts,
             capabilityProofService,
             serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AgentFrameworkWorkspaceService>>(),
             activityCoordinator,
@@ -149,7 +171,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             executionProfileGenerationSource,
             new WorkspaceExecutionRunProcessLeaseCleaner(
                 store,
-                commandExecutionService),
+                workspaceBundle.CommandExecutionService),
             providerProfileService,
             providerProfileRegistry,
             providerCredentialResolver,
@@ -160,7 +182,9 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             processHost,
             serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
             workspacePathResolutionService: new WorkspacePathResolutionService(workspaceRoot, scope),
-            providerRuntimeProfileSource: providerRuntimeProfileSource);
+            providerRuntimeProfileSource: providerRuntimeProfileSource,
+            providerSelectionPolicies: serviceProvider.GetServices<IAgentExecutionProviderSelectionPolicy>().ToList(),
+            runCriticalityPolicies: serviceProvider.GetServices<IAgentExecutionRunCriticalityPolicy>().ToList());
         return workspaceService;
     }
 

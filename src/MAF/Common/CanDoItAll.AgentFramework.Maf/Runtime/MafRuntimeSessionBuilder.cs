@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -9,35 +10,154 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal static class MafRuntimeSessionBuilder
 {
     private const string LocalHistoryConversationId = "_agent_local_chat_history";
+    private const string IncompatibleApprovalContinuationMessage =
+        "Cannot continue pending tool approvals because serialized Microsoft Agent Framework session state is unavailable or incompatible with the current provider/history mode.";
+
+    private static readonly IAgentRuntimeStateAdapter StateAdapter = new MafRuntimeStateAdapter();
+    private static readonly IRuntimeStateCompatibilityPolicy CompatibilityPolicy = new MafRuntimeStateCompatibilityPolicy();
 
     public static async ValueTask<AgentSession> RestoreOrCreateSessionAsync(
         AIAgent runtimeAgent,
         AgentDefinition agent,
         ProviderProfile provider,
+        string model,
         ChatSessionRecord session,
         AgentRuntimeExecutionOptions runtimeOptions,
         CancellationToken cancellationToken,
-        bool isApprovalContinuation = false)
+        bool isApprovalContinuation = false,
+        Func<ExecutionState, string, string, Task>? progressCallback = null)
     {
         if (!isApprovalContinuation && runtimeOptions.ContextIntent?.IsGovernedProcessStep == true)
         {
             return await runtimeAgent.CreateSessionAsync(cancellationToken);
         }
 
+        var pendingApprovalCount = session.Compatibility?.PendingApprovals.Count ?? 0;
+
         if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions, isApprovalContinuation))
         {
-            using var document = JsonDocument.Parse(session.Compatibility!.SerializedSessionStateJson!);
-            return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
+            var rawStateJson = session.Compatibility!.SerializedSessionStateJson!;
+            var decision = EvaluateStoredRuntimeState(rawStateJson, provider, model, runtimeOptions, out var envelope);
+            if (progressCallback is not null)
+            {
+                await progressCallback(
+                    ExecutionState.Preparing,
+                    "Session compatibility",
+                    DescribeCompatibilityDecision(decision));
+            }
+
+            switch (decision.Outcome)
+            {
+                case RuntimeStateCompatibilityOutcome.CompatibleRestore:
+                {
+                    var restoreResult = StateAdapter.TryRestore(envelope!);
+                    if (restoreResult.Succeeded)
+                    {
+                        return await DeserializeSerializedSessionAsync(runtimeAgent, restoreResult.PayloadJson, cancellationToken);
+                    }
+
+                    // Defensive: the policy judged this envelope compatible but the adapter itself
+                    // could not unwrap it. Fail exactly like an Incompatible decision — never trust
+                    // an envelope the owning adapter refuses.
+                    return await FailClosedOrCreateSessionAsync(
+                        runtimeAgent,
+                        isApprovalContinuation,
+                        pendingApprovalCount,
+                        restoreResult.FailureReason,
+                        cancellationToken);
+                }
+
+                case RuntimeStateCompatibilityOutcome.RegisteredMigration:
+                    return await DeserializeSerializedSessionAsync(runtimeAgent, rawStateJson, cancellationToken);
+
+                default:
+                    return await FailClosedOrCreateSessionAsync(
+                        runtimeAgent,
+                        isApprovalContinuation,
+                        pendingApprovalCount,
+                        decision.Reason,
+                        cancellationToken);
+            }
         }
 
-        if (isApprovalContinuation && (session.Compatibility?.PendingApprovals.Count ?? 0) > 0)
+        if (isApprovalContinuation && pendingApprovalCount > 0)
         {
-            throw new InvalidOperationException(
-                "Cannot continue pending tool approvals because serialized Microsoft Agent Framework session state is unavailable or incompatible with the current provider/history mode.");
+            throw new InvalidOperationException(IncompatibleApprovalContinuationMessage);
         }
 
         return await runtimeAgent.CreateSessionAsync(cancellationToken);
     }
+
+    private static async ValueTask<AgentSession> DeserializeSerializedSessionAsync(
+        AIAgent runtimeAgent,
+        string serializedSessionStateJson,
+        CancellationToken cancellationToken)
+    {
+        using var document = JsonDocument.Parse(serializedSessionStateJson);
+        return await runtimeAgent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: cancellationToken);
+    }
+
+    private static async ValueTask<AgentSession> FailClosedOrCreateSessionAsync(
+        AIAgent runtimeAgent,
+        bool isApprovalContinuation,
+        int pendingApprovalCount,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        if (isApprovalContinuation && pendingApprovalCount > 0)
+        {
+            throw new InvalidOperationException($"{IncompatibleApprovalContinuationMessage} Reason: {reason}");
+        }
+
+        return await runtimeAgent.CreateSessionAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Parses the persisted text as a runtime-state envelope (or recognizes it as legacy
+    /// unversioned state) and asks <see cref="MafRuntimeStateCompatibilityPolicy"/> for an
+    /// explicit restore/migrate/replay/fail decision. Never guesses: unparseable text is
+    /// Incompatible, not a silent replay.
+    /// </summary>
+    internal static RuntimeStateCompatibilityDecision EvaluateStoredRuntimeState(
+        string rawStateJson,
+        ProviderProfile provider,
+        string model,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        out RuntimeStateEnvelope? envelope)
+    {
+        var isEnvelope = RuntimeStateEnvelope.TryParse(rawStateJson, out envelope);
+        var hasStoredText = !string.IsNullOrWhiteSpace(rawStateJson);
+        var isWellFormedJson = isEnvelope || (hasStoredText && IsWellFormedJson(rawStateJson));
+        var request = new RuntimeStateCompatibilityRequest(
+            Envelope: envelope,
+            IsLegacyUnversionedState: !isEnvelope && isWellFormedJson,
+            HasUnparseableStoredState: !isEnvelope && !isWellFormedJson && hasStoredText,
+            CurrentProviderProfileId: provider.Id,
+            CurrentProviderTransport: provider.Transport,
+            CurrentModel: model,
+            CurrentToolsetFingerprint: runtimeOptions.ToolsetFingerprint,
+            CurrentContextPolicyFingerprint: runtimeOptions.ContextPolicyFingerprint,
+            CurrentHistoryMode: runtimeOptions.HistoryMode);
+        return CompatibilityPolicy.Evaluate(request);
+    }
+
+    private static bool IsWellFormedJson(string text)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string DescribeCompatibilityDecision(RuntimeStateCompatibilityDecision decision)
+        => string.IsNullOrWhiteSpace(decision.MigrationId)
+            ? $"Runtime-state compatibility decision: {decision.Outcome}. {decision.Reason}"
+            : $"Runtime-state compatibility decision: {decision.Outcome} (migration '{decision.MigrationId}'). {decision.Reason}";
 
     public static IEnumerable<ChatMessage> CreatePromptInputMessages(
         AgentDefinition agent,

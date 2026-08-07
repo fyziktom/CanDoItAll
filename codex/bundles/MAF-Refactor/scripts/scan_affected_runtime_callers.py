@@ -40,6 +40,7 @@ TOKEN_GROUPS: dict[str, tuple[str, ...]] = {
     "turn_context_and_continuation": (
         "AgentRuntimeTransientContext",
         "AgentRunTransientContextRegistry",
+        "AgentTurnContextLeaseRegistry",
         "TransientContextDigest",
         "RuntimeSessionKey",
         "SerializedSessionStateJson",
@@ -84,6 +85,24 @@ TOKEN_GROUPS: dict[str, tuple[str, ...]] = {
 
 ALLOWED_SUFFIXES = {".cs", ".razor", ".csproj", ".props", ".targets"}
 DEFAULT_SCAN_ROOTS = ("src", "tools", "tests")
+IGNORED_DIRECTORIES = {
+    ".artifacts",
+    "artifacts",
+    ".git",
+    "node_modules",
+    "bin",
+    "obj",
+    "output",
+}
+
+
+def iter_scan_files(scan_root: Path):
+    import os
+
+    for dirpath, dirnames, filenames in os.walk(scan_root):
+        dirnames[:] = [d for d in dirnames if d not in IGNORED_DIRECTORIES]
+        for name in filenames:
+            yield Path(dirpath) / name
 
 
 def classify_area(path: Path, repository_root: Path) -> str:
@@ -110,7 +129,7 @@ def main() -> int:
             missing_roots.append(root_name)
             continue
 
-        for path in scan_root.rglob("*"):
+        for path in iter_scan_files(scan_root):
             if not path.is_file() or path.suffix.lower() not in ALLOWED_SUFFIXES:
                 continue
             scanned_files += 1

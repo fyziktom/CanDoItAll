@@ -12,6 +12,30 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+IGNORED_DIRECTORIES = {
+    ".artifacts",
+    "artifacts",
+    ".git",
+    "node_modules",
+    "bin",
+    "obj",
+    "output",
+    ".playwright-cli",
+    ".playwright-mcp",
+    ".mcp-state",
+}
+
+
+def iter_cs_files(root: Path):
+    import os
+
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in IGNORED_DIRECTORIES]
+        for name in filenames:
+            if name.endswith(".cs"):
+                yield Path(dirpath) / name
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, required=True)
@@ -29,7 +53,7 @@ def main() -> int:
         "IAgentRuntime.Legacy.cs",
     }
 
-    for path in source.rglob("*.cs"):
+    for path in iter_cs_files(source):
         text = read(path)
         rel = path.relative_to(root).as_posix()
         if (

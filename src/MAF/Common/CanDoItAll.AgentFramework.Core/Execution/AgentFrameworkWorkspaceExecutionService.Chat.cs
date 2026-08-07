@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -265,10 +266,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
         ValidateActivityOperation(
             operation,
             agentId,
@@ -281,7 +283,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 agentId,
                 chatSessionId,
                 operation.StreamId.OperationId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }
@@ -291,7 +293,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid agentId,
         Guid chatSessionId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
     {
@@ -300,10 +302,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             activityOperation,
             executionRunId,
             activityOperationId,
-            approved,
+            decisions,
             autoApprovePendingToolCalls,
             cancellationToken);
 
+        return ToAgentChatRunResult(result, chatSessionId);
+    }
+
+    private static AgentChatRunResult ToAgentChatRunResult(ExecutionRunResult result, Guid chatSessionId)
+    {
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? chatSessionId,
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed approval continuations must produce an assistant message."),
@@ -386,27 +393,30 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ExecutionState.Preparing,
                 "Auto approval continuation",
                 "Preparing the automatically approved tool continuation.");
-            var continuationResponse = await runtime.RespondToPendingApprovalsAsync(
-                agent,
-                provider,
-                currentSession,
-                attachedCapabilities,
-                memory,
-                approved: true,
-                string.IsNullOrWhiteSpace(ChatSessionRuntimeCompatibilityAdapter.RuntimeSessionKeyOrEmpty(currentSession))
-                    ? null
-                    : ChatSessionRuntimeCompatibilityAdapter.RuntimeSessionKeyOrEmpty(currentSession),
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements: true,
-                structuredOutput: structuredOutput,
-                executionOptions: CreateRuntimeExecutionOptionsCore(
-                    run,
-                    activityOperationId,
-                    structuredOutput,
-                    handoffOptions,
-                    inputAttachments: null,
-                    jsonSchemaOutput: null));
+            var continuationResponse = await continuationRuntime.ContinueAsync(
+                new AgentRuntimeContinuationRequest(
+                    agent,
+                    provider,
+                    currentSession,
+                    attachedCapabilities,
+                    memory,
+                    Decisions: currentResponse.PendingApprovals
+                        .Select(item => new AgentRuntimeApprovalDecision(item.ApprovalId, Approved: true))
+                        .ToArray(),
+                    string.IsNullOrWhiteSpace(ChatSessionRuntimeCompatibilityAdapter.RuntimeSessionKeyOrEmpty(currentSession))
+                        ? null
+                        : ChatSessionRuntimeCompatibilityAdapter.RuntimeSessionKeyOrEmpty(currentSession),
+                    progressCallback,
+                    SuppressApprovalRequirements: true,
+                    StructuredOutput: structuredOutput,
+                    ExecutionOptions: CreateRuntimeExecutionOptionsCore(
+                        run,
+                        activityOperationId,
+                        structuredOutput,
+                        handoffOptions,
+                        inputAttachments: null,
+                        jsonSchemaOutput: null)),
+                cancellationToken);
 
             currentResponse = continuationResponse with
             {
@@ -543,7 +553,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .ToList();
     }
 
-    private static IReadOnlyList<AgentMemoryRecord> ResolveAgentMemoryForRun(
+    private IReadOnlyList<AgentMemoryRecord> ResolveAgentMemoryForRun(
         SandboxWorkspaceCatalog catalog,
         Guid agentId,
         ExecutionRunRecord run)

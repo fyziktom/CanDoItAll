@@ -7,11 +7,18 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.AgentFramework.Hosting;
 
+/// <summary>
+/// Deterministic process-mock interception core. SB10 introduced <see cref="ProcessMockExecutionDecorator"/>
+/// and <see cref="ProcessMockDiagnosticsDecorator"/> as the port-level classes that decide whether a
+/// request targets the process-mock provider; this type owns exactly the deterministic mock bodies
+/// those decorators call into. It no longer implements the broad legacy runtime interface (deleted
+/// SB18) or holds an inner fallback runtime — decorators own the provider-matching branch and the
+/// inner-port fallback themselves.
+/// </summary>
 internal sealed partial class ProcessMockAgentRuntime(
-    IAgentRuntime inner,
     IWorkspaceFileService fileService,
     string workspaceRoot,
-    IOptions<ProcessMockAgentOptions> options) : IAgentRuntime
+    IOptions<ProcessMockAgentOptions> options)
 {
     private const string WorkspaceStatPathToolName = "workspace_stat_path";
     private const string WorkspaceReadFileToolName = "workspace_read_file";
@@ -47,15 +54,8 @@ internal sealed partial class ProcessMockAgentRuntime(
         WriteIndented = false
     };
 
-    public Task<ProviderHealthResult> TestProviderAsync(
-        ProviderProfile provider,
-        CancellationToken cancellationToken = default)
+    internal Task<ProviderHealthResult> CreateProcessMockProviderHealthResultAsync()
     {
-        if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
-        {
-            return inner.TestProviderAsync(provider, cancellationToken);
-        }
-
         return Task.FromResult(options.Value.Enabled
             ? new ProviderHealthResult(
                 Success: true,
@@ -70,16 +70,8 @@ internal sealed partial class ProcessMockAgentRuntime(
                 SuggestedModels: []));
     }
 
-    public Task<ProviderTestChatResult> RunProviderTestChatAsync(
-        ProviderProfile provider,
-        ProviderTestChatRequest request,
-        CancellationToken cancellationToken = default)
+    internal Task<ProviderTestChatResult> CreateProcessMockProviderTestChatResultAsync()
     {
-        if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
-        {
-            return inner.RunProviderTestChatAsync(provider, request, cancellationToken);
-        }
-
         EnsureEnabled();
 
         return Task.FromResult(new ProviderTestChatResult(
@@ -89,50 +81,20 @@ internal sealed partial class ProcessMockAgentRuntime(
             OutputTokens: 22));
     }
 
-    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
-        ProviderProfile provider,
-        ProviderModelMaintenanceEditorRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
-        {
-            return inner.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
-        }
+    internal static InvalidOperationException CreateModelMaintenanceUnsupportedError()
+        => new("The process mock provider does not support provider model maintenance.");
 
-        throw new InvalidOperationException("The process mock provider does not support provider model maintenance.");
-    }
+    internal static InvalidOperationException CreateApprovalContinuationUnsupportedError()
+        => new("Process mock agents do not use pending approval continuations.");
 
-    public async Task<AgentRuntimeResponse> RunAsync(
+    internal async Task<AgentRuntimeResponse> ExecuteProcessMockRunAsync(
         AgentDefinition agent,
-        ProviderProfile provider,
-        ChatSessionRecord session,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        IReadOnlyList<AgentMemoryRecord> memory,
         string prompt,
         string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null,
-        AgentRuntimeExecutionOptions? executionOptions = null)
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
     {
-        if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
-        {
-            return await inner.RunAsync(
-                agent,
-                provider,
-                session,
-                capabilities,
-                memory,
-                prompt,
-                runtimeSessionKey,
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements,
-                structuredOutput,
-                executionOptions);
-        }
-
         EnsureEnabled();
         var roleKey = ProcessMockAgentCatalog.ResolveRoleKey(agent);
         if (string.IsNullOrWhiteSpace(roleKey))
@@ -183,40 +145,6 @@ internal sealed partial class ProcessMockAgentRuntime(
             FinalizerInvocations = BuildProcessStepOutcomeFinalizerInvocations(structuredOutput, executionOptions, outcome.ResponseText),
             ToolInvocationTraces = BuildProcessStepOutcomeToolInvocationTraces(requiredToolNames, structuredOutput, executionOptions)
         };
-    }
-
-    public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        ChatSessionRecord session,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        IReadOnlyList<AgentMemoryRecord> memory,
-        bool approved,
-        string? runtimeSessionKey,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null,
-        AgentRuntimeExecutionOptions? executionOptions = null)
-    {
-        if (!ProcessMockAgentCatalog.IsProcessMockProvider(provider))
-        {
-            return await inner.RespondToPendingApprovalsAsync(
-                agent,
-                provider,
-                session,
-                capabilities,
-                memory,
-                approved,
-                runtimeSessionKey,
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements,
-                structuredOutput,
-                executionOptions);
-        }
-
-        throw new InvalidOperationException("Process mock agents do not use pending approval continuations.");
     }
 
     private ProcessMockRuntimeState CreateState(string prompt, string? runtimeSessionKey)
