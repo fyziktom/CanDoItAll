@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A01",
+  "title": "Logical path contract and portable configuration cleanup",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by Gate C0",
+  "depends_on": [
+    "A00"
+  ],
+  "unlocks": [
+    "A02"
+  ],
+  "requirements": [
+    "PATH-001",
+    "PATH-002",
+    "PATH-003",
+    "PATH-004",
+    "PATH-005",
+    "PATH-006",
+    "PATH-007",
+    "PATH-008",
+    "PATH-009",
+    "PATH-010"
+  ],
+  "source_hotspots": [
+    "src/App/CanDoItAll.Web/appsettings.Development.json",
+    "src/App/CanDoItAll.Web/Properties/launchSettings.json",
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimePathResolver.cs"
+  ],
+  "tasks": [
+    {
+      "id": "A01-T01",
+      "title": "Introduce an explicit path taxonomy",
+      "description": "Create or document narrow types/policies for logical locators, physical host paths, routes/URIs, executable identifiers, and opaque script/command text. Do not introduce a broad platform god service.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T02",
+      "title": "Define canonical logical path serialization",
+      "description": "Emit '/' for logical paths, reject rooted/traversal forms, and add field-scoped legacy backslash readers. Preserve Unix filenames that legitimately contain backslash outside known logical fields.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T03",
+      "title": "Replace Windows-only development roots",
+      "description": "Remove shared %LOCALAPPDATA%\\... defaults from appsettings and launch profiles. Resolve platform defaults in code/configuration while retaining explicit Windows legacy input compatibility.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T04",
+      "title": "Define portable configuration expansion",
+      "description": "Support '~' and a documented variable syntax with bounded expansion. Treat unset or recursive variables as diagnostics; never expand arbitrary secret or user-authored artifact content.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T05",
+      "title": "Align path owners without violating dependencies",
+      "description": "Make WorkspacePathAccessGuard, FileSystemStoragePathPolicy, WorkspacePathPolicy, and MafRuntimePathResolver consume compatible pure semantics. Add a new abstractions project only if dependency analysis proves it necessary.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T06",
+      "title": "Version external-root aliases",
+      "description": "Replace drive-letter-only aliases with a platform-neutral root identity and retain a reader/migration for existing aliases.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T07",
+      "title": "Detect foreign absolute path syntax",
+      "description": "Recognize Windows drive/UNC paths on Unix and Unix absolute paths on Windows as host-bound/unresolved records. Never pass them through Path.GetFullPath as relative input.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T08",
+      "title": "Add golden and actual-host path tests",
+      "description": "Cover separators, case, Unicode, dot segments, empty segments, environment tokens, home expansion, routes, URLs, drive paths, UNC paths, Unix roots, and round-trip serialization on all three OSes.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A01-T09",
+      "title": "Run focused source scan and Gate C1a",
+      "description": "Prove no blanket slash replacement, no shared Windows root, and no divergence among path owners before filesystem work starts.",
+      "requirements": [
+        "PATH-001",
+        "PATH-002",
+        "PATH-003",
+        "PATH-004",
+        "PATH-005",
+        "PATH-006",
+        "PATH-007",
+        "PATH-008",
+        "PATH-009",
+        "PATH-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+gate,surface,windows,linux,macos,profile,evidence,owner
+C0,Repository baseline/inventory,Required,Required baseline/CI,Required baseline/CI,development/current,"commands, logs, classified scan",A00
+C1a,Logical path/config,Actual,Actual,Actual,unit + integration,"golden serialization, foreign path, expansion",A01
+C1,Filesystem semantics,Actual links/reparse/locking,Actual case/symlink/modes,Actual case/symlink/modes,temp roots/volumes,failure injection,A02
+C2a,Storage/control-plane migration,Old fixture + rollback,Read/migrate/rebind,Read/migrate/rebind,clean copy,backup/checksum/restart,A03
+C2,Secrets/key ring,DPAPI + legacy migration,Secret Service + headless,Keychain + headless,interactive/headless,CRUD/restart/rotation/redaction,A04
+C4,Core host/publish,build/test/start/restart,build/test/Postgres/start/restart,build/test/start/restart,headless,active CI + clean publish,A07
+R1a,Process primitives,argv/env/tree/cancel,execute-bit/env/tree/cancel,execute-bit/env/tree/cancel,actual-host fixtures,process-tree and receipt logs,B01
+R2,Manager,registry + WMI recovery,registry + /proc recovery,registry + macOS recovery,supervisor/watch,PID reuse/foreign process/faults,B03
+R3a,MCP/external tools,local stdio + external JSON,local stdio + external JSON,local stdio + external JSON,governed tool fixture,secret/cancel/output/cleanup,B04
+R3b,Docker/FileTools/desktop,interactive/headless,desktop/headless/Docker,interactive/headless/Docker,capability matrix,pinned dependency reports,B05
+R3,Processes/special drivers,representative scenario,representative/alternate,representative/alternate,process capability fixtures,receipts/recovery/authority,B06
+R4,Full runtime E2E,Required,Required,Required,supported profiles only,"active CI, Playwright, failure injection",B07

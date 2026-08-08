@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A02",
+  "title": "Filesystem semantics, symlink safety, atomicity, and permissions",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by A01",
+  "depends_on": [
+    "A01"
+  ],
+  "unlocks": [
+    "Gate C1",
+    "A03"
+  ],
+  "requirements": [
+    "FS-001",
+    "FS-002",
+    "FS-003",
+    "FS-004",
+    "FS-005",
+    "FS-006",
+    "FS-007",
+    "FS-008",
+    "FS-009",
+    "FS-010"
+  ],
+  "source_hotspots": [
+    "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
+    "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs"
+  ],
+  "tasks": [
+    {
+      "id": "A02-T01",
+      "title": "Separate logical and physical comparers",
+      "description": "Use ordinal semantics for logical keys. Introduce a root/volume-aware physical-path policy that does not assume all macOS volumes or all Unix hosts share one case model.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T02",
+      "title": "Make enumeration deterministic",
+      "description": "Audit every Directory.Enumerate*/GetFiles result that influences persistence, hashing, planning, receipts, migrations, tool selection, or tests. Sort by normalized logical key with explicit tie-breaking.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T03",
+      "title": "Unify link containment policy",
+      "description": "Define managed-root rules for symlinks, reparse points, junctions, missing leaves, and existing ancestors. Apply the same security contract to read, write, open, migrate, and process-target validation.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T04",
+      "title": "Harden file operations against races",
+      "description": "Minimize check/use gaps, revalidate parent identity immediately before mutation, keep temporary files in the target directory, and document any residual TOCTOU risk that cannot be eliminated with managed APIs.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T05",
+      "title": "Create atomic persistence primitives",
+      "description": "Implement tested temporary-write, flush, replace, backup, cleanup, and cancellation semantics for small JSON/key/catalog files and large storage payloads where appropriate.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T06",
+      "title": "Add bounded cross-process coordination",
+      "description": "Protect control-plane, key/vault, and catalog generation changes with a process-safe lock or transactional authority. Prove contention, stale/recovery, timeout, and cancellation behavior.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T07",
+      "title": "Apply Unix ownership and modes",
+      "description": "Create private directories and files with the required modes, verify actual modes after move/migration, and refuse to use secret-bearing paths when hardening fails.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T08",
+      "title": "Define portable physical filenames",
+      "description": "Replace host invalid-character behavior with an application policy, collision handling, reserved-name handling, length limits, Unicode normalization decision, and preserved display names.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T09",
+      "title": "Make watchers convergent",
+      "description": "Treat events as hints, deduplicate/debounce by generation, schedule deterministic rescan/fingerprint after overflow/error, and provide a polling fallback for unsupported/unreliable roots.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A02-T10",
+      "title": "Run malicious and failure-injection fixtures",
+      "description": "Test link swaps, case collisions, concurrent writers, process crash, full disk/permission failure where feasible, watcher overflow, rename storms, and cleanup boundaries.",
+      "requirements": [
+        "FS-001",
+        "FS-002",
+        "FS-003",
+        "FS-004",
+        "FS-005",
+        "FS-006",
+        "FS-007",
+        "FS-008",
+        "FS-009",
+        "FS-010"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

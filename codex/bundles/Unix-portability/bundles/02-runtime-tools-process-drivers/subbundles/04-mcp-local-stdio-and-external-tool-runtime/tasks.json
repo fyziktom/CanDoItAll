@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B04",
+  "title": "MCP local stdio and external tool runtime",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by Gate R2",
+  "depends_on": [
+    "B03",
+    "Gate R2"
+  ],
+  "unlocks": [
+    "B05"
+  ],
+  "requirements": [
+    "MCP-001",
+    "MCP-002",
+    "MCP-003",
+    "MCP-004",
+    "MCP-005",
+    "TOOL-001",
+    "TOOL-002"
+  ],
+  "source_hotspots": [
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs",
+    "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs",
+    "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpProcessLauncher.cs",
+    "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+    "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs"
+  ],
+  "tasks": [
+    {
+      "id": "B04-T01",
+      "title": "Authorize resolved executable identity",
+      "description": "Resolve first through B01, then validate exact capability-owned names/paths/signatures. Remove policy/resolver suffix and case drift.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T02",
+      "title": "Reuse process lifecycle and environment semantics",
+      "description": "Launch local stdio MCP through the authoritative primitive/owned registry, with bounded startup, stream lifecycle, timeout, cancellation, and cleanup.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T03",
+      "title": "Route secret bindings through runtime resolution",
+      "description": "Persist names/references only; resolve values immediately before launch; clear/avoid retaining values after process setup; receipts contain approved names.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T04",
+      "title": "Replace global Playwright cache discovery",
+      "description": "Install or locate the pinned MCP package under a controlled versioned application tool root with integrity/version evidence and atomic setup.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T05",
+      "title": "Harden MCP setup validation",
+      "description": "Report missing runtime, package, executable, working directory, secret, permission, and unsupported platform separately with deterministic remediation.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T06",
+      "title": "Refactor external process tools",
+      "description": "Remove or wrap LocalExternalProcessRunner so it cannot diverge from B01 timeout, output, cancellation, tree kill, environment, and receipt behavior.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T07",
+      "title": "Redact and bound outputs",
+      "description": "Apply sentinel-aware redaction before JSON-parse errors, non-zero-exit diagnostics, receipts, logs, or agent context. Preserve enough bounded evidence to debug.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T08",
+      "title": "Prove governed end-to-end paths",
+      "description": "Run a deterministic local stdio MCP and an external JSON tool on Windows/Linux/macOS with approval, workspace containment, secret binding, timeout, cancellation, invalid output, and cleanup.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B04-T09",
+      "title": "Issue MCP/tool gate R3a",
+      "description": "Security/runtime reviewers approve executable identity, secret handling, output, and lifecycle before plugins.",
+      "requirements": [
+        "MCP-001",
+        "MCP-002",
+        "MCP-003",
+        "MCP-004",
+        "MCP-005",
+        "TOOL-001",
+        "TOOL-002"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

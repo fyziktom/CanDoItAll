@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B02",
+  "title": "Workbench runtime nodes, terminal presentation, and elevation adapters",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by B01",
+  "depends_on": [
+    "B01"
+  ],
+  "unlocks": [
+    "B03"
+  ],
+  "requirements": [
+    "NODE-001",
+    "NODE-002",
+    "NODE-003",
+    "NODE-004",
+    "NODE-005",
+    "NODE-006",
+    "NODE-007",
+    "NODE-008"
+  ],
+  "source_hotspots": [
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDirectDotNetCommandPolicy.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs"
+  ],
+  "tasks": [
+    {
+      "id": "B02-T01",
+      "title": "Extract a pure runtime-node plan compiler",
+      "description": "Compile typed node metadata into executable, argv, environment, working directory, target, capability requirements, and display projection without starting a process.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T02",
+      "title": "Use direct execution as primary authority",
+      "description": "Run .NET, Docker, Python, Node/Tailwind, and other typed environments through B01 primitives. Never invoke a shell merely to display a terminal.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T03",
+      "title": "Make scripts explicit",
+      "description": "Model PowerShell and optional POSIX shell as distinct script kinds with executable dependency, policy, arguments, and side-effect/approval rules.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T04",
+      "title": "Implement OS-specific Python layout",
+      "description": "Resolve `Scripts/python.exe` on Windows and `bin/python` on Unix/macOS; invoke directly. Capability-gate Conda and avoid activation as execution authority.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T05",
+      "title": "Separate terminal presentation",
+      "description": "Create optional Workbench-owned adapters for Windows terminal/PowerShell, macOS terminal presentation, and configured Linux terminal. Headless execution does not require them.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T06",
+      "title": "Separate elevation capability",
+      "description": "Retain governed Windows runas where intended; default Linux/macOS to unavailable. Add no implicit sudo/pkexec/osascript path.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T07",
+      "title": "Migrate legacy command metadata carefully",
+      "description": "Recognize bounded static cmd/PowerShell wrappers for migration to typed fields. Dynamic/encoded/unknown shell content stays explicit and requires operator repair.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T08",
+      "title": "Use core path authority",
+      "description": "Resolve project/script/environment paths through the Core C4 logical/physical contracts and preserve agent-selected versus operator-selected authority.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T09",
+      "title": "Update capability-aware UX",
+      "description": "Replace PowerShell-only labels/messages with Run, Open terminal, Elevated launch, dependency missing, unsupported, headless, and foreign-path states.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B02-T10",
+      "title": "Run browser and actual-host proof",
+      "description": "Test direct run, optional terminal, script policy, Python layout, Docker plan, cancellation, and unavailable capability states.",
+      "requirements": [
+        "NODE-001",
+        "NODE-002",
+        "NODE-003",
+        "NODE-004",
+        "NODE-005",
+        "NODE-006",
+        "NODE-007",
+        "NODE-008"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

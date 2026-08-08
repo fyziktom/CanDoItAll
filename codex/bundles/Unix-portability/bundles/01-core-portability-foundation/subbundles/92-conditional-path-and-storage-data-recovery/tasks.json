@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A92",
+  "title": "Conditional path and storage data recovery",
+  "critical": true,
+  "conditional": true,
+  "status": "Not invoked",
+  "depends_on": [
+    "Any path/storage migration incident"
+  ],
+  "unlocks": [
+    "Storage gate re-review"
+  ],
+  "requirements": [],
+  "source_hotspots": [
+    "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs"
+  ],
+  "tasks": [
+    {
+      "id": "A92-T01",
+      "title": "Freeze writes and capture manifests",
+      "description": "Record catalogs, database rows, filesystem tree, checksums, links, modes, and migration journal.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A92-T02",
+      "title": "Classify logical versus physical corruption",
+      "description": "Do not reinterpret arbitrary backslashes or foreign absolute paths.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A92-T03",
+      "title": "Restore from backup or reconstruct by verified content identity",
+      "description": "Keep original files until references and revisions are reconciled.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A92-T04",
+      "title": "Repair host bindings and authority selection",
+      "description": "Require explicit operator rebind for ambiguous roots.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A92-T05",
+      "title": "Add regression fixtures and re-run migration gate",
+      "description": "Update the migration state machine before resuming normal work.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

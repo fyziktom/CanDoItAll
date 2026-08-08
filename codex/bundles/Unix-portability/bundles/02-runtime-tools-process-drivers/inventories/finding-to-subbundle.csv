@@ -1,0 +1,20 @@
+finding_id,severity,phase,category,paths
+F-024,P1,B01,Process host,src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs
+F-025,P0,B01,Environment semantics,src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs
+F-026,P1,B01,Executable resolution,src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs | src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs
+F-027,P0,B02,Workbench runtime nodes,src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs
+F-028,P1,B02,Python environments,src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs
+F-029,P1,B02,Elevation,src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs
+F-030,P0,B03,Process ownership,tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs
+F-031,P1,B03,Manager Windows dependency,tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj | tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs
+F-032,P1,B04,MCP command policy,src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs | src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs
+F-033,P1,B04,Playwright MCP setup,src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs
+F-034,P1,B04,Duplicate process runners,src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs | src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs
+F-035,P1,B04,Diagnostics leakage,src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs | src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs
+F-036,P1,B05,Docker plugin,src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs
+F-037,P1,B05,External FileTools package,src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj | src/Integration/CanDoItAll.FileTools.Integration/ConfiguredDesktopFileLauncher.cs
+F-038,P0,B06,Process architecture ownership,codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md | src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs
+F-039,P1,B06,Process driver platform layer,src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs
+F-040,P1,B07,Cross-platform runtime evidence,.github/workflows-disabled/ci.yml | tests/Playwright/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs
+F-041,P2,positive,Portable foundation,CanDoItAll.slnx | src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs
+F-042,P2,positive,Current architecture,src/Processes | src/Processes/Drivers | src/Foundation/CanDoItAll.Security.Abstractions

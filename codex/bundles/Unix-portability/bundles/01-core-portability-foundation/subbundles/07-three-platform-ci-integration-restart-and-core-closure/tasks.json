@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A07",
+  "title": "Three-platform CI, integration, restart, and Core Gate C4",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by A06",
+  "depends_on": [
+    "A06"
+  ],
+  "unlocks": [
+    "Core Gate C4",
+    "Runtime bundle B00"
+  ],
+  "requirements": [
+    "CI-001",
+    "CI-002",
+    "CI-003",
+    "CI-004",
+    "CI-005",
+    "CI-006",
+    "CI-007"
+  ],
+  "source_hotspots": [
+    ".github/workflows-disabled/ci.yml",
+    "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj"
+  ],
+  "tasks": [
+    {
+      "id": "A07-T01",
+      "title": "Restore an active CI workflow",
+      "description": "Create required Windows, Ubuntu, and macOS restore/build/stable-test jobs. Keep shell usage portable and cache only deterministic dependency inputs.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T02",
+      "title": "Add actual-host core portability tests",
+      "description": "Run path, filesystem, storage, permission, secret-provider selection, control-plane, and headless startup tests on the real host OS.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T03",
+      "title": "Prove migrations and restart",
+      "description": "Exercise old logical paths, host-bound records, legacy Data Protection/key fixtures, new vault records, interrupted migration, restart, and rollback.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T04",
+      "title": "Publish and run outside the checkout",
+      "description": "Create clean RID artifacts and start them with explicit temporary/service roots. Assert no dependency on repository-relative writable state or global user caches.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T05",
+      "title": "Add static portability/security guards",
+      "description": "Fail CI on unowned OS branches, raw shared Windows path defaults, insecure secret fallback, unsafe absolute-path persistence, or unclassified scan findings.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T06",
+      "title": "Run Windows regression and core UI smoke",
+      "description": "Preserve the stable Windows gate and a minimal browser/readiness smoke with runtime/desktop features disabled.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T07",
+      "title": "Perform independent architecture/security/operations review",
+      "description": "Review support claims, migration rollback, permissions, key protection, capability truthfulness, and residual risks.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A07-T08",
+      "title": "Issue Core Gate C4 and handoff",
+      "description": "Record the exact passing commit, CI run links, artifact checksums, support matrix, open limitations, and source delta that B00 must revalidate.",
+      "requirements": [
+        "CI-001",
+        "CI-002",
+        "CI-003",
+        "CI-004",
+        "CI-005",
+        "CI-006",
+        "CI-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

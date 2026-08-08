@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B06",
+  "title": "Process-domain driver and special-tool capability adaptation",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by B05",
+  "depends_on": [
+    "B05"
+  ],
+  "unlocks": [
+    "B07"
+  ],
+  "requirements": [
+    "PROC-001",
+    "PROC-002",
+    "PROC-003",
+    "PROC-004",
+    "PROC-005",
+    "PROC-006"
+  ],
+  "source_hotspots": [
+    "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs",
+    "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDescriptors.cs",
+    "src/Processes/CanDoItAll.Processes.Runtime",
+    "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration",
+    "codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md"
+  ],
+  "tasks": [
+    {
+      "id": "B06-T01",
+      "title": "Model required host capabilities",
+      "description": "Let process strategies/special tools declare capabilities such as direct execution, Docker, Python, Node, pwsh script, MCP, desktop, or terminal without branching on OS.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T02",
+      "title": "Keep host facts outside process semantics",
+      "description": "Host adapters expose availability and execution ports; Processes owns eligibility, alternate strategy, recovery, escalation, evidence, and failure interpretation.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T03",
+      "title": "Validate templates/plans before side effects",
+      "description": "Compile or launch-check required capabilities and produce deterministic missing-capability diagnostics with safe repair/alternate strategy.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T04",
+      "title": "Preserve authority and approvals",
+      "description": "Host capability presence never grants workspace/project scope, mutation, tool access, approval, or process authority. Re-run canonical authority and per-run workspace tests.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T05",
+      "title": "Adapt special/domain drivers",
+      "description": "Review every driver/tool that starts processes, opens files, runs Docker/Python/Node/PowerShell/MCP, or consumes host paths. Route through B01–B05 capabilities.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T06",
+      "title": "Normalize receipts/evidence",
+      "description": "Serialize logical paths, strategy/driver/capability IDs, tested platform profile, and bounded diagnostics; omit secrets and unnecessary host absolute paths.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T07",
+      "title": "Define platform layer semantics",
+      "description": "Document that ProcessDriverLayer.Platform means a process strategy package constrained by host capabilities, not a generic operating-system service layer.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T08",
+      "title": "Test alternate and unavailable paths",
+      "description": "For each special tool, prove success on supported profiles and planned fail/alternate behavior elsewhere without accidental escalation loops.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B06-T09",
+      "title": "Issue process architecture gate R3",
+      "description": "Independent process/MAF/security review confirms ownership, authority, capability, receipts, and recovery.",
+      "requirements": [
+        "PROC-001",
+        "PROC-002",
+        "PROC-003",
+        "PROC-004",
+        "PROC-005",
+        "PROC-006"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B03",
+  "title": "Manager process ownership, supervision, and watchers",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by B02",
+  "depends_on": [
+    "B02"
+  ],
+  "unlocks": [
+    "Gate R2",
+    "B04"
+  ],
+  "requirements": [
+    "MGR-001",
+    "MGR-002",
+    "MGR-003",
+    "MGR-004",
+    "MGR-005",
+    "MGR-006",
+    "MGR-007"
+  ],
+  "source_hotspots": [
+    "tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj",
+    "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+    "tools/App/CanDoItAll.Manager/WatchSupervisorService.cs",
+    "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
+    "tools/App/CanDoItAll.Manager/TuningExecutionAdapter.cs"
+  ],
+  "tasks": [
+    {
+      "id": "B03-T01",
+      "title": "Create an owned launched-process registry",
+      "description": "Persist non-secret PID/start identity/executable/argv hash/workspace/user/parent/lease state for Manager-launched processes and reconcile it on restart.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T02",
+      "title": "Isolate Windows WMI",
+      "description": "Move ManagementObjectSearcher and System.Management calls into a Windows leaf adapter selected by composition; neutral Manager contracts do not reference WMI.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T03",
+      "title": "Implement Linux recovery discovery",
+      "description": "Use `/proc` or another bounded mechanism to obtain start time, owner, executable, command, and parent where permitted. Missing evidence must not authorize termination.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T04",
+      "title": "Implement macOS recovery discovery",
+      "description": "Use a tested bounded adapter (native API or strictly parsed command fixture) with locale/permission/race handling and safe fallback.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T05",
+      "title": "Strengthen ownership proof",
+      "description": "Require PID plus start identity and additional registry/user/executable/command/workspace evidence. Reject name-only, substring-only, or ambiguous matches.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T06",
+      "title": "Unify launch/stop lifecycle",
+      "description": "Use B01 execution primitives for dotnet watch, Tailwind/npm, tuning, and related processes; implement graceful stop then bounded force kill.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T07",
+      "title": "Make watcher pipelines convergent",
+      "description": "Reuse Core watcher hint/rescan principles, generation/fingerprint output, duplicate suppression, overflow recovery, and polling fallback without merging domain-specific supervisor logic.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T08",
+      "title": "Fix path/comparer semantics",
+      "description": "Remove global case-insensitive path sets and use Core C4 logical/physical rules for project references, roots, output, ignored segments, and process signatures.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T09",
+      "title": "Inject process and watcher failures",
+      "description": "Test PID reuse, process exit race, unreadable command line, permission denied, orphan registry, duplicate starts, watcher overflow, rename storm, shutdown interruption, and output convergence.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B03-T10",
+      "title": "Issue Gate R2",
+      "description": "No later MCP/plugin/process adaptation begins until process ownership and Manager lifecycle are independently approved.",
+      "requirements": [
+        "MGR-001",
+        "MGR-002",
+        "MGR-003",
+        "MGR-004",
+        "MGR-005",
+        "MGR-006",
+        "MGR-007"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

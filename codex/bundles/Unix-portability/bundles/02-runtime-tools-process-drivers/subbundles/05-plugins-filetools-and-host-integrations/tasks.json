@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B05",
+  "title": "Plugins, FileTools, and host integrations",
+  "critical": true,
+  "conditional": false,
+  "status": "Blocked by B04",
+  "depends_on": [
+    "B04"
+  ],
+  "unlocks": [
+    "B06"
+  ],
+  "requirements": [
+    "PLUG-001",
+    "PLUG-002",
+    "PLUG-003",
+    "PLUG-004",
+    "PLUG-005"
+  ],
+  "source_hotspots": [
+    "src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs",
+    "src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj",
+    "src/Integration/CanDoItAll.FileTools.Integration/ConfiguredDesktopFileLauncher.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApplicationPreferences.cs"
+  ],
+  "tasks": [
+    {
+      "id": "B05-T01",
+      "title": "Inject Docker host execution dependencies",
+      "description": "Remove direct LocalWorkspaceProcessHost construction. Consume B01 process host, resolver, environment policy, workspace scope, registry, and receipt primitives.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T02",
+      "title": "Separate Docker executable and daemon capability",
+      "description": "Probe executable, context/config, daemon/socket/remote endpoint, authorization, and recipe-specific capability without passing arbitrary Docker environment.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T03",
+      "title": "Harden Docker environment and paths",
+      "description": "Use OS/tool-specific environment names with host case semantics; validate Docker config/root paths through Core C4 contracts and redact endpoint credentials.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T04",
+      "title": "Produce FileTools compatibility report",
+      "description": "Test package 0.1.18 on Windows, Ubuntu desktop/headless, macOS interactive/headless for open, reveal, preferred application, cancellation, unsupported state, and path safety.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T05",
+      "title": "Quarantine or upgrade unsupported FileTools behavior",
+      "description": "If package support is missing or unsafe, disable the capability truthfully or create a separate package issue/change; do not reimplement its internals opportunistically in this bundle.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T06",
+      "title": "Make desktop actions host-bound and optional",
+      "description": "Use Core host-bound application preferences, desktop-session capability, and explicit enablement. Service/headless profiles must not attempt GUI launch.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T07",
+      "title": "Create external dependency ledger/probes",
+      "description": "For every plugin/native dependency record version, source, supported OS/profile, probe, permissions, failure mode, remediation, and test evidence.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T08",
+      "title": "Run plugin/desktop failure matrix",
+      "description": "Cover missing Docker, denied socket, remote host, missing desktop session, foreign executable preference, unsupported package, timeout, cancellation, and link-safe path open.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B05-T09",
+      "title": "Issue integration gate R3b",
+      "description": "Proceed to Processes only after optional integrations degrade independently and no duplicate process/path/secret stack remains.",
+      "requirements": [
+        "PLUG-001",
+        "PLUG-002",
+        "PLUG-003",
+        "PLUG-004",
+        "PLUG-005"
+      ],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}
